@@ -1,0 +1,46 @@
+[build-system]
+requires = ["hatchling>=1.18"]
+build-backend = "hatchling.build"
+
+[project]
+name = "processbehavior"
+version = "0.1.0"
+description = "Python-native Process Behavior & Control Charts (spec-driven SPC with tidy outputs)"
+readme = "README.md"
+requires-python = ">=3.9"
+authors = [{name = "cnicholas", email = "you@example.com"}]
+license = { text = "Apache-2.0" }
+keywords = ["spc", "quality-control", "control-charts", "process-behavior", "shewhart"]
+dependencies = ["pandas>=2.0"]
+
+[project.optional-dependencies]
+changepoints = ["ruptures>=1.1"]
+effects = ["statsmodels>=0.14"]
+dev = [
+  "pytest>=8",
+  "pytest-cov>=5",
+  "ruff>=0.5",
+  "mypy>=1.10",
+  "pre-commit>=3.7",
+  "ipykernel",
+]
+
+[tool.pytest.ini_options]
+addopts = "-q"
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+lint.select = ["E","F","I","UP","B","SIM","C90"]
+lint.ignore = []
+format.quote-style = "single"
+target-version = "py39"
+
+[tool.mypy]
+python_version = "3.9"
+strict = true
+warn_unused_ignores = true
+warn_redundant_casts = true
+warn_return_any = true
+disallow_untyped_defs = true
+exclude = ["examples", "docs"]
