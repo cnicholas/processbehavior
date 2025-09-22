@@ -1,18 +1,21 @@
-from __future__ import annotations
+"""
+Constants for SPC analysis configuration.
 
-# Single source of truth for constants; expand as you implement real math.
-# Placeholders provided so the package imports cleanly today.
+This module contains configuration constants used throughout the process behavior charts system.
+"""
 
+# Column naming constants
+RSG_VARIABLE_NAME = 'rsg'
+TIME_VARIABLE_NAME = 'time'
+RESPONSE_VARIABLE_NAME = 'response'
 
-def d2(n: int) -> float:
-    # d2 for MR span 2 would be 1.128; here just guard
-    if n < 2:
-        raise ValueError('d2 undefined for n < 2')
-    return 1.128 if n == 2 else 1.0  # TODO: replace with proper table/formula
+# Data type constants for validation
+NUMBER_COLUMN_TYPES = ['int64', 'float64', 'int32', 'Int64', 'Float64', 'Int32']
+DATE_COLUMN_TYPES = ['int64', 'int32', 'Int64', 'Int32', 'datetime64[ns]', 'object']
 
+# Analysis type constants
+SUPPORTED_ANALYSIS_TYPES = ['Xbar', 'S', 'Imr', 'R']
+GROUPED_ANALYSES = ['Xbar', 'S']
 
-def c4(n: int) -> float:
-    # Placeholder c4; replace with real approximation or table
-    if n < 2:
-        raise ValueError('c4 undefined for n < 2')
-    return 0.94
+# Time unit constants
+VALID_TIME_UNITS = ['Year', 'Quarter', 'Month', 'Week']
