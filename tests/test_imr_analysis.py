@@ -27,7 +27,7 @@ class TestIMRAnalysis(unittest.TestCase):
             'round_to': 2,
         }
         #
-        f_path = '../processbehavior/datasets/data/FILLWEIGHTDATA_800.csv'
+        f_path = './processbehavior/datasets/data/FILLWEIGHTDATA_800.csv'
         df = pd.read_csv(f_path)
         print(f'\nDataset columns: {df.columns.tolist()}')
         print(f'Dataset shape: {df.shape}')
