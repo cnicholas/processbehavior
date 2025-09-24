@@ -5,7 +5,13 @@ from typing import Any
 
 import pandas as pd
 
-from .spec import AnalysisSpec
+from .analysis_dataset import (
+    calculate_statistics_R,
+    calculate_statistics_XbarS,
+    prepare_dataset,
+)
+from .charts.imr import calculate_statistics_Imr
+from .spec import AnalysisSpec, AnalysisSpecification
 
 
 def _data_signature(df: pd.DataFrame) -> str:
@@ -47,3 +53,38 @@ def analyze(df: pd.DataFrame, spec: AnalysisSpec) -> dict[str, Any]:
             'data_signature': _data_signature(df),
         },
     }
+
+
+def perform_analysis(df: pd.DataFrame, specification: dict) -> pd.DataFrame:
+    """Perform SPC analysis based on specification.
+
+    Args:
+        df: Input dataframe
+        specification: Analysis specification dictionary
+
+    Returns:
+        DataFrame with analysis results
+
+    Raises:
+        ValueError: If analysis type is not supported
+    """
+    analysis_type = specification['analysis_type']
+
+    # Create specification and prepare dataset
+    spec = AnalysisSpecification.from_dict(
+        analysis_type=analysis_type, analysis_specification=specification
+    )
+    prepared_df = prepare_dataset(df=df, analysis_specification=spec)
+
+    # Direct mapping to calculation functions
+    if analysis_type == 'Xbar' or analysis_type == 'S':
+        return calculate_statistics_XbarS(df=prepared_df, analysis_specification=spec)
+    elif analysis_type == 'Imr':
+        return calculate_statistics_Imr(df=prepared_df, analysis_specification=spec)
+    elif analysis_type == 'R':
+        return calculate_statistics_R(df=prepared_df, analysis_specification=spec)
+    else:
+        raise ValueError(
+            f'Analysis type {analysis_type} not supported. '
+            f'Available types: ["Xbar", "S", "Imr", "R"]'
+        )
