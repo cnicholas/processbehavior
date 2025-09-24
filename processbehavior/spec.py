@@ -1,7 +1,26 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from enum import Enum
 from typing import Any
+
+
+class AnalysisType(Enum):
+    """Supported analysis chart types."""
+
+    XBAR = 'Xbar'
+    S = 'S'
+    IMR = 'Imr'
+    R = 'R'
+
+
+class TimeUnit(Enum):
+    """Supported time grouping units."""
+
+    YEAR = 'Year'
+    QUARTER = 'Quarter'
+    MONTH = 'Month'
+    WEEK = 'Week'
 
 
 @dataclass(frozen=True)
@@ -30,47 +49,29 @@ class AnalysisSpec:
                 raise ValueError("each analysis dict must include a 'type' key")
 
 
+@dataclass
 class AnalysisSpecification:
-    """Legacy specification class for SPC analysis configuration.
+    """Specification class for SPC analysis configuration.
 
     Validates and processes analysis specifications for process behavior charts.
     Supports Xbar, S, Imr, and R chart types with flexible grouping and time options.
     """
 
-    VALID_TIME_UNITS = ['Year', 'Quarter', 'Month', 'Week']
-    SUPPORTED_ANALYSIS_TYPES = ['Xbar', 'S', 'Imr', 'R']
-    GROUPED_ANALYSES = ['Xbar', 'S']
+    analysis_type: AnalysisType | str  # Accept both enum and string for backward compatibility
+    response_var: str
+    rsg_vars: list[str] | None = None
+    rsg_var_name: str = 'rsg'
+    rsg_var_delim: str = '_'
+    time_var: str | None = None
+    time_unit: TimeUnit | str | None = None  # Accept both enum and string
+    round_to: int = 3
 
-    __slots__ = (
-        'analysis_type',
-        'rsg_vars',
-        'rsg_var_name',
-        'rsg_var_delim',
-        'time_var',
-        'response_var',
-        'time_unit',
-        'round_to',
-        '_has_grouping',
-        '_has_time',
-        '_requires_sort',
-        '_data_prep_output_cols',
-        '_sort_cols',
-        '_time_grouping_units',
-        '_time_grouping_cols',
-        '_grouping_cols',
-        '_analysis_output_cols',
-    )
-
-    def __init__(self, analysis_type: str, analysis_specification: dict):
-        # Extract and validate input parameters
-        self.analysis_type = analysis_type
-        self.rsg_vars = analysis_specification.get('rsg_vars')
-        self.rsg_var_name = analysis_specification.get('rsg_var_name', 'rsg')
-        self.rsg_var_delim = analysis_specification.get('rsg_var_delim', '_')
-        self.time_var = analysis_specification.get('time_var')
-        self.response_var = analysis_specification.get('response_var')
-        self.time_unit = analysis_specification.get('time_unit')
-        self.round_to = analysis_specification.get('round_to', 3)
+    def __post_init__(self):
+        # Normalize enum inputs to their values for backward compatibility
+        if isinstance(self.analysis_type, AnalysisType):
+            object.__setattr__(self, 'analysis_type', self.analysis_type.value)
+        if isinstance(self.time_unit, TimeUnit):
+            object.__setattr__(self, 'time_unit', self.time_unit.value)
 
         # Initialize computed properties
         self._has_grouping = self.rsg_vars is not None
@@ -88,15 +89,60 @@ class AnalysisSpecification:
         self._data_prep_output_cols = self._build_data_prep_cols()
         self._analysis_output_cols = self._build_analysis_output_cols()
 
+    @property
+    def supported_analysis_types(self) -> list[str]:
+        """Get list of supported analysis types."""
+        return [t.value for t in AnalysisType]
+
+    @property
+    def valid_time_units(self) -> list[str]:
+        """Get list of valid time units."""
+        return [t.value for t in TimeUnit]
+
+    @property
+    def grouped_analyses(self) -> list[str]:
+        """Get list of analysis types that require grouping."""
+        return [AnalysisType.XBAR.value, AnalysisType.S.value]
+
+    @classmethod
+    def from_dict(cls, analysis_type: AnalysisType | str, analysis_specification: dict):
+        """Create AnalysisSpecification from dictionary (legacy compatibility)."""
+        response_var = analysis_specification.get('response_var')
+        if response_var is None:
+            raise ValueError('response_var is required in analysis_specification dictionary')
+
+        return cls(
+            analysis_type=analysis_type,
+            response_var=response_var,
+            rsg_vars=analysis_specification.get('rsg_vars'),
+            rsg_var_name=analysis_specification.get('rsg_var_name', 'rsg'),
+            rsg_var_delim=analysis_specification.get('rsg_var_delim', '_'),
+            time_var=analysis_specification.get('time_var'),
+            time_unit=analysis_specification.get('time_unit'),
+            round_to=analysis_specification.get('round_to', 3),
+        )
+
+    @classmethod
+    def for_xbar_chart(cls, response_var: str, rsg_vars: list[str], **kwargs):
+        """Factory method for Xbar charts."""
+        return cls(
+            analysis_type=AnalysisType.XBAR, response_var=response_var, rsg_vars=rsg_vars, **kwargs
+        )
+
+    @classmethod
+    def for_imr_chart(cls, response_var: str, **kwargs):
+        """Factory method for IMR charts."""
+        return cls(analysis_type=AnalysisType.IMR, response_var=response_var, **kwargs)
+
     def _validate_inputs(self) -> None:
         """Validate all input parameters."""
-        if self.analysis_type not in self.SUPPORTED_ANALYSIS_TYPES:
+        if self.analysis_type not in self.supported_analysis_types:
             raise ValueError(
                 f'Analysis type: {self.analysis_type} is not supported, '
-                f'specify one of: {self.SUPPORTED_ANALYSIS_TYPES}!'
+                f'specify one of: {self.supported_analysis_types}!'
             )
 
-        if self.analysis_type in self.GROUPED_ANALYSES and self.rsg_vars is None:
+        if self.analysis_type in self.grouped_analyses and self.rsg_vars is None:
             raise ValueError(
                 f'A grouping variable is required to produce a {self.analysis_type} analysis!'
             )
@@ -109,8 +155,8 @@ class AnalysisSpecification:
         if self.time_unit is not None:
             if not self._has_time:
                 raise ValueError('A time variable is required when a time_unit is provided!')
-            if self.time_unit not in self.VALID_TIME_UNITS:
-                raise ValueError(f'Time unit must be one: {self.VALID_TIME_UNITS}!')
+            if self.time_unit not in self.valid_time_units:
+                raise ValueError(f'Time unit must be one: {self.valid_time_units}!')
 
     @property
     def data_prep_output_cols(self) -> list:
