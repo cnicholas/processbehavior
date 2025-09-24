@@ -8,9 +8,9 @@ import pandas as pd
 from .analysis_dataset import (
     calculate_statistics_R,
     calculate_statistics_XbarS,
-    prepare_dataset,
 )
 from .charts.imr import calculate_statistics_Imr
+from .data_prep import prepare_dataset
 from .spec import AnalysisSpec, AnalysisSpecification
 
 
