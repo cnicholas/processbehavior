@@ -9,7 +9,8 @@ import unittest
 import pandas as pd
 
 # Add the processbehavior package to the path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'processbehavior'))
+
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 from processbehavior import analysis_dataset as ad
 
@@ -27,7 +28,8 @@ class TestIMRAnalysis(unittest.TestCase):
             'round_to': 2,
         }
 
-        f_path = 'processbehavior/datasets/data/FILLWEIGHTDATA_800.csv'
+        f_path = './processbehavior/datasets/data/FILLWEIGHTDATA_800.csv'
+
         df = pd.read_csv(f_path)
         print(f'\nDataset columns: {df.columns.tolist()}')
         print(f'Dataset shape: {df.shape}')
