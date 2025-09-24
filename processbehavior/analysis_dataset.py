@@ -3,7 +3,6 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 
-from .data_prep import prepare_dataset
 from .limits import calculate_limits, detect_beyond_limits
 from .spec import AnalysisSpecification
 
@@ -59,89 +58,6 @@ def _package_grouped_results(
         statistics = gather_analysis_statistics(df=df, statistics_to_collect=statistics_cols)
         _out = {'all': df}
         return package_analysis(analysis_output=_out, summary_statistics_output=statistics)
-
-
-def perform_analysis(df: pd.DataFrame, specification: dict) -> pd.DataFrame:
-    """Perform SPC analysis based on specification.
-
-    Args:
-        df: Input dataframe
-        specification: Analysis specification dictionary
-
-    Returns:
-        DataFrame with analysis results
-
-    Raises:
-        ValueError: If analysis type is not supported
-    """
-    analysis_type = specification['analysis_type']
-
-    # Create specification and prepare dataset
-    spec = AnalysisSpecification(analysis_type=analysis_type, analysis_specification=specification)
-    prepared_df = prepare_dataset(df=df, analysis_specification=spec)
-
-    # Direct mapping to calculation functions
-    if analysis_type == 'Xbar' or analysis_type == 'S':
-        return calculate_statistics_XbarS(df=prepared_df, analysis_specification=spec)
-    elif analysis_type == 'Imr':
-        return calculate_statistics_Imr(df=prepared_df, analysis_specification=spec)
-    elif analysis_type == 'R':
-        return calculate_statistics_R(df=prepared_df, analysis_specification=spec)
-    else:
-        raise ValueError(
-            f'Analysis type {analysis_type} not supported. '
-            f'Available types: ["Xbar", "S", "Imr", "R"]'
-        )
-
-
-def calculate_statistics_Imr(
-    df: pd.DataFrame, analysis_specification: AnalysisSpecification
-) -> pd.DataFrame:
-    spec = analysis_specification
-    print('\nIn calculate statistics IMR...')
-    print(f'\nDataframe has columns: {df.columns.to_list()}')
-
-    # Calculate moving ranges using helper function
-    out = _calculate_moving_ranges(df, spec)
-
-    if spec.has_grouping:
-        grouped = out.groupby(spec.rsg_var_name, as_index=False).agg(
-            mean=pd.NamedAgg(spec.response_var, 'mean'), mR=pd.NamedAgg('mr', 'mean')
-        )
-
-        limits = grouped.apply(
-            lambda row: calculate_limits(mean=row['mean'], sd=0, N=0, mR=row.mR, limits_type='Imr'),
-            axis=1,
-        )
-
-        grouped = pd.merge(grouped, limits, left_index=True, right_index=True)
-        out = pd.merge(out, grouped, how='left', on=spec.rsg_var_name)
-    else:
-        out['mR'] = out['mr'].mean()
-        out['mean'] = out[spec.response_var].mean()
-
-        mR = out['mR'].max()
-        _mean = out['mean'].max()
-
-        limits = calculate_limits(
-            mean=_mean, sd=0, N=0, mR=mR, limits_type='Imr', round_to=spec.round_to
-        )
-        out['lcl'] = limits['lcl']
-        out['ucl'] = limits['ucl']
-
-    # Calculate beyond limits using vectorized operation
-    out['beyond_limits'] = np.select(
-        [out[spec.response_var] < out['lcl'], out[spec.response_var] > out['ucl']],
-        [-1, 1],
-        default=0,
-    )
-
-    # Prepare output columns using helper function
-    base_cols = [spec.response_var, 'mean', 'lcl', 'ucl', 'beyond_limits']
-    out = _prepare_output_columns(out, spec, base_cols)
-
-    # Package results using helper function
-    return _package_grouped_results(out, spec, ['mean', 'lcl', 'ucl'])
 
 
 def calculate_statistics_R(
