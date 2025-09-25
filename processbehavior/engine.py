@@ -5,12 +5,11 @@ from typing import Any
 
 import pandas as pd
 
-from .analysis_dataset import (
-    calculate_statistics_R,
-    calculate_statistics_XbarS,
-    prepare_dataset,
-)
 from .charts.imr import calculate_statistics_Imr
+from .charts.r import calculate_statistics_R
+from .charts.s import calculate_statistics_S
+from .charts.xbar import calculate_statistics_Xbar
+from .data_prep import prepare_dataset
 from .spec import AnalysisSpec, AnalysisSpecification
 
 
@@ -77,8 +76,10 @@ def perform_analysis(df: pd.DataFrame, specification: dict) -> pd.DataFrame:
     prepared_df = prepare_dataset(df=df, analysis_specification=spec)
 
     # Direct mapping to calculation functions
-    if analysis_type == 'Xbar' or analysis_type == 'S':
-        return calculate_statistics_XbarS(df=prepared_df, analysis_specification=spec)
+    if analysis_type == 'Xbar':
+        return calculate_statistics_Xbar(df=prepared_df, analysis_specification=spec)
+    elif analysis_type == 'S':
+        return calculate_statistics_S(df=prepared_df, analysis_specification=spec)
     elif analysis_type == 'Imr':
         return calculate_statistics_Imr(df=prepared_df, analysis_specification=spec)
     elif analysis_type == 'R':
