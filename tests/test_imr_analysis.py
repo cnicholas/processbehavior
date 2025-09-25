@@ -13,6 +13,7 @@ import pandas as pd
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 from processbehavior import analysis_dataset as ad
+from processbehavior import engine
 
 
 class TestIMRAnalysis(unittest.TestCase):
@@ -36,11 +37,13 @@ class TestIMRAnalysis(unittest.TestCase):
         print(f'Missing values in fill_weight: {df["fill_weight"].isna().sum()}')
 
         # Create analysis specification
-        a_spec = ad.AnalysisSpecification(analysis_type='Imr', analysis_specification=spec)
+        a_spec = ad.AnalysisSpecification.from_dict(
+            analysis_type='Imr', analysis_specification=spec
+        )
         print(f'Analysis specification created: {a_spec.analysis_type}')
 
         # Perform analysis
-        result = ad.perform_analysis(df=df, specification=spec)
+        result = engine.perform_analysis(df=df, specification=spec)
 
         # Verify result structure
         self.assertEqual(type(result), type({}))
@@ -94,7 +97,7 @@ class TestIMRAnalysis(unittest.TestCase):
         print(f'Dataset shape: {df.shape}')
 
         # Perform analysis
-        result = ad.perform_analysis(df=df, specification=spec)
+        result = engine.perform_analysis(df=df, specification=spec)
 
         # Verify result structure
         self.assertEqual(type(result), type({}))
