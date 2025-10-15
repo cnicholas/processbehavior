@@ -1,6 +1,7 @@
 
 from __future__ import annotations
 
+import logging
 import math
 
 import numpy as np
@@ -9,6 +10,9 @@ import scipy.special
 from pandas.api.types import is_numeric_dtype
 
 import objects as obj
+
+# Configure module logger
+logger = logging.getLogger(__name__)
 
 # ============================================================================
 # NEW: Refactored Analysis Class (replacing factory pattern)
@@ -77,13 +81,13 @@ class Analysis:
         statistics = {}
         out = df.copy()
 
-        print(f'\nIn calculate statistics XbarS...')
-        print(f'\nDataframe has columns: {out.columns.to_list()}')
-        print(f'\n{out.head(10)}')
-        print(f'\nn.max={out["n"].max()}')
+        logger.debug('In calculate statistics XbarS')
+        logger.debug('Dataframe has columns: %s', out.columns.to_list())
+        logger.debug('Dataframe head:\\n%s', out.head(10))
+        logger.debug('n.max=%s', out["n"].max())
 
         if spec.zero_center:
-            print(f'zero-centering data')
+            logger.info('Zero-centering data')
             zero_mean = out[spec.response_var].mean()
             out[spec.response_var] = out[spec.response_var] - zero_mean
 
@@ -107,7 +111,7 @@ class Analysis:
         # if subgroup sizes are equal use N (limits will be same for all groups)
         n_max = _N
         n_to_use = "N" if out['n'].eq(n_max).all() else "n"
-        print(f'Analysis is using: {n_to_use} for calculations!\nScenario: {1 if n_to_use=="N" else 2}')
+        logger.info('Analysis using %s for calculations (Scenario: %s)', n_to_use, 1 if n_to_use=="N" else 2)
 
         # CALCULATE XBAR
         xbar = out.copy()
@@ -250,13 +254,13 @@ class Analysis:
         out = prepare_dataset(df=df, analysis_specification=spec)
 
         if spec.zero_center:
-            print(f'zero-centering data')
+            logger.info('Zero-centering data')
             zero_mean = out[spec.response_var].mean()
-            print(f'zero-mean:{zero_mean}')
+            logger.debug('Zero-mean: %s', zero_mean)
             out[spec.response_var] = out[spec.response_var] - zero_mean
 
-        print(f'\nIn calculate statistics IMR...')
-        print(f'\nDataframe has columns: {out.columns.to_list()}')
+        logger.debug('In calculate statistics IMR')
+        logger.debug('Dataframe has columns: %s', out.columns.to_list())
 
         if spec.has_grouping:
             out['mr'] = abs(out.groupby(spec.rsg_var_name)[spec.response_var].diff())
@@ -352,12 +356,12 @@ class Analysis:
         out = prepare_dataset(df=df, analysis_specification=spec)
 
         if spec.zero_center:
-            print(f'zero-centering data')
+            logger.info('Zero-centering data')
             zero_mean = out[spec.response_var].mean()
             out[spec.response_var] = out[spec.response_var] - zero_mean
 
-        print(f'\nIn calculate statistics R...')
-        print(f'\nDataframe has columns: {out.columns.to_list()}')
+        logger.debug('In calculate statistics R')
+        logger.debug('Dataframe has columns: %s', out.columns.to_list())
 
         if spec.has_grouping:
             out['mr'] = abs(out.groupby(spec.rsg_var_name)[spec.response_var].diff())
@@ -650,7 +654,7 @@ def validate_columns(df: pd.DataFrame, analysis_specification: AnalysisSpecifica
 
 
 def prepare_dataset(df: pd.DataFrame, analysis_specification: AnalysisSpecification) -> pd.DataFrame:
-    print(f'\nEntering call to prepare_data...')
+    logger.debug('Entering prepare_dataset')
     spec = analysis_specification
     out = df.copy()
 
@@ -662,7 +666,7 @@ def prepare_dataset(df: pd.DataFrame, analysis_specification: AnalysisSpecificat
 
         # Drop 'n' column if it exists in the input data to avoid conflicts
         if 'n' in out.columns:
-            print(f'\nDropping existing "n" column from input data (will be recalculated)')
+            logger.debug('Dropping existing "n" column from input data (will be recalculated)')
             out = out.drop(columns=['n'])
 
         out = obj.add_grouping_variable_column(df=out, col_name=spec.rsg_var_name, cols_to_combine=spec.rsg_vars,
@@ -671,7 +675,7 @@ def prepare_dataset(df: pd.DataFrame, analysis_specification: AnalysisSpecificat
         # Remove groups with one obs - solve for all grouped analyses
         grouped = out.groupby(spec.rsg_var_name).size()
         starting_count = grouped.count()
-        print(f'\nStarting with {starting_count} groups')
+        logger.debug('Starting with %s groups', starting_count)
         grouped = grouped[grouped > 1]
 
         if grouped.shape[0] == 0:
@@ -680,16 +684,16 @@ def prepare_dataset(df: pd.DataFrame, analysis_specification: AnalysisSpecificat
         grouped = grouped.reset_index()
         grouped = grouped.rename(columns={0: 'n'})
 
-        print(f'\nPruning groups with 1 obs:\n{grouped}\n')
+        logger.debug('Pruning groups with 1 obs:\\n%s', grouped)
         ending_count = grouped.count()
 
-        print(f'\nGroups remaining: {ending_count.iloc[0]}')
-        print(f'\nRemoved {starting_count - ending_count.iloc[0]} group(s)')
-        print(f'\n')
+        logger.debug('Groups remaining: %s', ending_count.iloc[0])
+        logger.debug('Removed %s group(s)', starting_count - ending_count.iloc[0])
+        # Empty print removed
 
         out = pd.merge(out, grouped, how='inner', on=spec.rsg_var_name)
     else:
-        print(f'No Groups...\n')
+        logger.debug('No groups specified')
 
     # 301 - when provided sort by time dimension
     if spec.requires_sort:
@@ -758,7 +762,7 @@ def gather_analysis_statistics(df: pd.DataFrame, statistics_to_collect: list, gr
     
     :raises ValueError: if variables specified in list are in input dataframe 
     """
-    print(f'In call gather_statistics...')
+    logger.debug('In call gather_statistics')
     stats = {}
 
     out = df.copy()
@@ -808,7 +812,7 @@ def package_analysis(analysis_output: dict, summary_statistics_output: dict):
     
     :raises ValueError: if variables specified in list are in input dataframe 
     """
-    print(f'In call package_analysis...')
+    logger.debug('In call package_analysis')
     out = {}
 
     output_keys = analysis_output.keys()
@@ -940,14 +944,14 @@ class AnalysisDataSet:
         return(out)    
     def __prepare_dataset(self)-> pd.DataFrame:
 
-        print(f'\nEntering call to prepare_data...')
+        logger.debug('Entering prepare_dataset')
         out = self.raw_dataset.copy()
 
         if self.spec.has_grouping:
 
             # Drop 'n' column if it exists in the input data to avoid conflicts
             if 'n' in out.columns:
-                print(f'\nDropping existing "n" column from input data (will be recalculated)')
+                logger.debug('Dropping existing "n" column from input data (will be recalculated)')
                 out = out.drop(columns=['n'])
 
             out = self.__add_grouping_variable_column(df=self.raw_dataset, col_name=self.spec.rsg_var_name, cols_to_combine=self.spec.rsg_vars, col_delim=self.spec.rsg_var_delim)
@@ -959,7 +963,7 @@ class AnalysisDataSet:
             #Remove groups with one obs - solve for all grouped analyses
             grouped=out.groupby(self.spec.rsg_var_name).size()
             starting_count = grouped.count()
-            print(f'\nStarting with {starting_count} groups')
+            logger.debug('Starting with %s groups', starting_count)
             grouped=grouped[grouped>1]
 
             if grouped.shape[0] == 0:
@@ -968,12 +972,12 @@ class AnalysisDataSet:
             grouped = grouped.reset_index()
             grouped = grouped.rename(columns = {0:'n'})
 
-            print(f'\nPruning groups with 1 obs:\n{grouped}\n')
+            logger.debug('Pruning groups with 1 obs:\\n%s', grouped)
             ending_count = grouped.count()
 
-            print(f'\nGroups remaining: {ending_count.iloc[0]}')
-            print(f'\nRemoved {starting_count-ending_count.iloc[0]} group(s)')
-            print(f'\n')
+            logger.debug('Groups remaining: %s', ending_count.iloc[0])
+            logger.debug('Removed %s group(s)', starting_count - ending_count.iloc[0])
+            # Empty print removed
 
             out = pd.merge(out, grouped, how='inner', on=self.spec.rsg_var_name)
 
@@ -988,31 +992,54 @@ class AnalysisDataSet:
         return out
     
     def __calculate_sampling_design_state(self):
-        
-        out = 0 
-
         """
-        Detect Sampling Design State (SDS 1–6) from the current dataset and spec.
-    
-        Rules of thumb implemented:
-        - SDS1: every (k,t) cell has n>=2
-        - SDS2: every (k,t) cell has n==1
-        - SDS3: mixture of replication (some n==1 and some n>=2) and/or missing (k,t) cells
-        - SDS4: single design condition over time (K==1 with time present)
-        - SDS5: nested design (>=2 design vars) with asynchronous time coverage across lower units
-        - SDS6: unstructured fallback (no time OR cannot form (k,t) cells)
+        Detect Sampling Design State (SDS) from the current dataset and specification.
 
-        Side effects:
-        - sets self.sampling_design_state
-        - stores a diagnostics dict in self.sds_diag
+        Currently Implemented States:
+        ------------------------------
+        - **SDS 1**: Full replication - every (k,t) cell has n>=2 observations
+          * Enables calculation of within-cell variance (R2)
+          * Supports full interaction analysis
+
+        - **SDS 2**: No replication - every (k,t) cell has n==1 observation
+          * Uses moving average residuals for variance estimation
+          * Limited interaction analysis capability
+
+        - **SDS 0**: Default/Fallback - no grouping or time structure
+          * Returns 0 when grouping/time variables are not provided
+
+        Not Yet Implemented (Future Enhancement):
+        -----------------------------------------
+        - SDS 3: Partial replication - mixture of n==1 and n>=2 across cells
+        - SDS 4: Single condition over time - K==1 with time dimension
+        - SDS 5: Nested design - >=2 design vars with asynchronous time coverage
+        - SDS 6: Unstructured - no time OR cannot form (k,t) cells
+
+        Returns:
+        --------
+        int
+            0 = No structure (default)
+            1 = SDS 1 (full replication)
+            2 = SDS 2 (no replication)
+
+        Notes:
+        ------
+        The implementation currently handles the two most common scenarios in
+        statistical process control. Future versions will extend support to
+        handle mixed replication patterns (SDS 3-6).
+
+        References:
+        -----------
+        Wheeler, D. J. (1995). Advanced Topics in Statistical Process Control.
         """
-        print("System currently only handling SDS 1 & 2 for grouped data, no groups defaults to 0 - NEED to VALIDATE")
+        out = 0
+        logger.warning("System currently only handling SDS 1 & 2 for grouped data, no groups defaults to 0")
         
         if self.spec.has_grouping and self.spec.has_time:
             
-            grouping_vars = [self.spec.rsg_var_name, self.spec.time_var]        
+            grouping_vars = [self.spec.rsg_var_name, self.spec.time_var]
             group_sizes = (self.analysis_dataset.groupby(grouping_vars)[self.spec.response_var].count())
-            print (group_sizes)
+            logger.debug('Group sizes: %s', group_sizes)
             if all(group_sizes>=2): out = 1
             if all(group_sizes==1): out = 2        
         
@@ -1140,7 +1167,7 @@ class AnalysisDataSet:
             me  = self.analysis_dataset.groupby(self.spec.rsg_vars).agg(ME=pd.NamedAgg(column="R5",aggfunc="mean")).reset_index()
            
             if len(self.spec.rsg_vars)>2:
-                print("There are more than 2 variables in the RSG - ME interactions being calculated for first 2")
+                logger.warning("There are more than 2 variables in the RSG - ME interactions being calculated for first 2")
                 
             for factor in self.spec.rsg_vars:
 
@@ -1188,7 +1215,7 @@ class AnalysisDataSet:
 
         # Only calculate interaction effects if there are 2 or more factors
         if len(self.spec.rsg_vars) < 2:
-            print(f'Only {len(self.spec.rsg_vars)} factor(s) in RSG - factor interaction effects require at least 2 factors. Skipping.')
+            logger.info('Only %s factor(s) in RSG - factor interaction effects require at least 2 factors. Skipping.', len(self.spec.rsg_vars))
             return
 
         #df=self.analysis_dataset[self.spec.rsg_vars+["R2"]]
@@ -1204,7 +1231,7 @@ class AnalysisDataSet:
         #     rsg_effects = rsg_effects.merge(df, how='left', on=factor)
 
         if len(self.spec.rsg_vars)>2:
-            print(f'There are more than 2 variables in the RSG - ME interactions being calculated for first 2: {self.spec.rsg_vars}')
+            logger.warning('There are more than 2 variables in the RSG - ME interactions being calculated for first 2: %s', self.spec.rsg_vars)
 
         # Only process the minimum of 2 or the actual number of factors
         num_factors_to_process = min(2, len(self.spec.rsg_vars))
@@ -1214,7 +1241,7 @@ class AnalysisDataSet:
 
             df=pd.DataFrame()
             factor = self.spec.rsg_vars[i]
-            print(factor)
+            logger.debug('Processing factor: %s', factor)
             df = self.effects[factor]
             rsg_effects = rsg_effects.merge(df, how='left', on=factor)
             i=i+1
@@ -1271,73 +1298,3 @@ class AnalysisDataSet:
         self.__calculate_main_effects()
         self.__calculate_factor_interaction_effects()
         
-def calculate_limits(limits_type: str, mean: float = None, sd: float = None, N: int = None, mR: float = None,
-                     round_to: int = 3) -> dict:
-    out = {}
-    lcl = 0.0
-    ucl = 0.0
-
-    if (limits_type == "Xbar"):
-        if (None in [sd, mean, N]):
-            raise ValueError(f'The limits calculation for {limits_type}: requires (mean, sd, and N')
-        # Wd = S / c4n from
-        Wd = sd / c4(N)
-        # Studentized Control Limits for sub-group means.
-        # LCLx = X̿ – (3 ⋅ Wd) / √ n
-        lcl = mean + (-1 * ((3 * Wd) / math.sqrt(N)))
-        ucl = mean + ((3 * Wd) / math.sqrt(N))
-
-        out = {'lcl': lcl, 'ucl': ucl}
-
-    elif (limits_type == "S"):
-        if (None in [sd, N]):
-            raise ValueError(f'The limits calculation for {limits_type}: requires (sd, and N)')
-        # lcl - use b3 - S*b3(N)
-        lcl = sd * b3(N)
-        # ucl -use b4
-        ucl = sd * b4(N)
-
-        out = {'lcl': lcl, 'ucl': ucl}
-
-    elif (limits_type == "Imr"):
-        if (None in [mean, mR]):
-            raise ValueError(f'The limits calculation for {limits_type}: requires (mean, and mR)')
-
-        lcl = mean + (-1.0 * (2.66 * mR))
-        ucl = mean + (2.66 * mR)
-
-
-    elif (limits_type == "R"):
-        if (None in [mR]):
-            raise ValueError(f'The limits calculation for {limits_type}: requires (mR)')
-        lcl = 0
-        ucl = mR * 3.268
-
-
-    else:
-        raise ValueError(f'The limits type: {limits_type}: is not supported- provide (Xbar, S, IMR, or R')
-
-    out = {'lcl': lcl, 'ucl': ucl}
-
-    return (pd.Series(out, index=['lcl', 'ucl']))          
-
-def c4(n: int) -> float: #xbar chart
-    # Calculate bias constant for xbar and S charts
-    out = np.sqrt(2 / (n - 1)) * (np.exp(scipy.special.loggamma(n / 2) - scipy.special.loggamma((n - 1) / 2)))
-    return (out)
-
-
-def b3(n) -> float: #S chart
-    out = 1 - (3 / c4(n) * math.sqrt(1 - math.pow(c4(n), 2)))
-
-    return (0 if out < 0 else out)
-
-
-def b4(n) -> float: #S chart
-    out = 1 + (3 / c4(n) * math.sqrt(1 - math.pow(c4(n), 2)))
-
-    return (out)       
-
-def detect_beyond_limits(x, lcl, ucl) -> int:
-    result = lambda x, lcl, ucl: -1 if x < lcl else (1 if x > ucl else 0)
-    return (result(x, lcl, ucl))
