@@ -743,8 +743,8 @@ def prepare_dataset(df: pd.DataFrame, analysis_specification: AbstractAnalysisSp
         print(f'\nPruning groups with 1 obs:\n{grouped}\n')
         ending_count = grouped.count()
 
-        print(f'\nGroups remaining: {ending_count[0]}')
-        print(f'\nRemoved {starting_count - ending_count[0]} group(s)')
+        print(f'\nGroups remaining: {ending_count.iloc[0]}')
+        print(f'\nRemoved {starting_count - ending_count.iloc[0]} group(s)')
         print(f'\n')
 
         out = pd.merge(out, grouped, how='inner', on=spec.rsg_var_name)
@@ -1376,8 +1376,8 @@ class AnalysisDataSet(AbstractAnalysisDataSet):
             print(f'\nPruning groups with 1 obs:\n{grouped}\n')
             ending_count = grouped.count()
 
-            print(f'\nGroups remaining: {ending_count[0]}')
-            print(f'\nRemoved {starting_count-ending_count[0]} group(s)')
+            print(f'\nGroups remaining: {ending_count.iloc[0]}')
+            print(f'\nRemoved {starting_count-ending_count.iloc[0]} group(s)')
             print(f'\n')
 
             out = pd.merge(out, grouped, how='inner', on=self.spec.rsg_var_name)
