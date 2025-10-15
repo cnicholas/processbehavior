@@ -1,1 +1,1 @@
-"""Test package for processbehavior."""
+# This file makes the tests directory a Python package

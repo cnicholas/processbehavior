@@ -15,5 +15,7 @@ htmlcov/
 .DS_Store
 
 # Editors
-.vscode/
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
 .idea/

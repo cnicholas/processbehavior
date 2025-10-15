@@ -68,10 +68,7 @@ def df_SDS2():
     path_toSDS2 = "processbehavior/datasets/data/SDS_2_synthetic.csv"
     return pd.read_csv(path_toSDS2)
 
-# tests/test_vas_sds.py
-import numpy as np
-import pandas as pd
-import pytest
+
 
 TOL = 1e-10
 rng = np.random.default_rng(123)
