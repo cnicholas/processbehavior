@@ -65,8 +65,7 @@ def df_SDS1():
 
 @pytest.fixture
 def df_SDS2():
-    path_toSDS2 = "processbehavior/datasets/data/SDS_2_synthetic.csv"
-    return pd.read_csv(path_toSDS2)
+    return make_sds2()
 
 
 
