@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import math
-from abc import ABC, abstractmethod
 
 import numpy as np
 import pandas as pd
@@ -11,175 +10,129 @@ from pandas.api.types import is_numeric_dtype
 
 import objects as obj
 
+# ============================================================================
+# NEW: Refactored Analysis Class (replacing factory pattern)
+# ============================================================================
 
-class AbstractFactory(ABC):  # abstract factory
+class Analysis:
     """
-    The Abstract Factory interface declares a set of methods that return
-    different abstract products. These products are called a family and are
-    related by a high-level theme or concept. Prselves. A family ooducts of one family are usually
-    able to collaborate among themf products may have several
-    variants, but the products of one variant are incompatible with products of
-    another.
-    """
+    Unified analysis class handling all chart types via strategy pattern.
 
-    @abstractmethod
-    def create_Xbar(self, df: pd.DataFrame, spec: dict) -> AbstractAnalysis:
-        pass
+    This class replaces the AbstractFactory pattern with a simpler, more maintainable
+    approach. All analysis types (Xbar, S, Imr, R) are handled through internal
+    strategy methods.
 
-    @abstractmethod
-    def create_S(self, df: pd.DataFrame, spec: dict) -> AbstractAnalysis:
-        pass
-
-    @abstractmethod
-    def create_Imr(self) -> AbstractAnalysis:
-        pass
-
-    @abstractmethod
-    def create_R(self) -> AbstractAnalysis:
-        pass
-
-
-class AnalysisFactory(AbstractFactory):  # Concrete Factory
-    """
-    Concrete Factories produce a family of products that belong to a single
-    variant. The factory guarantees that resulting products are compatible. Note
-    that signatures of the Concrete Factory's methods return an abstract
-    product, while inside the method a concrete product is instantiated.
+    Usage:
+        analysis = Analysis(df, specification)
+        result = analysis.calculate()
     """
 
-    def create_Xbar(self, df: pd.DataFrame, analysis_specification: dict) -> AbstractAnalysis:
-        return Xbar(df=df, analysis_specification=analysis_specification)
+    def __init__(self, df: pd.DataFrame, specification: dict):
+        """
+        Initialize analysis with data and specification.
 
-    def create_S(self, df: pd.DataFrame, analysis_specification: dict) -> AbstractAnalysis:
-        return Sbar(df=df, analysis_specification=analysis_specification)
+        Args:
+            df: Input DataFrame with raw data
+            specification: Dictionary containing analysis configuration including 'analysis_type'
+        """
+        self.raw_df = df
+        self.analysis_type = specification['analysis_type']
+        self.spec = AnalysisSpecification(self.analysis_type, specification)
+        self.ads = AnalysisDataSet(df, self.spec)
 
-    def create_Imr(self, df: pd.DataFrame, analysis_specification: dict) -> AbstractAnalysis:
-        return IMR(df=df, analysis_specification=analysis_specification)
+    def calculate(self) -> pd.DataFrame:
+        """
+        Execute the appropriate analysis strategy and return results.
 
-    def create_R(self, df: pd.DataFrame, analysis_specification: dict) -> AbstractAnalysis:
-        return R(df=df, analysis_specification=analysis_specification)
+        Returns:
+            DataFrame containing analysis results
 
+        Raises:
+            ValueError: If analysis_type is not supported
+        """
+        strategies = {
+            'Xbar': self._calculate_xbar,
+            'S': self._calculate_s,
+            'Imr': self._calculate_imr,
+            'R': self._calculate_r
+        }
 
-class AbstractAnalysis(ABC):  # abstract product
-    """
-    Each distinct product of a product family should have a base interface. All
-    variants of the product must implement this interface.
-    """
+        if self.analysis_type not in strategies:
+            raise ValueError(
+                f'Analysis type {self.analysis_type} not supported! '
+                f'Valid types: {list(strategies.keys())}'
+            )
 
-    @abstractmethod
-    def get_statistics(self) -> str:
-        pass
+        return strategies[self.analysis_type]()
 
-    def get_dataset(self) -> pd.DataFrame:
-        pass
+    def _calculate_xbar(self) -> pd.DataFrame:
+        """
+        Calculate Xbar (mean) chart statistics.
 
-
-class Xbar(AbstractAnalysis):
-
-    def __init__(self, df: AnalysisDataSet, analysis_specification: dict):
-        self.df = df.analysis_dataset
-        self.ads = df
-        self.spec = analysis_specification
-        self.is_N_variable = self.__calculate_is_N_variable()
-        self.__calculate_is_N_variable()
-        self.analysis_result = self.calculate_statistics()
-        
-        
-    def get_statistics(self) -> str:
-        return "Statistics for "
-
-    def get_dataset(self) -> pd.DataFrame:
-        print(f'In get dataset Xbar...')
-        return self.analysis_result 
-    
-    def __calculate_is_N_variable(self) -> bool:
-        
-        group_ns = self.df.groupby(self.spec.rsg_var_name).size()
-        group_max_n = group_ns.max()
-        return group_ns.eq(group_max_n).all()
-        
-    def calculate_limits(self)-> pd.Series:
-        out={}
-        lcl = 0.0
-        ucl = 0.0       
-
-        # if (limits_type == "Xbar"):
-        #     if (None in [sd, mean, N]):
-        #         raise ValueError(f'The limits calculation for {limits_type}: requires (mean, sd, and N')
-        #     # Wd = S / c4n from
-        #     Wd = sd / c4(N)
-        #     # Studentized Control Limits for sub-group means.
-        #     # LCLx = X̿ – (3 ⋅ Wd) / √ n
-        #     lcl = mean + (-1 * ((3 * Wd) / math.sqrt(N)))
-        #     ucl = mean + ((3 * Wd) / math.sqrt(N))
-
-        #    out = {'lcl': lcl, 'ucl': ucl}
-    
-    def c4(n: int) -> float: #xbar chart
-        # Calculate bias constant for xbar and S charts
-        out = math.sqrt(2 / (n - 1)) * (math.exp(scipy.special.loggamma(n / 2) - scipy.special.loggamma((n - 1) / 2)))
-        return (out)
-    
-    def calculate_statistics(self) -> pd.DataFrame:                
-    
-        # TODO: update to use analysis spec to determine cals to do for S and xbar.
+        Logic moved from Xbar.calculate_statistics()
+        """
+        df = self.ads.analysis_dataset
         spec = self.spec
-        result = {} #dictionary containing both Xbar and S analysis results
-        statistics = {} #dictionary to collect statistics about both Xbar and S
-        out = self.df.copy()
-        
+        result = {}
+        statistics = {}
+        out = df.copy()
+
         print(f'\nIn calculate statistics XbarS...')
         print(f'\nDataframe has columns: {out.columns.to_list()}')
         print(f'\n{out.head(10)}')
         print(f'\nn.max={out["n"].max()}')
-        
+
         if spec.zero_center:
             print(f'zero-centering data')
             zero_mean = out[spec.response_var].mean()
-            out[spec.response_var] = out[spec.response_var]-zero_mean        
-        
+            out[spec.response_var] = out[spec.response_var] - zero_mean
+
         out = out.groupby(spec.rsg_var_name, as_index=False).agg(
-            s    = pd.NamedAgg(column = spec.response_var, aggfunc="std"),        
-            mean = pd.NamedAgg(column = spec.response_var, aggfunc="mean"),
-            n    = pd.NamedAgg(column = 'n', aggfunc="max")
+            s=pd.NamedAgg(column=spec.response_var, aggfunc="std"),
+            mean=pd.NamedAgg(column=spec.response_var, aggfunc="mean"),
+            n=pd.NamedAgg(column='n', aggfunc="max")
         )
-        
-        #294 Handle case where no subgroups have >1 observation
-        if out.shape[0] == 0: 
+
+        # Handle case where no subgroups have >1 observation
+        if out.shape[0] == 0:
             raise ValueError("All subgroups have 1 or less observations!")
-        
+
         _Xbar = out["mean"].mean()
-        out['Xbar'] = _Xbar #out["mean"].mean()   
-        _S =  out["s"].mean()
-        out['S'] = _S  #out["s"].mean()
+        out['Xbar'] = _Xbar
+        _S = out["s"].mean()
+        out['S'] = _S
         _N = out['n'].max()
-        out['N'] = _N #out['n'].max()        
-        
-        # if subgroup sizes are equal use N (limits will be same for all groups) if they are different use n (limits will vary by group)
-        n_max = _N #out['n'].max()  # get max value for group size
-        
+        out['N'] = _N
+
+        # if subgroup sizes are equal use N (limits will be same for all groups)
+        n_max = _N
         n_to_use = "N" if out['n'].eq(n_max).all() else "n"
         print(f'Analysis is using: {n_to_use} for calculations!\nScenario: {1 if n_to_use=="N" else 2}')
 
-        #CALCULATE XBAR
+        # CALCULATE XBAR
         xbar = out.copy()
-        
         xbar[['lcl', 'ucl']] = xbar.apply(
-                                    lambda row: obj.calculate_limits(mean=row['Xbar'], 
-                                    sd=row['S'], N=row[n_to_use], limits_type='Xbar', round_to=spec.round_to), axis=1
-                                )
+            lambda row: obj.calculate_limits(
+                mean=row['Xbar'],
+                sd=row['S'],
+                N=row[n_to_use],
+                limits_type='Xbar',
+                round_to=spec.round_to
+            ), axis=1
+        )
 
         xbar['beyond_limits'] = xbar.apply(
-                                    lambda row: obj.detect_beyond_limits(x=row['mean'], 
-                                    ucl=row['ucl'], lcl=row['lcl']), axis=1
-                                )
-        
-        #Round final output to specified decimal places
+            lambda row: obj.detect_beyond_limits(
+                x=row['mean'],
+                ucl=row['ucl'],
+                lcl=row['lcl']
+            ), axis=1
+        )
+
         xbar = xbar.round(spec.round_to)
-        
-        #TODO: Ugh! Refactor this mess...
-        statistics['Mean']=round(_Xbar, spec.round_to)
-        if n_to_use == "N": #all RSGs are same size
+
+        statistics['Mean'] = round(_Xbar, spec.round_to)
+        if n_to_use == "N":
             statistics['N'] = _N
             statistics['ucl'] = xbar['ucl'].max()
             statistics['lcl'] = xbar['lcl'].max()
@@ -188,32 +141,37 @@ class Xbar(AbstractAnalysis):
             statistics['N'] = variable_stats
             statistics['lcl'] = variable_stats
             statistics['ucl'] = variable_stats
-        
-        #TODO: replace with spec
-        cols_to_keep = ['rsg', 'mean', 'Xbar', 'lcl', 'ucl', 'beyond_limits']
 
+        cols_to_keep = ['rsg', 'mean', 'Xbar', 'lcl', 'ucl', 'beyond_limits']
         xbar = xbar[cols_to_keep]
-        
         result['Xbar'] = {'data': xbar, 'statistics': statistics}
-        #CALCULATE S - To make DRY Consider refactoring S function to take grouped dataset
+
+        # CALCULATE S
         statistics = {}
         statistics['S'] = round(_S, spec.round_to)
-        
+
         sbar = out.copy()
         sbar[['lcl', 'ucl']] = sbar.apply(
-                                    lambda row: obj.calculate_limits(mean=0, sd=row['S'], 
-                                    N=row[n_to_use], limits_type="S", round_to=spec.round_to), axis=1
-                                    )
+            lambda row: obj.calculate_limits(
+                mean=0,
+                sd=row['S'],
+                N=row[n_to_use],
+                limits_type="S",
+                round_to=spec.round_to
+            ), axis=1
+        )
 
         sbar['beyond_limits'] = sbar.apply(
-                                    lambda row: obj.detect_beyond_limits(x=row['S'], 
-                                    ucl=row['ucl'], lcl=row['lcl']), axis=1
-                                    )
+            lambda row: obj.detect_beyond_limits(
+                x=row['S'],
+                ucl=row['ucl'],
+                lcl=row['lcl']
+            ), axis=1
+        )
 
-        
         sbar = sbar.round(spec.round_to)
-        
-        if n_to_use == "N": #all RSGs are same size
+
+        if n_to_use == "N":
             statistics['N'] = _N
             statistics['ucl'] = sbar['ucl'].max()
             statistics['lcl'] = sbar['lcl'].max()
@@ -222,314 +180,296 @@ class Xbar(AbstractAnalysis):
             statistics['N'] = variable_stats
             statistics['lcl'] = variable_stats
             statistics['ucl'] = variable_stats
-            
+
         cols_to_keep = ['rsg', 's', 'S', 'lcl', 'ucl', 'beyond_limits']
-        
         sbar = sbar[cols_to_keep]
-        result['Sbar'] = {'data': sbar, 'statistics':statistics}
+        result['Sbar'] = {'data': sbar, 'statistics': statistics}
 
-        return (result)
-
-
-class Sbar(AbstractAnalysis):
-
-    def __init__(self, df: pd.DataFrame, analysis_specification: AnalysisSpecification):
-        self.df = df
-        self.spec = analysis_specification
-        self.analysis_result = calculate_statistics_XbarS(df=self.df, analysis_specification=self.spec)
-
-    def get_statistics(self) -> str:
-        return "The statistics for S"
-
-    def get_dataset(self) -> pd.DataFrame:
-        return self.analysis_result #calculate_statistics_XbarS(df=self.df, analysis_specification=self.spec)
-
-
-class IMR(AbstractAnalysis):
-    name = "IMR"
-
-    def __init__(self, df: pd.DataFrame, analysis_specification: AnalysisSpecification):
-        self.df = df
-        self.spec = analysis_specification
-
-    def get_dataset(self) -> pd.DataFrame:
-        return calculate_statistics_Imr(df=self.df, analysis_specification=self.spec)
-
-    """
-    The variant, Product B1, is only able to work correctly with the variant,
-    Product A1. Nevertheless, it accepts any instance of AbstractProductA as an
-    argument.
-    """
-
-    def get_statistics(self) -> str:
-        result = "get statistics for IMR"
         return result
 
+    def _calculate_s(self) -> pd.DataFrame:
+        """
+        Calculate S (standard deviation) chart statistics.
 
-    def calculate_statistics(df: pd.DataFrame, analysis_specification: AnalysisSpecification) -> pd.DataFrame:
-        #For Scenario 2
-        #out['ma'] = df.groupby(spec.rsg_var_name)[spec.response_var].transform(lambda x: x.rolling(2).mean())
-        #out['residual'] = out[spec.response_var] - out['ma'] # Not currently used for adjusted limits
-    
-        spec = analysis_specification
-        out=df.copy()
-        
+        Logic moved from calculate_statistics_S()
+        """
+        df = self.raw_df
+        spec = self.spec
+        out = prepare_dataset(df=df, analysis_specification=spec)
+
+        out = out.groupby(spec.rsg_var_name, as_index=False).agg(
+            s=pd.NamedAgg(column=spec.response_var, aggfunc="std"),
+            n=pd.NamedAgg(column=spec.rsg_var_name, aggfunc="count"),
+        )
+
+        # remove RSGs with a single observation
+        mask = out['n'].eq(1)
+        out = out[~mask]
+
+        out['S'] = out["s"].mean()
+        out['groups'] = out["n"].count()
+        out['N'] = out['n'].max()
+
+        # if subgroup sizes are equal use N (limits will be same for all groups)
+        n_max = out['n'].max()
+        n_to_use = "N" if (out['n'].eq(n_max).all()) else "n"
+
+        # Add limits columns
+        out[['lcl', 'ucl']] = out.apply(
+            lambda row: obj.calculate_limits(
+                mean=0,
+                sd=row['S'],
+                N=row[n_to_use],
+                limits_type="S",
+                round_to=spec.round_to
+            ), axis=1
+        )
+
+        out['beyond_limits'] = out.apply(
+            lambda row: obj.detect_beyond_limits(
+                x=row['S'],
+                ucl=row['ucl'],
+                lcl=row['lcl']
+            ), axis=1
+        )
+
+        cols_to_keep = ['rsg', 's', 'S', 'lcl', 'ucl', 'beyond_limits']
+        out = out[cols_to_keep]
+        out = out.round(spec.round_to)
+
+        return out
+
+    def _calculate_imr(self) -> pd.DataFrame:
+        """
+        Calculate IMR (Individual Moving Range) chart statistics.
+
+        Logic moved from calculate_statistics_Imr()
+        """
+        df = self.raw_df
+        spec = self.spec
+        out = prepare_dataset(df=df, analysis_specification=spec)
+
         if spec.zero_center:
             print(f'zero-centering data')
             zero_mean = out[spec.response_var].mean()
             print(f'zero-mean:{zero_mean}')
-            out[spec.response_var] = out[spec.response_var]-zero_mean
-                    
+            out[spec.response_var] = out[spec.response_var] - zero_mean
+
         print(f'\nIn calculate statistics IMR...')
         print(f'\nDataframe has columns: {out.columns.to_list()}')
+
         if spec.has_grouping:
-        
             out['mr'] = abs(out.groupby(spec.rsg_var_name)[spec.response_var].diff())
-
             grouped = out.groupby(spec.rsg_var_name, as_index=False)
-            
             grouped = grouped.agg(
-                mean = pd.NamedAgg(spec.response_var, 'mean'),
-                mR = pd.NamedAgg('mr', 'mean')            
-            )  
-            
-            limits = grouped.apply(lambda row: obj.calculate_limits(mean = row['mean'], sd=0, N=0, mR=row.mR, limits_type="Imr"), axis=1)
-            
+                mean=pd.NamedAgg(spec.response_var, 'mean'),
+                mR=pd.NamedAgg('mr', 'mean')
+            )
+
+            limits = grouped.apply(
+                lambda row: obj.calculate_limits(
+                    mean=row['mean'],
+                    sd=0,
+                    N=0,
+                    mR=row.mR,
+                    limits_type="Imr"
+                ), axis=1
+            )
+
             grouped = pd.merge(grouped, limits, left_index=True, right_index=True)
-                    
             out = pd.merge(out, grouped, how='left', on=spec.rsg_var_name)
-
         else:
-
             out['mR'] = abs(out[spec.response_var].diff()).mean()
-
             out['mean'] = out[spec.response_var].mean()
-            
             mR = out['mR'].max()
-            
             _mean = out['mean'].max()
-            
-            limits = obj.calculate_limits(mean = _mean, sd=0, N=0, mR=mR, limits_type="Imr",round_to=spec.round_to)
-            
+            limits = obj.calculate_limits(
+                mean=_mean,
+                sd=0,
+                N=0,
+                mR=mR,
+                limits_type="Imr",
+                round_to=spec.round_to
+            )
             out['lcl'] = limits['lcl']
             out['ucl'] = limits['ucl']
-        
-        out['beyond_limits'] = np.where(out[spec.response_var] < out['lcl'], -1, 0)
-        out['beyond_limits'] = np.where(out[spec.response_var] > out['ucl'],  1, 0)
 
-        # Swap out conditional logic when spec class is implemented
+        out['beyond_limits'] = np.where(out[spec.response_var] < out['lcl'], -1, 0)
+        out['beyond_limits'] = np.where(out[spec.response_var] > out['ucl'], 1, 0)
+
         cols_to_keep = [spec.response_var, 'mean', 'lcl', 'ucl', 'beyond_limits']
-        
+
         if spec.has_time:
-            if spec.has_grouping: #Use time and grouping
+            if spec.has_grouping:
                 cols_to_keep.insert(0, spec.rsg_var_name)
                 cols_to_keep.insert(0, spec.time_var)
             else:
                 cols_to_keep.insert(0, spec.time_var)
-                #301 - when provided sort by time dimension
         else:
             if spec.has_grouping:
                 out['x'] = out.groupby(spec.rsg_var_name).cumcount() + 1
-                cols_to_keep.insert(0, spec.rsg_var_name)            
-                cols_to_keep.insert(0, 'x') 
+                cols_to_keep.insert(0, spec.rsg_var_name)
+                cols_to_keep.insert(0, 'x')
             else:
                 out['x'] = out.index + 1
-                cols_to_keep.insert(0, 'x') 
+                cols_to_keep.insert(0, 'x')
 
         out = out[cols_to_keep]
         out = out.round(spec.round_to)
-        
+
         if spec.has_grouping:
-            statistics = gather_analysis_statistics(df=out, statistics_to_collect=['mean','lcl','ucl'], grouping_var=spec.rsg_var_name)
-            split_dict = split_df_by_group(df=out, grouping_var=spec.rsg_var_name)    
-            out=package_analysis(analysis_output=split_dict, summary_statistics_output=statistics)
-        else: 
-            statistics = gather_analysis_statistics(df=out, statistics_to_collect=['mean','lcl','ucl'])
-            _out = {'all':out} # return a dictionary with one result
-            out = package_analysis(analysis_output=_out, summary_statistics_output=statistics)
-        return (out)
+            statistics = gather_analysis_statistics(
+                df=out,
+                statistics_to_collect=['mean', 'lcl', 'ucl'],
+                grouping_var=spec.rsg_var_name
+            )
+            split_dict = split_df_by_group(df=out, grouping_var=spec.rsg_var_name)
+            out = package_analysis(
+                analysis_output=split_dict,
+                summary_statistics_output=statistics
+            )
+        else:
+            statistics = gather_analysis_statistics(
+                df=out,
+                statistics_to_collect=['mean', 'lcl', 'ucl']
+            )
+            _out = {'all': out}
+            out = package_analysis(
+                analysis_output=_out,
+                summary_statistics_output=statistics
+            )
 
+        return out
 
-class R(AbstractAnalysis):
-
-    def __init__(self, df: pd.DataFrame, analysis_specification: AnalysisSpecification):
-        self.df = df
-        self.spec = analysis_specification
-
-    def get_dataset(self) -> pd.DataFrame:
-        return calculate_statistics_R(df=self.df, analysis_specification=self.spec)
-
-    def get_statistics(self):
+    def _calculate_r(self) -> pd.DataFrame:
         """
-        The variant, Product B2, is only able to work correctly with the
-        variant, Product A2. Nevertheless, it accepts any instance of
-        AbstractProductA as an argument.
+        Calculate R (Range) chart statistics.
+
+        Logic moved from calculate_statistics_R()
         """
-        result = "The statistics for R"
-        return result
-    
-    def calculate_statistics(df: pd.DataFrame, analysis_specification: AnalysisSpecification) -> pd.DataFrame:
-        
-        spec = analysis_specification
-        out = df.copy() # To deal with: SettingWithCopyWarning
-        
+        df = self.raw_df
+        spec = self.spec
+        out = prepare_dataset(df=df, analysis_specification=spec)
+
         if spec.zero_center:
             print(f'zero-centering data')
-            zero_mean = out[spec.response_var].mean()        
-            out[spec.response_var] = out[spec.response_var]-zero_mean
-            
-            
+            zero_mean = out[spec.response_var].mean()
+            out[spec.response_var] = out[spec.response_var] - zero_mean
+
         print(f'\nIn calculate statistics R...')
         print(f'\nDataframe has columns: {out.columns.to_list()}')
+
         if spec.has_grouping:
-
             out['mr'] = abs(out.groupby(spec.rsg_var_name)[spec.response_var].diff())
-            
             grouped = out.groupby(spec.rsg_var_name, as_index=False)
-            
-            grouped = grouped.agg(
-                mR = pd.NamedAgg('mr', 'mean')            
-            )    
-            
-            limits = grouped.apply(lambda row: obj.calculate_limits(mean = 0, sd=0, N=0, mR=row.mR, limits_type="R", round_to=spec.round_to), axis=1)
-            
-            grouped = pd.merge(grouped, limits, left_index=True, right_index=True)
-                    
-            out = pd.merge(out, grouped, how='left', on=spec.rsg_var_name)
+            grouped = grouped.agg(mR=pd.NamedAgg('mr', 'mean'))
 
+            limits = grouped.apply(
+                lambda row: obj.calculate_limits(
+                    mean=0,
+                    sd=0,
+                    N=0,
+                    mR=row.mR,
+                    limits_type="R",
+                    round_to=spec.round_to
+                ), axis=1
+            )
+
+            grouped = pd.merge(grouped, limits, left_index=True, right_index=True)
+            out = pd.merge(out, grouped, how='left', on=spec.rsg_var_name)
         else:
-            
             out['mr'] = abs(out[spec.response_var].diff())
             out['mR'] = out['mr'].mean()
-            
-            #Calculate limits
-            #Statistics calculated by group limits applied by row to grouped stats
-            mR = out['mR'].max()   
-            limits = obj.calculate_limits(mean = 0, sd=0, N=0, mR=mR, limits_type="R", round_to=spec.round_to)
+            mR = out['mR'].max()
+            limits = obj.calculate_limits(
+                mean=0,
+                sd=0,
+                N=0,
+                mR=mR,
+                limits_type="R",
+                round_to=spec.round_to
+            )
             out['lcl'] = limits['lcl']
             out['ucl'] = limits["ucl"]
-            
-        #Drop NAs
-        out = out.dropna()   
-        
-            
-        #Calculate Beyond Limits
+
+        # Drop NAs
+        out = out.dropna()
+
+        # Calculate Beyond Limits
         out['beyond_limits'] = np.where(out[spec.response_var] > out['lcl'], -1, 0)
-        out['beyond_limits'] = np.where(out[spec.response_var] > out['ucl'],  1, 0)
-            
-        # Update with new specification capabilities
+        out['beyond_limits'] = np.where(out[spec.response_var] > out['ucl'], 1, 0)
+
         cols_to_keep = ['mr', 'mR', 'lcl', 'ucl', 'beyond_limits']
-        
+
         if spec.has_time:
             if spec.has_grouping:
-                cols_to_keep.insert(0,'rsg')
-                cols_to_keep.insert(0,spec.time_var)             
+                cols_to_keep.insert(0, 'rsg')
+                cols_to_keep.insert(0, spec.time_var)
             else:
                 cols_to_keep.insert(0, spec.time_var)
-        else: #No time
+        else:
             if spec.has_grouping:
                 out['x'] = out.groupby(spec.rsg_var_name).cumcount() + 1
-                cols_to_keep.insert(0,'rsg')
-                cols_to_keep.insert(0, 'x') 
-            else:            
+                cols_to_keep.insert(0, 'rsg')
+                cols_to_keep.insert(0, 'x')
+            else:
                 out['x'] = out.index
                 cols_to_keep.insert(0, 'x')
-        
+
         out = out[cols_to_keep]
         out = out.round(spec.round_to)
-        
-        if spec.has_grouping: # split result if there is a grouping otherwise return the data frame - TODO: add switch for this
-            statistics = gather_analysis_statistics(df=out, statistics_to_collect=['mR','lcl','ucl'], grouping_var=spec.rsg_var_name)
-            split_dict = split_df_by_group(df=out, grouping_var=spec.rsg_var_name)
-            out=package_analysis(analysis_output=split_dict, summary_statistics_output=statistics)    
-        else:
-            statistics = gather_analysis_statistics(df=out, statistics_to_collect=['mR','lcl','ucl'])
-            _out = {'all':out} # return a dictionary with one result
-            out = package_analysis(analysis_output=_out, summary_statistics_output=statistics)  
-        return (out)
 
+        if spec.has_grouping:
+            statistics = gather_analysis_statistics(
+                df=out,
+                statistics_to_collect=['mR', 'lcl', 'ucl'],
+                grouping_var=spec.rsg_var_name
+            )
+            split_dict = split_df_by_group(df=out, grouping_var=spec.rsg_var_name)
+            out = package_analysis(
+                analysis_output=split_dict,
+                summary_statistics_output=statistics
+            )
+        else:
+            statistics = gather_analysis_statistics(
+                df=out,
+                statistics_to_collect=['mR', 'lcl', 'ucl']
+            )
+            _out = {'all': out}
+            out = package_analysis(
+                analysis_output=_out,
+                summary_statistics_output=statistics
+            )
+
+        return out
+
+
+# ============================================================================
+# Module-level Functions
+# ============================================================================
 
 def perform_analysis(df: pd.DataFrame, specification: dict):
-    # TODO: Issue 183 Resolved
-    # TODO: How are requests for multiple analyses made, today it is singular and spec driven based on analysis type
-    # should we drive it off the sampling design state?
-    # analysis_types=["Xbar","S","Imr", "R"]
-
-    analysis_type = specification['analysis_type']
-    spec = AnalysisSpecification(analysis_type=analysis_type, analysis_specification=specification)
-    aspec = AnalysisSpecification(analysis_type, analysis_specification=specification)
-    ads = AnalysisDataSet(df=df, analysis_specification=aspec)
-    df = prepare_dataset(df=df, analysis_specification=spec)
-
-    factory = AnalysisFactory()
-
-    out = None
-
-    if analysis_type == "Xbar":
-
-        out = factory.create_Xbar(df=ads, analysis_specification=spec)
-
-    elif analysis_type == "S":
-
-        out = factory.create_S(df=df, analysis_specification=spec)
-
-    elif analysis_type == "Imr":
-
-        out = factory.create_Imr(df=df, analysis_specification=spec)
-
-    elif analysis_type == "R":
-
-        out = factory.create_R(df=df, analysis_specification=spec)
-
-    else:
-        raise ValueError(f'The analysis type provided: {analysis_type} is not supported!')
-
-    return out.get_dataset()
-
-
-class AbstractAnalysisSpecification(ABC):
-
-    @property
-    @abstractmethod
-    def sort_cols(self) -> list:
-        pass
-
-    @property
-    @abstractmethod
-    def grouping_cols(self) -> bool:
-        pass
-
-    @property
-    @abstractmethod
-    def analysis_output_cols(self) -> list:
-        pass
-
-    @property
-    @abstractmethod
-    def requires_sort(self) -> bool:
-        pass
-
-    @property
-    @abstractmethod
-    def has_time(self) -> bool:
-        pass
-
-    @property
-    @abstractmethod
-    def data_prep_output_cols(self) -> list:
-        pass
-
-    @property
-    @abstractmethod
-    def has_grouping(self) -> bool:
-        pass
-
-   
-
-class AnalysisSpecification(AbstractAnalysisSpecification):
     """
-    **AnalysisSpecification** is a concrete implementation of AbstractAnalysisSpecification and
-    is responsible for validating and processing analysis specifications currently implemented as a dictionary.
+    Main entry point for performing statistical process control analysis.
+
+    Args:
+        df: Input DataFrame with raw data
+        specification: Dictionary containing analysis configuration including 'analysis_type'
+
+    Returns:
+        DataFrame or dict containing analysis results
+
+    Raises:
+        ValueError: If analysis_type is not supported
+    """
+    # Use new unified Analysis class
+    analysis = Analysis(df, specification)
+    return analysis.calculate()
+
+class AnalysisSpecification:
+    """
+    **AnalysisSpecification** is responsible for validating and processing analysis specifications
+    currently implemented as a dictionary.
 
     Given a specification it determines how an analysis is executed and the results that are returned.
     :param str **analysis_type** type of analysis being defined, valide values are:*("Xbar","S","Imr", and "R")*
@@ -673,7 +613,7 @@ class AnalysisSpecification(AbstractAnalysisSpecification):
             self.data_prep_output_cols.insert(0, self.time_var)
 
 
-def validate_columns(df: pd.DataFrame, analysis_specification: AbstractAnalysisSpecification) -> pd.DataFrame:
+def validate_columns(df: pd.DataFrame, analysis_specification: AnalysisSpecification) -> pd.DataFrame:
     spec = analysis_specification
     # TODO: Centralize constants 
     number_column_types = ['int64', 'float64', 'int32', 'Int64', 'Float64', 'Int32', 'category']
@@ -709,7 +649,7 @@ def validate_columns(df: pd.DataFrame, analysis_specification: AbstractAnalysisS
     return df
 
 
-def prepare_dataset(df: pd.DataFrame, analysis_specification: AbstractAnalysisSpecification) -> pd.DataFrame:
+def prepare_dataset(df: pd.DataFrame, analysis_specification: AnalysisSpecification) -> pd.DataFrame:
     print(f'\nEntering call to prepare_data...')
     spec = analysis_specification
     out = df.copy()
@@ -762,328 +702,8 @@ def prepare_dataset(df: pd.DataFrame, analysis_specification: AbstractAnalysisSp
     return out
 
 
-def calculate_statistics_Imr(df: pd.DataFrame, analysis_specification: AnalysisSpecification) -> pd.DataFrame:
-    # For Scenario 2
-    # out['ma'] = df.groupby(spec.rsg_var_name)[spec.response_var].transform(lambda x: x.rolling(2).mean())
-    # out['residual'] = out[spec.response_var] - out['ma'] # Not currently used for adjusted limits
 
-    spec = analysis_specification
 
-    out=df.copy()
-    
-    if spec.zero_center:
-        print(f'zero-centering data')
-        zero_mean = out[spec.response_var].mean()
-        print(f'zero-mean:{zero_mean}')
-        out[spec.response_var] = out[spec.response_var]-zero_mean
-                
-
-    print(f'\nIn calculate statistics IMR...')
-    print(f'\nDataframe has columns: {out.columns.to_list()}')
-    if spec.has_grouping:
-
-        out['mr'] = abs(out.groupby(spec.rsg_var_name)[spec.response_var].diff())
-
-        grouped = out.groupby(spec.rsg_var_name, as_index=False)
-
-        grouped = grouped.agg(
-            mean=pd.NamedAgg(spec.response_var, 'mean'),
-            mR=pd.NamedAgg('mr', 'mean')
-        )
-
-        limits = grouped.apply(
-            lambda row: obj.calculate_limits(mean=row['mean'], sd=0, N=0, mR=row.mR, limits_type="Imr"), axis=1)
-
-        grouped = pd.merge(grouped, limits, left_index=True, right_index=True)
-
-        out = pd.merge(out, grouped, how='left', on=spec.rsg_var_name)
-
-    else:
-
-        out['mR'] = abs(out[spec.response_var].diff()).mean()
-
-        out['mean'] = out[spec.response_var].mean()
-
-        mR = out['mR'].max()
-
-        _mean = out['mean'].max()
-
-        limits = obj.calculate_limits(mean=_mean, sd=0, N=0, mR=mR, limits_type="Imr", round_to=spec.round_to)
-
-        out['lcl'] = limits['lcl']
-        out['ucl'] = limits['ucl']
-
-    out['beyond_limits'] = np.where(out[spec.response_var] < out['lcl'], -1, 0)
-    out['beyond_limits'] = np.where(out[spec.response_var] > out['ucl'], 1, 0)
-
-    # Swap out conditional logic when spec class is implemented
-    cols_to_keep = [spec.response_var, 'mean', 'lcl', 'ucl', 'beyond_limits']
-
-    if spec.has_time:
-        if spec.has_grouping:  # Use time and grouping
-            cols_to_keep.insert(0, spec.rsg_var_name)
-            cols_to_keep.insert(0, spec.time_var)
-        else:
-            cols_to_keep.insert(0, spec.time_var)
-            # 301 - when provided sort by time dimension
-    else:
-        if spec.has_grouping:
-            out['x'] = out.groupby(spec.rsg_var_name).cumcount() + 1
-            cols_to_keep.insert(0, spec.rsg_var_name)
-            cols_to_keep.insert(0, 'x')
-        else:
-            out['x'] = out.index + 1
-            cols_to_keep.insert(0, 'x')
-
-    out = out[cols_to_keep]
-    out = out.round(spec.round_to)
-
-    if spec.has_grouping:
-        statistics = gather_analysis_statistics(df=out, statistics_to_collect=['mean', 'lcl', 'ucl'],
-                                                grouping_var=spec.rsg_var_name)
-        split_dict = split_df_by_group(df=out, grouping_var=spec.rsg_var_name)
-        out = package_analysis(analysis_output=split_dict, summary_statistics_output=statistics)
-    else:
-        statistics = gather_analysis_statistics(df=out, statistics_to_collect=['mean', 'lcl', 'ucl'])
-        _out = {'all': out}  # return a dictionary with one result
-        out = package_analysis(analysis_output=_out, summary_statistics_output=statistics)
-    return (out)
-
-
-def calculate_statistics_R(df: pd.DataFrame, analysis_specification: AnalysisSpecification) -> pd.DataFrame:
-    spec = analysis_specification
-
-    out = df.copy() # To deal with: SettingWithCopyWarning
-    
-    if spec.zero_center:
-        print(f'zero-centering data')
-        zero_mean = out[spec.response_var].mean()        
-        out[spec.response_var] = out[spec.response_var]-zero_mean
-        
-        
-
-    print(f'\nIn calculate statistics R...')
-    print(f'\nDataframe has columns: {out.columns.to_list()}')
-    if spec.has_grouping:
-
-        out['mr'] = abs(out.groupby(spec.rsg_var_name)[spec.response_var].diff())
-
-        grouped = out.groupby(spec.rsg_var_name, as_index=False)
-
-        grouped = grouped.agg(
-            mR=pd.NamedAgg('mr', 'mean')
-        )
-
-        limits = grouped.apply(
-            lambda row: obj.calculate_limits(mean=0, sd=0, N=0, mR=row.mR, limits_type="R", round_to=spec.round_to),
-            axis=1)
-
-        grouped = pd.merge(grouped, limits, left_index=True, right_index=True)
-
-        out = pd.merge(out, grouped, how='left', on=spec.rsg_var_name)
-
-    else:
-
-        out['mr'] = abs(out[spec.response_var].diff())
-        out['mR'] = out['mr'].mean()
-
-        # Calculate limits
-        # Statistics calculated by group limits applied by row to grouped stats
-        mR = out['mR'].max()
-        limits = obj.calculate_limits(mean=0, sd=0, N=0, mR=mR, limits_type="R", round_to=spec.round_to)
-        out['lcl'] = limits['lcl']
-        out['ucl'] = limits["ucl"]
-
-    # Drop NAs
-    out = out.dropna()
-
-    # Calculate Beyond Limits
-    out['beyond_limits'] = np.where(out[spec.response_var] > out['lcl'], -1, 0)
-    out['beyond_limits'] = np.where(out[spec.response_var] > out['ucl'], 1, 0)
-
-    # Update with new specification capabilities
-    cols_to_keep = ['mr', 'mR', 'lcl', 'ucl', 'beyond_limits']
-    if spec.has_time:
-        if spec.has_grouping:
-            cols_to_keep.insert(0, 'rsg')
-            cols_to_keep.insert(0, spec.time_var)
-        else:
-            cols_to_keep.insert(0, spec.time_var)
-    else:  # No time
-        if spec.has_grouping:
-            out['x'] = out.groupby(spec.rsg_var_name).cumcount() + 1
-            cols_to_keep.insert(0, 'rsg')
-            cols_to_keep.insert(0, 'x')
-        else:
-            out['x'] = out.index
-            cols_to_keep.insert(0, 'x')
-
-    out = out[cols_to_keep]
-    out = out.round(spec.round_to)
-
-    if spec.has_grouping:  # split result if there is a grouping otherwise return the data frame - TODO: add switch for this
-        statistics = gather_analysis_statistics(df=out, statistics_to_collect=['mR', 'lcl', 'ucl'],
-                                                grouping_var=spec.rsg_var_name)
-        split_dict = split_df_by_group(df=out, grouping_var=spec.rsg_var_name)
-        out = package_analysis(analysis_output=split_dict, summary_statistics_output=statistics)
-    else:
-        statistics = gather_analysis_statistics(df=out, statistics_to_collect=['mR', 'lcl', 'ucl'])
-        _out = {'all': out}  # return a dictionary with one result
-        out = package_analysis(analysis_output=_out, summary_statistics_output=statistics)
-    return (out)
-
-
-def calculate_statistics_S(df: pd.DataFrame, analysis_specification: AnalysisSpecification) -> pd.DataFrame:
-    # TODO: update to use analysis spec to determine cals to do for S and xbar.
-    spec = analysis_specification
-
-    out = df.copy()
-
-    out = out.groupby(spec.rsg_var_name, as_index=False).agg(
-        s=pd.NamedAgg(column=spec.response_var, aggfunc="std"),
-        n=pd.NamedAgg(column=spec.rsg_var_name, aggfunc="count"),
-    )
-
-    # remove RSGs with a single observation
-    mask = out['n'].eq(1)
-    out = out[~mask]
-
-    out['S'] = out["s"].mean()
-    out['groups'] = out["n"].count()
-    out['N'] = out['n'].max()
-
-    # if subgroup sizes are equal use N (limits will be same for all groups)
-    n_max = out['n'].max()  # get max value for group size
-
-    n_to_use = "N" if (out['n'].eq(n_max).all()) else "n"
-    # Add limits columns
-    out[['lcl', 'ucl']] = out.apply(
-        lambda row: obj.calculate_limits(mean=0, sd=row['S'],
-                                         N=row[n_to_use], limits_type="S", round_to=spec.round_to), axis=1
-    )
-
-    out['beyond_limits'] = out.apply(
-        lambda row: obj.detect_beyond_limits(x=row['S'],
-                                             ucl=row['ucl'], lcl=row['lcl']), axis=1
-    )
-
-    cols_to_keep = ['rsg', 's', 'S', 'lcl', 'ucl', 'beyond_limits']
-
-    out = out[cols_to_keep]
-    out = out.round(spec.round_to)
-    return (out)
-
-
-def calculate_statistics_XbarS(df: pd.DataFrame, analysis_specification: AnalysisSpecification) -> pd.DataFrame:
-    # TODO: update to use analysis spec to determine cals to do for S and xbar.
-    spec = analysis_specification
-    result = {}  # dictionary containing both Xbar and S analysis results
-    statistics = {}  # dictionary to collect statistics about both Xbar and S
-    out = df.copy()
-
-    print(f'\nIn calculate statistics XbarS...')
-    print(f'\nDataframe has columns: {out.columns.to_list()}')
-    print(f'\n{out.head(10)}')
-    print(f'\nn.max={out["n"].max()}')
-
-    if spec.zero_center:
-        print(f'zero-centering data')
-        zero_mean = out[spec.response_var].mean()
-
-        out[spec.response_var] = out[spec.response_var]-zero_mean        
-    
-
-    out = out.groupby(spec.rsg_var_name, as_index=False).agg(
-        s=pd.NamedAgg(column=spec.response_var, aggfunc="std"),
-        mean=pd.NamedAgg(column=spec.response_var, aggfunc="mean"),
-        n=pd.NamedAgg(column='n', aggfunc="max")
-    )
-
-    # 294 Handle case where no subgroups have >1 observation
-    if out.shape[0] == 0:
-        raise ValueError("All subgroups have 1 or less observations!")
-
-    _Xbar = out["mean"].mean()
-    out['Xbar'] = _Xbar  # out["mean"].mean()
-    _S = out["s"].mean()
-    out['S'] = _S  # out["s"].mean()
-    _N = out['n'].max()
-    out['N'] = _N  # out['n'].max()
-
-    # if subgroup sizes are equal use N (limits will be same for all groups) if they are different use n (limits will vary by group)
-    n_max = _N  # out['n'].max()  # get max value for group size
-
-    n_to_use = "N" if out['n'].eq(n_max).all() else "n"
-    print(f'Analysis is using: {n_to_use} for calculations!\nScenario: {1 if n_to_use == "N" else 2}')
-
-    # CALCULATE XBAR
-    xbar = out.copy()
-
-    xbar[['lcl', 'ucl']] = xbar.apply(
-        lambda row: obj.calculate_limits(mean=row['Xbar'],
-                                         sd=row['S'], N=row[n_to_use], limits_type='Xbar', round_to=spec.round_to),
-        axis=1
-    )
-
-    xbar['beyond_limits'] = xbar.apply(
-        lambda row: obj.detect_beyond_limits(x=row['mean'],
-                                             ucl=row['ucl'], lcl=row['lcl']), axis=1
-    )
-
-    # Round final output to specified decimal places
-    xbar = xbar.round(spec.round_to)
-
-    # TODO: Ugh! Refactor this mess...
-    statistics['Mean'] = round(_Xbar, spec.round_to)
-    if n_to_use == "N":  # all RSGs are same size
-        statistics['N'] = _N
-        statistics['ucl'] = xbar['ucl'].max()
-        statistics['lcl'] = xbar['lcl'].max()
-    else:
-        variable_stats = 'Varies'
-        statistics['N'] = variable_stats
-        statistics['lcl'] = variable_stats
-        statistics['ucl'] = variable_stats
-
-    # TODO: replace with spec
-    cols_to_keep = ['rsg', 'mean', 'Xbar', 'lcl', 'ucl', 'beyond_limits']
-
-    xbar = xbar[cols_to_keep]
-
-    result['Xbar'] = {'data': xbar, 'statistics': statistics}
-    # CALCULATE S - To make DRY Consider refactoring S function to take grouped dataset
-    statistics = {}
-    statistics['S'] = round(_S, spec.round_to)
-
-    sbar = out.copy()
-    sbar[['lcl', 'ucl']] = sbar.apply(
-        lambda row: obj.calculate_limits(mean=0, sd=row['S'],
-                                         N=row[n_to_use], limits_type="S", round_to=spec.round_to), axis=1
-    )
-
-    sbar['beyond_limits'] = sbar.apply(
-        lambda row: obj.detect_beyond_limits(x=row['S'],
-                                             ucl=row['ucl'], lcl=row['lcl']), axis=1
-    )
-
-    sbar = sbar.round(spec.round_to)
-
-    if n_to_use == "N":  # all RSGs are same size
-        statistics['N'] = _N
-        statistics['ucl'] = sbar['ucl'].max()
-        statistics['lcl'] = sbar['lcl'].max()
-    else:
-        variable_stats = 'Varies'
-        statistics['N'] = variable_stats
-        statistics['lcl'] = variable_stats
-        statistics['ucl'] = variable_stats
-
-    cols_to_keep = ['rsg', 's', 'S', 'lcl', 'ucl', 'beyond_limits']
-
-    sbar = sbar[cols_to_keep]
-    result['Sbar'] = {'data': sbar, 'statistics': statistics}
-
-    return (result)
 
 
 def split_df_by_group(df: pd.DataFrame, grouping_var: str) -> dict:
@@ -1205,32 +825,7 @@ def package_analysis(analysis_output: dict, summary_statistics_output: dict):
     
     return (out)
 
-class AbstractAnalysisDataSet(ABC):
-    """
-    Each distinct product of a product family should have a base interface. All
-    variants of the product must implement this interface.
-    """
-    @property
-    @abstractmethod
-    def raw_dataset(self) -> pd.DataFrame:
-        pass
-    
-    @property
-    @abstractmethod
-    def analysis_dataset(self) -> pd.DataFrame:
-        pass    
-    
-    @property
-    @abstractmethod
-    def sampling_design_state(self) -> int:
-        pass
-    
-    @property
-    @abstractmethod
-    def statistics(self) -> dict:
-        pass
-    
-class AnalysisDataSet(AbstractAnalysisDataSet):
+class AnalysisDataSet:
     
     def __init__(self, df: pd.DataFrame, analysis_specification: AnalysisSpecification):
         self.raw_dataset = df
