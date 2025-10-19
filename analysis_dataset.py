@@ -542,7 +542,7 @@ class AnalysisSpecification:
         if self.zero_center not in [True, False]:
             raise ValueError(f'Supplied value for zero-centered needs to be True or False')
 
-        self.has_grouping = True if self.rsg_vars is not None else False
+        #self.has_grouping = True if self.rsg_vars is not None else False
         self.has_time = True if self.time_var is not None else False
         self.grouping_cols = self.rsg_var_name if self.has_grouping else []
 
@@ -567,8 +567,10 @@ class AnalysisSpecification:
     def sort_cols(self) -> list:
         self.sort_cols
 
+    @property
     def has_grouping(self) -> bool:
-        self.has_grouping
+        """Return True if rational subgrouping variables are defined."""
+        return self.rsg_vars is not None
 
     def grouping_cols(self) -> list:
         self.grouping_cols
@@ -585,7 +587,6 @@ class AnalysisSpecification:
         # Address time var in output
         self.analysis_output_cols.insert(0, self.time_var) if self.has_time else self.analysis_output_cols.insert(0,
                                                                                                                   "x")
-
     def _build_sort_cols(self):
         # TODO: Need to factor in time unit
         # Both grouping var and time need to be provided to enable sorting
@@ -593,10 +594,6 @@ class AnalysisSpecification:
             self.sort_cols = [self.rsg_var_name, self.time_var]
         elif self.has_time:
             self.sort_cols = [self.time_var]
-
-   
-
-    
 
     def _build_data_prep_cols(self) -> list:
         """
@@ -625,7 +622,7 @@ def validate_columns(df: pd.DataFrame, analysis_specification: AnalysisSpecifica
     date_column_types = ['int64', 'int32', 'Int64', 'Int32', 'datetime64[ns]', 'object']
 
     df_cols = df.columns.tolist()
-
+    logger.info(f'Spec has grouping: {spec.has_grouping}')
     if spec.has_grouping:
 
         if not all(item in df_cols for item in spec.rsg_vars):
@@ -839,17 +836,166 @@ class AnalysisDataSet:
         self.interactions = {}
         self.effects = {}
         self.Rbar=0
+        # Validate and prepare data
         self.__validate_columns()
         self.analysis_dataset = self.__prepare_dataset()
+        # Detect SDS
         self.sampling_design_state = self.__calculate_sampling_design_state()
-        
-        if self.sampling_design_state != 0:
-            
+        self.sds_characteristics = self.__get_sds_characteristics()
+        logger.info(self.analysis_summary)
+
+        # Get characteristics for logging/reporting
+        logger.info(
+            f"Detected: SDS {self.sampling_design_state} - "
+            f"{self.sds_characteristics['description']}")
+
+        # Validate BEFORE calculating (catch issues early)
+        self.__validate_sds_for_analysis()
+        # Calculate VAS residuals only when appropriate
+        if self.__should_calculate_vas_residuals():
+            logger.debug("Calculating VAS residuals (R1-R5)")
             self.__calculate_residuals()
             self.__calculate_centered_residuals()
             self.__calculate_interactions()   
-            self.__calculate_effects()     
-       
+            self.__calculate_effects()
+        else:
+            logger.debug(
+                f"Skipping VAS residuals for analysis_type={self.spec.analysis_type}, "
+                f"SDS={self.sampling_design_state}"
+            )
+  
+    def __should_calculate_vas_residuals(self) -> bool:
+        """
+        Determine if VAS residual decomposition (R1-R5) should be calculated.
+        
+        VAS residuals are the foundation of Wheeler/Bishop's variance analysis
+        system. They decompose total variation into components:
+        - R1: Total deviation from grand mean
+        - R2: Within-cell (unexplained) variation
+        - R3: Interaction effects (factor × time)
+        - R4: Time effects + unexplained
+        - R5: Factor effects + unexplained
+        
+        Calculate VAS residuals when:
+        1. User requests Xbar or S chart (cell-level analysis)
+        2. AND we have proper (k,t) factorial structure (SDS 1, 2, 3)
+        3. Purpose: Decompose variance, analyze interactions
+        
+        Do NOT calculate VAS residuals when:
+        1. User requests IMR or R chart (individual-level analysis)
+        2. OR no proper structure (SDS 0, 4, 6)
+        3. Purpose: Monitor individual values over time (possibly stratified)
+        
+        Key Insight:
+        -----------
+        **Grouping variables serve different purposes:**
+        
+        For Xbar-S: Grouping defines CELLS for variance decomposition
+            → Need R1-R5 to analyze factor/time/interaction effects
+            → VAS residuals ARE the point
+        
+        For IMR/R: Grouping defines STRATA for separate charts
+            → Each group gets own IMR chart with own limits
+            → VAS residuals NOT needed (different methodology)
+            → This is the "automatic stratification" killer feature
+        
+        Examples:
+        --------
+        >>> # VAS Analysis (needs residuals)
+        >>> spec = {'analysis_type': 'Xbar', 'rsg_vars': ['lane'], 'time_var': 'pull'}
+        >>> ads = AnalysisDataSet(df, spec)
+        >>> ads.__should_calculate_vas_residuals()  # → True
+        >>> # Gets: R1-R5, interactions, effects
+        
+        >>> # Stratified IMR (doesn't need residuals)
+        >>> spec = {'analysis_type': 'Imr', 'rsg_vars': ['lane'], 'time_var': 'pull'}
+        >>> ads = AnalysisDataSet(df, spec)  
+        >>> ads.__should_calculate_vas_residuals()  # → False
+        >>> # Gets: Separate IMR chart per lane with lane-specific limits
+        
+        Returns:
+            True if VAS residuals should be calculated, False otherwise
+        """
+        
+        # Quick rejections - clearly don't need VAS
+        if self.sampling_design_state == 0:
+            logger.debug("No VAS: SDS 0 (no structure)")
+            return False
+        
+        if self.sampling_design_state == 4:
+            logger.debug("No VAS: SDS 4 (single condition over time)")
+            return False
+        
+        if self.sampling_design_state == 6:
+            logger.debug("No VAS: SDS 6 (irregular grid - can't form proper cells)")
+            return False
+        
+        # KEY DECISION: Analysis type determines if we need VAS
+        # 
+        # Xbar/S → Analyzing CELL statistics (means/std devs)
+        #          Need VAS to decompose variance components
+        #
+        # IMR/R  → Analyzing INDIVIDUAL values over time
+        #          Use moving ranges, don't need factorial decomposition
+        #          Grouping just creates separate charts (stratification)
+        
+        if self.spec.analysis_type in ['Imr', 'R']:
+            logger.debug(
+                f"No VAS: {self.spec.analysis_type} analysis uses moving ranges, "
+                f"not factorial decomposition. "
+                f"Grouping creates stratified charts (separate chart per group)."
+            )
+            return False
+        
+        # At this point: Xbar or S chart with structure
+        if self.sampling_design_state in [1, 2, 3]:
+            logger.debug(
+                f"Calculate VAS: SDS {self.sampling_design_state} with "
+                f"{self.spec.analysis_type} analysis supports full decomposition"
+            )
+            return True
+        
+        # SDS 5 (nested) - special case
+        if self.sampling_design_state == 5:
+            logger.warning(
+                "SDS 5 (nested design) detected with Xbar-S analysis. "
+                "VAS decomposition for nested structures requires special handling. "
+                "Proceeding with standard VAS - results may need interpretation."
+            )
+            return True
+        
+        # Shouldn't reach here, but be conservative
+        logger.debug(f"No VAS: Unexpected case (SDS={self.sampling_design_state})")
+        return False
+    
+    @property
+    def has_vas_residuals(self) -> bool:
+        """Check if VAS residuals were calculated."""
+        return 'R1' in self.analysis_dataset.columns
+
+    @property  
+    def analysis_summary(self) -> dict:
+        """
+        Get comprehensive summary of the analysis dataset.
+        
+        Returns:
+            Dictionary with analysis metadata including:
+            - sds: Detected sampling design state
+            - sds_info: Full SDS characteristics
+            - has_vas: Whether VAS residuals calculated
+            - n_observations: Total observations
+            - n_groups: Number of unique groups
+            - n_time_periods: Number of time periods
+        """
+        summary = {
+            'sds': self.sampling_design_state,
+            'sds_info': self.sds_characteristics,
+            'has_vas_residuals': self.has_vas_residuals,
+            'n_observations': len(self.analysis_dataset),
+            'analysis_type': self.spec.analysis_type
+        }
+        return summary
+
     def sampling_design_state(self) -> int:
         self.sampling_design_state
         
@@ -991,59 +1137,381 @@ class AnalysisDataSet:
 
         return out
     
+    
     def __calculate_sampling_design_state(self):
         """
         Detect Sampling Design State (SDS) from the current dataset and specification.
 
-        Currently Implemented States:
-        ------------------------------
-        - **SDS 1**: Full replication - every (k,t) cell has n>=2 observations
-          * Enables calculation of within-cell variance (R2)
-          * Supports full interaction analysis
+        This function implements the complete SDS classification system from the
+        Variance Analysis System (VAS) framework by Wheeler and Bishop.
 
-        - **SDS 2**: No replication - every (k,t) cell has n==1 observation
-          * Uses moving average residuals for variance estimation
-          * Limited interaction analysis capability
+        Sampling Design States:
+        ----------------------
+        SDS 0: No structure
+            - No grouping or time variables specified
+            - Default/fallback state
+            - Limited analysis capabilities
 
-        - **SDS 0**: Default/Fallback - no grouping or time structure
-          * Returns 0 when grouping/time variables are not provided
+        SDS 1: Full replication
+            - Every (k,t) cell has n≥2 observations
+            - Enables direct within-cell variance estimation (R2)
+            - Supports full interaction analysis
+            - Most statistically powerful
 
-        Not Yet Implemented (Future Enhancement):
-        -----------------------------------------
-        - SDS 3: Partial replication - mixture of n==1 and n>=2 across cells
-        - SDS 4: Single condition over time - K==1 with time dimension
-        - SDS 5: Nested design - >=2 design vars with asynchronous time coverage
-        - SDS 6: Unstructured - no time OR cannot form (k,t) cells
+        SDS 2: No replication  
+            - Every (k,t) cell has exactly n=1 observation
+            - Requires moving average for R2 estimation
+            - Limited interaction analysis
+            - Common in designed experiments
+
+        SDS 3: Partial replication
+            - Mix of n=1 and n≥2 cells
+            - Requires hybrid R2 estimation
+            - Most common in real-world data
+            - Challenging to analyze correctly
+
+        SDS 4: Single condition over time
+            - Only one factor level (K=1)
+            - Multiple time points (T>1)
+            - Time series structure
+            - Appropriate for IMR charts
+
+        SDS 5: Nested design with asynchronous coverage
+            - Hierarchical factor structure (Factor 2 nested in Factor 1)
+            - Not all factor combinations present at all times
+            - Irregular temporal patterns
+            - Requires variance components
+
+        SDS 6: Unstructured/regime changes
+            - Cannot form regular (k,t) grid
+            - Irregular sampling patterns
+            - May have regime changes or process shifts
+            - Complex time structure
+
+        Detection Logic:
+        ---------------
+        1. Check for basic structure (grouping and/or time)
+        2. If both present, check for nested structure (SDS 5)
+        3. Examine cell size distribution:
+        - All n≥2 → SDS 1
+        - All n=1 → Check for complete grid
+        - Mixed → SDS 3
+        4. Check for single condition (SDS 4)
+        5. Check for irregular grid (SDS 6)
 
         Returns:
-        --------
+        -------
         int
             0 = No structure (default)
-            1 = SDS 1 (full replication)
-            2 = SDS 2 (no replication)
+            1 = Full replication
+            2 = No replication (complete unreplicated factorial)
+            3 = Partial replication
+            4 = Single condition over time
+            5 = Nested design
+            6 = Unstructured/regime changes
 
         Notes:
         ------
-        The implementation currently handles the two most common scenarios in
-        statistical process control. Future versions will extend support to
-        handle mixed replication patterns (SDS 3-6).
+        The detection is conservative - if unsure, defaults to a simpler SDS.
+        SDS 3 (partial replication) is the most common in practice but also
+        the most complex to handle correctly.
 
         References:
-        -----------
+        ----------
         Wheeler, D. J. (1995). Advanced Topics in Statistical Process Control.
         """
-        out = 0
-        logger.warning("System currently only handling SDS 1 & 2 for grouped data, no groups defaults to 0")
+    
+        # ========================================================================
+        # SDS 0: No structure - neither grouping nor time specified
+        # ========================================================================
+        if not (self.spec.has_grouping and self.spec.has_time):
+            logger.info("SDS 0: No grouping or time structure")
+            return 0
+    
+        # ========================================================================
+        # From here on, we have both grouping and time variables
+        # ========================================================================
         
-        if self.spec.has_grouping and self.spec.has_time:
+        grouping_vars = [self.spec.rsg_var_name, self.spec.time_var]
+        
+        # Count observations per (k,t) cell
+        cell_sizes = (self.analysis_dataset
+                    .groupby(grouping_vars, dropna=False)[self.spec.response_var]
+                    .count())
+        
+        n_cells = len(cell_sizes)
+        min_n = cell_sizes.min()
+        max_n = cell_sizes.max()
+    
+        # Calculate theoretical full grid size
+        n_groups = self.analysis_dataset[self.spec.rsg_var_name].nunique()
+        n_times = self.analysis_dataset[self.spec.time_var].nunique()
+        full_grid_size = n_groups * n_times
+        
+        logger.debug(f"SDS Detection: {n_groups} groups × {n_times} times = {full_grid_size} possible cells")
+        logger.debug(f"SDS Detection: {n_cells} cells observed, n range: [{min_n}, {max_n}]")
+    
+        # ========================================================================
+        # SDS 5: Nested design - check for hierarchical structure
+        # ========================================================================
+        # In nested designs, one factor is nested within another
+        # Example: heads nested within lanes (each head belongs to one lane only)
+        
+        if len(self.spec.rsg_vars) >= 2:
+            # Check if second factor is nested within first
+            # Each level of factor 2 should appear with only one level of factor 1
             
-            grouping_vars = [self.spec.rsg_var_name, self.spec.time_var]
-            group_sizes = (self.analysis_dataset.groupby(grouping_vars)[self.spec.response_var].count())
-            logger.debug('Group sizes: %s', group_sizes)
-            if all(group_sizes>=2): out = 1
-            if all(group_sizes==1): out = 2        
+            factor1 = self.spec.rsg_vars[0]
+            factor2 = self.spec.rsg_vars[1]
+            
+            # Count how many levels of factor1 each level of factor2 appears with
+            nesting_check = (self.analysis_dataset
+                            .groupby(factor2)[factor1]
+                            .nunique())
         
-        return out
+            is_nested = (nesting_check == 1).all()
+            
+            if is_nested:
+                # Additional check: incomplete temporal coverage (asynchronous)
+                # In true SDS 5, not all factor combinations appear at all times
+                coverage_ratio = n_cells / full_grid_size
+                
+                if coverage_ratio < 0.90:  # Less than 90% coverage
+                    logger.info(
+                        f"SDS 5: Nested design detected - {factor2} nested in {factor1}, "
+                        f"{coverage_ratio:.1%} grid coverage"
+                    )
+                    return 5
+                else:
+                    logger.debug(
+                        f"Nested structure detected but high coverage ({coverage_ratio:.1%}) - "
+                        f"treating as crossed design"
+                    )
+        
+        # ========================================================================
+        # SDS 4: Single condition over time
+        # ========================================================================
+        # Only one factor level but multiple time points
+        
+        if n_groups == 1 and n_times > 1:
+            logger.info(f"SDS 4: Single condition over time ({n_times} time points)")
+            return 4
+        
+        # ========================================================================
+        # SDS 6: Unstructured / Incomplete grid
+        # ========================================================================
+        # Check if we have an irregular (factor × time) grid
+        # This indicates irregular sampling or regime changes
+        
+        coverage_ratio = n_cells / full_grid_size
+        
+        if coverage_ratio < 0.75:  # Less than 75% of cells have data
+            logger.info(
+                f"SDS 6: Unstructured/incomplete grid - "
+                f"{n_cells}/{full_grid_size} cells present ({coverage_ratio:.1%})"
+            )
+            return 6
+    
+        # ========================================================================
+        # SDS 1, 2, 3: Based on cell size distribution
+        # ========================================================================
+        # At this point we have a reasonably complete (k,t) grid
+        
+        # Count cells by size
+        cells_with_n1 = (cell_sizes == 1).sum()
+        cells_with_n2_plus = (cell_sizes >= 2).sum()
+        
+        logger.debug(f"SDS Detection: {cells_with_n1} cells with n=1, {cells_with_n2_plus} cells with n≥2")
+        
+        # --------------------------------------------------------------------
+        # SDS 1: Full replication - ALL cells have n≥2
+        # --------------------------------------------------------------------
+        if min_n >= 2:
+            logger.info(f"SDS 1: Full replication (all cells have n≥2, range: [{min_n}, {max_n}])")
+            return 1
+        
+        # --------------------------------------------------------------------
+        # SDS 2: No replication - ALL cells have n=1
+        # --------------------------------------------------------------------
+        if max_n == 1:
+            # Verify this is truly a complete unreplicated factorial
+            if coverage_ratio >= 0.95:  # At least 95% complete
+                logger.info(f"SDS 2: No replication (all cells have n=1, {coverage_ratio:.1%} complete)")
+                return 2
+            else:
+                # Incomplete grid with all n=1 → treat as SDS 6
+                logger.info(
+                    f"SDS 6: Incomplete grid with no replication "
+                    f"({coverage_ratio:.1%} coverage)"
+                )
+                return 6
+    
+        # --------------------------------------------------------------------
+        # SDS 3: Partial replication - Mix of n=1 and n≥2
+        # --------------------------------------------------------------------
+        if cells_with_n1 > 0 and cells_with_n2_plus > 0:
+            pct_replicated = 100 * cells_with_n2_plus / n_cells
+            logger.info(
+                f"SDS 3: Partial replication - "
+                f"{cells_with_n2_plus}/{n_cells} cells replicated ({pct_replicated:.1f}%), "
+                f"n range: [{min_n}, {max_n}]"
+            )
+            return 3
+    
+        # ========================================================================
+        # Fallback: Should not reach here, but default to SDS 0
+        # ========================================================================
+        logger.warning(
+            f"SDS Detection: Unexpected case - defaulting to SDS 0. "
+            f"n_groups={n_groups}, n_times={n_times}, n_cells={n_cells}, "
+            f"min_n={min_n}, max_n={max_n}"
+        )
+        return 0
+
+
+# ============================================================================
+# Additional Helper Methods for SDS-Specific Logic
+# ============================================================================
+
+    def __get_sds_characteristics(self) -> dict:
+        """
+        Get detailed characteristics of the detected SDS.
+        
+        Returns dictionary with:
+        - sds: The detected SDS number
+        - description: Human-readable description
+        - replication_type: 'full', 'none', 'partial', 'single', 'nested', 'irregular'
+        - r2_method: How R2 should be calculated
+        - capabilities: What analyses are supported
+        
+        This can be useful for logging, reporting, and determining analysis approach.
+        
+        Returns:
+            Dictionary with SDS characteristics
+        """
+        sds = self.sampling_design_state
+        
+        characteristics = {
+            0: {
+                'description': 'No grouping or time structure',
+                'replication_type': 'none',
+                'r2_method': 'not_applicable',
+                'capabilities': ['basic_statistics_only'],
+                'interaction_analysis': False,
+                'variance_decomposition': False
+            },
+            1: {
+                'description': 'Full replication (all cells n≥2)',
+                'replication_type': 'full',
+                'r2_method': 'within_cell',
+                'capabilities': ['full_vas', 'all_residuals', 'interactions', 'main_effects'],
+                'interaction_analysis': True,
+                'variance_decomposition': True
+            },
+            2: {
+                'description': 'No replication (all cells n=1)',
+                'replication_type': 'none',
+                'r2_method': 'moving_average',
+                'capabilities': ['all_residuals', 'limited_interactions', 'main_effects'],
+                'interaction_analysis': 'limited',
+                'variance_decomposition': True
+            },
+            3: {
+                'description': 'Partial replication (mixed n=1 and n≥2)',
+                'replication_type': 'partial',
+                'r2_method': 'hybrid',
+                'capabilities': ['all_residuals', 'partial_interactions', 'main_effects'],
+                'interaction_analysis': 'partial',
+                'variance_decomposition': True
+            },
+            4: {
+                'description': 'Single condition over time (K=1)',
+                'replication_type': 'single_stream',
+                'r2_method': 'moving_range',
+                'capabilities': ['time_series', 'imr_chart', 'trend_analysis'],
+                'interaction_analysis': False,
+                'variance_decomposition': False
+            },
+            5: {
+                'description': 'Nested design with asynchronous coverage',
+                'replication_type': 'nested',
+                'r2_method': 'nested_variance_components',
+                'capabilities': ['variance_components', 'nested_effects', 'hierarchical_analysis'],
+                'interaction_analysis': 'hierarchical',
+                'variance_decomposition': 'hierarchical'
+            },
+            6: {
+                'description': 'Unstructured/irregular grid',
+                'replication_type': 'irregular',
+                'r2_method': 'adaptive',
+                'capabilities': ['regime_detection', 'adaptive_limits', 'sparse_analysis'],
+                'interaction_analysis': False,
+                'variance_decomposition': 'limited'
+            }
+        }
+        
+        result = characteristics.get(sds, characteristics[0]).copy()
+        result['sds'] = sds
+        
+        return result
+
+
+    def __validate_sds_for_analysis(self) -> bool:
+        """
+        Validate that the detected SDS is appropriate for the requested analysis.
+        
+        Returns True if analysis can proceed, raises ValueError with helpful
+        message if not.
+        
+        Examples of issues caught:
+        - Requesting Xbar-S chart on SDS 2 (no within-cell variance)
+        - Requesting full VAS on SDS 0 (no structure)
+        - Insufficient data for requested analysis type
+        """
+        sds = self.sampling_design_state
+        analysis_type = self.spec.analysis_type
+        
+        # SDS 0: Very limited capabilities
+        if sds == 0:
+            if analysis_type in ['Xbar', 'S']:
+                raise ValueError(
+                    f"Cannot perform {analysis_type} analysis without grouping structure. "
+                    f"Detected SDS 0 (no grouping or time variables). "
+                    f"Consider using 'Imr' analysis or specify grouping variables."
+                )
+        
+        # SDS 2: No within-cell variance
+        if sds == 2:
+            if analysis_type in ['Xbar', 'S']:
+                logger.warning(
+                    f"SDS 2 detected: No replication (all cells n=1). "
+                    f"{analysis_type} analysis will use moving average for variance estimation. "
+                    f"Consider using 'Imr' analysis instead."
+                )
+        
+        # SDS 4: Single stream - limited to IMR
+        if sds == 4:
+            if analysis_type not in ['Imr', 'R']:
+                logger.warning(
+                    f"SDS 4 detected: Single condition over time. "
+                    f"{analysis_type} analysis may not be appropriate. "
+                    f"Consider using 'Imr' analysis."
+                )
+        
+        # SDS 6: Irregular - may have issues
+        if sds == 6:
+            logger.warning(
+                f"SDS 6 detected: Unstructured/irregular grid. "
+                f"Analysis results may be unreliable due to incomplete data coverage. "
+                f"Consider checking for missing data or irregular sampling patterns."
+            )
+        
+        return True
+
+
+    # ============================================================================
+    # Usage Example in AnalysisDataSet.__init__
+    # ============================================================================
     
     def __calculate_Ybar(self):
         out = self.analysis_dataset[self.spec.response_var].mean()
@@ -1068,31 +1536,51 @@ class AnalysisDataSet:
                                     -  self.statistics['Ybar']
         
     def __calculate_R2_residual(self):
-        import logging
+        """Calculate R2 residual based on SDS."""
         logger = logging.getLogger(__name__)
 
         if self.sampling_design_state == 1:
             # SDS1: standard within-(k,t) residual
             self.analysis_dataset['R2'] = (
-                self.analysis_dataset[self.spec.response_var] - self.analysis_dataset['Ybar_kt']
+                self.analysis_dataset[self.spec.response_var] - 
+                self.analysis_dataset['Ybar_kt']
             )
             logger.debug("SDS1: R2 = Y - Ybar_kt")
 
         elif self.sampling_design_state == 2:
-            # SDS2: one obs per (k,t). Estimate unexplained via 2-point moving-average residual within each k
-            df = self.analysis_dataset.sort_values([self.spec.rsg_var_name, self.spec.time_var]).copy()
-            # simple centered MA2 along time for each k
+            # SDS2: moving-average residual
+            df = self.analysis_dataset.sort_values(
+                [self.spec.rsg_var_name, self.spec.time_var]
+            ).copy()
             df['_MA2'] = (
                 df.groupby(self.spec.rsg_var_name)[self.spec.response_var]
                 .transform(lambda s: (s.shift(1) + s.shift(-1)) / 2.0)
             )
-            # endpoints fallback to one-sided average
             fwd = df.groupby(self.spec.rsg_var_name)[self.spec.response_var].shift(-1)
             back = df.groupby(self.spec.rsg_var_name)[self.spec.response_var].shift(1)
             df['_MA2'] = df['_MA2'].where(df['_MA2'].notna(), fwd.where(fwd.notna(), back))
             df['R2'] = df[self.spec.response_var] - df['_MA2']
             self.analysis_dataset['R2'] = df['R2']
-            logger.debug("SDS2: R2 ≈ Y - MA2_k(t) (two-point moving-average residual)")
+            logger.debug("SDS2: R2 ≈ Y - MA2_k(t)")
+        
+        elif self.sampling_design_state == 3:
+            # SDS3: HYBRID approach
+            # TODO: Implement hybrid R2 calculation
+            # For now, use SDS1 approach (within-cell for replicated cells)
+            logger.warning(
+                "SDS3: Hybrid R2 calculation not yet fully implemented. "
+                "Using within-cell method (may be suboptimal for n=1 cells)."
+            )
+            self.analysis_dataset['R2'] = (
+                self.analysis_dataset[self.spec.response_var] - 
+                self.analysis_dataset['Ybar_kt']
+            )
+        
+        else:
+            logger.error(f"Cannot calculate R2 for SDS {self.sampling_design_state}")
+            raise ValueError(
+                f"R2 calculation not defined for SDS {self.sampling_design_state}"
+            )
             
     def __calculate_R3_residual(self):    #R3= Y(kt)-Ybar(k)-Ybar(.t)+YBAR 
         

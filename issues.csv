@@ -1,0 +1,26 @@
+Priority,Title,Category,Severity,Phase,Labels,Files,Estimated_Days
+1,Duplicate Code Between Classes and Functions,refactor,High,Phase 1,"refactor,priority-high,technical-debt",analysis_dataset.py,2
+2,Inconsistent Type Annotations,refactor,High,Phase 1,"refactor,priority-high,type-safety",analysis_dataset.py;objects.py,1
+3,Magic Numbers Throughout Codebase,refactor,High,Phase 1,"refactor,priority-high,code-quality",analysis_dataset.py;objects.py,1
+4,Incomplete Abstract Methods Implementation,bug,High,Phase 1,"bug,priority-high,correctness",analysis_dataset.py,0.5
+5,Dead/Commented Code Blocks,technical-debt,High,Phase 2,"technical-debt,priority-high,cleanup",analysis_dataset.py,0.5
+6,Inconsistent Error Handling,refactor,Medium,Phase 1,"refactor,priority-high,error-handling",analysis_dataset.py;objects.py,1
+7,Method Naming Inconsistency and Duplication,refactor,Medium,Phase 2,"refactor,priority-medium,code-duplication",analysis_dataset.py;objects.py,1
+8,Missing Docstrings on Key Classes,documentation,Medium,Phase 2,"documentation,priority-medium",analysis_dataset.py,1
+9,Inconsistent Specification Handling,refactor,High,Phase 1,"refactor,priority-high,api-design",analysis_dataset.py,2
+10,Excessive Print Statements for Debugging,technical-debt,Medium,Phase 2,"technical-debt,priority-medium,logging",analysis_dataset.py,1
+11,Duplicate Column Validation Logic,refactor,Medium,Phase 2,"refactor,priority-medium,code-duplication",analysis_dataset.py,0.5
+12,Unused Function Parameters,bug,Low,Phase 3,"bug,priority-low,code-quality",analysis_dataset.py,0.25
+13,Inconsistent Return Types,bug,Medium,Phase 1,"bug,priority-medium,api-design",analysis_dataset.py,1
+14,Missing Type Safety for Dict Keys,bug,Medium,Phase 1,"bug,priority-medium,type-safety",analysis_dataset.py,1
+15,Duplicate Grouping Logic,refactor,Medium,Phase 2,"refactor,priority-medium,code-duplication",analysis_dataset.py,1
+16,Beyond Limits Calculation Bug,bug,High,Phase 1,"bug,priority-high,correctness",analysis_dataset.py,0.25
+17,Hardcoded Column Names,refactor,Medium,Phase 2,"refactor,priority-medium,maintainability",analysis_dataset.py;objects.py,1
+18,Mixed Calculation Responsibilities,refactor,Medium,Phase 2,"refactor,priority-medium,architecture",analysis_dataset.py,2
+19,Incomplete Docstrings with Typos,documentation,Low,Phase 3,"documentation,priority-low,cleanup",analysis_dataset.py,0.5
+20,TODOs Indicating Technical Debt,technical-debt,Medium,Phase 2,"technical-debt,priority-medium,tracking",analysis_dataset.py,2
+21,Inconsistent Method Access Patterns,refactor,Low,Phase 3,"refactor,priority-low,code-quality",analysis_dataset.py,0.5
+22,Lambda Functions in Data Processing,performance,Low,Phase 3,"performance,priority-low,readability",analysis_dataset.py,1
+23,Import and Package Structure Issues,technical-debt,Medium,Phase 2,"technical-debt,priority-medium,architecture",analysis_dataset.py;all,2
+24,Missing Tests for Edge Cases,testing,Medium,Phase 2,"testing,priority-medium,quality",tests/,3
+25,Test Code Should Not Import Logging,technical-debt,Low,Phase 3,"technical-debt,priority-low,testing",tests/,0.5
