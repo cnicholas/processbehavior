@@ -1,12 +1,36 @@
 from __future__ import annotations
 
 import pandas as pd
+"""
+Data generation and loading utilities for processbehavior package.
+"""
 
+from .synthetic import (
+    make_sds1,
+    make_sds2,
+    make_sds3,
+    make_sds4,
+    make_sds5,
+    make_sds6,
+    make_sds,
+    make_edge_cases,
+    compare_sds_characteristics,
+    generate_test_suite,
+    get_sds_info,
+    print_sds_summary
+)
 
-def load_demo() -> pd.DataFrame:
-    """Tiny synthetic dataset for smoke tests & examples."""
-    n = 50
-    df = pd.DataFrame(
-        {'t': range(n), 'line': ['A'] * n, 'y': [10 + (i % 5) * 0.1 for i in range(n)]}
-    )
-    return df
+__all__ = [
+    'make_sds1',
+    'make_sds2',
+    'make_sds3',
+    'make_sds4',
+    'make_sds5',
+    'make_sds6',
+    'make_sds',
+    'make_edge_cases',
+    'compare_sds_characteristics',
+    'generate_test_suite',
+    'get_sds_info',
+    'print_sds_summary'
+]

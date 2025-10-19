@@ -5,6 +5,7 @@ import pandas as pd
 import logging
 import objects as obj
 
+
 # Configure logging
 logging.basicConfig(
     level=logging.DEBUG,
@@ -281,12 +282,19 @@ def test_sds1_synthetic():
     logger.debug(f'{result}')
               
 
-def test_perform_analysis_XbarS(df):
-
+def test_perform_analysis_XbarS(df: pd.DataFrame):
+    
     spec = {'analysis_type': 'Xbar', 'rsg_vars': ['a', 'b'], 'response_var': 'c', 'rsg_var_name': 'rsg',
-            'time_unit': None, 'round_to': 2}
+            'time_var': 'd', 'round_to': 2}
 
     logger.info(f"Testing XbarS with spec: {spec}")
+
+    aspec = ad.AnalysisSpecification(analysis_type='Xbar',analysis_specification=spec)
+    logger.info(f"spec.has_grouping: {aspec.has_grouping}")
+    ads = ad.AnalysisDataSet(df=df, analysis_specification=aspec)
+    
+    summary = ads.analysis_summary
+    logger.info(summary)
     result = ad.perform_analysis(df=df, specification=spec)
 
     conditionsXbar = {
@@ -327,14 +335,15 @@ def test_perform_analysis_XbarS(df):
             expected = conditions[cond]
             assert actual == expected, f'The value for {cond}: {actual} does not match the expected value: {expected}'
 
-def test_perform_analysis_XbarS_differing_Ns(df_differing_Ns):
+def test_perform_analysis_XbarS_differing_Ns(df_differing_Ns: pd.DataFrame):
 
         spec = {'analysis_type': 'Xbar', 'rsg_vars': ['a', 'b'], 'response_var': 'c', 'rsg_var_name': 'rsg',
-                'time_unit': None, 'round_to': 2}
-
+                'time_var': 'd', 'round_to': 2}
+        aspec1 = ad.AnalysisSpecification('Xbar', spec)
         logger.info(f"Testing XbarS with differing Ns, spec: {spec}")
-        result = ad.perform_analysis(df=df_differing_Ns, specification=spec)
-
+       
+        result = ad.AnalysisDataSet(df_differing_Ns, aspec1)
+        print(result.analysis_summary)
         conditionsXbar = {
                         'Mean':4.17,
                         'lcl': 'Varies',
@@ -375,7 +384,7 @@ def test_perform_analysis_XbarS_differing_Ns(df_differing_Ns):
                 expected = conditions[cond]
                 assert actual == expected
 
-def test_perform_analysis_Imr(df):
+def test_perform_analysis_Imr(df: pd.DataFrame):
         spec = {'analysis_type': 'Imr', 'rsg_vars': ['a', 'b'], 'time_var': 'd', 'response_var': 'c',
                 'rsg_var_name': 'rsg', 'time_unit': None, 'round_to': 2}
         # spec = {'analysis_type':'Imr', 'rsg_vars':['a','b'], 'response_var':'c','rsg_var_name':'rsg', 'time_unit':None}
@@ -411,7 +420,7 @@ def test_perform_analysis_Imr(df):
         assert result[keys[0]]['statistics']['n'] == 3
         assert result[keys[1]]['statistics']['n'] == 3
 
-def test_perform_analysis_IMR_w_o_grouping_var(df):
+def test_perform_analysis_IMR_w_o_grouping_var(df: pd.DataFrame):
         spec = {'analysis_type': 'Imr', 'response_var': 'c','time_unit': None, 'round_to':2}
 
         a_spec = ad.AnalysisSpecification(analysis_type="Imr", analysis_specification=spec)
@@ -421,7 +430,7 @@ def test_perform_analysis_IMR_w_o_grouping_var(df):
 
         logger.debug(f'\n{result}')
   
-def test_perform_analysis_R(df):
+def test_perform_analysis_R(df: pd.DataFrame):
         spec = {'analysis_type': 'R', 'rsg_vars': ['a', 'b'], 'time_var': 'd', 'response_var': 'c',
                 'rsg_var_name': 'rsg', 'time_unit': None, 'round_to': 2}
         a_spec = ad.AnalysisSpecification(analysis_type='R', analysis_specification=spec)
@@ -452,7 +461,7 @@ def test_perform_analysis_R(df):
         assert len(result['b_d']['data']) == 2 #First now get dropped should be    
         
         
-def test_perform_analysis_R_w_o_grouping(df):
+def test_perform_analysis_R_w_o_grouping(df: pd.DataFrame):
         spec = {'analysis_type': 'R', 'response_var': 'c', 'rsg_var_name': 'rsg',
                 'time_unit': None}
         logger.info('spec')
@@ -485,7 +494,7 @@ def test_R_with_FW800():
             logger.info(f'key:{key}')#: {res.isnull().values.any()}')
             assert False == res['data'].isnull().values.any()
 
-def test_analysis_types_dt_col_handling(df_dt, analysis_types):
+def test_analysis_types_dt_col_handling(df_dt: pd.DataFrame, analysis_types: list[str]):
 
         df = df_dt
         spec = {'analysis_type': None, 'rsg_vars': ['a', 'b'], 'time_var': 'd', 'response_var': 'c',
@@ -493,8 +502,8 @@ def test_analysis_types_dt_col_handling(df_dt, analysis_types):
 
         has_time='d'
         no_time=None
-        date_conditions = [has_time, no_time] # Test each chart type with and without a datetime column    
-
+        date_conditions = [has_time] # Test each chart type with and without a datetime column    
+#TODO: Resolve and validate  cases where no time variable is present
         for cond in date_conditions:
             spec['time_var'] = cond
             logger.info(f'\nRunning with time_var set to: {cond}\n')
@@ -512,7 +521,7 @@ def test_analysis_types_dt_col_handling(df_dt, analysis_types):
                     else:
                         assert out.columns.tolist()[0] == 'x' #default column name for added index when no time variable present
 
-def test_time_var_as_object_and_sort(df_dt):
+def test_time_var_as_object_and_sort(df_dt: pd.DataFrame):
 
         df = df_dt
         spec = {'analysis_type': 'Imr', 'rsg_vars': ['a', 'b'], 'time_var': 'd2', 'response_var': 'c',
@@ -597,7 +606,7 @@ def test_gather_statistics_no_grouping():
         assert len(out['all']) == 4 #should only have 1 dictionary with a key of 'all' with 4 entries (stats + n)
         logger.debug(f'{out}')
     
-def test_perform_analysis_XbarS_zero_center(df):
+def test_perform_analysis_XbarS_zero_center(df: pd.DataFrame):
         spec = {'analysis_type': 'Xbar', 'rsg_vars': ['a', 'b'], 'time_var': 'd', 'response_var': 'c',
                 'rsg_var_name': 'rsg', 'zero-center':True}
 
@@ -605,7 +614,7 @@ def test_perform_analysis_XbarS_zero_center(df):
         result = ad.perform_analysis(df=df, specification=spec)
         assert result['Xbar']['statistics']['Mean'] == 0
         
-def test_perform_analysis_IMR_zero_center(df):
+def test_perform_analysis_IMR_zero_center(df: pd.DataFrame):
         spec = {'analysis_type': 'Imr', 'rsg_vars': ['a', 'b'], 'time_var': 'd', 'response_var': 'c',
                 'rsg_var_name': 'rsg', 'zero-center':True}
 
@@ -615,7 +624,7 @@ def test_perform_analysis_IMR_zero_center(df):
         logger.debug(f'{result}')
         #assert result['Xbar']['statistics']['Mean'] == 0
         
-def test_perform_analysis_R_zero_center(df):
+def test_perform_analysis_R_zero_center(df: pd.DataFrame):
         spec = {'analysis_type': 'R', 'rsg_vars': ['a', 'b'], 'time_var': 'd', 'response_var': 'c',
                 'rsg_var_name': 'rsg', 'zero-center':True}
 
@@ -625,7 +634,7 @@ def test_perform_analysis_R_zero_center(df):
         logger.debug(f'{result}')
         #assert result['Xbar']['statistics']['Mean'] == 0
         
-def test_analysis_dataset_sds1(df_SDS1):
+def test_analysis_dataset_sds1(df_SDS1: pd.DataFrame):
         #SDS1 Columns = "TIME","FACTOR 1","FACTOR 2","Y"
         spec = {'analysis_type': 'Xbar', 'rsg_vars': ['FACTOR 1', 'FACTOR 2'], 'time_var': 'TIME', 'response_var': 'Y',
                 'rsg_var_name': 'rsg','round_to':2}
@@ -682,7 +691,7 @@ def test_analysis_dataset_sds1(df_SDS1):
             logger.debug(f'{key}')
             logger.debug(f'{theDataset.interactions[key]}') 
     
-def test_sds2_synthetic(df_SDS2):
+def test_sds2_synthetic(df_SDS2: pd.DataFrame):
         """
         Test SDS2 (one observation per k,t cell) using synthetic data.
         SDS2 Columns = "time","factor 1","factor 2","n","y"
@@ -771,7 +780,7 @@ def test_sds2_synthetic(df_SDS2):
 
 
         
-def test_analysis_dataset_no_groups(df):
+def test_analysis_dataset_no_groups(df: pd.DataFrame):
         logger.info('\nTesting no grouping without time variable specified - expect only the response variable to be returned...')
         spec = {'analysis_type': 'Imr', 'response_var': 'c','time_unit': None, 'round_to':2}
 

@@ -138,5 +138,45 @@ In practice, plotting them side by side helps analysts understand whether signal
 
 ---
 
-Do you want me to also draft a **worked example** (with fake data + simple charts) that illustrates each residual in action? That way your users see not just the math but the *practical diagnostic value*.
+## Automatic Stratified Control Charts ⭐
 
+The killer feature that doesn't exist in other SPC software.
+
+### The Problem
+
+Traditional SPC tools force you to choose:
+- ❌ **Combine all groups** → Inflated limits mask true patterns
+- ❌ **Manual stratification** → Filter each group separately (tedious, error-prone)
+
+### The Solution
+
+**This system stratifies automatically:**
+```python
+# One specification
+spec = {
+    'analysis_type': 'Imr',
+    'rsg_vars': ['lane', 'phase'],  # ← Stratify by these
+    'time_var': 'pull',
+    'response_var': 'fill_weight'
+}
+
+# One function call
+results = perform_analysis(df, spec)
+
+# Multiple charts automatically created:
+# results['lane1_phase1'] - Individual chart with lane1_phase1-specific limits
+# results['lane1_phase2'] - Individual chart with lane1_phase2-specific limits
+# results['lane2_phase1'] - Individual chart with lane2_phase1-specific limits
+# ...
+```
+
+### Key Distinction
+
+**Grouping serves DIFFERENT purposes for different analyses:**
+
+| Analysis | Grouping Purpose | Output | VAS Residuals |
+|----------|-----------------|---------|---------------|
+| **IMR/R** | **Stratification** | Separate chart per group | No (not needed) |
+| **Xbar-S** | **Variance decomposition** | Variance components | Yes (that's the point) |
+
+Both use `rsg_vars`, but for completely different reasons!
