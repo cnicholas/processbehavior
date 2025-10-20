@@ -15,10 +15,11 @@
     "**/venv/**": true,
     "**/.venv/**": true
   },
-  "python.testing.pytestArgs": [
+  "python.testing.pytestArgs":  [
     "-v",
-    "--no-cov"
-  ],
+    "-s",
+    "--log-cli-level=INFO"
+],
   "python.testing.pytestEnabled": true,
   "python.testing.unittestEnabled": false,
   "python.testing.cwd": "${workspaceFolder}",
