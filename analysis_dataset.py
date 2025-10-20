@@ -67,7 +67,7 @@ class Analysis:
                 f'Valid types: {list(strategies.keys())}'
             )
 
-        return strategies[self.analysis_type]()
+        return strategies[self.spec.analysis_type]()
 
     def _calculate_xbar(self) -> pd.DataFrame:
         """
@@ -75,11 +75,11 @@ class Analysis:
 
         Logic moved from Xbar.calculate_statistics()
         """
-        df = self.ads.analysis_dataset
+        #df = self.ads.analysis_dataset
         spec = self.spec
         result = {}
         statistics = {}
-        out = df.copy()
+        out = self.ads.analysis_dataset.copy()
 
         logger.debug('In calculate statistics XbarS')
         logger.debug('Dataframe has columns: %s', out.columns.to_list())
@@ -199,7 +199,7 @@ class Analysis:
         """
         df = self.raw_df
         spec = self.spec
-        out = prepare_dataset(df=df, analysis_specification=spec)
+        out = self.ads.analysis_dataset.copy()
 
         out = out.groupby(spec.rsg_var_name, as_index=False).agg(
             s=pd.NamedAgg(column=spec.response_var, aggfunc="std"),
@@ -249,10 +249,11 @@ class Analysis:
 
         Logic moved from calculate_statistics_Imr()
         """
+        y = self.spec.response_var
         df = self.raw_df
         spec = self.spec
-        out = prepare_dataset(df=df, analysis_specification=spec)
-
+        out = self.ads.analysis_dataset.copy()#prepare_dataset(df=df, analysis_specification=spec)
+        print (out)
         if spec.zero_center:
             logger.info('Zero-centering data')
             zero_mean = out[spec.response_var].mean()
@@ -263,40 +264,90 @@ class Analysis:
         logger.debug('Dataframe has columns: %s', out.columns.to_list())
 
         if spec.has_grouping:
-            out['mr'] = abs(out.groupby(spec.rsg_var_name)[spec.response_var].diff())
-            grouped = out.groupby(spec.rsg_var_name, as_index=False)
-            grouped = grouped.agg(
-                mean=pd.NamedAgg(spec.response_var, 'mean'),
-                mR=pd.NamedAgg('mr', 'mean')
+            # Stable order before diff
+            sort_cols = [spec.rsg_var_name]
+            if spec.has_time:
+                sort_cols.append(spec.time_var)
+            if sort_cols:
+                out = out.sort_values(sort_cols, kind='stable')
+
+            # Moving range per subgroup (must exist BEFORE agg)
+            out['mr'] = out.groupby(spec.rsg_var_name, sort=False)[y].diff().abs()
+
+            # Build a SAFE aggregation spec (only include existing cols)
+            agg = {}
+            if y in out.columns:
+                agg['mean'] = (y, 'mean')
+            if 'mr' in out.columns:
+                agg['mR'] = ('mr', 'mean')
+
+            if not agg:
+                raise RuntimeError(
+                    f"IMR aggregation spec is empty. "
+                    f"Have columns: {out.columns.tolist()}, y={y!r}"
+                )
+
+            grouped = (
+                out.groupby(spec.rsg_var_name, sort=False)
+                .agg(**agg)
+                .reset_index()
             )
 
-            limits = grouped.apply(
+            # Compute limits per group
+            # grouped has columns: [spec.rsg_var_name, 'mean', 'mR']
+            lims = grouped.apply(
                 lambda row: obj.calculate_limits(
                     mean=row['mean'],
-                    sd=0,
-                    N=0,
-                    mR=row.mR,
-                    limits_type="Imr"
-                ), axis=1
+                    sd=0, N=0,
+                    mR=(row['mR'] if pd.notna(row['mR']) else 0.0),
+                    limits_type="Imr",
+                    round_to=spec.round_to
+                ),
+                axis=1
             )
 
-            grouped = pd.merge(grouped, limits, left_index=True, right_index=True)
-            out = pd.merge(out, grouped, how='left', on=spec.rsg_var_name)
-        else:
-            out['mR'] = abs(out[spec.response_var].diff()).mean()
-            out['mean'] = out[spec.response_var].mean()
-            mR = out['mR'].max()
-            _mean = out['mean'].max()
-            limits = obj.calculate_limits(
-                mean=_mean,
-                sd=0,
-                N=0,
-                mR=mR,
-                limits_type="Imr",
-                round_to=spec.round_to
+            # --- Normalize/join lcl/ucl regardless of return type ---
+            if isinstance(lims, pd.DataFrame):
+                # Your case: lims already has columns ['lcl','ucl'], index aligned to grouped
+                grouped = grouped.join(lims[['lcl','ucl']])
+            else:
+                # lims is a Series; each element could be dict/Series/tuple
+                def _to_pair(x):
+                    if isinstance(x, dict):
+                        return x.get('lcl', np.nan), x.get('ucl', np.nan)
+                    try:
+                        return x['lcl'], x['ucl']         # pandas Series-like
+                    except Exception:
+                        pass
+                    if hasattr(x, 'lcl') and hasattr(x, 'ucl'):
+                        return getattr(x, 'lcl', np.nan), getattr(x, 'ucl', np.nan)
+                    if isinstance(x, (list, tuple)) and len(x) >= 2:
+                        return x[0], x[1]
+                    return np.nan, np.nan
+
+                lims_df = pd.DataFrame(lims.map(_to_pair).tolist(),
+                                    index=grouped.index,
+                                    columns=['lcl','ucl'])
+                grouped = grouped.join(lims_df)
+
+
+            # Attach back to rows
+            out = out.merge(
+                grouped[[spec.rsg_var_name, 'mean', 'mR', 'lcl', 'ucl']],
+                on=spec.rsg_var_name, how='left', validate='many_to_one'
             )
-            out['lcl'] = limits['lcl']
-            out['ucl'] = limits['ucl']
+        else:
+            # (unchanged single-stream path, but keep same style)
+            if spec.has_time:
+                out = out.sort_values([spec.time_var], kind='stable')
+            out['mr'] = out[y].diff().abs()
+            mR = out['mr'].mean()
+            mean_ = out[y].mean()
+            lims = obj.calculate_limits(mean=mean_, sd=0, N=0, mR=mR, limits_type="Imr", round_to=spec.round_to)
+            out['mean'] = mean_
+            out['mR']   = mR
+            out['lcl']  = lims['lcl']
+            out['ucl']  = lims['ucl']
 
         out['beyond_limits'] = np.where(out[spec.response_var] < out['lcl'], -1, 0)
         out['beyond_limits'] = np.where(out[spec.response_var] > out['ucl'], 1, 0)
@@ -353,7 +404,7 @@ class Analysis:
         """
         df = self.raw_df
         spec = self.spec
-        out = prepare_dataset(df=df, analysis_specification=spec)
+        out = self.ads.analysis_dataset.copy()
 
         if spec.zero_center:
             logger.info('Zero-centering data')
@@ -699,7 +750,7 @@ def prepare_dataset(df: pd.DataFrame, analysis_specification: AnalysisSpecificat
     out = out[spec.data_prep_output_cols]  # These are predetermined by the spec
 
     out = out.dropna()
-
+    
     return out
 
 
@@ -831,6 +882,10 @@ class AnalysisDataSet:
     def __init__(self, df: pd.DataFrame, analysis_specification: AnalysisSpecification):
         self.raw_dataset = df
         self.spec = analysis_specification
+        self.obs_df = None
+        self.cell_df = None
+        self.k_df = None
+        self.t_df = None
         self.statistics = {}
         self.residuals = {}
         self.interactions = {}
@@ -839,6 +894,7 @@ class AnalysisDataSet:
         # Validate and prepare data
         self.__validate_columns()
         self.analysis_dataset = self.__prepare_dataset()
+        self.__build_frames()
         # Detect SDS
         self.sampling_design_state = self.__calculate_sampling_design_state()
         self.sds_characteristics = self.__get_sds_characteristics()
@@ -1518,6 +1574,11 @@ class AnalysisDataSet:
         self.analysis_dataset['Ybar'] = out
         self.statistics['Ybar'] = out          
         
+    # def __calculate_Ybar_k(self):        
+        
+    #     #out=pd.merge(self.analysis_dataset, out, how='left', on =[self.spec.rsg_var_name])
+    #     self.analysis_dataset['Ybar_k'] = self.analysis_dataset.groupby([self.spec.rsg_var_name])[self.spec.response_var].transform('mean')
+       
     def __calculate_Ybar_k(self):        
         
         #out=pd.merge(self.analysis_dataset, out, how='left', on =[self.spec.rsg_var_name])
@@ -1536,59 +1597,49 @@ class AnalysisDataSet:
                                     -  self.statistics['Ybar']
         
     def __calculate_R2_residual(self):
-        """Calculate R2 residual based on SDS."""
         logger = logging.getLogger(__name__)
-
+        y = self.spec.response_var
+        df = self.analysis_dataset
         if self.sampling_design_state == 1:
-            # SDS1: standard within-(k,t) residual
-            self.analysis_dataset['R2'] = (
-                self.analysis_dataset[self.spec.response_var] - 
-                self.analysis_dataset['Ybar_kt']
-            )
+            # SDS1: N=1 everywhere ⇒ R2 = 0 (Ybar_kt == Y)
+            self.analysis_dataset['R2'] = df[y] - df['Ybar_kt']
             logger.debug("SDS1: R2 = Y - Ybar_kt")
+            
 
         elif self.sampling_design_state == 2:
-            # SDS2: moving-average residual
+            # Your moving-average approach (kept as-is)
             df = self.analysis_dataset.sort_values(
                 [self.spec.rsg_var_name, self.spec.time_var]
             ).copy()
             df['_MA2'] = (
-                df.groupby(self.spec.rsg_var_name)[self.spec.response_var]
+                df.groupby(self.spec.rsg_var_name)[y]
                 .transform(lambda s: (s.shift(1) + s.shift(-1)) / 2.0)
             )
-            fwd = df.groupby(self.spec.rsg_var_name)[self.spec.response_var].shift(-1)
-            back = df.groupby(self.spec.rsg_var_name)[self.spec.response_var].shift(1)
+            fwd  = df.groupby(self.spec.rsg_var_name)[y].shift(-1)
+            back = df.groupby(self.spec.rsg_var_name)[y].shift(1)
             df['_MA2'] = df['_MA2'].where(df['_MA2'].notna(), fwd.where(fwd.notna(), back))
-            df['R2'] = df[self.spec.response_var] - df['_MA2']
+            df['R2'] = df[y] - df['_MA2']
             self.analysis_dataset['R2'] = df['R2']
             logger.debug("SDS2: R2 ≈ Y - MA2_k(t)")
-        
+
         elif self.sampling_design_state == 3:
-            # SDS3: HYBRID approach
-            # TODO: Implement hybrid R2 calculation
-            # For now, use SDS1 approach (within-cell for replicated cells)
-            logger.warning(
-                "SDS3: Hybrid R2 calculation not yet fully implemented. "
-                "Using within-cell method (may be suboptimal for n=1 cells)."
-            )
-            self.analysis_dataset['R2'] = (
-                self.analysis_dataset[self.spec.response_var] - 
-                self.analysis_dataset['Ybar_kt']
-            )
-        
+            # SDS3: Bishop — R2 = Y - Ybar_kt for n>1; else 0
+            df = self.analysis_dataset
+            n = df.groupby([self.spec.rsg_var_name, self.spec.time_var])[y].transform('count')
+            r2_within = df[y] - df['Ybar_kt']
+            self.analysis_dataset['R2'] = np.where(n > 1, r2_within, 0.0)
+            logger.debug("SDS3: R2 = Y - Ybar_kt (n>1), else 0")
+
         else:
             logger.error(f"Cannot calculate R2 for SDS {self.sampling_design_state}")
-            raise ValueError(
-                f"R2 calculation not defined for SDS {self.sampling_design_state}"
-            )
+            raise ValueError(f"R2 calculation not defined for SDS {self.sampling_design_state}")
+
             
-    def __calculate_R3_residual(self):    #R3= Y(kt)-Ybar(k)-Ybar(.t)+YBAR 
-        
-        self.analysis_dataset['R3'] = self.analysis_dataset['Ybar_kt']\
-                                    - self.analysis_dataset['Ybar_k']\
-                                    - self.analysis_dataset['Ybar_t']\
-                                    + self.analysis_dataset['Ybar']\
-                                    + self.analysis_dataset['R2'] 
+    def __calculate_R3_residual(self):
+        y = self.spec.response_var
+        df = self.analysis_dataset
+        df['R3'] = df[y] - df['Ybar_k'] - df['Ybar_t'] + df['Ybar']
+
     
     def __calculate_R4_residual(self):
         # R4 = Ybar_t - Ybar + R2   (Eq. 72) for ALL SDS
@@ -1612,42 +1663,61 @@ class AnalysisDataSet:
                
         self.analysis_dataset['Rbar_t'] = self.analysis_dataset.groupby([self.spec.time_var])["R1"].transform("mean")
     
-    def __calculate_RCR1(self): #Y-R1_bar
-        self.analysis_dataset['RCR1'] = self.analysis_dataset["Ybar"] + self.analysis_dataset["R1"]
-        
-    def __calculate_RCR2(self): #Y-R1bar_kt
-        
-            self.analysis_dataset["RCR2"] = self.analysis_dataset["Ybar"]\
-                                          + self.analysis_dataset["R2"]
-                
-    def __calculate_RCR3(self):    #R3= Y(kt)-Ybar(k)-Ybar(.t)+YBAR 
-        
-            self.analysis_dataset['RCR3'] = self.analysis_dataset['Ybar']\
-                                          + self.analysis_dataset["R3"]                                                                             
-            
-    def __calculate_RCR4(self):     #R4= Y – YBAR – YBAR(kt)+Ybar(t)
-        
-            self.analysis_dataset['RCR4'] = self.analysis_dataset["Ybar"]\
-                                          + self.analysis_dataset['R4']            
-                                        
-    def __calculate_RCR5(self):    #R5= Y-Ybar-YBar(kt)+YBar(k)
-        
-            self.analysis_dataset['RCR5'] = self.analysis_dataset["Ybar"]\
-                                          + self.analysis_dataset['R5']
+    def __calculate_RCR1(self):  # Y = Ybar + R1
+        self.analysis_dataset['RCR1'] = self.analysis_dataset['Ybar'] + self.analysis_dataset['R1']
+
+    def __calculate_RCR2(self):  # Y = Ybar_kt + R2
+        self.analysis_dataset['RCR2'] = self.analysis_dataset['Ybar_kt'] + self.analysis_dataset['R2']
+
+    def __calculate_RCR3(self):  # Y = (Ybar_k + Ybar_t - Ybar) + R3
+        df = self.analysis_dataset
+        df['RCR3'] = (df['Ybar_k'] + df['Ybar_t'] - df['Ybar']) + df['R3']
+
+    def __calculate_RCR4(self):  # Y = (Ybar + Ybar_kt - Ybar_t) + R4
+        df = self.analysis_dataset
+        df['RCR4'] = (df['Ybar'] + df['Ybar_kt'] - df['Ybar_t']) + df['R4']
+
+    def __calculate_RCR5(self):  # Y = (Ybar + Ybar_kt - Ybar_k) + R5
+        df = self.analysis_dataset
+        df['RCR5'] = (df['Ybar'] + df['Ybar_kt'] - df['Ybar_k']) + df['R5']
+
                                                    
     def __calculate_pdc_by_time(self):
-        if self.sampling_design_state==1:
-            # SDS1: Calculate mean R3 for each group-time cell and broadcast to all rows
-            self.analysis_dataset['pdc_by_pt'] = self.analysis_dataset.groupby([self.spec.rsg_var_name, self.spec.time_var])['R3'].transform('mean')
-            self.interactions["pdc_by_pt"] = self.analysis_dataset['pdc_by_pt']
+        y = self.spec.response_var
 
-        elif self.sampling_design_state==2:
-            self.analysis_dataset['pdc_by_pt'] = self.analysis_dataset['Ybar_kt']\
-                                                         - self.analysis_dataset['Ybar_k']\
-                                                         - self.analysis_dataset['Ybar_t']\
-                                                         + self.analysis_dataset['Ybar']
-            
-            self.interactions["pdc_by_pt"] = self.analysis_dataset['pdc_by_pt']
+        if self.sampling_design_state == 1:
+            # Explicit keys: [FACTOR_1, FACTOR_2, TIME]  (not the composite rsg)
+            keys = list(self.spec.rsg_vars) + [self.spec.time_var]
+
+            # R3 = Y - Ybar_k - Ybar_t + Ybar
+            # Cell-average R3 equals the interaction effect:
+            #   Ybar_kt - Ybar_k - Ybar_t + Ybar
+            # Broadcast the cell-average to rows:
+            self.analysis_dataset['pdc_by_pt'] = (
+                self.analysis_dataset
+                .groupby(keys, sort=False)['R3']
+                .transform('mean')
+            )
+
+            # (Optional but nice): also store a single value per cell
+            # so you can key-compare without re-aggregating later.
+            self.analysis_dataset['interaction_cell'] = (
+                self.analysis_dataset
+                .groupby(keys, sort=False)['R3']
+                .transform('mean')
+            )
+            self.interactions['pdc_by_pt'] = self.analysis_dataset['pdc_by_pt']
+
+        elif self.sampling_design_state == 2:
+            # (unchanged) direct formula at the row level
+            self.analysis_dataset['pdc_by_pt'] = (
+                self.analysis_dataset['Ybar_kt']
+                - self.analysis_dataset['Ybar_k']
+                - self.analysis_dataset['Ybar_t']
+                + self.analysis_dataset['Ybar']
+            )
+            self.interactions['pdc_by_pt'] = self.analysis_dataset['pdc_by_pt']
+
             #Two-factor interaction effect
             #Pg 77 Average R5ij-average R5i- average R5j 
             #there will be one main effect for the rational subgroup and one ME for each factor x level
@@ -1674,30 +1744,72 @@ class AnalysisDataSet:
             self.interactions["F1xF2"] = me[self.spec.rsg_vars+["F1xF2"]]   
             
     def __calculate_main_effect(self):
-            #Use RSG to perform the grouping
-            #self.effects['main_effects'] = self.analysis_dataset.groupby(self.spec.rsg_var_name)['R2'].mean()
-            self.effects['main_effect'] = self.analysis_dataset.groupby(self.spec.rsg_var_name).agg(
-                                                                Main_Effect=pd.NamedAgg(column="R5", aggfunc="mean"))
-            
-            for factor in self.spec.rsg_vars:
-                label=factor
-                self.effects[label] = self.analysis_dataset.groupby([factor]).agg(
-                                                               Main_Effect=pd.NamedAgg(column="R5", aggfunc="mean"))
+        """
+        Compute mean(R5) at:
+        - RSG (composite) grain  → effects['main_effect']       -> [rsg, Main_Effect]
+        - Each factor's grain    → effects[factor]              -> [factor, Main_Effect]
+        Guarantees 2-column, de-indexed frames with unique keys.
+        """
+        if not self.spec.rsg_vars:
+            return
+
+        y_me = 'R5'  # source for Main_Effect
+
+        # --- RSG-level main effect (kept for compatibility)
+        rsg = self.spec.rsg_var_name
+        rsg_me = (self.analysis_dataset
+                .groupby(rsg, sort=False)[y_me]
+                .mean()
+                .rename('Main_Effect')
+                .reset_index())
+        if rsg_me.duplicated(subset=[rsg]).any():
+            raise ValueError(f"Duplicate levels in main_effect for {rsg}")
+        self.effects['main_effect'] = rsg_me[[rsg, 'Main_Effect']]
+
+        # --- Per-factor main effects (canonical for downstream use)
+        for factor in self.spec.rsg_vars:
+            me = (self.analysis_dataset
+                .groupby([factor], sort=False)[y_me]
+                .mean()
+                .rename('Main_Effect')
+                .reset_index())
+            if me.duplicated(subset=[factor]).any():
+                raise ValueError(f"Duplicate levels in main_effect for factor {factor}")
+            # Ensure exactly two columns and no index surprises
+            self.effects[factor] = me[[factor, 'Main_Effect']]
+
     def __calculate_main_effects(self):
-            #dataset Columns F1 MAIN EFFECTS & F2 MAIN EFFECTS - Note Effect versus Effects R2i+MEi
-            for factor in self.spec.rsg_vars:
-                
-                me =self.effects[factor]
-                
-                df = pd.DataFrame()
-                
-                label=factor+"_MEs"               
-                
-                df= self.analysis_dataset[[factor,"R2"]].merge(me, how='left', on=factor)
-                df[label] = df["R2"] + df["Main_Effect"]
-               
-                self.effects[label] = df[[factor,label]]
-                
+        """
+        Build per-row '{factor}_MEs' = R2 + Main_Effect(level) for each factor.
+        Requires R2. Reads self.effects[factor] as a 2-col DataFrame [factor, 'Main_Effect'].
+        """
+        if 'R2' not in self.analysis_dataset.columns:
+            raise RuntimeError("R2 is missing; compute residuals before main effects.")
+        if not self.spec.rsg_vars:
+            return
+
+        for factor in self.spec.rsg_vars:
+            me = self.effects.get(factor)
+            # Normalize/repair if absent or malformed
+            if not isinstance(me, pd.DataFrame) or {factor, 'Main_Effect'} - set(me.columns):
+                me = (self.analysis_dataset
+                    .groupby([factor], sort=False)['R5']
+                    .mean()
+                    .rename('Main_Effect')
+                    .reset_index())
+                self.effects[factor] = me[[factor, 'Main_Effect']]
+            else:
+                # ensure exactly two columns & unique
+                me = me[[factor, 'Main_Effect']].drop_duplicates()
+
+            label = f"{factor}_MEs"
+            df_me = (self.analysis_dataset[[factor, 'R2']]
+                    .merge(me, on=factor, how='left', validate='many_to_one'))
+            df_me[label] = df_me['R2'] + df_me['Main_Effect']
+            self.effects[label] = df_me[[factor, label]]
+
+
+                    
     def __calculate_factor_interaction_effects(self):
         #calculate average R5 for levels of RSG
 
@@ -1785,4 +1897,254 @@ class AnalysisDataSet:
         self.__calculate_time_me()
         self.__calculate_main_effects()
         self.__calculate_factor_interaction_effects()
-        
+
+    def __build_keys(self, df: pd.DataFrame) -> pd.DataFrame:
+        out = df.copy()
+        # Stable row id for reproducible merges
+        out['obs_id'] = np.arange(len(out), dtype=np.int64)
+        k_vars = self.spec.rsg_vars or []
+        t = self.spec.time_var
+
+        # Canonical tuple keys for math
+        if k_vars:
+            out['rsg_key'] = list(map(tuple, out[k_vars].astype(object).values))
+        else:
+            out['rsg_key'] = [()] * len(out)
+
+        if k_vars and t:
+            out['cell_key'] = list(map(tuple, out[k_vars + [t]].astype(object).values))
+        elif t:
+            out['cell_key'] = out[t].astype(object).apply(lambda x: (x,))
+        else:
+            out['cell_key'] = out['rsg_key']
+
+        # Composite label purely for charts/UX (keep it!)
+        if self.spec.rsg_var_name and k_vars:
+            delim = getattr(self.spec, 'rsg_var_delim', '_')
+            out[self.spec.rsg_var_name] = (
+                out[k_vars].astype('string').apply(lambda s: delim.join(s), axis=1)
+            )
+        return out
+    
+    def __prepare_dataset(self) -> pd.DataFrame:
+        spec = self.spec
+
+        out = self._prepare_core(
+            df=self.raw_dataset,
+            rsg_vars=spec.rsg_vars,
+            rsg_var_name=spec.rsg_var_name,
+            rsg_var_delim=spec.rsg_var_delim,
+            time_var=spec.time_var,
+            response_var=spec.response_var,
+            requires_sort=spec.requires_sort,
+            sort_cols=spec.sort_cols,
+            data_prep_output_cols=spec.data_prep_output_cols,
+            validate_fn=lambda d: validate_columns(d, spec),
+            add_group_col_fn=lambda d, cols, name, delim: self.__add_grouping_variable_column(
+                df=d, cols_to_combine=cols, col_name=name, col_delim=delim
+            ),
+        )
+
+        # Build stable keys for downstream math/tests
+        out = self.__build_keys(out)  # the helper we discussed earlier (adds obs_id, rsg_key, cell_key)
+        return out
+    
+
+    @staticmethod
+    def _prepare_core(
+        df: pd.DataFrame,
+        *,
+        rsg_vars: list[str] | None,
+        rsg_var_name: str,
+        rsg_var_delim: str,
+        time_var: str | None,
+        response_var: str,
+        requires_sort: bool,
+        sort_cols: list[str],
+        data_prep_output_cols: list[str],
+        validate_fn,          # a callable for validation (keeps it swappable in tests)
+        add_group_col_fn,     # a callable to build the composite rsg when needed
+        logger: logging.Logger = logger,
+    ) -> pd.DataFrame:
+        # 1) validate (pure)
+        out = validate_fn(df.copy())
+
+        # 2) add composite rsg if needed
+        if rsg_vars:
+            out = add_group_col_fn(out, rsg_vars, rsg_var_name, rsg_var_delim)
+
+            # prune groups with n<=1 (pure)
+            grouped = out.groupby(rsg_var_name).size()
+            grouped = grouped[grouped > 1]
+            if grouped.shape[0] == 0:
+                raise ValueError("All subgroups have 1 or less observations!")
+
+            grouped = grouped.reset_index().rename(columns={0: 'n'})
+            out = pd.merge(out, grouped, how='inner', on=rsg_var_name)
+
+        # 3) sorting
+        if requires_sort:
+            out = out.sort_values(sort_cols, kind='stable')
+
+        # 4) project columns
+        out = out[data_prep_output_cols]
+
+        # 5) dropna (pure)
+        out = out.dropna()
+
+        return out
+    def __build_frames(self) -> None:
+        """
+        Materialize canonical frames by grain:
+        - obs_df : one row per observation
+        - cell_df: one row per (k_vars + time)
+        - k_df   : one row per k_vars combination
+        - t_df   : one row per time point
+        """
+        spec = self.spec
+        y = spec.response_var
+        k_vars = list(spec.rsg_vars or [])
+        t = spec.time_var
+
+        df = self.__ensure_keys(self.analysis_dataset)
+
+        # ---------- obs_df (authoritative row-grain) ----------
+        base_cols = [c for c in [*k_vars, t, spec.rsg_var_name, 'obs_id', 'n'] if c in df.columns]
+        means     = [c for c in ['Ybar','Ybar_k','Ybar_t','Ybar_kt'] if c in df.columns]
+        residuals = [c for c in ['R1','R2','R3','R4','R5'] if c in df.columns]
+        rcrs      = [c for c in ['RCR1','RCR2','RCR3','RCR4','RCR5'] if c in df.columns]
+        centered  = [c for c in ['Rbar_k','Rbar_t','Rbar_kt'] if c in df.columns]
+        inter_row = [c for c in ['pdc_by_pt','interaction_cell','factor_interaction_effects'] if c in df.columns]
+
+        obs_keep = [c for c in [y, *base_cols, *means, *residuals, *rcrs, *centered, *inter_row] if c in df.columns]
+        self.obs_df = (df[obs_keep]
+                    .sort_values('obs_id', kind='stable')
+                    .reset_index(drop=True))
+
+        # ---------- k_df (factor/main-effect grain) ----------
+        if spec.has_grouping and k_vars:
+            # counts by factor combo (no rename needed)
+            k_counts = (
+                df.groupby(k_vars, sort=False)
+                .size()
+                .rename('n_k')
+                .reset_index()
+            )
+            k_df = k_counts
+
+            # add factor-level means if you want them visible at k grain
+            if 'Ybar_k' in df.columns:
+                k_first = self.__safe_first(df, k_vars, 'Ybar_k')
+                k_df = k_df.merge(k_first, on=k_vars, how='left', validate='one_to_one')
+
+            # join per-factor Main_Effect tables you stored in self.effects[factor]
+            for factor in k_vars:
+                me = self.effects.get(factor)
+                if isinstance(me, pd.DataFrame) and {factor, 'Main_Effect'} <= set(me.columns):
+                    k_df = k_df.merge(
+                        me[[factor, 'Main_Effect']].rename(columns={'Main_Effect': f'{factor}_Main_Effect'}),
+                        on=factor, how='left', validate='many_to_one'
+                    )
+
+            # single-factor convenience alias
+            if len(k_vars) == 1 and f"{k_vars[0]}_Main_Effect" in k_df.columns:
+                k_df['Main_Effect_k'] = k_df[f"{k_vars[0]}_Main_Effect"]
+
+            self.k_df = k_df.sort_values(k_vars, kind='stable').reset_index(drop=True)
+        else:
+            self.k_df = pd.DataFrame(columns=(k_vars + ['n_k'] + (['Ybar_k'] if 'Ybar_k' in df.columns else [])))
+
+        # ---------- t_df (time/main-effect grain) ----------
+        if spec.has_time and t:
+            t_counts = (
+                df.groupby([t], sort=False)
+                .size()
+                .rename('n_t')
+                .reset_index()
+            )
+            t_df = t_counts
+
+            if 'Ybar_t' in df.columns:
+                t_first = self.__safe_first(df, [t], 'Ybar_t')
+                t_df = t_df.merge(t_first, on=[t], how='left', validate='one_to_one')
+
+            # time main effect: you store as self.effects['pt_me'] with column PT_ME
+            pt_me = self.effects.get('pt_me')
+            if isinstance(pt_me, pd.DataFrame):
+                # normalize shape: either index=t or column=t
+                if t not in pt_me.columns and pt_me.index.name == t:
+                    pt_me = pt_me.reset_index()
+                if {'PT_ME'} <= set(pt_me.columns) and t in pt_me.columns:
+                    t_df = t_df.merge(pt_me[[t, 'PT_ME']], on=t, how='left', validate='many_to_one')
+
+            self.t_df = t_df.sort_values([t], kind='stable').reset_index(drop=True)
+        else:
+            self.t_df = pd.DataFrame(columns=([t] if t else []) + ['n_t'] + (['Ybar_t'] if 'Ybar_t' in df.columns else []) + ['PT_ME'])
+
+        # ---------- cell_df (cell-grain: k_vars × t) ----------
+        if spec.has_grouping and spec.has_time and k_vars and t:
+            keys = k_vars + [t]
+
+            # n per cell
+            cdf = (
+                df.groupby(keys, sort=False)
+                .size()
+                .rename('n_cell')
+                .reset_index()
+            )
+
+            # firsts of broadcast means (only if present)
+            for col in ['Ybar_kt', 'Ybar_k', 'Ybar_t']:
+                if col in df.columns:
+                    c_first = self.__safe_first(df, keys, col)
+                    cdf = cdf.merge(c_first, on=keys, how='left', validate='one_to_one')
+
+            # interaction per cell: prefer explicit column else reconstruct
+            if 'interaction_cell' in df.columns:
+                ic = self.__safe_first(df, keys, 'interaction_cell')
+                cdf = cdf.merge(ic, on=keys, how='left', validate='one_to_one')
+            elif all(c in cdf.columns for c in ['Ybar_kt', 'Ybar_k', 'Ybar_t']) and 'Ybar' in self.statistics:
+                cdf['interaction_cell'] = cdf['Ybar_kt'] - cdf['Ybar_k'] - cdf['Ybar_t'] + float(self.statistics['Ybar'])
+
+            # centered residual cell means if present
+            for col in ['Rbar_kt']:
+                if col in df.columns:
+                    c_first = self.__safe_first(df, keys, col)
+                    cdf = cdf.merge(c_first, on=keys, how='left', validate='one_to_one')
+
+            self.cell_df = cdf.sort_values(keys, kind='stable').reset_index(drop=True)
+        else:
+            # empty shell with predictable columns
+            self.cell_df = pd.DataFrame(columns=(k_vars + ([t] if t else []) + ['n_cell','Ybar_kt','Ybar_k','Ybar_t','interaction_cell','Rbar_kt']))
+
+
+    # --- helpers (put inside the class) ------------------------------------------
+    def __ensure_keys(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Make sure key columns exist; create a deterministic obs_id if missing."""
+        spec = self.spec
+        out = df.copy()
+
+        # ensure obs_id (stable) for row-grain sorting/debug
+        if 'obs_id' not in out.columns:
+            sort_cols = []
+            if spec.has_grouping:
+                sort_cols += [spec.rsg_var_name]
+            if spec.has_time:
+                sort_cols += [spec.time_var]
+            if sort_cols:
+                out = out.sort_values(sort_cols, kind='stable')
+            out = out.reset_index(drop=True)
+            out['obs_id'] = np.arange(len(out), dtype=int)
+
+        return out
+
+    def __safe_first(self, df: pd.DataFrame, keys: list[str], col: str) -> pd.DataFrame:
+        """Return one row per keys with the first value of col, if col exists; else empty."""
+        if col not in df.columns:
+            return pd.DataFrame(columns=keys + [col])
+        return (
+            df.groupby(keys, sort=False)[col]
+            .first()
+            .reset_index()
+        )
+    # -----------------------------------------------------------------------------
