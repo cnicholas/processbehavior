@@ -1,0 +1,663 @@
+"""
+VAS (Variance Analysis System) residual calculations for process behavior analysis.
+
+This module calculates the Wheeler/Bishop VAS residuals (R1-R5) that decompose
+total variation into interpretable components:
+
+- R1: Total deviation from grand mean
+- R2: Within-cell (unexplained) variation
+- R3: Interaction effects (factor × time)
+- R4: Time effects + unexplained
+- R5: Factor effects + unexplained
+
+The calculations adapt based on Sampling Design State (SDS):
+- SDS 1: Direct within-cell variance (full replication)
+- SDS 2: Moving average approximation (no replication)
+- SDS 3: Hybrid approach (partial replication)
+
+Follows the Pythonic Hadley philosophy:
+- Pure functions (no mutation)
+- Explicit inputs and outputs
+- Type hints everywhere
+- Comprehensive docstrings with examples
+"""
+
+from __future__ import annotations
+
+import logging
+from typing import TYPE_CHECKING
+
+import numpy as np
+import pandas as pd
+
+if TYPE_CHECKING:
+    from analysis_dataset import AnalysisSpecification
+
+logger = logging.getLogger(__name__)
+
+
+# ============================================================================
+# Pure Functions: Means (Ybar calculations)
+# ============================================================================
+
+def calculate_grand_mean(df: pd.DataFrame, response_var: str) -> float:
+    """
+    Calculate grand mean (Ȳ) - average of all observations.
+
+    This is the baseline for R1 residuals.
+
+    Parameters
+    ----------
+    df : DataFrame
+        Input data
+    response_var : str
+        Name of response variable column
+
+    Returns
+    -------
+    float
+        Grand mean (Ȳ)
+
+    Examples
+    --------
+    >>> df = pd.DataFrame({'weight': [10.0, 10.5, 9.5, 10.0]})
+    >>> calculate_grand_mean(df, 'weight')
+    10.0
+    """
+    return df[response_var].mean()
+
+
+def calculate_factor_means(
+    df: pd.DataFrame,
+    response_var: str,
+    rsg_var: str
+) -> pd.Series:
+    """
+    Calculate factor-level means (Ȳ_k) - average for each factor level.
+
+    Broadcasts the mean for each factor level to all rows in that level.
+
+    Parameters
+    ----------
+    df : DataFrame
+        Input data
+    response_var : str
+        Name of response variable
+    rsg_var : str
+        Name of rational subgroup variable
+
+    Returns
+    -------
+    Series
+        Factor means, same length as df (broadcast to rows)
+
+    Examples
+    --------
+    >>> df = pd.DataFrame({
+    ...     'lane': ['A', 'A', 'B', 'B'],
+    ...     'weight': [10.0, 10.5, 9.0, 9.5]
+    ... })
+    >>> calculate_factor_means(df, 'weight', 'lane')
+    0    10.25
+    1    10.25
+    2     9.25
+    3     9.25
+    Name: weight, dtype: float64
+    """
+    return df.groupby(rsg_var)[response_var].transform('mean')
+
+
+def calculate_time_means(
+    df: pd.DataFrame,
+    response_var: str,
+    time_var: str
+) -> pd.Series:
+    """
+    Calculate time-level means (Ȳ_t) - average for each time point.
+
+    Broadcasts the mean for each time point to all rows at that time.
+
+    Parameters
+    ----------
+    df : DataFrame
+        Input data
+    response_var : str
+        Name of response variable
+    time_var : str
+        Name of time variable
+
+    Returns
+    -------
+    Series
+        Time means, same length as df (broadcast to rows)
+
+    Examples
+    --------
+    >>> df = pd.DataFrame({
+    ...     'pull': [1, 1, 2, 2],
+    ...     'weight': [10.0, 10.5, 9.0, 9.5]
+    ... })
+    >>> calculate_time_means(df, 'weight', 'pull')
+    0    10.25
+    1    10.25
+    2     9.25
+    3     9.25
+    Name: weight, dtype: float64
+    """
+    return df.groupby(time_var)[response_var].transform('mean')
+
+
+def calculate_cell_means(
+    df: pd.DataFrame,
+    response_var: str,
+    rsg_var: str,
+    time_var: str
+) -> pd.Series:
+    """
+    Calculate cell means (Ȳ_kt) - average for each (factor × time) cell.
+
+    Broadcasts the mean for each cell to all rows in that cell.
+
+    Parameters
+    ----------
+    df : DataFrame
+        Input data
+    response_var : str
+        Name of response variable
+    rsg_var : str
+        Name of rational subgroup variable
+    time_var : str
+        Name of time variable
+
+    Returns
+    -------
+    Series
+        Cell means, same length as df (broadcast to rows)
+
+    Examples
+    --------
+    >>> df = pd.DataFrame({
+    ...     'lane': ['A', 'A', 'B', 'B'],
+    ...     'pull': [1, 1, 2, 2],
+    ...     'weight': [10.0, 10.5, 9.0, 9.5]
+    ... })
+    >>> calculate_cell_means(df, 'weight', 'lane', 'pull')
+    0    10.25
+    1    10.25
+    2     9.25
+    3     9.25
+    Name: weight, dtype: float64
+    """
+    return df.groupby([rsg_var, time_var])[response_var].transform('mean')
+
+
+# ============================================================================
+# Pure Functions: Residuals (R1-R5)
+# ============================================================================
+
+def calculate_r1_residual(
+    df: pd.DataFrame,
+    response_var: str,
+    grand_mean: float
+) -> pd.Series:
+    """
+    Calculate R1 residual: total deviation from grand mean.
+
+    R1 = Y - Ȳ  (Equation 56 from Wheeler)
+
+    R1 represents the total variation of each observation around the
+    overall average. It's the foundation for all other residuals.
+
+    Parameters
+    ----------
+    df : DataFrame
+        Input data
+    response_var : str
+        Name of response variable column
+    grand_mean : float
+        Grand mean (Ȳ)
+
+    Returns
+    -------
+    Series
+        R1 residuals, same length as df
+
+    Examples
+    --------
+    >>> df = pd.DataFrame({'weight': [10.1, 10.3, 9.9]})
+    >>> r1 = calculate_r1_residual(df, 'weight', 10.1)
+    >>> r1.tolist()
+    [0.0, 0.19999999999999929, -0.20000000000000107]
+
+    Notes
+    -----
+    R1 is the simplest residual - it just shows how far each observation
+    is from the overall average. The sum of all R1 values is always zero.
+    """
+    return df[response_var] - grand_mean
+
+
+def calculate_r2_residual_sds1(
+    df: pd.DataFrame,
+    response_var: str,
+    cell_means: pd.Series
+) -> pd.Series:
+    """
+    Calculate R2 for SDS 1 (full replication): within-cell variation.
+
+    R2 = Y - Ȳ_kt  (Equation 58 from Wheeler)
+
+    With full replication (all cells have n≥2), we can directly estimate
+    within-cell variance from the deviations within each cell.
+
+    Parameters
+    ----------
+    df : DataFrame
+        Input data
+    response_var : str
+        Name of response variable
+    cell_means : Series
+        Cell means (Ȳ_kt), broadcast to rows
+
+    Returns
+    -------
+    Series
+        R2 residuals
+
+    Examples
+    --------
+    >>> df = pd.DataFrame({'y': [10.0, 10.5, 9.0, 9.5]})
+    >>> cell_means = pd.Series([10.25, 10.25, 9.25, 9.25])
+    >>> r2 = calculate_r2_residual_sds1(df, 'y', cell_means)
+    >>> r2.tolist()
+    [-0.25, 0.25, -0.25, 0.25]
+    """
+    return df[response_var] - cell_means
+
+
+def calculate_r2_residual_sds2(
+    df: pd.DataFrame,
+    response_var: str,
+    rsg_var: str
+) -> pd.Series:
+    """
+    Calculate R2 for SDS 2 (no replication): moving average approximation.
+
+    R2 ≈ Y - MA2_k(t)
+
+    With no replication (all cells n=1), we can't estimate within-cell
+    variance directly. Instead, use a 2-point moving average within each
+    factor level to approximate the local mean.
+
+    Parameters
+    ----------
+    df : DataFrame
+        Input data (must be sorted by [rsg_var, time])
+    response_var : str
+        Name of response variable
+    rsg_var : str
+        Rational subgroup variable
+
+    Returns
+    -------
+    Series
+        R2 residuals (approximation)
+
+    Notes
+    -----
+    The moving average is (Y[t-1] + Y[t+1]) / 2. For edge points
+    (first/last in each group), use forward or backward average only.
+
+    This is an approximation - it assumes smooth local variation.
+    """
+    # Calculate 2-point moving average per group
+    ma2 = df.groupby(rsg_var)[response_var].transform(
+        lambda s: (s.shift(1) + s.shift(-1)) / 2.0
+    )
+
+    # For edge points, use forward or backward value only
+    fwd = df.groupby(rsg_var)[response_var].shift(-1)
+    back = df.groupby(rsg_var)[response_var].shift(1)
+
+    # Fill NaN values with forward, then backward
+    ma2 = ma2.where(ma2.notna(), fwd.where(fwd.notna(), back))
+
+    return df[response_var] - ma2
+
+
+def calculate_r2_residual_sds3(
+    df: pd.DataFrame,
+    response_var: str,
+    cell_means: pd.Series,
+    rsg_var: str,
+    time_var: str
+) -> pd.Series:
+    """
+    Calculate R2 for SDS 3 (partial replication): hybrid approach.
+
+    R2 = Y - Ȳ_kt  for cells with n > 1
+    R2 = 0         for cells with n = 1
+
+    With partial replication, some cells have n≥2 (can estimate variance)
+    and some have n=1 (cannot). For n=1 cells, set R2=0 (no within-cell
+    variance estimable).
+
+    Parameters
+    ----------
+    df : DataFrame
+        Input data
+    response_var : str
+        Name of response variable
+    cell_means : Series
+        Cell means (Ȳ_kt)
+    rsg_var : str
+        Rational subgroup variable
+    time_var : str
+        Time variable
+
+    Returns
+    -------
+    Series
+        R2 residuals (hybrid)
+
+    Examples
+    --------
+    >>> df = pd.DataFrame({
+    ...     'rsg': ['A', 'A', 'B'],  # A has n=2, B has n=1
+    ...     'time': [1, 1, 1],
+    ...     'y': [10.0, 10.5, 9.0]
+    ... })
+    >>> # Cell means would be: [10.25, 10.25, 9.0]
+    >>> # n per cell: A×1 has n=2, B×1 has n=1
+    >>> # R2: [-0.25, 0.25, 0.0]  (B gets 0 because n=1)
+    """
+    # Count observations per cell
+    n_per_cell = df.groupby([rsg_var, time_var])[response_var].transform('count')
+
+    # Calculate within-cell deviation
+    r2_within = df[response_var] - cell_means
+
+    # Use within-cell deviation only for n>1, otherwise 0
+    # Return as Series to match expected type
+    return pd.Series(
+        np.where(n_per_cell > 1, r2_within, 0.0),
+        index=df.index
+    )
+
+
+def calculate_r3_residual(
+    df: pd.DataFrame,
+    response_var: str,
+    factor_means: pd.Series,
+    time_means: pd.Series,
+    grand_mean: float
+) -> pd.Series:
+    """
+    Calculate R3 residual: interaction effects (factor × time).
+
+    R3 = Y - Ȳ_k - Ȳ_t + Ȳ  (Equation 66 from Wheeler)
+
+    R3 captures the interaction between factors and time. It represents
+    variation that can't be explained by factor effects or time effects alone.
+
+    Parameters
+    ----------
+    df : DataFrame
+        Input data
+    response_var : str
+        Name of response variable
+    factor_means : Series
+        Factor means (Ȳ_k)
+    time_means : Series
+        Time means (Ȳ_t)
+    grand_mean : float
+        Grand mean (Ȳ)
+
+    Returns
+    -------
+    Series
+        R3 residuals
+
+    Examples
+    --------
+    >>> df = pd.DataFrame({'y': [10.0, 10.5, 9.0, 9.5]})
+    >>> factor_means = pd.Series([10.25, 10.25, 9.25, 9.25])
+    >>> time_means = pd.Series([9.75, 9.75, 10.0, 10.0])
+    >>> r3 = calculate_r3_residual(df, 'y', factor_means, time_means, 9.875)
+    """
+    return df[response_var] - factor_means - time_means + grand_mean
+
+
+def calculate_r4_residual(
+    time_means: pd.Series,
+    grand_mean: float,
+    r2: pd.Series
+) -> pd.Series:
+    """
+    Calculate R4 residual: time effects + unexplained.
+
+    R4 = Ȳ_t - Ȳ + R2  (Equation 72 from Wheeler)
+
+    R4 represents time effects plus within-cell variation. Used to
+    assess if time contributes meaningful variation.
+
+    Parameters
+    ----------
+    time_means : Series
+        Time means (Ȳ_t)
+    grand_mean : float
+        Grand mean (Ȳ)
+    r2 : Series
+        R2 residuals
+
+    Returns
+    -------
+    Series
+        R4 residuals
+    """
+    return time_means - grand_mean + r2
+
+
+def calculate_r5_residual(
+    factor_means: pd.Series,
+    grand_mean: float,
+    r2: pd.Series
+) -> pd.Series:
+    """
+    Calculate R5 residual: factor effects + unexplained.
+
+    R5 = Ȳ_k - Ȳ + R2  (Equation 75 from Wheeler)
+
+    R5 represents factor effects plus within-cell variation. Used to
+    assess if factors contribute meaningful variation and to calculate
+    main effects.
+
+    Parameters
+    ----------
+    factor_means : Series
+        Factor means (Ȳ_k)
+    grand_mean : float
+        Grand mean (Ȳ)
+    r2 : Series
+        R2 residuals
+
+    Returns
+    -------
+    Series
+        R5 residuals
+    """
+    return factor_means - grand_mean + r2
+
+
+# ============================================================================
+# Orchestration Class
+# ============================================================================
+
+class ResidualCalculator:
+    """
+    Calculates VAS residuals (R1-R5) based on Sampling Design State.
+
+    This class orchestrates the pure residual calculation functions,
+    adapting the R2 calculation based on SDS and adding all necessary
+    mean columns to the dataset.
+
+    Examples
+    --------
+    Calculate residuals for SDS 1 (full replication):
+
+    >>> calc = ResidualCalculator()
+    >>> df_with_residuals = calc.calculate_residuals(df, spec, sds=1)
+    >>> # df now has: Ybar, Ybar_k, Ybar_t, Ybar_kt, R1, R2, R3, R4, R5
+
+    Calculate for SDS 2 (no replication - uses moving average):
+
+    >>> df_with_residuals = calc.calculate_residuals(df, spec, sds=2)
+    >>> # R2 calculated using moving average approximation
+    """
+
+    def calculate_residuals(
+        self,
+        df: pd.DataFrame,
+        spec: 'AnalysisSpecification',
+        sds: int
+    ) -> pd.DataFrame:
+        """
+        Calculate all VAS residuals and add to DataFrame.
+
+        This is the main entry point. It:
+        1. Calculates all means (Ybar, Ybar_k, Ybar_t, Ybar_kt)
+        2. Calculates all residuals (R1, R2, R3, R4, R5)
+        3. Adapts R2 calculation based on SDS
+
+        Parameters
+        ----------
+        df : DataFrame
+            Input data (prepared, with keys)
+        spec : AnalysisSpecification
+            Analysis specification
+        sds : int
+            Sampling Design State (1, 2, or 3)
+
+        Returns
+        -------
+        DataFrame
+            Input data with added columns:
+            - Ybar, Ybar_k, Ybar_t, Ybar_kt (means)
+            - R1, R2, R3, R4, R5 (residuals)
+
+        Raises
+        ------
+        ValueError
+            If SDS doesn't support VAS residuals (0, 4, 6)
+            If required columns missing
+
+        Examples
+        --------
+        >>> calc = ResidualCalculator()
+        >>> df_out = calc.calculate_residuals(df, spec, sds=1)
+        >>> 'R1' in df_out.columns
+        True
+        >>> 'R5' in df_out.columns
+        True
+        """
+        if not spec.has_grouping:
+            raise ValueError(
+                "VAS residuals require grouping structure.\n"
+                "No grouping variables specified in spec."
+            )
+
+        if sds not in [1, 2, 3, 5]:
+            raise ValueError(
+                f"VAS residuals not supported for SDS {sds}.\n"
+                f"Valid SDS values: 1 (full replication), "
+                f"2 (no replication), 3 (partial replication), 5 (nested).\n"
+                f"Current SDS: {sds}"
+            )
+
+        out = df.copy()
+        y = spec.response_var
+
+        # Step 1: Calculate all means
+        logger.debug("Calculating means (Ybar, Ybar_k, Ybar_t, Ybar_kt)")
+
+        grand_mean = calculate_grand_mean(out, y)
+        out['Ybar'] = grand_mean
+
+        out['Ybar_k'] = calculate_factor_means(out, y, spec.rsg_var_name)
+
+        out['Ybar_t'] = calculate_time_means(out, y, spec.time_var)
+
+        out['Ybar_kt'] = calculate_cell_means(out, y, spec.rsg_var_name, spec.time_var)
+
+        # Step 2: Calculate R1 (always the same)
+        logger.debug("Calculating R1 residual")
+        out['R1'] = calculate_r1_residual(out, y, grand_mean)
+
+        # Step 3: Calculate R2 (SDS-dependent)
+        logger.debug(f"Calculating R2 residual (SDS {sds} method)")
+        out['R2'] = self._calculate_r2_for_sds(out, spec, sds)
+
+        # Step 4: Calculate R3
+        logger.debug("Calculating R3 residual")
+        out['R3'] = calculate_r3_residual(
+            out, y, out['Ybar_k'], out['Ybar_t'], grand_mean
+        )
+
+        # Step 5: Calculate R4
+        logger.debug("Calculating R4 residual")
+        out['R4'] = calculate_r4_residual(out['Ybar_t'], grand_mean, out['R2'])
+
+        # Step 6: Calculate R5
+        logger.debug("Calculating R5 residual")
+        out['R5'] = calculate_r5_residual(out['Ybar_k'], grand_mean, out['R2'])
+
+        logger.info("VAS residuals calculated successfully")
+        return out
+
+    def _calculate_r2_for_sds(
+        self,
+        df: pd.DataFrame,
+        spec: 'AnalysisSpecification',
+        sds: int
+    ) -> pd.Series:
+        """
+        Calculate R2 using appropriate method for the SDS.
+
+        This is where the strategy pattern happens - different R2
+        calculations for different data structures.
+        """
+        y = spec.response_var
+
+        if sds == 1:
+            # Full replication: direct within-cell variance
+            logger.debug("SDS 1: R2 = Y - Ybar_kt")
+            return calculate_r2_residual_sds1(df, y, df['Ybar_kt'])
+
+        elif sds == 2:
+            # No replication: moving average approximation
+            logger.debug("SDS 2: R2 ≈ Y - MA2_k(t)")
+            # Must sort for moving average to work correctly
+            df_sorted = df.sort_values([spec.rsg_var_name, spec.time_var]).copy()
+            r2 = calculate_r2_residual_sds2(df_sorted, y, spec.rsg_var_name)
+            # Re-index to match original order
+            return r2.reindex(df.index)
+
+        elif sds == 3:
+            # Partial replication: hybrid approach
+            logger.debug("SDS 3: R2 = Y - Ybar_kt (n>1), else 0")
+            return calculate_r2_residual_sds3(
+                df, y, df['Ybar_kt'], spec.rsg_var_name, spec.time_var
+            )
+
+        elif sds == 5:
+            # Nested: use SDS 3 approach for now
+            logger.warning(
+                "SDS 5: Using SDS 3 hybrid approach for R2.\n"
+                "Nested designs may require custom variance components."
+            )
+            return calculate_r2_residual_sds3(
+                df, y, df['Ybar_kt'], spec.rsg_var_name, spec.time_var
+            )
+
+        else:
+            raise ValueError(f"R2 calculation not defined for SDS {sds}")

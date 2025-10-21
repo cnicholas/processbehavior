@@ -2,6 +2,7 @@ import logging
 import pytest
 
 import analysis_dataset as ad
+from analysis_specification import AnalysisSpecification
 
 # Configure logging
 logging.basicConfig(

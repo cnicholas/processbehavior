@@ -1,9 +1,10 @@
 import pytest
 import analysis_dataset as ad
+from analysis_specification import AnalysisSpecification
 import numpy as np
 import pandas as pd
 import logging
-import objects as obj
+from spc_constants import c4
 
 
 # Configure logging
@@ -397,8 +398,8 @@ def test_perform_analysis_Imr(df: pd.DataFrame):
         result = theAnalysis.calculate()#(df=df, specification=spec)
         logger.info('Testing with df for IMR with groups')
 
-        logger.info('Testing return is a dictionary')
-        assert type(result) == type({})
+        logger.info('Testing return is dict-like')
+        assert hasattr(result, 'keys') and hasattr(result, 'values')
 
         logger.info('Testing return contains two dictionaries')
         assert len(result) == 2 #third group only had 1 obs so it should have been dropped
@@ -429,7 +430,7 @@ def test_perform_analysis_IMR_w_o_grouping_var(df: pd.DataFrame):
         a_spec = ad.AnalysisSpecification(analysis_type="Imr", analysis_specification=spec)
         result = ad.perform_analysis(df=df, specification=spec)
 
-        assert type(result) == type({})
+        assert hasattr(result, "keys") and hasattr(result, "values")
 
         logger.debug(f'\n{result}')
   
@@ -443,7 +444,7 @@ def test_perform_analysis_R(df: pd.DataFrame):
         logger.debug(f'Test: {result}')
         logger.info(f'Testing return is a dictionary{type(result)}')
 
-        assert type(result) == type({})
+        assert hasattr(result, "keys") and hasattr(result, "values")
         assert len(result) == 2 # Expect length of 2, 3rd group had 1 obs and should be dropped
         logger.debug(f'{result}')
         logger.info('Testing group means')
@@ -470,7 +471,7 @@ def test_perform_analysis_R_w_o_grouping(df: pd.DataFrame):
         logger.info('spec')
         result = ad.perform_analysis(df=df, specification=spec)
 
-        assert type(result) == type({})
+        assert hasattr(result, "keys") and hasattr(result, "values")
         assert result['all']['statistics']['mR'] == 2.917
         assert result['all']['statistics']['n'] == 6
         assert result['all']['statistics']['lcl'] == 0
@@ -488,7 +489,7 @@ def test_R_with_FW800():
 
         result = ad.perform_analysis(df=df, specification=spec)
 
-        assert type(result) == type({}) #expect dict
+        assert hasattr(result, "keys") and hasattr(result, "values") #expect dict
         assert len(result) == 8 #expect 8 rsgs
 
         #Check all values dfs in the returned dict
@@ -552,7 +553,7 @@ def test_IMR_w_o_grouping_var_FW800():
             a_spec = ad.AnalysisSpecification(analysis_type="Imr", analysis_specification=spec)
             result = ad.perform_analysis(df=df, specification=spec)
 
-            assert type(result) == type({})
+            assert hasattr(result, "keys") and hasattr(result, "values")
             _keys = result.keys()
             logger.info("Verifying dictionary returned has the key: 'all'...")
             assert list(result)[0] == 'all'
@@ -819,7 +820,7 @@ def test_limits():
          'sd': sd,
          'N': N}
         result = pd.DataFrame(frame)
-        result['c4'] = obj.c4(result['N'])
+        result['c4'] = result['N'].apply(c4)
         result['Wd'] = result['sd'] / result['c4']
         result['lcl'] = result['mean'] + (-1 * ((3 * result['Wd']) / np.sqrt(result['N'])))
         result['ucl'] = result['mean'] + ((3 * result['Wd']) / np.sqrt(result['N']))

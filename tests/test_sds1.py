@@ -732,9 +732,21 @@ def test_pdc_by_pt_consistency(df_SDS1):
     }
     analysis = ad.Analysis(df_SDS1, specification=spec)
     df = analysis.ads.analysis_dataset
+
+    # Calculate expected PDC using formula
     sanity = (df.groupby(['FACTOR 1','FACTOR 2','TIME'])
                 .apply(lambda g: g['Ybar_kt'].iloc[0] - g['Ybar_k'].iloc[0]
                                   - g['Ybar_t'].iloc[0] + g['Ybar'].iloc[0])
                 .rename('pdc_by_pt'))
-    calc = df.groupby(['FACTOR 1','FACTOR 2','TIME'])['pdc_by_pt'].mean()
+
+    # Get actual PDC from interactions (new architecture stores it there)
+    # PDC is a Series with same index as df, so we can group it
+    pdc_series = analysis.ads.interactions.get('pdc_by_pt')
+    assert pdc_series is not None, "PDC should be calculated for SDS 1"
+
+    # Add PDC to dataframe temporarily for grouping
+    df_with_pdc = df.copy()
+    df_with_pdc['pdc_by_pt'] = pdc_series
+    calc = df_with_pdc.groupby(['FACTOR 1','FACTOR 2','TIME'])['pdc_by_pt'].mean()
+
     pd.testing.assert_series_equal(calc.round(6), sanity.round(6), check_names=False)

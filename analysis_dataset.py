@@ -9,7 +9,13 @@ import pandas as pd
 import scipy.special
 from pandas.api.types import is_numeric_dtype
 
-import objects as obj
+from spc_constants import calculate_limits, detect_beyond_limits
+from data_preparation import DataPreparation
+from sds_detector import SamplingDesignDetector
+from residual_calculator import ResidualCalculator
+from effects_calculator import EffectsCalculator
+from analysis_result import AnalysisResult
+from analysis_specification import AnalysisSpecification
 
 # Configure module logger
 logger = logging.getLogger(__name__)
@@ -44,15 +50,32 @@ class Analysis:
         self.spec = AnalysisSpecification(self.analysis_type, specification)
         self.ads = AnalysisDataSet(df, self.spec)
 
-    def calculate(self) -> pd.DataFrame:
+    def calculate(self) -> AnalysisResult:
         """
-        Execute the appropriate analysis strategy and return results.
+        Execute the appropriate analysis strategy and return comprehensive results.
 
-        Returns:
-            DataFrame containing analysis results
+        Returns
+        -------
+        AnalysisResult
+            Unified result object containing:
+            - charts: Chart data and statistics
+            - residuals: VAS residuals (R1-R5) if calculated
+            - effects: Main effects if calculated
+            - interactions: Interaction effects if calculated
+            - summary: Comprehensive metadata
+            - dataset: Full analysis dataset
 
-        Raises:
-            ValueError: If analysis_type is not supported
+        Raises
+        ------
+        ValueError
+            If analysis_type is not supported
+
+        Examples
+        --------
+        >>> result = analysis.calculate()
+        >>> xbar = result.get_chart('Xbar')
+        >>> if result.has_residuals:
+        ...     residuals = result.residuals
         """
         strategies = {
             'Xbar': self._calculate_xbar,
@@ -67,7 +90,14 @@ class Analysis:
                 f'Valid types: {list(strategies.keys())}'
             )
 
-        return strategies[self.spec.analysis_type]()
+        # Execute strategy to get chart data
+        chart_data = strategies[self.spec.analysis_type]()
+
+        # Wrap in AnalysisResult for unified access
+        return AnalysisResult(
+            charts=chart_data,
+            analysis_dataset_obj=self.ads
+        )
 
     def _calculate_xbar(self) -> pd.DataFrame:
         """
@@ -116,7 +146,7 @@ class Analysis:
         # CALCULATE XBAR
         xbar = out.copy()
         xbar[['lcl', 'ucl']] = xbar.apply(
-            lambda row: obj.calculate_limits(
+            lambda row: calculate_limits(
                 mean=row['Xbar'],
                 sd=row['S'],
                 N=row[n_to_use],
@@ -126,7 +156,7 @@ class Analysis:
         )
 
         xbar['beyond_limits'] = xbar.apply(
-            lambda row: obj.detect_beyond_limits(
+            lambda row: detect_beyond_limits(
                 x=row['mean'],
                 ucl=row['ucl'],
                 lcl=row['lcl']
@@ -156,7 +186,7 @@ class Analysis:
 
         sbar = out.copy()
         sbar[['lcl', 'ucl']] = sbar.apply(
-            lambda row: obj.calculate_limits(
+            lambda row: calculate_limits(
                 mean=0,
                 sd=row['S'],
                 N=row[n_to_use],
@@ -166,7 +196,7 @@ class Analysis:
         )
 
         sbar['beyond_limits'] = sbar.apply(
-            lambda row: obj.detect_beyond_limits(
+            lambda row: detect_beyond_limits(
                 x=row['S'],
                 ucl=row['ucl'],
                 lcl=row['lcl']
@@ -220,7 +250,7 @@ class Analysis:
 
         # Add limits columns
         out[['lcl', 'ucl']] = out.apply(
-            lambda row: obj.calculate_limits(
+            lambda row: calculate_limits(
                 mean=0,
                 sd=row['S'],
                 N=row[n_to_use],
@@ -230,7 +260,7 @@ class Analysis:
         )
 
         out['beyond_limits'] = out.apply(
-            lambda row: obj.detect_beyond_limits(
+            lambda row: detect_beyond_limits(
                 x=row['S'],
                 ucl=row['ucl'],
                 lcl=row['lcl']
@@ -296,7 +326,7 @@ class Analysis:
             # Compute limits per group
             # grouped has columns: [spec.rsg_var_name, 'mean', 'mR']
             lims = grouped.apply(
-                lambda row: obj.calculate_limits(
+                lambda row: calculate_limits(
                     mean=row['mean'],
                     sd=0, N=0,
                     mR=(row['mR'] if pd.notna(row['mR']) else 0.0),
@@ -343,7 +373,7 @@ class Analysis:
             out['mr'] = out[y].diff().abs()
             mR = out['mr'].mean()
             mean_ = out[y].mean()
-            lims = obj.calculate_limits(mean=mean_, sd=0, N=0, mR=mR, limits_type="Imr", round_to=spec.round_to)
+            lims = calculate_limits(mean=mean_, sd=0, N=0, mR=mR, limits_type="Imr", round_to=spec.round_to)
             out['mean'] = mean_
             out['mR']   = mR
             out['lcl']  = lims['lcl']
@@ -420,7 +450,7 @@ class Analysis:
             grouped = grouped.agg(mR=pd.NamedAgg('mr', 'mean'))
 
             limits = grouped.apply(
-                lambda row: obj.calculate_limits(
+                lambda row: calculate_limits(
                     mean=0,
                     sd=0,
                     N=0,
@@ -436,7 +466,7 @@ class Analysis:
             out['mr'] = abs(out[spec.response_var].diff())
             out['mR'] = out['mr'].mean()
             mR = out['mR'].max()
-            limits = obj.calculate_limits(
+            limits = calculate_limits(
                 mean=0,
                 sd=0,
                 N=0,
@@ -520,243 +550,6 @@ def perform_analysis(df: pd.DataFrame, specification: dict):
     # Use new unified Analysis class
     analysis = Analysis(df, specification)
     return analysis.calculate()
-
-class AnalysisSpecification:
-    """
-    **AnalysisSpecification** is responsible for validating and processing analysis specifications
-    currently implemented as a dictionary.
-
-    Given a specification it determines how an analysis is executed and the results that are returned.
-    :param str **analysis_type** type of analysis being defined, valide values are:*("Xbar","S","Imr", and "R")*
-    :param dictionary analysis_specification: containing the parameters for the analysis: 
-               
-        rsg_vars:list rational subgrouping variables (optional) - if provided the input dataset 
-                will be grouped by columns specified.  In the below example, a column of concatenated values will
-                be returned and named "rsg" or the user specified: rsg_var_name.
-        time_var: the time dimension or ordering variable for the data, if provided, data will be sorted 
-                by rsg and time or time only.
-        response_var: the response variabe being analyzed for the conditions specified by 
-                rsg_vars and time_var
-        rsg_var_name: user specified label for the rational subgroup column created by rsg_vars specified, defaults to rsg
-        rsg_var_delim: user specified delimiter for multi-variable, *default value is '_'*, i.e., col_a, col_b 
-                will return values col_a_col_b, labeled with rsg_var_name, valid values include any string: *['_','|','-', ...etc]*
-        time_unit: enables aggregations for common intervals of time (Year, Quarter, Month, and Week) - using the 
-                specified unit,the system will group and aggregate the response variable. *not implemented*
-        round_to: digits to round analytic dataset numeric value to, default is 3
-
-        Example: spec = ``{'rsg_vars':['lane','phase'], 'time_var':'pull', 
-                         'response_var':'fill_weight','rsg_var_name':'rsg', 'time_unit':None, 'round_to':None}``
-
-    :return: an instance of AnalysisSpecification for specified analysis
-    :rtype: class
-    :raises ValueError: if above listed variables are not propertly specified.     
-    """
-
-    VALID_TIME_UNITS = ['Year', 'Quarter', 'Month', 'Week']
-
-    # s=['rsg', 's', 'S', 'lcl', 'ucl', 'beyond_limits']
-    # xbar = ['rsg', 'mean', 'Xbar', 'lcl', 'ucl', 'beyond_limits']
-    # spec = {'analysis_type':'S', 'rsg_vars':['a','b'], 'time_var':'d', 'response_var':'c','rsg_var_name':'rsg', 'time_unit':None}
-
-    def __init__(self, analysis_type:str, analysis_specification: dict):
-        SUPPORTED_ANALYSIS_TYPES = ['Xbar','S','Imr','R']
-        GROUPED_ANALYSES = ['Xbar','S']       
-
-
-        # Create output col list for each analyis type
-        self.analysis_type = analysis_type
-        self.spec = analysis_specification
-        self.rsg_vars = self.spec.get('rsg_vars')
-        self.rsg_var_name = self.spec.get('rsg_var_name', 'rsg')
-        self.rsg_var_delim = self.spec.get('rsg_var_delim', '_')
-        self.time_var = self.spec.get('time_var')
-        self.response_var = self.spec.get('response_var')
-        
-        self.round_to = self.spec.get('round_to', 3)  # default round to 3 if none
-        self.data_prep_output_cols = []
-        self.sort_cols = []
-        self.time_grouping_units = []
-        self.time_grouping_cols = {}
-        self.grouping_cols = []
-        self.zero_center = self.spec.get('zero-center', False)
-
-        if self.analysis_type not in SUPPORTED_ANALYSIS_TYPES:
-            raise ValueError(
-                f'Analyis type: {self.analysis_type} is not supported, specify one of: {SUPPORTED_ANALYSIS_TYPES}!')
-
-        if self.analysis_type in GROUPED_ANALYSES and self.rsg_vars is None:
-            raise ValueError(f'A grouping variable is required to produce a {self.analysis_type} analyis!')
-
-        if self.response_var is None:
-            raise ValueError(f'A response variable is required to produce a {self.analysis_type} analyis!')
-
-        if self.zero_center not in [True, False]:
-            raise ValueError(f'Supplied value for zero-centered needs to be True or False')
-
-        #self.has_grouping = True if self.rsg_vars is not None else False
-        self.has_time = True if self.time_var is not None else False
-        self.grouping_cols = self.rsg_var_name if self.has_grouping else []
-
-        # Need to raise exception in tidy function if time unit specified and time_var not a datetime
-        # 293
-        self.requires_sort = True if self.has_grouping and self.has_time or self.has_time else False
-
-        
-        self._build_data_prep_cols()
-        # Initialize output cols
-        self.analysis_output_cols = [self.response_var, 'mean', 'lcl', 'ucl', 'beyond_limits']
-
-        self._build_sort_cols()
-        self._build_output_cols()
-
-    def data_prep_output_cols(self) -> list:
-        self.data_prep_output_cols
-
-    def analysis_output_cols(self) -> list:
-        self.analysis_output_cols
-
-    def sort_cols(self) -> list:
-        self.sort_cols
-
-    @property
-    def has_grouping(self) -> bool:
-        """Return True if rational subgrouping variables are defined."""
-        return self.rsg_vars is not None
-
-    def grouping_cols(self) -> list:
-        self.grouping_cols
-
-    def has_time(self) -> bool:
-        self._has_time
-
-    def requires_sort(self) -> bool:
-        self.requires_sort
-
-    def _build_output_cols(self):
-        # Address Grouping var in output
-        if self.has_grouping: self.analysis_output_cols.insert(0, self.rsg_var_name)
-        # Address time var in output
-        self.analysis_output_cols.insert(0, self.time_var) if self.has_time else self.analysis_output_cols.insert(0,
-                                                                                                                  "x")
-    def _build_sort_cols(self):
-        # TODO: Need to factor in time unit
-        # Both grouping var and time need to be provided to enable sorting
-        if self.has_grouping and self.has_time:
-            self.sort_cols = [self.rsg_var_name, self.time_var]
-        elif self.has_time:
-            self.sort_cols = [self.time_var]
-
-    def _build_data_prep_cols(self) -> list:
-        """
-        _build_data_prep_cols builds a list of column names to keep 
-        at the end of the data preparation step, including time units for aggregation
-        """
-        self.data_prep_output_cols.insert(0, self.response_var)  # this is the default value
-        # Add time unit cols
-        for col in self.time_grouping_cols:
-            self.data_prep_output_cols.append(self.time_grouping_cols[col])
-
-        if self.has_grouping:
-            self.data_prep_output_cols.insert(0, 'n')
-            self.data_prep_output_cols.insert(0, self.rsg_var_name)
-            self.data_prep_output_cols.extend(self.rsg_vars)
-
-        if self.has_time:
-            self.data_prep_output_cols.insert(0, self.time_var)
-
-
-def validate_columns(df: pd.DataFrame, analysis_specification: AnalysisSpecification) -> pd.DataFrame:
-    spec = analysis_specification
-    # TODO: Centralize constants 
-    number_column_types = ['int64', 'float64', 'int32', 'Int64', 'Float64', 'Int32', 'category']
-    # string_column_types = ['string', 'object', 'category', 'String', 'Object']
-    date_column_types = ['int64', 'int32', 'Int64', 'Int32', 'datetime64[ns]', 'object']
-
-    df_cols = df.columns.tolist()
-    logger.info(f'Spec has grouping: {spec.has_grouping}')
-    if spec.has_grouping:
-
-        if not all(item in df_cols for item in spec.rsg_vars):
-            raise ValueError(f'One or more of the rsg_vars: {spec.rsg_vars}: are not in the data set: {df_cols}!')
-
-    if spec.has_time:
-
-        if not spec.time_var in df_cols:
-            raise ValueError(f'The time variable: {spec.time_var}: is not in the data set!')
-
-        time_type = df[spec.time_var].dtype
-        #TODO: Verify need to valid data type of time_var
-        #if not pd.api.types.is_datetime64_any_dtype(time_type):
-        #    raise ValueError(f'The time variable: {spec.time_var}: must be a datetime when a time unit is provided!')
-
-    # Validate response variable
-    if not spec.response_var in df_cols: raise ValueError(
-        f'The response variable: {spec.response_var}: is not in the data set!')
-
-    response_type = df[spec.response_var].dtype
-
-    if not pd.api.types.is_numeric_dtype(response_type): raise ValueError(
-        f'The response variable: {spec.response_var}: is not type numeric!')
-
-    return df
-
-
-def prepare_dataset(df: pd.DataFrame, analysis_specification: AnalysisSpecification) -> pd.DataFrame:
-    logger.debug('Entering prepare_dataset')
-    spec = analysis_specification
-    out = df.copy()
-
-    out = validate_columns(df=out, analysis_specification=spec)
-
-    # 296 - Incorporate user specified delimiter into spec to delimit multiple grouping variables when specified, default will be underscore - "_"
-    ##If specified add column for RSG - Rational Subgroup
-    if spec.has_grouping:
-
-        # Drop 'n' column if it exists in the input data to avoid conflicts
-        if 'n' in out.columns:
-            logger.debug('Dropping existing "n" column from input data (will be recalculated)')
-            out = out.drop(columns=['n'])
-
-        out = obj.add_grouping_variable_column(df=out, col_name=spec.rsg_var_name, cols_to_combine=spec.rsg_vars,
-                                               col_delim=spec.rsg_var_delim)
-
-        # Remove groups with one obs - solve for all grouped analyses
-        grouped = out.groupby(spec.rsg_var_name).size()
-        starting_count = grouped.count()
-        logger.debug('Starting with %s groups', starting_count)
-        grouped = grouped[grouped > 1]
-
-        if grouped.shape[0] == 0:
-            raise ValueError("All subgroups have 1 or less observations!")
-
-        grouped = grouped.reset_index()
-        grouped = grouped.rename(columns={0: 'n'})
-
-        logger.debug('Pruning groups with 1 obs:\\n%s', grouped)
-        ending_count = grouped.count()
-
-        logger.debug('Groups remaining: %s', ending_count.iloc[0])
-        logger.debug('Removed %s group(s)', starting_count - ending_count.iloc[0])
-        # Empty print removed
-
-        out = pd.merge(out, grouped, how='inner', on=spec.rsg_var_name)
-    else:
-        logger.debug('No groups specified')
-
-    # 301 - when provided sort by time dimension
-    if spec.requires_sort:
-        out = out.sort_values(spec.sort_cols)  # These are predetermined by the spec
-
-    out = out[spec.data_prep_output_cols]  # These are predetermined by the spec
-
-    out = out.dropna()
-    
-    return out
-
-
-
-
-
 
 def split_df_by_group(df: pd.DataFrame, grouping_var: str) -> dict:
     """
@@ -878,10 +671,35 @@ def package_analysis(analysis_output: dict, summary_statistics_output: dict):
     return (out)
 
 class AnalysisDataSet:
-    
+    """
+    Orchestrates statistical process control analysis using Wheeler/Bishop methodology.
+
+    This class coordinates the workflow:
+    1. Data preparation and validation
+    2. Sampling Design State (SDS) detection
+    3. VAS residual calculation (R1-R5)
+    4. Effects and interactions analysis
+    5. Control chart frame building
+
+    Uses composition pattern - delegates to focused classes for each concern.
+    """
+
     def __init__(self, df: pd.DataFrame, analysis_specification: AnalysisSpecification):
+        """
+        Initialize analysis with data and specification.
+
+        Parameters
+        ----------
+        df : pd.DataFrame
+            Raw input data
+        analysis_specification : AnalysisSpecification
+            Configuration for the analysis
+        """
+        # Store inputs
         self.raw_dataset = df
         self.spec = analysis_specification
+
+        # Initialize output containers (for backward compatibility)
         self.obs_df = None
         self.cell_df = None
         self.k_df = None
@@ -890,158 +708,107 @@ class AnalysisDataSet:
         self.residuals = {}
         self.interactions = {}
         self.effects = {}
-        self.Rbar=0
-        # Validate and prepare data
-        self.__validate_columns()
-        self.analysis_dataset = self.__prepare_dataset()
-        self.__build_frames()
-        # Detect SDS
-        self.sampling_design_state = self.__calculate_sampling_design_state()
-        self.sds_characteristics = self.__get_sds_characteristics()
-        logger.info(self.analysis_summary)
+        self.Rbar = 0
 
-        # Get characteristics for logging/reporting
+        # Composition - each component has one job (Single Responsibility Principle)
+        self.prep = DataPreparation()
+        self.sds_detector = SamplingDesignDetector()
+        self.residual_calc = ResidualCalculator()
+        self.effects_calc = EffectsCalculator()
+
+        # Run the analysis workflow
+        self._initialize()
+
+    def _initialize(self):
+        """
+        Execute the analysis workflow.
+
+        Clear orchestration that reads like a recipe:
+        1. Validate and prepare data
+        2. Build frames for charting
+        3. Detect sampling design state
+        4. Calculate VAS residuals (if appropriate)
+        5. Calculate effects and interactions (if appropriate)
+        """
+        # Step 1: Validate and prepare data
+        logger.info("Preparing dataset")
+        self.prep.validate_columns(self.raw_dataset, self.spec)
+        self.analysis_dataset = self.prep.prepare_dataset(self.raw_dataset, self.spec)
+        self.analysis_dataset = self.prep.build_keys(self.analysis_dataset, self.spec)
+
+        # Step 2: Build frames for charting
+        self._build_frames()
+
+        # Step 3: Detect SDS
+        logger.info("Detecting sampling design state")
+        self.sampling_design_state = self.sds_detector.detect_sds(
+            self.analysis_dataset, self.spec
+        )
+        self.sds_characteristics = self.sds_detector.get_sds_characteristics(
+            self.sampling_design_state
+        )
+
+        # Log analysis summary and SDS
+        logger.info(self.analysis_summary)
         logger.info(
             f"Detected: SDS {self.sampling_design_state} - "
-            f"{self.sds_characteristics['description']}")
+            f"{self.sds_characteristics['description']}"
+        )
 
-        # Validate BEFORE calculating (catch issues early)
-        self.__validate_sds_for_analysis()
-        # Calculate VAS residuals only when appropriate
-        if self.__should_calculate_vas_residuals():
-            logger.debug("Calculating VAS residuals (R1-R5)")
-            self.__calculate_residuals()
-            self.__calculate_centered_residuals()
-            self.__calculate_interactions()   
-            self.__calculate_effects()
+        # Step 4: Validate compatibility (fail fast if incompatible)
+        self.sds_detector.validate_sds_for_analysis(
+            self.sampling_design_state, self.spec.analysis_type
+        )
+
+        # Step 5: Calculate VAS residuals only when appropriate
+        if self.sds_detector.should_calculate_vas_residuals(
+            self.sampling_design_state, self.spec.analysis_type
+        ):
+            logger.info("Calculating VAS residuals (R1-R5)")
+            self.analysis_dataset = self.residual_calc.calculate_residuals(
+                self.analysis_dataset, self.spec, self.sampling_design_state
+            )
+
+            # Calculate centered residuals (legacy support)
+            self._calculate_centered_residuals()
+
+            # Step 6: Calculate effects and interactions
+            logger.info("Calculating effects and interactions")
+            self.effects = self.effects_calc.calculate_all_effects(
+                self.analysis_dataset, self.spec
+            )
+            self.interactions = self.effects_calc.calculate_interactions(
+                self.analysis_dataset, self.spec, self.sampling_design_state
+            )
         else:
             logger.debug(
                 f"Skipping VAS residuals for analysis_type={self.spec.analysis_type}, "
                 f"SDS={self.sampling_design_state}"
             )
-  
-    def __should_calculate_vas_residuals(self) -> bool:
-        """
-        Determine if VAS residual decomposition (R1-R5) should be calculated.
-        
-        VAS residuals are the foundation of Wheeler/Bishop's variance analysis
-        system. They decompose total variation into components:
-        - R1: Total deviation from grand mean
-        - R2: Within-cell (unexplained) variation
-        - R3: Interaction effects (factor × time)
-        - R4: Time effects + unexplained
-        - R5: Factor effects + unexplained
-        
-        Calculate VAS residuals when:
-        1. User requests Xbar or S chart (cell-level analysis)
-        2. AND we have proper (k,t) factorial structure (SDS 1, 2, 3)
-        3. Purpose: Decompose variance, analyze interactions
-        
-        Do NOT calculate VAS residuals when:
-        1. User requests IMR or R chart (individual-level analysis)
-        2. OR no proper structure (SDS 0, 4, 6)
-        3. Purpose: Monitor individual values over time (possibly stratified)
-        
-        Key Insight:
-        -----------
-        **Grouping variables serve different purposes:**
-        
-        For Xbar-S: Grouping defines CELLS for variance decomposition
-            → Need R1-R5 to analyze factor/time/interaction effects
-            → VAS residuals ARE the point
-        
-        For IMR/R: Grouping defines STRATA for separate charts
-            → Each group gets own IMR chart with own limits
-            → VAS residuals NOT needed (different methodology)
-            → This is the "automatic stratification" killer feature
-        
-        Examples:
-        --------
-        >>> # VAS Analysis (needs residuals)
-        >>> spec = {'analysis_type': 'Xbar', 'rsg_vars': ['lane'], 'time_var': 'pull'}
-        >>> ads = AnalysisDataSet(df, spec)
-        >>> ads.__should_calculate_vas_residuals()  # → True
-        >>> # Gets: R1-R5, interactions, effects
-        
-        >>> # Stratified IMR (doesn't need residuals)
-        >>> spec = {'analysis_type': 'Imr', 'rsg_vars': ['lane'], 'time_var': 'pull'}
-        >>> ads = AnalysisDataSet(df, spec)  
-        >>> ads.__should_calculate_vas_residuals()  # → False
-        >>> # Gets: Separate IMR chart per lane with lane-specific limits
-        
-        Returns:
-            True if VAS residuals should be calculated, False otherwise
-        """
-        
-        # Quick rejections - clearly don't need VAS
-        if self.sampling_design_state == 0:
-            logger.debug("No VAS: SDS 0 (no structure)")
-            return False
-        
-        if self.sampling_design_state == 4:
-            logger.debug("No VAS: SDS 4 (single condition over time)")
-            return False
-        
-        if self.sampling_design_state == 6:
-            logger.debug("No VAS: SDS 6 (irregular grid - can't form proper cells)")
-            return False
-        
-        # KEY DECISION: Analysis type determines if we need VAS
-        # 
-        # Xbar/S → Analyzing CELL statistics (means/std devs)
-        #          Need VAS to decompose variance components
-        #
-        # IMR/R  → Analyzing INDIVIDUAL values over time
-        #          Use moving ranges, don't need factorial decomposition
-        #          Grouping just creates separate charts (stratification)
-        
-        if self.spec.analysis_type in ['Imr', 'R']:
-            logger.debug(
-                f"No VAS: {self.spec.analysis_type} analysis uses moving ranges, "
-                f"not factorial decomposition. "
-                f"Grouping creates stratified charts (separate chart per group)."
-            )
-            return False
-        
-        # At this point: Xbar or S chart with structure
-        if self.sampling_design_state in [1, 2, 3]:
-            logger.debug(
-                f"Calculate VAS: SDS {self.sampling_design_state} with "
-                f"{self.spec.analysis_type} analysis supports full decomposition"
-            )
-            return True
-        
-        # SDS 5 (nested) - special case
-        if self.sampling_design_state == 5:
-            logger.warning(
-                "SDS 5 (nested design) detected with Xbar-S analysis. "
-                "VAS decomposition for nested structures requires special handling. "
-                "Proceeding with standard VAS - results may need interpretation."
-            )
-            return True
-        
-        # Shouldn't reach here, but be conservative
-        logger.debug(f"No VAS: Unexpected case (SDS={self.sampling_design_state})")
-        return False
-    
+
+    # =========================================================================
+    # Properties (for backward compatibility and convenience)
+    # =========================================================================
+
     @property
     def has_vas_residuals(self) -> bool:
         """Check if VAS residuals were calculated."""
         return 'R1' in self.analysis_dataset.columns
 
-    @property  
+    @property
     def analysis_summary(self) -> dict:
         """
         Get comprehensive summary of the analysis dataset.
-        
-        Returns:
+
+        Returns
+        -------
+        dict
             Dictionary with analysis metadata including:
             - sds: Detected sampling design state
             - sds_info: Full SDS characteristics
             - has_vas: Whether VAS residuals calculated
             - n_observations: Total observations
-            - n_groups: Number of unique groups
-            - n_time_periods: Number of time periods
+            - analysis_type: Type of analysis being performed
         """
         summary = {
             'sds': self.sampling_design_state,
@@ -1052,948 +819,46 @@ class AnalysisDataSet:
         }
         return summary
 
-    def sampling_design_state(self) -> int:
-        self.sampling_design_state
-        
-    def raw_dataset(self) -> pd.DataFrame:
-        self.raw_dataset
-    
-    def analysis_dataset(self) -> pd.DataFrame:
-        self.analysis_dataset
-        
-    def statistics(self) -> dict:
-        self.statistics
-    
-    def interactions(self) -> dict:
-        self.interactions
-        
-    def effects(self) -> dict:
-        self.effects
-        
-    def __validate_columns(self) -> bool:    
+    # =========================================================================
+    # Centered Residuals (legacy support - kept for backward compatibility)
+    # =========================================================================
 
-        # TODO: Centralize constants 
-        number_column_types = ['int64', 'float64', 'int32', 'Int64', 'Float64', 'Int32']
-        # string_column_types = ['string', 'object', 'category', 'String', 'Object']
-        #TODO: Update to remove datatime types use this for numeric types https://pandas.pydata.org/docs/reference/api/pandas.api.types.is_numeric_dtype.html
-        #TODO: add check for api types categorical types
-        date_column_types = ['int64', 'int32', 'Int64', 'Int32', 'datetime64[ns]','object']
-
-        df_cols = self.raw_dataset.columns.tolist()
-
-        if self.spec.has_grouping:
-
-            if not all(item in df_cols for item in self.spec.rsg_vars):
-                raise ValueError(f'One or more of the rsg_vars: {self.spec.rsg_vars}: are not in the data set: {df_cols}!')
-        
-        # Validate response variable
-        if not self.spec.response_var in df_cols: raise ValueError(
-            f'The response variable: {self.spec.response_var}: is not in the data set!')
-
-        response_type = self.raw_dataset[self.spec.response_var].dtype
-
-        if not is_numeric_dtype(response_type): raise ValueError( #TODO: adjust to use api check
-            f'The response variable: {self.spec.response_var}: is not type numeric!')
-
-        return True
-
-    def __add_column(self, df: pd.DataFrame, new_col_name: str, existing_column: str):
-        # add a copy of an existing column for use with single variable groupings
-
-        df_cols = df.columns.tolist()
-        check = existing_column in df_cols
-
-        if (check):
-
-            kwargs = {new_col_name: df[existing_column]}
-
-            out = df.assign(**kwargs)
-            return (out)
-        else:
-            raise ValueError(str(existing_column) + ": is not in the data set!")
-
-
-    def __add_composite_column(self, df: pd.DataFrame, cols_to_combine: list, col_name: str, col_delim: str='_') -> pd.DataFrame:
-        df_cols = df.columns.tolist()
-        check = all(item in df_cols for item in cols_to_combine)
-
-        if (check):
-
-            if (len(cols_to_combine) > 1):  # Only combine when list has more than one value
-                len_col_delim = len(col_delim)
-                # dynamically build columns from list of column names\n",
-                combined = (df[cols_to_combine].astype(str) + col_delim).cumsum(1).iloc[:, -1].values
-                # remove trailing \"_\" with comprehension\n",
-                combined = [x[:-len_col_delim] for x in combined]
-
-                # hack to get around assign not taking string col_name
-                kwargs = {col_name: combined}
-                out = df.assign(**kwargs)
-
-                return (out)        
-        else:
-
-            raise ValueError("One or more of: " + str(cols_to_combine) + ": are not in the data set!")
-    def __add_grouping_variable_column(self, df: pd.DataFrame, cols_to_combine: list, col_name: str, col_delim: str='_')->pd.DataFrame: 
-        
-        out = df.copy()
-        
-        if len(cols_to_combine)>1:
-            out = self.__add_composite_column(df = out, cols_to_combine = cols_to_combine, col_name = col_name, col_delim = col_delim)
-        else:        
-            out = self.__add_column(df = df, new_col_name = col_name, existing_column = cols_to_combine[0])
-        
-        return(out)    
-    def __prepare_dataset(self)-> pd.DataFrame:
-
-        logger.debug('Entering prepare_dataset')
-        out = self.raw_dataset.copy()
-
-        if self.spec.has_grouping:
-
-            # Drop 'n' column if it exists in the input data to avoid conflicts
-            if 'n' in out.columns:
-                logger.debug('Dropping existing "n" column from input data (will be recalculated)')
-                out = out.drop(columns=['n'])
-
-            out = self.__add_grouping_variable_column(df=self.raw_dataset, col_name=self.spec.rsg_var_name, cols_to_combine=self.spec.rsg_vars, col_delim=self.spec.rsg_var_delim)
-
-            # Drop 'n' column again if it was added back by __add_grouping_variable_column
-            if 'n' in out.columns:
-                out = out.drop(columns=['n'])
-
-            #Remove groups with one obs - solve for all grouped analyses
-            grouped=out.groupby(self.spec.rsg_var_name).size()
-            starting_count = grouped.count()
-            logger.debug('Starting with %s groups', starting_count)
-            grouped=grouped[grouped>1]
-
-            if grouped.shape[0] == 0:
-                raise ValueError("All subgroups have 1 or less observations!")
-
-            grouped = grouped.reset_index()
-            grouped = grouped.rename(columns = {0:'n'})
-
-            logger.debug('Pruning groups with 1 obs:\\n%s', grouped)
-            ending_count = grouped.count()
-
-            logger.debug('Groups remaining: %s', ending_count.iloc[0])
-            logger.debug('Removed %s group(s)', starting_count - ending_count.iloc[0])
-            # Empty print removed
-
-            out = pd.merge(out, grouped, how='inner', on=self.spec.rsg_var_name)
-
-        # Perform sorting
-        if self.spec.requires_sort:
-            out = out.sort_values(self.spec.sort_cols) #These are predetermined by the spec
-
-        out = out[self.spec.data_prep_output_cols] #These are predetermined by the spec
-
-        out = out.dropna()
-
-        return out
-    
-    
-    def __calculate_sampling_design_state(self):
+    def _calculate_centered_residuals(self):
         """
-        Detect Sampling Design State (SDS) from the current dataset and specification.
+        Calculate centered residuals (Rbar and RCR values).
 
-        This function implements the complete SDS classification system from the
-        Variance Analysis System (VAS) framework by Wheeler and Bishop.
+        These are legacy calculations that center residuals by their means.
+        Kept for backward compatibility with existing code and tests.
 
-        Sampling Design States:
-        ----------------------
-        SDS 0: No structure
-            - No grouping or time variables specified
-            - Default/fallback state
-            - Limited analysis capabilities
-
-        SDS 1: Full replication
-            - Every (k,t) cell has n≥2 observations
-            - Enables direct within-cell variance estimation (R2)
-            - Supports full interaction analysis
-            - Most statistically powerful
-
-        SDS 2: No replication  
-            - Every (k,t) cell has exactly n=1 observation
-            - Requires moving average for R2 estimation
-            - Limited interaction analysis
-            - Common in designed experiments
-
-        SDS 3: Partial replication
-            - Mix of n=1 and n≥2 cells
-            - Requires hybrid R2 estimation
-            - Most common in real-world data
-            - Challenging to analyze correctly
-
-        SDS 4: Single condition over time
-            - Only one factor level (K=1)
-            - Multiple time points (T>1)
-            - Time series structure
-            - Appropriate for IMR charts
-
-        SDS 5: Nested design with asynchronous coverage
-            - Hierarchical factor structure (Factor 2 nested in Factor 1)
-            - Not all factor combinations present at all times
-            - Irregular temporal patterns
-            - Requires variance components
-
-        SDS 6: Unstructured/regime changes
-            - Cannot form regular (k,t) grid
-            - Irregular sampling patterns
-            - May have regime changes or process shifts
-            - Complex time structure
-
-        Detection Logic:
-        ---------------
-        1. Check for basic structure (grouping and/or time)
-        2. If both present, check for nested structure (SDS 5)
-        3. Examine cell size distribution:
-        - All n≥2 → SDS 1
-        - All n=1 → Check for complete grid
-        - Mixed → SDS 3
-        4. Check for single condition (SDS 4)
-        5. Check for irregular grid (SDS 6)
-
-        Returns:
-        -------
-        int
-            0 = No structure (default)
-            1 = Full replication
-            2 = No replication (complete unreplicated factorial)
-            3 = Partial replication
-            4 = Single condition over time
-            5 = Nested design
-            6 = Unstructured/regime changes
-
-        Notes:
-        ------
-        The detection is conservative - if unsure, defaults to a simpler SDS.
-        SDS 3 (partial replication) is the most common in practice but also
-        the most complex to handle correctly.
-
-        References:
-        ----------
-        Wheeler, D. J. (1995). Advanced Topics in Statistical Process Control.
+        Calculates:
+        - Rbar_kt: Mean of R1 per cell (factor × time)
+        - Rbar_k: Mean of R1 per factor level
+        - Rbar_t: Mean of R1 per time point
+        - RCR1-RCR5: Reconstructed Y values from centered residuals
         """
-    
-        # ========================================================================
-        # SDS 0: No structure - neither grouping nor time specified
-        # ========================================================================
-        if not (self.spec.has_grouping and self.spec.has_time):
-            logger.info("SDS 0: No grouping or time structure")
-            return 0
-    
-        # ========================================================================
-        # From here on, we have both grouping and time variables
-        # ========================================================================
-        
-        grouping_vars = [self.spec.rsg_var_name, self.spec.time_var]
-        
-        # Count observations per (k,t) cell
-        cell_sizes = (self.analysis_dataset
-                    .groupby(grouping_vars, dropna=False)[self.spec.response_var]
-                    .count())
-        
-        n_cells = len(cell_sizes)
-        min_n = cell_sizes.min()
-        max_n = cell_sizes.max()
-    
-        # Calculate theoretical full grid size
-        n_groups = self.analysis_dataset[self.spec.rsg_var_name].nunique()
-        n_times = self.analysis_dataset[self.spec.time_var].nunique()
-        full_grid_size = n_groups * n_times
-        
-        logger.debug(f"SDS Detection: {n_groups} groups × {n_times} times = {full_grid_size} possible cells")
-        logger.debug(f"SDS Detection: {n_cells} cells observed, n range: [{min_n}, {max_n}]")
-    
-        # ========================================================================
-        # SDS 5: Nested design - check for hierarchical structure
-        # ========================================================================
-        # In nested designs, one factor is nested within another
-        # Example: heads nested within lanes (each head belongs to one lane only)
-        
-        if len(self.spec.rsg_vars) >= 2:
-            # Check if second factor is nested within first
-            # Each level of factor 2 should appear with only one level of factor 1
-            
-            factor1 = self.spec.rsg_vars[0]
-            factor2 = self.spec.rsg_vars[1]
-            
-            # Count how many levels of factor1 each level of factor2 appears with
-            nesting_check = (self.analysis_dataset
-                            .groupby(factor2)[factor1]
-                            .nunique())
-        
-            is_nested = (nesting_check == 1).all()
-            
-            if is_nested:
-                # Additional check: incomplete temporal coverage (asynchronous)
-                # In true SDS 5, not all factor combinations appear at all times
-                coverage_ratio = n_cells / full_grid_size
-                
-                if coverage_ratio < 0.90:  # Less than 90% coverage
-                    logger.info(
-                        f"SDS 5: Nested design detected - {factor2} nested in {factor1}, "
-                        f"{coverage_ratio:.1%} grid coverage"
-                    )
-                    return 5
-                else:
-                    logger.debug(
-                        f"Nested structure detected but high coverage ({coverage_ratio:.1%}) - "
-                        f"treating as crossed design"
-                    )
-        
-        # ========================================================================
-        # SDS 4: Single condition over time
-        # ========================================================================
-        # Only one factor level but multiple time points
-        
-        if n_groups == 1 and n_times > 1:
-            logger.info(f"SDS 4: Single condition over time ({n_times} time points)")
-            return 4
-        
-        # ========================================================================
-        # SDS 6: Unstructured / Incomplete grid
-        # ========================================================================
-        # Check if we have an irregular (factor × time) grid
-        # This indicates irregular sampling or regime changes
-        
-        coverage_ratio = n_cells / full_grid_size
-        
-        if coverage_ratio < 0.75:  # Less than 75% of cells have data
-            logger.info(
-                f"SDS 6: Unstructured/incomplete grid - "
-                f"{n_cells}/{full_grid_size} cells present ({coverage_ratio:.1%})"
-            )
-            return 6
-    
-        # ========================================================================
-        # SDS 1, 2, 3: Based on cell size distribution
-        # ========================================================================
-        # At this point we have a reasonably complete (k,t) grid
-        
-        # Count cells by size
-        cells_with_n1 = (cell_sizes == 1).sum()
-        cells_with_n2_plus = (cell_sizes >= 2).sum()
-        
-        logger.debug(f"SDS Detection: {cells_with_n1} cells with n=1, {cells_with_n2_plus} cells with n≥2")
-        
-        # --------------------------------------------------------------------
-        # SDS 1: Full replication - ALL cells have n≥2
-        # --------------------------------------------------------------------
-        if min_n >= 2:
-            logger.info(f"SDS 1: Full replication (all cells have n≥2, range: [{min_n}, {max_n}])")
-            return 1
-        
-        # --------------------------------------------------------------------
-        # SDS 2: No replication - ALL cells have n=1
-        # --------------------------------------------------------------------
-        if max_n == 1:
-            # Verify this is truly a complete unreplicated factorial
-            if coverage_ratio >= 0.95:  # At least 95% complete
-                logger.info(f"SDS 2: No replication (all cells have n=1, {coverage_ratio:.1%} complete)")
-                return 2
-            else:
-                # Incomplete grid with all n=1 → treat as SDS 6
-                logger.info(
-                    f"SDS 6: Incomplete grid with no replication "
-                    f"({coverage_ratio:.1%} coverage)"
-                )
-                return 6
-    
-        # --------------------------------------------------------------------
-        # SDS 3: Partial replication - Mix of n=1 and n≥2
-        # --------------------------------------------------------------------
-        if cells_with_n1 > 0 and cells_with_n2_plus > 0:
-            pct_replicated = 100 * cells_with_n2_plus / n_cells
-            logger.info(
-                f"SDS 3: Partial replication - "
-                f"{cells_with_n2_plus}/{n_cells} cells replicated ({pct_replicated:.1f}%), "
-                f"n range: [{min_n}, {max_n}]"
-            )
-            return 3
-    
-        # ========================================================================
-        # Fallback: Should not reach here, but default to SDS 0
-        # ========================================================================
-        logger.warning(
-            f"SDS Detection: Unexpected case - defaulting to SDS 0. "
-            f"n_groups={n_groups}, n_times={n_times}, n_cells={n_cells}, "
-            f"min_n={min_n}, max_n={max_n}"
-        )
-        return 0
-
-
-# ============================================================================
-# Additional Helper Methods for SDS-Specific Logic
-# ============================================================================
-
-    def __get_sds_characteristics(self) -> dict:
-        """
-        Get detailed characteristics of the detected SDS.
-        
-        Returns dictionary with:
-        - sds: The detected SDS number
-        - description: Human-readable description
-        - replication_type: 'full', 'none', 'partial', 'single', 'nested', 'irregular'
-        - r2_method: How R2 should be calculated
-        - capabilities: What analyses are supported
-        
-        This can be useful for logging, reporting, and determining analysis approach.
-        
-        Returns:
-            Dictionary with SDS characteristics
-        """
-        sds = self.sampling_design_state
-        
-        characteristics = {
-            0: {
-                'description': 'No grouping or time structure',
-                'replication_type': 'none',
-                'r2_method': 'not_applicable',
-                'capabilities': ['basic_statistics_only'],
-                'interaction_analysis': False,
-                'variance_decomposition': False
-            },
-            1: {
-                'description': 'Full replication (all cells n≥2)',
-                'replication_type': 'full',
-                'r2_method': 'within_cell',
-                'capabilities': ['full_vas', 'all_residuals', 'interactions', 'main_effects'],
-                'interaction_analysis': True,
-                'variance_decomposition': True
-            },
-            2: {
-                'description': 'No replication (all cells n=1)',
-                'replication_type': 'none',
-                'r2_method': 'moving_average',
-                'capabilities': ['all_residuals', 'limited_interactions', 'main_effects'],
-                'interaction_analysis': 'limited',
-                'variance_decomposition': True
-            },
-            3: {
-                'description': 'Partial replication (mixed n=1 and n≥2)',
-                'replication_type': 'partial',
-                'r2_method': 'hybrid',
-                'capabilities': ['all_residuals', 'partial_interactions', 'main_effects'],
-                'interaction_analysis': 'partial',
-                'variance_decomposition': True
-            },
-            4: {
-                'description': 'Single condition over time (K=1)',
-                'replication_type': 'single_stream',
-                'r2_method': 'moving_range',
-                'capabilities': ['time_series', 'imr_chart', 'trend_analysis'],
-                'interaction_analysis': False,
-                'variance_decomposition': False
-            },
-            5: {
-                'description': 'Nested design with asynchronous coverage',
-                'replication_type': 'nested',
-                'r2_method': 'nested_variance_components',
-                'capabilities': ['variance_components', 'nested_effects', 'hierarchical_analysis'],
-                'interaction_analysis': 'hierarchical',
-                'variance_decomposition': 'hierarchical'
-            },
-            6: {
-                'description': 'Unstructured/irregular grid',
-                'replication_type': 'irregular',
-                'r2_method': 'adaptive',
-                'capabilities': ['regime_detection', 'adaptive_limits', 'sparse_analysis'],
-                'interaction_analysis': False,
-                'variance_decomposition': 'limited'
-            }
-        }
-        
-        result = characteristics.get(sds, characteristics[0]).copy()
-        result['sds'] = sds
-        
-        return result
-
-
-    def __validate_sds_for_analysis(self) -> bool:
-        """
-        Validate that the detected SDS is appropriate for the requested analysis.
-        
-        Returns True if analysis can proceed, raises ValueError with helpful
-        message if not.
-        
-        Examples of issues caught:
-        - Requesting Xbar-S chart on SDS 2 (no within-cell variance)
-        - Requesting full VAS on SDS 0 (no structure)
-        - Insufficient data for requested analysis type
-        """
-        sds = self.sampling_design_state
-        analysis_type = self.spec.analysis_type
-        
-        # SDS 0: Very limited capabilities
-        if sds == 0:
-            if analysis_type in ['Xbar', 'S']:
-                raise ValueError(
-                    f"Cannot perform {analysis_type} analysis without grouping structure. "
-                    f"Detected SDS 0 (no grouping or time variables). "
-                    f"Consider using 'Imr' analysis or specify grouping variables."
-                )
-        
-        # SDS 2: No within-cell variance
-        if sds == 2:
-            if analysis_type in ['Xbar', 'S']:
-                logger.warning(
-                    f"SDS 2 detected: No replication (all cells n=1). "
-                    f"{analysis_type} analysis will use moving average for variance estimation. "
-                    f"Consider using 'Imr' analysis instead."
-                )
-        
-        # SDS 4: Single stream - limited to IMR
-        if sds == 4:
-            if analysis_type not in ['Imr', 'R']:
-                logger.warning(
-                    f"SDS 4 detected: Single condition over time. "
-                    f"{analysis_type} analysis may not be appropriate. "
-                    f"Consider using 'Imr' analysis."
-                )
-        
-        # SDS 6: Irregular - may have issues
-        if sds == 6:
-            logger.warning(
-                f"SDS 6 detected: Unstructured/irregular grid. "
-                f"Analysis results may be unreliable due to incomplete data coverage. "
-                f"Consider checking for missing data or irregular sampling patterns."
-            )
-        
-        return True
-
-
-    # ============================================================================
-    # Usage Example in AnalysisDataSet.__init__
-    # ============================================================================
-    
-    def __calculate_Ybar(self):
-        out = self.analysis_dataset[self.spec.response_var].mean()
-        self.analysis_dataset['Ybar'] = out
-        self.statistics['Ybar'] = out          
-        
-    # def __calculate_Ybar_k(self):        
-        
-    #     #out=pd.merge(self.analysis_dataset, out, how='left', on =[self.spec.rsg_var_name])
-    #     self.analysis_dataset['Ybar_k'] = self.analysis_dataset.groupby([self.spec.rsg_var_name])[self.spec.response_var].transform('mean')
-       
-    def __calculate_Ybar_k(self):        
-        
-        #out=pd.merge(self.analysis_dataset, out, how='left', on =[self.spec.rsg_var_name])
-        self.analysis_dataset['Ybar_k'] = self.analysis_dataset.groupby([self.spec.rsg_var_name])[self.spec.response_var].transform('mean')
-       
-    def __calculate_Ybar_kt(self):
-        self.analysis_dataset["Ybar_kt"] = self.analysis_dataset.groupby([self.spec.rsg_var_name, self.spec.time_var])[self.spec.response_var].transform("mean")
-    
-    def __calculate_Ybar_t(self): 
-               
-        self.analysis_dataset['Ybar_t'] = self.analysis_dataset.groupby([self.spec.time_var])[self.spec.response_var].transform("mean")
-                
-    def __calculate_R1_residual(self):    # R1= Y-Ybar    
-        
-        self.analysis_dataset['R1'] = self.analysis_dataset[self.spec.response_var] \
-                                    -  self.statistics['Ybar']
-        
-    def __calculate_R2_residual(self):
-        logger = logging.getLogger(__name__)
-        y = self.spec.response_var
-        df = self.analysis_dataset
-        if self.sampling_design_state == 1:
-            # SDS1: N=1 everywhere ⇒ R2 = 0 (Ybar_kt == Y)
-            self.analysis_dataset['R2'] = df[y] - df['Ybar_kt']
-            logger.debug("SDS1: R2 = Y - Ybar_kt")
-            
-
-        elif self.sampling_design_state == 2:
-            # Your moving-average approach (kept as-is)
-            df = self.analysis_dataset.sort_values(
-                [self.spec.rsg_var_name, self.spec.time_var]
-            ).copy()
-            df['_MA2'] = (
-                df.groupby(self.spec.rsg_var_name)[y]
-                .transform(lambda s: (s.shift(1) + s.shift(-1)) / 2.0)
-            )
-            fwd  = df.groupby(self.spec.rsg_var_name)[y].shift(-1)
-            back = df.groupby(self.spec.rsg_var_name)[y].shift(1)
-            df['_MA2'] = df['_MA2'].where(df['_MA2'].notna(), fwd.where(fwd.notna(), back))
-            df['R2'] = df[y] - df['_MA2']
-            self.analysis_dataset['R2'] = df['R2']
-            logger.debug("SDS2: R2 ≈ Y - MA2_k(t)")
-
-        elif self.sampling_design_state == 3:
-            # SDS3: Bishop — R2 = Y - Ybar_kt for n>1; else 0
-            df = self.analysis_dataset
-            n = df.groupby([self.spec.rsg_var_name, self.spec.time_var])[y].transform('count')
-            r2_within = df[y] - df['Ybar_kt']
-            self.analysis_dataset['R2'] = np.where(n > 1, r2_within, 0.0)
-            logger.debug("SDS3: R2 = Y - Ybar_kt (n>1), else 0")
-
-        else:
-            logger.error(f"Cannot calculate R2 for SDS {self.sampling_design_state}")
-            raise ValueError(f"R2 calculation not defined for SDS {self.sampling_design_state}")
-
-            
-    def __calculate_R3_residual(self):
-        y = self.spec.response_var
-        df = self.analysis_dataset
-        df['R3'] = df[y] - df['Ybar_k'] - df['Ybar_t'] + df['Ybar']
-
-    
-    def __calculate_R4_residual(self):
-        # R4 = Ybar_t - Ybar + R2   (Eq. 72) for ALL SDS
-        self.analysis_dataset['R4'] = (
-            self.analysis_dataset['Ybar_t'] - self.analysis_dataset['Ybar'] + self.analysis_dataset['R2']
-        )
-
-    def __calculate_R5_residual(self):
-        # R5 = Ybar_k - Ybar + R2   (Eq. 75) for ALL SDS
-        self.analysis_dataset['R5'] = (
-            self.analysis_dataset['Ybar_k'] - self.analysis_dataset['Ybar'] + self.analysis_dataset['R2']
-        )
-                                                   
-    def __calculate_Rbar_kt(self):
-        self.analysis_dataset["Rbar_kt"] = self.analysis_dataset.groupby([self.spec.rsg_var_name, self.spec.time_var])["R1"].transform("mean")
-        
-    def __calculate_Rbar_k(self):        
-        self.analysis_dataset['Rbar_k'] = self.analysis_dataset.groupby([self.spec.rsg_var_name])["R1"].transform('mean')
-        
-    def __calculate_Rbar_t(self): 
-               
-        self.analysis_dataset['Rbar_t'] = self.analysis_dataset.groupby([self.spec.time_var])["R1"].transform("mean")
-    
-    def __calculate_RCR1(self):  # Y = Ybar + R1
-        self.analysis_dataset['RCR1'] = self.analysis_dataset['Ybar'] + self.analysis_dataset['R1']
-
-    def __calculate_RCR2(self):  # Y = Ybar_kt + R2
-        self.analysis_dataset['RCR2'] = self.analysis_dataset['Ybar_kt'] + self.analysis_dataset['R2']
-
-    def __calculate_RCR3(self):  # Y = (Ybar_k + Ybar_t - Ybar) + R3
-        df = self.analysis_dataset
-        df['RCR3'] = (df['Ybar_k'] + df['Ybar_t'] - df['Ybar']) + df['R3']
-
-    def __calculate_RCR4(self):  # Y = (Ybar + Ybar_kt - Ybar_t) + R4
-        df = self.analysis_dataset
-        df['RCR4'] = (df['Ybar'] + df['Ybar_kt'] - df['Ybar_t']) + df['R4']
-
-    def __calculate_RCR5(self):  # Y = (Ybar + Ybar_kt - Ybar_k) + R5
-        df = self.analysis_dataset
-        df['RCR5'] = (df['Ybar'] + df['Ybar_kt'] - df['Ybar_k']) + df['R5']
-
-                                                   
-    def __calculate_pdc_by_time(self):
-        y = self.spec.response_var
-
-        if self.sampling_design_state == 1:
-            # Explicit keys: [FACTOR_1, FACTOR_2, TIME]  (not the composite rsg)
-            keys = list(self.spec.rsg_vars) + [self.spec.time_var]
-
-            # R3 = Y - Ybar_k - Ybar_t + Ybar
-            # Cell-average R3 equals the interaction effect:
-            #   Ybar_kt - Ybar_k - Ybar_t + Ybar
-            # Broadcast the cell-average to rows:
-            self.analysis_dataset['pdc_by_pt'] = (
-                self.analysis_dataset
-                .groupby(keys, sort=False)['R3']
-                .transform('mean')
-            )
-
-            # (Optional but nice): also store a single value per cell
-            # so you can key-compare without re-aggregating later.
-            self.analysis_dataset['interaction_cell'] = (
-                self.analysis_dataset
-                .groupby(keys, sort=False)['R3']
-                .transform('mean')
-            )
-            self.interactions['pdc_by_pt'] = self.analysis_dataset['pdc_by_pt']
-
-        elif self.sampling_design_state == 2:
-            # (unchanged) direct formula at the row level
-            self.analysis_dataset['pdc_by_pt'] = (
-                self.analysis_dataset['Ybar_kt']
-                - self.analysis_dataset['Ybar_k']
-                - self.analysis_dataset['Ybar_t']
-                + self.analysis_dataset['Ybar']
-            )
-            self.interactions['pdc_by_pt'] = self.analysis_dataset['pdc_by_pt']
-
-            #Two-factor interaction effect
-            #Pg 77 Average R5ij-average R5i- average R5j 
-            #there will be one main effect for the rational subgroup and one ME for each factor x level
-           
-            me  = self.analysis_dataset.groupby(self.spec.rsg_vars).agg(ME=pd.NamedAgg(column="R5",aggfunc="mean")).reset_index()
-           
-            if len(self.spec.rsg_vars)>2:
-                logger.warning("There are more than 2 variables in the RSG - ME interactions being calculated for first 2")
-                
-            for factor in self.spec.rsg_vars:
-
-                tmp=self.analysis_dataset.groupby(factor).agg(MEF=pd.NamedAgg(column="R5", aggfunc="mean"))
-                me = me.merge(tmp, how='left', on=factor)
-                me.rename(columns={"MEF":factor+"_ME"}, inplace=True)
-
-            # Use the first two factor names from rsg_vars
-            factor1_me_col = self.spec.rsg_vars[0] + "_ME"
-            factor2_me_col = self.spec.rsg_vars[1] + "_ME" if len(self.spec.rsg_vars) > 1 else None
-
-            if factor2_me_col:
-                me["F1xF2"] = me["ME"] - me[factor1_me_col] - me[factor2_me_col]
-            else:
-                me["F1xF2"] = me["ME"] - me[factor1_me_col]
-            self.interactions["F1xF2"] = me[self.spec.rsg_vars+["F1xF2"]]   
-            
-    def __calculate_main_effect(self):
-        """
-        Compute mean(R5) at:
-        - RSG (composite) grain  → effects['main_effect']       -> [rsg, Main_Effect]
-        - Each factor's grain    → effects[factor]              -> [factor, Main_Effect]
-        Guarantees 2-column, de-indexed frames with unique keys.
-        """
-        if not self.spec.rsg_vars:
+        if not self.spec.has_grouping:
             return
 
-        y_me = 'R5'  # source for Main_Effect
+        df = self.analysis_dataset
 
-        # --- RSG-level main effect (kept for compatibility)
-        rsg = self.spec.rsg_var_name
-        rsg_me = (self.analysis_dataset
-                .groupby(rsg, sort=False)[y_me]
-                .mean()
-                .rename('Main_Effect')
-                .reset_index())
-        if rsg_me.duplicated(subset=[rsg]).any():
-            raise ValueError(f"Duplicate levels in main_effect for {rsg}")
-        self.effects['main_effect'] = rsg_me[[rsg, 'Main_Effect']]
+        # Calculate centered residual means
+        df["Rbar_kt"] = df.groupby([self.spec.rsg_var_name, self.spec.time_var])["R1"].transform("mean")
+        df['Rbar_k'] = df.groupby([self.spec.rsg_var_name])["R1"].transform('mean')
+        df['Rbar_t'] = df.groupby([self.spec.time_var])["R1"].transform("mean")
 
-        # --- Per-factor main effects (canonical for downstream use)
-        for factor in self.spec.rsg_vars:
-            me = (self.analysis_dataset
-                .groupby([factor], sort=False)[y_me]
-                .mean()
-                .rename('Main_Effect')
-                .reset_index())
-            if me.duplicated(subset=[factor]).any():
-                raise ValueError(f"Duplicate levels in main_effect for factor {factor}")
-            # Ensure exactly two columns and no index surprises
-            self.effects[factor] = me[[factor, 'Main_Effect']]
+        # Calculate RCR (Reconstructed Centered Residuals)
+        # These verify that Y can be reconstructed from components
+        df['RCR1'] = df['Ybar'] + df['R1']  # Y = Ybar + R1
+        df['RCR2'] = df['Ybar_kt'] + df['R2']  # Y = Ybar_kt + R2
+        df['RCR3'] = (df['Ybar_k'] + df['Ybar_t'] - df['Ybar']) + df['R3']  # Y = (Ybar_k + Ybar_t - Ybar) + R3
+        df['RCR4'] = (df['Ybar'] + df['Ybar_kt'] - df['Ybar_t']) + df['R4']  # Y = (Ybar + Ybar_kt - Ybar_t) + R4
+        df['RCR5'] = (df['Ybar'] + df['Ybar_kt'] - df['Ybar_k']) + df['R5']  # Y = (Ybar + Ybar_kt - Ybar_k) + R5
 
-    def __calculate_main_effects(self):
-        """
-        Build per-row '{factor}_MEs' = R2 + Main_Effect(level) for each factor.
-        Requires R2. Reads self.effects[factor] as a 2-col DataFrame [factor, 'Main_Effect'].
-        """
-        if 'R2' not in self.analysis_dataset.columns:
-            raise RuntimeError("R2 is missing; compute residuals before main effects.")
-        if not self.spec.rsg_vars:
-            return
+    # =========================================================================
+    # Frame Building (kept as-is for backward compatibility)
+    # =========================================================================
 
-        for factor in self.spec.rsg_vars:
-            me = self.effects.get(factor)
-            # Normalize/repair if absent or malformed
-            if not isinstance(me, pd.DataFrame) or {factor, 'Main_Effect'} - set(me.columns):
-                me = (self.analysis_dataset
-                    .groupby([factor], sort=False)['R5']
-                    .mean()
-                    .rename('Main_Effect')
-                    .reset_index())
-                self.effects[factor] = me[[factor, 'Main_Effect']]
-            else:
-                # ensure exactly two columns & unique
-                me = me[[factor, 'Main_Effect']].drop_duplicates()
-
-            label = f"{factor}_MEs"
-            df_me = (self.analysis_dataset[[factor, 'R2']]
-                    .merge(me, on=factor, how='left', validate='many_to_one'))
-            df_me[label] = df_me['R2'] + df_me['Main_Effect']
-            self.effects[label] = df_me[[factor, label]]
-
-
-                    
-    def __calculate_factor_interaction_effects(self):
-        #calculate average R5 for levels of RSG
-
-        # Only calculate interaction effects if there are 2 or more factors
-        if len(self.spec.rsg_vars) < 2:
-            logger.info('Only %s factor(s) in RSG - factor interaction effects require at least 2 factors. Skipping.', len(self.spec.rsg_vars))
-            return
-
-        #df=self.analysis_dataset[self.spec.rsg_vars+["R2"]]
-        rsg_effects = self.analysis_dataset.groupby(self.spec.rsg_vars).agg(
-                                                                R5=pd.NamedAgg(column="R5", aggfunc="mean"))
-        rsg_effects.reset_index(inplace=True)
-
-
-        #get main effects for each factor and add to rsg_effects
-        # for factor in self.spec.rsg_vars:
-        #     df=pd.DataFrame()
-        #     df = self.effects[factor]
-        #     rsg_effects = rsg_effects.merge(df, how='left', on=factor)
-
-        if len(self.spec.rsg_vars)>2:
-            logger.warning('There are more than 2 variables in the RSG - ME interactions being calculated for first 2: %s', self.spec.rsg_vars)
-
-        # Only process the minimum of 2 or the actual number of factors
-        num_factors_to_process = min(2, len(self.spec.rsg_vars))
-        i = 0
-
-        while i < num_factors_to_process: #The system only handles 2 factor interactions
-
-            df=pd.DataFrame()
-            factor = self.spec.rsg_vars[i]
-            logger.debug('Processing factor: %s', factor)
-            df = self.effects[factor]
-            rsg_effects = rsg_effects.merge(df, how='left', on=factor)
-            i=i+1
-
-        rsg_effects["Rx"] = rsg_effects["R5"] - rsg_effects["Main_Effect_x"] - rsg_effects["Main_Effect_y"]
-        tmp = self.analysis_dataset[self.spec.rsg_vars+["R2"]]
-        tmp = tmp.merge(rsg_effects, how='left', on=self.spec.rsg_vars)
-        tmp["factor_interaction_effects"] = tmp["R2"] + tmp["Rx"]
-        tmp = tmp[self.spec.rsg_vars+["factor_interaction_effects"]]
-        self.effects["factor_interaction_effects"] = tmp
-
-        #print(f'Factor Interaction Effects:\n {rsg_effects[self.spec.rsg_vars+["Rx"]]}/n Results:\n{tmp}') 
-                                                              
-
-    def __calculate_time_me(self):        
-        
-            self.effects['pt_me'] = self.analysis_dataset.groupby([self.spec.time_var]).agg(
-                                                                PT_ME=pd.NamedAgg(column="R1", aggfunc="mean"))        
-
-    def __calculate_residuals(self):
-        
-        if self.spec.has_grouping:
-            
-            self.__calculate_Ybar()
-            self.__calculate_Ybar_k()
-            self.__calculate_Ybar_kt()
-            self.__calculate_Ybar_t()
-            self.__calculate_R1_residual()
-            self.__calculate_R2_residual()
-            self.__calculate_R3_residual()
-            self.__calculate_R4_residual()
-            self.__calculate_R5_residual()
-    
-    def __calculate_centered_residuals(self):     
-           
-        if self.spec.has_grouping:
-            
-            self.__calculate_Rbar_kt()
-            self.__calculate_Rbar_k()
-            self.__calculate_Rbar_t()
-            self.__calculate_RCR1()
-            self.__calculate_RCR2()
-            self.__calculate_RCR3()
-            self.__calculate_RCR4()   
-            self.__calculate_RCR5()    
-            
-    def __calculate_interactions(self):
-        
-        self.__calculate_pdc_by_time()
-    
-    def __calculate_effects(self):
-        self.__calculate_main_effect() #order matters #1
-        self.__calculate_time_me()
-        self.__calculate_main_effects()
-        self.__calculate_factor_interaction_effects()
-
-    def __build_keys(self, df: pd.DataFrame) -> pd.DataFrame:
-        out = df.copy()
-        # Stable row id for reproducible merges
-        out['obs_id'] = np.arange(len(out), dtype=np.int64)
-        k_vars = self.spec.rsg_vars or []
-        t = self.spec.time_var
-
-        # Canonical tuple keys for math
-        if k_vars:
-            out['rsg_key'] = list(map(tuple, out[k_vars].astype(object).values))
-        else:
-            out['rsg_key'] = [()] * len(out)
-
-        if k_vars and t:
-            out['cell_key'] = list(map(tuple, out[k_vars + [t]].astype(object).values))
-        elif t:
-            out['cell_key'] = out[t].astype(object).apply(lambda x: (x,))
-        else:
-            out['cell_key'] = out['rsg_key']
-
-        # Composite label purely for charts/UX (keep it!)
-        if self.spec.rsg_var_name and k_vars:
-            delim = getattr(self.spec, 'rsg_var_delim', '_')
-            out[self.spec.rsg_var_name] = (
-                out[k_vars].astype('string').apply(lambda s: delim.join(s), axis=1)
-            )
-        return out
-    
-    def __prepare_dataset(self) -> pd.DataFrame:
-        spec = self.spec
-
-        out = self._prepare_core(
-            df=self.raw_dataset,
-            rsg_vars=spec.rsg_vars,
-            rsg_var_name=spec.rsg_var_name,
-            rsg_var_delim=spec.rsg_var_delim,
-            time_var=spec.time_var,
-            response_var=spec.response_var,
-            requires_sort=spec.requires_sort,
-            sort_cols=spec.sort_cols,
-            data_prep_output_cols=spec.data_prep_output_cols,
-            validate_fn=lambda d: validate_columns(d, spec),
-            add_group_col_fn=lambda d, cols, name, delim: self.__add_grouping_variable_column(
-                df=d, cols_to_combine=cols, col_name=name, col_delim=delim
-            ),
-        )
-
-        # Build stable keys for downstream math/tests
-        out = self.__build_keys(out)  # the helper we discussed earlier (adds obs_id, rsg_key, cell_key)
-        return out
-    
-
-    @staticmethod
-    def _prepare_core(
-        df: pd.DataFrame,
-        *,
-        rsg_vars: list[str] | None,
-        rsg_var_name: str,
-        rsg_var_delim: str,
-        time_var: str | None,
-        response_var: str,
-        requires_sort: bool,
-        sort_cols: list[str],
-        data_prep_output_cols: list[str],
-        validate_fn,          # a callable for validation (keeps it swappable in tests)
-        add_group_col_fn,     # a callable to build the composite rsg when needed
-        logger: logging.Logger = logger,
-    ) -> pd.DataFrame:
-        # 1) validate (pure)
-        out = validate_fn(df.copy())
-
-        # 2) add composite rsg if needed
-        if rsg_vars:
-            out = add_group_col_fn(out, rsg_vars, rsg_var_name, rsg_var_delim)
-
-            # prune groups with n<=1 (pure)
-            grouped = out.groupby(rsg_var_name).size()
-            grouped = grouped[grouped > 1]
-            if grouped.shape[0] == 0:
-                raise ValueError("All subgroups have 1 or less observations!")
-
-            grouped = grouped.reset_index().rename(columns={0: 'n'})
-            out = pd.merge(out, grouped, how='inner', on=rsg_var_name)
-
-        # 3) sorting
-        if requires_sort:
-            out = out.sort_values(sort_cols, kind='stable')
-
-        # 4) project columns
-        out = out[data_prep_output_cols]
-
-        # 5) dropna (pure)
-        out = out.dropna()
-
-        return out
-    def __build_frames(self) -> None:
+    def _build_frames(self) -> None:
         """
         Materialize canonical frames by grain:
         - obs_df : one row per observation

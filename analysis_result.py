@@ -1,0 +1,831 @@
+"""
+AnalysisResult - Unified container for all analysis outputs.
+
+This module provides a comprehensive result object that makes all analysis data
+easily accessible in one place:
+- Chart data (Xbar, S, IMR, stratified charts)
+- Residuals (R1-R5)
+- Effects (main effects, interactions)
+- Summary metadata (SDS, statistics, capabilities)
+
+Usage:
+    analysis = Analysis(df, spec)
+    result = analysis.calculate()  # Returns AnalysisResult
+
+    # Access charts
+    xbar_data = result.get_chart('Xbar')
+    stats = result.get_statistics('Xbar')
+
+    # Access residuals
+    residuals = result.residuals  # DataFrame with R1-R5
+
+    # Access effects
+    main_effects = result.effects
+    interactions = result.interactions
+
+    # Get summary
+    print(result.summary)
+"""
+
+from __future__ import annotations
+from typing import Dict, List, Optional, Any
+import pandas as pd
+import logging
+
+logger = logging.getLogger(__name__)
+
+
+class AnalysisResult:
+    """
+    Comprehensive analysis result container.
+
+    This class unifies all analysis outputs into a single, easily accessible object.
+    It provides:
+    - Chart data and statistics (Xbar, S, IMR, stratified)
+    - VAS residuals (R1-R5)
+    - Main effects and interactions
+    - Sampling Design State (SDS) information
+    - Summary metadata
+
+    Attributes
+    ----------
+    charts : dict
+        Dictionary of chart data in format:
+        {'chart_name': {'data': DataFrame, 'statistics': dict}}
+    dataset : pd.DataFrame
+        Full analysis dataset with all calculations
+    residuals : pd.DataFrame or None
+        VAS residuals (R1-R5) if calculated
+    effects : dict or None
+        Main effects if calculated
+    interactions : dict or None
+        Interaction effects if calculated
+    summary : dict
+        Comprehensive metadata about the analysis
+    sds : int
+        Sampling Design State (0-6)
+    sds_info : dict
+        Detailed SDS characteristics
+
+    Examples
+    --------
+    >>> result = analysis.calculate()
+    >>> xbar = result.get_chart('Xbar')
+    >>> print(result.summary)
+    >>> if result.has_residuals:
+    ...     residuals = result.residuals
+    """
+
+    def __init__(
+        self,
+        charts: Dict[str, Dict[str, Any]],
+        analysis_dataset_obj: 'AnalysisDataSet'
+    ):
+        """
+        Initialize AnalysisResult from chart data and AnalysisDataSet.
+
+        Parameters
+        ----------
+        charts : dict
+            Chart data in nested dict format
+        analysis_dataset_obj : AnalysisDataSet
+            The underlying AnalysisDataSet with all calculations
+        """
+        # Store chart data (backward compatible)
+        self.charts = charts
+
+        # Store reference to full dataset
+        self._ads = analysis_dataset_obj
+        self.dataset = analysis_dataset_obj.analysis_dataset
+
+        # Extract SDS information
+        self.sds = analysis_dataset_obj.sampling_design_state
+        self.sds_info = analysis_dataset_obj.sds_characteristics
+
+        # Extract residuals if calculated
+        self._residuals = None
+        if analysis_dataset_obj.has_vas_residuals:
+            residual_cols = ['R1', 'R2', 'R3', 'R4', 'R5']
+            available_cols = [c for c in residual_cols if c in self.dataset.columns]
+            if available_cols:
+                self._residuals = self.dataset[available_cols].copy()
+
+        # Extract effects and interactions
+        self._effects = analysis_dataset_obj.effects if analysis_dataset_obj.effects else None
+        self._interactions = analysis_dataset_obj.interactions if analysis_dataset_obj.interactions else None
+
+        # Build comprehensive summary
+        self._summary = self._build_summary()
+
+    def _build_summary(self) -> dict:
+        """
+        Build comprehensive summary of analysis.
+
+        Returns
+        -------
+        dict
+            Summary with SDS info, capabilities, and statistics
+        """
+        # Count total signals across all charts
+        n_signals = 0
+
+        # Handle case where charts might not be a dict
+        if not isinstance(self.charts, dict):
+            logger.warning(f"Charts is not a dict, it's a {type(self.charts)}")
+            chart_values = []
+        else:
+            chart_values = self.charts.values()
+
+        for chart_info in chart_values:
+            if 'data' in chart_info and 'beyond_limits' in chart_info['data'].columns:
+                n_signals += (chart_info['data']['beyond_limits'] != 0).sum()
+
+        summary = {
+            # SDS information
+            'sds': self.sds,
+            'sds_description': self.sds_info.get('description', 'Unknown'),
+            'sds_capabilities': self.sds_info.get('capabilities', []),
+            'replication_type': self.sds_info.get('replication_type', 'unknown'),
+
+            # Analysis configuration
+            'analysis_type': self._ads.spec.analysis_type,
+            'response_var': self._ads.spec.response_var,
+            'grouping_vars': self._ads.spec.rsg_vars,
+            'time_var': self._ads.spec.time_var,
+
+            # Data dimensions
+            'n_observations': len(self.dataset),
+            'n_charts': len(self.charts),
+            'chart_types': list(self.charts.keys()),
+
+            # Capabilities
+            'has_residuals': self.has_residuals,
+            'has_effects': self.has_effects,
+            'has_interactions': self.has_interactions,
+            'variance_decomposition': self.sds_info.get('variance_decomposition', False),
+            'interaction_analysis': self.sds_info.get('interaction_analysis', False),
+
+            # Signals
+            'n_signals_total': int(n_signals),
+
+            # Stratification
+            'is_stratified': self._is_stratified(),
+        }
+
+        return summary
+
+    def _is_stratified(self) -> bool:
+        """
+        Check if this is a stratified analysis (separate charts per group).
+
+        Returns
+        -------
+        bool
+            True if multiple charts exist and none are named 'Xbar', 'Sbar', 'R', 'all'
+        """
+        standard_chart_names = {'Xbar', 'Sbar', 'R', 'all'}
+        chart_names = set(self.charts.keys())
+
+        # If we have charts that aren't standard names, it's stratified
+        non_standard = chart_names - standard_chart_names
+
+        return len(non_standard) > 0 and len(self.charts) > 1
+
+    # =========================================================================
+    # Properties for easy access
+    # =========================================================================
+
+    @property
+    def residuals(self) -> Optional[pd.DataFrame]:
+        """
+        Get VAS residuals (R1-R5) if calculated.
+
+        Returns
+        -------
+        DataFrame or None
+            DataFrame with columns [R1, R2, R3, R4, R5] if residuals were
+            calculated, None otherwise
+        """
+        return self._residuals
+
+    @property
+    def effects(self) -> Optional[dict]:
+        """
+        Get main effects if calculated.
+
+        Returns
+        -------
+        dict or None
+            Dictionary with main effects:
+            - 'k_effects': Factor effects (Series)
+            - 't_effects': Time effects (Series)
+        """
+        return self._effects
+
+    @property
+    def interactions(self) -> Optional[dict]:
+        """
+        Get interaction effects if calculated.
+
+        Returns
+        -------
+        dict or None
+            Dictionary with interaction terms (varies by SDS)
+        """
+        return self._interactions
+
+    @property
+    def summary(self) -> dict:
+        """
+        Get comprehensive summary of analysis.
+
+        Returns
+        -------
+        dict
+            Summary with SDS info, capabilities, dimensions, and statistics
+        """
+        return self._summary
+
+    @property
+    def has_residuals(self) -> bool:
+        """Check if VAS residuals were calculated."""
+        return self._residuals is not None
+
+    @property
+    def has_effects(self) -> bool:
+        """Check if main effects were calculated."""
+        return self._effects is not None and len(self._effects) > 0
+
+    @property
+    def has_interactions(self) -> bool:
+        """Check if interaction effects were calculated."""
+        return self._interactions is not None and len(self._interactions) > 0
+
+    @property
+    def all_charts(self) -> List[str]:
+        """Get list of all available chart names."""
+        return list(self.charts.keys())
+
+    # =========================================================================
+    # Convenience methods for accessing data
+    # =========================================================================
+
+    def get_chart(self, name: str) -> pd.DataFrame:
+        """
+        Get chart data by name.
+
+        Parameters
+        ----------
+        name : str
+            Chart name (e.g., 'Xbar', 'Sbar', 'GroupA', 'all')
+
+        Returns
+        -------
+        DataFrame
+            Chart data
+
+        Raises
+        ------
+        KeyError
+            If chart name not found
+
+        Examples
+        --------
+        >>> xbar = result.get_chart('Xbar')
+        >>> alice = result.get_chart('Alice')  # For stratified IMR
+        """
+        if name not in self.charts:
+            raise KeyError(
+                f"Chart '{name}' not found. Available charts: {self.all_charts}"
+            )
+        return self.charts[name]['data']
+
+    def get_statistics(self, name: str) -> dict:
+        """
+        Get chart statistics by name.
+
+        Parameters
+        ----------
+        name : str
+            Chart name (e.g., 'Xbar', 'Sbar', 'GroupA')
+
+        Returns
+        -------
+        dict
+            Statistics dictionary with keys like 'mean', 'lcl', 'ucl', 'n'
+
+        Raises
+        ------
+        KeyError
+            If chart name not found
+
+        Examples
+        --------
+        >>> stats = result.get_statistics('Xbar')
+        >>> print(f"Mean: {stats['Mean']}, UCL: {stats['ucl']}")
+        """
+        if name not in self.charts:
+            raise KeyError(
+                f"Chart '{name}' not found. Available charts: {self.all_charts}"
+            )
+        return self.charts[name]['statistics']
+
+    def get_residual(self, residual_type: str) -> Optional[pd.Series]:
+        """
+        Get specific residual (R1, R2, R3, R4, or R5).
+
+        Parameters
+        ----------
+        residual_type : str
+            Residual type ('R1', 'R2', 'R3', 'R4', or 'R5')
+
+        Returns
+        -------
+        Series or None
+            Residual values if calculated, None otherwise
+
+        Examples
+        --------
+        >>> r1 = result.get_residual('R1')
+        >>> r2 = result.get_residual('R2')
+        """
+        if not self.has_residuals:
+            return None
+
+        if residual_type not in self._residuals.columns:
+            available = list(self._residuals.columns)
+            logger.warning(
+                f"Residual '{residual_type}' not found. "
+                f"Available: {available}"
+            )
+            return None
+
+        return self._residuals[residual_type]
+
+    def iter_charts(self):
+        """
+        Iterate over all charts.
+
+        Yields
+        ------
+        tuple of (name, data, statistics)
+
+        Examples
+        --------
+        >>> for name, data, stats in result.iter_charts():
+        ...     print(f"{name}: {len(data)} points, mean={stats.get('mean')}")
+        """
+        for name, chart_info in self.charts.items():
+            yield name, chart_info['data'], chart_info['statistics']
+
+    def get_signals(self, chart_name: Optional[str] = None) -> pd.DataFrame:
+        """
+        Get points beyond control limits.
+
+        Parameters
+        ----------
+        chart_name : str, optional
+            Chart name to check. If None, checks all charts.
+
+        Returns
+        -------
+        DataFrame
+            Rows where beyond_limits != 0
+
+        Examples
+        --------
+        >>> signals = result.get_signals('Xbar')
+        >>> all_signals = result.get_signals()  # All charts
+        """
+        if chart_name:
+            data = self.get_chart(chart_name)
+            if 'beyond_limits' in data.columns:
+                return data[data['beyond_limits'] != 0]
+            return pd.DataFrame()
+
+        # Get signals from all charts
+        all_signals = []
+        for name, data, _ in self.iter_charts():
+            if 'beyond_limits' in data.columns:
+                signals = data[data['beyond_limits'] != 0].copy()
+                signals['chart'] = name
+                all_signals.append(signals)
+
+        if all_signals:
+            return pd.concat(all_signals, ignore_index=True)
+        return pd.DataFrame()
+
+    # =========================================================================
+    # String representation
+    # =========================================================================
+
+    def __repr__(self) -> str:
+        """String representation."""
+        charts_str = ', '.join(self.all_charts)
+        return (
+            f"AnalysisResult(\n"
+            f"  sds={self.sds} ({self.sds_info['description']}),\n"
+            f"  charts=[{charts_str}],\n"
+            f"  n_obs={len(self.dataset)},\n"
+            f"  has_residuals={self.has_residuals},\n"
+            f"  has_effects={self.has_effects},\n"
+            f"  n_signals={self.summary['n_signals_total']}\n"
+            f")"
+        )
+
+    def __str__(self) -> str:
+        """User-friendly string representation."""
+        lines = [
+            "="*70,
+            "ANALYSIS RESULT SUMMARY",
+            "="*70,
+            f"\nSampling Design State: SDS {self.sds}",
+            f"Description: {self.sds_info['description']}",
+            f"\nAnalysis Type: {self.summary['analysis_type']}",
+            f"Response Variable: {self.summary['response_var']}",
+        ]
+
+        if self.summary['grouping_vars']:
+            lines.append(f"Grouping: {', '.join(self.summary['grouping_vars'])}")
+
+        if self.summary['time_var']:
+            lines.append(f"Time Variable: {self.summary['time_var']}")
+
+        lines.extend([
+            f"\nObservations: {self.summary['n_observations']}",
+            f"Charts: {', '.join(self.all_charts)}",
+        ])
+
+        if self.summary['is_stratified']:
+            lines.append(f"Stratified: Yes ({len(self.charts)} groups)")
+
+        lines.append(f"\nCapabilities:")
+        lines.append(f"  Residuals: {'✓' if self.has_residuals else '✗'}")
+        lines.append(f"  Effects: {'✓' if self.has_effects else '✗'}")
+        lines.append(f"  Interactions: {'✓' if self.has_interactions else '✗'}")
+
+        if self.summary['n_signals_total'] > 0:
+            lines.append(f"\n⚠️  Signals: {self.summary['n_signals_total']} points beyond limits")
+
+        lines.append("="*70)
+
+        return '\n'.join(lines)
+
+    # =========================================================================
+    # Dictionary-like access (for backward compatibility)
+    # =========================================================================
+
+    def __getitem__(self, key):
+        """Allow dict-like access to charts for backward compatibility."""
+        return self.charts[key]
+
+    def __contains__(self, key):
+        """Check if chart exists."""
+        return key in self.charts
+
+    def keys(self):
+        """Get chart names (for backward compatibility)."""
+        return self.charts.keys()
+
+    def values(self):
+        """Get chart info (for backward compatibility)."""
+        return self.charts.values()
+
+    def items(self):
+        """Get chart items (for backward compatibility)."""
+        return self.charts.items()
+
+    def __len__(self):
+        """Return number of charts (for backward compatibility)."""
+        return len(self.charts)
+
+    def __iter__(self):
+        """Iterate over chart names (for backward compatibility)."""
+        return iter(self.charts)
+
+    def get(self, key, default=None):
+        """Get chart by name with default (for backward compatibility)."""
+        return self.charts.get(key, default)
+
+    # =========================================================================
+    # Excel Export
+    # =========================================================================
+
+    def to_excel(
+        self,
+        filepath: str,
+        include_summary: bool = True,
+        include_charts: bool = True,
+        include_residuals: bool = True,
+        include_effects: bool = True,
+        include_interactions: bool = True,
+        include_full_dataset: bool = False,
+        format_cells: bool = True
+    ) -> None:
+        """
+        Export analysis results to Excel with each component on a separate tab.
+
+        Creates a multi-sheet Excel workbook with organized analysis results:
+        - Summary: Analysis metadata, SDS info, signal counts
+        - Charts: One tab per chart (Xbar, Sbar, stratified IMR, etc.)
+        - Residuals: R1-R5 variance decomposition (if available)
+        - Effects: Main effects (if calculated)
+        - Interactions: Interaction terms (if calculated)
+        - Full_Dataset: Complete analysis dataset (optional)
+
+        Parameters
+        ----------
+        filepath : str
+            Output Excel file path (e.g., 'analysis.xlsx')
+        include_summary : bool, default=True
+            Include summary tab with analysis metadata
+        include_charts : bool, default=True
+            Include tabs for each chart
+        include_residuals : bool, default=True
+            Include residuals tab if available
+        include_effects : bool, default=True
+            Include effects tab if available
+        include_interactions : bool, default=True
+            Include interactions tab if available
+        include_full_dataset : bool, default=False
+            Include complete analysis dataset (can be large)
+        format_cells : bool, default=True
+            Apply formatting (bold headers, auto-width, freeze panes)
+
+        Returns
+        -------
+        None
+            File is written to disk
+
+        Examples
+        --------
+        Export with default settings (all available data except full dataset):
+
+        >>> result = analysis.calculate()
+        >>> result.to_excel('my_analysis.xlsx')
+
+        Export with full dataset included:
+
+        >>> result.to_excel('complete_report.xlsx', include_full_dataset=True)
+
+        Export only charts and summary (minimal):
+
+        >>> result.to_excel('charts_only.xlsx',
+        ...                 include_residuals=False,
+        ...                 include_effects=False,
+        ...                 include_interactions=False)
+
+        Notes
+        -----
+        - Tab names are limited to 31 characters (Excel limitation)
+        - Chart tabs are prefixed with 'Chart_' for clarity
+        - Stratified charts use format 'IMR_{group_name}'
+        - Summary tab includes SDS info and signal counts
+        - Formatting includes frozen headers and auto-sized columns
+        """
+        try:
+            import openpyxl
+            from openpyxl.utils.dataframe import dataframe_to_rows
+            from openpyxl.styles import Font, Alignment
+        except ImportError:
+            raise ImportError(
+                "Excel export requires openpyxl. Install it with: "
+                "pip install openpyxl"
+            )
+
+        # Create Excel writer
+        with pd.ExcelWriter(filepath, engine='openpyxl') as writer:
+
+            # 1. Summary Tab
+            if include_summary:
+                self._write_summary_tab(writer, format_cells)
+
+            # 2. Chart Tabs
+            if include_charts:
+                self._write_chart_tabs(writer, format_cells)
+
+            # 3. Residuals Tab
+            if include_residuals and self.has_residuals:
+                self._write_residuals_tab(writer, format_cells)
+
+            # 4. Effects Tab
+            if include_effects and self.has_effects:
+                self._write_effects_tab(writer, format_cells)
+
+            # 5. Interactions Tab
+            if include_interactions and self.has_interactions:
+                self._write_interactions_tab(writer, format_cells)
+
+            # 6. Full Dataset Tab (optional - can be large)
+            if include_full_dataset:
+                self._write_full_dataset_tab(writer, format_cells)
+
+        logger.info(f"Analysis results exported to: {filepath}")
+
+    def _write_summary_tab(self, writer: pd.ExcelWriter, format_cells: bool) -> None:
+        """Write summary tab with analysis metadata."""
+        # Convert summary dict to DataFrame for better Excel formatting
+        summary_items = []
+
+        # SDS Information
+        summary_items.append(('Category', 'Sampling Design State'))
+        summary_items.append(('SDS', self.summary['sds']))
+        summary_items.append(('Description', self.summary['sds_description']))
+        summary_items.append(('Replication Type', self.summary['replication_type']))
+        summary_items.append(('', ''))
+
+        # Analysis Configuration
+        summary_items.append(('Category', 'Analysis Configuration'))
+        summary_items.append(('Analysis Type', self.summary['analysis_type']))
+        summary_items.append(('Response Variable', self.summary['response_var']))
+        summary_items.append(('Grouping Variables', str(self.summary['grouping_vars'])))
+        summary_items.append(('Time Variable', self.summary['time_var']))
+        summary_items.append(('', ''))
+
+        # Data Dimensions
+        summary_items.append(('Category', 'Data Dimensions'))
+        summary_items.append(('Total Observations', self.summary['n_observations']))
+        summary_items.append(('Number of Charts', self.summary['n_charts']))
+        summary_items.append(('Chart Types', ', '.join(self.summary['chart_types'])))
+        summary_items.append(('Is Stratified', self.summary['is_stratified']))
+        summary_items.append(('', ''))
+
+        # Capabilities
+        summary_items.append(('Category', 'Analysis Capabilities'))
+        summary_items.append(('Has Residuals', self.summary['has_residuals']))
+        summary_items.append(('Has Effects', self.summary['has_effects']))
+        summary_items.append(('Has Interactions', self.summary['has_interactions']))
+        summary_items.append(('Variance Decomposition', self.summary['variance_decomposition']))
+        summary_items.append(('Interaction Analysis', self.summary['interaction_analysis']))
+        summary_items.append(('', ''))
+
+        # Signals
+        summary_items.append(('Category', 'Process Signals'))
+        summary_items.append(('Total Signals Detected', self.summary['n_signals_total']))
+
+        # Add SDS capabilities as a list
+        if self.summary['sds_capabilities']:
+            summary_items.append(('', ''))
+            summary_items.append(('Category', 'SDS Capabilities'))
+            for capability in self.summary['sds_capabilities']:
+                summary_items.append(('', capability))
+
+        # Create DataFrame
+        summary_df = pd.DataFrame(summary_items, columns=['Attribute', 'Value'])
+
+        # Write to Excel
+        summary_df.to_excel(writer, sheet_name='Summary', index=False)
+
+        # Apply formatting if requested
+        if format_cells:
+            ws = writer.sheets['Summary']
+            self._apply_formatting(ws)
+
+    def _write_chart_tabs(self, writer: pd.ExcelWriter, format_cells: bool) -> None:
+        """Write tabs for each chart."""
+        for chart_name, chart_info in self.charts.items():
+            # Get chart data
+            chart_data = chart_info.get('data')
+            if chart_data is None or not isinstance(chart_data, pd.DataFrame):
+                continue
+
+            # Create tab name (Excel limit: 31 chars)
+            tab_name = f"Chart_{chart_name}"
+            if len(tab_name) > 31:
+                tab_name = tab_name[:31]
+
+            # Write chart data
+            chart_data.to_excel(writer, sheet_name=tab_name, index=False)
+
+            # Apply formatting if requested
+            if format_cells:
+                ws = writer.sheets[tab_name]
+                self._apply_formatting(ws)
+
+    def _write_residuals_tab(self, writer: pd.ExcelWriter, format_cells: bool) -> None:
+        """Write residuals tab."""
+        if self.residuals is not None:
+            self.residuals.to_excel(writer, sheet_name='Residuals', index=False)
+
+            if format_cells:
+                ws = writer.sheets['Residuals']
+                self._apply_formatting(ws)
+
+    def _write_effects_tab(self, writer: pd.ExcelWriter, format_cells: bool) -> None:
+        """Write effects tab."""
+        # Convert effects dict to DataFrame
+        effects_data = []
+
+        for effect_name, effect_values in self.effects.items():
+            if isinstance(effect_values, pd.DataFrame):
+                # For DataFrames, extract all rows
+                for idx, row in effect_values.iterrows():
+                    # Get the value column (could be different names)
+                    value_col = [c for c in effect_values.columns if 'effect' in c.lower() or 'me' in c.lower()]
+                    if value_col:
+                        val = row[value_col[0]]
+                    else:
+                        # Use last column as value
+                        val = row.iloc[-1]
+
+                    # Get the level/category
+                    level_col = effect_values.columns[0]
+                    level = row[level_col]
+
+                    effects_data.append({
+                        'Effect_Type': effect_name,
+                        'Level': str(level),
+                        'Value': val
+                    })
+            elif isinstance(effect_values, pd.Series):
+                for idx, val in effect_values.items():
+                    effects_data.append({
+                        'Effect_Type': effect_name,
+                        'Level': str(idx),
+                        'Value': val
+                    })
+            elif isinstance(effect_values, (int, float)):
+                effects_data.append({
+                    'Effect_Type': effect_name,
+                    'Level': '',
+                    'Value': effect_values
+                })
+
+        if effects_data:
+            effects_df = pd.DataFrame(effects_data)
+            effects_df.to_excel(writer, sheet_name='Effects', index=False)
+
+            if format_cells:
+                ws = writer.sheets['Effects']
+                self._apply_formatting(ws)
+
+    def _write_interactions_tab(self, writer: pd.ExcelWriter, format_cells: bool) -> None:
+        """Write interactions tab."""
+        # Convert interactions dict to DataFrame
+        interactions_data = []
+
+        for interaction_name, interaction_values in self.interactions.items():
+            if isinstance(interaction_values, pd.Series):
+                for idx, val in interaction_values.items():
+                    interactions_data.append({
+                        'Interaction': interaction_name,
+                        'Combination': str(idx),
+                        'Value': val
+                    })
+            elif isinstance(interaction_values, pd.DataFrame):
+                # For DataFrames, flatten them
+                for row_idx, row in interaction_values.iterrows():
+                    for col_name, val in row.items():
+                        interactions_data.append({
+                            'Interaction': interaction_name,
+                            'Combination': f"{row_idx} x {col_name}",
+                            'Value': val
+                        })
+
+        if interactions_data:
+            interactions_df = pd.DataFrame(interactions_data)
+            interactions_df.to_excel(writer, sheet_name='Interactions', index=False)
+
+            if format_cells:
+                ws = writer.sheets['Interactions']
+                self._apply_formatting(ws)
+
+    def _write_full_dataset_tab(self, writer: pd.ExcelWriter, format_cells: bool) -> None:
+        """Write full dataset tab."""
+        self.dataset.to_excel(writer, sheet_name='Full_Dataset', index=False)
+
+        if format_cells:
+            ws = writer.sheets['Full_Dataset']
+            self._apply_formatting(ws)
+
+    def _apply_formatting(self, worksheet) -> None:
+        """
+        Apply standard formatting to worksheet.
+
+        - Bold headers
+        - Freeze top row
+        - Auto-size columns
+        """
+        from openpyxl.styles import Font
+
+        # Bold headers (first row)
+        for cell in worksheet[1]:
+            cell.font = Font(bold=True)
+
+        # Freeze top row
+        worksheet.freeze_panes = 'A2'
+
+        # Auto-size columns
+        for column in worksheet.columns:
+            max_length = 0
+            column_letter = column[0].column_letter
+
+            for cell in column:
+                try:
+                    if cell.value:
+                        max_length = max(max_length, len(str(cell.value)))
+                except:
+                    pass
+
+            adjusted_width = min(max_length + 2, 50)  # Cap at 50
+            worksheet.column_dimensions[column_letter].width = adjusted_width

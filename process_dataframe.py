@@ -1,0 +1,338 @@
+"""
+ProcessDataFrame - Intelligent wrapper for process behavior analysis.
+
+This module provides a user-friendly interface with IDE auto-completion for column names
+and SDS-driven automatic analysis selection.
+
+Usage:
+    from processbehavior import ProcessDataFrame
+
+    data = ProcessDataFrame(raw_df)
+
+    # Auto-completion for column names!
+    analysis = data.analyze(
+        response_vars=[data.columns.Height, data.columns.Width],
+        time_var=data.columns.ProductionTime,
+        grouping_vars=[data.columns.Operator]
+    )
+"""
+
+from __future__ import annotations
+import logging
+from typing import List, Union, Optional
+import pandas as pd
+
+from sds_detector import SamplingDesignDetector
+from analysis_specification import AnalysisSpecification
+from analysis_dataset import Analysis
+
+logger = logging.getLogger(__name__)
+
+
+class ColumnAccessor:
+    """
+    Provides IDE auto-completion for DataFrame column names.
+
+    Usage:
+        data = ProcessDataFrame(df)
+        data.columns.Height  # Auto-completes to column name string
+
+    This class dynamically creates attributes for each column in the DataFrame,
+    enabling IDE auto-completion and preventing typos.
+    """
+
+    def __init__(self, df: pd.DataFrame):
+        """
+        Initialize accessor with DataFrame columns.
+
+        Args:
+            df: The DataFrame whose columns will be accessible
+        """
+        self._df = df
+        self._columns = list(df.columns)
+
+        # Dynamically add each column as an attribute
+        for col in self._columns:
+            # Convert column name to valid Python identifier if needed
+            attr_name = self._sanitize_column_name(col)
+            setattr(self, attr_name, col)
+
+    def _sanitize_column_name(self, col_name: str) -> str:
+        """
+        Convert column name to valid Python identifier.
+
+        Handles spaces, special characters, etc.
+
+        Args:
+            col_name: Original column name
+
+        Returns:
+            Sanitized name safe for use as Python attribute
+        """
+        # Replace spaces and special chars with underscores
+        safe_name = col_name.replace(' ', '_').replace('-', '_')
+
+        # Remove other special characters
+        safe_name = ''.join(c if c.isalnum() or c == '_' else '_' for c in safe_name)
+
+        # Ensure doesn't start with number
+        if safe_name[0].isdigit():
+            safe_name = f'col_{safe_name}'
+
+        return safe_name
+
+    def __repr__(self) -> str:
+        """Display available columns."""
+        return f"ColumnAccessor({self._columns})"
+
+    def __dir__(self):
+        """Support for tab-completion in IPython/Jupyter."""
+        return [self._sanitize_column_name(col) for col in self._columns]
+
+
+class ProcessDataFrame:
+    """
+    Intelligent wrapper for process behavior analysis with auto-completion.
+
+    This class makes analysis frictionless by:
+    1. Providing IDE auto-completion for column names
+    2. Auto-detecting Sampling Design State (SDS)
+    3. Running the best analysis for the detected SDS
+    4. Explaining what analysis is being run and why
+
+    Usage:
+        # Basic usage with auto-completion
+        data = ProcessDataFrame(raw_df)
+
+        analysis = data.analyze(
+            response_var=data.columns.Measurement,
+            time_var=data.columns.Time,
+            grouping_vars=[data.columns.Operator, data.columns.Machine]
+        )
+
+        # Simple series (SDS 0) - runs IMR chart
+        data = ProcessDataFrame(simple_series)
+        analysis = data.analyze(response_var=data.columns.Value)
+
+    Attributes:
+        columns: ColumnAccessor for IDE auto-completion of column names
+        data: The underlying pandas DataFrame
+    """
+
+    def __init__(self, df: pd.DataFrame):
+        """
+        Initialize ProcessDataFrame with data.
+
+        Args:
+            df: pandas DataFrame containing process data
+        """
+        if not isinstance(df, pd.DataFrame):
+            raise TypeError(f"Expected pandas DataFrame, got {type(df)}")
+
+        self.data = df.copy()
+        self.columns = ColumnAccessor(self.data)
+
+        logger.info(f"ProcessDataFrame created with {len(df)} rows, {len(df.columns)} columns")
+
+    def analyze(
+        self,
+        response_var: Optional[str] = None,
+        response_vars: Optional[List[str]] = None,
+        time_var: Optional[str] = None,
+        grouping_vars: Optional[List[str]] = None,
+        rsg_var_name: str = 'rsg',
+        rsg_var_delim: str = '_',
+        round_to: int = 3,
+        zero_center: bool = False
+    ) -> Analysis:
+        """
+        Auto-detect SDS and run the best analysis for your data.
+
+        This method:
+        1. Builds an AnalysisSpecification from your parameters
+        2. Detects the Sampling Design State (SDS)
+        3. Determines the best analysis type for that SDS
+        4. Runs the analysis and explains what it's doing
+
+        Args:
+            response_var: Single response variable (for simple series)
+            response_vars: List of response variables (for multivariate)
+            time_var: Time/sequence variable
+            grouping_vars: Grouping variables for rational subgrouping
+            rsg_var_name: Name for rational subgroup column (default: 'rsg')
+            rsg_var_delim: Delimiter for multi-variable groups (default: '_')
+            round_to: Decimal places for rounding (default: 3)
+            zero_center: Whether to center data at zero (default: False)
+
+        Returns:
+            Analysis object with results
+
+        Raises:
+            ValueError: If neither response_var nor response_vars is provided
+
+        Examples:
+            # Simple series - IMR chart
+            analysis = data.analyze(response_var=data.columns.Measurement)
+
+            # Grouped data - Xbar and S charts
+            analysis = data.analyze(
+                response_var=data.columns.Height,
+                time_var=data.columns.Time,
+                grouping_vars=[data.columns.Operator]
+            )
+        """
+        # Handle response variable specification
+        if response_var is None and response_vars is None:
+            raise ValueError("Must provide either response_var or response_vars")
+
+        if response_var and response_vars:
+            raise ValueError("Provide either response_var OR response_vars, not both")
+
+        # Normalize to response_var for specification
+        final_response_var = response_var if response_var else response_vars[0]
+
+        # Build specification dict
+        spec_dict = {
+            'response_var': final_response_var,
+            'time_var': time_var,
+            'rsg_vars': grouping_vars,
+            'rsg_var_name': rsg_var_name,
+            'rsg_var_delim': rsg_var_delim,
+            'round_to': round_to,
+            'zero-center': zero_center  # Note: hyphen not underscore (legacy API)
+        }
+
+        # Create a temporary spec to detect SDS
+        # We'll use 'Imr' as default since we don't know SDS yet
+        temp_spec = AnalysisSpecification('Imr', spec_dict)
+
+        # Prepare data first (adds 'rsg' column if needed)
+        from data_preparation import DataPreparation
+        prep = DataPreparation()
+        prep.validate_columns(self.data, temp_spec)
+        prepared_df = prep.prepare_dataset(self.data, temp_spec)
+
+        # Detect SDS on prepared data
+        detector = SamplingDesignDetector()
+        sds = detector.detect_sds(prepared_df, temp_spec)
+        sds_info = detector.get_sds_characteristics(sds)
+
+        # Determine best analysis type for this SDS
+        analysis_type = self._determine_analysis_type(sds, grouping_vars)
+
+        # Log what we're doing and why
+        self._explain_analysis(sds, sds_info, analysis_type, spec_dict)
+
+        # Update spec with correct analysis type
+        spec_dict['analysis_type'] = analysis_type
+        final_spec = AnalysisSpecification(analysis_type, spec_dict)
+
+        # Run the analysis
+        analysis = Analysis(self.data, spec_dict)
+
+        return analysis
+
+    def _determine_analysis_type(
+        self,
+        sds: int,
+        grouping_vars: Optional[List[str]]
+    ) -> str:
+        """
+        Determine the best analysis type for the detected SDS.
+
+        Decision logic:
+        - SDS 0 (simple series): IMR chart
+        - SDS 1-6 with grouping: Xbar and S charts
+        - SDS with no grouping but has time: IMR chart
+
+        Args:
+            sds: Detected Sampling Design State
+            grouping_vars: User-specified grouping variables
+
+        Returns:
+            Analysis type string ('Imr', 'Xbar', 'S', or 'R')
+        """
+        # SDS 0: Simple series → IMR chart
+        if sds == 0:
+            return 'Imr'
+
+        # If user provided grouping variables → Xbar/S charts
+        if grouping_vars and len(grouping_vars) > 0:
+            return 'Xbar'  # Will also calculate S chart
+
+        # Otherwise → IMR chart (individuals)
+        return 'Imr'
+
+    def _explain_analysis(
+        self,
+        sds: int,
+        sds_info: dict,
+        analysis_type: str,
+        spec: dict
+    ):
+        """
+        Print user-friendly explanation of what analysis is running and why.
+
+        Args:
+            sds: Detected Sampling Design State
+            sds_info: SDS characteristics dict
+            analysis_type: Selected analysis type
+            spec: Analysis specification dict
+        """
+        print("\n" + "="*70)
+        print("PROCESS BEHAVIOR ANALYSIS")
+        print("="*70)
+
+        print(f"\n📊 Detected SDS {sds}: {sds_info['description']}")
+        print(f"   Replication: {sds_info.get('replication_type', 'N/A')}")
+        if sds_info.get('variance_decomposition'):
+            print(f"   Variance decomposition: Supported")
+
+        print(f"\n📈 Running: {self._get_analysis_description(analysis_type)}")
+        print(f"   Response: {spec['response_var']}")
+
+        if spec.get('time_var'):
+            print(f"   Time: {spec['time_var']}")
+
+        if spec.get('rsg_vars'):
+            print(f"   Grouping: {', '.join(spec['rsg_vars'])}")
+
+        print(f"\n💡 Why this analysis?")
+        print(f"   {self._get_analysis_rationale(sds, analysis_type, spec)}")
+
+        print("\n" + "="*70 + "\n")
+
+    def _get_analysis_description(self, analysis_type: str) -> str:
+        """Get friendly description of analysis type."""
+        descriptions = {
+            'Imr': 'IMR Chart (Individual Moving Range)',
+            'Xbar': 'Xbar and S Charts (Subgroup Mean and Variation)',
+            'S': 'S Chart (Subgroup Standard Deviation)',
+            'R': 'R Chart (Subgroup Range)'
+        }
+        return descriptions.get(analysis_type, analysis_type)
+
+    def _get_analysis_rationale(self, sds: int, analysis_type: str, spec: dict) -> str:
+        """Explain why this analysis was chosen."""
+        if sds == 0:
+            return "Simple series with no grouping → IMR chart for individual measurements"
+
+        if spec.get('rsg_vars'):
+            return (
+                f"Data has rational subgroups ({', '.join(spec['rsg_vars'])}) → "
+                "Xbar/S charts to track subgroup means and variation"
+            )
+
+        return "No rational subgroups detected → IMR chart for individual measurements"
+
+    def __repr__(self) -> str:
+        """String representation."""
+        return (
+            f"ProcessDataFrame(rows={len(self.data)}, "
+            f"columns={len(self.data.columns)})\n"
+            f"Columns: {list(self.data.columns)}"
+        )
+
+    def __len__(self) -> int:
+        """Return number of rows."""
+        return len(self.data)
