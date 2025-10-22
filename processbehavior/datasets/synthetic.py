@@ -46,7 +46,7 @@ import numpy as np
 import pandas as pd
 from typing import Optional, Tuple, Dict, List, Union
 import logging
-from analysis_dataset import AnalysisSpecification
+from ..analysis_dataset import AnalysisSpecification
 
 logger = logging.getLogger(__name__)
 

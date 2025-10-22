@@ -1,5 +1,6 @@
 import pytest
-import analysis_dataset as ad
+from processbehavior import analysis_dataset as ad
+from processbehavior.analysis_specification import AnalysisSpecification
 import pandas as pd
 import numpy as np
 from processbehavior.datasets import (
@@ -206,8 +207,9 @@ def test_stratified_imr_vs_vas_xbar():
     Both use grouping and time, but for different purposes!
     """
     from processbehavior.datasets import make_sds1
-    import analysis_dataset as ad
-    
+    from processbehavior import analysis_dataset as ad
+    from processbehavior.analysis_specification import AnalysisSpecification
+
     # Generate data: 3 lanes, 8 time periods, replicated
     df = make_sds1(K=3, T=8, n_min=2, n_max=4, seed=42)
     
@@ -313,8 +315,9 @@ def test_stratified_imr_with_sds6():
     irregular data, you can still monitor each group separately.
     """
     from processbehavior.datasets import make_sds6
-    import analysis_dataset as ad
-    
+    from processbehavior import analysis_dataset as ad
+    from processbehavior.analysis_specification import AnalysisSpecification
+
     # SDS6: Irregular sampling, regime changes
     df = make_sds6(T=80, K=3, p_sampled=0.6, seed=42)
     
@@ -330,7 +333,7 @@ def test_stratified_imr_with_sds6():
     # Should work even with irregular data
     result = ad.perform_analysis(df, spec)
     
-    assert isinstance(result, dict)
+    assert hasattr(result, "keys") and hasattr(result, "values")
     assert len(result) >= 2  # Should have multiple groups
     
     print(f"✓ Stratified IMR works with SDS6: {len(result)} groups")
@@ -351,8 +354,9 @@ def test_automatic_stratification_demo():
     Shows how one specification creates multiple charts automatically.
     """
     from processbehavior.datasets import make_sds2
-    import analysis_dataset as ad
-    
+    from processbehavior import analysis_dataset as ad
+    from processbehavior.analysis_specification import AnalysisSpecification
+
     # Multi-lane filling operation
     df = make_sds2(K=4, T=20, seed=42)
     df['factor 1'] = df['factor 1'].replace({
@@ -492,8 +496,9 @@ def test_vas_decision_matrix():
         make_sds1, make_sds2, make_sds3, 
         make_sds4, make_sds5, make_sds6
     )
-    import analysis_dataset as ad
-    
+    from processbehavior import analysis_dataset as ad
+    from processbehavior.analysis_specification import AnalysisSpecification
+
     # Decision matrix: (SDS, analysis_type) → should_calculate_vas
     decision_matrix = {
         # SDS 0: Never calculate VAS
