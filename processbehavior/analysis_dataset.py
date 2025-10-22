@@ -99,6 +99,237 @@ class Analysis:
             analysis_dataset_obj=self.ads
         )
 
+    # =========================================================================
+    # Helper Methods (DRY principle)
+    # =========================================================================
+
+    def _apply_zero_centering(self, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Zero-center response variable if specified.
+
+        Pure function approach: doesn't modify input, returns new DataFrame.
+
+        Parameters
+        ----------
+        df : pd.DataFrame
+            Input data with response variable
+
+        Returns
+        -------
+        pd.DataFrame
+            Data with zero-centered response variable (if spec.zero_center is True)
+        """
+        if not self.spec.zero_center:
+            return df
+
+        logger.info('Zero-centering data')
+        result = df.copy()
+        zero_mean = result[self.spec.response_var].mean()
+        logger.debug('Zero-mean: %s', zero_mean)
+        result[self.spec.response_var] = result[self.spec.response_var] - zero_mean
+
+        return result
+
+    def _add_beyond_limits_flag(
+        self,
+        df: pd.DataFrame,
+        value_col: str,
+        lcl_col: str = 'lcl',
+        ucl_col: str = 'ucl'
+    ) -> pd.DataFrame:
+        """
+        Add beyond_limits flag column.
+
+        Returns -1 for below LCL, 1 for above UCL, 0 for in control.
+
+        Pure function: doesn't modify input.
+
+        Parameters
+        ----------
+        df : pd.DataFrame
+            Input data with control limits
+        value_col : str
+            Column name containing values to check
+        lcl_col : str, default 'lcl'
+            Column name for lower control limit
+        ucl_col : str, default 'ucl'
+            Column name for upper control limit
+
+        Returns
+        -------
+        pd.DataFrame
+            Data with added 'beyond_limits' column
+        """
+        result = df.copy()
+
+        result['beyond_limits'] = result.apply(
+            lambda row: detect_beyond_limits(
+                x=row[value_col],
+                ucl=row[ucl_col],
+                lcl=row[lcl_col]
+            ),
+            axis=1
+        )
+
+        return result
+
+    def _determine_n_to_use(self, df: pd.DataFrame, n_col: str = 'n') -> tuple[str, int]:
+        """
+        Determine if subgroup sizes are constant or variable.
+
+        Parameters
+        ----------
+        df : pd.DataFrame
+            Input data with subgroup size column
+        n_col : str, default 'n'
+            Column name containing subgroup sizes
+
+        Returns
+        -------
+        tuple[str, int]
+            (n_to_use, max_n) where:
+            - n_to_use: 'N' if constant sizes, 'n' if variable
+            - max_n: maximum subgroup size
+
+        Examples
+        --------
+        >>> n_to_use, max_n = self._determine_n_to_use(out)
+        >>> # Use max_n for statistics, n_to_use for per-row calculations
+        """
+        n_max = df[n_col].max()
+        n_to_use = "N" if df[n_col].eq(n_max).all() else "n"
+
+        logger.info(
+            'Analysis using %s for calculations (Scenario: %s)',
+            n_to_use,
+            1 if n_to_use == "N" else 2
+        )
+
+        return n_to_use, n_max
+
+    def _package_stratified_results(
+        self,
+        df: pd.DataFrame,
+        statistics_cols: list[str]
+    ) -> dict:
+        """
+        Package analysis results with statistics for stratified charts.
+
+        Used for IMR and R charts with optional grouping.
+
+        Parameters
+        ----------
+        df : pd.DataFrame
+            Analysis results with chart data
+        statistics_cols : list[str]
+            Columns to collect statistics for (e.g., ['mean', 'lcl', 'ucl'])
+
+        Returns
+        -------
+        dict
+            Packaged results: {group: {'data': df, 'statistics': dict}}
+            For ungrouped data: {'all': {'data': df, 'statistics': dict}}
+
+        Examples
+        --------
+        >>> result = self._package_stratified_results(
+        ...     df=out,
+        ...     statistics_cols=['mean', 'lcl', 'ucl']
+        ... )
+        """
+        if self.spec.has_grouping:
+            statistics = gather_analysis_statistics(
+                df=df,
+                statistics_to_collect=statistics_cols,
+                grouping_var=self.spec.rsg_var_name
+            )
+            split_dict = split_df_by_group(
+                df=df,
+                grouping_var=self.spec.rsg_var_name
+            )
+        else:
+            statistics = gather_analysis_statistics(
+                df=df,
+                statistics_to_collect=statistics_cols
+            )
+            split_dict = {'all': df}
+
+        return package_analysis(
+            analysis_output=split_dict,
+            summary_statistics_output=statistics
+        )
+
+    def _build_output_columns(
+        self,
+        df: pd.DataFrame,
+        value_cols: list[str]
+    ) -> pd.DataFrame:
+        """
+        Select output columns with appropriate time/grouping columns.
+
+        Handles the pattern:
+        - If has_time and has_grouping: [time, rsg, ...values, obs_id]
+        - If has_time only: [time, ...values, obs_id]
+        - If has_grouping only: [x, rsg, ...values, obs_id] (with generated x)
+        - Otherwise: [x, ...values, obs_id] (with generated x)
+
+        Always includes obs_id (if available) for traceability of violations.
+
+        Parameters
+        ----------
+        df : pd.DataFrame
+            Input data
+        value_cols : list[str]
+            Columns to keep (e.g., ['mean', 'lcl', 'ucl', 'beyond_limits'])
+
+        Returns
+        -------
+        pd.DataFrame
+            Data with selected columns, rounded
+
+        Notes
+        -----
+        The obs_id column enables tracing violations back to original data:
+        - Find violations: df[df['beyond_limits'] != 0]
+        - Get obs_ids: violation_ids = df['obs_id'].tolist()
+        - Trace to raw data: raw_df[raw_df['obs_id'].isin(violation_ids)]
+
+        Examples
+        --------
+        >>> out = self._build_output_columns(
+        ...     df=out,
+        ...     value_cols=[spec.response_var, 'mean', 'lcl', 'ucl', 'beyond_limits']
+        ... )
+        """
+        result = df.copy()
+        cols_to_keep = value_cols.copy()
+
+        if self.spec.has_time:
+            if self.spec.has_grouping:
+                cols_to_keep.insert(0, self.spec.rsg_var_name)
+                cols_to_keep.insert(0, self.spec.time_var)
+            else:
+                cols_to_keep.insert(0, self.spec.time_var)
+        else:
+            if self.spec.has_grouping:
+                result['x'] = result.groupby(self.spec.rsg_var_name).cumcount() + 1
+                cols_to_keep.insert(0, self.spec.rsg_var_name)
+                cols_to_keep.insert(0, 'x')
+            else:
+                result['x'] = result.index + 1
+                cols_to_keep.insert(0, 'x')
+
+        # Always include obs_id for traceability (if available)
+        # This enables linking violations back to original data
+        if 'obs_id' in result.columns and 'obs_id' not in cols_to_keep:
+            cols_to_keep.append('obs_id')
+
+        return result[cols_to_keep].round(self.spec.round_to)
+
+    # =========================================================================
+    # Chart Calculation Methods (Strategy Pattern)
+    # =========================================================================
+
     def _calculate_xbar(self) -> pd.DataFrame:
         """
         Calculate Xbar (mean) chart statistics.
@@ -116,10 +347,8 @@ class Analysis:
         logger.debug('Dataframe head:\\n%s', out.head(10))
         logger.debug('n.max=%s', out["n"].max())
 
-        if spec.zero_center:
-            logger.info('Zero-centering data')
-            zero_mean = out[spec.response_var].mean()
-            out[spec.response_var] = out[spec.response_var] - zero_mean
+        # Apply zero-centering if requested
+        out = self._apply_zero_centering(out)
 
         out = out.groupby(spec.rsg_var_name, as_index=False).agg(
             s=pd.NamedAgg(column=spec.response_var, aggfunc="std"),
@@ -138,10 +367,8 @@ class Analysis:
         _N = out['n'].max()
         out['N'] = _N
 
-        # if subgroup sizes are equal use N (limits will be same for all groups)
-        n_max = _N
-        n_to_use = "N" if out['n'].eq(n_max).all() else "n"
-        logger.info('Analysis using %s for calculations (Scenario: %s)', n_to_use, 1 if n_to_use=="N" else 2)
+        # Determine if subgroup sizes are constant or variable
+        n_to_use, n_max = self._determine_n_to_use(out)
 
         # CALCULATE XBAR
         xbar = out.copy()
@@ -155,14 +382,8 @@ class Analysis:
             ), axis=1
         )
 
-        xbar['beyond_limits'] = xbar.apply(
-            lambda row: detect_beyond_limits(
-                x=row['mean'],
-                ucl=row['ucl'],
-                lcl=row['lcl']
-            ), axis=1
-        )
-
+        # Detect beyond limits signals
+        xbar = self._add_beyond_limits_flag(xbar, value_col='mean')
         xbar = xbar.round(spec.round_to)
 
         statistics['Mean'] = round(_Xbar, spec.round_to)
@@ -195,14 +416,8 @@ class Analysis:
             ), axis=1
         )
 
-        sbar['beyond_limits'] = sbar.apply(
-            lambda row: detect_beyond_limits(
-                x=row['S'],
-                ucl=row['ucl'],
-                lcl=row['lcl']
-            ), axis=1
-        )
-
+        # Detect beyond limits signals
+        sbar = self._add_beyond_limits_flag(sbar, value_col='S')
         sbar = sbar.round(spec.round_to)
 
         if n_to_use == "N":
@@ -244,9 +459,8 @@ class Analysis:
         out['groups'] = out["n"].count()
         out['N'] = out['n'].max()
 
-        # if subgroup sizes are equal use N (limits will be same for all groups)
-        n_max = out['n'].max()
-        n_to_use = "N" if (out['n'].eq(n_max).all()) else "n"
+        # Determine if subgroup sizes are constant or variable
+        n_to_use, n_max = self._determine_n_to_use(out)
 
         # Add limits columns
         out[['lcl', 'ucl']] = out.apply(
@@ -259,13 +473,8 @@ class Analysis:
             ), axis=1
         )
 
-        out['beyond_limits'] = out.apply(
-            lambda row: detect_beyond_limits(
-                x=row['S'],
-                ucl=row['ucl'],
-                lcl=row['lcl']
-            ), axis=1
-        )
+        # Detect beyond limits signals
+        out = self._add_beyond_limits_flag(out, value_col='S')
 
         cols_to_keep = ['rsg', 's', 'S', 'lcl', 'ucl', 'beyond_limits']
         out = out[cols_to_keep]
@@ -282,13 +491,10 @@ class Analysis:
         y = self.spec.response_var
         df = self.raw_df
         spec = self.spec
-        out = self.ads.analysis_dataset.copy()#prepare_dataset(df=df, analysis_specification=spec)
-        print (out)
-        if spec.zero_center:
-            logger.info('Zero-centering data')
-            zero_mean = out[spec.response_var].mean()
-            logger.debug('Zero-mean: %s', zero_mean)
-            out[spec.response_var] = out[spec.response_var] - zero_mean
+        out = self.ads.analysis_dataset.copy()
+
+        # Apply zero-centering if requested
+        out = self._apply_zero_centering(out)
 
         logger.debug('In calculate statistics IMR')
         logger.debug('Dataframe has columns: %s', out.columns.to_list())
@@ -379,52 +585,20 @@ class Analysis:
             out['lcl']  = lims['lcl']
             out['ucl']  = lims['ucl']
 
-        out['beyond_limits'] = np.where(out[spec.response_var] < out['lcl'], -1, 0)
-        out['beyond_limits'] = np.where(out[spec.response_var] > out['ucl'], 1, 0)
+        # Detect beyond limits signals
+        out = self._add_beyond_limits_flag(out, value_col=spec.response_var)
 
-        cols_to_keep = [spec.response_var, 'mean', 'lcl', 'ucl', 'beyond_limits']
+        # Format output with appropriate columns
+        out = self._build_output_columns(
+            df=out,
+            value_cols=[spec.response_var, 'mean', 'lcl', 'ucl', 'beyond_limits']
+        )
 
-        if spec.has_time:
-            if spec.has_grouping:
-                cols_to_keep.insert(0, spec.rsg_var_name)
-                cols_to_keep.insert(0, spec.time_var)
-            else:
-                cols_to_keep.insert(0, spec.time_var)
-        else:
-            if spec.has_grouping:
-                out['x'] = out.groupby(spec.rsg_var_name).cumcount() + 1
-                cols_to_keep.insert(0, spec.rsg_var_name)
-                cols_to_keep.insert(0, 'x')
-            else:
-                out['x'] = out.index + 1
-                cols_to_keep.insert(0, 'x')
-
-        out = out[cols_to_keep]
-        out = out.round(spec.round_to)
-
-        if spec.has_grouping:
-            statistics = gather_analysis_statistics(
-                df=out,
-                statistics_to_collect=['mean', 'lcl', 'ucl'],
-                grouping_var=spec.rsg_var_name
-            )
-            split_dict = split_df_by_group(df=out, grouping_var=spec.rsg_var_name)
-            out = package_analysis(
-                analysis_output=split_dict,
-                summary_statistics_output=statistics
-            )
-        else:
-            statistics = gather_analysis_statistics(
-                df=out,
-                statistics_to_collect=['mean', 'lcl', 'ucl']
-            )
-            _out = {'all': out}
-            out = package_analysis(
-                analysis_output=_out,
-                summary_statistics_output=statistics
-            )
-
-        return out
+        # Package results with statistics
+        return self._package_stratified_results(
+            df=out,
+            statistics_cols=['mean', 'lcl', 'ucl']
+        )
 
     def _calculate_r(self) -> pd.DataFrame:
         """
@@ -436,10 +610,8 @@ class Analysis:
         spec = self.spec
         out = self.ads.analysis_dataset.copy()
 
-        if spec.zero_center:
-            logger.info('Zero-centering data')
-            zero_mean = out[spec.response_var].mean()
-            out[spec.response_var] = out[spec.response_var] - zero_mean
+        # Apply zero-centering if requested
+        out = self._apply_zero_centering(out)
 
         logger.debug('In calculate statistics R')
         logger.debug('Dataframe has columns: %s', out.columns.to_list())
@@ -480,53 +652,20 @@ class Analysis:
         # Drop NAs
         out = out.dropna()
 
-        # Calculate Beyond Limits
-        out['beyond_limits'] = np.where(out[spec.response_var] > out['lcl'], -1, 0)
-        out['beyond_limits'] = np.where(out[spec.response_var] > out['ucl'], 1, 0)
+        # Detect beyond limits signals
+        out = self._add_beyond_limits_flag(out, value_col='mr')
 
-        cols_to_keep = ['mr', 'mR', 'lcl', 'ucl', 'beyond_limits']
+        # Format output with appropriate columns
+        out = self._build_output_columns(
+            df=out,
+            value_cols=['mr', 'mR', 'lcl', 'ucl', 'beyond_limits']
+        )
 
-        if spec.has_time:
-            if spec.has_grouping:
-                cols_to_keep.insert(0, 'rsg')
-                cols_to_keep.insert(0, spec.time_var)
-            else:
-                cols_to_keep.insert(0, spec.time_var)
-        else:
-            if spec.has_grouping:
-                out['x'] = out.groupby(spec.rsg_var_name).cumcount() + 1
-                cols_to_keep.insert(0, 'rsg')
-                cols_to_keep.insert(0, 'x')
-            else:
-                out['x'] = out.index
-                cols_to_keep.insert(0, 'x')
-
-        out = out[cols_to_keep]
-        out = out.round(spec.round_to)
-
-        if spec.has_grouping:
-            statistics = gather_analysis_statistics(
-                df=out,
-                statistics_to_collect=['mR', 'lcl', 'ucl'],
-                grouping_var=spec.rsg_var_name
-            )
-            split_dict = split_df_by_group(df=out, grouping_var=spec.rsg_var_name)
-            out = package_analysis(
-                analysis_output=split_dict,
-                summary_statistics_output=statistics
-            )
-        else:
-            statistics = gather_analysis_statistics(
-                df=out,
-                statistics_to_collect=['mR', 'lcl', 'ucl']
-            )
-            _out = {'all': out}
-            out = package_analysis(
-                analysis_output=_out,
-                summary_statistics_output=statistics
-            )
-
-        return out
+        # Package results with statistics
+        return self._package_stratified_results(
+            df=out,
+            statistics_cols=['mR', 'lcl', 'ucl']
+        )
 
 
 # ============================================================================
