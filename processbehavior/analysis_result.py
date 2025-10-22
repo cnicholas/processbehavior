@@ -790,24 +790,127 @@ class AnalysisResult:
 
     def _write_chart_tabs(self, writer: pd.ExcelWriter, format_cells: bool) -> None:
         """Write tabs for each chart."""
+
+        # Check if this is a stratified analysis
+        stratify_vars = self._ads.spec.spec.get('stratify')
+        if self.summary['is_stratified'] and stratify_vars:
+            # Stratified analysis: combine all stratified charts into single tab
+            self._write_stratified_chart_tab(writer, format_cells, stratify_vars)
+        else:
+            # Standard analysis: each chart gets its own tab
+            for chart_name, chart_info in self.charts.items():
+                # Get chart data
+                chart_data = chart_info.get('data')
+                if chart_data is None or not isinstance(chart_data, pd.DataFrame):
+                    continue
+
+                # Create tab name (Excel limit: 31 chars)
+                tab_name = f"Chart_{chart_name}"
+                if len(tab_name) > 31:
+                    tab_name = tab_name[:31]
+
+                # Write chart data
+                chart_data.to_excel(writer, sheet_name=tab_name, index=False)
+
+                # Apply formatting if requested
+                if format_cells:
+                    ws = writer.sheets[tab_name]
+                    self._apply_formatting(ws)
+
+    def _write_stratified_chart_tab(
+        self,
+        writer: pd.ExcelWriter,
+        format_cells: bool,
+        stratify_vars: list
+    ) -> None:
+        """
+        Write all stratified charts to a single combined tab.
+
+        Combines all strata into one worksheet with a column identifying the stratum,
+        making it easy to compare and filter in Excel.
+
+        Parameters
+        ----------
+        writer : pd.ExcelWriter
+            Excel writer object
+        format_cells : bool
+            Whether to apply cell formatting
+        stratify_vars : list
+            Variables used for stratification
+        """
+        # Determine stratification column name
+        if len(stratify_vars) == 1:
+            strat_col = stratify_vars[0]
+        else:
+            strat_col = '_'.join(stratify_vars)
+
+        # Collect all stratified charts
+        combined_data = []
+
+        standard_chart_names = {'Xbar', 'Sbar', 'R', 'all'}
+
         for chart_name, chart_info in self.charts.items():
-            # Get chart data
+            # Skip standard charts (will be written separately)
+            if chart_name in standard_chart_names:
+                continue
+
             chart_data = chart_info.get('data')
             if chart_data is None or not isinstance(chart_data, pd.DataFrame):
                 continue
 
-            # Create tab name (Excel limit: 31 chars)
-            tab_name = f"Chart_{chart_name}"
+            # Extract stratum value from chart name
+            # Pattern: "{StratumValue}_{StratCol}_{StratumValue}"
+            # e.g., "Day_Shift_Day" -> stratum = "Day"
+            # The first part before first underscore is the stratum value
+            parts = chart_name.split('_')
+            if len(parts) > 0:
+                stratum_value = parts[0]
+            else:
+                stratum_value = chart_name
+
+            # Add stratum column to data
+            chart_data_copy = chart_data.copy()
+            chart_data_copy.insert(0, strat_col, stratum_value)
+
+            combined_data.append(chart_data_copy)
+
+        # Combine all stratified charts
+        if combined_data:
+            combined_df = pd.concat(combined_data, ignore_index=True)
+
+            # Create descriptive tab name
+            chart_type = self._ads.spec.analysis_type
+            if len(stratify_vars) == 1:
+                tab_name = f"Chart_{chart_type}_by_{strat_col}"
+            else:
+                tab_name = f"Chart_{chart_type}_Stratified"
+
+            # Excel tab name limit: 31 chars
             if len(tab_name) > 31:
                 tab_name = tab_name[:31]
 
-            # Write chart data
-            chart_data.to_excel(writer, sheet_name=tab_name, index=False)
+            # Write combined data
+            combined_df.to_excel(writer, sheet_name=tab_name, index=False)
 
             # Apply formatting if requested
             if format_cells:
                 ws = writer.sheets[tab_name]
                 self._apply_formatting(ws)
+
+        # Also write any standard charts (Xbar, Sbar, etc.)
+        # These are separate analyses, not stratified
+        standard_chart_names = {'Xbar', 'Sbar', 'R', 'all'}
+        for chart_name in standard_chart_names:
+            if chart_name in self.charts:
+                chart_info = self.charts[chart_name]
+                chart_data = chart_info.get('data')
+                if chart_data is not None and isinstance(chart_data, pd.DataFrame):
+                    tab_name = f"Chart_{chart_name}"
+                    chart_data.to_excel(writer, sheet_name=tab_name, index=False)
+
+                    if format_cells:
+                        ws = writer.sheets[tab_name]
+                        self._apply_formatting(ws)
 
     def _write_residuals_tab(self, writer: pd.ExcelWriter, format_cells: bool) -> None:
         """Write residuals tab."""
