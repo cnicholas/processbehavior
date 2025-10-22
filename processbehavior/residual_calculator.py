@@ -281,13 +281,16 @@ def calculate_r2_residual_sds2(
     rsg_var: str
 ) -> pd.Series:
     """
-    Calculate R2 for SDS 2 (no replication): moving average approximation.
+    Calculate R2 for SDS 2 (no replication): backward moving average.
 
-    R2 ≈ Y - MA2_k(t)
+    Per Tom Bishop Equation 65-66:
+    Y_ma_j = (Y_j + Y_{j-1}) / 2
+    R2_j = Y_j - Y_ma_j = (Y_j - Y_{j-1}) / 2 = MR_j / 2
 
-    With no replication (all cells n=1), we can't estimate within-cell
-    variance directly. Instead, use a 2-point moving average within each
-    factor level to approximate the local mean.
+    With no replication (all cells n=1), R2 = Y - Ȳ_kt would give R2=0
+    (no information about within-subgroup variation). Instead, use a
+    backward-looking 2-point moving average to approximate the local mean
+    and extract the "unexplained" variation.
 
     Parameters
     ----------
@@ -301,27 +304,30 @@ def calculate_r2_residual_sds2(
     Returns
     -------
     Series
-        R2 residuals (approximation)
+        R2 residuals where R2_j = (Y_j - Y_{j-1}) / 2 for j ≥ 2
+        First observation in each group is NaN (no lag available)
 
     Notes
     -----
-    The moving average is (Y[t-1] + Y[t+1]) / 2. For edge points
-    (first/last in each group), use forward or backward average only.
+    This is Tom Bishop's method for SDS 2 and 6 (Equations 64-66).
+    The backward MA smooths the data to remove PDC and PT effects,
+    leaving the unexplained variation (R2 ≈ λ + η + ε).
 
-    This is an approximation - it assumes smooth local variation.
+    Mathematical result: R2_j = (Y_j - Y_{j-1}) / 2
+    This equals half of the moving range, connecting to IMR methodology.
+
+    References
+    ----------
+    Tom Bishop, "Understanding Statistical Process Control", Section 20.2.1
     """
-    # Calculate 2-point moving average per group
+    # Backward-looking moving average: (Y_j + Y_{j-1}) / 2
+    # This is the current value + the lagged value, divided by 2
     ma2 = df.groupby(rsg_var)[response_var].transform(
-        lambda s: (s.shift(1) + s.shift(-1)) / 2.0
+        lambda s: (s + s.shift(1)) / 2.0
     )
 
-    # For edge points, use forward or backward value only
-    fwd = df.groupby(rsg_var)[response_var].shift(-1)
-    back = df.groupby(rsg_var)[response_var].shift(1)
-
-    # Fill NaN values with forward, then backward
-    ma2 = ma2.where(ma2.notna(), fwd.where(fwd.notna(), back))
-
+    # R2 = Y - Y_ma
+    # Note: First observation in each group will have NaN (no lag)
     return df[response_var] - ma2
 
 

@@ -152,7 +152,7 @@ def test_calculate_r2_residual_sds1():
 
 
 def test_calculate_r2_residual_sds2_moving_average():
-    """R2 for SDS 2 uses 2-point moving average approximation."""
+    """R2 for SDS 2 uses backward 2-point moving average per Tom Bishop."""
     # Sorted data: [10, 11, 12] within group
     df = pd.DataFrame({
         'rsg': ['A', 'A', 'A'],
@@ -161,12 +161,15 @@ def test_calculate_r2_residual_sds2_moving_average():
 
     result = calculate_r2_residual_sds2(df, 'weight', 'rsg')
 
-    # Point 0: MA = (None + 11) / 2 = use forward = 11, R2 = 10 - 11 = -1
-    # Point 1: MA = (10 + 12) / 2 = 11, R2 = 11 - 11 = 0
-    # Point 2: MA = (11 + None) / 2 = use backward = 11, R2 = 12 - 11 = 1
-    assert pytest.approx(result.iloc[0], 0.01) == -1.0
-    assert pytest.approx(result.iloc[1], 0.01) == 0.0
-    assert pytest.approx(result.iloc[2], 0.01) == 1.0
+    # Per Tom Bishop Eq. 65: Y_ma = (Y_j + Y_{j-1}) / 2
+    # R2_j = Y_j - Y_ma = (Y_j - Y_{j-1}) / 2
+    #
+    # Point 0 (j=1): No lag, R2 = NaN
+    # Point 1 (j=2): MA = (11 + 10)/2 = 10.5, R2 = 11 - 10.5 = 0.5
+    # Point 2 (j=3): MA = (12 + 11)/2 = 11.5, R2 = 12 - 11.5 = 0.5
+    assert pd.isna(result.iloc[0])  # First point has no lag
+    assert pytest.approx(result.iloc[1], 0.01) == 0.5
+    assert pytest.approx(result.iloc[2], 0.01) == 0.5
 
 
 def test_calculate_r2_residual_sds3_hybrid():
@@ -326,7 +329,7 @@ def test_calculate_residuals_r1_sum_is_zero(calc, sds1_df, spec_sds1):
 
 
 def test_calculate_residuals_sds2_uses_moving_average(calc, spec_sds1):
-    """SDS 2 should use moving average for R2."""
+    """SDS 2 should use backward moving average for R2."""
     # SDS 2: Each cell has n=1
     sds2_df = pd.DataFrame({
         'rsg': ['A', 'A', 'A'],
@@ -336,10 +339,13 @@ def test_calculate_residuals_sds2_uses_moving_average(calc, spec_sds1):
 
     result = calc.calculate_residuals(sds2_df, spec_sds1, sds=2)
 
-    # R2 should use moving average approximation
+    # R2 should use backward moving average: R2 = (Y_j - Y_{j-1}) / 2
     assert 'R2' in result.columns
-    # Not zero (like SDS 3 n=1 case)
-    assert not (result['R2'] == 0).all()
+    # First observation should be NaN (no lag)
+    assert pd.isna(result['R2'].iloc[0])
+    # Remaining should equal (Y_j - Y_{j-1}) / 2
+    assert pytest.approx(result['R2'].iloc[1], 0.01) == 0.5  # (11-10)/2
+    assert pytest.approx(result['R2'].iloc[2], 0.01) == 0.5  # (12-11)/2
 
 
 def test_calculate_residuals_sds3_hybrid_approach(calc, spec_sds1):
@@ -416,7 +422,7 @@ def test_calculate_residuals_with_single_observation_per_row(calc):
 
 
 def test_r2_sds2_handles_single_group(calc):
-    """SDS 2 R2 calculation should handle edge points correctly."""
+    """SDS 2 R2 calculation should handle minimal data correctly."""
     df = pd.DataFrame({
         'rsg': ['A', 'A'],  # Only 2 points
         'weight': [10.0, 11.0]
@@ -424,6 +430,100 @@ def test_r2_sds2_handles_single_group(calc):
 
     result = calculate_r2_residual_sds2(df, 'weight', 'rsg')
 
-    # Both should use forward/backward averaging
+    # First point has no lag (NaN), second point has R2 = (11-10)/2 = 0.5
     assert len(result) == 2
-    assert pd.notna(result).all()
+    assert pd.isna(result.iloc[0])  # First point: no lag
+    assert pytest.approx(result.iloc[1], 0.01) == 0.5  # Second: (11-10)/2
+
+
+# ============================================================================
+# Test: Tom Bishop Validation - R2 = MR/2 for SDS 2
+# ============================================================================
+
+def test_r2_sds2_equals_half_moving_range():
+    """
+    Validate Tom Bishop's formula: R2 = (Y_j - Y_{j-1}) / 2 = MR / 2.
+
+    This test confirms the mathematical relationship between R2 residuals
+    and the moving range used in IMR charts.
+    """
+    df = pd.DataFrame({
+        'rsg': ['A'] * 5,
+        'weight': [10.0, 12.0, 11.0, 13.0, 12.5]
+    })
+
+    r2 = calculate_r2_residual_sds2(df, 'weight', 'rsg')
+
+    # Calculate moving range: MR_j = |Y_j - Y_{j-1}|
+    # For our data:
+    # j=1: MR = NA
+    # j=2: MR = |12 - 10| = 2, R2 should = 2/2 = 1.0
+    # j=3: MR = |11 - 12| = 1, R2 should = -1/2 = -0.5 (signed!)
+    # j=4: MR = |13 - 11| = 2, R2 should = 2/2 = 1.0
+    # j=5: MR = |12.5 - 13| = 0.5, R2 should = -0.5/2 = -0.25
+
+    assert pd.isna(r2.iloc[0])
+    assert pytest.approx(r2.iloc[1], 0.01) == 1.0   # (12-10)/2
+    assert pytest.approx(r2.iloc[2], 0.01) == -0.5  # (11-12)/2
+    assert pytest.approx(r2.iloc[3], 0.01) == 1.0   # (13-11)/2
+    assert pytest.approx(r2.iloc[4], 0.01) == -0.25 # (12.5-13)/2
+
+
+def test_r2_sds2_multiple_groups():
+    """
+    SDS 2 R2 calculation should work independently per group.
+
+    Validates that the backward MA is calculated within each group
+    (process design condition), not across groups.
+    """
+    df = pd.DataFrame({
+        'rsg': ['A', 'A', 'A', 'B', 'B', 'B'],
+        'time': [1, 2, 3, 1, 2, 3],
+        'weight': [10.0, 11.0, 12.0, 20.0, 22.0, 21.0]
+    }).sort_values(['rsg', 'time'])
+
+    result = calculate_r2_residual_sds2(df, 'weight', 'rsg')
+
+    # Group A (indices 0-2):
+    assert pd.isna(result.iloc[0])  # First in group A
+    assert pytest.approx(result.iloc[1], 0.01) == 0.5   # (11-10)/2
+    assert pytest.approx(result.iloc[2], 0.01) == 0.5   # (12-11)/2
+
+    # Group B (indices 3-5):
+    assert pd.isna(result.iloc[3])  # First in group B
+    assert pytest.approx(result.iloc[4], 0.01) == 1.0   # (22-20)/2
+    assert pytest.approx(result.iloc[5], 0.01) == -0.5  # (21-22)/2
+
+
+def test_r2_sds2_tom_bishop_example():
+    """
+    Test with values inspired by Tom Bishop's Figure 30 example.
+
+    This validates that our implementation produces the "unexplained"
+    variation pattern that Tom describes - removing PDC and PT effects
+    to leave only the residual variation.
+    """
+    # Simulated data with trend (PT effect) and noise
+    df = pd.DataFrame({
+        'rsg': ['Lane4'] * 10,
+        'time': list(range(1, 11)),
+        'weight': [238.0, 239.0, 240.0, 239.5, 240.5,
+                   241.0, 240.0, 241.5, 241.0, 242.0]
+    })
+
+    result = calculate_r2_residual_sds2(df, 'weight', 'rsg')
+
+    # First point should be NaN
+    assert pd.isna(result.iloc[0])
+
+    # Remaining R2 values should be small (trend removed)
+    # and should equal (Y_j - Y_{j-1}) / 2
+    for i in range(1, len(result)):
+        y_current = df['weight'].iloc[i]
+        y_previous = df['weight'].iloc[i-1]
+        expected_r2 = (y_current - y_previous) / 2.0
+        assert pytest.approx(result.iloc[i], 0.01) == expected_r2
+
+    # Verify that R2 values are generally smaller than original variation
+    # (trend has been removed by the moving average)
+    assert result[1:].abs().max() < df['weight'].std()
