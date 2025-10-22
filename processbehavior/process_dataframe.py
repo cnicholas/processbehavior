@@ -90,6 +90,50 @@ class ColumnAccessor:
         return [self._sanitize_column_name(col) for col in self._columns]
 
 
+class ChartTypeAccessor:
+    """
+    Provides IDE auto-completion for valid chart types based on detected SDS.
+
+    This class dynamically creates attributes for each valid chart type,
+    enabling IDE auto-completion and preventing invalid chart selections.
+
+    Usage:
+        data = ProcessDataFrame(df)
+
+        # After first analyze(), data.charts is populated
+        result = data.analyze(response_var=data.columns.Height)
+
+        # Now you can use auto-completion for valid charts
+        result2 = data.analyze(
+            response_var=data.columns.Height,
+            chart_type=data.charts.Xbar  # IDE auto-completes valid options!
+        )
+
+    Attributes are set dynamically based on SDS-specific valid charts.
+    """
+
+    def __init__(self, valid_charts: List[str]):
+        """
+        Initialize accessor with valid chart types for the detected SDS.
+
+        Args:
+            valid_charts: List of valid chart type names for the current SDS
+        """
+        self._valid_charts = valid_charts
+
+        # Dynamically add each valid chart as an attribute
+        for chart in valid_charts:
+            setattr(self, chart, chart)
+
+    def __repr__(self) -> str:
+        """Display available chart types."""
+        return f"Available charts: {', '.join(self._valid_charts)}"
+
+    def __dir__(self):
+        """Support for tab-completion in IPython/Jupyter."""
+        return self._valid_charts
+
+
 class ProcessDataFrame:
     """
     Intelligent wrapper for process behavior analysis with auto-completion.
@@ -97,25 +141,30 @@ class ProcessDataFrame:
     This class makes analysis frictionless by:
     1. Providing IDE auto-completion for column names
     2. Auto-detecting Sampling Design State (SDS)
-    3. Running the best analysis for the detected SDS
-    4. Explaining what analysis is being run and why
+    3. Showing valid chart types for the detected SDS
+    4. Running the best analysis for the detected SDS
+    5. Explaining what analysis is being run and why
 
     Usage:
         # Basic usage with auto-completion
         data = ProcessDataFrame(raw_df)
 
+        # Auto-detect best chart (frictionless)
         analysis = data.analyze(
             response_var=data.columns.Measurement,
             time_var=data.columns.Time,
             grouping_vars=[data.columns.Operator, data.columns.Machine]
         )
 
-        # Simple series (SDS 0) - runs IMR chart
-        data = ProcessDataFrame(simple_series)
-        analysis = data.analyze(response_var=data.columns.Value)
+        # Explicit chart selection with auto-completion (power users)
+        analysis = data.analyze(
+            response_var=data.columns.Measurement,
+            chart_type=data.charts.S  # Auto-completes only valid charts!
+        )
 
     Attributes:
         columns: ColumnAccessor for IDE auto-completion of column names
+        charts: ChartTypeAccessor for valid chart types (set after first analyze())
         data: The underlying pandas DataFrame
     """
 
@@ -131,6 +180,7 @@ class ProcessDataFrame:
 
         self.data = df.copy()
         self.columns = ColumnAccessor(self.data)
+        self.charts = None  # Will be populated after first analyze() call
 
         logger.info(f"ProcessDataFrame created with {len(df)} rows, {len(df.columns)} columns")
 
@@ -140,6 +190,7 @@ class ProcessDataFrame:
         response_vars: Optional[List[str]] = None,
         time_var: Optional[str] = None,
         grouping_vars: Optional[List[str]] = None,
+        chart_type: Optional[str] = None,
         rsg_var_name: str = 'rsg',
         rsg_var_delim: str = '_',
         round_to: int = 3,
@@ -151,14 +202,18 @@ class ProcessDataFrame:
         This method:
         1. Builds an AnalysisSpecification from your parameters
         2. Detects the Sampling Design State (SDS)
-        3. Determines the best analysis type for that SDS
-        4. Runs the analysis and explains what it's doing
+        3. Determines valid chart types for that SDS
+        4. Runs the specified or recommended chart analysis
+        5. Explains what analysis is being run and why
 
         Args:
             response_var: Single response variable (for simple series)
             response_vars: List of response variables (for multivariate)
             time_var: Time/sequence variable
             grouping_vars: Grouping variables for rational subgrouping
+            chart_type: Explicit chart type ('Xbar', 'S', 'Imr', 'R'). If None,
+                       uses recommended chart for detected SDS. After first analyze(),
+                       use data.charts for auto-completion of valid options.
             rsg_var_name: Name for rational subgroup column (default: 'rsg')
             rsg_var_delim: Delimiter for multi-variable groups (default: '_')
             round_to: Decimal places for rounding (default: 3)
@@ -171,14 +226,21 @@ class ProcessDataFrame:
             ValueError: If neither response_var nor response_vars is provided
 
         Examples:
-            # Simple series - IMR chart
+            # Simple series - Auto-detects IMR chart
             analysis = data.analyze(response_var=data.columns.Measurement)
 
-            # Grouped data - Xbar and S charts
+            # Grouped data - Auto-detects Xbar chart (recommended)
             analysis = data.analyze(
                 response_var=data.columns.Height,
                 time_var=data.columns.Time,
                 grouping_vars=[data.columns.Operator]
+            )
+
+            # Explicit chart type selection (with auto-completion)
+            analysis = data.analyze(
+                response_var=data.columns.Height,
+                grouping_vars=[data.columns.Operator],
+                chart_type=data.charts.S  # IDE auto-completes valid options!
             )
         """
         # Handle response variable specification
@@ -217,11 +279,42 @@ class ProcessDataFrame:
         sds = detector.detect_sds(prepared_df, temp_spec)
         sds_info = detector.get_sds_characteristics(sds)
 
-        # Determine best analysis type for this SDS
-        analysis_type = self._determine_analysis_type(sds, grouping_vars)
+        # Get SDS analysis plan to determine valid charts
+        plan = SamplingDesignDetector.get_analysis_plan(sds)
+
+        # Set up charts accessor for IDE auto-completion
+        self.charts = ChartTypeAccessor(plan.valid_charts)
+
+        # Determine which chart to run
+        if chart_type is None:
+            # Auto-detect: use recommended chart from SDS plan
+            analysis_type = plan.recommended_chart
+            logger.info(
+                f"Auto-selected '{analysis_type}' chart "
+                f"(recommended for SDS {sds}: {plan.name})"
+            )
+        else:
+            # User specified: validate it's valid for this SDS
+            if chart_type not in plan.valid_charts:
+                invalid_chart_reasons = {
+                    invalid.split(' (')[0]: invalid.split('(')[1].rstrip(')')
+                    for invalid in plan.invalid_charts
+                    if '(' in invalid
+                }
+                reason = invalid_chart_reasons.get(chart_type, "not supported for this data structure")
+
+                raise ValueError(
+                    f"Chart type '{chart_type}' is not valid for SDS {sds} ({plan.name}).\n"
+                    f"Reason: {reason}\n"
+                    f"Valid options: {plan.valid_charts}\n"
+                    f"Recommended: '{plan.recommended_chart}'\n"
+                    f"Hint: Use data.charts for auto-completion of valid chart types."
+                )
+            analysis_type = chart_type
+            logger.info(f"Using user-specified chart: '{analysis_type}'")
 
         # Log what we're doing and why
-        self._explain_analysis(sds, sds_info, analysis_type, spec_dict)
+        self._explain_analysis(sds, sds_info, analysis_type, spec_dict, plan)
 
         # Update spec with correct analysis type
         spec_dict['analysis_type'] = analysis_type
@@ -268,7 +361,8 @@ class ProcessDataFrame:
         sds: int,
         sds_info: dict,
         analysis_type: str,
-        spec: dict
+        spec: dict,
+        plan: 'SDSAnalysisPlan'
     ):
         """
         Print user-friendly explanation of what analysis is running and why.
@@ -278,27 +372,44 @@ class ProcessDataFrame:
             sds_info: SDS characteristics dict
             analysis_type: Selected analysis type
             spec: Analysis specification dict
+            plan: SDS analysis plan with valid/invalid charts
         """
         print("\n" + "="*70)
         print("PROCESS BEHAVIOR ANALYSIS")
         print("="*70)
 
-        print(f"\n📊 Detected SDS {sds}: {sds_info['description']}")
-        print(f"   Replication: {sds_info.get('replication_type', 'N/A')}")
-        if sds_info.get('variance_decomposition'):
-            print(f"   Variance decomposition: Supported")
+        print(f"\n📊 Detected SDS {sds}: {plan.name}")
+        print(f"   {plan.description}")
+        print(f"   Replication: {plan.has_replication.capitalize()}")
 
-        print(f"\n📈 Running: {self._get_analysis_description(analysis_type)}")
+        # Show available charts
+        print(f"\n📈 Available charts: {', '.join(plan.valid_charts)}")
+        is_recommended = analysis_type == plan.recommended_chart
+        selection_note = " (recommended)" if is_recommended else " (user-specified)"
+        print(f"   Selected: {self._get_analysis_description(analysis_type)}{selection_note}")
+
+        # Show what's not available (if any)
+        if plan.invalid_charts:
+            print(f"\n⚠️  Not available for this SDS:")
+            for invalid in plan.invalid_charts:
+                print(f"   • {invalid}")
+
+        # Show data configuration
+        print(f"\n📋 Data Configuration:")
         print(f"   Response: {spec['response_var']}")
-
         if spec.get('time_var'):
             print(f"   Time: {spec['time_var']}")
-
         if spec.get('rsg_vars'):
             print(f"   Grouping: {', '.join(spec['rsg_vars'])}")
 
-        print(f"\n💡 Why this analysis?")
-        print(f"   {self._get_analysis_rationale(sds, analysis_type, spec)}")
+        # Show capabilities
+        print(f"\n✨ Analysis Capabilities:")
+        if plan.vas_residuals_supported:
+            print(f"   • VAS residuals: {', '.join(plan.residuals_available)} (R2 method: {plan.residual_calculation_method})")
+        else:
+            print(f"   • VAS residuals: Not available")
+        print(f"   • Main effects: {'Yes' if plan.main_effects_supported else 'No'}")
+        print(f"   • Interactions: {'Yes' if plan.interaction_effects_supported else 'No'}")
 
         print("\n" + "="*70 + "\n")
 

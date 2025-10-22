@@ -167,13 +167,29 @@ def test_analyze_simple_series_no_time():
 
 def test_analyze_with_grouping():
     """Data with grouping variables should trigger Xbar/S charts."""
-    # Create grouped data
+    # Create grouped data with complete replication (SDS 1)
+    # 2 operators × 2 machines × 3 time points × 3 replicates = 36 obs
     np.random.seed(42)
+
+    operators = []
+    machines = []
+    times = []
+    heights = []
+
+    for op in ['A', 'B']:
+        for machine in ['M1', 'M2']:
+            for time in [1, 2, 3]:
+                for rep in range(3):  # 3 replicates per cell
+                    operators.append(op)
+                    machines.append(machine)
+                    times.append(time)
+                    heights.append(np.random.normal(100, 5))
+
     df = pd.DataFrame({
-        'Height': np.random.normal(100, 5, 60),
-        'Operator': ['A', 'B', 'C'] * 20,
-        'Machine': ['M1', 'M2'] * 30,
-        'Time': list(range(1, 21)) * 3
+        'Height': heights,
+        'Operator': operators,
+        'Machine': machines,
+        'Time': times
     })
 
     pdata = ProcessDataFrame(df)
@@ -190,10 +206,25 @@ def test_analyze_with_grouping():
 
 def test_analyze_with_single_grouping():
     """Single grouping variable should work."""
+    # Create data with complete replication (SDS 1)
+    # 2 batches × 5 time points × 3 replicates = 30 obs
+    np.random.seed(42)
+
+    batches = []
+    sequences = []
+    values = []
+
+    for batch in ['A', 'B']:
+        for seq in range(1, 6):
+            for rep in range(3):  # 3 replicates per cell
+                batches.append(batch)
+                sequences.append(seq)
+                values.append(np.random.randint(1, 7))
+
     df = pd.DataFrame({
-        'Value': [1, 2, 3, 4, 5, 6] * 5,
-        'Batch': ['A', 'B'] * 15,
-        'Sequence': list(range(1, 31))
+        'Value': values,
+        'Batch': batches,
+        'Sequence': sequences
     })
 
     pdata = ProcessDataFrame(df)
