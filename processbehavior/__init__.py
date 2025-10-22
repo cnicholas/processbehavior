@@ -47,7 +47,7 @@ from processbehavior.analysis_dataset import Analysis, AnalysisDataSet
 from processbehavior.analysis_specification import AnalysisSpecification
 
 # Utility classes (advanced users)
-from processbehavior.sds_detector import SamplingDesignDetector
+from processbehavior.sds_detector import SamplingDesignDetector, SDSAnalysisPlan
 from processbehavior.data_preparation import DataPreparation
 from processbehavior.effects_calculator import EffectsCalculator
 from processbehavior.residual_calculator import ResidualCalculator
@@ -64,6 +64,7 @@ __all__ = [
 
     # Utilities
     'SamplingDesignDetector',
+    'SDSAnalysisPlan',
     'DataPreparation',
     'EffectsCalculator',
     'ResidualCalculator',

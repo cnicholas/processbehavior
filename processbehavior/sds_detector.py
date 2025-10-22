@@ -19,6 +19,7 @@ Follows the Pythonic Hadley philosophy:
 from __future__ import annotations
 
 import logging
+from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 import pandas as pd
@@ -27,6 +28,157 @@ if TYPE_CHECKING:
     from analysis_dataset import AnalysisSpecification
 
 logger = logging.getLogger(__name__)
+
+
+# ============================================================================
+# SDS Analysis Plan - The "Recipe" for Each Sampling Design State
+# ============================================================================
+
+@dataclass
+class SDSAnalysisPlan:
+    """
+    Complete specification of what analysis can be performed for a given SDS.
+
+    This is the authoritative "recipe" that the system follows when it detects
+    a particular Sampling Design State. It defines capabilities and limitations
+    for each SDS, enabling validation against Bishop's methodology.
+
+    Attributes
+    ----------
+    sds : int
+        Sampling Design State (0-6)
+    name : str
+        Short descriptive name
+    description : str
+        Detailed description of the data structure
+    has_factors : bool
+        Whether grouping/factor variables are present
+    has_time : bool
+        Whether time variable is present
+    has_replication : str
+        Replication pattern: 'full', 'partial', or 'none'
+    valid_charts : list[str]
+        Chart types that can be used with this SDS
+    recommended_chart : str
+        Default/recommended chart type
+    invalid_charts : list[str]
+        Chart types that cannot be used (with reasons)
+    vas_residuals_supported : bool
+        Whether VAS residual calculations (R1-R5) are supported
+    residuals_available : list[str]
+        Which residuals can be calculated
+    residual_calculation_method : str
+        How R2 is calculated ('exact', 'moving_average', 'hybrid', or 'none')
+    main_effects_supported : bool
+        Whether main effect calculations are supported
+    interaction_effects_supported : bool
+        Whether interaction effect calculations are supported
+    supports_stratification : bool
+        Whether data can be split into stratified charts
+    typical_use_cases : list[str]
+        Common real-world scenarios
+    limitations : list[str]
+        What cannot be done with this SDS
+    bishop_reference : str
+        Reference to Wheeler/Bishop methodology
+
+    Examples
+    --------
+    >>> plan = SamplingDesignDetector.get_analysis_plan(sds=1)
+    >>> print(plan.name)
+    'Full Factorial with Complete Replication'
+    >>> print(plan.vas_residuals_supported)
+    True
+    >>> print(plan.valid_charts)
+    ['Xbar', 'S', 'Imr']
+    """
+    sds: int
+    name: str
+    description: str
+
+    # Data structure characteristics
+    has_factors: bool
+    has_time: bool
+    has_replication: str  # 'full', 'partial', 'none'
+
+    # Valid chart types
+    valid_charts: list[str]
+    recommended_chart: str
+    invalid_charts: list[str]
+
+    # VAS residual capabilities
+    vas_residuals_supported: bool
+    residuals_available: list[str]
+    residual_calculation_method: str  # 'exact', 'moving_average', 'hybrid', 'none'
+
+    # Effects and interactions
+    main_effects_supported: bool
+    interaction_effects_supported: bool
+
+    # Stratification
+    supports_stratification: bool
+
+    # Use cases and notes
+    typical_use_cases: list[str]
+    limitations: list[str]
+    bishop_reference: str
+
+    def __str__(self) -> str:
+        """Pretty print the analysis plan."""
+        lines = [
+            f"SDS {self.sds}: {self.name}",
+            "=" * 70,
+            f"Description: {self.description}",
+            "",
+            "Data Structure:",
+            f"  • Factors: {'Yes' if self.has_factors else 'No'}",
+            f"  • Time: {'Yes' if self.has_time else 'No'}",
+            f"  • Replication: {self.has_replication.capitalize()}",
+            "",
+            "Chart Capabilities:",
+            f"  • Valid charts: {', '.join(self.valid_charts)}",
+            f"  • Recommended: {self.recommended_chart}",
+        ]
+
+        if self.invalid_charts:
+            lines.append(f"  • Invalid charts: {', '.join(self.invalid_charts)}")
+
+        lines.extend([
+            "",
+            "Variance Analysis System (VAS):",
+            f"  • VAS supported: {'Yes' if self.vas_residuals_supported else 'No'}",
+        ])
+
+        if self.vas_residuals_supported:
+            lines.append(f"  • Residuals: {', '.join(self.residuals_available)}")
+            lines.append(f"  • R2 calculation: {self.residual_calculation_method}")
+
+        lines.extend([
+            "",
+            "Effects Analysis:",
+            f"  • Main effects: {'Yes' if self.main_effects_supported else 'No'}",
+            f"  • Interactions: {'Yes' if self.interaction_effects_supported else 'No'}",
+            f"  • Stratification: {'Yes' if self.supports_stratification else 'No'}",
+        ])
+
+        if self.typical_use_cases:
+            lines.append("")
+            lines.append("Typical Use Cases:")
+            for use_case in self.typical_use_cases:
+                lines.append(f"  • {use_case}")
+
+        if self.limitations:
+            lines.append("")
+            lines.append("Limitations:")
+            for limitation in self.limitations:
+                lines.append(f"  • {limitation}")
+
+        lines.extend([
+            "",
+            f"Reference: {self.bishop_reference}",
+        ])
+
+        return "\n".join(lines)
 
 
 class SamplingDesignDetector:
@@ -553,3 +705,338 @@ class SamplingDesignDetector:
             f"min_n={min_n}, max_n={max_n}"
         )
         return 0
+
+    # =========================================================================
+    # SDS Analysis Plan Methods - Validation & Diagnostic Tools
+    # =========================================================================
+
+    @staticmethod
+    def get_analysis_plan(sds: int) -> SDSAnalysisPlan:
+        """
+        Get comprehensive analysis plan for a Sampling Design State.
+
+        This is the authoritative specification of what the system will do
+        when it encounters a particular SDS. Use this to:
+        - Validate implementation against Bishop's methodology
+        - Understand system capabilities and limitations
+        - Generate documentation
+        - Debug unexpected behavior
+
+        Parameters
+        ----------
+        sds : int
+            Sampling Design State (0-6)
+
+        Returns
+        -------
+        SDSAnalysisPlan
+            Complete specification of capabilities and limitations
+
+        Raises
+        ------
+        ValueError
+            If sds is not in range 0-6
+
+        Examples
+        --------
+        >>> plan = SamplingDesignDetector.get_analysis_plan(sds=1)
+        >>> print(plan.name)
+        'Full Factorial with Complete Replication'
+        >>> print(plan.vas_residuals_supported)
+        True
+        >>> print(plan.valid_charts)
+        ['Xbar', 'S', 'Imr']
+
+        >>> # Check what your data structure supports
+        >>> detector = SamplingDesignDetector()
+        >>> sds = detector.detect_sds(df, spec)
+        >>> plan = detector.get_analysis_plan(sds)
+        >>> print(f"Your data supports: {', '.join(plan.valid_charts)}")
+        """
+        plans = {
+            0: SDSAnalysisPlan(
+                sds=0,
+                name="Simple Series",
+                description="Individual measurements with no rational subgrouping or time structure",
+                has_factors=False,
+                has_time=False,
+                has_replication='none',
+                valid_charts=['Imr'],
+                recommended_chart='Imr',
+                invalid_charts=['Xbar (requires rational subgroups)', 'S (requires rational subgroups)', 'R (requires rational subgroups)'],
+                vas_residuals_supported=False,
+                residuals_available=[],
+                residual_calculation_method='none',
+                main_effects_supported=False,
+                interaction_effects_supported=False,
+                supports_stratification=False,
+                typical_use_cases=[
+                    'Simple process monitoring (temperature, pH, daily output)',
+                    'Individual measurements over time',
+                    'Quality characteristic tracking with no grouping'
+                ],
+                limitations=[
+                    'Cannot decompose variance (no factors or time structure)',
+                    'Cannot detect interaction effects',
+                    'Limited to individuals control chart (IMR)',
+                    'No rational subgrouping available'
+                ],
+                bishop_reference="Wheeler 'Understanding Variation' Chapter 3: Individuals Charts"
+            ),
+
+            1: SDSAnalysisPlan(
+                sds=1,
+                name="Full Factorial with Complete Replication",
+                description="All factor × time cells have n ≥ 2 observations (best case for analysis)",
+                has_factors=True,
+                has_time=True,
+                has_replication='full',
+                valid_charts=['Xbar', 'S', 'Imr'],
+                recommended_chart='Xbar',
+                invalid_charts=[],
+                vas_residuals_supported=True,
+                residuals_available=['R1', 'R2', 'R3', 'R4', 'R5'],
+                residual_calculation_method='exact',
+                main_effects_supported=True,
+                interaction_effects_supported=True,
+                supports_stratification=True,
+                typical_use_cases=[
+                    'Designed experiments with replication',
+                    'Process capability studies',
+                    'Multi-factor ANOVA-style analyses',
+                    'Complete factorial designs'
+                ],
+                limitations=[],
+                bishop_reference="Wheeler/Bishop Methodology: Complete Data (SDS 1)"
+            ),
+
+            2: SDSAnalysisPlan(
+                sds=2,
+                name="Full Factorial with No Replication",
+                description="All factor × time cells have exactly n = 1 observation",
+                has_factors=True,
+                has_time=True,
+                has_replication='none',
+                valid_charts=['Xbar', 'Imr'],
+                recommended_chart='Xbar',
+                invalid_charts=['S (requires n≥2 per subgroup)', 'R (requires n≥2 per subgroup)'],
+                vas_residuals_supported=True,
+                residuals_available=['R1', 'R2', 'R3', 'R4', 'R5'],
+                residual_calculation_method='moving_average',
+                main_effects_supported=True,
+                interaction_effects_supported=True,
+                supports_stratification=True,
+                typical_use_cases=[
+                    'Production data (one measurement per factor/time combination)',
+                    'Unreplicated factorial experiments',
+                    'Historical data analysis',
+                    'Screening experiments'
+                ],
+                limitations=[
+                    'R2 estimated via moving average (approximate, not exact)',
+                    'Cannot use S or R charts (require n≥2)',
+                    'Interaction confounded with pure error'
+                ],
+                bishop_reference="Wheeler/Bishop Methodology: No Replication (SDS 2)"
+            ),
+
+            3: SDSAnalysisPlan(
+                sds=3,
+                name="Partial Replication",
+                description="Mixed cells: some have n ≥ 2, others have n = 1",
+                has_factors=True,
+                has_time=True,
+                has_replication='partial',
+                valid_charts=['Xbar', 'S', 'Imr'],
+                recommended_chart='Xbar',
+                invalid_charts=[],
+                vas_residuals_supported=True,
+                residuals_available=['R1', 'R2', 'R3', 'R4', 'R5'],
+                residual_calculation_method='hybrid',
+                main_effects_supported=True,
+                interaction_effects_supported=True,
+                supports_stratification=True,
+                typical_use_cases=[
+                    'Unbalanced designs',
+                    'Real-world data with missing observations',
+                    'Opportunistic replication in some cells',
+                    'Pilot studies with targeted replication'
+                ],
+                limitations=[
+                    'R2 uses hybrid calculation (exact where possible, approximate elsewhere)',
+                    'Variance estimates less precise than SDS 1',
+                    'May have unequal subgroup sizes'
+                ],
+                bishop_reference="Wheeler/Bishop Methodology: Partial Replication (SDS 3)"
+            ),
+
+            4: SDSAnalysisPlan(
+                sds=4,
+                name="Factors Only (No Time)",
+                description="Grouping factors present but no time variable",
+                has_factors=True,
+                has_time=False,
+                has_replication='full',
+                valid_charts=['Xbar', 'S', 'Imr'],
+                recommended_chart='Xbar',
+                invalid_charts=[],
+                vas_residuals_supported=False,
+                residuals_available=[],
+                residual_calculation_method='none',
+                main_effects_supported=True,
+                interaction_effects_supported=False,
+                supports_stratification=True,
+                typical_use_cases=[
+                    'Cross-sectional studies',
+                    'Between-group comparisons',
+                    'Baseline capability studies',
+                    'Multi-stream process monitoring'
+                ],
+                limitations=[
+                    'No VAS residuals (requires time dimension)',
+                    'Cannot analyze time trends',
+                    'Cannot detect factor × time interactions',
+                    'Limited to factor main effects'
+                ],
+                bishop_reference="Wheeler/Bishop Methodology: Factors Only (SDS 4)"
+            ),
+
+            5: SDSAnalysisPlan(
+                sds=5,
+                name="Time Only (No Factors)",
+                description="Time variable present but no grouping factors",
+                has_factors=False,
+                has_time=True,
+                has_replication='partial',
+                valid_charts=['Xbar', 'S', 'Imr'],
+                recommended_chart='Xbar',
+                invalid_charts=[],
+                vas_residuals_supported=False,
+                residuals_available=[],
+                residual_calculation_method='none',
+                main_effects_supported=False,
+                interaction_effects_supported=False,
+                supports_stratification=False,
+                typical_use_cases=[
+                    'Single process over time with subgroups',
+                    'Repeated measurements at time points',
+                    'Time series with natural grouping (hourly batches)',
+                    'Rational subgrouping by time period only'
+                ],
+                limitations=[
+                    'No VAS residuals (requires factors)',
+                    'Cannot analyze factor effects',
+                    'Cannot detect interactions',
+                    'Limited to time-based grouping'
+                ],
+                bishop_reference="Wheeler/Bishop Methodology: Time Only (SDS 5)"
+            ),
+
+            6: SDSAnalysisPlan(
+                sds=6,
+                name="Incomplete/Irregular Grid",
+                description="Sparse factor × time grid with many missing cells",
+                has_factors=True,
+                has_time=True,
+                has_replication='none',
+                valid_charts=['Imr'],
+                recommended_chart='Imr',
+                invalid_charts=['Xbar (requires complete grid)', 'S (requires complete grid)'],
+                vas_residuals_supported=False,
+                residuals_available=[],
+                residual_calculation_method='none',
+                main_effects_supported=False,
+                interaction_effects_supported=False,
+                supports_stratification=True,
+                typical_use_cases=[
+                    'Opportunistic data collection',
+                    'Real-world incomplete data',
+                    'Sparse monitoring programs',
+                    'Ad-hoc measurements with irregular sampling'
+                ],
+                limitations=[
+                    'No VAS residuals (incomplete grid)',
+                    'Cannot calculate reliable main effects',
+                    'Cannot analyze interactions',
+                    'Limited to stratified IMR charts per factor level',
+                    'Most limited analytical capabilities'
+                ],
+                bishop_reference="Wheeler/Bishop Methodology: Irregular Data (SDS 6)"
+            ),
+        }
+
+        if sds not in plans:
+            raise ValueError(
+                f"Invalid SDS: {sds}. Must be 0-6. "
+                f"Available: {list(plans.keys())}"
+            )
+
+        return plans[sds]
+
+    @staticmethod
+    def print_all_analysis_plans() -> None:
+        """
+        Print comprehensive analysis plans for all SDS (0-6).
+
+        This generates a complete reference guide showing what the system
+        will do for each Sampling Design State. Useful for:
+        - Validating implementation against Bishop's methodology
+        - Documentation generation
+        - Training and education
+        - Understanding system capabilities
+
+        Examples
+        --------
+        >>> SamplingDesignDetector.print_all_analysis_plans()
+        # Prints complete analysis plan for SDS 0-6
+        """
+        print("=" * 70)
+        print("SAMPLING DESIGN STATE (SDS) ANALYSIS PLANS")
+        print("Complete Specification of System Capabilities")
+        print("=" * 70)
+        print()
+
+        for sds in range(7):
+            plan = SamplingDesignDetector.get_analysis_plan(sds)
+            print(plan)
+            print()
+            print()
+
+    @staticmethod
+    def get_capability_matrix() -> pd.DataFrame:
+        """
+        Generate a comparison matrix of all SDS capabilities.
+
+        Returns a DataFrame showing what each SDS supports, useful for
+        quick reference and validation.
+
+        Returns
+        -------
+        pd.DataFrame
+            Matrix with SDS as index and capabilities as columns
+
+        Examples
+        --------
+        >>> matrix = SamplingDesignDetector.get_capability_matrix()
+        >>> print(matrix)
+        >>> matrix.to_excel('sds_capabilities.xlsx')
+        """
+        data = []
+        for sds in range(7):
+            plan = SamplingDesignDetector.get_analysis_plan(sds)
+            data.append({
+                'SDS': sds,
+                'Name': plan.name,
+                'Factors': '✓' if plan.has_factors else '✗',
+                'Time': '✓' if plan.has_time else '✗',
+                'Replication': plan.has_replication,
+                'Valid Charts': ', '.join(plan.valid_charts),
+                'Recommended': plan.recommended_chart,
+                'VAS': '✓' if plan.vas_residuals_supported else '✗',
+                'R2 Method': plan.residual_calculation_method,
+                'Main Effects': '✓' if plan.main_effects_supported else '✗',
+                'Interactions': '✓' if plan.interaction_effects_supported else '✗',
+                'Stratification': '✓' if plan.supports_stratification else '✗',
+            })
+
+        return pd.DataFrame(data).set_index('SDS')
