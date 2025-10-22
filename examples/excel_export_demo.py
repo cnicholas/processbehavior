@@ -14,7 +14,7 @@ The to_excel() method creates multi-sheet workbooks with:
 """
 
 from processbehavior.datasets import make_sds1, make_sds2, make_sds3
-import analysis_dataset as ad
+from processbehavior import analysis_dataset as ad
 import pandas as pd
 
 print("=" * 70)
@@ -146,7 +146,7 @@ print("Example 5: Frictionless API with Auto-Export")
 print("=" * 70)
 
 # Import the frictionless API
-from process_dataframe import ProcessDataFrame
+from processbehavior import ProcessDataFrame
 
 # Create ProcessDataFrame
 pdf = ProcessDataFrame(df1)

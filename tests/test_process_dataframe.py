@@ -12,7 +12,7 @@ Tests cover:
 import pytest
 import pandas as pd
 import numpy as np
-from process_dataframe import ProcessDataFrame, ColumnAccessor
+from processbehavior.process_dataframe import ProcessDataFrame, ColumnAccessor
 
 
 # ============================================================================

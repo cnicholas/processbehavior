@@ -31,7 +31,7 @@ import numpy as np
 import pandas as pd
 
 if TYPE_CHECKING:
-    from analysis_dataset import AnalysisSpecification
+    from .analysis_dataset import AnalysisSpecification
 
 logger = logging.getLogger(__name__)
 

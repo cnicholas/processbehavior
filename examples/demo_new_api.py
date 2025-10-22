@@ -16,13 +16,8 @@ Key features demonstrated:
 
 import numpy as np
 import pandas as pd
-import sys
-import os
 
-# Add parent directory to path so we can import process_dataframe
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-from process_dataframe import ProcessDataFrame
+from processbehavior import ProcessDataFrame
 
 # Set random seed for reproducibility
 np.random.seed(42)

@@ -1,8 +1,8 @@
 import logging
 import pytest
 
-import analysis_dataset as ad
-from analysis_specification import AnalysisSpecification
+from processbehavior import analysis_dataset as ad
+from processbehavior.analysis_specification import AnalysisSpecification
 
 # Configure logging
 logging.basicConfig(

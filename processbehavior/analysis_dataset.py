@@ -9,13 +9,13 @@ import pandas as pd
 import scipy.special
 from pandas.api.types import is_numeric_dtype
 
-from spc_constants import calculate_limits, detect_beyond_limits
-from data_preparation import DataPreparation
-from sds_detector import SamplingDesignDetector
-from residual_calculator import ResidualCalculator
-from effects_calculator import EffectsCalculator
-from analysis_result import AnalysisResult
-from analysis_specification import AnalysisSpecification
+from .spc_constants import calculate_limits, detect_beyond_limits
+from .data_preparation import DataPreparation
+from .sds_detector import SamplingDesignDetector
+from .residual_calculator import ResidualCalculator
+from .effects_calculator import EffectsCalculator
+from .analysis_result import AnalysisResult
+from .analysis_specification import AnalysisSpecification
 
 # Configure module logger
 logger = logging.getLogger(__name__)

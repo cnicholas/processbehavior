@@ -14,14 +14,9 @@ All in one place!
 
 import numpy as np
 import pandas as pd
-import sys
-import os
 
-# Add parent directory to path
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-from analysis_dataset import Analysis
-from process_dataframe import ProcessDataFrame
+from processbehavior.analysis_dataset import Analysis
+from processbehavior.process_dataframe import ProcessDataFrame
 
 np.random.seed(42)
 

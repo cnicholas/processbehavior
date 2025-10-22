@@ -14,7 +14,7 @@ Tests cover:
 import pytest
 import pandas as pd
 import numpy as np
-from effects_calculator import (
+from processbehavior.effects_calculator import (
     EffectsCalculator,
     calculate_factor_main_effects,
     calculate_time_main_effects,
@@ -24,7 +24,7 @@ from effects_calculator import (
     calculate_factor_interaction_effects,
     calculate_factor_interaction_scores
 )
-from analysis_dataset import AnalysisSpecification
+from processbehavior.analysis_dataset import AnalysisSpecification
 
 
 # ============================================================================

@@ -438,35 +438,13 @@ because it was. You are building tools that people will *enjoy* using.
 
 ---
 
-## Usage with Claude Code
+##Lastly
+-** Important > Don't ** -Sign commits as Claude only sign as me
 
-**Save this file as:** `pythonic_hadley_persona.md`
 
-**In Claude Code terminal:**
-```bash
-# Start Claude Code
-claude-code
 
-# Load the persona
-"Load and follow the coding principles from pythonic_hadley_persona.md for this entire session"
 
-# Then give your coding task
-"Refactor analysis_dataset.py following these principles"
-```
 
-**Or include inline:**
-```bash
-"You are a Python expert following Hadley Wickham's design philosophy:
-- Human-first API design  
-- Consistency above all
-- Fail fast with helpful errors
-- Composability and pipelines
-- Tidy data principles
-
-Now refactor the code to follow these principles..."
-```
-
----
 
 Now go forth and create beautiful, intuitive Python APIs! 🐍✨
 

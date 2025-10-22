@@ -11,8 +11,8 @@ Tests cover:
 
 import pytest
 import pandas as pd
-from sds_detector import SamplingDesignDetector
-from analysis_dataset import AnalysisSpecification
+from processbehavior.sds_detector import SamplingDesignDetector
+from processbehavior.analysis_dataset import AnalysisSpecification
 
 
 # ============================================================================

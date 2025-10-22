@@ -34,10 +34,10 @@ import logging
 import numpy as np
 import pandas as pd
 
-from spc_constants import calculate_limits, detect_beyond_limits
-from analysis_specification import AnalysisSpecification
-from analysis_dataset import AnalysisDataSet, split_df_by_group, gather_analysis_statistics, package_analysis
-from analysis_result import AnalysisResult
+from .spc_constants import calculate_limits, detect_beyond_limits
+from .analysis_specification import AnalysisSpecification
+from .analysis_dataset import AnalysisDataSet, split_df_by_group, gather_analysis_statistics, package_analysis
+from .analysis_result import AnalysisResult
 
 logger = logging.getLogger(__name__)
 

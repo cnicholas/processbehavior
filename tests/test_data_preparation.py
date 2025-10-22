@@ -12,8 +12,8 @@ Tests cover:
 import pytest
 import pandas as pd
 import numpy as np
-from data_preparation import DataPreparation
-from analysis_dataset import AnalysisSpecification
+from processbehavior.data_preparation import DataPreparation
+from processbehavior.analysis_dataset import AnalysisSpecification
 
 
 # ============================================================================

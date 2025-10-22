@@ -17,7 +17,7 @@ Tests cover:
 import pytest
 import pandas as pd
 import numpy as np
-from residual_calculator import (
+from processbehavior.residual_calculator import (
     # Pure functions for means
     calculate_grand_mean,
     calculate_factor_means,
@@ -34,7 +34,7 @@ from residual_calculator import (
     # Orchestration
     ResidualCalculator
 )
-from analysis_dataset import AnalysisSpecification
+from processbehavior.analysis_dataset import AnalysisSpecification
 
 
 # ============================================================================

@@ -22,9 +22,9 @@ import logging
 from typing import List, Union, Optional
 import pandas as pd
 
-from sds_detector import SamplingDesignDetector
-from analysis_specification import AnalysisSpecification
-from analysis_dataset import Analysis
+from .sds_detector import SamplingDesignDetector
+from .analysis_specification import AnalysisSpecification
+from .analysis_dataset import Analysis
 
 logger = logging.getLogger(__name__)
 
@@ -207,7 +207,7 @@ class ProcessDataFrame:
         temp_spec = AnalysisSpecification('Imr', spec_dict)
 
         # Prepare data first (adds 'rsg' column if needed)
-        from data_preparation import DataPreparation
+        from .data_preparation import DataPreparation
         prep = DataPreparation()
         prep.validate_columns(self.data, temp_spec)
         prepared_df = prep.prepare_dataset(self.data, temp_spec)

@@ -11,7 +11,7 @@ Tests cover:
 import pytest
 import numpy as np
 import pandas as pd
-from spc_constants import (
+from processbehavior.spc_constants import (
     c4, b3, b4,
     calculate_limits,
     detect_beyond_limits,

@@ -15,8 +15,8 @@ from pathlib import Path
 from processbehavior.datasets import make_sds1, make_sds2, make_sds3
 
 # Import analysis components
-import analysis_dataset as ad
-from analysis_specification import AnalysisSpecification
+from processbehavior import analysis_dataset as ad
+from processbehavior.analysis_specification import AnalysisSpecification
 
 
 @pytest.fixture
