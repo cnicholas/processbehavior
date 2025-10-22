@@ -90,14 +90,91 @@ class Analysis:
                 f'Valid types: {list(strategies.keys())}'
             )
 
-        # Execute strategy to get chart data
-        chart_data = strategies[self.spec.analysis_type]()
+        # Check if stratification is requested
+        stratify_vars = self.spec.spec.get('stratify')
+
+        if stratify_vars:
+            # Stratified analysis: create separate charts for each stratum
+            chart_data = self._calculate_stratified(strategies[self.spec.analysis_type], stratify_vars)
+        else:
+            # Standard analysis: single combined chart
+            chart_data = strategies[self.spec.analysis_type]()
 
         # Wrap in AnalysisResult for unified access
         return AnalysisResult(
             charts=chart_data,
             analysis_dataset_obj=self.ads
         )
+
+    def _calculate_stratified(self, chart_method, stratify_vars: list) -> dict:
+        """
+        Execute stratified analysis: separate charts for each level of stratify variables.
+
+        Args:
+            chart_method: The chart calculation method to run for each stratum
+            stratify_vars: List of variables to stratify by
+
+        Returns:
+            dict: Chart data with stratified results
+
+        Example:
+            If stratify_vars=['Operator'] with levels A, B, C:
+            Returns {'Imr_Operator_A': {...}, 'Imr_Operator_B': {...}, 'Imr_Operator_C': {...}}
+        """
+        logger.info(f"Executing stratified analysis by: {stratify_vars}")
+
+        # Get prepared data
+        df = self.ads.analysis_dataset.copy()
+
+        # Create stratification column (combination of stratify vars)
+        if len(stratify_vars) == 1:
+            strat_col = stratify_vars[0]
+        else:
+            # Combine multiple variables into single stratification key
+            strat_col = '_'.join(stratify_vars)
+            df[strat_col] = df[stratify_vars].apply(lambda x: '_'.join(x.astype(str)), axis=1)
+
+        # Get unique strata
+        strata = df[strat_col].unique()
+        logger.info(f"Found {len(strata)} strata: {list(strata)}")
+
+        # Validate minimum data per stratum
+        for stratum in strata:
+            stratum_df = df[df[strat_col] == stratum]
+            if len(stratum_df) < 2:
+                logger.warning(
+                    f"Stratum '{stratum}' has only {len(stratum_df)} observation(s). "
+                    f"IMR charts require at least 2 observations."
+                )
+
+        # Calculate chart for each stratum
+        all_charts = {}
+
+        for stratum in strata:
+            logger.info(f"Calculating chart for stratum: {stratum}")
+
+            # Filter data for this stratum
+            stratum_df = df[df[strat_col] == stratum].copy()
+
+            # Temporarily swap out the dataset for this stratum
+            original_dataset = self.ads.analysis_dataset
+            self.ads.analysis_dataset = stratum_df
+
+            try:
+                # Run the chart calculation for this stratum
+                stratum_charts = chart_method()
+
+                # Add stratum prefix to chart names
+                for chart_name, chart_data in stratum_charts.items():
+                    stratified_name = f"{chart_name}_{strat_col}_{stratum}"
+                    all_charts[stratified_name] = chart_data
+
+            finally:
+                # Restore original dataset
+                self.ads.analysis_dataset = original_dataset
+
+        logger.info(f"Stratified analysis complete: {len(all_charts)} charts created")
+        return all_charts
 
     # =========================================================================
     # Helper Methods (DRY principle)
