@@ -42,10 +42,12 @@ Bishop, D. R. (2023). Personal communication and collaboration on
 Variance Analysis System implementation.
 """
 
+import logging
+from typing import Dict, List, Optional, Tuple, Union
+
 import numpy as np
 import pandas as pd
-from typing import Optional, Tuple, Dict, List, Union
-import logging
+
 from ..analysis_dataset import AnalysisSpecification
 
 logger = logging.getLogger(__name__)
@@ -78,7 +80,7 @@ def make_sds1(
     interaction_effect_size: float = 0.5,
     seed: Optional[int] = None,
     include_truth: bool = False,
-    factor_names: Optional[List[str]] = None
+    factor_names: Optional[list[str]] = None
 ) -> pd.DataFrame:
     """
     Generate Sampling Design State 1 data (full replication).
@@ -212,7 +214,7 @@ def make_sds1(
             # Random number of observations per cell (uniform distribution)
             n = rng.integers(n_min, n_max + 1)
             
-            for i in range(n):
+            for _i in range(n):
                 # Generate observation from true model: Y = μ + ρ + τ + ρτ + ε
                 epsilon = rng.normal(0, sigma)  # Pure error
                 y = mu + rho[k] + tau[t] + inter[k, t] + epsilon
@@ -273,7 +275,7 @@ def make_sds2(
     interaction_effect_size: float = 0.6,
     seed: Optional[int] = None,
     include_truth: bool = False,
-    factor_names: Optional[List[str]] = None
+    factor_names: Optional[list[str]] = None
 ) -> pd.DataFrame:
     """
     Generate Sampling Design State 2 data (no replication).
@@ -370,7 +372,7 @@ def make_sds2(
     if factor_names is None:
         factor_names = [f"K{k+1}" for k in range(K)]
     elif len(factor_names) != K:
-        raise ValueError(f"Length of factor_names must equal K")
+        raise ValueError("Length of factor_names must equal K")
     
     rows = []
     for k in range(K):
@@ -434,7 +436,7 @@ def make_sds3(
     seed: Optional[int] = None,
     replication_pattern: str = 'random',
     include_truth: bool = False,
-    factor_names: Optional[List[str]] = None
+    factor_names: Optional[list[str]] = None
 ) -> pd.DataFrame:
     """
     Generate Sampling Design State 3 data (partial replication).
@@ -563,7 +565,7 @@ def make_sds3(
     if factor_names is None:
         factor_names = [f"K{k+1}" for k in range(K)]
     elif len(factor_names) != K:
-        raise ValueError(f"Length of factor_names must equal K")
+        raise ValueError("Length of factor_names must equal K")
     
     rows = []
     replicated_cells = []
@@ -609,7 +611,7 @@ def make_sds3(
                 unreplicated_cells.append((k, t))
             
             # Generate observations
-            for i in range(n):
+            for _i in range(n):
                 epsilon = rng.normal(0, sigma)
                 y = mu + rho[k] + tau[t] + inter[k, t] + epsilon
                 
@@ -1051,8 +1053,8 @@ def make_sds6(
     K: int = 3,
     mu: float = 50.0,
     sigma: float = 0.5,
-    regime_lengths: Optional[List[int]] = None,
-    regime_shifts: Optional[List[float]] = None,
+    regime_lengths: Optional[list[int]] = None,
+    regime_shifts: Optional[list[float]] = None,
     factor_effect_size: float = 1.8,
     p_sampled: float = 0.7,
     seed: Optional[int] = None,
@@ -1344,7 +1346,7 @@ def make_sds(
 # Edge Cases and Special Scenarios
 # ============================================================================
 
-def make_edge_cases() -> Dict[str, pd.DataFrame]:
+def make_edge_cases() -> dict[str, pd.DataFrame]:
     """
     Generate challenging edge cases for testing robustness.
     
@@ -1462,7 +1464,7 @@ def make_edge_cases() -> Dict[str, pd.DataFrame]:
 # ============================================================================
 
 def compare_sds_characteristics(
-    sds_list: Optional[List[int]] = None,
+    sds_list: Optional[list[int]] = None,
     K: int = 3,
     T: int = 8,
     seed: int = 42
@@ -1589,7 +1591,7 @@ def validate_sds_detection(
 def generate_test_suite(
     output_dir: str = 'test_data',
     seed: int = 42
-) -> Dict[str, str]:
+) -> dict[str, str]:
     """
     Generate complete suite of test datasets and save to disk.
     
@@ -1710,7 +1712,7 @@ def generate_test_suite(
 # Documentation and Metadata
 # ============================================================================
 
-def get_sds_info(sds: int) -> Dict[str, str]:
+def get_sds_info(sds: int) -> dict[str, str]:
     """
     Get detailed information about a specific SDS type.
     
@@ -1875,7 +1877,7 @@ def print_sds_summary():
         print(f"\nSDS {sds}: {info['name']}")
         print("-" * 70)
         print(f"Description: {info['description']}")
-        print(f"\nCharacteristics:")
+        print("\nCharacteristics:")
         for char in info['characteristics']:
             print(f"  • {char}")
         print(f"\nCommon in: {info['common_in']}")

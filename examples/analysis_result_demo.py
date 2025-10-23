@@ -70,14 +70,14 @@ def example1_unified_access():
 
     # Access effects if available
     if result.has_effects:
-        print(f"\n✨ Effects calculated:")
+        print("\n✨ Effects calculated:")
         print(f"  Factor effects: {len(result.effects.get('k_effects', []))}")
         print(f"  Time effects: {len(result.effects.get('t_effects', []))}")
     else:
         print("\n✨ No effects calculated (SDS doesn't support effects)")
 
     # Access summary
-    print(f"\n📋 Summary:")
+    print("\n📋 Summary:")
     print(f"  SDS: {result.summary['sds']} - {result.summary['sds_description']}")
     print(f"  Observations: {result.summary['n_observations']}")
     print(f"  Signals: {result.summary['n_signals_total']}")
@@ -185,7 +185,7 @@ def example3_with_residuals():
 
     if result.has_interactions:
         print("\n🔗 Interactions calculated:")
-        for key in result.interactions.keys():
+        for key in result.interactions:
             print(f"  - {key}")
 
 

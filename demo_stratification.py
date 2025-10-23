@@ -11,8 +11,9 @@ Usage:
     python demo_stratification.py
 """
 
-import pandas as pd
 import numpy as np
+import pandas as pd
+
 from processbehavior import ProcessDataFrame
 
 
@@ -54,7 +55,7 @@ def demo_1_basic_stratification():
 
     result = analysis.calculate()
 
-    print(f"\n✅ Stratified Analysis Complete!")
+    print("\n✅ Stratified Analysis Complete!")
     print(f"   Created {result.summary['n_charts']} separate IMR charts")
     print(f"   Strata: {', '.join(result.list_strata())}\n")
 
@@ -114,9 +115,9 @@ def demo_2_multi_factor_stratification():
 
     result = analysis.calculate()
 
-    print(f"\n✅ Multi-Factor Stratification Complete!")
+    print("\n✅ Multi-Factor Stratification Complete!")
     print(f"   Created {result.summary['n_charts']} charts (one per Shift×Machine)")
-    print(f"\nStrata:")
+    print("\nStrata:")
     for stratum in result.list_strata():
         print(f"  • {stratum}")
 
@@ -161,7 +162,7 @@ def demo_3_selective_stratification():
 
     result = analysis.calculate()
 
-    print(f"\n✅ Selective Stratification Complete!")
+    print("\n✅ Selective Stratification Complete!")
     print(f"   Created {result.summary['n_charts']} charts (one per Machine)")
     print(f"   Strata: {', '.join(result.list_strata())}")
 

@@ -1,11 +1,12 @@
-import pytest
-from processbehavior import analysis_dataset as ad
-from processbehavior.analysis_specification import AnalysisSpecification
+import logging
+
 import numpy as np
 import pandas as pd
-import logging
-from processbehavior.spc_constants import c4
+import pytest
 
+from processbehavior import analysis_dataset as ad
+from processbehavior.analysis_specification import AnalysisSpecification
+from processbehavior.spc_constants import c4
 
 # Configure logging
 logging.basicConfig(
@@ -84,7 +85,7 @@ def make_sds1(K=2, T=4, n=3, mu=50.0, sigma=0.4):
     rows = []
     for k in range(K):
         for t in range(T):
-            for i in range(n):
+            for _i in range(n):
                 y = mu + rho[k] + tau[t] + inter[k, t] + rng.normal(0, sigma)
                 rows.append((t+1, f"K{k+1}", "NA", y))
     return pd.DataFrame(rows, columns=["time", "factor 1", "factor 2", "y"])
@@ -110,7 +111,7 @@ def make_sds3(K=3, T=6, mu=50.0, sigma=0.5, p_missing=0.3, n_low=1, n_high=3):
             if rng.random() < p_missing:
                 continue
             n = rng.integers(n_low, n_high+1)
-            for i in range(n):
+            for _i in range(n):
                 y = mu + rho[k] + tau[t] + inter[k, t] + rng.normal(0, sigma)
                 rows.append((t+1, f"K{k+1}", "NA", y))
     return pd.DataFrame(rows, columns=["time", "factor 1", "factor 2", "y"])
@@ -317,7 +318,7 @@ def test_perform_analysis_XbarS(df: pd.DataFrame):
     logger.info('\tTesting length result set - should be two data frames')
     assert actual == expected, f'The number of dataframes in the result is: {actual} does not the expected:{expected}'
 
-    for set in conditionSets.keys():
+    for set in conditionSets:
         logger.info(f'{set}')
         out = result[set]['data']
         logger.info(f'Statistics for {set}: {result[set]["statistics"]}/n')
@@ -330,7 +331,7 @@ def test_perform_analysis_XbarS(df: pd.DataFrame):
         logger.info('\tTesting length result set')
         assert actual == expected, f'The number of rows in the result: {actual} does not the expected:{expected}'
 
-        for cond in conditions.keys():
+        for cond in conditions:
             logger.info(f'Testing value of statistic: {cond}: {stats[cond]}')
             actual = stats[cond]
             expected = conditions[cond]
@@ -368,7 +369,7 @@ def test_perform_analysis_XbarS_differing_Ns(df_differing_Ns: pd.DataFrame):
         logger.info('\tTesting length result set - should be two data frames')
        # assert actual  == expected
 
-        for set in conditionSets.keys():
+        for set in conditionSets:
             logger.info(f'{set}')
             out = result[set]['data']
             logger.info(f'Statistics for {set}: {result[set]["statistics"]}/n')
@@ -381,7 +382,7 @@ def test_perform_analysis_XbarS_differing_Ns(df_differing_Ns: pd.DataFrame):
             logger.info('\tTesting length result set')
             assert actual  == expected
 
-            for cond in conditions.keys():
+            for cond in conditions:
                 logger.info(f'Testing value of statistic: {cond}: {stats[cond]}')
                 actual = stats[cond]
                 expected = conditions[cond]
@@ -427,7 +428,7 @@ def test_perform_analysis_Imr(df: pd.DataFrame):
 def test_perform_analysis_IMR_w_o_grouping_var(df: pd.DataFrame):
         spec = {'analysis_type': 'Imr', 'response_var': 'c','time_unit': None, 'round_to':2}
 
-        a_spec = ad.AnalysisSpecification(analysis_type="Imr", analysis_specification=spec)
+        ad.AnalysisSpecification(analysis_type="Imr", analysis_specification=spec)
         result = ad.perform_analysis(df=df, specification=spec)
 
         assert hasattr(result, "keys") and hasattr(result, "values")
@@ -437,7 +438,7 @@ def test_perform_analysis_IMR_w_o_grouping_var(df: pd.DataFrame):
 def test_perform_analysis_R(df: pd.DataFrame):
         spec = {'analysis_type': 'R', 'rsg_vars': ['a', 'b'], 'time_var': 'd', 'response_var': 'c',
                 'rsg_var_name': 'rsg', 'time_unit': None, 'round_to': 2}
-        a_spec = ad.AnalysisSpecification(analysis_type='R', analysis_specification=spec)
+        ad.AnalysisSpecification(analysis_type='R', analysis_specification=spec)
 
         result = ad.perform_analysis(df=df, specification=spec)
         logger.info('Testing with df for R with groups')
@@ -493,10 +494,10 @@ def test_R_with_FW800():
         assert len(result) == 8 #expect 8 rsgs
 
         #Check all values dfs in the returned dict
-        for key in result.keys():
+        for key in result:
             res = result[key]
             logger.info(f'key:{key}')#: {res.isnull().values.any()}')
-            assert False == res['data'].isnull().values.any()
+            assert not res['data'].isnull().values.any()
 
 def test_analysis_types_dt_col_handling(df_dt: pd.DataFrame, analysis_types: list[str]):
 
@@ -505,7 +506,6 @@ def test_analysis_types_dt_col_handling(df_dt: pd.DataFrame, analysis_types: lis
                 'rsg_var_name': 'rsg', 'time_unit': None}
 
         has_time='d'
-        no_time=None
         date_conditions = [has_time] # Test each chart type with and without a datetime column    
 #TODO: Resolve and validate  cases where no time variable is present
         for cond in date_conditions:
@@ -550,7 +550,7 @@ def test_IMR_w_o_grouping_var_FW800():
             f_path= "processbehavior/datasets/data/FILLWEIGHTDATA_800.csv"
             df = pd.read_csv(f_path)
             logger.debug(f'\n{df.columns.tolist()}')
-            a_spec = ad.AnalysisSpecification(analysis_type="Imr", analysis_specification=spec)
+            ad.AnalysisSpecification(analysis_type="Imr", analysis_specification=spec)
             result = ad.perform_analysis(df=df, specification=spec)
 
             assert hasattr(result, "keys") and hasattr(result, "values")
@@ -723,12 +723,12 @@ def test_sds2_synthetic(df_SDS2: pd.DataFrame):
         analysis_specification = ad.AnalysisSpecification(analysis_specification=spec, analysis_type=spec['analysis_type'])
         theDataset = ad.AnalysisDataSet(df_SDS2, analysis_specification)
 
-        print(f"\n\n============== ANALYSIS RESULTS ==============")
+        print("\n\n============== ANALYSIS RESULTS ==============")
         print(f"Sampling Design State: {theDataset.sampling_design_state}")
         print(f"Statistics: {theDataset.statistics}")
 
         # Assert SDS2 was correctly detected
-        assert 2 == theDataset.sampling_design_state, f"Expected SDS=2, got {theDataset.sampling_design_state}"
+        assert theDataset.sampling_design_state == 2, f"Expected SDS=2, got {theDataset.sampling_design_state}"
 
         print("\n--- Analysis Dataset (with residuals) ---")
         cols_to_show = ['time', 'rsg', 'y', 'Ybar', 'Ybar_k', 'Ybar_t', 'Ybar_kt', 'R1', 'R2', 'R3', 'R4', 'R5']
@@ -753,7 +753,7 @@ def test_sds2_synthetic(df_SDS2: pd.DataFrame):
         )
 
         # Verify R2 uses moving average (not zero) - should have some NaN values
-        print(f"\n--- Verifying R2 calculation (moving average based) ---")
+        print("\n--- Verifying R2 calculation (moving average based) ---")
         print(f"R2 has {theDataset.analysis_dataset['R2'].isna().sum()} NaN values (expected for endpoints)")
         assert theDataset.analysis_dataset['R2'].notna().any(), "R2 should have some non-NaN values"
 
@@ -774,9 +774,7 @@ def test_sds2_synthetic(df_SDS2: pd.DataFrame):
         print("\n--- Interactions ---")
         for key, value in theDataset.interactions.items():
             print(f"\n{key}:")
-            if isinstance(value, pd.Series):
-                print(value.head(10))
-            elif isinstance(value, pd.DataFrame):
+            if isinstance(value, (pd.Series, pd.DataFrame)):
                 print(value.head(10))
             else:
                 print(value)
@@ -794,22 +792,19 @@ def test_analysis_dataset_no_groups(df: pd.DataFrame):
         a_spec = ad.AnalysisSpecification(analysis_type = spec['analysis_type'], analysis_specification=spec)
         theDataset = ad.AnalysisDataSet(df=df, analysis_specification=a_spec)
         logger.info(f'the dataframe in test_analysis_dataset_no_groups:\n{theDataset.analysis_dataset.columns.to_list()}')
-        assert 0 == theDataset.sampling_design_state
-        assert ['c','obs_id', 'rsg_key','cell_key'] == theDataset.analysis_dataset.columns.to_list(), 'there should be only 1 column in the result'
+        assert theDataset.sampling_design_state == 0
+        assert theDataset.analysis_dataset.columns.to_list() == ['c','obs_id', 'rsg_key','cell_key'], 'there should be only 1 column in the result'
 
         logger.info('\nTesting no grouping with time variable specified - expect the time variable and response variable to be returned...')
         spec = {'analysis_type': 'Imr', 'time_var':'d', 'response_var': 'c','time_unit': None, 'round_to':2}
 
         a_spec = ad.AnalysisSpecification(analysis_type = spec['analysis_type'], analysis_specification=spec)
         theDataset = ad.AnalysisDataSet(df=df, analysis_specification=a_spec)
-        assert 0 == theDataset.sampling_design_state
-        assert ['d','c','obs_id', 'rsg_key','cell_key'] == theDataset.analysis_dataset.columns.to_list(), 'there should be 2 columns in the result'
+        assert theDataset.sampling_design_state == 0
+        assert theDataset.analysis_dataset.columns.to_list() == ['d','c','obs_id', 'rsg_key','cell_key'], 'there should be 2 columns in the result'
         
 def test_limits():
         
-        out={}
-        lcl = 0.0
-        ucl = 0.0       
         
         mean=pd.Series([1,1,1,1,1,1,1,1,1,1])
         sd=pd.Series([1,1,1,1,1,1,1,1,1,1])

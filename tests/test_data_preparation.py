@@ -9,12 +9,12 @@ Tests cover:
 - Edge cases
 """
 
-import pytest
-import pandas as pd
 import numpy as np
-from processbehavior.data_preparation import DataPreparation
-from processbehavior.analysis_dataset import AnalysisSpecification
+import pandas as pd
+import pytest
 
+from processbehavior.analysis_dataset import AnalysisSpecification
+from processbehavior.data_preparation import DataPreparation
 
 # ============================================================================
 # Fixtures
@@ -368,7 +368,7 @@ def test_filter_small_groups_logs_count(prep, small_groups_df, caplog):
     df_with_rsg = prep._add_grouping_column(small_groups_df, spec)
 
     with caplog.at_level('DEBUG'):
-        result = prep._filter_small_groups(df_with_rsg, spec)
+        prep._filter_small_groups(df_with_rsg, spec)
 
     # Should log starting and ending counts
     assert 'Starting with' in caplog.text

@@ -65,13 +65,13 @@ class Analysis:
         statistics = {}
         out = df.copy()
 
-        print(f'\nIn calculate statistics XbarS...')
+        print('\nIn calculate statistics XbarS...')
         print(f'\nDataframe has columns: {out.columns.to_list()}')
         print(f'\n{out.head(10)}')
         print(f'\nn.max={out["n"].max()}')
 
         if spec.zero_center:
-            print(f'zero-centering data')
+            print('zero-centering data')
             zero_mean = out[spec.response_var].mean()
             out[spec.response_var] = out[spec.response_var] - zero_mean
 
@@ -238,12 +238,12 @@ class Analysis:
         out = prepare_dataset(df=df, analysis_specification=spec)
 
         if spec.zero_center:
-            print(f'zero-centering data')
+            print('zero-centering data')
             zero_mean = out[spec.response_var].mean()
             print(f'zero-mean:{zero_mean}')
             out[spec.response_var] = out[spec.response_var] - zero_mean
 
-        print(f'\nIn calculate statistics IMR...')
+        print('\nIn calculate statistics IMR...')
         print(f'\nDataframe has columns: {out.columns.to_list()}')
 
         if spec.has_grouping:
@@ -340,11 +340,11 @@ class Analysis:
         out = prepare_dataset(df=df, analysis_specification=spec)
 
         if spec.zero_center:
-            print(f'zero-centering data')
+            print('zero-centering data')
             zero_mean = out[spec.response_var].mean()
             out[spec.response_var] = out[spec.response_var] - zero_mean
 
-        print(f'\nIn calculate statistics R...')
+        print('\nIn calculate statistics R...')
         print(f'\nDataframe has columns: {out.columns.to_list()}')
 
         if spec.has_grouping:

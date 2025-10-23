@@ -247,7 +247,7 @@ class SamplingDesignDetector:
     def detect_sds(
         self,
         df: pd.DataFrame,
-        spec: 'AnalysisSpecification'
+        spec: AnalysisSpecification
     ) -> int:
         """
         Detect Sampling Design State from data structure.
@@ -473,38 +473,35 @@ class SamplingDesignDetector:
         True
         """
         # SDS 0: Very limited capabilities
-        if sds == 0:
-            if analysis_type in ['Xbar', 'S']:
-                raise ValueError(
-                    f"Cannot perform {analysis_type} analysis without grouping structure.\n"
-                    f"Detected SDS 0 (no grouping or time variables).\n"
-                    f"Fix: Use 'Imr' analysis or specify grouping variables"
-                )
+        if sds == 0 and analysis_type in ['Xbar', 'S']:
+            raise ValueError(
+                f"Cannot perform {analysis_type} analysis without grouping structure.\n"
+                f"Detected SDS 0 (no grouping or time variables).\n"
+                f"Fix: Use 'Imr' analysis or specify grouping variables"
+            )
 
         # SDS 2: No within-cell variance
-        if sds == 2:
-            if analysis_type in ['Xbar', 'S']:
-                logger.warning(
-                    f"SDS 2 detected: No replication (all cells n=1).\n"
-                    f"{analysis_type} analysis will use moving average for variance estimation.\n"
-                    f"Consider using 'Imr' analysis instead for better performance."
-                )
+        if sds == 2 and analysis_type in ['Xbar', 'S']:
+            logger.warning(
+                f"SDS 2 detected: No replication (all cells n=1).\n"
+                f"{analysis_type} analysis will use moving average for variance estimation.\n"
+                f"Consider using 'Imr' analysis instead for better performance."
+            )
 
         # SDS 4: Single stream
-        if sds == 4:
-            if analysis_type not in ['Imr', 'R']:
-                logger.warning(
-                    f"SDS 4 detected: Single condition over time.\n"
-                    f"{analysis_type} analysis may not be appropriate.\n"
-                    f"Consider using 'Imr' analysis."
-                )
+        if sds == 4 and analysis_type not in ['Imr', 'R']:
+            logger.warning(
+                f"SDS 4 detected: Single condition over time.\n"
+                f"{analysis_type} analysis may not be appropriate.\n"
+                f"Consider using 'Imr' analysis."
+            )
 
         # SDS 6: Irregular
         if sds == 6:
             logger.warning(
-                f"SDS 6 detected: Unstructured/irregular grid.\n"
-                f"Analysis results may be unreliable due to incomplete data coverage.\n"
-                f"Check for missing data or irregular sampling patterns."
+                "SDS 6 detected: Unstructured/irregular grid.\n"
+                "Analysis results may be unreliable due to incomplete data coverage.\n"
+                "Check for missing data or irregular sampling patterns."
             )
 
         return True
@@ -601,7 +598,7 @@ class SamplingDesignDetector:
     def _check_nested_design(
         self,
         df: pd.DataFrame,
-        spec: 'AnalysisSpecification',
+        spec: AnalysisSpecification,
         n_cells: int,
         full_grid_size: int
     ) -> int | None:

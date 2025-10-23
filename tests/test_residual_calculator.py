@@ -14,15 +14,18 @@ Tests cover:
 - Orchestration class
 """
 
-import pytest
-import pandas as pd
 import numpy as np
+import pandas as pd
+import pytest
+
+from processbehavior.analysis_dataset import AnalysisSpecification
 from processbehavior.residual_calculator import (
+    # Orchestration
+    ResidualCalculator,
+    calculate_cell_means,
+    calculate_factor_means,
     # Pure functions for means
     calculate_grand_mean,
-    calculate_factor_means,
-    calculate_time_means,
-    calculate_cell_means,
     # Pure functions for residuals
     calculate_r1_residual,
     calculate_r2_residual_sds1,
@@ -31,11 +34,8 @@ from processbehavior.residual_calculator import (
     calculate_r3_residual,
     calculate_r4_residual,
     calculate_r5_residual,
-    # Orchestration
-    ResidualCalculator
+    calculate_time_means,
 )
-from processbehavior.analysis_dataset import AnalysisSpecification
-
 
 # ============================================================================
 # Test: Pure Functions for Means

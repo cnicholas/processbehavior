@@ -9,13 +9,13 @@ import pandas as pd
 import scipy.special
 from pandas.api.types import is_numeric_dtype
 
-from .spc_constants import calculate_limits, detect_beyond_limits
-from .data_preparation import DataPreparation
-from .sds_detector import SamplingDesignDetector
-from .residual_calculator import ResidualCalculator
-from .effects_calculator import EffectsCalculator
 from .analysis_result import AnalysisResult
 from .analysis_specification import AnalysisSpecification
+from .data_preparation import DataPreparation
+from .effects_calculator import EffectsCalculator
+from .residual_calculator import ResidualCalculator
+from .sds_detector import SamplingDesignDetector
+from .spc_constants import calculate_limits, detect_beyond_limits
 
 # Configure module logger
 logger = logging.getLogger(__name__)
@@ -519,7 +519,6 @@ class Analysis:
 
         Logic moved from calculate_statistics_S()
         """
-        df = self.raw_df
         spec = self.spec
         out = self.ads.analysis_dataset.copy()
 
@@ -566,7 +565,6 @@ class Analysis:
         Logic moved from calculate_statistics_Imr()
         """
         y = self.spec.response_var
-        df = self.raw_df
         spec = self.spec
         out = self.ads.analysis_dataset.copy()
 
@@ -683,7 +681,6 @@ class Analysis:
 
         Logic moved from calculate_statistics_R()
         """
-        df = self.raw_df
         spec = self.spec
         out = self.ads.analysis_dataset.copy()
 
@@ -787,8 +784,10 @@ def split_df_by_group(df: pd.DataFrame, grouping_var: str) -> dict:
     another.
     """
     # Make sure grouping_var column exists
-    if not grouping_var in df.columns.tolist(): raise ValueError(
-        f'The group_var: {grouping_var} is not in the data set!')
+    if grouping_var not in df.columns.tolist():
+        raise ValueError(
+            f'The group_var: {grouping_var} is not in the data set!'
+        )
 
     out = {}
 
@@ -803,15 +802,24 @@ def split_df_by_group(df: pd.DataFrame, grouping_var: str) -> dict:
     return (out)
 
 
-def gather_analysis_statistics(df: pd.DataFrame, statistics_to_collect: list, grouping_var: str = None) -> dict:
+def gather_analysis_statistics(
+    df: pd.DataFrame,
+    statistics_to_collect: list,
+    grouping_var: str = None
+) -> dict:
     """
-    Function gather_analysis_summary_statistics returns a dictionary of statistics (contained in stats_to_package) for each analytic result passed. 
-    
-    :param pandas.Dataframe df: a grouped dataframe of analysis results, i.e., output from R or Imr
-    :param list stats_to_package: list of variables/columns to summarize (dataframes currently contain columns for mean, moving range, and N) 
-    
-    This function will take the max for each value specified in stats to package an put in dictionary with key equal to the value of list item, 
-    i.e., "mean" will be returned in a dictionary {statistics:{group_name: "abc", mean:1.0, etc...}}   
+    Function gather_analysis_summary_statistics returns a dictionary of
+    statistics (contained in stats_to_package) for each analytic result passed.
+
+    :param pandas.Dataframe df: a grouped dataframe of analysis results,
+        i.e., output from R or Imr
+    :param list stats_to_package: list of variables/columns to summarize
+        (dataframes currently contain columns for mean, moving range, and N)
+
+    This function will take the max for each value specified in stats to package
+    and put in dictionary with key equal to the value of list item,
+    i.e., "mean" will be returned in a dictionary
+    {statistics:{group_name: "abc", mean:1.0, etc...}}   
     
     :return: dictionary of dataframes with grouping_var values as keys
     
@@ -838,7 +846,7 @@ def gather_analysis_statistics(df: pd.DataFrame, statistics_to_collect: list, gr
             summarized = df.groupby([grouping_var]).max()
             summarized = pd.merge(N, summarized, how='left', on=grouping_var)
 
-            for index, row in summarized.iterrows():
+            for _index, row in summarized.iterrows():
                 stats[row[grouping_var]] = row[statistics_to_collect].to_dict()
 
         else:
@@ -878,7 +886,7 @@ def package_analysis(analysis_output: dict, summary_statistics_output: dict):
     is_valid = all(keys in output_keys for keys in stats_keys)
 
     if is_valid:
-        for key in analysis_output.keys():
+        for key in analysis_output:
             out[key] = {'data': analysis_output[key], 'statistics': summary_statistics_output[key]}
     else:
       

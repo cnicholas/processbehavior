@@ -5,18 +5,19 @@ This module tests the to_excel() method which exports analysis results
 to multi-sheet Excel workbooks.
 """
 
-import pytest
-import pandas as pd
 import os
 import tempfile
 from pathlib import Path
 
-# Import test data generators
-from processbehavior.datasets import make_sds1, make_sds2, make_sds3
+import pandas as pd
+import pytest
 
 # Import analysis components
 from processbehavior import analysis_dataset as ad
 from processbehavior.analysis_specification import AnalysisSpecification
+
+# Import test data generators
+from processbehavior.datasets import make_sds1, make_sds2, make_sds3
 
 
 @pytest.fixture
@@ -371,7 +372,7 @@ def test_excel_export_preserves_statistics(temp_excel_file):
     result = analysis.calculate()
 
     # Get original statistics
-    original_stats = result.get_statistics('Xbar')
+    result.get_statistics('Xbar')
 
     # Export to Excel
     result.to_excel(temp_excel_file)

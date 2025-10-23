@@ -8,18 +8,20 @@ Tests cover:
 - Edge cases and validation
 """
 
-import pytest
 import numpy as np
 import pandas as pd
+import pytest
+
 from processbehavior.spc_constants import (
-    c4, b3, b4,
+    IMR_LIMIT_MULTIPLIER,
+    R_UPPER_LIMIT_MULTIPLIER,
+    SIGMA_MULTIPLIER,
+    b3,
+    b4,
+    c4,
     calculate_limits,
     detect_beyond_limits,
-    SIGMA_MULTIPLIER,
-    IMR_LIMIT_MULTIPLIER,
-    R_UPPER_LIMIT_MULTIPLIER
 )
-
 
 # ============================================================================
 # Test: Constants

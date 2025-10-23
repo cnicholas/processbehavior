@@ -37,20 +37,19 @@ AnalysisDataSet : Analysis dataset manager
 __version__ = "0.3.0"
 
 # Main user-facing API
-from processbehavior.process_dataframe import ProcessDataFrame
+# Core analysis classes
+from processbehavior.analysis_dataset import Analysis, AnalysisDataSet
 
 # Result object
 from processbehavior.analysis_result import AnalysisResult
-
-# Core analysis classes
-from processbehavior.analysis_dataset import Analysis, AnalysisDataSet
 from processbehavior.analysis_specification import AnalysisSpecification
+from processbehavior.data_preparation import DataPreparation
+from processbehavior.effects_calculator import EffectsCalculator
+from processbehavior.process_dataframe import ProcessDataFrame
+from processbehavior.residual_calculator import ResidualCalculator
 
 # Utility classes (advanced users)
 from processbehavior.sds_detector import SamplingDesignDetector, SDSAnalysisPlan
-from processbehavior.data_preparation import DataPreparation
-from processbehavior.effects_calculator import EffectsCalculator
-from processbehavior.residual_calculator import ResidualCalculator
 
 __all__ = [
     # Main API

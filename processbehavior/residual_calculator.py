@@ -524,7 +524,7 @@ class ResidualCalculator:
     def calculate_residuals(
         self,
         df: pd.DataFrame,
-        spec: 'AnalysisSpecification',
+        spec: AnalysisSpecification,
         sds: int
     ) -> pd.DataFrame:
         """
@@ -623,7 +623,7 @@ class ResidualCalculator:
     def _calculate_r2_for_sds(
         self,
         df: pd.DataFrame,
-        spec: 'AnalysisSpecification',
+        spec: AnalysisSpecification,
         sds: int
     ) -> pd.Series:
         """

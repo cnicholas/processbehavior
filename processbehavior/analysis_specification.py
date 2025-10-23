@@ -20,6 +20,7 @@ Usage:
 """
 
 from __future__ import annotations
+
 import logging
 
 logger = logging.getLogger(__name__)
@@ -168,11 +169,11 @@ class AnalysisSpecification:
             raise ValueError('Supplied value for zero-center needs to be True or False')
 
         # Set derived properties
-        self.has_time = True if self.time_var is not None else False
+        self.has_time = self.time_var is not None
         self.grouping_cols = self.rsg_var_name if self.has_grouping else []
 
         # Determine if sorting is required
-        self.requires_sort = True if (self.has_grouping and self.has_time) or self.has_time else False
+        self.requires_sort = bool(self.has_grouping and self.has_time or self.has_time)
 
         # Build column specifications
         self._build_data_prep_cols()

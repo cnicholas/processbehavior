@@ -28,9 +28,11 @@ Usage:
 """
 
 from __future__ import annotations
-from typing import Dict, List, Optional, Any
-import pandas as pd
+
 import logging
+from typing import Any, Dict, List, Optional
+
+import pandas as pd
 
 logger = logging.getLogger(__name__)
 
@@ -78,8 +80,8 @@ class AnalysisResult:
 
     def __init__(
         self,
-        charts: Dict[str, Dict[str, Any]],
-        analysis_dataset_obj: 'AnalysisDataSet'
+        charts: dict[str, dict[str, Any]],
+        analysis_dataset_obj: AnalysisDataSet
     ):
         """
         Initialize AnalysisResult from chart data and AnalysisDataSet.
@@ -196,7 +198,7 @@ class AnalysisResult:
     # =========================================================================
 
     @property
-    def residuals(self) -> Optional[pd.DataFrame]:
+    def residuals(self) -> pd.DataFrame | None:
         """
         Get VAS residuals (R1-R5) if calculated.
 
@@ -209,7 +211,7 @@ class AnalysisResult:
         return self._residuals
 
     @property
-    def effects(self) -> Optional[dict]:
+    def effects(self) -> dict | None:
         """
         Get main effects if calculated.
 
@@ -223,7 +225,7 @@ class AnalysisResult:
         return self._effects
 
     @property
-    def interactions(self) -> Optional[dict]:
+    def interactions(self) -> dict | None:
         """
         Get interaction effects if calculated.
 
@@ -262,7 +264,7 @@ class AnalysisResult:
         return self._interactions is not None and len(self._interactions) > 0
 
     @property
-    def all_charts(self) -> List[str]:
+    def all_charts(self) -> list[str]:
         """Get list of all available chart names."""
         return list(self.charts.keys())
 
@@ -330,7 +332,7 @@ class AnalysisResult:
             )
         return self.charts[name]['statistics']
 
-    def get_residual(self, residual_type: str) -> Optional[pd.Series]:
+    def get_residual(self, residual_type: str) -> pd.Series | None:
         """
         Get specific residual (R1, R2, R3, R4, or R5).
 
@@ -362,7 +364,7 @@ class AnalysisResult:
 
         return self._residuals[residual_type]
 
-    def get_stratified_charts(self) -> Dict[str, Dict[str, Any]]:
+    def get_stratified_charts(self) -> dict[str, dict[str, Any]]:
         """
         Get all stratified charts (if stratification was used).
 
@@ -420,7 +422,7 @@ class AnalysisResult:
         """
         # Find charts containing the stratum identifier
         matching_charts = [
-            name for name in self.charts.keys()
+            name for name in self.charts
             if stratum in name
         ]
 
@@ -439,7 +441,7 @@ class AnalysisResult:
         chart_name = matching_charts[0]
         return self.charts[chart_name]['data']
 
-    def list_strata(self) -> List[str]:
+    def list_strata(self) -> list[str]:
         """
         List all strata in stratified analysis.
 
@@ -460,7 +462,7 @@ class AnalysisResult:
         # Extract stratum names from chart names
         # Format: "Imr_Operator_A" -> "Operator_A"
         strata = []
-        for chart_name in self.get_stratified_charts().keys():
+        for chart_name in self.get_stratified_charts():
             # Split by underscore and take last 2 parts (variable_level)
             parts = chart_name.split('_')
             if len(parts) >= 2:
@@ -485,7 +487,7 @@ class AnalysisResult:
         for name, chart_info in self.charts.items():
             yield name, chart_info['data'], chart_info['statistics']
 
-    def get_signals(self, chart_name: Optional[str] = None) -> pd.DataFrame:
+    def get_signals(self, chart_name: str | None = None) -> pd.DataFrame:
         """
         Get points beyond control limits.
 
@@ -566,7 +568,7 @@ class AnalysisResult:
         if self.summary['is_stratified']:
             lines.append(f"Stratified: Yes ({len(self.charts)} groups)")
 
-        lines.append(f"\nCapabilities:")
+        lines.append("\nCapabilities:")
         lines.append(f"  Residuals: {'✓' if self.has_residuals else '✗'}")
         lines.append(f"  Effects: {'✓' if self.has_effects else '✗'}")
         lines.append(f"  Interactions: {'✓' if self.has_interactions else '✗'}")
@@ -691,14 +693,14 @@ class AnalysisResult:
         - Formatting includes frozen headers and auto-sized columns
         """
         try:
-            import openpyxl
-            from openpyxl.utils.dataframe import dataframe_to_rows
-            from openpyxl.styles import Font, Alignment
-        except ImportError:
+            import openpyxl  # noqa: F401
+            from openpyxl.styles import Alignment, Font  # noqa: F401
+            from openpyxl.utils.dataframe import dataframe_to_rows  # noqa: F401
+        except ImportError as e:
             raise ImportError(
                 "Excel export requires openpyxl. Install it with: "
                 "pip install openpyxl"
-            )
+            ) from e
 
         # Create Excel writer
         with pd.ExcelWriter(filepath, engine='openpyxl') as writer:
@@ -844,10 +846,7 @@ class AnalysisResult:
             Variables used for stratification
         """
         # Determine stratification column name
-        if len(stratify_vars) == 1:
-            strat_col = stratify_vars[0]
-        else:
-            strat_col = '_'.join(stratify_vars)
+        strat_col = stratify_vars[0] if len(stratify_vars) == 1 else '_'.join(stratify_vars)
 
         # Collect all stratified charts
         combined_data = []
@@ -868,10 +867,7 @@ class AnalysisResult:
             # e.g., "Day_Shift_Day" -> stratum = "Day"
             # The first part before first underscore is the stratum value
             parts = chart_name.split('_')
-            if len(parts) > 0:
-                stratum_value = parts[0]
-            else:
-                stratum_value = chart_name
+            stratum_value = parts[0] if len(parts) > 0 else chart_name
 
             # Add stratum column to data
             chart_data_copy = chart_data.copy()
@@ -946,10 +942,7 @@ class AnalysisResult:
             Variables used for stratification
         """
         # Determine stratification column name
-        if len(stratify_vars) == 1:
-            strat_col = stratify_vars[0]
-        else:
-            strat_col = '_'.join(stratify_vars)
+        stratify_vars[0] if len(stratify_vars) == 1 else '_'.join(stratify_vars)
 
         # Collect data from all stratified charts
         all_chart_data = []

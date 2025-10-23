@@ -9,11 +9,11 @@ Tests cover:
 - User-friendly output and explanations
 """
 
-import pytest
-import pandas as pd
 import numpy as np
-from processbehavior.process_dataframe import ProcessDataFrame, ColumnAccessor
+import pandas as pd
+import pytest
 
+from processbehavior.process_dataframe import ColumnAccessor, ProcessDataFrame
 
 # ============================================================================
 # Test: ColumnAccessor - Auto-completion support
@@ -179,7 +179,7 @@ def test_analyze_with_grouping():
     for op in ['A', 'B']:
         for machine in ['M1', 'M2']:
             for time in [1, 2, 3]:
-                for rep in range(3):  # 3 replicates per cell
+                for _rep in range(3):  # 3 replicates per cell
                     operators.append(op)
                     machines.append(machine)
                     times.append(time)
@@ -216,7 +216,7 @@ def test_analyze_with_single_grouping():
 
     for batch in ['A', 'B']:
         for seq in range(1, 6):
-            for rep in range(3):  # 3 replicates per cell
+            for _rep in range(3):  # 3 replicates per cell
                 batches.append(batch)
                 sequences.append(seq)
                 values.append(np.random.randint(1, 7))

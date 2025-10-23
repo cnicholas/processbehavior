@@ -8,8 +8,9 @@ Usage:
     python demo_sds_validation.py
 """
 
-from processbehavior.sds_detector import SamplingDesignDetector
 import pandas as pd
+
+from processbehavior.sds_detector import SamplingDesignDetector
 
 
 def demo_individual_plan():
