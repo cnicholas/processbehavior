@@ -3,7 +3,6 @@ import logging
 import pytest
 
 from processbehavior import analysis_dataset as ad
-from processbehavior.analysis_specification import AnalysisSpecification
 
 # Configure logging
 logging.basicConfig(
@@ -72,13 +71,25 @@ def test_analysis_specification_Imr_w_time_var():
     #             'response_var': 'c', 'rsg_var_name': 'rsg','time_unit':'Month'}
         
     #     with self.assertRaises(ValueError):
-    #         ad.AnalysisSpecification(analysis_type='Imr',analysis_specification=no_time_invalid_spec)
+    #         ad.AnalysisSpecification(
+    #             analysis_type='Imr',
+    #             analysis_specification=no_time_invalid_spec
+    #         )
 
-    #     invalid_time_unit_spec = {'analysis_type': 'Imr', 'rsg_vars': ['a', 'b'], 'time_var':'d', 
-    #             'response_var': 'c', 'rsg_var_name': 'rsg','time_unit':'month'}
+    #     invalid_time_unit_spec = {
+    #         'analysis_type': 'Imr',
+    #         'rsg_vars': ['a', 'b'],
+    #         'time_var':'d',
+    #         'response_var': 'c',
+    #         'rsg_var_name': 'rsg',
+    #         'time_unit':'month'
+    #     }
 
     #     with self.assertRaises(ValueError):
-    #         ad.AnalysisSpecification(analysis_type='Imr', analysis_specification=invalid_time_unit_spec)
+    #         ad.AnalysisSpecification(
+    #             analysis_type='Imr',
+    #             analysis_specification=invalid_time_unit_spec
+    #         )
         
         
     #     valid_spec = {'analysis_type': 'Imr', 'rsg_vars': ['a', 'b'], 
@@ -98,7 +109,10 @@ def test_analysis_specification_sort_required():
             'response_var': 'c', 'rsg_var_name': 'rsg','time_unit':'Month'}
     sortable = True
 
-    logger.info('\nTesting: Sort required when time_var and rsg_var specified and that sortcols from match....')
+    logger.info(
+        '\nTesting: Sort required when time_var and rsg_var specified '
+        'and that sortcols from match....'
+    )
     aspec = ad.AnalysisSpecification(analysis_type='Imr', analysis_specification=time_w_group_spec)
     assert aspec.requires_sort == sortable
     assert aspec.sort_cols == ['rsg','d']
@@ -148,8 +162,14 @@ def test_analysis_specification_zero_center():
     zero_center_spec_invalid= {'analysis_type': 'Imr', 'rsg_vars': ['a', 'b'], 'time_var':'d',
             'response_var': 'c', 'rsg_var_name': 'rsg','time_unit':'Month','zero-center':1234}
 
-    logger.info('\nTesting: ValueError raised when zero-center is set to none boolean value in spec....')
+    logger.info(
+        '\nTesting: ValueError raised when zero-center is set to '
+        'none boolean value in spec....'
+    )
     with pytest.raises(ValueError):
-        ad.AnalysisSpecification(analysis_type='Imr', analysis_specification=zero_center_spec_invalid)
+        ad.AnalysisSpecification(
+            analysis_type='Imr',
+            analysis_specification=zero_center_spec_invalid
+        )
         
        

@@ -20,13 +20,12 @@ Usage:
 from __future__ import annotations
 
 import logging
-from typing import List, Optional, Union
 
 import pandas as pd
 
 from .analysis_dataset import Analysis
 from .analysis_specification import AnalysisSpecification
-from .sds_detector import SamplingDesignDetector
+from .sds_detector import SamplingDesignDetector, SDSAnalysisPlan
 
 logger = logging.getLogger(__name__)
 

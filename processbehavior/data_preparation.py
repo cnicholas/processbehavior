@@ -16,7 +16,6 @@ Follows the Pythonic Hadley philosophy:
 from __future__ import annotations
 
 import logging
-from typing import Callable, Optional
 
 import numpy as np
 import pandas as pd

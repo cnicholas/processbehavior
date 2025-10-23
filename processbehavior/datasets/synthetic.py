@@ -43,7 +43,7 @@ Variance Analysis System implementation.
 """
 
 import logging
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Optional
 
 import numpy as np
 import pandas as pd

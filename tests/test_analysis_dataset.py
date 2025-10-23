@@ -5,7 +5,6 @@ import pandas as pd
 import pytest
 
 from processbehavior import analysis_dataset as ad
-from processbehavior.analysis_specification import AnalysisSpecification
 from processbehavior.spc_constants import c4
 
 # Configure logging

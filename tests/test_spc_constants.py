@@ -8,7 +8,6 @@ Tests cover:
 - Edge cases and validation
 """
 
-import numpy as np
 import pandas as pd
 import pytest
 
