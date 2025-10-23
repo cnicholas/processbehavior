@@ -11,8 +11,9 @@ Usage:
     python demo_chart_type_selection.py
 """
 
-import pandas as pd
 import numpy as np
+import pandas as pd
+
 from processbehavior import ProcessDataFrame
 from processbehavior.sds_detector import SamplingDesignDetector
 
@@ -35,7 +36,7 @@ def demo_1_auto_detection():
     for op in ['A', 'B']:
         for machine in ['M1', 'M2']:
             for time in [1, 2, 3]:
-                for rep in range(3):
+                for _rep in range(3):
                     operators.append(op)
                     machines.append(machine)
                     times.append(time)
@@ -79,7 +80,7 @@ def demo_2_explicit_selection():
     for op in ['A', 'B']:
         for machine in ['M1', 'M2']:
             for time in [1, 2, 3]:
-                for rep in range(3):
+                for _rep in range(3):
                     operators.append(op)
                     machines.append(machine)
                     times.append(time)
@@ -96,14 +97,14 @@ def demo_2_explicit_selection():
 
     # First analyze to detect SDS and populate data.charts
     print("Step 1: Run initial analysis to detect SDS")
-    result1 = data.analyze(
+    data.analyze(
         response_var=data.columns.Height,
         time_var=data.columns.Time,
         grouping_vars=[data.columns.Operator, data.columns.Machine]
     )
 
     # Now data.charts has auto-completion!
-    print(f"\nStep 2: Use data.charts for auto-completion")
+    print("\nStep 2: Use data.charts for auto-completion")
     print(f"Available: {data.charts}")
 
     # User can now specify different chart
@@ -141,7 +142,7 @@ def demo_3_validation_prevents_errors():
     print("Attempting to request Xbar chart (invalid for SDS 0)...\n")
 
     try:
-        result = data.analyze(
+        data.analyze(
             response_var=data.columns.Temperature,
             chart_type='Xbar'  # This will fail - SDS 0 doesn't support Xbar
         )
@@ -168,7 +169,7 @@ def demo_4_sds_driven_recommendations():
     values = []
     for op in ['A', 'B']:
         for time in [1, 2, 3]:
-            for rep in range(3):
+            for _rep in range(3):
                 operators.append(op)
                 times.append(time)
                 values.append(np.random.normal(100, 10))
@@ -190,7 +191,7 @@ def demo_4_sds_driven_recommendations():
         print("-" * 40)
 
         data = ProcessDataFrame(df)
-        result = data.analyze(response_var='Value', **extra_params)
+        data.analyze(response_var='Value', **extra_params)
 
         plan = SamplingDesignDetector.get_analysis_plan(expected_sds)
         print(f"Valid charts: {plan.valid_charts}")
@@ -214,7 +215,7 @@ def demo_5_complete_workflow():
 
     for batch in ['Morning', 'Afternoon']:
         for day in range(1, 6):
-            for rep in range(4):
+            for _rep in range(4):
                 batches.append(batch)
                 days.append(day)
                 measurements.append(np.random.normal(75, 5))

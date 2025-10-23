@@ -391,7 +391,7 @@ def calculate_factor_interaction_effects(
     )
 
     # Add main effects for each factor
-    for i, factor in enumerate([factor1, factor2]):
+    for _i, factor in enumerate([factor1, factor2]):
         me = main_effects.get(factor)
         if me is None or not isinstance(me, pd.DataFrame):
             raise ValueError(
@@ -492,7 +492,7 @@ class EffectsCalculator:
     def calculate_all_effects(
         self,
         df: pd.DataFrame,
-        spec: 'AnalysisSpecification'
+        spec: AnalysisSpecification
     ) -> dict:
         """
         Calculate all effects and interactions.
@@ -577,7 +577,7 @@ class EffectsCalculator:
     def calculate_interactions(
         self,
         df: pd.DataFrame,
-        spec: 'AnalysisSpecification',
+        spec: AnalysisSpecification,
         sds: int
     ) -> dict:
         """

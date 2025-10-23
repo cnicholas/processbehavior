@@ -13,9 +13,10 @@ The to_excel() method creates multi-sheet workbooks with:
 - Full Dataset: Complete analysis data (optional)
 """
 
-from processbehavior.datasets import make_sds1, make_sds2, make_sds3
-from processbehavior import analysis_dataset as ad
 import pandas as pd
+
+from processbehavior import analysis_dataset as ad
+from processbehavior.datasets import make_sds1, make_sds2, make_sds3
 
 print("=" * 70)
 print("EXCEL EXPORT DEMO")
@@ -104,7 +105,7 @@ print("✓ Exported to: example3_complete.xlsx")
 print(f"  - Total observations: {result3.summary['n_observations']}")
 print(f"  - SDS: {result3.sds}")
 print(f"  - Variance decomposition: {result3.summary['variance_decomposition']}")
-print(f"  - Tabs: Summary, Charts, Residuals, Effects, Interactions, Full_Dataset")
+print("  - Tabs: Summary, Charts, Residuals, Effects, Interactions, Full_Dataset")
 
 # =============================================================================
 # Example 4: Minimal Export (Charts Only)

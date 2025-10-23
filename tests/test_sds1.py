@@ -1,8 +1,9 @@
 # test_analysis_dataset_sds1.py
+import logging
+
 import numpy as np
 import pandas as pd
 import pytest
-import logging
 
 from processbehavior import analysis_dataset as ad  # your module
 
@@ -83,7 +84,7 @@ def compare_frames_by_map(
 
     both = merged[merged['_merge'] == 'both'].copy()
     rows = []
-    for exp_col in name_map.keys():
+    for exp_col in name_map:
         a = pd.to_numeric(both[f"{exp_col}_exp"], errors='coerce')
         b = pd.to_numeric(both[f"{exp_col}_act"], errors='coerce')
         abs_diff = (a - b).abs()
@@ -231,15 +232,13 @@ def test_analysis_dataset_sds1(df_SDS1: pd.DataFrame):
         common = src_int.index.intersection(calc.index)
         assert len(common) > 0, "No common (k,t,time) keys found for PDC×PT comparison."
 
-        src_al  = src_int.loc[common].sort_index()
-        calc_al = calc.loc[common].sort_index()
+        src_int.loc[common].sort_index()
+        calc.loc[common].sort_index()
         # test_analysis_dataset_sds1.py
-import numpy as np
-import pandas as pd
-import pytest
 import logging
 
-from processbehavior import analysis_dataset as ad  # your module
+import pandas as pd
+import pytest
 
 logger = logging.getLogger(__name__)
 
@@ -318,7 +317,7 @@ def compare_frames_by_map(
 
     both = merged[merged['_merge'] == 'both'].copy()
     rows = []
-    for exp_col in name_map.keys():
+    for exp_col in name_map:
         a = pd.to_numeric(both[f"{exp_col}_exp"], errors='coerce')
         b = pd.to_numeric(both[f"{exp_col}_act"], errors='coerce')
         abs_diff = (a - b).abs()
@@ -475,12 +474,10 @@ def test_analysis_dataset_sds1(df_SDS1: pd.DataFrame):
             rtol=1e-6, atol=1e-6, check_names=False
         )
         # test_analysis_dataset_sds1.py
-import numpy as np
-import pandas as pd
-import pytest
 import logging
 
-from processbehavior import analysis_dataset as ad  # your module
+import pandas as pd
+import pytest
 
 logger = logging.getLogger(__name__)
 
@@ -559,7 +556,7 @@ def compare_frames_by_map(
 
     both = merged[merged['_merge'] == 'both'].copy()
     rows = []
-    for exp_col in name_map.keys():
+    for exp_col in name_map:
         a = pd.to_numeric(both[f"{exp_col}_exp"], errors='coerce')
         b = pd.to_numeric(both[f"{exp_col}_act"], errors='coerce')
         abs_diff = (a - b).abs()
@@ -708,7 +705,7 @@ def test_analysis_dataset_sds1(df_SDS1: pd.DataFrame):
         assert len(common) > 0, "No common (k,t,time) keys found for PDC×PT comparison."
 
         #src_al  = src_int.loc[common].sort_index()
-        calc_al = calc.loc[common].sort_index()
+        calc.loc[common].sort_index()
 
         sanity = (
             df_calc_h

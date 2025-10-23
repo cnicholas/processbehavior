@@ -1,4 +1,5 @@
 import logging
+
 import pytest
 
 from processbehavior import analysis_dataset as ad
@@ -40,10 +41,10 @@ def test_analysis_specification_Imr_no_time_var():
     logger.info(f'\nAnalysis Type is: {asImr.analysis_type}')
 
     #rsg_vars provided
-    assert asImr.has_grouping == True
+    assert asImr.has_grouping
 
     #group if there is an rsg
-    assert asImr.has_time == False #no time_var
+    assert not asImr.has_time #no time_var
 
     #rsg is present sort by it only add time if it is provided
     assert asImr.sort_cols == []
@@ -58,10 +59,10 @@ def test_analysis_specification_Imr_w_time_var():
     asImr = ad.AnalysisSpecification(analysis_type='Imr',analysis_specification=spec)
     logger.debug(f'{spec}')
     logger.info(f'\nAnalysis Type is: {asImr.analysis_type}')
-    assert asImr.has_grouping == True
-    assert asImr.has_time == True
+    assert asImr.has_grouping
+    assert asImr.has_time
     assert asImr.sort_cols == [spec['rsg_var_name'], spec['time_var']]
-    assert asImr.requires_sort == True
+    assert asImr.requires_sort
 
     #expect time_var and rsg to be first two columns of output cols
     assert asImr.analysis_output_cols == [spec['time_var'], spec['rsg_var_name'], spec['response_var'], 'mean', 'lcl', 'ucl', 'beyond_limits']
@@ -118,7 +119,7 @@ def test_analysis_specification_rsg_delim():
 
     logger.info(f'\nTesting n in data prep output cols for grouped data: {aspec.data_prep_output_cols}')
     actual = "n" in aspec.data_prep_output_cols
-    assert actual == True
+    assert actual
 
     delim_spec = {'analysis_type': 'Imr', 'rsg_vars': ['a', 'b'], 'time_var':'d',
             'response_var': 'c', 'rsg_var_name': 'rsg', 'rsg_var_delim': '|', 'time_unit':'Month'}
@@ -135,14 +136,14 @@ def test_analysis_specification_zero_center():
 
     logger.info('\nTesting: Value of zero-center is False when not set in spec....')
     aspec = ad.AnalysisSpecification(analysis_type='Imr', analysis_specification=zero_center_spec_false)
-    assert aspec.zero_center == False
+    assert not aspec.zero_center
 
     zero_center_spec_true= {'analysis_type': 'Imr', 'rsg_vars': ['a', 'b'], 'time_var':'d',
             'response_var': 'c', 'rsg_var_name': 'rsg','time_unit':'Month','zero-center':True}
 
     logger.info('\nTesting: Value of zero-center is True when set in spec....')
     aspec = ad.AnalysisSpecification(analysis_type='Imr', analysis_specification=zero_center_spec_true)
-    assert aspec.zero_center == True
+    assert aspec.zero_center
 
     zero_center_spec_invalid= {'analysis_type': 'Imr', 'rsg_vars': ['a', 'b'], 'time_var':'d',
             'response_var': 'c', 'rsg_var_name': 'rsg','time_unit':'Month','zero-center':1234}

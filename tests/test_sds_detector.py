@@ -9,11 +9,11 @@ Tests cover:
 - Edge cases and boundary conditions
 """
 
-import pytest
 import pandas as pd
-from processbehavior.sds_detector import SamplingDesignDetector
-from processbehavior.analysis_dataset import AnalysisSpecification
+import pytest
 
+from processbehavior.analysis_dataset import AnalysisSpecification
+from processbehavior.sds_detector import SamplingDesignDetector
 
 # ============================================================================
 # Fixtures

@@ -1,18 +1,20 @@
+import numpy as np
+import pandas as pd
 import pytest
+
 from processbehavior import analysis_dataset as ad
 from processbehavior.analysis_specification import AnalysisSpecification
-import pandas as pd
-import numpy as np
 from processbehavior.datasets import (
+    make_edge_cases,
+    make_sds,
     make_sds1,
     make_sds2,
     make_sds3,
     make_sds4,
     make_sds5,
     make_sds6,
-    make_sds,
-    make_edge_cases
 )
+
 
 def test_sds_comprehensive():
     """
@@ -107,7 +109,7 @@ def test_sds_comprehensive():
     }
     
     result4 = ad.perform_analysis(df=df4, specification=spec4)
-    print(f"IMR analysis completed for SDS4")
+    print("IMR analysis completed for SDS4")
     print(f"Mean: {result4['all']['statistics']['mean']:.2f}")
     print(f"Control limits: [{result4['all']['statistics']['lcl']:.2f}, "
           f"{result4['all']['statistics']['ucl']:.2f}]")
@@ -118,7 +120,7 @@ def test_sds_comprehensive():
     print("=" * 60)
     df5 = make_sds5(L=2, H_per_L=3, T=8, seed=42)
     print(f"Generated {len(df5)} observations")
-    print(f"Nested structure check:")
+    print("Nested structure check:")
     print(df5.groupby('factor 2')['factor 1'].unique())
     
     spec5 = {
@@ -131,8 +133,8 @@ def test_sds_comprehensive():
     }
     
     try:
-        result5 = ad.perform_analysis(df=df5, specification=spec5)
-        print(f"✓ SDS5 analysis completed")
+        ad.perform_analysis(df=df5, specification=spec5)
+        print("✓ SDS5 analysis completed")
     except Exception as e:
         print(f"⚠️  SDS5 analysis issue: {e}")
     
@@ -206,9 +208,8 @@ def test_stratified_imr_vs_vas_xbar():
     
     Both use grouping and time, but for different purposes!
     """
-    from processbehavior.datasets import make_sds1
     from processbehavior import analysis_dataset as ad
-    from processbehavior.analysis_specification import AnalysisSpecification
+    from processbehavior.datasets import make_sds1
 
     # Generate data: 3 lanes, 8 time periods, replicated
     df = make_sds1(K=3, T=8, n_min=2, n_max=4, seed=42)
@@ -314,9 +315,8 @@ def test_stratified_imr_with_sds6():
     This is a strength of the stratified approach - even with messy,
     irregular data, you can still monitor each group separately.
     """
-    from processbehavior.datasets import make_sds6
     from processbehavior import analysis_dataset as ad
-    from processbehavior.analysis_specification import AnalysisSpecification
+    from processbehavior.datasets import make_sds6
 
     # SDS6: Irregular sampling, regime changes
     df = make_sds6(T=80, K=3, p_sampled=0.6, seed=42)
@@ -353,9 +353,8 @@ def test_automatic_stratification_demo():
     
     Shows how one specification creates multiple charts automatically.
     """
-    from processbehavior.datasets import make_sds2
     from processbehavior import analysis_dataset as ad
-    from processbehavior.analysis_specification import AnalysisSpecification
+    from processbehavior.datasets import make_sds2
 
     # Multi-lane filling operation
     df = make_sds2(K=4, T=20, seed=42)
@@ -383,10 +382,10 @@ def test_automatic_stratification_demo():
     }
     
     print("\nSingle specification:")
-    print(f"  analysis_type: 'Imr'")
-    print(f"  rsg_vars: ['factor 1']  ← KEY: Stratify by lane")
-    print(f"  time_var: 'time'")
-    print(f"  response_var: 'y'")
+    print("  analysis_type: 'Imr'")
+    print("  rsg_vars: ['factor 1']  ← KEY: Stratify by lane")
+    print("  time_var: 'time'")
+    print("  response_var: 'y'")
     
     # One function call
     result = ad.perform_analysis(df, spec)
@@ -492,12 +491,15 @@ def test_vas_decision_matrix():
     Tests all combinations of SDS and analysis type to ensure
     correct VAS calculation decisions.
     """
-    from processbehavior.datasets import (
-        make_sds1, make_sds2, make_sds3, 
-        make_sds4, make_sds5, make_sds6
-    )
     from processbehavior import analysis_dataset as ad
-    from processbehavior.analysis_specification import AnalysisSpecification
+    from processbehavior.datasets import (
+        make_sds1,
+        make_sds2,
+        make_sds3,
+        make_sds4,
+        make_sds5,
+        make_sds6,
+    )
 
     # Decision matrix: (SDS, analysis_type) → should_calculate_vas
     decision_matrix = {

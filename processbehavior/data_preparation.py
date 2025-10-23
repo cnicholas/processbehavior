@@ -64,7 +64,7 @@ class DataPreparation:
     def prepare_dataset(
         self,
         df: pd.DataFrame,
-        spec: 'AnalysisSpecification'
+        spec: AnalysisSpecification
     ) -> pd.DataFrame:
         """
         Prepare raw data for analysis.
@@ -141,7 +141,7 @@ class DataPreparation:
     def validate_columns(
         self,
         df: pd.DataFrame,
-        spec: 'AnalysisSpecification'
+        spec: AnalysisSpecification
     ) -> None:
         """
         Validate that required columns exist and have correct types.
@@ -196,13 +196,12 @@ class DataPreparation:
                 )
 
         # Validate time variable
-        if spec.has_time:
-            if spec.time_var not in df_cols:
-                raise ValueError(
-                    f"Time variable '{spec.time_var}' not found in dataset.\n"
-                    f"Available columns: {df_cols}\n"
-                    f"Fix: Check spelling or specify correct time column"
-                )
+        if spec.has_time and spec.time_var not in df_cols:
+            raise ValueError(
+                f"Time variable '{spec.time_var}' not found in dataset.\n"
+                f"Available columns: {df_cols}\n"
+                f"Fix: Check spelling or specify correct time column"
+            )
 
         # Validate response variable
         if spec.response_var not in df_cols:
@@ -225,7 +224,7 @@ class DataPreparation:
     def build_keys(
         self,
         df: pd.DataFrame,
-        spec: 'AnalysisSpecification'
+        spec: AnalysisSpecification
     ) -> pd.DataFrame:
         """
         Add stable key columns for reproducible analysis.
@@ -301,7 +300,7 @@ class DataPreparation:
     def _add_grouping_column(
         self,
         df: pd.DataFrame,
-        spec: 'AnalysisSpecification'
+        spec: AnalysisSpecification
     ) -> pd.DataFrame:
         """
         Add composite grouping column (e.g., 'lane_head').
@@ -338,7 +337,7 @@ class DataPreparation:
     def _filter_small_groups(
         self,
         df: pd.DataFrame,
-        spec: 'AnalysisSpecification'
+        spec: AnalysisSpecification
     ) -> pd.DataFrame:
         """
         Remove groups with n ≤ 1 (can't calculate variance).

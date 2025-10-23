@@ -11,21 +11,21 @@ Tests cover:
 - Integration scenarios
 """
 
-import pytest
-import pandas as pd
 import numpy as np
+import pandas as pd
+import pytest
+
+from processbehavior.analysis_dataset import AnalysisSpecification
 from processbehavior.effects_calculator import (
     EffectsCalculator,
-    calculate_factor_main_effects,
-    calculate_time_main_effects,
-    calculate_main_effect_scores,
-    calculate_interaction_cell_means,
-    calculate_pdc_by_time_sds2,
     calculate_factor_interaction_effects,
-    calculate_factor_interaction_scores
+    calculate_factor_interaction_scores,
+    calculate_factor_main_effects,
+    calculate_interaction_cell_means,
+    calculate_main_effect_scores,
+    calculate_pdc_by_time_sds2,
+    calculate_time_main_effects,
 )
-from processbehavior.analysis_dataset import AnalysisSpecification
-
 
 # ============================================================================
 # Fixtures

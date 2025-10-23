@@ -18,13 +18,15 @@ Usage:
 """
 
 from __future__ import annotations
+
 import logging
-from typing import List, Union, Optional
+from typing import List, Optional, Union
+
 import pandas as pd
 
-from .sds_detector import SamplingDesignDetector
-from .analysis_specification import AnalysisSpecification
 from .analysis_dataset import Analysis
+from .analysis_specification import AnalysisSpecification
+from .sds_detector import SamplingDesignDetector
 
 logger = logging.getLogger(__name__)
 
@@ -112,7 +114,7 @@ class ChartTypeAccessor:
     Attributes are set dynamically based on SDS-specific valid charts.
     """
 
-    def __init__(self, valid_charts: List[str]):
+    def __init__(self, valid_charts: list[str]):
         """
         Initialize accessor with valid chart types for the detected SDS.
 
@@ -186,12 +188,12 @@ class ProcessDataFrame:
 
     def analyze(
         self,
-        response_var: Optional[str] = None,
-        response_vars: Optional[List[str]] = None,
-        time_var: Optional[str] = None,
-        grouping_vars: Optional[List[str]] = None,
-        chart_type: Optional[str] = None,
-        stratify: Union[bool, str, List[str]] = False,
+        response_var: str | None = None,
+        response_vars: list[str] | None = None,
+        time_var: str | None = None,
+        grouping_vars: list[str] | None = None,
+        chart_type: str | None = None,
+        stratify: bool | str | list[str] = False,
         rsg_var_name: str = 'rsg',
         rsg_var_delim: str = '_',
         round_to: int = 3,
@@ -339,7 +341,7 @@ class ProcessDataFrame:
         # Update spec with correct analysis type and stratification info
         spec_dict['analysis_type'] = analysis_type
         spec_dict['stratify'] = stratify_vars
-        final_spec = AnalysisSpecification(analysis_type, spec_dict)
+        AnalysisSpecification(analysis_type, spec_dict)
 
         # Run the analysis
         analysis = Analysis(self.data, spec_dict)
@@ -349,7 +351,7 @@ class ProcessDataFrame:
     def _determine_analysis_type(
         self,
         sds: int,
-        grouping_vars: Optional[List[str]]
+        grouping_vars: list[str] | None
     ) -> str:
         """
         Determine the best analysis type for the detected SDS.
@@ -379,10 +381,10 @@ class ProcessDataFrame:
 
     def _process_stratify_parameter(
         self,
-        stratify: Union[bool, str, List[str]],
-        grouping_vars: Optional[List[str]],
+        stratify: bool | str | list[str],
+        grouping_vars: list[str] | None,
         analysis_type: str
-    ) -> Optional[List[str]]:
+    ) -> list[str] | None:
         """
         Process and validate the stratify parameter.
 
@@ -452,8 +454,8 @@ class ProcessDataFrame:
         sds_info: dict,
         analysis_type: str,
         spec: dict,
-        plan: 'SDSAnalysisPlan',
-        stratify_vars: Optional[List[str]] = None
+        plan: SDSAnalysisPlan,
+        stratify_vars: list[str] | None = None
     ):
         """
         Print user-friendly explanation of what analysis is running and why.
@@ -487,12 +489,12 @@ class ProcessDataFrame:
 
         # Show what's not available (if any)
         if plan.invalid_charts:
-            print(f"\n⚠️  Not available for this SDS:")
+            print("\n⚠️  Not available for this SDS:")
             for invalid in plan.invalid_charts:
                 print(f"   • {invalid}")
 
         # Show data configuration
-        print(f"\n📋 Data Configuration:")
+        print("\n📋 Data Configuration:")
         print(f"   Response: {spec['response_var']}")
         if spec.get('time_var'):
             print(f"   Time: {spec['time_var']}")
@@ -500,11 +502,11 @@ class ProcessDataFrame:
             print(f"   Grouping: {', '.join(spec['rsg_vars'])}")
 
         # Show capabilities
-        print(f"\n✨ Analysis Capabilities:")
+        print("\n✨ Analysis Capabilities:")
         if plan.vas_residuals_supported:
             print(f"   • VAS residuals: {', '.join(plan.residuals_available)} (R2 method: {plan.residual_calculation_method})")
         else:
-            print(f"   • VAS residuals: Not available")
+            print("   • VAS residuals: Not available")
         print(f"   • Main effects: {'Yes' if plan.main_effects_supported else 'No'}")
         print(f"   • Interactions: {'Yes' if plan.interaction_effects_supported else 'No'}")
 
