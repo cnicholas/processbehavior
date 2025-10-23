@@ -796,6 +796,11 @@ class AnalysisResult:
         if self.summary['is_stratified'] and stratify_vars:
             # Stratified analysis: combine all stratified charts into single tab
             self._write_stratified_chart_tab(writer, format_cells, stratify_vars)
+
+            # For stratified IMR/I charts, also create a summary tab for quick comparison
+            chart_type = self._ads.spec.analysis_type
+            if chart_type in ['Imr', 'I']:
+                self._write_stratified_summary_tab(writer, format_cells, stratify_vars)
         else:
             # Standard analysis: each chart gets its own tab
             for chart_name, chart_info in self.charts.items():
@@ -912,6 +917,106 @@ class AnalysisResult:
                         ws = writer.sheets[tab_name]
                         self._apply_formatting(ws)
 
+    def _write_stratified_summary_tab(
+        self,
+        writer: pd.ExcelWriter,
+        format_cells: bool,
+        stratify_vars: list
+    ) -> None:
+        """
+        Create a summary tab for stratified IMR charts.
+
+        Provides a high-level comparison across all strata showing:
+        - Stratum identifier (RSG)
+        - Number of observations per stratum
+        - Mean, LCL, UCL for each stratum
+        - Total signals (beyond_limits != 0)
+        - Signal rate (% of observations with signals)
+
+        This enables quick triage: identify which strata have the most signals,
+        then drill into the detailed chart tab for time-series investigation.
+
+        Parameters
+        ----------
+        writer : pd.ExcelWriter
+            Excel writer object
+        format_cells : bool
+            Whether to apply cell formatting
+        stratify_vars : list
+            Variables used for stratification
+        """
+        # Determine stratification column name
+        if len(stratify_vars) == 1:
+            strat_col = stratify_vars[0]
+        else:
+            strat_col = '_'.join(stratify_vars)
+
+        # Collect data from all stratified charts
+        all_chart_data = []
+
+        for chart_name, chart_info in self.charts.items():
+            # Skip standard charts
+            if chart_name in {'Xbar', 'Sbar', 'R', 'all'}:
+                continue
+
+            chart_data = chart_info.get('data')
+            if chart_data is not None and isinstance(chart_data, pd.DataFrame):
+                all_chart_data.append(chart_data)
+
+        # Combine all chart data
+        if not all_chart_data:
+            return
+
+        combined_data = pd.concat(all_chart_data, ignore_index=True)
+
+        # Group by stratum (rsg column) and calculate summary statistics
+        if 'rsg' not in combined_data.columns:
+            return
+
+        summary_rows = []
+
+        for stratum, group in combined_data.groupby('rsg', sort=False):
+            n_obs = len(group)
+
+            # Get mean, lcl, ucl (should be constant within stratum)
+            mean_val = group['mean'].iloc[0] if 'mean' in group.columns else None
+            lcl_val = group['lcl'].iloc[0] if 'lcl' in group.columns else None
+            ucl_val = group['ucl'].iloc[0] if 'ucl' in group.columns else None
+
+            # Count signals
+            if 'beyond_limits' in group.columns:
+                n_signals = (group['beyond_limits'] != 0).sum()
+                signal_rate = (n_signals / n_obs * 100) if n_obs > 0 else 0
+            else:
+                n_signals = None
+                signal_rate = None
+
+            summary_rows.append({
+                'Stratum': stratum,
+                'Observations': n_obs,
+                'Mean': mean_val,
+                'LCL': lcl_val,
+                'UCL': ucl_val,
+                'Signals': n_signals,
+                'Signal_Rate_%': signal_rate
+            })
+
+        if summary_rows:
+            # Create summary DataFrame
+            summary_df = pd.DataFrame(summary_rows)
+
+            # Sort by signal count (descending) so worst strata appear first
+            if 'Signals' in summary_df.columns:
+                summary_df = summary_df.sort_values('Signals', ascending=False)
+
+            # Write to Excel
+            tab_name = 'Stratified_Summary'
+            summary_df.to_excel(writer, sheet_name=tab_name, index=False)
+
+            if format_cells:
+                ws = writer.sheets[tab_name]
+                self._apply_formatting(ws)
+
     def _write_residuals_tab(self, writer: pd.ExcelWriter, format_cells: bool) -> None:
         """Write residuals tab."""
         if self.residuals is not None:
@@ -930,12 +1035,14 @@ class AnalysisResult:
             if isinstance(effect_values, pd.DataFrame):
                 # For DataFrames, extract all rows
                 for idx, row in effect_values.iterrows():
-                    # Get the value column (could be different names)
-                    value_col = [c for c in effect_values.columns if 'effect' in c.lower() or 'me' in c.lower()]
+                    # Get the value column - look for specific patterns
+                    # Exclude first column (grouping variable) and match effect/ME columns
+                    value_col = [c for c in effect_values.columns[1:]
+                                if 'effect' in c.lower() or c.upper().endswith('_ME') or c.upper() == 'PT_ME']
                     if value_col:
                         val = row[value_col[0]]
                     else:
-                        # Use last column as value
+                        # Use last column as value (first column is grouping variable)
                         val = row.iloc[-1]
 
                     # Get the level/category
@@ -976,12 +1083,27 @@ class AnalysisResult:
 
         for interaction_name, interaction_values in self.interactions.items():
             if isinstance(interaction_values, pd.Series):
-                for idx, val in interaction_values.items():
-                    interactions_data.append({
-                        'Interaction': interaction_name,
-                        'Combination': str(idx),
-                        'Value': val
-                    })
+                # Handle MultiIndex Series (cell-level interactions)
+                if isinstance(interaction_values.index, pd.MultiIndex):
+                    # Extract index level names and values
+                    for idx_tuple, val in interaction_values.items():
+                        # Build a dict with index level values plus the interaction value
+                        row_dict = {'Interaction': interaction_name}
+
+                        # Add each index level as a separate column
+                        for level_name, level_val in zip(interaction_values.index.names, idx_tuple):
+                            row_dict[level_name] = level_val
+
+                        row_dict['Value'] = val
+                        interactions_data.append(row_dict)
+                else:
+                    # Regular index - use as Combination
+                    for idx, val in interaction_values.items():
+                        interactions_data.append({
+                            'Interaction': interaction_name,
+                            'Combination': str(idx),
+                            'Value': val
+                        })
             elif isinstance(interaction_values, pd.DataFrame):
                 # For DataFrames, flatten them
                 for row_idx, row in interaction_values.iterrows():
