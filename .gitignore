@@ -1,21 +1,114 @@
-# venv & Python
-.venv/
+# Python
 __pycache__/
-*.pyc
-*.pyo
-*.pyd
-*.egg-info/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Virtual environments
+venv/
+.venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# Distribution / packaging
 dist/
 build/
+*.egg-info/
 .eggs/
+*.egg
+
+# Testing
 .pytest_cache/
 .coverage
+.coverage.*
 htmlcov/
-.ipynb_checkpoints/
-.DS_Store
+.tox/
+.nox/
+coverage.xml
+*.cover
+.hypothesis/
 
-# Editors
+# IDEs
 .vscode/*
 !.vscode/settings.json
 !.vscode/extensions.json
+!.vscode/tasks.json
+!.vscode/launch.json
 .idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb
+
+# Temporary files
+*.tmp
+*.temp
+*.log
+*.bak
+*.swp
+
+# Analysis output files (examples/demos should not be committed)
+*.xlsx
+*.xls
+*.csv
+!processbehavior/datasets/data/*.csv  # Keep test datasets
+*.pdf
+*.png
+*.jpg
+*.jpeg
+
+# Temporary scripts and demos (work-in-progress)
+analyze_*.py
+demo_*.py
+test_excel_*.py
+verify_*.py
+new_*.py
+
+# Documentation drafts (keep only finalized docs)
+COMMIT_MESSAGE.txt
+*_DRAFT.md
+*_WIP.md
+ANALYSIS_COMPARISON.md
+ANALYSIS_OUTPUT_REVIEW.md
+ANALYSIS_RESULT_IMPLEMENTATION.md
+EXCEL_EXPORT_GUIDE.md
+EXECUTIVE_SUMMARY_FOR_TOM.md
+NEW_API_SUMMARY.md
+PROCESSBEHAVIOR_OVERVIEW.md
+PROCESSBEHAVIOR_OVERVIEW.pdf
+REFACTORING_*.md
+STRATIFIED_SUMMARY_DEMO.md
+code_review_issues.md
+github_issues.md
+QUICK_START_REFACTORING.md
+R2_VALIDATION_REPORT.md
+
+# Keep important documentation
+!README.md
+!CHANGELOG.md
+!CONTRIBUTING.md
+!CODE_OF_CONDUCT.md
+!SECURITY.md
+!pythonic_hadley_persona.md
+!PACKAGING_CHECKLIST.md
+!SAMPLING_DESIGN_STATES_REFERENCE.md
+!PLOTTING_FRAMEWORK_DESIGN.md
+!WESTERN_ELECTRIC_RULES_DESIGN.md
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Ruff
+.ruff_cache/
+
+# OS
+Thumbs.db
