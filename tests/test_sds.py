@@ -1,12 +1,8 @@
 import numpy as np
 import pandas as pd
-import pytest
 
 from processbehavior import analysis_dataset as ad
-from processbehavior.analysis_specification import AnalysisSpecification
 from processbehavior.datasets import (
-    make_edge_cases,
-    make_sds,
     make_sds1,
     make_sds2,
     make_sds3,

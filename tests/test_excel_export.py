@@ -7,17 +7,15 @@ to multi-sheet Excel workbooks.
 
 import os
 import tempfile
-from pathlib import Path
 
 import pandas as pd
 import pytest
 
 # Import analysis components
 from processbehavior import analysis_dataset as ad
-from processbehavior.analysis_specification import AnalysisSpecification
 
 # Import test data generators
-from processbehavior.datasets import make_sds1, make_sds2, make_sds3
+from processbehavior.datasets import make_sds1, make_sds2
 
 
 @pytest.fixture

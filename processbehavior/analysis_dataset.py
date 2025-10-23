@@ -2,12 +2,9 @@
 from __future__ import annotations
 
 import logging
-import math
 
 import numpy as np
 import pandas as pd
-import scipy.special
-from pandas.api.types import is_numeric_dtype
 
 from .analysis_result import AnalysisResult
 from .analysis_specification import AnalysisSpecification
@@ -95,7 +92,8 @@ class Analysis:
 
         if stratify_vars:
             # Stratified analysis: create separate charts for each stratum
-            chart_data = self._calculate_stratified(strategies[self.spec.analysis_type], stratify_vars)
+            strategy = strategies[self.spec.analysis_type]
+            chart_data = self._calculate_stratified(strategy, stratify_vars)
         else:
             # Standard analysis: single combined chart
             chart_data = strategies[self.spec.analysis_type]()
@@ -654,7 +652,10 @@ class Analysis:
             out['mr'] = out[y].diff().abs()
             mR = out['mr'].mean()
             mean_ = out[y].mean()
-            lims = calculate_limits(mean=mean_, sd=0, N=0, mR=mR, limits_type="Imr", round_to=spec.round_to)
+            lims = calculate_limits(
+                mean=mean_, sd=0, N=0, mR=mR,
+                limits_type="Imr", round_to=spec.round_to
+            )
             out['mean'] = mean_
             out['mR']   = mR
             out['lcl']  = lims['lcl']
@@ -865,8 +866,11 @@ def gather_analysis_statistics(
 
 def package_analysis(analysis_output: dict, summary_statistics_output: dict):
     """
-    Function package_analysis combines the results of an analysis with the collected summary statistics from the analysis, i.e., 
-    combines two dictionaries into one with the rational subgroup name as the key.returns a dictionary of statistics (contained in stats_to_package) for each analytic result passed. 
+    Function package_analysis combines the results of an analysis with
+    the collected summary statistics from the analysis, i.e., combines
+    two dictionaries into one with the rational subgroup name as the key.
+    Returns a dictionary of statistics (contained in stats_to_package)
+    for each analytic result passed. 
     
     :param pandas.Dataframe analysis_output: dictionary of dataframes with a key matching the name of the rational subgroup name for grouped individuals analyses, R or Imr
     :param list summary_statistics_output: dictionary of collected statistics for each grouped individuals analysis. key is expected to be the name of the rational subgroup. 
