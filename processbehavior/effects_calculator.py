@@ -262,9 +262,9 @@ def calculate_interaction_cell_means(
     Returns
     -------
     Series
-        Interaction effects per unique cell with MultiIndex
-        Length equals number of unique factor×time combinations
-        Index: MultiIndex with levels [*rsg_vars, time_var]
+        Interaction effects broadcast to all rows
+        Length equals length of input DataFrame
+        Each row gets the mean R3 value for its factor×time cell
 
     Examples
     --------
@@ -274,10 +274,11 @@ def calculate_interaction_cell_means(
     ...     'R3': [0.1, 0.15, -0.1, -0.05]
     ... })
     >>> int_eff = calculate_interaction_cell_means(df, ['lane'], 'pull')
-    >>> int_eff
-    lane  pull
-    A     1       0.125
-    B     2      -0.075
+    >>> int_eff  # Broadcast to all rows
+    0    0.125
+    1    0.125
+    2   -0.075
+    3   -0.075
     Name: R3, dtype: float64
     """
     if 'R3' not in df.columns:
@@ -285,8 +286,8 @@ def calculate_interaction_cell_means(
 
     keys = rsg_vars + [time_var]
 
-    # Return unique cell means with MultiIndex, not duplicated values
-    return df.groupby(keys, sort=False)['R3'].mean()
+    # Use transform to broadcast cell means back to all rows
+    return df.groupby(keys, sort=False)['R3'].transform('mean')
 
 
 def calculate_pdc_by_time_sds2(
