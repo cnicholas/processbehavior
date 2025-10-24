@@ -1109,14 +1109,21 @@ class AnalysisDataSet:
         - k_df   : one row per k_vars combination
         - t_df   : one row per time point
         """
+        df = self.__ensure_keys(self.analysis_dataset)
+
+        # Build each frame using extracted helper methods
+        self.obs_df = self._build_obs_df(df)
+        self.k_df = self._build_k_df(df)
+        self.t_df = self._build_t_df(df)
+        self.cell_df = self._build_cell_df(df)
+
+    def _build_obs_df(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Build observation-level frame (one row per observation)."""
         spec = self.spec
         y = spec.response_var
         k_vars = list(spec.rsg_vars or [])
         t = spec.time_var
 
-        df = self.__ensure_keys(self.analysis_dataset)
-
-        # ---------- obs_df (authoritative row-grain) ----------
         base_cols = [
             c for c in [*k_vars, t, spec.rsg_var_name, 'obs_id', 'n']
             if c in df.columns
@@ -1134,13 +1141,17 @@ class AnalysisDataSet:
             c for c in [y, *base_cols, *means, *residuals, *rcrs, *centered, *inter_row]
             if c in df.columns
         ]
-        self.obs_df = (df[obs_keep]
-                    .sort_values('obs_id', kind='stable')
-                    .reset_index(drop=True))
+        return (df[obs_keep]
+                .sort_values('obs_id', kind='stable')
+                .reset_index(drop=True))
 
-        # ---------- k_df (factor/main-effect grain) ----------
+    def _build_k_df(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Build factor-level frame (one row per k_vars combination)."""
+        spec = self.spec
+        k_vars = list(spec.rsg_vars or [])
+
         if spec.has_grouping and k_vars:
-            # counts by factor combo (no rename needed)
+            # counts by factor combo
             k_counts = (
                 df.groupby(k_vars, sort=False)
                 .size()
@@ -1149,12 +1160,12 @@ class AnalysisDataSet:
             )
             k_df = k_counts
 
-            # add factor-level means if you want them visible at k grain
+            # add factor-level means if present
             if 'Ybar_k' in df.columns:
                 k_first = self.__safe_first(df, k_vars, 'Ybar_k')
                 k_df = k_df.merge(k_first, on=k_vars, how='left', validate='one_to_one')
 
-            # join per-factor Main_Effect tables you stored in self.effects[factor]
+            # join per-factor Main_Effect tables
             for factor in k_vars:
                 me = self.effects.get(factor)
                 required_cols = {factor, 'Main_Effect'}
@@ -1171,14 +1182,18 @@ class AnalysisDataSet:
             if len(k_vars) == 1 and f"{k_vars[0]}_Main_Effect" in k_df.columns:
                 k_df['Main_Effect_k'] = k_df[f"{k_vars[0]}_Main_Effect"]
 
-            self.k_df = k_df.sort_values(k_vars, kind='stable').reset_index(drop=True)
+            return k_df.sort_values(k_vars, kind='stable').reset_index(drop=True)
         else:
             cols = k_vars + ['n_k']
             if 'Ybar_k' in df.columns:
                 cols += ['Ybar_k']
-            self.k_df = pd.DataFrame(columns=cols)
+            return pd.DataFrame(columns=cols)
 
-        # ---------- t_df (time/main-effect grain) ----------
+    def _build_t_df(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Build time-level frame (one row per time point)."""
+        spec = self.spec
+        t = spec.time_var
+
         if spec.has_time and t:
             t_counts = (
                 df.groupby([t], sort=False)
@@ -1192,7 +1207,7 @@ class AnalysisDataSet:
                 t_first = self.__safe_first(df, [t], 'Ybar_t')
                 t_df = t_df.merge(t_first, on=[t], how='left', validate='one_to_one')
 
-            # time main effect: you store as self.effects['pt_me'] with column PT_ME
+            # time main effect
             pt_me = self.effects.get('pt_me')
             if isinstance(pt_me, pd.DataFrame):
                 # normalize shape: either index=t or column=t
@@ -1201,15 +1216,20 @@ class AnalysisDataSet:
                 if {'PT_ME'} <= set(pt_me.columns) and t in pt_me.columns:
                     t_df = t_df.merge(pt_me[[t, 'PT_ME']], on=t, how='left', validate='many_to_one')
 
-            self.t_df = t_df.sort_values([t], kind='stable').reset_index(drop=True)
+            return t_df.sort_values([t], kind='stable').reset_index(drop=True)
         else:
             cols = ([t] if t else []) + ['n_t']
             if 'Ybar_t' in df.columns:
                 cols += ['Ybar_t']
             cols += ['PT_ME']
-            self.t_df = pd.DataFrame(columns=cols)
+            return pd.DataFrame(columns=cols)
 
-        # ---------- cell_df (cell-grain: k_vars × t) ----------
+    def _build_cell_df(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Build cell-level frame (one row per k_vars × time combination)."""
+        spec = self.spec
+        k_vars = list(spec.rsg_vars or [])
+        t = spec.time_var
+
         if spec.has_grouping and spec.has_time and k_vars and t:
             keys = k_vars + [t]
 
@@ -1246,12 +1266,12 @@ class AnalysisDataSet:
                     c_first = self.__safe_first(df, keys, col)
                     cdf = cdf.merge(c_first, on=keys, how='left', validate='one_to_one')
 
-            self.cell_df = cdf.sort_values(keys, kind='stable').reset_index(drop=True)
+            return cdf.sort_values(keys, kind='stable').reset_index(drop=True)
         else:
             # empty shell with predictable columns
             cols = k_vars + ([t] if t else [])
             cols += ['n_cell', 'Ybar_kt', 'Ybar_k', 'Ybar_t', 'interaction_cell', 'Rbar_kt']
-            self.cell_df = pd.DataFrame(columns=cols)
+            return pd.DataFrame(columns=cols)
 
 
     # --- helpers (put inside the class) ------------------------------------------
