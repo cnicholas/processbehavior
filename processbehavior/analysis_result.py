@@ -30,9 +30,12 @@ Usage:
 from __future__ import annotations
 
 import logging
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import pandas as pd
+
+if TYPE_CHECKING:
+    from .analysis_dataset import AnalysisDataSet
 
 logger = logging.getLogger(__name__)
 

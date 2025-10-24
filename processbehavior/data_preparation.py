@@ -16,10 +16,14 @@ Follows the Pythonic Hadley philosophy:
 from __future__ import annotations
 
 import logging
+from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
 from pandas.api.types import is_numeric_dtype
+
+if TYPE_CHECKING:
+    from .analysis_dataset import AnalysisSpecification
 
 logger = logging.getLogger(__name__)
 

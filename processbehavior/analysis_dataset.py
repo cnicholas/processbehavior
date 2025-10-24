@@ -870,10 +870,14 @@ def package_analysis(analysis_output: dict, summary_statistics_output: dict):
     the collected summary statistics from the analysis, i.e., combines
     two dictionaries into one with the rational subgroup name as the key.
     Returns a dictionary of statistics (contained in stats_to_package)
-    for each analytic result passed. 
-    
-    :param pandas.Dataframe analysis_output: dictionary of dataframes with a key matching the name of the rational subgroup name for grouped individuals analyses, R or Imr
-    :param list summary_statistics_output: dictionary of collected statistics for each grouped individuals analysis. key is expected to be the name of the rational subgroup. 
+    for each analytic result passed.
+
+    :param pandas.Dataframe analysis_output: dictionary of dataframes with
+        a key matching the name of the rational subgroup name for grouped
+        individuals analyses, R or Imr
+    :param list summary_statistics_output: dictionary of collected
+        statistics for each grouped individuals analysis. key is expected
+        to be the name of the rational subgroup. 
     
     :return: dictionary of dataframes with grouping_var values as keys
     
@@ -891,10 +895,17 @@ def package_analysis(analysis_output: dict, summary_statistics_output: dict):
 
     if is_valid:
         for key in analysis_output:
-            out[key] = {'data': analysis_output[key], 'statistics': summary_statistics_output[key]}
+            out[key] = {
+                'data': analysis_output[key],
+                'statistics': summary_statistics_output[key]
+            }
     else:
-      
-        raise ValueError(f'Call: package_analysis: The rational subgroups do not match for statistics being collected {stats_keys.to_list()}, data: {output_keys.to_list()}')
+        msg = (
+            f'Call: package_analysis: The rational subgroups do not match '
+            f'for statistics being collected {stats_keys.to_list()}, '
+            f'data: {output_keys.to_list()}'
+        )
+        raise ValueError(msg)
     
     return (out)
 
@@ -1070,7 +1081,8 @@ class AnalysisDataSet:
         df = self.analysis_dataset
 
         # Calculate centered residual means
-        df["Rbar_kt"] = df.groupby([self.spec.rsg_var_name, self.spec.time_var])["R1"].transform("mean")
+        rsg_time_groups = df.groupby([self.spec.rsg_var_name, self.spec.time_var])
+        df["Rbar_kt"] = rsg_time_groups["R1"].transform("mean")
         df['Rbar_k'] = df.groupby([self.spec.rsg_var_name])["R1"].transform('mean')
         df['Rbar_t'] = df.groupby([self.spec.time_var])["R1"].transform("mean")
 
@@ -1078,9 +1090,12 @@ class AnalysisDataSet:
         # These verify that Y can be reconstructed from components
         df['RCR1'] = df['Ybar'] + df['R1']  # Y = Ybar + R1
         df['RCR2'] = df['Ybar_kt'] + df['R2']  # Y = Ybar_kt + R2
-        df['RCR3'] = (df['Ybar_k'] + df['Ybar_t'] - df['Ybar']) + df['R3']  # Y = (Ybar_k + Ybar_t - Ybar) + R3
-        df['RCR4'] = (df['Ybar'] + df['Ybar_kt'] - df['Ybar_t']) + df['R4']  # Y = (Ybar + Ybar_kt - Ybar_t) + R4
-        df['RCR5'] = (df['Ybar'] + df['Ybar_kt'] - df['Ybar_k']) + df['R5']  # Y = (Ybar + Ybar_kt - Ybar_k) + R5
+        # Y = (Ybar_k + Ybar_t - Ybar) + R3
+        df['RCR3'] = (df['Ybar_k'] + df['Ybar_t'] - df['Ybar']) + df['R3']
+        # Y = (Ybar + Ybar_kt - Ybar_t) + R4
+        df['RCR4'] = (df['Ybar'] + df['Ybar_kt'] - df['Ybar_t']) + df['R4']
+        # Y = (Ybar + Ybar_kt - Ybar_k) + R5
+        df['RCR5'] = (df['Ybar'] + df['Ybar_kt'] - df['Ybar_k']) + df['R5']
 
     # =========================================================================
     # Frame Building (kept as-is for backward compatibility)
@@ -1102,14 +1117,23 @@ class AnalysisDataSet:
         df = self.__ensure_keys(self.analysis_dataset)
 
         # ---------- obs_df (authoritative row-grain) ----------
-        base_cols = [c for c in [*k_vars, t, spec.rsg_var_name, 'obs_id', 'n'] if c in df.columns]
-        means     = [c for c in ['Ybar','Ybar_k','Ybar_t','Ybar_kt'] if c in df.columns]
+        base_cols = [
+            c for c in [*k_vars, t, spec.rsg_var_name, 'obs_id', 'n']
+            if c in df.columns
+        ]
+        means = [c for c in ['Ybar','Ybar_k','Ybar_t','Ybar_kt'] if c in df.columns]
         residuals = [c for c in ['R1','R2','R3','R4','R5'] if c in df.columns]
-        rcrs      = [c for c in ['RCR1','RCR2','RCR3','RCR4','RCR5'] if c in df.columns]
-        centered  = [c for c in ['Rbar_k','Rbar_t','Rbar_kt'] if c in df.columns]
-        inter_row = [c for c in ['pdc_by_pt','interaction_cell','factor_interaction_effects'] if c in df.columns]
+        rcrs = [c for c in ['RCR1','RCR2','RCR3','RCR4','RCR5'] if c in df.columns]
+        centered = [c for c in ['Rbar_k','Rbar_t','Rbar_kt'] if c in df.columns]
+        inter_row = [
+            c for c in ['pdc_by_pt','interaction_cell','factor_interaction_effects']
+            if c in df.columns
+        ]
 
-        obs_keep = [c for c in [y, *base_cols, *means, *residuals, *rcrs, *centered, *inter_row] if c in df.columns]
+        obs_keep = [
+            c for c in [y, *base_cols, *means, *residuals, *rcrs, *centered, *inter_row]
+            if c in df.columns
+        ]
         self.obs_df = (df[obs_keep]
                     .sort_values('obs_id', kind='stable')
                     .reset_index(drop=True))
@@ -1133,9 +1157,13 @@ class AnalysisDataSet:
             # join per-factor Main_Effect tables you stored in self.effects[factor]
             for factor in k_vars:
                 me = self.effects.get(factor)
-                if isinstance(me, pd.DataFrame) and {factor, 'Main_Effect'} <= set(me.columns):
+                required_cols = {factor, 'Main_Effect'}
+                if isinstance(me, pd.DataFrame) and required_cols <= set(me.columns):
+                    me_renamed = me[[factor, 'Main_Effect']].rename(
+                        columns={'Main_Effect': f'{factor}_Main_Effect'}
+                    )
                     k_df = k_df.merge(
-                        me[[factor, 'Main_Effect']].rename(columns={'Main_Effect': f'{factor}_Main_Effect'}),
+                        me_renamed,
                         on=factor, how='left', validate='many_to_one'
                     )
 
@@ -1145,7 +1173,10 @@ class AnalysisDataSet:
 
             self.k_df = k_df.sort_values(k_vars, kind='stable').reset_index(drop=True)
         else:
-            self.k_df = pd.DataFrame(columns=(k_vars + ['n_k'] + (['Ybar_k'] if 'Ybar_k' in df.columns else [])))
+            cols = k_vars + ['n_k']
+            if 'Ybar_k' in df.columns:
+                cols += ['Ybar_k']
+            self.k_df = pd.DataFrame(columns=cols)
 
         # ---------- t_df (time/main-effect grain) ----------
         if spec.has_time and t:
@@ -1172,7 +1203,11 @@ class AnalysisDataSet:
 
             self.t_df = t_df.sort_values([t], kind='stable').reset_index(drop=True)
         else:
-            self.t_df = pd.DataFrame(columns=([t] if t else []) + ['n_t'] + (['Ybar_t'] if 'Ybar_t' in df.columns else []) + ['PT_ME'])
+            cols = ([t] if t else []) + ['n_t']
+            if 'Ybar_t' in df.columns:
+                cols += ['Ybar_t']
+            cols += ['PT_ME']
+            self.t_df = pd.DataFrame(columns=cols)
 
         # ---------- cell_df (cell-grain: k_vars × t) ----------
         if spec.has_grouping and spec.has_time and k_vars and t:
@@ -1196,8 +1231,14 @@ class AnalysisDataSet:
             if 'interaction_cell' in df.columns:
                 ic = self.__safe_first(df, keys, 'interaction_cell')
                 cdf = cdf.merge(ic, on=keys, how='left', validate='one_to_one')
-            elif all(c in cdf.columns for c in ['Ybar_kt', 'Ybar_k', 'Ybar_t']) and 'Ybar' in self.statistics:
-                cdf['interaction_cell'] = cdf['Ybar_kt'] - cdf['Ybar_k'] - cdf['Ybar_t'] + float(self.statistics['Ybar'])
+            else:
+                required_cols = ['Ybar_kt', 'Ybar_k', 'Ybar_t']
+                has_cols = all(c in cdf.columns for c in required_cols)
+                if has_cols and 'Ybar' in self.statistics:
+                    ybar = float(self.statistics['Ybar'])
+                    cdf['interaction_cell'] = (
+                        cdf['Ybar_kt'] - cdf['Ybar_k'] - cdf['Ybar_t'] + ybar
+                    )
 
             # centered residual cell means if present
             for col in ['Rbar_kt']:
@@ -1208,7 +1249,9 @@ class AnalysisDataSet:
             self.cell_df = cdf.sort_values(keys, kind='stable').reset_index(drop=True)
         else:
             # empty shell with predictable columns
-            self.cell_df = pd.DataFrame(columns=(k_vars + ([t] if t else []) + ['n_cell','Ybar_kt','Ybar_k','Ybar_t','interaction_cell','Rbar_kt']))
+            cols = k_vars + ([t] if t else [])
+            cols += ['n_cell', 'Ybar_kt', 'Ybar_k', 'Ybar_t', 'interaction_cell', 'Rbar_kt']
+            self.cell_df = pd.DataFrame(columns=cols)
 
 
     # --- helpers (put inside the class) ------------------------------------------
