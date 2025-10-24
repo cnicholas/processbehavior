@@ -1,10 +1,8 @@
-from __future__ import annotations
-
-import pandas as pd
-
 """
 Data generation and loading utilities for processbehavior package.
 """
+
+from __future__ import annotations
 
 from .synthetic import (
     compare_sds_characteristics,

@@ -116,8 +116,14 @@ class AnalysisResult:
                 self._residuals = self.dataset[available_cols].copy()
 
         # Extract effects and interactions
-        self._effects = analysis_dataset_obj.effects if analysis_dataset_obj.effects else None
-        self._interactions = analysis_dataset_obj.interactions if analysis_dataset_obj.interactions else None
+        self._effects = (
+            analysis_dataset_obj.effects if analysis_dataset_obj.effects else None
+        )
+        self._interactions = (
+            analysis_dataset_obj.interactions
+            if analysis_dataset_obj.interactions
+            else None
+        )
 
         # Build comprehensive summary
         self._summary = self._build_summary()
@@ -1030,16 +1036,17 @@ class AnalysisResult:
         for effect_name, effect_values in self.effects.items():
             if isinstance(effect_values, pd.DataFrame):
                 # For DataFrames, extract all rows
-                for idx, row in effect_values.iterrows():
+                for _idx, row in effect_values.iterrows():
                     # Get the value column - look for specific patterns
                     # Exclude first column (grouping variable) and match effect/ME columns
-                    value_col = [c for c in effect_values.columns[1:]
-                                if 'effect' in c.lower() or c.upper().endswith('_ME') or c.upper() == 'PT_ME']
-                    if value_col:
-                        val = row[value_col[0]]
-                    else:
-                        # Use last column as value (first column is grouping variable)
-                        val = row.iloc[-1]
+                    value_col = [
+                        c for c in effect_values.columns[1:]
+                        if 'effect' in c.lower()
+                        or c.upper().endswith('_ME')
+                        or c.upper() == 'PT_ME'
+                    ]
+                    # Use first match or last column as value
+                    val = row[value_col[0]] if value_col else row.iloc[-1]
 
                     # Get the level/category
                     level_col = effect_values.columns[0]
@@ -1152,7 +1159,7 @@ class AnalysisResult:
                 try:
                     if cell.value:
                         max_length = max(max_length, len(str(cell.value)))
-                except:
+                except Exception:  # noqa: S110
                     pass
 
             adjusted_width = min(max_length + 2, 50)  # Cap at 50

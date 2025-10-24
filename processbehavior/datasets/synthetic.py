@@ -423,7 +423,7 @@ def make_sds2(
 # SDS 3: Partial Replication - MOST COMMON IN PRACTICE!
 # ============================================================================
 
-def make_sds3(
+def make_sds3(  # noqa: C901
     K: int = 3,
     T: int = 8,
     p_replicated: float = 0.5,
