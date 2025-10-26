@@ -91,9 +91,8 @@ class Analysis:
         stratify_vars = self.spec.spec.get('stratify')
 
         if stratify_vars:
-            # Stratified analysis: create separate charts for each stratum
-            strategy = strategies[self.spec.analysis_type]
-            chart_data = self._calculate_stratified(strategy, stratify_vars)
+            # Smart stratification logic
+            chart_data = self._calculate_smart_stratified(strategies, stratify_vars)
         else:
             # Standard analysis: single combined chart
             chart_data = strategies[self.spec.analysis_type]()
@@ -172,6 +171,61 @@ class Analysis:
                 self.ads.analysis_dataset = original_dataset
 
         logger.info(f"Stratified analysis complete: {len(all_charts)} charts created")
+        return all_charts
+
+    def _calculate_smart_stratified(self, strategies: dict, stratify_vars: list) -> dict:
+        """
+        Smart stratification: generates appropriate charts based on analysis type.
+
+        For Xbar/S/R analyses with stratification:
+        - Generates combined (unstratified) Xbar/S/R charts for overall view
+        - Generates stratified IMR charts for drill-down capability
+        - Does NOT generate stratified Xbar/S/R (low value)
+
+        For IMR analyses with stratification:
+        - Generates stratified IMR charts as normal
+
+        Args:
+            strategies: Dict mapping analysis types to calculation methods
+            stratify_vars: List of variables to stratify by
+
+        Returns:
+            dict: Combined chart data with smart stratification applied
+        """
+        logger.info(f"Smart stratification requested by: {stratify_vars}")
+
+        # Grouped analyses that benefit from combined + stratified IMR approach
+        GROUPED_ANALYSES = ['Xbar', 'S', 'R']
+
+        all_charts = {}
+
+        if self.analysis_type in GROUPED_ANALYSES:
+            # Generate combined Xbar/S/R charts (overall process view)
+            logger.info(
+                f"Generating combined {self.analysis_type} charts for overall view "
+                f"(stratifying {self.analysis_type} provides minimal value)"
+            )
+            combined_charts = strategies[self.analysis_type]()
+            all_charts.update(combined_charts)
+
+            # Generate stratified IMR charts for drill-down
+            logger.info("Generating stratified IMR charts for drill-down by subgroup")
+            imr_strategy = strategies['Imr']
+            stratified_imr = self._calculate_stratified(imr_strategy, stratify_vars)
+            all_charts.update(stratified_imr)
+
+            logger.info(
+                f"Smart stratification complete: "
+                f"{len(combined_charts)} combined {self.analysis_type} charts + "
+                f"{len(stratified_imr)} stratified IMR charts"
+            )
+
+        else:
+            # For IMR and other analyses, use standard stratification
+            logger.info(f"Generating stratified {self.analysis_type} charts")
+            strategy = strategies[self.analysis_type]
+            all_charts = self._calculate_stratified(strategy, stratify_vars)
+
         return all_charts
 
     # =========================================================================
