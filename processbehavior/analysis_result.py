@@ -1133,6 +1133,133 @@ class AnalysisResult:
             ws = writer.sheets['Full_Dataset']
             self._apply_formatting(ws)
 
+    def detect_signals(
+        self,
+        chart: str | None = None,
+        rules: str | list[str] | None = None,
+        config: Any | None = None,
+        **kwargs
+    ):
+        """
+        Detect Western Electric rule violations in control charts.
+
+        This method applies configurable pattern detection rules to identify
+        non-random patterns in control chart data.
+
+        Parameters
+        ----------
+        chart : str, optional
+            Specific chart to analyze. If None, analyzes all charts.
+        rules : str, list, or RuleSet, optional
+            Rules to apply:
+            - 'standard': Rules 1-4 (default)
+            - 'extended': Rules 1-8
+            - 'all': All available rules
+            - List of rule names: ['rule_1', 'rule_2', ...]
+            - RuleSet: Fluent API configuration
+        config : SignalConfig, optional
+            Advanced configuration object
+        **kwargs
+            Additional parameters passed to SignalConfig
+
+        Returns
+        -------
+        SignalResult or dict of SignalResult
+            If chart specified: single SignalResult
+            If no chart: dict mapping chart names to SignalResults
+
+        Examples
+        --------
+        Simple usage (standard rules):
+
+        >>> signals = result.detect_signals()
+        >>> print(signals.summary)
+
+        Specific chart and rules:
+
+        >>> signals = result.detect_signals(
+        ...     chart='Xbar',
+        ...     rules=['rule_1', 'rule_2', 'rule_5']
+        ... )
+
+        Using fluent API:
+
+        >>> from processbehavior.signals import RuleSet
+        >>> signals = result.detect_signals(
+        ...     rules=RuleSet()
+        ...         .beyond_limits()
+        ...         .zone_a(consecutive=2, window=3)
+        ...         .trend(length=6)
+        ... )
+
+        Full configuration:
+
+        >>> from processbehavior.signals import SignalConfig
+        >>> config = SignalConfig(
+        ...     enabled_rules=['rule_1', 'rule_2'],
+        ...     min_observations=30,
+        ...     ignore_first_n=5
+        ... )
+        >>> signals = result.detect_signals(config=config)
+
+        Access violations:
+
+        >>> signals.by_rule['rule_2']  # Rule 2 violations
+        >>> signals.flagged_observations  # Set of obs_ids
+        >>> signals.to_excel('violations.xlsx')
+        """
+        from .signals import RuleSet, SignalConfig, SignalDetector
+
+        # Build configuration
+        if config is None:
+            config = SignalConfig()
+
+            # Handle rules parameter
+            if rules is not None:
+                if isinstance(rules, RuleSet):
+                    config.enabled_rules = rules.get_rules()
+                elif isinstance(rules, str):
+                    config.enabled_rules = rules
+                elif isinstance(rules, list):
+                    config.enabled_rules = rules
+
+            # Apply kwargs
+            for key, value in kwargs.items():
+                if hasattr(config, key):
+                    setattr(config, key, value)
+
+        # Initialize detector
+        detector = SignalDetector()
+
+        # Detect on specific chart or all charts
+        if chart:
+            if chart not in self.charts:
+                raise ValueError(
+                    f"Chart '{chart}' not found.\n"
+                    f"Available: {self.all_charts}"
+                )
+
+            chart_info = self.charts[chart]
+            return detector.detect(
+                data=chart_info['data'],
+                stats=chart_info['statistics'],
+                config=config,
+                chart_name=chart
+            )
+
+        else:
+            # Detect on all charts
+            results = {}
+            for chart_name, chart_info in self.charts.items():
+                results[chart_name] = detector.detect(
+                    data=chart_info['data'],
+                    stats=chart_info['statistics'],
+                    config=config,
+                    chart_name=chart_name
+                )
+
+            return results
+
     def _apply_formatting(self, worksheet) -> None:
         """
         Apply standard formatting to worksheet.
