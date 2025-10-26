@@ -1291,3 +1291,80 @@ class AnalysisResult:
 
             adjusted_width = min(max_length + 2, 50)  # Cap at 50
             worksheet.column_dimensions[column_letter].width = adjusted_width
+
+    def plot(self, **kwargs):
+        """
+        Create interactive control chart visualization.
+
+        This is the main plotting method. It automatically determines
+        the best visualization for your data and chart type.
+
+        Parameters
+        ----------
+        chart : str, optional
+            Specific chart to plot ('Xbar', 'Sbar', 'Imr', etc.)
+            If None, plots all available charts
+        facet : bool, default False
+            Whether to create faceted plot for stratified data
+        facet_by : str, optional
+            Variable to facet by (overrides auto-detection)
+        ncols : int, default 2
+            Number of columns in faceted layout
+        highlight_signals : bool, default True
+            Whether to highlight points beyond control limits
+        show_limits : bool, default True
+            Whether to show control limit lines
+        show_rules : bool, default False
+            Whether to show additional run rules
+        template : str, default 'processbehavior'
+            Visual theme ('processbehavior', 'minimal', 'dark')
+        width : int, default 1000
+            Figure width in pixels
+        height : int, optional
+            Figure height in pixels (auto-calculated if None)
+        title : str, optional
+            Custom title for the figure
+
+        Returns
+        -------
+        ControlChartFigure
+            Interactive figure object with .show(), .save_html(), .save_image()
+
+        Examples
+        --------
+        Simple plotting:
+
+        >>> result = analyze(df, 'value', chart_type='xbar')
+        >>> fig = result.plot()
+        >>> fig.show()
+
+        Specific chart:
+
+        >>> fig = result.plot(chart='Xbar')
+
+        Faceted by operator:
+
+        >>> fig = result.plot(facet_by='Operator', ncols=3)
+
+        Custom styling:
+
+        >>> fig = result.plot(
+        ...     template='dark',
+        ...     highlight_signals=True,
+        ...     width=1200
+        ... )
+
+        Save as HTML:
+
+        >>> fig = result.plot()
+        >>> fig.save_html('report.html')
+
+        Save as image (requires kaleido):
+
+        >>> fig = result.plot()
+        >>> fig.save_image('chart.png', width=1200, height=800)
+        """
+        from .plotting import Plotter
+
+        plotter = Plotter(self)
+        return plotter.plot(**kwargs)
