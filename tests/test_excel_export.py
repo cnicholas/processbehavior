@@ -170,12 +170,13 @@ def test_excel_export_minimal(temp_excel_file):
         include_interactions=False
     )
 
-    # Verify only chart tabs exist
+    # Verify only chart tabs exist (plus Visual_Charts)
     excel_file = pd.ExcelFile(temp_excel_file, engine='openpyxl')
     sheet_names = excel_file.sheet_names
 
     assert 'Summary' not in sheet_names
-    assert all('Chart_' in name for name in sheet_names)
+    # All sheets should be either Chart_ sheets or Visual_Charts
+    assert all('Chart_' in name or name == 'Visual_Charts' for name in sheet_names)
 
 
 def test_excel_export_no_formatting(temp_excel_file):

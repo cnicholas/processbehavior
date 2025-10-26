@@ -638,7 +638,9 @@ class AnalysisResult:
         include_effects: bool = True,
         include_interactions: bool = True,
         include_full_dataset: bool = False,
-        format_cells: bool = True
+        format_cells: bool = True,
+        include_chart_images: bool = True,
+        export_html: bool = True
     ) -> None:
         """
         Export analysis results to Excel with each component on a separate tab.
@@ -669,6 +671,10 @@ class AnalysisResult:
             Include complete analysis dataset (can be large)
         format_cells : bool, default=True
             Apply formatting (bold headers, auto-width, freeze panes)
+        include_chart_images : bool, default=True
+            Include visual charts tab with embedded chart images (requires plotly)
+        export_html : bool, default=True
+            Export companion interactive HTML files alongside Excel file
 
         Returns
         -------
@@ -693,6 +699,12 @@ class AnalysisResult:
         ...                 include_effects=False,
         ...                 include_interactions=False)
 
+        Export with interactive HTML charts (for presentations):
+
+        >>> result.to_excel('presentation_ready.xlsx',
+        ...                 include_chart_images=True,
+        ...                 export_html=True)
+
         Notes
         -----
         - Tab names are limited to 31 characters (Excel limitation)
@@ -700,6 +712,9 @@ class AnalysisResult:
         - Stratified charts use format 'IMR_{group_name}'
         - Summary tab includes SDS info and signal counts
         - Formatting includes frozen headers and auto-sized columns
+        - Visual_Charts tab includes embedded images (requires Chrome for kaleido)
+        - Interactive HTML files are exported alongside Excel for full interactivity
+        - HTML charts support zoom, pan, and hover tooltips
         """
         try:
             import openpyxl  # noqa: F401
@@ -737,6 +752,14 @@ class AnalysisResult:
             # 6. Full Dataset Tab (optional - can be large)
             if include_full_dataset:
                 self._write_full_dataset_tab(writer, format_cells)
+
+            # 7. Visual Charts Tab (with embedded images)
+            if include_chart_images:
+                self._write_visual_charts_tab(writer, filepath)
+
+        # 8. Export companion interactive HTML files
+        if export_html:
+            self._export_html_charts(filepath)
 
         logger.info(f"Analysis results exported to: {filepath}")
 
@@ -1132,6 +1155,161 @@ class AnalysisResult:
         if format_cells:
             ws = writer.sheets['Full_Dataset']
             self._apply_formatting(ws)
+
+    def _write_visual_charts_tab(self, writer: pd.ExcelWriter, filepath: str) -> None:
+        """
+        Write visual charts tab with embedded chart images.
+
+        Creates a 'Visual_Charts' worksheet with:
+        - Embedded PNG images of control charts
+        - Hyperlinks to interactive HTML files
+        - Organized layout for presentation
+        """
+        try:
+            from pathlib import Path
+            from openpyxl.drawing.image import Image
+            from openpyxl.styles import Font
+            from io import BytesIO
+
+            # Get workbook to add images
+            wb = writer.book
+            ws = wb.create_sheet('Visual_Charts')
+
+            # Try to import plotting dependencies
+            try:
+                from .plotting import Plotter
+            except ImportError:
+                logger.warning(
+                    "Plotly not available. Skipping chart images. "
+                    "Install with: pip install plotly"
+                )
+                ws['A1'] = "Chart visualizations require plotly"
+                ws['A2'] = "Install with: pip install plotly"
+                return
+
+            # Create plotter
+            plotter = Plotter(self)
+
+            # Get output directory
+            output_path = Path(filepath)
+            output_dir = output_path.parent
+            base_name = output_path.stem
+
+            # Track row position for layout
+            current_row = 1
+
+            # Export combined charts first (Xbar, Sbar, etc.)
+            combined_charts = [name for name in self.charts.keys()
+                             if name in ['Xbar', 'Sbar', 'Imr', 'R', 'all']]
+
+            if combined_charts:
+                ws[f'A{current_row}'] = 'COMBINED CONTROL CHARTS'
+                ws[f'A{current_row}'].font = Font(bold=True, size=14)
+                current_row += 2
+
+                for chart_name in combined_charts:
+                    try:
+                        # Generate chart
+                        fig = plotter.plot(
+                            chart=chart_name,
+                            width=1200,
+                            height=500,
+                            template='processbehavior'
+                        )
+
+                        # Save as image
+                        img_buffer = BytesIO()
+                        fig.figure.write_image(img_buffer, format='png', width=1200, height=500)
+                        img_buffer.seek(0)
+
+                        # Add title
+                        ws[f'A{current_row}'] = f"{chart_name} Chart"
+                        ws[f'A{current_row}'].font = Font(bold=True)
+                        current_row += 1
+
+                        # Add image
+                        img = Image(img_buffer)
+                        img.width = 800  # Scale to fit Excel
+                        img.height = 333
+                        ws.add_image(img, f'A{current_row}')
+                        current_row += 18  # Space for image + margin
+
+                        logger.info(f"Added {chart_name} chart image to Excel")
+
+                    except Exception as e:
+                        logger.warning(f"Could not add {chart_name} chart image: {e}")
+                        ws[f'A{current_row}'] = f"Error generating {chart_name} chart"
+                        current_row += 2
+
+            # Add note about interactive HTML files
+            current_row += 2
+            ws[f'A{current_row}'] = 'INTERACTIVE CHARTS'
+            ws[f'A{current_row}'].font = Font(bold=True, size=14)
+            current_row += 1
+            ws[f'A{current_row}'] = 'Interactive HTML files have been exported alongside this Excel file.'
+            current_row += 1
+            ws[f'A{current_row}'] = 'Open the .html files in a web browser for full interactivity (zoom, pan, hover tooltips).'
+
+        except ImportError as e:
+            logger.warning(f"Could not create visual charts tab: {e}")
+            logger.warning("Install kaleido for image export: pip install kaleido")
+
+    def _export_html_charts(self, filepath: str) -> None:
+        """
+        Export interactive HTML charts alongside the Excel file.
+
+        Creates HTML files in the same directory as the Excel file:
+        - {basename}_combined.html - Combined Xbar/Sbar charts
+        - {basename}_stratified.html - Stratified IMR charts (if applicable)
+        """
+        try:
+            from pathlib import Path
+            from .plotting import Plotter
+
+            output_path = Path(filepath)
+            output_dir = output_path.parent
+            base_name = output_path.stem
+
+            plotter = Plotter(self)
+
+            # Export combined charts
+            combined_charts = [name for name in self.charts.keys()
+                             if name in ['Xbar', 'Sbar', 'Imr', 'R', 'all']]
+
+            if combined_charts:
+                html_file = output_dir / f'{base_name}_combined.html'
+                fig = plotter.plot(
+                    width=1400,
+                    height=800,
+                    template='processbehavior',
+                    title=f'Control Charts: {base_name}'
+                )
+                fig.save_html(str(html_file))
+                logger.info(f"Exported interactive combined charts to: {html_file}")
+
+            # Export stratified charts if present
+            stratified_charts = [name for name in self.charts.keys()
+                               if name not in combined_charts and len(self.charts) > len(combined_charts)]
+
+            if stratified_charts and self.summary.get('is_stratified', False):
+                html_file = output_dir / f'{base_name}_stratified.html'
+                # This will plot all stratified charts
+                fig = plotter.plot(
+                    width=1800,
+                    height=1200,
+                    template='processbehavior',
+                    title=f'Stratified Control Charts: {base_name}'
+                )
+                fig.save_html(str(html_file))
+                logger.info(f"Exported interactive stratified charts to: {html_file}")
+
+        except ImportError:
+            logger.warning(
+                "Plotly not available for HTML export. "
+                "Install with: pip install plotly"
+            )
+        except Exception as e:
+            logger.warning(f"Could not export HTML charts: {e}")
 
     def detect_signals(
         self,
