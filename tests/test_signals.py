@@ -119,9 +119,9 @@ class TestSignalDetector:
     def simple_stats(self):
         """Create simple test statistics."""
         return {
-            'Mean': 100.0,
-            'ucl': 115.0,  # Mean + 3*sigma
-            'lcl': 85.0    # Mean - 3*sigma
+            'center': 100.0,
+            'ucl': 115.0,  # center + 3*sigma
+            'lcl': 85.0    # center - 3*sigma
         }
 
     def test_no_violations(self, simple_data, simple_stats):
@@ -144,7 +144,7 @@ class TestSignalDetector:
         })
 
         stats = {
-            'Mean': 100.0,
+            'center': 100.0,
             'ucl': 115.0,
             'lcl': 85.0
         }
@@ -167,7 +167,7 @@ class TestSignalDetector:
         })
 
         stats = {
-            'Mean': 96.0,
+            'center': 96.0,
             'ucl': 110.0,
             'lcl': 82.0
         }
@@ -226,7 +226,7 @@ class TestSignalResult:
         })
 
         data = pd.DataFrame({'mean': [100] * 10})
-        stats = {'Mean': 100, 'ucl': 115, 'lcl': 85}
+        stats = {'center': 100, 'ucl': 115, 'lcl': 85}
 
         return SignalResult(violations, 'Test Chart', data, stats)
 
