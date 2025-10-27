@@ -299,13 +299,13 @@ def test_perform_analysis_XbarS(df: pd.DataFrame):
     result = ad.perform_analysis(df=df, specification=spec)
 
     conditionsXbar = {
-                    'Mean':5.0,
+                    'center':5.0,
                     'lcl': 1.52,
                     'ucl': 8.48
                     }
 
     conditionsS =   {
-                    'S':1.78,
+                    'center':1.78,
                     'lcl': 0,
                     'ucl': 4.57
                     }
@@ -348,14 +348,14 @@ def test_perform_analysis_XbarS_differing_Ns(df_differing_Ns: pd.DataFrame):
         print(f'#############################Differing Ns:\n {result}')
         print(theAnalysis.ads.analysis_summary)
         conditionsXbar = {
-                        'Mean':4.17,
+                        'center':4.17,
                         'lcl': 'Varies',
                         'ucl': 'Varies',
                         'N':'Varies'
                         }
 
         conditionsS =   {
-                        'S':2.48,
+                        'center':2.48,
                         'lcl': 'Varies',
                         'ucl': 'Varies',
                         'N': 'Varies'
@@ -408,9 +408,9 @@ def test_perform_analysis_Imr(df: pd.DataFrame):
         logger.info("Checking keys have correct subgroup values...")
         assert keys[0] == 'a_c'
         assert keys[1] == 'b_d'
-        logger.info("Checking means are correct for each subgroup...")
-        assert result[keys[0]]['statistics']['mean'] == 2.33
-        assert result[keys[1]]['statistics']['mean'] == 7.67
+        logger.info("Checking centers are correct for each subgroup...")
+        assert result[keys[0]]['statistics']['center'] == 2.33
+        assert result[keys[1]]['statistics']['center'] == 7.67
 
         logger.info('Testing group limits - lcl')
         assert result[keys[0]]['statistics']['lcl'] == -0.33
@@ -447,9 +447,9 @@ def test_perform_analysis_R(df: pd.DataFrame):
         assert hasattr(result, "keys") and hasattr(result, "values")
         assert len(result) == 2 # Expect length of 2, 3rd group had 1 obs and should be dropped
         logger.debug(f'{result}')
-        logger.info('Testing group means')
-        assert result['a_c']['statistics']['mR'] == 1
-        assert result['b_d']['statistics']['mR'] == 2.5
+        logger.info('Testing group centers')
+        assert result['a_c']['statistics']['center'] == 1
+        assert result['b_d']['statistics']['center'] == 2.5
 
         logger.info('Testing group limits - lcl')
         assert result['a_c']['statistics']['lcl'] == 0
@@ -472,7 +472,7 @@ def test_perform_analysis_R_w_o_grouping(df: pd.DataFrame):
         result = ad.perform_analysis(df=df, specification=spec)
 
         assert hasattr(result, "keys") and hasattr(result, "values")
-        assert result['all']['statistics']['mR'] == 2.917
+        assert result['all']['statistics']['center'] == 2.917
         assert result['all']['statistics']['n'] == 6
         assert result['all']['statistics']['lcl'] == 0
         assert result['all']['statistics']['ucl'] == 9.532
@@ -559,8 +559,8 @@ def test_IMR_w_o_grouping_var_FW800():
             logger.info("Verifying 'all'dictionary key references a pandas.Dataframe...")
             assert type(result.get("all")) == type({})
             out = result.get("all")
-            logger.info("Verify lcl, ucl, and mean...(Match results from R (qcc))..." )
-            assert out['statistics']['mean'] == 237.78
+            logger.info("Verify lcl, ucl, and center...(Match results from R (qcc))..." )
+            assert out['statistics']['center'] == 237.78
             assert out['statistics']['lcl'] == 232.23
             assert out['statistics']['ucl'] == 243.33
            
@@ -615,7 +615,7 @@ def test_perform_analysis_XbarS_zero_center(df: pd.DataFrame):
 
         logger.info(f'{spec}')
         result = ad.perform_analysis(df=df, specification=spec)
-        assert result['Xbar']['statistics']['Mean'] == 0
+        assert result['Xbar']['statistics']['center'] == 0
         
 def test_perform_analysis_IMR_zero_center(df: pd.DataFrame):
         spec = {'analysis_type': 'Imr', 'rsg_vars': ['a', 'b'], 'time_var': 'd', 'response_var': 'c',

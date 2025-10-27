@@ -214,10 +214,10 @@ class TestPlotter:
     def test_helper_get_value_column(self, simple_result):
         """Test value column detection."""
         plotter = Plotter(simple_result)
-        data = pd.DataFrame({'mean': [1, 2, 3]})
+        data = pd.DataFrame({'xbar': [1, 2, 3]})
 
         value_col = plotter._get_value_column(data, 'Xbar')
-        assert value_col == 'mean'
+        assert value_col == 'xbar'
 
     def test_helper_get_x_column(self, simple_result):
         """Test x-axis column detection."""
@@ -231,15 +231,15 @@ class TestPlotter:
         """Test centerline key detection."""
         plotter = Plotter(simple_result)
 
-        # Test Mean
-        stats = {'Mean': 100, 'ucl': 115, 'lcl': 85}
+        # All chart types now use 'center'
+        stats = {'center': 100, 'ucl': 115, 'lcl': 85}
         center_key = plotter._get_center_key(stats)
-        assert center_key == 'Mean'
+        assert center_key == 'center'
 
-        # Test mR
-        stats = {'mR': 5, 'ucl': 15, 'lcl': 0}
+        # Test with missing center
+        stats = {'ucl': 15, 'lcl': 0}
         center_key = plotter._get_center_key(stats)
-        assert center_key == 'mR'
+        assert center_key is None
 
 
 class TestAnalysisResultIntegration:

@@ -106,7 +106,7 @@ def test_sds_comprehensive():
     
     result4 = ad.perform_analysis(df=df4, specification=spec4)
     print("IMR analysis completed for SDS4")
-    print(f"Mean: {result4['all']['statistics']['mean']:.2f}")
+    print(f"Center: {result4['all']['statistics']['center']:.2f}")
     print(f"Control limits: [{result4['all']['statistics']['lcl']:.2f}, "
           f"{result4['all']['statistics']['ucl']:.2f}]")
     
@@ -242,7 +242,7 @@ def test_stratified_imr_vs_vas_xbar():
     for group, chart in result_imr.items():
         stats = chart['statistics']
         print(f"\n  {group}:")
-        print(f"    Mean: {stats['mean']:.2f}")
+        print(f"    Center: {stats['center']:.2f}")
         print(f"    Limits: [{stats['lcl']:.2f}, {stats['ucl']:.2f}]")
     
     print("\n→ This is AUTOMATIC STRATIFICATION")
@@ -396,16 +396,16 @@ def test_automatic_stratification_demo():
         
         print(f"\n  {lane}:")
         print(f"    Observations: {len(data)}")
-        print(f"    Mean: {stats['mean']:.2f}")
+        print(f"    Center: {stats['center']:.2f}")
         print(f"    Control limits: [{stats['lcl']:.2f}, {stats['ucl']:.2f}]")
         print(f"    Points beyond limits: {beyond}")
-    
+
     # Compare limits across lanes
     print("\n" + "-" * 70)
     print("COMPARISON ACROSS LANES")
     print("-" * 70)
-    
-    means = {lane: chart['statistics']['mean'] for lane, chart in result.items()}
+
+    means = {lane: chart['statistics']['center'] for lane, chart in result.items()}
     ranges = {lane: chart['statistics']['ucl'] - chart['statistics']['lcl'] 
               for lane, chart in result.items()}
     

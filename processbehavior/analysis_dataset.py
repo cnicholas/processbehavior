@@ -489,10 +489,11 @@ class Analysis:
         if out.shape[0] == 0:
             raise ValueError("All subgroups have 1 or less observations!")
 
-        _Xbar = out["mean"].mean()
-        out['Xbar'] = _Xbar
+        # Rename columns for consistency: mean→xbar (values)
+        out = out.rename(columns={'mean': 'xbar'})
+
+        _Xbar = out["xbar"].mean()
         _S = out["s"].mean()
-        out['S'] = _S
         _N = out['n'].max()
         out['N'] = _N
 
@@ -501,10 +502,11 @@ class Analysis:
 
         # CALCULATE XBAR
         xbar = out.copy()
+        xbar['center'] = _Xbar  # Add center column for Xbar chart
         xbar[['lcl', 'ucl']] = xbar.apply(
             lambda row: calculate_limits(
-                mean=row['Xbar'],
-                sd=row['S'],
+                mean=row['center'],
+                sd=_S,
                 N=row[n_to_use],
                 limits_type='Xbar',
                 round_to=spec.round_to
@@ -512,10 +514,10 @@ class Analysis:
         )
 
         # Detect beyond limits signals
-        xbar = self._add_beyond_limits_flag(xbar, value_col='mean')
+        xbar = self._add_beyond_limits_flag(xbar, value_col='xbar')
         xbar = xbar.round(spec.round_to)
 
-        statistics['Mean'] = round(_Xbar, spec.round_to)
+        statistics['center'] = round(_Xbar, spec.round_to)
         if n_to_use == "N":
             statistics['N'] = _N
             statistics['ucl'] = xbar['ucl'].max()
@@ -526,19 +528,20 @@ class Analysis:
             statistics['lcl'] = variable_stats
             statistics['ucl'] = variable_stats
 
-        cols_to_keep = ['rsg', 'mean', 'Xbar', 'lcl', 'ucl', 'beyond_limits']
+        cols_to_keep = ['rsg', 'xbar', 'center', 'lcl', 'ucl', 'beyond_limits']
         xbar = xbar[cols_to_keep]
         result['Xbar'] = {'data': xbar, 'statistics': statistics}
 
         # CALCULATE S
         statistics = {}
-        statistics['S'] = round(_S, spec.round_to)
+        statistics['center'] = round(_S, spec.round_to)
 
         sbar = out.copy()
+        sbar['center'] = _S  # Add center column for S chart
         sbar[['lcl', 'ucl']] = sbar.apply(
             lambda row: calculate_limits(
                 mean=0,
-                sd=row['S'],
+                sd=row['center'],
                 N=row[n_to_use],
                 limits_type="S",
                 round_to=spec.round_to
@@ -546,7 +549,8 @@ class Analysis:
         )
 
         # Detect beyond limits signals
-        sbar = self._add_beyond_limits_flag(sbar, value_col='S')
+        # FIX: Should use 's' (varying values) not 'S'/'center' (constant)
+        sbar = self._add_beyond_limits_flag(sbar, value_col='s')
         sbar = sbar.round(spec.round_to)
 
         if n_to_use == "N":
@@ -559,7 +563,7 @@ class Analysis:
             statistics['lcl'] = variable_stats
             statistics['ucl'] = variable_stats
 
-        cols_to_keep = ['rsg', 's', 'S', 'lcl', 'ucl', 'beyond_limits']
+        cols_to_keep = ['rsg', 's', 'center', 'lcl', 'ucl', 'beyond_limits']
         sbar = sbar[cols_to_keep]
         result['Sbar'] = {'data': sbar, 'statistics': statistics}
 
@@ -583,7 +587,8 @@ class Analysis:
         mask = out['n'].eq(1)
         out = out[~mask]
 
-        out['S'] = out["s"].mean()
+        # Rename 'S' to 'center' for consistency
+        out['center'] = out["s"].mean()
         out['groups'] = out["n"].count()
         out['N'] = out['n'].max()
 
@@ -594,7 +599,7 @@ class Analysis:
         out[['lcl', 'ucl']] = out.apply(
             lambda row: calculate_limits(
                 mean=0,
-                sd=row['S'],
+                sd=row['center'],
                 N=row[n_to_use],
                 limits_type="S",
                 round_to=spec.round_to
@@ -602,9 +607,10 @@ class Analysis:
         )
 
         # Detect beyond limits signals
-        out = self._add_beyond_limits_flag(out, value_col='S')
+        # FIX: Should use 's' (varying values) not 'center' (constant)
+        out = self._add_beyond_limits_flag(out, value_col='s')
 
-        cols_to_keep = ['rsg', 's', 'S', 'lcl', 'ucl', 'beyond_limits']
+        cols_to_keep = ['rsg', 's', 'center', 'lcl', 'ucl', 'beyond_limits']
         out = out[cols_to_keep]
         out = out.round(spec.round_to)
 
@@ -694,9 +700,12 @@ class Analysis:
                 grouped = grouped.join(lims_df)
 
 
+            # Rename mean to center for consistency
+            grouped = grouped.rename(columns={'mean': 'center'})
+
             # Attach back to rows
             out = out.merge(
-                grouped[[spec.rsg_var_name, 'mean', 'mR', 'lcl', 'ucl']],
+                grouped[[spec.rsg_var_name, 'center', 'mR', 'lcl', 'ucl']],
                 on=spec.rsg_var_name, how='left', validate='many_to_one'
             )
         else:
@@ -710,7 +719,7 @@ class Analysis:
                 mean=mean_, sd=0, N=0, mR=mR,
                 limits_type="Imr", round_to=spec.round_to
             )
-            out['mean'] = mean_
+            out['center'] = mean_  # Renamed from 'mean' to 'center'
             out['mR']   = mR
             out['lcl']  = lims['lcl']
             out['ucl']  = lims['ucl']
@@ -721,13 +730,13 @@ class Analysis:
         # Format output with appropriate columns
         out = self._build_output_columns(
             df=out,
-            value_cols=[spec.response_var, 'mean', 'lcl', 'ucl', 'beyond_limits']
+            value_cols=[spec.response_var, 'center', 'lcl', 'ucl', 'beyond_limits']
         )
 
         # Package results with statistics
         return self._package_stratified_results(
             df=out,
-            statistics_cols=['mean', 'lcl', 'ucl']
+            statistics_cols=['center', 'lcl', 'ucl']
         )
 
     def _calculate_r(self) -> pd.DataFrame:
@@ -748,14 +757,15 @@ class Analysis:
         if spec.has_grouping:
             out['mr'] = abs(out.groupby(spec.rsg_var_name)[spec.response_var].diff())
             grouped = out.groupby(spec.rsg_var_name, as_index=False)
-            grouped = grouped.agg(mR=pd.NamedAgg('mr', 'mean'))
+            # Rename 'mR' to 'center' for consistency
+            grouped = grouped.agg(center=pd.NamedAgg('mr', 'mean'))
 
             limits = grouped.apply(
                 lambda row: calculate_limits(
                     mean=0,
                     sd=0,
                     N=0,
-                    mR=row.mR,
+                    mR=row.center,
                     limits_type="R",
                     round_to=spec.round_to
                 ), axis=1
@@ -765,13 +775,14 @@ class Analysis:
             out = pd.merge(out, grouped, how='left', on=spec.rsg_var_name)
         else:
             out['mr'] = abs(out[spec.response_var].diff())
-            out['mR'] = out['mr'].mean()
-            mR = out['mR'].max()
+            # Rename 'mR' to 'center' for consistency
+            out['center'] = out['mr'].mean()
+            center_val = out['center'].max()
             limits = calculate_limits(
                 mean=0,
                 sd=0,
                 N=0,
-                mR=mR,
+                mR=center_val,
                 limits_type="R",
                 round_to=spec.round_to
             )
@@ -787,13 +798,13 @@ class Analysis:
         # Format output with appropriate columns
         out = self._build_output_columns(
             df=out,
-            value_cols=['mr', 'mR', 'lcl', 'ucl', 'beyond_limits']
+            value_cols=['mr', 'center', 'lcl', 'ucl', 'beyond_limits']
         )
 
         # Package results with statistics
         return self._package_stratified_results(
             df=out,
-            statistics_cols=['mR', 'lcl', 'ucl']
+            statistics_cols=['center', 'lcl', 'ucl']
         )
 
 
