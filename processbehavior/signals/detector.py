@@ -82,7 +82,7 @@ class SignalDetector:
         data : DataFrame
             Chart data with observations
         stats : dict
-            Chart statistics (ucl, lcl, Mean, etc.)
+            Chart statistics (ucl, lcl, center, etc.)
         config : SignalConfig, optional
             Detection configuration (uses defaults if None)
         value_col : str, default 'mean'
@@ -107,7 +107,7 @@ class SignalDetector:
         self._validate_inputs(data, stats, config)
 
         # Calculate zones
-        center = stats['Mean']
+        center = stats['center']
         sigma = (stats['ucl'] - center) / 3
         zones = config.zone_definition.get_boundaries(center, sigma)
 
@@ -170,7 +170,7 @@ class SignalDetector:
         if data.empty:
             raise ValueError("Cannot detect signals on empty DataFrame")
 
-        required_stats = ['ucl', 'lcl', 'Mean']
+        required_stats = ['ucl', 'lcl', 'center']
         missing = [s for s in required_stats if s not in stats]
         if missing:
             raise ValueError(
@@ -236,7 +236,7 @@ class SignalDetector:
                         'rule_number': int(rule_name.split('_')[1]),
                         'description': self.RULE_DESCRIPTIONS[rule_name],
                         'value': data.loc[idx, value_col],
-                        'center': stats['Mean'],
+                        'center': stats['center'],
                         'ucl': stats['ucl'],
                         'lcl': stats['lcl']
                     })
