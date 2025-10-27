@@ -415,30 +415,112 @@ class Plotter:
 
     # Helper methods
     def _get_value_column(self, data: pd.DataFrame, chart_name: str) -> str:
-        """Determine the value column for a chart."""
-        if 'mean' in data.columns:
-            return 'mean'
-        elif 's' in data.columns:
-            return 's'
-        elif 'mr' in data.columns:
-            return 'mr'
-        else:
-            # Get first numeric column
-            numeric_cols = data.select_dtypes(include='number').columns
-            return numeric_cols[0] if len(numeric_cols) > 0 else data.columns[0]
+        """
+        Determine the value column to plot based on chart name.
+
+        This follows a DECLARATIVE contract where each chart type explicitly
+        defines which column contains the values to plot:
+        - Xbar: 'xbar' (subgroup means)
+        - Sbar/S: 's' (subgroup standard deviations)
+        - R: 'mr' (moving ranges)
+        - IMR: response_var (individual measurements)
+
+        Uses chart_name to directly determine the value column.
+        NO FALLBACK - missing columns indicate a bug in chart calculation.
+
+        Parameters
+        ----------
+        data : pd.DataFrame
+            Chart data
+        chart_name : str
+            Name of the chart (e.g., 'Xbar', 'Sbar', 'Lane_1', 'all')
+
+        Returns
+        -------
+        str
+            Column name to use for y-axis values
+
+        Raises
+        ------
+        ValueError
+            If the expected value column is not found in the data
+        """
+        # Check chart_name first (explicit chart type)
+        chart_name_str = str(chart_name)
+
+        # Xbar charts: Plot subgroup means
+        if 'Xbar' in chart_name_str:
+            if 'xbar' in data.columns:
+                return 'xbar'
+            raise ValueError(
+                f"Xbar chart '{chart_name}' missing required column 'xbar'. "
+                f"Available columns: {list(data.columns)}"
+            )
+
+        # S bar charts: Plot subgroup standard deviations
+        if 'Sbar' in chart_name_str or chart_name_str == 'S':
+            if 's' in data.columns:
+                return 's'
+            raise ValueError(
+                f"S chart '{chart_name}' missing required column 's'. "
+                f"Available columns: {list(data.columns)}"
+            )
+
+        # R charts: Plot moving ranges
+        if chart_name_str == 'R' or 'R' in chart_name_str:
+            if 'mr' in data.columns:
+                return 'mr'
+            raise ValueError(
+                f"R chart '{chart_name}' missing required column 'mr'. "
+                f"Available columns: {list(data.columns)}"
+            )
+
+        # For stratified charts (groups), use analysis_type from summary
+        analysis_type = self.summary.get('analysis_type')
+
+        # IMR charts: Plot the response variable (individual measurements)
+        if analysis_type == 'Imr':
+            response_var = self.summary.get('response_var')
+            if response_var and response_var in data.columns:
+                return response_var
+            raise ValueError(
+                f"IMR chart '{chart_name}' missing required column '{response_var}'. "
+                f"Available columns: {list(data.columns)}"
+            )
+
+        # If we reach here, cannot determine chart type
+        raise ValueError(
+            f"Cannot determine value column for chart '{chart_name}' "
+            f"(analysis_type: {analysis_type}). "
+            f"Available columns: {list(data.columns)}"
+        )
 
     def _get_x_column(self, data: pd.DataFrame) -> str:
-        """Determine the x-axis column."""
-        if 'x' in data.columns:
-            return 'x'
-        else:
-            return data.index.name or 'index'
+        """
+        Determine the x-axis column for plotting.
+
+        Chart calculation logic (_build_output_columns) guarantees one of two cases:
+        1. time_var was specified → data contains time_var column
+        2. time_var not specified → data contains 'x' column (auto-generated)
+
+        Returns
+        -------
+        str
+            Column name to use for x-axis
+        """
+        # Use time variable if specified in analysis
+        time_var = self.summary.get('time_var')
+        if time_var:
+            return time_var
+
+        # Otherwise use auto-generated 'x' column
+        return 'x'
 
     def _get_center_key(self, stats: dict) -> Optional[str]:
         """Get the centerline statistic key."""
-        for key in ['Mean', 'mean', 'S', 'mR']:
-            if key in stats:
-                return key
+        # All chart types now use 'center' for the centerline column
+        if 'center' in stats:
+            return 'center'
         return None
 
     def _get_stratified_charts(self) -> dict:
