@@ -212,11 +212,21 @@ class TestPlotter:
         assert isinstance(fig, ControlChartFigure)
 
     def test_helper_get_value_column(self, simple_result):
-        """Test value column detection."""
+        """Test value column detection from metadata."""
         plotter = Plotter(simple_result)
-        data = pd.DataFrame({'xbar': [1, 2, 3]})
 
-        value_col = plotter._get_value_column(data, 'Xbar')
+        # Create chart_info with metadata (as charts now provide)
+        chart_info = {
+            'data': pd.DataFrame({'xbar': [1, 2, 3]}),
+            'statistics': {},
+            'metadata': {
+                'chart_type': 'Xbar',
+                'value_col': 'xbar',
+                'center_col': 'center'
+            }
+        }
+
+        value_col = plotter._get_value_column(chart_info, 'Xbar')
         assert value_col == 'xbar'
 
     def test_helper_get_x_column(self, simple_result):
