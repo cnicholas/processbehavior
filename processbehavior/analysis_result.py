@@ -1418,10 +1418,20 @@ class AnalysisResult:
                 )
 
             chart_info = self.charts[chart]
+
+            # Extract value column from metadata (required)
+            if 'metadata' not in chart_info:
+                raise ValueError(
+                    f"Chart '{chart}' missing metadata. "
+                    f"This indicates a bug in chart calculation."
+                )
+            value_col = chart_info['metadata']['value_col']
+
             return detector.detect(
                 data=chart_info['data'],
                 stats=chart_info['statistics'],
                 config=config,
+                value_col=value_col,
                 chart_name=chart
             )
 
@@ -1429,10 +1439,19 @@ class AnalysisResult:
             # Detect on all charts
             results = {}
             for chart_name, chart_info in self.charts.items():
+                # Extract value column from metadata (required)
+                if 'metadata' not in chart_info:
+                    raise ValueError(
+                        f"Chart '{chart_name}' missing metadata. "
+                        f"This indicates a bug in chart calculation."
+                    )
+                value_col = chart_info['metadata']['value_col']
+
                 results[chart_name] = detector.detect(
                     data=chart_info['data'],
                     stats=chart_info['statistics'],
                     config=config,
+                    value_col=value_col,
                     chart_name=chart_name
                 )
 

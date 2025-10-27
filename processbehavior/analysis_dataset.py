@@ -339,7 +339,9 @@ class Analysis:
     def _package_stratified_results(
         self,
         df: pd.DataFrame,
-        statistics_cols: list[str]
+        statistics_cols: list[str],
+        chart_type: str,
+        value_col: str
     ) -> dict:
         """
         Package analysis results with statistics for stratified charts.
@@ -352,18 +354,24 @@ class Analysis:
             Analysis results with chart data
         statistics_cols : list[str]
             Columns to collect statistics for (e.g., ['mean', 'lcl', 'ucl'])
+        chart_type : str
+            Type of chart ('Imr' or 'R')
+        value_col : str
+            Name of the value column to plot
 
         Returns
         -------
         dict
-            Packaged results: {group: {'data': df, 'statistics': dict}}
-            For ungrouped data: {'all': {'data': df, 'statistics': dict}}
+            Packaged results: {group: {'data': df, 'statistics': dict, 'metadata': dict}}
+            For ungrouped data: {'all': {'data': df, 'statistics': dict, 'metadata': dict}}
 
         Examples
         --------
         >>> result = self._package_stratified_results(
         ...     df=out,
-        ...     statistics_cols=['mean', 'lcl', 'ucl']
+        ...     statistics_cols=['center', 'lcl', 'ucl'],
+        ...     chart_type='Imr',
+        ...     value_col='measurement'
         ... )
         """
         if self.spec.has_grouping:
@@ -383,10 +391,20 @@ class Analysis:
             )
             split_dict = {'all': df}
 
-        return package_analysis(
+        result = package_analysis(
             analysis_output=split_dict,
             summary_statistics_output=statistics
         )
+
+        # Add metadata to each group's result
+        for group_key in result:
+            result[group_key]['metadata'] = {
+                'chart_type': chart_type,
+                'value_col': value_col,
+                'center_col': 'center'
+            }
+
+        return result
 
     def _build_output_columns(
         self,
@@ -530,7 +548,15 @@ class Analysis:
 
         cols_to_keep = ['rsg', 'xbar', 'center', 'lcl', 'ucl', 'beyond_limits']
         xbar = xbar[cols_to_keep]
-        result['Xbar'] = {'data': xbar, 'statistics': statistics}
+        result['Xbar'] = {
+            'data': xbar,
+            'statistics': statistics,
+            'metadata': {
+                'chart_type': 'Xbar',
+                'value_col': 'xbar',
+                'center_col': 'center'
+            }
+        }
 
         # CALCULATE S
         statistics = {}
@@ -565,7 +591,15 @@ class Analysis:
 
         cols_to_keep = ['rsg', 's', 'center', 'lcl', 'ucl', 'beyond_limits']
         sbar = sbar[cols_to_keep]
-        result['Sbar'] = {'data': sbar, 'statistics': statistics}
+        result['Sbar'] = {
+            'data': sbar,
+            'statistics': statistics,
+            'metadata': {
+                'chart_type': 'Sbar',
+                'value_col': 's',
+                'center_col': 'center'
+            }
+        }
 
         return result
 
@@ -733,10 +767,12 @@ class Analysis:
             value_cols=[spec.response_var, 'center', 'lcl', 'ucl', 'beyond_limits']
         )
 
-        # Package results with statistics
+        # Package results with statistics and metadata
         return self._package_stratified_results(
             df=out,
-            statistics_cols=['center', 'lcl', 'ucl']
+            statistics_cols=['center', 'lcl', 'ucl'],
+            chart_type='Imr',
+            value_col=spec.response_var
         )
 
     def _calculate_r(self) -> pd.DataFrame:
@@ -801,10 +837,12 @@ class Analysis:
             value_cols=['mr', 'center', 'lcl', 'ucl', 'beyond_limits']
         )
 
-        # Package results with statistics
+        # Package results with statistics and metadata
         return self._package_stratified_results(
             df=out,
-            statistics_cols=['center', 'lcl', 'ucl']
+            statistics_cols=['center', 'lcl', 'ucl'],
+            chart_type='R',
+            value_col='mr'
         )
 
 
