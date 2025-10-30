@@ -169,17 +169,84 @@ class ProcessDataFrame:
         data: The underlying pandas DataFrame
     """
 
-    def __init__(self, df: pd.DataFrame):
+    def __init__(self, df: pd.DataFrame, na_values: list[str] | None = None):
         """
-        Initialize ProcessDataFrame with data.
+        Initialize ProcessDataFrame with data and optional NA value handling.
 
         Args:
             df: pandas DataFrame containing process data
+            na_values: Additional values to treat as NA/missing (beyond pandas defaults).
+                      Common garbage characters are handled automatically.
+                      Examples: ['*', '?', '--', 'ND', 'BDL', '<LOD']
+
+        Examples:
+            # Basic usage - automatic garbage character handling
+            >>> pdf = ProcessDataFrame(df)
+
+            # Custom NA indicators (combined with defaults)
+            >>> pdf = ProcessDataFrame(df, na_values=['-999', '9999', 'MISSING'])
         """
         if not isinstance(df, pd.DataFrame):
             raise TypeError(f"Expected pandas DataFrame, got {type(df)}")
 
-        self.data = df.copy()
+        # Default garbage characters commonly found in real-world data
+        # These are NOT recognized by pandas by default
+        default_na = [
+            '*',      # Common in lab data for missing/invalid
+            '?',      # Question mark for unknown
+            '--',     # Double dash for missing
+            'ND',     # Not Detected
+            'BDL',    # Below Detection Limit
+            'BQL',    # Below Quantification Limit
+            '<LOD',   # Below Limit of Detection
+            '>ULQ',   # Above Upper Limit of Quantification
+            'N/D',    # Not Detected (variant)
+            'n/d',    # Not detected (lowercase)
+            'MISSING',
+            'missing'
+        ]
+
+        # Combine default with user-specified NA values
+        all_na_values = default_na + (na_values or [])
+
+        # Clean the data - replace garbage characters with pd.NA
+        cleaned_df = df.copy()
+
+        # Track which columns had NA values for informative warning
+        columns_with_na = []
+        na_counts = {}
+
+        for col in cleaned_df.columns:
+            # Count how many garbage values we find
+            na_mask = cleaned_df[col].isin(all_na_values)
+            na_count = na_mask.sum()
+
+            if na_count > 0:
+                columns_with_na.append(col)
+                na_counts[col] = na_count
+                # Replace with pd.NA
+                cleaned_df.loc[na_mask, col] = pd.NA
+
+                # Try to convert to numeric if it was originally numeric
+                # This handles cases like ['235.5', '*', '237.2'] -> [235.5, NaN, 237.2]
+                try:
+                    # Try conversion - if it fails, keep original dtype
+                    numeric_col = pd.to_numeric(cleaned_df[col])
+                    cleaned_df[col] = numeric_col
+                except (ValueError, TypeError):
+                    # Keep as-is if conversion fails (likely string data)
+                    pass
+
+        # Warn user if we found and cleaned garbage characters
+        if columns_with_na:
+            total_na = sum(na_counts.values())
+            logger.warning(
+                f"Found {total_na} garbage/NA values across {len(columns_with_na)} column(s):\n"
+                + "\n".join([f"  • {col}: {count} values" for col, count in na_counts.items()])
+                + f"\n\nThese values were converted to NA and will be excluded from analysis."
+            )
+
+        self.data = cleaned_df
         self.columns = ColumnAccessor(self.data)
         self.charts = None  # Will be populated after first analyze() call
 
