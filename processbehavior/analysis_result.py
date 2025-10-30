@@ -1043,9 +1043,32 @@ class AnalysisResult:
                 self._apply_formatting(ws)
 
     def _write_residuals_tab(self, writer: pd.ExcelWriter, format_cells: bool) -> None:
-        """Write residuals tab."""
+        """Write residuals tab with original data columns."""
         if self.residuals is not None:
-            self.residuals.to_excel(writer, sheet_name='Residuals', index=False)
+            # Include original data columns with residuals for context
+            # Get original input columns from summary
+            time_var = self.summary.get('time_var')
+            grouping_vars = self.summary.get('grouping_vars', [])
+            response_var = self.summary.get('response_var')
+
+            # Build list of columns to include: original inputs + residuals
+            original_cols = []
+            if time_var and time_var in self.dataset.columns:
+                original_cols.append(time_var)
+            if grouping_vars:
+                original_cols.extend([g for g in grouping_vars if g in self.dataset.columns])
+            if response_var and response_var in self.dataset.columns:
+                original_cols.append(response_var)
+
+            # Add residual columns
+            residual_cols = ['R1', 'R2', 'R3', 'R4', 'R5']
+            all_cols = original_cols + residual_cols
+
+            # Extract these columns from dataset (which has both)
+            residuals_with_data = self.dataset[all_cols].copy()
+
+            # Write to Excel
+            residuals_with_data.to_excel(writer, sheet_name='Residuals', index=False)
 
             if format_cells:
                 ws = writer.sheets['Residuals']
