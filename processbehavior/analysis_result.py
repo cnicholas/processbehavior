@@ -1450,12 +1450,17 @@ class AnalysisResult:
                 )
             value_col = chart_info['metadata']['value_col']
 
+            # Extract chart type from chart name
+            # Examples: 'Xbar' -> 'Xbar', 'Sbar' -> 'S', 'Imr_lane_1' -> 'Imr'
+            chart_type = self._extract_chart_type(chart)
+
             return detector.detect(
                 data=chart_info['data'],
                 stats=chart_info['statistics'],
                 config=config,
                 value_col=value_col,
-                chart_name=chart
+                chart_name=chart,
+                chart_type=chart_type
             )
 
         else:
@@ -1470,15 +1475,51 @@ class AnalysisResult:
                     )
                 value_col = chart_info['metadata']['value_col']
 
+                # Extract chart type from chart name
+                chart_type = self._extract_chart_type(chart_name)
+
                 results[chart_name] = detector.detect(
                     data=chart_info['data'],
                     stats=chart_info['statistics'],
                     config=config,
                     value_col=value_col,
-                    chart_name=chart_name
+                    chart_name=chart_name,
+                    chart_type=chart_type
                 )
 
             return results
+
+    def _extract_chart_type(self, chart_name: str) -> str:
+        """
+        Extract base chart type from chart name.
+
+        Handles stratified chart names like 'Imr_lane_1' -> 'Imr'.
+
+        Parameters
+        ----------
+        chart_name : str
+            Full chart name
+
+        Returns
+        -------
+        str
+            Base chart type ('Xbar', 'S', 'Imr', 'R')
+        """
+        # Common chart type mapping
+        type_mapping = {
+            'Xbar': 'Xbar',
+            'Sbar': 'S',
+            'Imr': 'Imr',
+            'R': 'R'
+        }
+
+        # Check if chart name starts with a known type
+        for prefix, chart_type in type_mapping.items():
+            if chart_name.startswith(prefix):
+                return chart_type
+
+        # Default to Xbar if unknown
+        return 'Xbar'
 
     def _apply_formatting(self, worksheet) -> None:
         """

@@ -50,7 +50,8 @@ class AnalysisSpecification:
         - **response_var** (str, required): Response variable being analyzed.
 
         - **rsg_var_name** (str, optional): Label for rational subgroup column.
-          Defaults to 'rsg'.
+          Defaults to 'rsg'. A tuple-based key 'rsg_key' is also created
+          for correct numeric sorting in internal operations.
 
         - **rsg_var_delim** (str, optional): Delimiter for multi-variable grouping.
           Default is '_'. For example, col_a and col_b will create 'col_a_col_b'.

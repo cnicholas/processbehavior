@@ -72,7 +72,8 @@ class SignalDetector:
         stats: dict,
         config: Optional[SignalConfig] = None,
         value_col: str = 'mean',
-        chart_name: str = 'Chart'
+        chart_name: str = 'Chart',
+        chart_type: str = 'Xbar'
     ) -> SignalResult:
         """
         Detect signals in control chart data.
@@ -89,6 +90,8 @@ class SignalDetector:
             Name of value column
         chart_name : str, default 'Chart'
             Name of chart for reporting
+        chart_type : str, default 'Xbar'
+            Chart type ('Xbar', 'S', 'Imr', 'R') - determines applicable rules
 
         Returns
         -------
@@ -98,10 +101,29 @@ class SignalDetector:
         Examples
         --------
         >>> detector = SignalDetector()
-        >>> signals = detector.detect(chart_data, chart_stats)
+        >>> signals = detector.detect(chart_data, chart_stats, chart_type='Imr')
         >>> print(signals.summary)
         """
         config = config or SignalConfig()
+
+        # Get applicable rules for this chart type
+        applicable_rules = config.get_rules_for_chart(chart_type)
+
+        # Log rule selection
+        if logger.isEnabledFor(logging.INFO):
+            all_rules = [f'rule_{i}' for i in range(1, 9)]
+            skipped_rules = [r for r in all_rules if r not in applicable_rules]
+            if skipped_rules:
+                logger.info(
+                    f"Chart '{chart_name}' (type: {chart_type}): "
+                    f"Applying rules {applicable_rules}. "
+                    f"Skipped {skipped_rules} (not applicable for {chart_type} charts)"
+                )
+            else:
+                logger.info(
+                    f"Chart '{chart_name}' (type: {chart_type}): "
+                    f"Applying all rules {applicable_rules}"
+                )
 
         # Validate data
         self._validate_inputs(data, stats, config)
@@ -114,10 +136,10 @@ class SignalDetector:
         # Apply filtering
         filtered_data = self._filter_data(data, config)
 
-        # Detect violations for each enabled rule
+        # Detect violations for each applicable rule
         all_violations = pd.DataFrame(index=filtered_data.index)
 
-        for rule_name in config.enabled_rules:
+        for rule_name in applicable_rules:
             if rule_name not in self.RULE_DETECTORS:
                 logger.warning(f"Unknown rule: {rule_name}, skipping")
                 continue

@@ -46,9 +46,14 @@ class TestSignalConfig:
     def test_default_config(self):
         """Test default configuration."""
         config = SignalConfig()
-        assert config.enabled_rules == ['rule_1', 'rule_2', 'rule_3', 'rule_4']
+        assert config.enabled_rules == 'default'
         assert config.min_observations == 20
         assert config.use_vectorized is True
+        # Test chart-type-based defaults
+        assert config.get_rules_for_chart('Xbar') == ['rule_1']
+        assert config.get_rules_for_chart('S') == ['rule_1']
+        assert len(config.get_rules_for_chart('Imr')) == 8
+        assert len(config.get_rules_for_chart('R')) == 8
 
     def test_preset_standard(self):
         """Test standard preset."""
