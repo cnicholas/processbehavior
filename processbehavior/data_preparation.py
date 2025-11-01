@@ -237,6 +237,12 @@ class DataPreparation:
         - rsg_key: Tuple key for factor combinations
         - cell_key: Tuple key for (factor × time) cells
 
+        Dual-column strategy:
+        - **rsg_key (tuple)**: Used for internal computation (sorting, grouping)
+          Ensures correct numeric ordering: (1, 1), (1, 2), (1, 10)
+        - **rsg (string)**: Used for display (chart labels, user output)
+          Created separately in _add_grouping_column()
+
         These tuple keys are essential for mathematical operations
         (avoiding string comparison issues) while the composite string
         column (e.g., 'rsg') is kept for user-facing charts.
@@ -310,6 +316,11 @@ class DataPreparation:
 
         Creates a user-friendly string column combining multiple factors.
         For single factors, just copies the column with a standard name.
+
+        Note: This creates the 'rsg' STRING column for user-facing display
+        (chart labels, summaries). The 'rsg_key' TUPLE column (created in
+        build_keys()) is used for internal computation to ensure correct
+        numeric sorting.
         """
         out = df.copy()
 

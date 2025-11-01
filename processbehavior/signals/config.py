@@ -10,6 +10,20 @@ from dataclasses import dataclass, field
 from typing import Callable, Literal
 
 
+# Chart-type-based rule defaults
+# ================================
+# WECO rules 2-8 require sequential/temporal ordering of observations.
+# - Xbar/S: Categorical comparison of subgroups → Only Rule 1 applies
+# - Imr/R: Sequential observations over time → All rules apply
+# Easy to extend for new chart types (CUSUM, EWMA, etc.)
+CHART_TYPE_RULES = {
+    'Xbar': ['rule_1'],  # Rational subgroup means (categorical)
+    'S': ['rule_1'],     # Rational subgroup variation (categorical)
+    'Imr': ['rule_1', 'rule_2', 'rule_3', 'rule_4', 'rule_5', 'rule_6', 'rule_7', 'rule_8'],
+    'R': ['rule_1', 'rule_2', 'rule_3', 'rule_4', 'rule_5', 'rule_6', 'rule_7', 'rule_8'],
+}
+
+
 @dataclass
 class ZoneDefinition:
     """
@@ -71,12 +85,13 @@ class SignalConfig:
 
     Parameters
     ----------
-    enabled_rules : list or str, default 'standard'
+    enabled_rules : list or str, default 'default'
         Which rules to apply:
-        - 'standard': Rules 1-4 (most common)
-        - 'extended': Rules 1-8 (all Western Electric)
+        - 'default': Use chart-type-based defaults (Xbar/S: Rule 1, Imr/R: Rules 1-8)
+        - 'standard': Rules 1-4 (filtered by chart type)
+        - 'extended': Rules 1-8 (filtered by chart type)
         - 'all': Same as extended
-        - List of rule names: ['rule_1', 'rule_2', ...]
+        - List of rule names: ['rule_1', 'rule_2', ...] (explicit override)
     zone_definition : ZoneDefinition, optional
         Custom zone definitions
     min_observations : int, default 20
@@ -107,7 +122,7 @@ class SignalConfig:
     >>> config = SignalConfig(enabled_rules='extended')
     """
 
-    enabled_rules: list[str] | Literal['standard', 'extended', 'all'] = 'standard'
+    enabled_rules: list[str] | Literal['default', 'standard', 'extended', 'all'] = 'default'
     zone_definition: ZoneDefinition = field(default_factory=ZoneDefinition)
     min_observations: int = 20
     ignore_first_n: int = 0
@@ -116,7 +131,8 @@ class SignalConfig:
 
     def __post_init__(self):
         """Resolve rule presets to actual rule lists."""
-        if isinstance(self.enabled_rules, str):
+        if isinstance(self.enabled_rules, str) and self.enabled_rules != 'default':
+            # Resolve presets except 'default' (resolved per chart type)
             self.enabled_rules = self._resolve_preset(self.enabled_rules)
 
     def _resolve_preset(self, preset: str) -> list[str]:
@@ -134,6 +150,53 @@ class SignalConfig:
             )
 
         return presets[preset]
+
+    def get_rules_for_chart(self, chart_type: str) -> list[str]:
+        """
+        Get applicable rules for a chart type.
+
+        Uses chart-type-based defaults or applies filtering to user-specified rules.
+
+        Parameters
+        ----------
+        chart_type : str
+            Chart type ('Xbar', 'S', 'Imr', 'R')
+
+        Returns
+        -------
+        list of str
+            Rule names to apply
+
+        Examples
+        --------
+        Use defaults:
+
+        >>> config = SignalConfig(enabled_rules='default')
+        >>> config.get_rules_for_chart('Xbar')
+        ['rule_1']
+        >>> config.get_rules_for_chart('Imr')
+        ['rule_1', 'rule_2', ..., 'rule_8']
+
+        Explicit rules (no filtering):
+
+        >>> config = SignalConfig(enabled_rules=['rule_1', 'rule_2'])
+        >>> config.get_rules_for_chart('Xbar')
+        ['rule_1', 'rule_2']
+        """
+        if isinstance(self.enabled_rules, list):
+            # User provided explicit list - use as-is
+            return self.enabled_rules
+
+        if self.enabled_rules == 'default':
+            # Use chart-type defaults
+            return CHART_TYPE_RULES.get(chart_type, ['rule_1'])
+
+        # This shouldn't happen (already resolved in __post_init__)
+        # but handle just in case
+        raise ValueError(
+            f"Invalid enabled_rules state: {self.enabled_rules}. "
+            f"Expected list or 'default'."
+        )
 
 
 class RuleSet:
