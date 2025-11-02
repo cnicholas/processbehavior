@@ -285,35 +285,42 @@ class SamplingDesignDetector:
             return 0
 
         # From here: have both grouping and time
-        grouping_vars = [spec.rsg_var_name, spec.time_var]
+        # CRITICAL: For SDS detection, we need TWO different counts:
+        # 1. Sample sizes per SUBGROUP (for SDS 1/2/3 classification)
+        # 2. Grid coverage of (group × time) combinations (for SDS 6 detection)
 
-        # Count observations per (k,t) cell
-        cell_sizes = (
-            df.groupby(grouping_vars, dropna=False)[spec.response_var]
+        # Count observations per SUBGROUP (across all time points)
+        # - This is for determining n per subgroup
+        # - Sample size n = observations per subgroup ACROSS ALL TIME POINTS
+        subgroup_sizes = (
+            df.groupby([spec.rsg_var_name], dropna=False)[spec.response_var]
             .count()
         )
 
-        n_cells = len(cell_sizes)
-        min_n = cell_sizes.min()
-        max_n = cell_sizes.max()
+        min_n = subgroup_sizes.min()
+        max_n = subgroup_sizes.max()
+        n_groups = len(subgroup_sizes)
 
-        # Calculate grid dimensions
-        n_groups = df[spec.rsg_var_name].nunique()
+        # Count (group × time) grid coverage (for SDS 6 incomplete grid detection)
+        # - This checks if we have a complete factorial design
+        # - Independent of how many observations are in each cell
+        grid_cells = df.groupby([spec.rsg_var_name, spec.time_var], dropna=False).size()
+        n_grid_cells = len(grid_cells)
         n_times = df[spec.time_var].nunique()
         full_grid_size = n_groups * n_times
 
         logger.debug(
             f"SDS Detection: {n_groups} groups × {n_times} times "
-            f"= {full_grid_size} possible cells"
+            f"= {full_grid_size} possible grid cells"
         )
         logger.debug(
-            f"SDS Detection: {n_cells} cells observed, "
-            f"n range: [{min_n}, {max_n}]"
+            f"SDS Detection: {n_grid_cells} grid cells observed, "
+            f"subgroup sizes n range: [{min_n}, {max_n}]"
         )
 
         # Check for nested design (SDS 5)
         if len(spec.rsg_vars) >= 2:
-            sds5 = self._check_nested_design(df, spec, n_cells, full_grid_size)
+            sds5 = self._check_nested_design(df, spec, n_grid_cells, full_grid_size)
             if sds5 is not None:
                 return sds5
 
@@ -322,18 +329,18 @@ class SamplingDesignDetector:
             logger.info(f"SDS 4: Single condition over time ({n_times} time points)")
             return 4
 
-        # SDS 6: Incomplete grid
-        coverage_ratio = n_cells / full_grid_size
+        # SDS 6: Incomplete grid (< 75% of group×time combinations present)
+        coverage_ratio = n_grid_cells / full_grid_size
         if coverage_ratio < 0.75:
             logger.info(
                 f"SDS 6: Unstructured/incomplete grid - "
-                f"{n_cells}/{full_grid_size} cells present ({coverage_ratio:.1%})"
+                f"{n_grid_cells}/{full_grid_size} grid cells present ({coverage_ratio:.1%})"
             )
             return 6
 
-        # SDS 1, 2, or 3: Based on cell sizes
+        # SDS 1, 2, or 3: Based on subgroup sample sizes
         return self._classify_by_replication(
-            cell_sizes, min_n, max_n, coverage_ratio
+            subgroup_sizes, min_n, max_n, coverage_ratio
         )
 
     def get_sds_characteristics(self, sds: int) -> dict:

@@ -20,6 +20,7 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
+from natsort import natsorted
 from pandas.api.types import is_numeric_dtype
 
 if TYPE_CHECKING:
@@ -70,11 +71,23 @@ class DataPreparation:
         spec: AnalysisSpecification
     ) -> pd.DataFrame:
         """
-        Prepare raw data for analysis.
+        Prepare raw data for analysis with automatic type conversion.
 
         Takes user's raw DataFrame and specification, returns a clean dataset
         ready for statistical analysis. This is a pure transformation - the
         input DataFrame is never modified.
+
+        **Type Conversion for Correct Sorting:**
+        - String-numeric columns ('1', '2', '10') → numeric (1, 2, 10)
+        - String-date columns ('2024-01-01') → datetime
+        - Numeric, date, datetime, categorical, Period types → unchanged
+        - RSG column → categorical with natural sort order
+
+        This ensures correct sorting for:
+        - Time series: 1, 2, 3, 10 (not '1', '10', '2', '3')
+        - Factor levels: Lane 1, Lane 2, Lane 10 (not Lane 1, Lane 10, Lane 2)
+        - Moving range calculations (adjacent observations)
+        - Signal detection rules (consecutive points)
 
         Parameters
         ----------
@@ -88,7 +101,8 @@ class DataPreparation:
         DataFrame
             Validated, filtered, sorted dataset with:
             - All required columns present and validated
-            - Composite grouping column if needed
+            - Type conversion applied for correct sorting
+            - Composite grouping column if needed (categorical with natural sort)
             - Invalid groups removed (n ≤ 1)
             - Sorted appropriately
             - Only requested output columns
@@ -124,10 +138,29 @@ class DataPreparation:
         # Validate columns early (fail fast!)
         self.validate_columns(out, spec)
 
+        # Convert types for correct sorting (time_var and factor columns)
+        # This handles string-numeric ('1', '10') and string-dates
+        if spec.has_time:
+            out[spec.time_var], msg = self._detect_and_convert_type(
+                out[spec.time_var],
+                spec.time_var
+            )
+
+        if spec.has_grouping:
+            for col in spec.rsg_vars:
+                out[col], msg = self._detect_and_convert_type(out[col], col)
+
         # Add composite grouping variable if needed
         if spec.has_grouping:
             out = self._add_grouping_column(out, spec)
             out = self._filter_small_groups(out, spec)
+
+            # Make RSG categorical with natural sort order
+            # This ensures 'Lane_1', 'Lane_2', 'Lane_10' (not 'Lane_1', 'Lane_10', 'Lane_2')
+            out[spec.rsg_var_name] = self._make_categorical_rsg(
+                out[spec.rsg_var_name],
+                spec.rsg_var_name
+            )
 
         # Sort if required
         if spec.requires_sort:
@@ -238,14 +271,15 @@ class DataPreparation:
         - cell_key: Tuple key for (factor × time) cells
 
         Dual-column strategy:
-        - **rsg_key (tuple)**: Used for internal computation (sorting, grouping)
-          Ensures correct numeric ordering: (1, 1), (1, 2), (1, 10)
+        - **rsg_key (tuple)**: Available for internal operations (fast lookups, hierarchical ops)
+          Preserves factor types after type conversion: (1, 1), (1, 2), (1, 10)
         - **rsg (string)**: Used for display (chart labels, user output)
-          Created separately in _add_grouping_column()
+          Created separately in _add_grouping_column() as categorical with natural sort
 
-        These tuple keys are essential for mathematical operations
-        (avoiding string comparison issues) while the composite string
-        column (e.g., 'rsg') is kept for user-facing charts.
+        Note: As of the type conversion implementation, tuple keys are created but
+        not used for primary sorting. Type conversion + categorical RSG handles
+        correct ordering. Tuple keys remain available for future enhancements
+        (fast lookups, hierarchical operations, etc.).
 
         Parameters
         ----------
@@ -329,7 +363,7 @@ class DataPreparation:
             logger.debug('Dropping existing "n" column (will be recalculated)')
             out = out.drop(columns=['n'])
 
-        # Create composite column
+        # Create composite column (always as string for display)
         if len(spec.rsg_vars) > 1:
             # Multiple factors: combine with delimiter
             out = self._add_composite_column(
@@ -339,12 +373,14 @@ class DataPreparation:
                 col_delim=spec.rsg_var_delim
             )
         else:
-            # Single factor: copy with standard name
+            # Single factor: copy with standard name, convert to string
             out = self._add_column(
                 df=out,
                 new_col_name=spec.rsg_var_name,
                 existing_column=spec.rsg_vars[0]
             )
+            # Ensure RSG is string (even if source column is numeric)
+            out[spec.rsg_var_name] = out[spec.rsg_var_name].astype(str)
 
         return out
 
@@ -441,3 +477,161 @@ class DataPreparation:
         out[col_name] = combined
 
         return out
+
+    def _detect_and_convert_type(
+        self,
+        series: pd.Series,
+        col_name: str
+    ) -> tuple[pd.Series, str | None]:
+        """
+        Detect and convert string columns to appropriate types.
+
+        Attempts conversion in this order:
+        1. Try pd.to_numeric() for numeric strings ('1', '2', '10' → 1, 2, 10)
+        2. Try pd.to_datetime() for date strings ('2024-01-01' → datetime)
+        3. Keep original if both fail
+
+        This ensures correct sorting:
+        - Numeric: 1, 2, 10 (not '1', '10', '2')
+        - Date/datetime: chronological order
+        - Categorical/string: natural sort will be applied
+
+        Parameters
+        ----------
+        series : pd.Series
+            Column to potentially convert
+        col_name : str
+            Name of column (for logging)
+
+        Returns
+        -------
+        tuple[pd.Series, str | None]
+            - Converted series (or original if no conversion)
+            - Conversion message (None if no conversion)
+
+        Examples
+        --------
+        >>> prep = DataPreparation()
+        >>> s = pd.Series(['1', '2', '10'])
+        >>> converted, msg = prep._detect_and_convert_type(s, 'time')
+        >>> converted.dtype
+        dtype('int64')
+        >>> '1' in msg  # Should mention conversion
+        True
+        """
+        # Skip if already numeric or datetime
+        if pd.api.types.is_numeric_dtype(series):
+            return series, None
+        if pd.api.types.is_datetime64_any_dtype(series):
+            return series, None
+        if isinstance(series.dtype, pd.PeriodDtype):
+            return series, None
+
+        # Skip if contains Python date/datetime objects (already proper type)
+        if len(series) > 0 and isinstance(series.iloc[0], (type(None), type(pd.NaT))):
+            # Handle NaT/None
+            first_valid_idx = series.first_valid_index()
+            if first_valid_idx is not None:
+                first_val = series.loc[first_valid_idx]
+            else:
+                return series, None
+        else:
+            first_val = series.iloc[0] if len(series) > 0 else None
+
+        if first_val is not None:
+            import datetime
+            if isinstance(first_val, (datetime.date, datetime.datetime)):
+                return series, None
+
+        # Skip if already categorical (assume user set ordering intentionally)
+        if isinstance(series.dtype, pd.CategoricalDtype):
+            return series, None
+
+        # Try numeric conversion
+        try:
+            numeric_vals = pd.to_numeric(series, errors='coerce')
+            # Only convert if ALL values succeeded (no NaNs introduced)
+            if not numeric_vals.isna().any() or series.isna().any():
+                # Some succeeded or only original NaNs
+                if numeric_vals.notna().any():
+                    msg = (
+                        f"Converted column '{col_name}' from string to numeric "
+                        f"for correct sorting (example: '{series.iloc[0]}' → {numeric_vals.iloc[0]})"
+                    )
+                    logger.info(msg)
+                    return numeric_vals, msg
+        except (ValueError, TypeError):
+            pass
+
+        # Try datetime conversion
+        try:
+            datetime_vals = pd.to_datetime(series, errors='coerce')
+            # Only convert if most values succeeded
+            success_rate = datetime_vals.notna().sum() / len(series)
+            if success_rate > 0.5:  # At least 50% converted
+                msg = (
+                    f"Converted column '{col_name}' from string to datetime "
+                    f"for correct chronological sorting"
+                )
+                logger.info(msg)
+                return datetime_vals, msg
+        except (ValueError, TypeError):
+            pass
+
+        # No conversion possible/needed
+        return series, None
+
+    def _make_categorical_rsg(
+        self,
+        series: pd.Series,
+        col_name: str
+    ) -> pd.Series:
+        """
+        Convert RSG column to categorical with natural sort order.
+
+        Uses natsort to handle numeric parts in strings correctly:
+        - Natural sort: 'Lane_1', 'Lane_2', 'Lane_10'
+        - Lexicographic: 'Lane_1', 'Lane_10', 'Lane_2' (wrong!)
+
+        This ensures groupby, sort_values, and plotting operations
+        all respect the correct numeric ordering within strings.
+
+        Parameters
+        ----------
+        series : pd.Series
+            RSG column (string values like 'Lane_1_Head_10')
+        col_name : str
+            Name of column (for logging)
+
+        Returns
+        -------
+        pd.Series
+            Categorical series with natural-sorted categories
+
+        Examples
+        --------
+        >>> prep = DataPreparation()
+        >>> s = pd.Series(['Lane_1_Head_10', 'Lane_1_Head_2', 'Lane_10_Head_1'])
+        >>> cat = prep._make_categorical_rsg(s, 'rsg')
+        >>> cat.dtype.ordered
+        True
+        >>> list(cat.cat.categories)
+        ['Lane_1_Head_2', 'Lane_1_Head_10', 'Lane_10_Head_1']
+        """
+        # Get unique values and sort naturally
+        unique_vals = series.unique()
+        sorted_categories = natsorted(unique_vals)
+
+        # Create ordered categorical
+        categorical = pd.Categorical(
+            series,
+            categories=sorted_categories,
+            ordered=True
+        )
+
+        logger.info(
+            f"Created categorical column '{col_name}' with natural sort order "
+            f"({len(sorted_categories)} categories)"
+        )
+
+        return pd.Series(categorical, index=series.index)
