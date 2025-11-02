@@ -825,16 +825,15 @@ class AnalysisResult:
     def _write_chart_tabs(self, writer: pd.ExcelWriter, format_cells: bool) -> None:
         """Write tabs for each chart."""
 
-        # Check if this is a stratified analysis
-        stratify_vars = self._ads.spec.spec.get('stratify')
-        if self.summary['is_stratified'] and stratify_vars:
+        # Check if this is a stratified analysis (IMR/R with grouping_vars)
+        if self.summary['is_stratified']:
             # Stratified analysis: combine all stratified charts into single tab
-            self._write_stratified_chart_tab(writer, format_cells, stratify_vars)
+            self._write_stratified_chart_tab(writer, format_cells)
 
-            # For stratified IMR/I charts, also create a summary tab for quick comparison
+            # For stratified IMR/R charts, also create a summary tab for quick comparison
             chart_type = self._ads.spec.analysis_type
-            if chart_type in ['Imr', 'I']:
-                self._write_stratified_summary_tab(writer, format_cells, stratify_vars)
+            if chart_type in ['Imr', 'R']:
+                self._write_stratified_summary_tab(writer, format_cells)
         else:
             # Standard analysis: each chart gets its own tab
             for chart_name, chart_info in self.charts.items():
@@ -859,8 +858,7 @@ class AnalysisResult:
     def _write_stratified_chart_tab(
         self,
         writer: pd.ExcelWriter,
-        format_cells: bool,
-        stratify_vars: list
+        format_cells: bool
     ) -> None:
         """
         Write all stratified charts to a single combined tab.
@@ -874,11 +872,9 @@ class AnalysisResult:
             Excel writer object
         format_cells : bool
             Whether to apply cell formatting
-        stratify_vars : list
-            Variables used for stratification
         """
-        # Determine stratification column name
-        strat_col = stratify_vars[0] if len(stratify_vars) == 1 else '_'.join(stratify_vars)
+        # For stratified IMR/R, use 'rsg' column as stratification identifier
+        strat_col = self._ads.spec.rsg_var_name  # Usually 'rsg'
 
         # Collect all stratified charts
         combined_data = []
@@ -894,18 +890,10 @@ class AnalysisResult:
             if chart_data is None or not isinstance(chart_data, pd.DataFrame):
                 continue
 
-            # Extract stratum value from chart name
-            # Pattern: "{StratumValue}_{StratCol}_{StratumValue}"
-            # e.g., "Day_Shift_Day" -> stratum = "Day"
-            # The first part before first underscore is the stratum value
-            parts = chart_name.split('_')
-            stratum_value = parts[0] if len(parts) > 0 else chart_name
-
-            # Add stratum column to data
-            chart_data_copy = chart_data.copy()
-            chart_data_copy.insert(0, strat_col, stratum_value)
-
-            combined_data.append(chart_data_copy)
+            # For IMR/R with grouping_vars, the 'rsg' column already exists
+            # and contains the stratification identifier (chart name)
+            # No need to add it - just use the data as-is
+            combined_data.append(chart_data.copy())
 
         # Combine all stratified charts
         if combined_data:
@@ -913,8 +901,10 @@ class AnalysisResult:
 
             # Create descriptive tab name
             chart_type = self._ads.spec.analysis_type
-            if len(stratify_vars) == 1:
-                tab_name = f"Chart_{chart_type}_by_{strat_col}"
+            grouping_vars = self._ads.spec.rsg_vars if self._ads.spec.has_grouping else []
+
+            if len(grouping_vars) == 1:
+                tab_name = f"Chart_{chart_type}_by_{grouping_vars[0]}"
             else:
                 tab_name = f"Chart_{chart_type}_Stratified"
 
@@ -948,11 +938,10 @@ class AnalysisResult:
     def _write_stratified_summary_tab(
         self,
         writer: pd.ExcelWriter,
-        format_cells: bool,
-        stratify_vars: list
+        format_cells: bool
     ) -> None:
         """
-        Create a summary tab for stratified IMR charts.
+        Create a summary tab for stratified IMR/R charts.
 
         Provides a high-level comparison across all strata showing:
         - Stratum identifier (RSG)
@@ -970,11 +959,9 @@ class AnalysisResult:
             Excel writer object
         format_cells : bool
             Whether to apply cell formatting
-        stratify_vars : list
-            Variables used for stratification
         """
-        # Determine stratification column name
-        stratify_vars[0] if len(stratify_vars) == 1 else '_'.join(stratify_vars)
+        # Use RSG column name from spec
+        strat_col = self._ads.spec.rsg_var_name  # Usually 'rsg'
 
         # Collect data from all stratified charts
         all_chart_data = []
