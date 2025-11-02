@@ -13,6 +13,7 @@ import pytest
 
 # Import analysis components
 from processbehavior import analysis_dataset as ad
+from processbehavior import Analysis
 
 # Import test data generators
 from processbehavior.datasets import make_sds1, make_sds2
@@ -42,7 +43,7 @@ def test_excel_export_basic(temp_excel_file):
     }
 
     # Run analysis
-    analysis = ad.Analysis(df, spec)
+    analysis = Analysis(df, spec)
     result = analysis.calculate()
 
     # Export to Excel
@@ -77,7 +78,7 @@ def test_excel_export_with_full_dataset(temp_excel_file):
         'response_var': 'y'
     }
 
-    analysis = ad.Analysis(df, spec)
+    analysis = Analysis(df, spec)
     result = analysis.calculate()
 
     # Export with full dataset
@@ -104,7 +105,7 @@ def test_excel_export_stratified_imr(temp_excel_file):
         'response_var': 'y'
     }
 
-    analysis = ad.Analysis(df, spec)
+    analysis = Analysis(df, spec)
     result = analysis.calculate()
 
     # Export to Excel
@@ -113,12 +114,19 @@ def test_excel_export_stratified_imr(temp_excel_file):
     # Verify file exists
     assert os.path.exists(temp_excel_file)
 
-    # Read back and verify multiple chart tabs
+    # Read back and verify stratified charts are combined into single tab
     excel_file = pd.ExcelFile(temp_excel_file, engine='openpyxl')
     chart_tabs = [name for name in excel_file.sheet_names if 'Chart_' in name]
 
-    # Should have multiple charts (one per group)
-    assert len(chart_tabs) > 1
+    # Stratified IMR creates one combined chart tab with all groups
+    assert len(chart_tabs) == 1, f"Expected 1 combined chart tab, got {len(chart_tabs)}: {chart_tabs}"
+    assert 'Chart_Imr_by_factor 1' in excel_file.sheet_names or 'Chart_Imr_Stratified' in excel_file.sheet_names
+
+    # Verify the combined tab has data
+    combined_tab_name = [n for n in excel_file.sheet_names if 'Chart_Imr' in n][0]
+    combined_data = pd.read_excel(temp_excel_file, sheet_name=combined_tab_name)
+    assert len(combined_data) > 0, "Combined chart tab should have data"
+    assert 'rsg' in combined_data.columns, "Combined data should have 'rsg' column for stratification"
 
 
 def test_excel_export_with_residuals(temp_excel_file):
@@ -132,7 +140,7 @@ def test_excel_export_with_residuals(temp_excel_file):
         'response_var': 'y'
     }
 
-    analysis = ad.Analysis(df, spec)
+    analysis = Analysis(df, spec)
     result = analysis.calculate()
 
     # Export to Excel
@@ -158,7 +166,7 @@ def test_excel_export_minimal(temp_excel_file):
         'response_var': 'y'
     }
 
-    analysis = ad.Analysis(df, spec)
+    analysis = Analysis(df, spec)
     result = analysis.calculate()
 
     # Export with minimal options
@@ -190,7 +198,7 @@ def test_excel_export_no_formatting(temp_excel_file):
         'response_var': 'y'
     }
 
-    analysis = ad.Analysis(df, spec)
+    analysis = Analysis(df, spec)
     result = analysis.calculate()
 
     # Export without formatting
@@ -213,7 +221,7 @@ def test_excel_export_chart_data_integrity(temp_excel_file):
         'response_var': 'y'
     }
 
-    analysis = ad.Analysis(df, spec)
+    analysis = Analysis(df, spec)
     result = analysis.calculate()
 
     # Get original chart data
@@ -241,7 +249,7 @@ def test_excel_export_summary_content(temp_excel_file):
         'response_var': 'y'
     }
 
-    analysis = ad.Analysis(df, spec)
+    analysis = Analysis(df, spec)
     result = analysis.calculate()
 
     # Export to Excel
@@ -269,7 +277,7 @@ def test_excel_export_effects_tab(temp_excel_file):
         'response_var': 'y'
     }
 
-    analysis = ad.Analysis(df, spec)
+    analysis = Analysis(df, spec)
     result = analysis.calculate()
 
     # Export to Excel
@@ -296,7 +304,7 @@ def test_excel_export_invalid_path():
         'response_var': 'y'
     }
 
-    analysis = ad.Analysis(df, spec)
+    analysis = Analysis(df, spec)
     result = analysis.calculate()
 
     # Try to export to invalid path
@@ -316,7 +324,7 @@ def test_excel_export_multiple_analyses(temp_excel_file):
         'response_var': 'y'
     }
 
-    analysis = ad.Analysis(df, spec_s)
+    analysis = Analysis(df, spec_s)
     result = analysis.calculate()
 
     # Should successfully export
@@ -344,7 +352,7 @@ def test_excel_tab_name_truncation(temp_excel_file):
         'response_var': 'y'
     }
 
-    analysis = ad.Analysis(df, spec)
+    analysis = Analysis(df, spec)
     result = analysis.calculate()
 
     # Export to Excel
@@ -367,7 +375,7 @@ def test_excel_export_preserves_statistics(temp_excel_file):
         'response_var': 'y'
     }
 
-    analysis = ad.Analysis(df, spec)
+    analysis = Analysis(df, spec)
     result = analysis.calculate()
 
     # Get original statistics
