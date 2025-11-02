@@ -20,9 +20,10 @@ Quick Start:
     >>> df = synthetic.make_sds1(K=3, T=8, n_min=2, n_max=4)
     >>> 
     >>> # Use with analysis
-    >>> spec = {'analysis_type': 'Xbar', 'rsg_vars': ['factor 1'], 
+    >>> from processbehavior import Analysis
+    >>> spec = {'analysis_type': 'Xbar', 'rsg_vars': ['factor 1'],
     ...         'response_var': 'y', 'time_var': 'time'}
-    >>> results = perform_analysis(df, spec)
+    >>> results = Analysis(df, spec).calculate()
 
 Sampling Design States:
 ----------------------
@@ -1370,7 +1371,7 @@ def make_edge_cases() -> dict[str, pd.DataFrame]:
         >>> # Test each edge case
         >>> for name, df in edge_cases.items():
         ...     try:
-        ...         result = perform_analysis(df, spec)
+        ...         result = Analysis(df, spec).calculate()
         ...         print(f"{name}: PASSED")
         ...     except Exception as e:
         ...         print(f"{name}: {type(e).__name__}")

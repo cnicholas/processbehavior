@@ -6,7 +6,6 @@ import logging
 import numpy as np
 import pandas as pd
 
-from .analysis import Analysis
 from .analysis_specification import AnalysisSpecification
 from .data_preparation import DataPreparation
 from .effects_calculator import EffectsCalculator
@@ -19,24 +18,6 @@ logger = logging.getLogger(__name__)
 # ============================================================================
 # Module-level Functions
 # ============================================================================
-
-def perform_analysis(df: pd.DataFrame, specification: dict):
-    """
-    Main entry point for performing statistical process control analysis.
-
-    Args:
-        df: Input DataFrame with raw data
-        specification: Dictionary containing analysis configuration including 'analysis_type'
-
-    Returns:
-        DataFrame or dict containing analysis results
-
-    Raises:
-        ValueError: If analysis_type is not supported
-    """
-    # Use new unified Analysis class
-    analysis = Analysis(df, specification)
-    return analysis.calculate()
 
 def split_df_by_group(df: pd.DataFrame, grouping_var: str) -> dict:
     """

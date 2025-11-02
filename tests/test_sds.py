@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 
 from processbehavior import analysis_dataset as ad
+from processbehavior import Analysis
 from processbehavior.datasets import (
     make_sds1,
     make_sds2,
@@ -108,7 +109,7 @@ def test_sds_comprehensive():
         'round_to': 3
     }
     
-    result4 = ad.perform_analysis(df=df4, specification=spec4)
+    result4 = Analysis(df4, spec4).calculate()
     print("IMR analysis completed for SDS4")
     print(f"Center: {result4['all']['statistics']['center']:.2f}")
     print(f"Control limits: [{result4['all']['statistics']['lcl']:.2f}, "
@@ -133,7 +134,7 @@ def test_sds_comprehensive():
     }
     
     try:
-        ad.perform_analysis(df=df5, specification=spec5)
+        Analysis(df5, spec5).calculate()
         print("✓ SDS5 analysis completed")
     except Exception as e:
         print(f"⚠️  SDS5 analysis issue: {e}")
@@ -156,7 +157,7 @@ def test_sds_comprehensive():
         'round_to': 3
     }
     
-    result6 = ad.perform_analysis(df=df6, specification=spec6)
+    result6 = Analysis(df6, spec6).calculate()
     print(f"✓ Analyzed {len(result6)} groups")
     
     print("\n" + "=" * 60)
@@ -237,7 +238,7 @@ def test_stratified_imr_vs_vas_xbar():
         "IMR should not calculate VAS residuals"
     
     # Perform analysis - get stratified charts
-    result_imr = ad.perform_analysis(df, spec_imr)
+    result_imr = Analysis(df, spec_imr).calculate()
     
     print(f"\n✓ Created {len(result_imr)} individual IMR charts (one per group)")
     print(f"  Groups: {list(result_imr.keys())}")
@@ -331,7 +332,7 @@ def test_stratified_imr_with_sds6():
     }
     
     # Should work even with irregular data
-    result = ad.perform_analysis(df, spec)
+    result = Analysis(df, spec).calculate()
     
     assert hasattr(result, "keys") and hasattr(result, "values")
     assert len(result) >= 2  # Should have multiple groups
@@ -388,7 +389,7 @@ def test_automatic_stratification_demo():
     print("  response_var: 'y'")
     
     # One function call
-    result = ad.perform_analysis(df, spec)
+    result = Analysis(df, spec).calculate()
     
     print(f"\n✓ ONE function call created {len(result)} control charts:")
     
@@ -450,7 +451,7 @@ def test_automatic_stratification_demo():
     
     print("\nThis system:")
     print("  1. Specify rsg_vars=['factor 1']")
-    print("  2. Call perform_analysis() once")
+    print("  2. Call Analysis(df, spec).calculate() once")
     print("  3. Done.")
     print("\n  = Automatic, error-free, complete")
 

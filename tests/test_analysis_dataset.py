@@ -5,6 +5,7 @@ import pandas as pd
 import pytest
 
 from processbehavior import analysis_dataset as ad
+from processbehavior import Analysis
 from processbehavior.spc_constants import c4
 
 # Configure logging
@@ -266,7 +267,7 @@ def test_sds1_synthetic():
         else:
             print(value)
 
-    result = ad.perform_analysis(df=df, specification=spec)
+    result = Analysis(df, spec).calculate()
 
     print("\n\n============== CONTROL CHART RESULTS ==============")
     print("\n--- Xbar Chart Results ---")
@@ -296,7 +297,7 @@ def test_perform_analysis_XbarS(df: pd.DataFrame):
     
     summary = ads.analysis_summary
     logger.info(summary)
-    result = ad.perform_analysis(df=df, specification=spec)
+    result = Analysis(df, spec).calculate()
 
     conditionsXbar = {
                     'center':5.0,
@@ -342,7 +343,7 @@ def test_perform_analysis_XbarS_differing_Ns(df_differing_Ns: pd.DataFrame):
                 'time_var': 'd', 'round_to': 2}
         
         logger.info(f"Testing XbarS with differing Ns, spec: {spec}")
-        theAnalysis = ad.Analysis(df_differing_Ns,spec)
+        theAnalysis = Analysis(df_differing_Ns, spec)
         result = theAnalysis.calculate()
         
         print(f'#############################Differing Ns:\n {result}')
@@ -394,7 +395,7 @@ def test_perform_analysis_Imr(df: pd.DataFrame):
 
         logger.info(f'{spec}')
         #a_spec = ad.AnalysisSpecification(analysis_type='Imr', analysis_specification=spec)
-        theAnalysis = ad.Analysis(df=df,specification=spec)
+        theAnalysis = Analysis(df=df, specification=spec)
         result = theAnalysis.calculate()#(df=df, specification=spec)
         logger.info('Testing with df for IMR with groups')
 
@@ -428,7 +429,7 @@ def test_perform_analysis_IMR_w_o_grouping_var(df: pd.DataFrame):
         spec = {'analysis_type': 'Imr', 'response_var': 'c','time_unit': None, 'round_to':2}
 
         ad.AnalysisSpecification(analysis_type="Imr", analysis_specification=spec)
-        result = ad.perform_analysis(df=df, specification=spec)
+        result = Analysis(df, spec).calculate()
 
         assert hasattr(result, "keys") and hasattr(result, "values")
 
@@ -439,7 +440,7 @@ def test_perform_analysis_R(df: pd.DataFrame):
                 'rsg_var_name': 'rsg', 'time_unit': None, 'round_to': 2}
         ad.AnalysisSpecification(analysis_type='R', analysis_specification=spec)
 
-        result = ad.perform_analysis(df=df, specification=spec)
+        result = Analysis(df, spec).calculate()
         logger.info('Testing with df for R with groups')
         logger.debug(f'Test: {result}')
         logger.info(f'Testing return is a dictionary{type(result)}')
@@ -469,7 +470,7 @@ def test_perform_analysis_R_w_o_grouping(df: pd.DataFrame):
         spec = {'analysis_type': 'R', 'response_var': 'c', 'rsg_var_name': 'rsg',
                 'time_unit': None}
         logger.info('spec')
-        result = ad.perform_analysis(df=df, specification=spec)
+        result = Analysis(df, spec).calculate()
 
         assert hasattr(result, "keys") and hasattr(result, "values")
         assert result['all']['statistics']['center'] == 2.917
@@ -487,7 +488,7 @@ def test_R_with_FW800():
         spec = {'analysis_type': 'R', 'rsg_vars': ['lane', 'phase'], 'response_var': 'fill_weight', 'rsg_var_name': 'rsg',
                 'time_var': 'pull'}
 
-        result = ad.perform_analysis(df=df, specification=spec)
+        result = Analysis(df, spec).calculate()
 
         assert hasattr(result, "keys") and hasattr(result, "values") #expect dict
         assert len(result) == 8 #expect 8 rsgs
@@ -514,7 +515,7 @@ def test_analysis_types_dt_col_handling(df_dt: pd.DataFrame, analysis_types: lis
                 spec['analysis_type'] = analysis
                 logger.info(f'Running datetime column in {analysis} analysis')
                 logger.info(f'Using spec: {spec}')
-                result = ad.perform_analysis(df=df, specification=spec)
+                result = Analysis(df, spec).calculate()
                 logger.debug(f'{result}')
                 if analysis in ['Imr','R']:
                     out = result['a_c']['data']
@@ -530,7 +531,7 @@ def test_time_var_as_object_and_sort(df_dt: pd.DataFrame):
         spec = {'analysis_type': 'Imr', 'rsg_vars': ['a', 'b'], 'time_var': 'd2', 'response_var': 'c',
                 'rsg_var_name': 'rsg', 'time_unit': None}
         
-        result = ad.perform_analysis(df=df, specification=spec)
+        result = Analysis(df, spec).calculate()
 
         # With type conversion, string dates are converted to datetime
         o_type=result['a_c']['data']['d2'].dtype
@@ -551,7 +552,7 @@ def test_IMR_w_o_grouping_var_FW800():
             df = pd.read_csv(f_path)
             logger.debug(f'\n{df.columns.tolist()}')
             ad.AnalysisSpecification(analysis_type="Imr", analysis_specification=spec)
-            result = ad.perform_analysis(df=df, specification=spec)
+            result = Analysis(df, spec).calculate()
 
             assert hasattr(result, "keys") and hasattr(result, "values")
             _keys = result.keys()
@@ -615,7 +616,7 @@ def test_perform_analysis_XbarS_zero_center(df: pd.DataFrame):
                 'rsg_var_name': 'rsg', 'zero-center':True}
 
         logger.info(f'{spec}')
-        result = ad.perform_analysis(df=df, specification=spec)
+        result = Analysis(df, spec).calculate()
         assert result['Xbar']['statistics']['center'] == 0
         
 def test_perform_analysis_IMR_zero_center(df: pd.DataFrame):
@@ -624,7 +625,7 @@ def test_perform_analysis_IMR_zero_center(df: pd.DataFrame):
 
         logger.info(f'{spec}')
         logger.debug(f'{df}')
-        result  = ad.perform_analysis(df=df, specification=spec)
+        result = Analysis(df, spec).calculate()
         logger.debug(f'{result}')
         #assert result['Xbar']['statistics']['Mean'] == 0
         
@@ -634,7 +635,7 @@ def test_perform_analysis_R_zero_center(df: pd.DataFrame):
 
         logger.info(f'{spec}')
         logger.debug(f'{df}')
-        result  = ad.perform_analysis(df=df, specification=spec)
+        result = Analysis(df, spec).calculate()
         logger.debug(f'{result}')
         #assert result['Xbar']['statistics']['Mean'] == 0
         

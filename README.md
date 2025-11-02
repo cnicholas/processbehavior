@@ -153,6 +153,8 @@ Traditional SPC tools force you to choose:
 **This system stratifies automatically:**
 ```python
 # One specification
+from processbehavior import Analysis
+
 spec = {
     'analysis_type': 'Imr',
     'rsg_vars': ['lane', 'phase'],  # ← Stratify by these
@@ -161,7 +163,7 @@ spec = {
 }
 
 # One function call
-results = perform_analysis(df, spec)
+results = Analysis(df, spec).calculate()
 
 # Multiple charts automatically created:
 # results['lane1_phase1'] - Individual chart with lane1_phase1-specific limits

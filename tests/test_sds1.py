@@ -6,6 +6,7 @@ import pandas as pd
 import pytest
 
 from processbehavior import analysis_dataset as ad  # your module
+from processbehavior import Analysis
 
 logger = logging.getLogger(__name__)
 
@@ -128,7 +129,7 @@ def test_analysis_dataset_sds1(df_SDS1: pd.DataFrame):
     }
 
     # Run analysis
-    analysis = ad.Analysis(df_SDS1, spec)
+    analysis = Analysis(df_SDS1, spec)
     ds = analysis.ads
     df_calc = ds.analysis_dataset
 
@@ -361,7 +362,7 @@ def test_analysis_dataset_sds1(df_SDS1: pd.DataFrame):
     }
 
     # Run analysis
-    analysis = ad.Analysis(df_SDS1, spec)
+    analysis = Analysis(df_SDS1, spec)
     ds = analysis.ads
     df_calc = ds.analysis_dataset
 
@@ -600,7 +601,7 @@ def test_analysis_dataset_sds1(df_SDS1: pd.DataFrame):
     }
 
     # Run analysis
-    analysis = ad.Analysis(df_SDS1, spec)
+    analysis = Analysis(df_SDS1, spec)
     ds = analysis.ads
     df_calc = ds.analysis_dataset
 
@@ -727,7 +728,7 @@ def test_pdc_by_pt_consistency(df_SDS1):
         'rsg_var_name': 'rsg',
         'round_to': 2,
     }
-    analysis = ad.Analysis(df_SDS1, specification=spec)
+    analysis = Analysis(df_SDS1, specification=spec)
     df = analysis.ads.analysis_dataset
 
     # Calculate expected PDC using formula

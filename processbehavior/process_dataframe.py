@@ -23,7 +23,7 @@ import logging
 
 import pandas as pd
 
-from .analysis_dataset import Analysis
+from .analysis import Analysis
 from .analysis_specification import AnalysisSpecification
 from .sds_detector import SamplingDesignDetector, SDSAnalysisPlan
 
@@ -259,7 +259,6 @@ class ProcessDataFrame:
         time_var: str | None = None,
         grouping_vars: list[str] | None = None,
         chart_type: str | None = None,
-        stratify: bool | str | list[str] = False,
         rsg_var_name: str = 'rsg',
         rsg_var_delim: str = '_',
         round_to: int = 3,
@@ -279,17 +278,12 @@ class ProcessDataFrame:
             response_var: Single response variable (for simple series)
             response_vars: List of response variables (for multivariate)
             time_var: Time/sequence variable
-            grouping_vars: Grouping variables for rational subgrouping
+            grouping_vars: Grouping variables for rational subgrouping.
+                          For IMR charts, this automatically creates separate charts
+                          per group (stratified analysis).
             chart_type: Explicit chart type ('Xbar', 'S', 'Imr', 'R'). If None,
                        uses recommended chart for detected SDS. After first analyze(),
                        use data.charts for auto-completion of valid options.
-            stratify: Create separate charts for each level of grouping variable(s).
-                     - False (default): Single combined chart
-                     - True: Stratify by all grouping_vars (creates separate chart per stratum)
-                     - 'VarName': Stratify by specific variable
-                     - ['Var1', 'Var2']: Stratify by combination of variables
-                     Most commonly used with chart_type='Imr' to create separate IMR
-                     charts for each subgroup, enabling drill-down analysis.
             rsg_var_name: Name for rational subgroup column (default: 'rsg')
             rsg_var_delim: Delimiter for multi-variable groups (default: '_')
             round_to: Decimal places for rounding (default: 3)
@@ -319,12 +313,11 @@ class ProcessDataFrame:
                 chart_type=data.charts.S  # IDE auto-completes valid options!
             )
 
-            # Stratified analysis - separate IMR for each Operator
+            # Stratified IMR analysis - separate IMR chart per Operator
             analysis = data.analyze(
                 response_var=data.columns.Height,
                 grouping_vars=[data.columns.Operator],
-                chart_type='Imr',
-                stratify=True  # Creates separate IMR chart per operator
+                chart_type='Imr'  # Creates separate IMR chart per operator automatically
             )
             # Access: analysis.get_stratified_chart('Operator_A')
         """
@@ -398,15 +391,11 @@ class ProcessDataFrame:
             analysis_type = chart_type
             logger.info(f"Using user-specified chart: '{analysis_type}'")
 
-        # Handle stratification
-        stratify_vars = self._process_stratify_parameter(stratify, grouping_vars, analysis_type)
-
         # Log what we're doing and why
-        self._explain_analysis(sds, sds_info, analysis_type, spec_dict, plan, stratify_vars)
+        self._explain_analysis(sds, sds_info, analysis_type, spec_dict, plan)
 
-        # Update spec with correct analysis type and stratification info
+        # Update spec with correct analysis type
         spec_dict['analysis_type'] = analysis_type
-        spec_dict['stratify'] = stratify_vars
         AnalysisSpecification(analysis_type, spec_dict)
 
         # Run the analysis
@@ -445,83 +434,13 @@ class ProcessDataFrame:
         # Otherwise → IMR chart (individuals)
         return 'Imr'
 
-    def _process_stratify_parameter(
-        self,
-        stratify: bool | str | list[str],
-        grouping_vars: list[str] | None,
-        analysis_type: str
-    ) -> list[str] | None:
-        """
-        Process and validate the stratify parameter.
-
-        Args:
-            stratify: User-specified stratification request
-            grouping_vars: Grouping variables from analyze()
-            analysis_type: Selected analysis type
-
-        Returns:
-            List of variables to stratify by, or None if no stratification
-
-        Raises:
-            ValueError: If stratify is invalid or incompatible with analysis
-        """
-        # No stratification requested
-        if stratify is False or stratify is None:
-            return None
-
-        # Validate that grouping variables exist
-        if not grouping_vars:
-            raise ValueError(
-                "Stratification requires grouping_vars to be specified.\n"
-                "Cannot stratify data with no grouping structure."
-            )
-
-        # Determine which variables to stratify by
-        if stratify is True:
-            # Stratify by all grouping variables
-            stratify_vars = grouping_vars.copy()
-            logger.info(f"Stratifying by all grouping variables: {stratify_vars}")
-        elif isinstance(stratify, str):
-            # Stratify by single variable
-            if stratify not in grouping_vars:
-                raise ValueError(
-                    f"Stratify variable '{stratify}' not in grouping_vars.\n"
-                    f"Available: {grouping_vars}"
-                )
-            stratify_vars = [stratify]
-            logger.info(f"Stratifying by: {stratify}")
-        elif isinstance(stratify, list):
-            # Stratify by list of variables
-            invalid = [v for v in stratify if v not in grouping_vars]
-            if invalid:
-                raise ValueError(
-                    f"Stratify variables {invalid} not in grouping_vars.\n"
-                    f"Available: {grouping_vars}"
-                )
-            stratify_vars = stratify
-            logger.info(f"Stratifying by: {stratify_vars}")
-        else:
-            raise TypeError(
-                f"stratify must be bool, str, or list[str], got {type(stratify)}"
-            )
-
-        # Warn if stratifying with non-IMR charts (less common use case)
-        if analysis_type not in ['Imr', 'R']:
-            logger.warning(
-                f"Stratifying {analysis_type} charts is uncommon. "
-                f"Stratification is most useful with IMR charts for drill-down analysis."
-            )
-
-        return stratify_vars
-
     def _explain_analysis(
         self,
         sds: int,
         sds_info: dict,
         analysis_type: str,
         spec: dict,
-        plan: SDSAnalysisPlan,
-        stratify_vars: list[str] | None = None
+        plan: SDSAnalysisPlan
     ):
         """
         Print user-friendly explanation of what analysis is running and why.
@@ -532,7 +451,6 @@ class ProcessDataFrame:
             analysis_type: Selected analysis type
             spec: Analysis specification dict
             plan: SDS analysis plan with valid/invalid charts
-            stratify_vars: Variables to stratify by, if any
         """
         print("\n" + "="*70)
         print("PROCESS BEHAVIOR ANALYSIS")
@@ -547,11 +465,6 @@ class ProcessDataFrame:
         is_recommended = analysis_type == plan.recommended_chart
         selection_note = " (recommended)" if is_recommended else " (user-specified)"
         print(f"   Selected: {self._get_analysis_description(analysis_type)}{selection_note}")
-
-        # Show stratification info
-        if stratify_vars:
-            num_strata = "multiple" if len(stratify_vars) > 1 else "per level"
-            print(f"   Stratification: Enabled - creating separate charts {num_strata} of {', '.join(stratify_vars)}")
 
         # Show what's not available (if any)
         if plan.invalid_charts:
