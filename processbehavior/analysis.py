@@ -44,6 +44,148 @@ from .spc_constants import calculate_limits, detect_beyond_limits
 logger = logging.getLogger(__name__)
 
 
+# ============================================================================
+# Module-level Helper Functions
+# ============================================================================
+
+def split_df_by_group(df: pd.DataFrame, grouping_var: str) -> dict:
+    """
+    Split DataFrame by grouping variable into dictionary of DataFrames.
+
+    :param pandas.Dataframe df: data frame to split by group
+    :param str grouping_var: group_variable to group dataframe by
+    :return: dictionary of dataframes with grouping_var values as keys
+    :rtype: dict
+    :raises ValueError: if group_var is not in input dataframe
+
+    For example: if df.groups = ['a','b','c'] the function will return:
+            {
+                'a': pandas.Dataframe for a,
+                'b': pandas.Dataframe for b,
+                'c': pandas.Dataframe for c
+            }
+    """
+    # Make sure grouping_var column exists
+    if grouping_var not in df.columns.tolist():
+        raise ValueError(
+            f'The group_var: {grouping_var} is not in the data set!'
+        )
+
+    out = {}
+    grouped = df.groupby(grouping_var)
+
+    # package_results
+    for g in grouped.groups:
+        criteria = df[grouping_var].eq(g)
+        out[g] = df[criteria]
+
+    return out
+
+
+def gather_analysis_statistics(
+    df: pd.DataFrame,
+    statistics_to_collect: list,
+    grouping_var: str = None
+) -> dict:
+    """
+    Gather summary statistics from analysis results.
+
+    Returns a dictionary of statistics (contained in stats_to_package)
+    for each analytic result passed.
+
+    :param pandas.Dataframe df: a grouped dataframe of analysis results,
+        i.e., output from R or Imr
+    :param list statistics_to_collect: list of variables/columns to summarize
+        (dataframes currently contain columns for mean, moving range, and N)
+    :param str grouping_var: optional grouping variable
+
+    This function will take the max for each value specified in stats to package
+    and put in dictionary with key equal to the value of list item,
+    i.e., "mean" will be returned in a dictionary
+    {statistics:{group_name: "abc", mean:1.0, etc...}}
+
+    :return: dictionary of statistics with grouping_var values as keys
+    :rtype: dict
+    :raises ValueError: if variables specified in list are not in input dataframe
+    """
+    logger.debug('In call gather_statistics')
+    stats = {}
+
+    out = df.copy()
+    out_cols = df.columns.to_list()
+
+    is_valid = all(cols in out_cols for cols in statistics_to_collect)
+
+    if is_valid:
+        if grouping_var is not None:
+            statistics_to_collect.append("n")
+            N = out.groupby(grouping_var, as_index=False).size()
+            N.reset_index()
+            N.rename(columns={"size": "n"}, inplace=True)
+
+            summarized = df.groupby([grouping_var]).max()
+            summarized = pd.merge(N, summarized, how='left', on=grouping_var)
+
+            for _index, row in summarized.iterrows():
+                stats[row[grouping_var]] = row[statistics_to_collect].to_dict()
+
+        else:
+            n = len(out)
+
+            summarized = out[statistics_to_collect].max().to_dict()
+            summarized["n"] = n
+            stats['all'] = summarized
+
+    else:
+        raise ValueError(f'Statistics: {statistics_to_collect} are not in {df.columns.to_list()}')
+
+    return stats
+
+
+def package_analysis(analysis_output: dict, summary_statistics_output: dict):
+    """
+    Combine analysis results with summary statistics.
+
+    Combines two dictionaries into one with the rational subgroup name as the key.
+    Returns a dictionary of statistics (contained in stats_to_package)
+    for each analytic result passed.
+
+    :param dict analysis_output: dictionary of dataframes with
+        a key matching the name of the rational subgroup name for grouped
+        individuals analyses, R or Imr
+    :param dict summary_statistics_output: dictionary of collected
+        statistics for each grouped individuals analysis. key is expected
+        to be the name of the rational subgroup.
+
+    :return: dictionary with combined data and statistics
+    :rtype: dict
+    :raises ValueError: if keys don't match between the two dictionaries
+    """
+    logger.debug('In call package_analysis')
+    out = {}
+
+    output_keys = analysis_output.keys()
+    stats_keys = summary_statistics_output.keys()
+
+    is_valid = all(keys in output_keys for keys in stats_keys)
+
+    if is_valid:
+        for key in analysis_output:
+            out[key] = {
+                'data': analysis_output[key],
+                'statistics': summary_statistics_output[key]
+            }
+    else:
+        msg = (
+            f'Call: package_analysis: The rational subgroups do not match '
+            f'for statistics being collected {list(stats_keys)}, '
+            f'data: {list(output_keys)}'
+        )
+        raise ValueError(msg)
+
+    return out
+
+
 class Analysis:
     """
     Unified analysis class handling all chart types via strategy pattern.
@@ -268,9 +410,7 @@ class Analysis:
         ...     value_col='measurement'
         ... )
         """
-        # Import here to avoid circular dependency
-        from .analysis_dataset import gather_analysis_statistics, split_df_by_group, package_analysis
-
+        # Functions are now in the same module - no import needed
         if self.spec.has_grouping:
             statistics = gather_analysis_statistics(
                 df=df,

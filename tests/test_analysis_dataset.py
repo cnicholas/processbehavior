@@ -6,6 +6,7 @@ import pytest
 
 from processbehavior import analysis_dataset as ad
 from processbehavior import Analysis
+from processbehavior.analysis import gather_analysis_statistics, package_analysis
 from processbehavior.spc_constants import c4
 
 # Configure logging
@@ -571,7 +572,7 @@ def test_package_statistics():
         analysis_output = {'a':"dataframe_a",'b':"dataframe_b"}
         statistics = {'a':"statistics_a",'b':"statistics_b"}
         
-        out = ad.package_analysis(analysis_output=analysis_output, summary_statistics_output=statistics)
+        out = package_analysis(analysis_output=analysis_output, summary_statistics_output=statistics)
         assert type(out.get("a")) == type({})
         assert out.get("a").get('statistics') == "statistics_a" 
 
@@ -590,7 +591,7 @@ def test_gather_statistics():
         }
         df = pd.DataFrame(data=df)
         
-        out = ad.gather_analysis_statistics(df, ['stat1','stat2','stat3'], grouping_var='rsg')
+        out = gather_analysis_statistics(df, ['stat1','stat2','stat3'], grouping_var='rsg')
         assert len(out) == 2 #should only have 1 dictionary with two keys
         assert len(out['a_c']) == 4 #should only have 1 dictionary with two keys
         logger.debug(f'{out}')
@@ -606,7 +607,7 @@ def test_gather_statistics_no_grouping():
         }
         df = pd.DataFrame(data=df)
         
-        out = ad.gather_analysis_statistics(df, ['stat1','stat2','stat3'])
+        out = gather_analysis_statistics(df, ['stat1','stat2','stat3'])
         assert len(out) == 1 #should only have 1 dictionary with two keys
         assert len(out['all']) == 4 #should only have 1 dictionary with a key of 'all' with 4 entries (stats + n)
         logger.debug(f'{out}')
