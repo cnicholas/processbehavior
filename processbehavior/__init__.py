@@ -38,7 +38,8 @@ __version__ = "0.3.0"
 
 # Main user-facing API
 # Core analysis classes
-from processbehavior.analysis_dataset import Analysis, AnalysisDataSet
+from processbehavior.analysis import Analysis
+from processbehavior.analysis_dataset import AnalysisDataSet
 
 # Result object
 from processbehavior.analysis_result import AnalysisResult
