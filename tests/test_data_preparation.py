@@ -840,3 +840,86 @@ def test_integration_mixed_factor_types_correct_stratification(prep):
     assert '1_A' in categories
     assert '10_A' in categories
     assert categories.index('1_A') < categories.index('10_A')
+
+
+def test_prepare_dataset_preserves_observation_counts(prep):
+    """Observation counts should be preserved (after dropna)."""
+    df = pd.DataFrame({
+        'lane': [1, 1, 2, 2, 3, 3] * 3,  # 18 rows, 6 per lane
+        'pull': [1, 2, 1, 2, 1, 2] * 3,
+        'weight': [10.1, 10.2, 10.3, 10.4, 10.5, 10.6] * 3
+    })
+    spec = AnalysisSpecification('Xbar', {
+        'rsg_vars': ['lane'],
+        'time_var': 'pull',
+        'response_var': 'weight'
+    })
+
+    result = prep.prepare_dataset(df, spec)
+
+    # Should preserve all 18 observations
+    assert len(result) == 18, f"Expected 18 rows, got {len(result)}"
+
+    # Should preserve per-group counts
+    counts = result.groupby('rsg').size()
+    assert all(counts == 6), f"Expected 6 observations per lane, got {counts.tolist()}"
+
+
+def test_prepare_dataset_handles_missing_data_correctly(prep):
+    """Missing data should be dropped and counts should reflect clean data."""
+    df = pd.DataFrame({
+        'lane': [1, 1, 1, 2, 2, 2, 3, 3, 3],
+        'pull': [1, 2, 3, 1, 2, 3, 1, 2, 3],
+        'weight': [10.1, None, 10.3, 10.4, 10.5, None, 10.7, 10.8, 10.9]
+    })
+    spec = AnalysisSpecification('Xbar', {
+        'rsg_vars': ['lane'],
+        'time_var': 'pull',
+        'response_var': 'weight'
+    })
+
+    result = prep.prepare_dataset(df, spec)
+
+    # Should have 7 rows (9 original - 2 with missing weight)
+    assert len(result) == 7, f"Expected 7 rows after dropna, got {len(result)}"
+
+    # Check per-lane counts are correct
+    counts = result.groupby('rsg').size().to_dict()
+    assert counts['1'] == 2, f"Lane 1 should have 2 observations, got {counts.get('1', 0)}"
+    assert counts['2'] == 2, f"Lane 2 should have 2 observations, got {counts.get('2', 0)}"
+    assert counts['3'] == 3, f"Lane 3 should have 3 observations, got {counts.get('3', 0)}"
+
+
+def test_full_pipeline_observation_count_integrity(prep):
+    """End-to-end test: Verify observation counts through full pipeline."""
+    # Simulate realistic data with some missing values
+    np.random.seed(42)
+    df = pd.DataFrame({
+        'lane': np.repeat([1, 2, 3, 4], 50),  # 200 rows, 50 per lane
+        'phase': np.tile([1, 2] * 25, 4),
+        'pull': np.tile(range(1, 51), 4),
+        'weight': np.random.normal(10, 0.5, 200)
+    })
+
+    # Add some missing values
+    df.loc[[5, 67, 123], 'weight'] = None  # 3 missing values
+
+    spec = AnalysisSpecification('Xbar', {
+        'rsg_vars': ['lane'],
+        'time_var': 'pull',
+        'response_var': 'weight'
+    })
+
+    result = prep.prepare_dataset(df, spec)
+
+    # Should have 197 rows (200 - 3 missing)
+    assert len(result) == 197, f"Expected 197 rows, got {len(result)}"
+
+    # Verify per-lane counts
+    lane_counts = result.groupby('rsg').size().to_dict()
+    # Row 5 is lane 1, row 67 is lane 2, row 123 is lane 3
+    expected_counts = {'1': 49, '2': 49, '3': 49, '4': 50}  # Missing values in lanes 1, 2, 3
+
+    for lane, expected in expected_counts.items():
+        actual = lane_counts.get(lane, 0)
+        assert actual == expected, f"Lane {lane}: expected {expected} observations, got {actual}"
