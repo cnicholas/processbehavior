@@ -10,7 +10,7 @@ These tests verify the DECLARATIVE CONTRACT that each chart type should follow.
 """
 import pytest
 import pandas as pd
-from processbehavior.analysis_dataset import Analysis
+from processbehavior.analysis import Analysis
 from processbehavior.plotting.plotter import Plotter
 
 

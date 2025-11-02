@@ -113,7 +113,8 @@ from processbehavior.process_dataframe import ProcessDataFrame
 from processbehavior.analysis_result import AnalysisResult
 
 # Core analysis classes
-from processbehavior.analysis_dataset import Analysis, AnalysisDataSet
+from processbehavior.analysis import Analysis
+from processbehavior.analysis_dataset import AnalysisDataSet
 from processbehavior.analysis_specification import AnalysisSpecification
 
 # Utility classes (advanced users)
