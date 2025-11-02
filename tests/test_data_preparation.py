@@ -478,3 +478,365 @@ def test_full_preparation_pipeline(prep, simple_df, spec_xbar):
     assert len(result) == 6  # All rows kept
     assert result['weight'].notna().all()
     assert (result['n'] > 1).all()
+
+
+# ============================================================================
+# Test: Type Conversion for Correct Sorting
+# ============================================================================
+
+def test_time_var_numeric_unchanged(prep):
+    """Native numeric time_var should stay unchanged."""
+    df = pd.DataFrame({
+        'lane': ['A', 'A', 'A'],
+        'time': [1, 2, 10],  # Already numeric
+        'weight': [10.1, 10.2, 10.3]
+    })
+    spec = AnalysisSpecification('Xbar', {
+        'rsg_vars': ['lane'],
+        'time_var': 'time',
+        'response_var': 'weight'
+    })
+
+    result = prep.prepare_dataset(df, spec)
+
+    assert pd.api.types.is_numeric_dtype(result['time'])
+    assert result['time'].tolist() == [1, 2, 10]
+
+
+def test_time_var_string_numeric_converted(prep):
+    """String-numeric time_var should be converted to numeric."""
+    df = pd.DataFrame({
+        'lane': ['A', 'A', 'A', 'A', 'A', 'A'],
+        'time': ['1', '2', '10', '1', '2', '10'],  # String numbers
+        'weight': [10.1, 10.2, 10.3, 10.0, 10.1, 10.2]
+    })
+    spec = AnalysisSpecification('Xbar', {
+        'rsg_vars': ['lane'],
+        'time_var': 'time',
+        'response_var': 'weight'
+    })
+
+    result = prep.prepare_dataset(df, spec)
+
+    # Should be converted to numeric
+    assert pd.api.types.is_numeric_dtype(result['time'])
+    # Should sort correctly: 1, 1, 2, 2, 10, 10 (not '1', '10', '1', '10', '2', '2')
+    assert result['time'].tolist() == [1, 1, 2, 2, 10, 10]
+
+
+def test_time_var_date_unchanged(prep):
+    """Native date objects should stay unchanged."""
+    from datetime import date
+
+    df = pd.DataFrame({
+        'lane': ['A', 'A', 'A'],
+        'time': [date(2024, 1, 1), date(2024, 1, 2), date(2024, 1, 10)],
+        'weight': [10.1, 10.2, 10.3]
+    })
+    spec = AnalysisSpecification('Xbar', {
+        'rsg_vars': ['lane'],
+        'time_var': 'time',
+        'response_var': 'weight'
+    })
+
+    result = prep.prepare_dataset(df, spec)
+
+    # Should keep as object dtype (dates)
+    assert result['time'].iloc[0] == date(2024, 1, 1)
+    assert result['time'].iloc[2] == date(2024, 1, 10)
+
+
+def test_time_var_datetime_unchanged(prep):
+    """Native datetime objects should stay unchanged."""
+    from datetime import datetime
+
+    df = pd.DataFrame({
+        'lane': ['A', 'A', 'A'],
+        'time': [datetime(2024, 1, 1), datetime(2024, 1, 2), datetime(2024, 1, 10)],
+        'weight': [10.1, 10.2, 10.3]
+    })
+    spec = AnalysisSpecification('Xbar', {
+        'rsg_vars': ['lane'],
+        'time_var': 'time',
+        'response_var': 'weight'
+    })
+
+    result = prep.prepare_dataset(df, spec)
+
+    assert pd.api.types.is_datetime64_any_dtype(result['time'])
+
+
+def test_time_var_string_date_converted(prep):
+    """String-date time_var should be converted to datetime."""
+    df = pd.DataFrame({
+        'lane': ['A', 'A', 'A'],
+        'time': ['2024-01-01', '2024-01-02', '2024-01-10'],
+        'weight': [10.1, 10.2, 10.3]
+    })
+    spec = AnalysisSpecification('Xbar', {
+        'rsg_vars': ['lane'],
+        'time_var': 'time',
+        'response_var': 'weight'
+    })
+
+    result = prep.prepare_dataset(df, spec)
+
+    # Should be converted to datetime
+    assert pd.api.types.is_datetime64_any_dtype(result['time'])
+
+
+def test_time_var_categorical_unchanged(prep):
+    """Ordered categorical time_var should stay unchanged."""
+    df = pd.DataFrame({
+        'lane': ['A', 'A', 'A'],
+        'time': pd.Categorical(['early', 'mid', 'late'], ordered=True),
+        'weight': [10.1, 10.2, 10.3]
+    })
+    spec = AnalysisSpecification('Xbar', {
+        'rsg_vars': ['lane'],
+        'time_var': 'time',
+        'response_var': 'weight'
+    })
+
+    result = prep.prepare_dataset(df, spec)
+
+    # Should stay categorical
+    assert isinstance(result['time'].dtype, pd.CategoricalDtype)
+
+
+def test_time_var_period_unchanged(prep):
+    """Period time_var should stay unchanged."""
+    df = pd.DataFrame({
+        'lane': ['A', 'A', 'A'],
+        'time': pd.period_range('2024-01', periods=3, freq='M'),
+        'weight': [10.1, 10.2, 10.3]
+    })
+    spec = AnalysisSpecification('Xbar', {
+        'rsg_vars': ['lane'],
+        'time_var': 'time',
+        'response_var': 'weight'
+    })
+
+    result = prep.prepare_dataset(df, spec)
+
+    # Should stay as Period
+    assert isinstance(result['time'].dtype, pd.PeriodDtype)
+
+
+# ============================================================================
+# Test: Factor Column Type Conversion
+# ============================================================================
+
+def test_factor_numeric_unchanged(prep):
+    """Numeric factor columns should stay unchanged."""
+    df = pd.DataFrame({
+        'lane': [1, 1, 2, 2, 10, 10],  # Already numeric
+        'weight': [10.1, 10.2, 10.3, 10.4, 10.5, 10.6]
+    })
+    spec = AnalysisSpecification('Xbar', {
+        'rsg_vars': ['lane'],
+        'response_var': 'weight'
+    })
+
+    result = prep.prepare_dataset(df, spec)
+
+    # Lane should stay numeric (but RSG will be categorical)
+    assert 'rsg' in result.columns
+
+
+def test_factor_string_numeric_converted(prep):
+    """String-numeric factor columns should be converted."""
+    df = pd.DataFrame({
+        'lane': ['1', '1', '2', '2', '10', '10'],  # String numbers
+        'weight': [10.1, 10.2, 10.3, 10.4, 10.5, 10.6]
+    })
+    spec = AnalysisSpecification('Xbar', {
+        'rsg_vars': ['lane'],
+        'response_var': 'weight'
+    })
+
+    result = prep.prepare_dataset(df, spec)
+
+    # Lane column should be converted to numeric
+    assert pd.api.types.is_numeric_dtype(result['lane'])
+    # RSG should be categorical with correct order
+    assert isinstance(result['rsg'].dtype, pd.CategoricalDtype)
+
+
+def test_factor_mixed_stays_string(prep):
+    """Mixed string/numeric factor columns should stay string."""
+    df = pd.DataFrame({
+        'lane': ['A', 'A', 'B', 'B', '1', '1'],  # Mixed
+        'weight': [10.1, 10.2, 10.3, 10.4, 10.5, 10.6]
+    })
+    spec = AnalysisSpecification('Xbar', {
+        'rsg_vars': ['lane'],
+        'response_var': 'weight'
+    })
+
+    result = prep.prepare_dataset(df, spec)
+
+    # Should stay as object/string (can't convert to numeric)
+    # But RSG should be categorical
+    assert isinstance(result['rsg'].dtype, pd.CategoricalDtype)
+
+
+# ============================================================================
+# Test: RSG Categorical with Natural Sort
+# ============================================================================
+
+def test_rsg_categorical_natural_sort(prep):
+    """RSG should be categorical with natural sort order."""
+    df = pd.DataFrame({
+        'lane': ['Lane_1', 'Lane_10', 'Lane_2'] * 2,  # Would sort wrong lexicographically
+        'weight': [10.1, 10.2, 10.3, 10.4, 10.5, 10.6]
+    })
+    spec = AnalysisSpecification('Xbar', {
+        'rsg_vars': ['lane'],
+        'response_var': 'weight'
+    })
+
+    result = prep.prepare_dataset(df, spec)
+
+    # RSG should be categorical
+    assert isinstance(result['rsg'].dtype, pd.CategoricalDtype)
+    # Categories should be naturally sorted: Lane_1, Lane_2, Lane_10
+    categories = list(result['rsg'].cat.categories)
+    assert categories == ['Lane_1', 'Lane_2', 'Lane_10']
+
+
+def test_rsg_categorical_preserves_groupby_order(prep):
+    """Groupby should respect categorical order."""
+    df = pd.DataFrame({
+        'lane': ['10', '10', '2', '2', '1', '1'],  # Would sort wrong as strings
+        'weight': [10.1, 10.2, 10.3, 10.4, 10.5, 10.6]
+    })
+    spec = AnalysisSpecification('Xbar', {
+        'rsg_vars': ['lane'],
+        'response_var': 'weight'
+    })
+
+    result = prep.prepare_dataset(df, spec)
+
+    # Groupby should respect categorical order
+    grouped = result.groupby('rsg', sort=False)
+    group_names = list(grouped.groups.keys())
+
+    # Should be in categorical order: '1', '2', '10' (not '1', '10', '2')
+    assert group_names == ['1', '2', '10']
+
+
+def test_rsg_categorical_with_numeric_factors(prep):
+    """Multi-factor RSG with numeric parts should sort naturally."""
+    df = pd.DataFrame({
+        'lane': [1, 1, 10, 10, 2, 2, 1, 1, 10, 10, 2, 2],
+        'head': [1, 1, 1, 1, 1, 1, 10, 10, 10, 10, 10, 10],
+        'weight': [10.1, 10.2, 10.3, 10.4, 10.5, 10.6, 10.7, 10.8, 10.9, 11.0, 11.1, 11.2]
+    })
+    spec = AnalysisSpecification('Xbar', {
+        'rsg_vars': ['lane', 'head'],
+        'response_var': 'weight'
+    })
+
+    result = prep.prepare_dataset(df, spec)
+
+    # RSG should be categorical
+    assert isinstance(result['rsg'].dtype, pd.CategoricalDtype)
+    # Categories should be naturally sorted
+    # Should be: 1_1, 1_10, 2_1, 2_10, 10_1, 10_10
+    categories = list(result['rsg'].cat.categories)
+    expected = ['1_1', '1_10', '2_1', '2_10', '10_1', '10_10']
+    assert categories == expected
+
+
+# ============================================================================
+# Test: Sorting Correctness (Critical for Analysis)
+# ============================================================================
+
+def test_sorting_correctness_for_moving_range(prep):
+    """Moving range must use adjacent observations in correct time order."""
+    df = pd.DataFrame({
+        'time': ['1', '10', '2', '20', '3'],  # Intentionally scrambled strings
+        'weight': [10.1, 10.2, 10.3, 10.4, 10.5]
+    })
+    spec = AnalysisSpecification('Imr', {
+        'time_var': 'time',
+        'response_var': 'weight'
+    })
+
+    result = prep.prepare_dataset(df, spec)
+
+    # Should be sorted correctly: 1, 2, 3, 10, 20
+    assert result['time'].tolist() == [1, 2, 3, 10, 20]
+    # Weights should be reordered accordingly
+    assert result['weight'].tolist() == [10.1, 10.3, 10.5, 10.2, 10.4]
+
+
+def test_sorting_correctness_for_signal_detection(prep):
+    """Signal detection rules require correct sequential ordering."""
+    df = pd.DataFrame({
+        'lane': ['A'] * 10,
+        'time': ['1', '10', '11', '2', '20', '21', '3', '30', '4', '5'],  # Scrambled
+        'weight': [10.1, 10.2, 10.3, 10.4, 10.5, 10.6, 10.7, 10.8, 10.9, 11.0]
+    })
+    spec = AnalysisSpecification('Xbar', {
+        'rsg_vars': ['lane'],
+        'time_var': 'time',
+        'response_var': 'weight'
+    })
+
+    result = prep.prepare_dataset(df, spec)
+
+    # Time should be sorted correctly: 1, 2, 3, 4, 5, 10, 11, 20, 21, 30
+    expected_time = [1, 2, 3, 4, 5, 10, 11, 20, 21, 30]
+    assert result['time'].tolist() == expected_time
+
+
+# ============================================================================
+# Test: Integration - Type Conversion End-to-End
+# ============================================================================
+
+def test_integration_string_numeric_time_correct_chart_ordering(prep):
+    """End-to-end: String-numeric time should produce correctly ordered charts."""
+    df = pd.DataFrame({
+        'lane': ['A'] * 12,
+        'time': ['1', '2', '3', '10', '11', '12'] * 2,  # Strings
+        'weight': np.random.normal(10, 0.1, 12)
+    })
+    spec = AnalysisSpecification('Xbar', {
+        'rsg_vars': ['lane'],
+        'time_var': 'time',
+        'response_var': 'weight'
+    })
+
+    result = prep.prepare_dataset(df, spec)
+
+    # Time should be numeric and correctly ordered
+    assert pd.api.types.is_numeric_dtype(result['time'])
+    assert result['time'].is_monotonic_increasing  # Should be in order
+
+
+def test_integration_mixed_factor_types_correct_stratification(prep):
+    """End-to-end: Mixed factor types should stratify correctly."""
+    df = pd.DataFrame({
+        'batch': ['1', '2', '10'] * 4,  # String-numeric
+        'operator': ['A', 'B'] * 6,  # Categorical
+        'weight': np.random.normal(10, 0.1, 12)
+    })
+    spec = AnalysisSpecification('Xbar', {
+        'rsg_vars': ['batch', 'operator'],
+        'response_var': 'weight'
+    })
+
+    result = prep.prepare_dataset(df, spec)
+
+    # Batch should be converted to numeric
+    assert pd.api.types.is_numeric_dtype(result['batch'])
+    # RSG should be categorical with natural order
+    assert isinstance(result['rsg'].dtype, pd.CategoricalDtype)
+    # Categories should respect numeric ordering
+    categories = list(result['rsg'].cat.categories)
+    # Should have: 1_A, 1_B, 2_A, 2_B, 10_A, 10_B (not 10_A, 10_B, 1_A...)
+    assert '1_A' in categories
+    assert '10_A' in categories
+    assert categories.index('1_A') < categories.index('10_A')

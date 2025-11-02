@@ -79,10 +79,18 @@ def sds1_data():
 
 @pytest.fixture
 def sds2_data():
-    """SDS 2: No replication - all cells have n=1, complete grid."""
+    """SDS 2: No replication - all subgroups have n=1, complete grid.
+
+    NOTE: For SDS detection:
+    - Subgroup sample sizes: n per subgroup across all time (for SDS 1/2/3)
+    - Grid coverage: (group × time) combinations present (for SDS 6)
+
+    This creates 4 subgroups, each with exactly n=1 observation total.
+    Complete grid: 4 groups × 1 time = 4 cells, all present.
+    """
     return pd.DataFrame({
-        'rsg': ['A', 'A', 'B', 'B'],
-        'pull': [1, 2, 1, 2],
+        'rsg': ['A', 'B', 'C', 'D'],  # 4 subgroups, each appears once
+        'pull': [1, 1, 1, 1],          # All at same time point
         'weight': [10.1, 10.3, 9.9, 10.0]
     })
 
@@ -452,11 +460,10 @@ def test_detect_sds_boundary_74_percent_coverage(detector, spec_with_grouping_an
     """Test coverage threshold: 74% should be SDS 6."""
     # 2 groups × 10 time points = 20 possible cells
     # 14 cells present = 70% (< 75%)
-    # Group A has times 1-7, Group B has times 1-7 (total 14 cells)
-    # But the grid spans times 1-10, so 2×10 = 20 possible
+    # Need to ensure time points 1-10 are all referenced to create full grid
     df = pd.DataFrame({
         'rsg': ['A'] * 7 + ['B'] * 7,
-        'pull': [1, 2, 3, 4, 5, 6, 7, 1, 2, 3, 4, 5, 6, 10],  # Group B ends at 10, creating sparse grid
+        'pull': [1, 2, 3, 4, 5, 6, 7, 1, 2, 3, 4, 8, 9, 10],  # A:1-7, B:1-4,8-10 = 14 cells, times span 1-10
         'weight': [10.0] * 14
     })
 
@@ -480,16 +487,27 @@ def test_detect_sds_with_large_n_values(detector, spec_with_grouping_and_time):
 
 
 def test_detect_sds_with_varying_cell_sizes(detector, spec_with_grouping_and_time):
-    """Should correctly detect SDS 3 with varying n per cell."""
+    """Should correctly detect SDS 3 with varying subgroup sizes.
+
+    SDS 3 requires:
+    - Complete grid coverage (≥75%)
+    - Mix of subgroup sizes: some n=1, others n≥2
+    """
     df = pd.DataFrame({
-        'rsg': ['A'] * 5 + ['B'] * 2 + ['A'] * 1,  # A×1: n=5, B×1: n=2, A×2: n=1
-        'pull': [1] * 5 + [1] * 2 + [2],
+        'rsg': ['A', 'A', 'A', 'A', 'A',  # Group A: 5 observations (times 1,1,1,2,2)
+                'B',                       # Group B: 1 observation (time 1)
+                'C', 'C'],                 # Group C: 2 observations (times 1,2)
+        'pull': [1, 1, 1, 2, 2,            # A appears at times 1,2
+                 1,                         # B appears at time 1
+                 1, 2],                     # C appears at times 1,2
         'weight': [10.0] * 8
     })
+    # Grid: 3 groups × 2 times = 6 cells, all 6 present = 100% coverage
+    # Subgroup sizes: A=5, B=1, C=2 → mix of n=1 and n≥2 → SDS 3
 
     sds = detector.detect_sds(df, spec_with_grouping_and_time)
 
-    assert sds == 3  # Partial replication (mix of n=1, n=2, n=5)
+    assert sds == 3  # Partial replication (mix of n=1 and n≥2)
 
 
 def test_detect_sds_logs_debug_info(detector, sds1_data, spec_with_grouping_and_time, caplog):

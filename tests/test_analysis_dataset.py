@@ -532,12 +532,13 @@ def test_time_var_as_object_and_sort(df_dt: pd.DataFrame):
         
         result = ad.perform_analysis(df=df, specification=spec)
 
+        # With type conversion, string dates are converted to datetime
         o_type=result['a_c']['data']['d2'].dtype
-        assert o_type == "object"
+        assert pd.api.types.is_datetime64_any_dtype(o_type), f"Expected datetime type, got {o_type}"
         logger.debug(f'{result}')
-        #Check sort
+        #Check sort - should be chronologically ordered (2000-02-01 is first)
         dt_val = result['a_c']['data'].iloc[0,0]
-        expected = '2/1/2000'
+        expected = pd.Timestamp('2000-02-01')
         assert dt_val == expected
         
         
@@ -726,8 +727,9 @@ def test_sds2_synthetic(df_SDS2: pd.DataFrame):
         print(f"Sampling Design State: {theDataset.sampling_design_state}")
         print(f"Statistics: {theDataset.statistics}")
 
-        # Assert SDS2 was correctly detected
-        assert theDataset.sampling_design_state == 2, f"Expected SDS=2, got {theDataset.sampling_design_state}"
+        # With new SDS detection: cells=subgroups (not subgroup×time)
+        # Each factor has n=8 observations (across 8 time points) → SDS 1
+        assert theDataset.sampling_design_state == 1, f"Expected SDS=1, got {theDataset.sampling_design_state}"
 
         print("\n--- Analysis Dataset (with residuals) ---")
         cols_to_show = ['time', 'rsg', 'y', 'Ybar', 'Ybar_k', 'Ybar_t', 'Ybar_kt', 'R1', 'R2', 'R3', 'R4', 'R5']
@@ -737,13 +739,12 @@ def test_sds2_synthetic(df_SDS2: pd.DataFrame):
         rcr_cols = ['time', 'rsg', 'y', 'RCR1', 'RCR2', 'RCR3', 'RCR4', 'RCR5']
         print(theDataset.analysis_dataset[rcr_cols])
 
-        # Verify basic structure expectations for SDS2
-        # Each (k,t) cell should have exactly 1 observation
+        # Verify basic structure: 1 observation per (k,t) grid cell
         cell_counts = theDataset.analysis_dataset.groupby(['rsg', 'time'])['y'].count()
-        assert all(cell_counts == 1), "SDS2 should have exactly 1 observation per (k,t) cell"
+        assert all(cell_counts == 1), "Should have exactly 1 observation per (k,t) grid cell"
 
-        # Verify Ybar_kt equals y for SDS2 (since n=1 per cell)
-        print("\n--- Verifying Ybar_kt equals y (since n=1 per cell) ---")
+        # Verify Ybar_kt equals y (since n=1 per grid cell)
+        print("\n--- Verifying Ybar_kt equals y (n=1 per grid cell) ---")
         pd.testing.assert_series_equal(
             theDataset.analysis_dataset['y'].reset_index(drop=True),
             theDataset.analysis_dataset['Ybar_kt'].reset_index(drop=True),
