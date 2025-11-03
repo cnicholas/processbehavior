@@ -9,7 +9,6 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Callable, Literal
 
-
 # Chart-type-based rule defaults
 # ================================
 # WECO rules 2-8 require sequential/temporal ordering of observations.

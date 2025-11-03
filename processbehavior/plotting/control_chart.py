@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING
 import plotly.graph_objects as go
 
 if TYPE_CHECKING:
-    from typing import Optional
+    pass
 
 logger = logging.getLogger(__name__)
 
@@ -83,8 +83,8 @@ class ControlChartFigure:
     def save_image(
         self,
         filepath: str | Path,
-        width: Optional[int] = None,
-        height: Optional[int] = None,
+        width: int | None = None,
+        height: int | None = None,
         scale: float = 2.0
     ):
         """

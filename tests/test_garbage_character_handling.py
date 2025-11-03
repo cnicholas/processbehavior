@@ -6,7 +6,6 @@ is properly cleaned and handled gracefully.
 """
 
 import pandas as pd
-import pytest
 
 from processbehavior import ProcessDataFrame
 
@@ -231,7 +230,7 @@ class TestDataIntegrity:
         })
 
         original_values = df['Y'].copy()
-        pdf = ProcessDataFrame(df)
+        ProcessDataFrame(df)
 
         # Original should be unchanged
         pd.testing.assert_series_equal(df['Y'], original_values)
@@ -248,7 +247,7 @@ class TestWarningMessages:
         })
 
         with caplog.at_level('WARNING'):
-            pdf = ProcessDataFrame(df)
+            ProcessDataFrame(df)
 
         # Should have warning about garbage values
         assert 'garbage/NA values' in caplog.text
@@ -263,7 +262,7 @@ class TestWarningMessages:
         })
 
         with caplog.at_level('WARNING'):
-            pdf = ProcessDataFrame(df)
+            ProcessDataFrame(df)
 
         # Should show counts for both columns
         assert 'Y: 2 values' in caplog.text
@@ -277,7 +276,7 @@ class TestWarningMessages:
         })
 
         with caplog.at_level('WARNING'):
-            pdf = ProcessDataFrame(df)
+            ProcessDataFrame(df)
 
         # Should not have warning
         assert 'garbage/NA values' not in caplog.text

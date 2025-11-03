@@ -551,15 +551,13 @@ class DataPreparation:
         try:
             numeric_vals = pd.to_numeric(series, errors='coerce')
             # Only convert if ALL values succeeded (no NaNs introduced)
-            if not numeric_vals.isna().any() or series.isna().any():
-                # Some succeeded or only original NaNs
-                if numeric_vals.notna().any():
-                    msg = (
-                        f"Converted column '{col_name}' from string to numeric "
-                        f"for correct sorting (example: '{series.iloc[0]}' → {numeric_vals.iloc[0]})"
-                    )
-                    logger.info(msg)
-                    return numeric_vals, msg
+            if (not numeric_vals.isna().any() or series.isna().any()) and numeric_vals.notna().any():
+                msg = (
+                    f"Converted column '{col_name}' from string to numeric "
+                    f"for correct sorting (example: '{series.iloc[0]}' → {numeric_vals.iloc[0]})"
+                )
+                logger.info(msg)
+                return numeric_vals, msg
         except (ValueError, TypeError):
             pass
 

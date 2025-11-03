@@ -5,8 +5,6 @@ Tests that detect_signals() works correctly with all chart types by using
 the metadata-based value column resolution.
 """
 
-import numpy as np
-import pandas as pd
 import pytest
 
 from processbehavior import ProcessDataFrame
@@ -153,7 +151,7 @@ class TestWECOIntegration:
         assert 'Sbar' in all_signals
 
         # Each should be a SignalResult
-        for chart_name, signals in all_signals.items():
+        for _chart_name, signals in all_signals.items():
             assert hasattr(signals, 'count')
             assert hasattr(signals, 'has_signals')
 

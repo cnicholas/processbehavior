@@ -25,7 +25,7 @@ from .detectors import (
 from .result import SignalResult
 
 if TYPE_CHECKING:
-    from typing import Optional
+    pass
 
 logger = logging.getLogger(__name__)
 
@@ -70,7 +70,7 @@ class SignalDetector:
         self,
         data: pd.DataFrame,
         stats: dict,
-        config: Optional[SignalConfig] = None,
+        config: SignalConfig | None = None,
         value_col: str = 'mean',
         chart_name: str = 'Chart',
         chart_type: str = 'Xbar'

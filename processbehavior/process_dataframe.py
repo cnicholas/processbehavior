@@ -243,7 +243,7 @@ class ProcessDataFrame:
             logger.warning(
                 f"Found {total_na} garbage/NA values across {len(columns_with_na)} column(s):\n"
                 + "\n".join([f"  • {col}: {count} values" for col, count in na_counts.items()])
-                + f"\n\nThese values were converted to NA and will be excluded from analysis."
+                + "\n\nThese values were converted to NA and will be excluded from analysis."
             )
 
         self.data = cleaned_df
@@ -483,7 +483,10 @@ class ProcessDataFrame:
         # Show capabilities
         print("\n✨ Analysis Capabilities:")
         if plan.vas_residuals_supported:
-            print(f"   • VAS residuals: {', '.join(plan.residuals_available)} (R2 method: {plan.residual_calculation_method})")
+            print(
+                f"   • VAS residuals: {', '.join(plan.residuals_available)} "
+                f"(R2 method: {plan.residual_calculation_method})"
+            )
         else:
             print("   • VAS residuals: Not available")
         print(f"   • Main effects: {'Yes' if plan.main_effects_supported else 'No'}")
