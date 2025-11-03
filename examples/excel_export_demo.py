@@ -14,8 +14,8 @@ The to_excel() method creates multi-sheet workbooks with:
 """
 
 
-from processbehavior import analysis_dataset as ad
 from processbehavior import ProcessDataFrame
+from processbehavior import analysis_dataset as ad
 from processbehavior.datasets import make_sds1, make_sds2, make_sds3
 
 print("=" * 70)

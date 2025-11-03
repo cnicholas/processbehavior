@@ -131,12 +131,12 @@ def make_sds5(L=2, H_per_L=3, T=6, mu=50.0, sigma=0.4):
     head_eff = rng.normal(0, 1.0, (L, H_per_L))
     tau = rng.normal(0, 0.8, T)
     rows = []
-    for l in range(L):
+    for level_idx in range(L):
         for h in range(H_per_L):
             active_times = [t for t in range(T) if rng.random() > 0.2]
             for t in active_times:
-                y = mu + line_eff[l] + head_eff[l, h] + tau[t] + rng.normal(0, sigma)
-                rows.append((t+1, f"Line{l+1}", f"Head{h+1}", y))
+                y = mu + line_eff[level_idx] + head_eff[level_idx, h] + tau[t] + rng.normal(0, sigma)
+                rows.append((t+1, f"Line{level_idx+1}", f"Head{h+1}", y))
     return pd.DataFrame(rows, columns=["time", "factor 1", "factor 2", "y"])
 
 def make_sds6(T=80, K=3, mu=50.0, sigma=0.5):
@@ -575,7 +575,7 @@ def test_IMR_w_o_grouping_var_FW800():
             logger.info("Verifying dictionary returned has the key: 'all'...")
             assert list(result)[0] == 'all'
             logger.info("Verifying 'all'dictionary key references a pandas.Dataframe...")
-            assert type(result.get("all")) == type({})
+            assert isinstance(result.get("all"), dict)
             out = result.get("all")
             logger.info("Verify lcl, ucl, and center...(Match results from R (qcc))..." )
             assert out['statistics']['center'] == 237.78
@@ -588,10 +588,10 @@ def test_package_statistics():
         statistics = {'a':"statistics_a",'b':"statistics_b"}
         
         out = package_analysis(analysis_output=analysis_output, summary_statistics_output=statistics)
-        assert type(out.get("a")) == type({})
-        assert out.get("a").get('statistics') == "statistics_a" 
+        assert isinstance(out.get("a"), dict)
+        assert out.get("a").get('statistics') == "statistics_a"
 
-        assert type(out.get("b")) == type({})
+        assert isinstance(out.get("b"), dict)
         assert out.get("b").get('statistics') == "statistics_b" 
         logger.debug(f'\n{out}')
         
