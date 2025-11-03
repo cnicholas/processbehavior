@@ -18,7 +18,6 @@ jobs:
         run: |
           ruff check .
           mypy processbehavior
-      - name: Tests (unittest)
+      - name: Tests
         run: |
-          # Adjust -s and -p to your layout if needed
-          python -m unittest discover -s tests -p "test_*.py" -v
+          pytest tests/ -v
