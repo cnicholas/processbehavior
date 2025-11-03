@@ -4,8 +4,8 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from processbehavior import analysis_dataset as ad
 from processbehavior import Analysis
+from processbehavior import analysis_dataset as ad
 from processbehavior.analysis import gather_analysis_statistics, package_analysis
 from processbehavior.spc_constants import c4
 
@@ -54,7 +54,10 @@ def df_dt():
         'a': ['a', 'a', 'a', 'b', 'b', 'b','d'],
         'b': ['c', 'c', 'c', 'd', 'd', 'd','e'],
         'c':[1.5, 2, 3.5, 40, 55, 60, 1],
-        'd': pd.to_datetime(["2022-01-01", "2022-01-02", "2022-01-03", "2022-01-01", "2022-01-02", "2022-01-03", pd.NA]),
+        'd': pd.to_datetime([
+            "2022-01-01", "2022-01-02", "2022-01-03",
+            "2022-01-01", "2022-01-02", "2022-01-03", pd.NA
+        ]),
         'a1':[1, 1, 1, 1,1 ,1, 1],  #junk columns to test return df
         'a2':[2, 2, 2, 2, 2, 2, 2], #junk columns to test return df
         'd2': ["4/1/2000", "2/1/2000", "3/1/2000", "5/1/2000", "2/1/2000", "1/1/2000", pd.NA]
@@ -237,8 +240,11 @@ def test_sds1_synthetic():
     print("\nInput DataFrame:")
     print(df.head(10))
 
-    spec = {'analysis_type': 'Xbar', 'rsg_vars': ['factor 1'], 'response_var': 'y', 'time_var': 'time','rsg_var_name': 'rsg',
-            'time_unit': None, 'round_to': 2}
+    spec = {
+        'analysis_type': 'Xbar', 'rsg_vars': ['factor 1'],
+        'response_var': 'y', 'time_var': 'time', 'rsg_var_name': 'rsg',
+        'time_unit': None, 'round_to': 2
+    }
     logger.info(spec)
 
     # Create the AnalysisDataSet to access residuals
@@ -250,7 +256,10 @@ def test_sds1_synthetic():
     print(f"\nStatistics: {ads.statistics}")
 
     print("\n--- Analysis Dataset (with residuals) ---")
-    print(ads.analysis_dataset[['time', 'rsg', 'y', 'Ybar', 'Ybar_k', 'Ybar_t', 'Ybar_kt', 'R1', 'R2', 'R3', 'R4', 'R5']])
+    print(ads.analysis_dataset[[
+        'time', 'rsg', 'y', 'Ybar', 'Ybar_k', 'Ybar_t', 'Ybar_kt',
+        'R1', 'R2', 'R3', 'R4', 'R5'
+    ]])
 
     print("\n--- Centered Residuals (RCRs) ---")
     print(ads.analysis_dataset[['time', 'rsg', 'y', 'RCR1', 'RCR2', 'RCR3', 'RCR4', 'RCR5']])
@@ -392,7 +401,10 @@ def test_perform_analysis_XbarS_differing_Ns(df_differing_Ns: pd.DataFrame):
 def test_perform_analysis_Imr(df: pd.DataFrame):
         spec = {'analysis_type': 'Imr', 'rsg_vars': ['a', 'b'], 'time_var': 'd', 'response_var': 'c',
                 'rsg_var_name': 'rsg', 'time_unit': None, 'round_to': 2}
-        # spec = {'analysis_type':'Imr', 'rsg_vars':['a','b'], 'response_var':'c','rsg_var_name':'rsg', 'time_unit':None}
+        # spec = {
+        #     'analysis_type':'Imr', 'rsg_vars':['a','b'],
+        #     'response_var':'c','rsg_var_name':'rsg', 'time_unit':None
+        # }
 
         logger.info(f'{spec}')
         #a_spec = ad.AnalysisSpecification(analysis_type='Imr', analysis_specification=spec)
@@ -486,8 +498,10 @@ def test_R_with_FW800():
         df = pd.read_csv(f_path)
         logger.debug(f'{df.columns.tolist()}')
 
-        spec = {'analysis_type': 'R', 'rsg_vars': ['lane', 'phase'], 'response_var': 'fill_weight', 'rsg_var_name': 'rsg',
-                'time_var': 'pull'}
+        spec = {
+            'analysis_type': 'R', 'rsg_vars': ['lane', 'phase'],
+            'response_var': 'fill_weight', 'rsg_var_name': 'rsg', 'time_var': 'pull'
+        }
 
         result = Analysis(df, spec).calculate()
 
@@ -524,7 +538,8 @@ def test_analysis_types_dt_col_handling(df_dt: pd.DataFrame, analysis_types: lis
                     if cond==has_time:
                         assert out.columns.tolist()[0] == has_time
                     else:
-                        assert out.columns.tolist()[0] == 'x' #default column name for added index when no time variable present
+                        # default column name for added index when no time variable present
+                        assert out.columns.tolist()[0] == 'x'
 
 def test_time_var_as_object_and_sort(df_dt: pd.DataFrame):
 
@@ -642,11 +657,22 @@ def test_perform_analysis_R_zero_center(df: pd.DataFrame):
         
 # def test_analysis_dataset_sds1(df_SDS1: pd.DataFrame):
 #         #SDS1 Columns = "TIME","FACTOR 1","FACTOR 2","Y"
-#         spec = {'analysis_type': 'Xbar', 'rsg_vars': ['FACTOR 1', 'FACTOR 2'], 'time_var': 'TIME', 'response_var': 'Y',
-#                 'rsg_var_name': 'rsg','round_to':2}
+#         spec = {
+#             'analysis_type': 'Xbar', 'rsg_vars': ['FACTOR 1', 'FACTOR 2'],
+#             'time_var': 'TIME', 'response_var': 'Y',
+#             'rsg_var_name': 'rsg','round_to':2
+#         }
 #         logger.info(f'\n\nTest set columns: {df_SDS1.columns.to_list()}')
-#         source_cols_to_test = ['YBAR(k,t)', 'YBAR(.t)', 'YBAR(k.)', 'YBAR', 'R1', 'R2', 'R3', 'R4', 'R5', 'RCR1', 'RCR2', 'RCR3', 'RCR4', 'RCR5']
-#         dest_cols_to_test =   ['Ybar_kt',   'Ybar_t',   'Ybar_k',   'Ybar', 'R1', 'R2', 'R3', 'R4', 'R5', 'RCR1', 'RCR2', 'RCR3', 'RCR4', 'RCR5']
+#         source_cols_to_test = [
+#             'YBAR(k,t)', 'YBAR(.t)', 'YBAR(k.)', 'YBAR',
+#             'R1', 'R2', 'R3', 'R4', 'R5',
+#             'RCR1', 'RCR2', 'RCR3', 'RCR4', 'RCR5'
+#         ]
+#         dest_cols_to_test = [
+#             'Ybar_kt', 'Ybar_t', 'Ybar_k', 'Ybar',
+#             'R1', 'R2', 'R3', 'R4', 'R5',
+#             'RCR1', 'RCR2', 'RCR3', 'RCR4', 'RCR5'
+#         ]
 #         theAnalysis = ad.Analysis(df_SDS1,spec)
        
 #         theDataset = theAnalysis.ads 
@@ -658,8 +684,14 @@ def test_perform_analysis_R_zero_center(df: pd.DataFrame):
 #         logger.info(f'Processed column names: {theDataset.analysis_dataset.columns.to_list()}')
 #         logger.info(f'Sampling Design State is: {theDataset.sampling_design_state}')
 #         assert 1 == theDataset.sampling_design_state
-#         print(f' #######################vSDS1 Source ##########################\n {df_SDS1[source_cols_to_test].head(10)}')
-#         print(f' #######################vSDS1 Dest ##########################\n {theDataset.analysis_dataset[dest_cols_to_test].head(10)}')
+#         print(
+#             f' #######################vSDS1 Source ##########################\n'
+#             f' {df_SDS1[source_cols_to_test].head(10)}'
+#         )
+#         print(
+#             f' #######################vSDS1 Dest ##########################\n'
+#             f' {theDataset.analysis_dataset[dest_cols_to_test].head(10)}'
+#         )
 #         logger.info('\nTesting each calculated column against the source:')
 #         for src, dest in zip(source_cols_to_test, dest_cols_to_test):
 #             logger.info(f'\tTesting source column: {src} for equality with: {dest} in analytic dataset')
@@ -675,7 +707,10 @@ def test_perform_analysis_R_zero_center(df: pd.DataFrame):
 
 #         # For SDS1, pdc_by_pt is duplicated (2 obs per group-time cell), so take every other value
 #         src_pdc_pt_interactions = df_SDS1["PDCxPT INTERACTION EFFECTS"].round(3).head(800)
-#         dest_pdc_pt_interactions = theDataset.interactions['pdc_by_pt'].round(3).iloc[::2].head(400)  # Take every 2nd value
+#         # Take every 2nd value
+#         dest_pdc_pt_interactions = (
+#             theDataset.interactions['pdc_by_pt'].round(3).iloc[::2].head(400)
+#         )
 #         logger.debug(f'Source head (first 5):')
 #         logger.debug(f'{src_pdc_pt_interactions.head(5)}')
 #         logger.debug(f'Result head (first 5, every 2nd):')
@@ -719,10 +754,14 @@ def test_sds2_synthetic(df_SDS2: pd.DataFrame):
         print(df_SDS2)
 
         # SDS2 has only 1 factor (factor 1), factor 2 is NA
-        spec = {'analysis_type': 'Xbar', 'rsg_vars': ['factor 1'], 'time_var': 'time', 'response_var': 'y',
-                'rsg_var_name': 'rsg'}
+        spec = {
+            'analysis_type': 'Xbar', 'rsg_vars': ['factor 1'],
+            'time_var': 'time', 'response_var': 'y', 'rsg_var_name': 'rsg'
+        }
 
-        analysis_specification = ad.AnalysisSpecification(analysis_specification=spec, analysis_type=spec['analysis_type'])
+        analysis_specification = ad.AnalysisSpecification(
+            analysis_specification=spec, analysis_type=spec['analysis_type']
+        )
         theDataset = ad.AnalysisDataSet(df_SDS2, analysis_specification)
 
         print("\n\n============== ANALYSIS RESULTS ==============")
@@ -788,22 +827,35 @@ def test_sds2_synthetic(df_SDS2: pd.DataFrame):
 
         
 def test_analysis_dataset_no_groups(df: pd.DataFrame):
-        logger.info('\nTesting no grouping without time variable specified - expect only the response variable to be returned...')
+        logger.info(
+            '\nTesting no grouping without time variable specified - '
+            'expect only the response variable to be returned...'
+        )
         spec = {'analysis_type': 'Imr', 'response_var': 'c','time_unit': None, 'round_to':2}
         
         a_spec = ad.AnalysisSpecification(analysis_type = spec['analysis_type'], analysis_specification=spec)
         theDataset = ad.AnalysisDataSet(df=df, analysis_specification=a_spec)
-        logger.info(f'the dataframe in test_analysis_dataset_no_groups:\n{theDataset.analysis_dataset.columns.to_list()}')
+        logger.info(
+            f'the dataframe in test_analysis_dataset_no_groups:\n'
+            f'{theDataset.analysis_dataset.columns.to_list()}'
+        )
         assert theDataset.sampling_design_state == 0
-        assert theDataset.analysis_dataset.columns.to_list() == ['c','obs_id', 'rsg_key','cell_key'], 'there should be only 1 column in the result'
+        assert theDataset.analysis_dataset.columns.to_list() == [
+            'c','obs_id', 'rsg_key','cell_key'
+        ], 'there should be only 1 column in the result'
 
-        logger.info('\nTesting no grouping with time variable specified - expect the time variable and response variable to be returned...')
+        logger.info(
+            '\nTesting no grouping with time variable specified - '
+            'expect the time variable and response variable to be returned...'
+        )
         spec = {'analysis_type': 'Imr', 'time_var':'d', 'response_var': 'c','time_unit': None, 'round_to':2}
 
         a_spec = ad.AnalysisSpecification(analysis_type = spec['analysis_type'], analysis_specification=spec)
         theDataset = ad.AnalysisDataSet(df=df, analysis_specification=a_spec)
         assert theDataset.sampling_design_state == 0
-        assert theDataset.analysis_dataset.columns.to_list() == ['d','c','obs_id', 'rsg_key','cell_key'], 'there should be 2 columns in the result'
+        assert theDataset.analysis_dataset.columns.to_list() == [
+            'd','c','obs_id', 'rsg_key','cell_key'
+        ], 'there should be 2 columns in the result'
         
 def test_limits():
         

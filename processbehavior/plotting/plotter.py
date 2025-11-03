@@ -17,7 +17,7 @@ from .control_chart import ControlChartFigure
 from .themes import apply_theme
 
 if TYPE_CHECKING:
-    from typing import Literal, Optional
+    pass
 
 logger = logging.getLogger(__name__)
 
@@ -68,17 +68,17 @@ class Plotter:
 
     def plot(
         self,
-        chart: Optional[str] = None,
+        chart: str | None = None,
         facet: bool = False,
-        facet_by: Optional[str] = None,
+        facet_by: str | None = None,
         ncols: int = 2,
         highlight_signals: bool = True,
         show_limits: bool = True,
         show_rules: bool = False,
         template: str = 'processbehavior',
         width: int = 1000,
-        height: Optional[int] = None,
-        title: Optional[str] = None
+        height: int | None = None,
+        title: str | None = None
     ) -> ControlChartFigure:
         """
         Create control chart visualization.
@@ -479,7 +479,7 @@ class Plotter:
         # Otherwise use auto-generated 'x' column
         return 'x'
 
-    def _get_center_key(self, stats: dict) -> Optional[str]:
+    def _get_center_key(self, stats: dict) -> str | None:
         """Get the centerline statistic key."""
         # All chart types now use 'center' for the centerline column
         if 'center' in stats:

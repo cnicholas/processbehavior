@@ -16,7 +16,6 @@ import numpy as np
 import pandas as pd
 
 from processbehavior.analysis import Analysis
-from processbehavior.process_dataframe import ProcessDataFrame
 
 np.random.seed(42)
 

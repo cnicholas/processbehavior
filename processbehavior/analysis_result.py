@@ -873,9 +873,6 @@ class AnalysisResult:
         format_cells : bool
             Whether to apply cell formatting
         """
-        # For stratified IMR/R, use 'rsg' column as stratification identifier
-        strat_col = self._ads.spec.rsg_var_name  # Usually 'rsg'
-
         # Collect all stratified charts
         combined_data = []
 
@@ -960,9 +957,6 @@ class AnalysisResult:
         format_cells : bool
             Whether to apply cell formatting
         """
-        # Use RSG column name from spec
-        strat_col = self._ads.spec.rsg_var_name  # Usually 'rsg'
-
         # Collect data from all stratified charts
         all_chart_data = []
 
@@ -1176,10 +1170,10 @@ class AnalysisResult:
         - Organized layout for presentation
         """
         try:
-            from pathlib import Path
+            from io import BytesIO
+
             from openpyxl.drawing.image import Image
             from openpyxl.styles import Font
-            from io import BytesIO
 
             # Get workbook to add images
             wb = writer.book
@@ -1200,16 +1194,11 @@ class AnalysisResult:
             # Create plotter
             plotter = Plotter(self)
 
-            # Get output directory
-            output_path = Path(filepath)
-            output_dir = output_path.parent
-            base_name = output_path.stem
-
             # Track row position for layout
             current_row = 1
 
             # Export combined charts first (Xbar, Sbar, etc.)
-            combined_charts = [name for name in self.charts.keys()
+            combined_charts = [name for name in self.charts
                              if name in ['Xbar', 'Sbar', 'Imr', 'R', 'all']]
 
             if combined_charts:
@@ -1258,7 +1247,10 @@ class AnalysisResult:
             current_row += 1
             ws[f'A{current_row}'] = 'Interactive HTML files have been exported alongside this Excel file.'
             current_row += 1
-            ws[f'A{current_row}'] = 'Open the .html files in a web browser for full interactivity (zoom, pan, hover tooltips).'
+            ws[f'A{current_row}'] = (
+                'Open the .html files in a web browser for full interactivity '
+                '(zoom, pan, hover tooltips).'
+            )
 
         except ImportError as e:
             logger.warning(f"Could not create visual charts tab: {e}")
@@ -1274,6 +1266,7 @@ class AnalysisResult:
         """
         try:
             from pathlib import Path
+
             from .plotting import Plotter
 
             output_path = Path(filepath)
@@ -1283,7 +1276,7 @@ class AnalysisResult:
             plotter = Plotter(self)
 
             # Export combined charts
-            combined_charts = [name for name in self.charts.keys()
+            combined_charts = [name for name in self.charts
                              if name in ['Xbar', 'Sbar', 'Imr', 'R', 'all']]
 
             if combined_charts:
@@ -1298,7 +1291,7 @@ class AnalysisResult:
                 logger.info(f"Exported interactive combined charts to: {html_file}")
 
             # Export stratified charts if present
-            stratified_charts = [name for name in self.charts.keys()
+            stratified_charts = [name for name in self.charts
                                if name not in combined_charts and len(self.charts) > len(combined_charts)]
 
             if stratified_charts and self.summary.get('is_stratified', False):
@@ -1406,9 +1399,7 @@ class AnalysisResult:
             if rules is not None:
                 if isinstance(rules, RuleSet):
                     config.enabled_rules = rules.get_rules()
-                elif isinstance(rules, str):
-                    config.enabled_rules = rules
-                elif isinstance(rules, list):
+                elif isinstance(rules, (str, list)):
                     config.enabled_rules = rules
 
             # Apply kwargs

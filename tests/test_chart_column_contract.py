@@ -8,8 +8,8 @@ This test exposes bugs in:
 
 These tests verify the DECLARATIVE CONTRACT that each chart type should follow.
 """
-import pytest
 import pandas as pd
+
 from processbehavior.analysis import Analysis
 from processbehavior.plotting.plotter import Plotter
 
@@ -133,7 +133,7 @@ def test_imr_chart_column_contract():
     result = Analysis(df, spec).calculate()
 
     # Get the chart (not 'all', but the actual group chart)
-    chart_name = [k for k in result.charts.keys() if k != 'all'][0]
+    chart_name = [k for k in result.charts if k != 'all'][0]
     imr_data = result.charts[chart_name]['data']
 
     # Test column structure

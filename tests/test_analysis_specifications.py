@@ -64,7 +64,10 @@ def test_analysis_specification_Imr_w_time_var():
     assert asImr.requires_sort
 
     #expect time_var and rsg to be first two columns of output cols
-    assert asImr.analysis_output_cols == [spec['time_var'], spec['rsg_var_name'], spec['response_var'], 'mean', 'lcl', 'ucl', 'beyond_limits']
+    assert asImr.analysis_output_cols == [
+        spec['time_var'], spec['rsg_var_name'], spec['response_var'],
+        'mean', 'lcl', 'ucl', 'beyond_limits'
+    ]
         
     # def test_analysis_specification_test_time_unit(self):
     #     no_time_invalid_spec = {'analysis_type': 'Imr', 'rsg_vars': ['a', 'b'], 

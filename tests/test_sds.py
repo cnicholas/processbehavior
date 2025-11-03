@@ -1,8 +1,8 @@
 import numpy as np
 import pandas as pd
 
-from processbehavior import analysis_dataset as ad
 from processbehavior import Analysis
+from processbehavior import analysis_dataset as ad
 from processbehavior.datasets import (
     make_sds1,
     make_sds2,
@@ -316,7 +316,6 @@ def test_stratified_imr_with_sds6():
     This is a strength of the stratified approach - even with messy,
     irregular data, you can still monitor each group separately.
     """
-    from processbehavior import analysis_dataset as ad
     from processbehavior.datasets import make_sds6
 
     # SDS6: Irregular sampling, regime changes
@@ -354,7 +353,6 @@ def test_automatic_stratification_demo():
     
     Shows how one specification creates multiple charts automatically.
     """
-    from processbehavior import analysis_dataset as ad
     from processbehavior.datasets import make_sds2
 
     # Multi-lane filling operation
