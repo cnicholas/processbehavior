@@ -13,11 +13,11 @@ The package automatically detects the data structure (SDS 0-6) without requiring
 |-----|-------------|------------------|
 | **SDS 0** | No grouping or time structure | Single stream, no organization |
 | **SDS 1** | Full replication (n≥2 per cell) | Multiple observations per (factor×time) cell |
-| **SDS 2→1** | No replication (n=1 per cell) | Classified as SDS 1 via rational subgrouping |
-| **SDS 3→1** | Partial replication (mixed) | Classified as SDS 1 when grouped by factor |
-| **SDS 4** | Single stream over time | One process monitored continuously |
-| **SDS 5** | Nested/hierarchical design | Factors sampled asynchronously |
-| **SDS 6** | Regime changes/unstructured | Irregular patterns, process shifts |
+| **SDS 2** | No replication (n=1 per cell) | Exactly one observation per (factor×time) cell |
+| **SDS 3** | Partial replication (mixed) | Some cells n=1, others n≥2 |
+| **SDS 4** | Single stream over time | One process monitored continuously (K=1) |
+| **SDS 5** | Nested/hierarchical design | Factors sampled asynchronously, incomplete coverage |
+| **SDS 6** | Regime changes/unstructured | Irregular patterns, sparse grids, process shifts |
 
 ### 2. **Auto-Completion**
 Once SDS is detected, the package automatically completes:
@@ -95,28 +95,32 @@ TEST: SDS 1: Full Replication (Expected SDS: 1)
 
 ## Synthetic Data Generators
 
-The demo uses synthetic data generators from `processbehavior.datasets.synthetic`:
+The demo uses the **unified `make_sds()` API** from `processbehavior.datasets.synthetic`:
 
 ```python
 from processbehavior.datasets import synthetic
 
+# Unified API - specify SDS type with sds parameter
 # SDS 1: Full replication
-df = synthetic.make_sds1(K=3, T=8, n_min=2, n_max=4, seed=42)
+df = synthetic.make_sds(sds=1, K=3, T=8, n_min=2, n_max=4, seed=42)
 
 # SDS 2: No replication
-df = synthetic.make_sds2(K=3, T=10, seed=42)
+df = synthetic.make_sds(sds=2, K=3, T=8, seed=42)
 
 # SDS 3: Partial replication
-df = synthetic.make_sds3(K=3, T=8, p_replicated=0.6, seed=42)
+df = synthetic.make_sds(sds=3, K=3, T=8, p_replicated=0.6, n_when_replicated=3, seed=42)
 
 # SDS 4: Single stream
-df = synthetic.make_sds4(T=50, seed=42)
+df = synthetic.make_sds(sds=4, K=3, T=50, seed=42)
 
 # SDS 5: Nested design
-df = synthetic.make_sds5(L=3, H_per_L=4, T=12, seed=42)
+df = synthetic.make_sds(sds=5, K=3, T=12, L=3, H_per_L=4, seed=42)
 
 # SDS 6: Regime changes
-df = synthetic.make_sds6(K=3, T=40, seed=42)
+df = synthetic.make_sds(sds=6, K=3, T=40, seed=42)
+
+# Individual functions still available for backward compatibility:
+# make_sds1(), make_sds2(), make_sds3(), make_sds4(), make_sds5(), make_sds6()
 ```
 
 ## Comparison to Commercial Software
@@ -146,13 +150,15 @@ This demo serves as:
 
 ## Notes
 
-- The demo uses `seed=42` for reproducibility
-- Warnings about pandas deprecations are expected and unrelated to the refactoring
-- Some SDS types (e.g., SDS 2→1, SDS 3→1) are reclassified based on rational subgrouping principles
-- This reflects the package's intelligent handling of data structures
+- The demo uses `seed=42` for reproducibility across all SDS types
+- **No warnings**: All pandas FutureWarnings have been eliminated (as of v0.1.0)
+- **Cell-level detection**: SDS classification is based on (factor × time) cell replication, not factor-level aggregation
+- **100% accuracy**: Demo validates that `make_sds(sds=N)` is correctly detected as SDS N for all N ∈ {0,1,2,3,4,5,6}
+- See `VERIFICATION_REPORT.md` for comprehensive validation details
 
 ---
 
 **Created:** 2024-11-30
+**Updated:** 2025-11-30 (v0.1.0 - unified API, corrected detection logic)
 **Author:** ProcessBehavior Team
 **Purpose:** Validate SDS detection and showcase auto-completion capabilities
