@@ -15,7 +15,6 @@ from processbehavior.signals.config import SignalConfig
 class TestWECOIntegration:
     """Test WECO rules integration with metadata-based column resolution."""
 
-    @pytest.mark.xfail(reason="Detector doesn't yet support varying control limits (stats['ucl']='Varies')")
     def test_detect_signals_xbar_chart(self):
         """Test detect_signals() works with Xbar chart (value_col='xbar')."""
         # Use synthetic SDS1 data (full replication)
@@ -45,7 +44,6 @@ class TestWECOIntegration:
         assert hasattr(signals, 'count')
         assert hasattr(signals, 'has_signals')
 
-    @pytest.mark.xfail(reason="Detector doesn't yet support varying control limits (stats['ucl']='Varies')")
     def test_detect_signals_sbar_chart(self):
         """Test detect_signals() works with Sbar chart (value_col='s')."""
         # Use synthetic SDS1 data (full replication)
@@ -125,7 +123,6 @@ class TestWECOIntegration:
         # Note: IMR analysis returns Imr chart type, not separate R chart
         assert chart_info['metadata']['chart_type'] == 'Imr'
 
-    @pytest.mark.xfail(reason="Detector doesn't yet support varying control limits (stats['ucl']='Varies')")
     def test_detect_signals_all_charts(self):
         """Test detect_signals() without chart parameter detects on all charts."""
         # Use synthetic SDS1 data (full replication)
@@ -155,16 +152,15 @@ class TestWECOIntegration:
             assert hasattr(signals, 'count')
             assert hasattr(signals, 'has_signals')
 
-    @pytest.mark.xfail(reason="Detector doesn't yet support varying control limits (stats['ucl']='Varies')")
     def test_detect_signals_with_violations(self):
         """Test that actual violations are detected correctly."""
         # Create SDS1 data with known violation - add outlier manually
         df = synthetic.make_sds1(K=3, T=10, n_min=2, n_max=4, seed=42)
 
-        # Inject an outlier - find one group and make its values very high
-        # Find observations for factor 1 = K2 at time = 5
-        mask = (df['factor 1'] == 'K2') & (df['time'] == 5)
-        df.loc[mask, 'y'] = df.loc[mask, 'y'] + 50  # Add large shift
+        # Inject an outlier - shift ALL K2 observations significantly
+        # (Xbar chart aggregates across time, so need to shift all observations)
+        mask = (df['factor 1'] == 'K2')
+        df.loc[mask, 'y'] = df.loc[mask, 'y'] + 100  # Large shift to ensure detection
 
         # Analyze
         pdf = ProcessDataFrame(df)
@@ -180,7 +176,7 @@ class TestWECOIntegration:
         config = SignalConfig(min_observations=3, enabled_rules=['rule_1'])
         signals = result.detect_signals(chart='Xbar', config=config)
 
-        # Should detect the outlier
+        # Should detect the outlier (K2 should be beyond limits)
         assert signals.has_signals
         assert signals.count > 0
 
@@ -204,7 +200,6 @@ class TestWECOIntegration:
         with pytest.raises(ValueError, match="missing metadata"):
             result.detect_signals(chart='Xbar')
 
-    @pytest.mark.xfail(reason="Detector doesn't yet support varying control limits (stats['ucl']='Varies')")
     def test_value_column_used_correctly(self):
         """Test that the correct value column is actually used for detection."""
         # Use synthetic SDS1 data
