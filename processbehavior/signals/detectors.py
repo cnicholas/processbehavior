@@ -13,7 +13,8 @@ import pandas as pd
 def detect_beyond_limits(
     data: pd.DataFrame,
     stats: dict,
-    value_col: str
+    value_col: str,
+    limits_vary: bool = False
 ) -> pd.Series:
     """
     Rule 1: Points beyond control limits.
@@ -23,11 +24,13 @@ def detect_beyond_limits(
     Parameters
     ----------
     data : DataFrame
-        Chart data
+        Chart data with optional 'ucl' and 'lcl' columns for varying limits
     stats : dict
         Chart statistics with 'ucl' and 'lcl' keys
     value_col : str
         Name of value column
+    limits_vary : bool, default False
+        If True, use per-row 'ucl' and 'lcl' from data columns
 
     Returns
     -------
@@ -35,14 +38,24 @@ def detect_beyond_limits(
         True for violations
     """
     values = data[value_col]
-    return (values > stats['ucl']) | (values < stats['lcl'])
+
+    # Use per-row limits if they vary, else use constant limits from stats
+    if limits_vary and 'ucl' in data.columns and 'lcl' in data.columns:
+        ucl = data['ucl']
+        lcl = data['lcl']
+    else:
+        ucl = stats['ucl']
+        lcl = stats['lcl']
+
+    return (values > ucl) | (values < lcl)
 
 
 def detect_zone_a_2_of_3(
     data: pd.DataFrame,
     stats: dict,
     value_col: str,
-    zones: dict
+    zones,  # dict or DataFrame
+    limits_vary: bool = False
 ) -> pd.Series:
     """
     Rule 2: 2 of 3 consecutive points in Zone A.
@@ -58,8 +71,10 @@ def detect_zone_a_2_of_3(
         Chart statistics
     value_col : str
         Name of value column
-    zones : dict
-        Zone boundaries from ZoneDefinition.get_boundaries()
+    zones : dict or DataFrame
+        Zone boundaries (dict if constant, DataFrame if per-row)
+    limits_vary : bool, default False
+        If True, zones is a DataFrame with per-row boundaries
 
     Returns
     -------
@@ -69,8 +84,14 @@ def detect_zone_a_2_of_3(
     values = data[value_col]
 
     # Determine which zone each point is in
-    in_upper_a = (values > zones['A_upper'][0]) & (values <= zones['A_upper'][1])
-    in_lower_a = (values >= zones['A_lower'][0]) & (values < zones['A_lower'][1])
+    if limits_vary:
+        # Per-row zones
+        in_upper_a = (values > zones['A_upper_lower']) & (values <= zones['A_upper_upper'])
+        in_lower_a = (values >= zones['A_lower_lower']) & (values < zones['A_lower_upper'])
+    else:
+        # Constant zones
+        in_upper_a = (values > zones['A_upper'][0]) & (values <= zones['A_upper'][1])
+        in_lower_a = (values >= zones['A_lower'][0]) & (values < zones['A_lower'][1])
 
     # Rolling window count
     upper_count = in_upper_a.astype(int).rolling(window=3, min_periods=3).sum()
@@ -86,7 +107,8 @@ def detect_zone_b_4_of_5(
     data: pd.DataFrame,
     stats: dict,
     value_col: str,
-    zones: dict
+    zones,  # dict or DataFrame
+    limits_vary: bool = False
 ) -> pd.Series:
     """
     Rule 3: 4 of 5 consecutive points in Zone B or beyond.
@@ -102,8 +124,10 @@ def detect_zone_b_4_of_5(
         Chart statistics
     value_col : str
         Name of value column
-    zones : dict
-        Zone boundaries
+    zones : dict or DataFrame
+        Zone boundaries (dict if constant, DataFrame if per-row)
+    limits_vary : bool, default False
+        If True, zones is a DataFrame with per-row boundaries
 
     Returns
     -------
@@ -113,8 +137,14 @@ def detect_zone_b_4_of_5(
     values = data[value_col]
 
     # In Zone B or beyond (same side)
-    upper = values > zones['B_upper'][0]
-    lower = values < zones['B_lower'][1]
+    if limits_vary:
+        # Per-row zones
+        upper = values > zones['B_upper_lower']
+        lower = values < zones['B_lower_upper']
+    else:
+        # Constant zones
+        upper = values > zones['B_upper'][0]
+        lower = values < zones['B_lower'][1]
 
     upper_count = upper.astype(int).rolling(window=5, min_periods=5).sum()
     lower_count = lower.astype(int).rolling(window=5, min_periods=5).sum()
@@ -140,7 +170,7 @@ def detect_run(
     data : DataFrame
         Chart data
     stats : dict
-        Chart statistics with 'Mean' key
+        Chart statistics with 'center' key
     value_col : str
         Name of value column
     length : int, default 8
@@ -152,7 +182,7 @@ def detect_run(
         True for violations
     """
     values = data[value_col]
-    center = stats['Mean']
+    center = stats.get('center', stats.get('Mean'))  # Try 'center' first, fallback to 'Mean'
 
     # Above or below center
     above = (values > center).astype(int)
@@ -265,7 +295,8 @@ def detect_reduced_variation(
     data: pd.DataFrame,
     stats: dict,
     value_col: str,
-    zones: dict,
+    zones,  # dict or DataFrame
+    limits_vary: bool = False,
     length: int = 15
 ) -> pd.Series:
     """
@@ -282,8 +313,10 @@ def detect_reduced_variation(
         Chart statistics
     value_col : str
         Name of value column
-    zones : dict
-        Zone boundaries
+    zones : dict or DataFrame
+        Zone boundaries (dict if constant, DataFrame if per-row)
+    limits_vary : bool, default False
+        If True, zones is a DataFrame with per-row boundaries
     length : int, default 15
         Number of consecutive points required
 
@@ -295,10 +328,18 @@ def detect_reduced_variation(
     values = data[value_col]
 
     # Within Zone C
-    in_zone_c = (
-        (values > zones['C_lower'][0]) &
-        (values < zones['C_upper'][1])
-    )
+    if limits_vary:
+        # Per-row zones
+        in_zone_c = (
+            (values > zones['C_lower_lower']) &
+            (values < zones['C_upper_upper'])
+        )
+    else:
+        # Constant zones
+        in_zone_c = (
+            (values > zones['C_lower'][0]) &
+            (values < zones['C_upper'][1])
+        )
 
     in_c_count = in_zone_c.astype(int).rolling(
         window=length, min_periods=length
@@ -312,7 +353,8 @@ def detect_avoiding_center(
     data: pd.DataFrame,
     stats: dict,
     value_col: str,
-    zones: dict,
+    zones,  # dict or DataFrame
+    limits_vary: bool = False,
     length: int = 8
 ) -> pd.Series:
     """
@@ -329,8 +371,10 @@ def detect_avoiding_center(
         Chart statistics
     value_col : str
         Name of value column
-    zones : dict
-        Zone boundaries
+    zones : dict or DataFrame
+        Zone boundaries (dict if constant, DataFrame if per-row)
+    limits_vary : bool, default False
+        If True, zones is a DataFrame with per-row boundaries
     length : int, default 8
         Number of consecutive points required
 
@@ -342,10 +386,18 @@ def detect_avoiding_center(
     values = data[value_col]
 
     # Outside Zone C
-    outside_c = (
-        (values <= zones['C_lower'][0]) |
-        (values >= zones['C_upper'][1])
-    )
+    if limits_vary:
+        # Per-row zones
+        outside_c = (
+            (values <= zones['C_lower_lower']) |
+            (values >= zones['C_upper_upper'])
+        )
+    else:
+        # Constant zones
+        outside_c = (
+            (values <= zones['C_lower'][0]) |
+            (values >= zones['C_upper'][1])
+        )
 
     outside_count = outside_c.astype(int).rolling(
         window=length, min_periods=length

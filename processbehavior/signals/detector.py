@@ -128,13 +128,21 @@ class SignalDetector:
         # Validate data
         self._validate_inputs(data, stats, config)
 
-        # Calculate zones
-        center = stats['center']
-        sigma = (stats['ucl'] - center) / 3
-        zones = config.zone_definition.get_boundaries(center, sigma)
-
         # Apply filtering
         filtered_data = self._filter_data(data, config)
+
+        # Detect if limits vary
+        limits_vary = self._limits_vary(stats)
+
+        # Calculate zones (constant or per-row)
+        if limits_vary:
+            # Use per-row limits from data
+            zones = self._calculate_per_row_zones(filtered_data, stats, config)
+        else:
+            # Use constant limits from stats
+            center = stats['center']
+            sigma = (stats['ucl'] - center) / 3
+            zones = config.zone_definition.get_boundaries(center, sigma)
 
         # Detect violations for each applicable rule
         all_violations = pd.DataFrame(index=filtered_data.index)
@@ -158,11 +166,17 @@ class SignalDetector:
 
             try:
                 if rule_name in ['rule_2', 'rule_3', 'rule_7', 'rule_8']:
-                    # Needs zones
+                    # Zone-based rules
                     violations = detector(
-                        filtered_data, stats, value_col, zones
+                        filtered_data, stats, value_col, zones, limits_vary
+                    )
+                elif rule_name == 'rule_1':
+                    # Rule 1 can use per-row limits
+                    violations = detector(
+                        filtered_data, stats, value_col, limits_vary
                     )
                 else:
+                    # Other rules (4, 5, 6) don't use zones
                     violations = detector(
                         filtered_data, stats, value_col
                     )
@@ -249,9 +263,20 @@ class SignalDetector:
         # Create violation records
         records = []
 
+        # Check if limits vary
+        limits_vary = self._limits_vary(stats)
+
         for idx in data.index:
             for rule_name in violations.columns:
                 if violations.loc[idx, rule_name]:
+                    # Use per-row limits if they vary, else use stats
+                    if limits_vary and 'ucl' in data.columns and 'lcl' in data.columns:
+                        ucl = data.loc[idx, 'ucl']
+                        lcl = data.loc[idx, 'lcl']
+                    else:
+                        ucl = stats['ucl']
+                        lcl = stats['lcl']
+
                     records.append({
                         'obs_id': idx,
                         'rule_name': rule_name,
@@ -259,8 +284,8 @@ class SignalDetector:
                         'description': self.RULE_DESCRIPTIONS[rule_name],
                         'value': data.loc[idx, value_col],
                         'center': stats['center'],
-                        'ucl': stats['ucl'],
-                        'lcl': stats['lcl']
+                        'ucl': ucl,
+                        'lcl': lcl
                     })
 
         violation_df = pd.DataFrame(records) if records else pd.DataFrame()
@@ -271,3 +296,66 @@ class SignalDetector:
             data=data,
             stats=stats
         )
+
+    def _limits_vary(self, stats: dict) -> bool:
+        """Check if control limits vary (per-row limits)."""
+        return stats.get('ucl') == 'Varies' or stats.get('lcl') == 'Varies'
+
+    def _calculate_per_row_zones(
+        self,
+        data: pd.DataFrame,
+        stats: dict,
+        config: SignalConfig
+    ) -> pd.DataFrame:
+        """
+        Calculate per-row zone boundaries for varying control limits.
+
+        When control limits vary per row (e.g., Xbar with varying n),
+        this calculates zone boundaries for each row based on that row's
+        specific ucl/lcl values.
+
+        Parameters
+        ----------
+        data : DataFrame
+            Chart data with 'ucl' and 'lcl' columns
+        stats : dict
+            Chart statistics with 'center' key
+        config : SignalConfig
+            Configuration with zone_definition
+
+        Returns
+        -------
+        DataFrame
+            Per-row zone boundaries with columns like 'A_upper_lower', 'A_upper_upper', etc.
+        """
+        if 'ucl' not in data.columns or 'lcl' not in data.columns:
+            raise ValueError(
+                "Cannot calculate per-row zones: data missing 'ucl' or 'lcl' columns"
+            )
+
+        center = stats['center']
+        zone_def = config.zone_definition
+
+        # Calculate sigma per row
+        sigma = (data['ucl'] - center) / 3
+
+        # Calculate all zone boundaries per row
+        zones_df = pd.DataFrame(index=data.index)
+
+        # Upper zones
+        zones_df['A_upper_lower'] = center + zone_def.A[0] * sigma
+        zones_df['A_upper_upper'] = center + zone_def.A[1] * sigma
+        zones_df['B_upper_lower'] = center + zone_def.B[0] * sigma
+        zones_df['B_upper_upper'] = center + zone_def.B[1] * sigma
+        zones_df['C_upper_lower'] = center + zone_def.C[0] * sigma
+        zones_df['C_upper_upper'] = center + zone_def.C[1] * sigma
+
+        # Lower zones
+        zones_df['A_lower_lower'] = center - zone_def.A[1] * sigma
+        zones_df['A_lower_upper'] = center - zone_def.A[0] * sigma
+        zones_df['B_lower_lower'] = center - zone_def.B[1] * sigma
+        zones_df['B_lower_upper'] = center - zone_def.B[0] * sigma
+        zones_df['C_lower_lower'] = center - zone_def.C[1] * sigma
+        zones_df['C_lower_upper'] = center - zone_def.C[0] * sigma
+
+        return zones_df
