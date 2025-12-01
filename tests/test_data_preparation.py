@@ -59,7 +59,8 @@ def small_groups_df():
 @pytest.fixture
 def spec_xbar():
     """Xbar analysis specification."""
-    return AnalysisSpecification('Xbar', {
+    return AnalysisSpecification({
+        'analysis_type': 'Xbar',
         'rsg_vars': ['lane'],
         'time_var': 'pull',
         'response_var': 'weight'
@@ -69,7 +70,8 @@ def spec_xbar():
 @pytest.fixture
 def spec_multi_factor():
     """Multi-factor specification."""
-    return AnalysisSpecification('Xbar', {
+    return AnalysisSpecification({
+        'analysis_type': 'Xbar',
         'rsg_vars': ['lane', 'head'],
         'time_var': 'pull',
         'response_var': 'weight'
@@ -88,7 +90,8 @@ def test_validate_columns_passes_with_valid_data(prep, simple_df, spec_xbar):
 
 def test_validate_columns_raises_on_missing_response(prep, simple_df):
     """Should raise helpful error if response variable missing."""
-    spec = AnalysisSpecification('Xbar', {
+    spec = AnalysisSpecification({
+        'analysis_type': 'Xbar',
         'rsg_vars': ['lane'],
         'response_var': 'missing_column'
     })
@@ -99,7 +102,8 @@ def test_validate_columns_raises_on_missing_response(prep, simple_df):
 
 def test_validate_columns_raises_on_missing_grouping_var(prep, simple_df):
     """Should raise helpful error if grouping variable missing."""
-    spec = AnalysisSpecification('Xbar', {
+    spec = AnalysisSpecification({
+        'analysis_type': 'Xbar',
         'rsg_vars': ['missing_lane'],
         'response_var': 'weight'
     })
@@ -110,7 +114,8 @@ def test_validate_columns_raises_on_missing_grouping_var(prep, simple_df):
 
 def test_validate_columns_raises_on_missing_time(prep, simple_df):
     """Should raise helpful error if time variable missing."""
-    spec = AnalysisSpecification('Xbar', {
+    spec = AnalysisSpecification({
+        'analysis_type': 'Xbar',
         'rsg_vars': ['lane'],
         'time_var': 'missing_time',
         'response_var': 'weight'
@@ -126,7 +131,8 @@ def test_validate_columns_raises_on_non_numeric_response(prep):
         'lane': ['A', 'B'],
         'weight': ['ten', 'nine']  # Strings!
     })
-    spec = AnalysisSpecification('Imr', {
+    spec = AnalysisSpecification({
+        'analysis_type': 'Imr',
         'response_var': 'weight'
     })
 
@@ -136,7 +142,8 @@ def test_validate_columns_raises_on_non_numeric_response(prep):
 
 def test_validate_columns_error_suggests_fix(prep, simple_df):
     """Error messages should suggest how to fix the problem."""
-    spec = AnalysisSpecification('Xbar', {
+    spec = AnalysisSpecification({
+        'analysis_type': 'Xbar',
         'rsg_vars': ['lane'],
         'response_var': 'weigth'  # Typo!
     })
@@ -167,7 +174,8 @@ def test_prepare_dataset_creates_n_column(prep, simple_df, spec_xbar):
 
 def test_prepare_dataset_removes_small_groups(prep, small_groups_df):
     """Should remove groups with n ≤ 1."""
-    spec = AnalysisSpecification('Xbar', {
+    spec = AnalysisSpecification({
+        'analysis_type': 'Xbar',
         'rsg_vars': ['lane'],
         'response_var': 'weight'
     })
@@ -187,7 +195,8 @@ def test_prepare_dataset_raises_if_all_groups_small(prep):
         'lane': ['A', 'B', 'C'],  # All have n=1
         'weight': [10.1, 9.9, 10.0]
     })
-    spec = AnalysisSpecification('Xbar', {
+    spec = AnalysisSpecification({
+        'analysis_type': 'Xbar',
         'rsg_vars': ['lane'],
         'response_var': 'weight'
     })
@@ -217,7 +226,8 @@ def test_prepare_dataset_drops_na_rows(prep):
         'lane': ['A', 'A', 'B', 'B'],
         'weight': [10.1, np.nan, 9.9, 10.0]  # One NaN
     })
-    spec = AnalysisSpecification('Xbar', {
+    spec = AnalysisSpecification({
+        'analysis_type': 'Xbar',
         'rsg_vars': ['lane'],
         'response_var': 'weight'
     })
@@ -286,7 +296,8 @@ def test_build_keys_adds_cell_key(prep, simple_df, spec_xbar):
 def test_build_keys_empty_rsg_key_when_no_factors(prep):
     """Should use empty tuples for rsg_key when no grouping."""
     df = pd.DataFrame({'weight': [10.1, 10.2]})
-    spec = AnalysisSpecification('Imr', {
+    spec = AnalysisSpecification({
+        'analysis_type': 'Imr',
         'response_var': 'weight'
     })
 
@@ -359,7 +370,8 @@ def test_add_column_copies_existing(prep):
 
 def test_filter_small_groups_logs_count(prep, small_groups_df, caplog):
     """Should log how many groups were filtered."""
-    spec = AnalysisSpecification('Xbar', {
+    spec = AnalysisSpecification({
+        'analysis_type': 'Xbar',
         'rsg_vars': ['lane'],
         'response_var': 'weight'
     })
@@ -385,7 +397,8 @@ def test_prepare_dataset_with_single_factor(prep):
         'lane': ['A', 'A', 'B', 'B'],
         'weight': [10.1, 10.2, 9.9, 10.0]
     })
-    spec = AnalysisSpecification('Xbar', {
+    spec = AnalysisSpecification({
+        'analysis_type': 'Xbar',
         'rsg_vars': ['lane'],
         'response_var': 'weight'
     })
@@ -403,7 +416,8 @@ def test_prepare_dataset_without_grouping(prep):
         'time': [1, 2, 3],
         'weight': [10.1, 10.2, 10.3]
     })
-    spec = AnalysisSpecification('Imr', {
+    spec = AnalysisSpecification({
+        'analysis_type': 'Imr',
         'time_var': 'time',
         'response_var': 'weight'
     })
@@ -421,7 +435,8 @@ def test_prepare_dataset_without_time(prep):
         'lane': ['A', 'A', 'B', 'B'],
         'weight': [10.1, 10.2, 9.9, 10.0]
     })
-    spec = AnalysisSpecification('Xbar', {
+    spec = AnalysisSpecification({
+        'analysis_type': 'Xbar',
         'rsg_vars': ['lane'],
         'response_var': 'weight'
     })
@@ -446,7 +461,8 @@ def test_validate_columns_with_categorical_grouping(prep):
         'lane': pd.Categorical(['A', 'A', 'B', 'B']),
         'weight': [10.1, 10.2, 9.9, 10.0]
     })
-    spec = AnalysisSpecification('Xbar', {
+    spec = AnalysisSpecification({
+        'analysis_type': 'Xbar',
         'rsg_vars': ['lane'],
         'response_var': 'weight'
     })
@@ -491,7 +507,8 @@ def test_time_var_numeric_unchanged(prep):
         'time': [1, 2, 10],  # Already numeric
         'weight': [10.1, 10.2, 10.3]
     })
-    spec = AnalysisSpecification('Xbar', {
+    spec = AnalysisSpecification({
+        'analysis_type': 'Xbar',
         'rsg_vars': ['lane'],
         'time_var': 'time',
         'response_var': 'weight'
@@ -510,7 +527,8 @@ def test_time_var_string_numeric_converted(prep):
         'time': ['1', '2', '10', '1', '2', '10'],  # String numbers
         'weight': [10.1, 10.2, 10.3, 10.0, 10.1, 10.2]
     })
-    spec = AnalysisSpecification('Xbar', {
+    spec = AnalysisSpecification({
+        'analysis_type': 'Xbar',
         'rsg_vars': ['lane'],
         'time_var': 'time',
         'response_var': 'weight'
@@ -533,7 +551,8 @@ def test_time_var_date_unchanged(prep):
         'time': [date(2024, 1, 1), date(2024, 1, 2), date(2024, 1, 10)],
         'weight': [10.1, 10.2, 10.3]
     })
-    spec = AnalysisSpecification('Xbar', {
+    spec = AnalysisSpecification({
+        'analysis_type': 'Xbar',
         'rsg_vars': ['lane'],
         'time_var': 'time',
         'response_var': 'weight'
@@ -555,7 +574,8 @@ def test_time_var_datetime_unchanged(prep):
         'time': [datetime(2024, 1, 1), datetime(2024, 1, 2), datetime(2024, 1, 10)],
         'weight': [10.1, 10.2, 10.3]
     })
-    spec = AnalysisSpecification('Xbar', {
+    spec = AnalysisSpecification({
+        'analysis_type': 'Xbar',
         'rsg_vars': ['lane'],
         'time_var': 'time',
         'response_var': 'weight'
@@ -573,7 +593,8 @@ def test_time_var_string_date_converted(prep):
         'time': ['2024-01-01', '2024-01-02', '2024-01-10'],
         'weight': [10.1, 10.2, 10.3]
     })
-    spec = AnalysisSpecification('Xbar', {
+    spec = AnalysisSpecification({
+        'analysis_type': 'Xbar',
         'rsg_vars': ['lane'],
         'time_var': 'time',
         'response_var': 'weight'
@@ -592,7 +613,8 @@ def test_time_var_categorical_unchanged(prep):
         'time': pd.Categorical(['early', 'mid', 'late'], ordered=True),
         'weight': [10.1, 10.2, 10.3]
     })
-    spec = AnalysisSpecification('Xbar', {
+    spec = AnalysisSpecification({
+        'analysis_type': 'Xbar',
         'rsg_vars': ['lane'],
         'time_var': 'time',
         'response_var': 'weight'
@@ -611,7 +633,8 @@ def test_time_var_period_unchanged(prep):
         'time': pd.period_range('2024-01', periods=3, freq='M'),
         'weight': [10.1, 10.2, 10.3]
     })
-    spec = AnalysisSpecification('Xbar', {
+    spec = AnalysisSpecification({
+        'analysis_type': 'Xbar',
         'rsg_vars': ['lane'],
         'time_var': 'time',
         'response_var': 'weight'
@@ -633,7 +656,8 @@ def test_factor_numeric_unchanged(prep):
         'lane': [1, 1, 2, 2, 10, 10],  # Already numeric
         'weight': [10.1, 10.2, 10.3, 10.4, 10.5, 10.6]
     })
-    spec = AnalysisSpecification('Xbar', {
+    spec = AnalysisSpecification({
+        'analysis_type': 'Xbar',
         'rsg_vars': ['lane'],
         'response_var': 'weight'
     })
@@ -650,7 +674,8 @@ def test_factor_string_numeric_converted(prep):
         'lane': ['1', '1', '2', '2', '10', '10'],  # String numbers
         'weight': [10.1, 10.2, 10.3, 10.4, 10.5, 10.6]
     })
-    spec = AnalysisSpecification('Xbar', {
+    spec = AnalysisSpecification({
+        'analysis_type': 'Xbar',
         'rsg_vars': ['lane'],
         'response_var': 'weight'
     })
@@ -669,7 +694,8 @@ def test_factor_mixed_stays_string(prep):
         'lane': ['A', 'A', 'B', 'B', '1', '1'],  # Mixed
         'weight': [10.1, 10.2, 10.3, 10.4, 10.5, 10.6]
     })
-    spec = AnalysisSpecification('Xbar', {
+    spec = AnalysisSpecification({
+        'analysis_type': 'Xbar',
         'rsg_vars': ['lane'],
         'response_var': 'weight'
     })
@@ -691,7 +717,8 @@ def test_rsg_categorical_natural_sort(prep):
         'lane': ['Lane_1', 'Lane_10', 'Lane_2'] * 2,  # Would sort wrong lexicographically
         'weight': [10.1, 10.2, 10.3, 10.4, 10.5, 10.6]
     })
-    spec = AnalysisSpecification('Xbar', {
+    spec = AnalysisSpecification({
+        'analysis_type': 'Xbar',
         'rsg_vars': ['lane'],
         'response_var': 'weight'
     })
@@ -711,7 +738,8 @@ def test_rsg_categorical_preserves_groupby_order(prep):
         'lane': ['10', '10', '2', '2', '1', '1'],  # Would sort wrong as strings
         'weight': [10.1, 10.2, 10.3, 10.4, 10.5, 10.6]
     })
-    spec = AnalysisSpecification('Xbar', {
+    spec = AnalysisSpecification({
+        'analysis_type': 'Xbar',
         'rsg_vars': ['lane'],
         'response_var': 'weight'
     })
@@ -733,7 +761,8 @@ def test_rsg_categorical_with_numeric_factors(prep):
         'head': [1, 1, 1, 1, 1, 1, 10, 10, 10, 10, 10, 10],
         'weight': [10.1, 10.2, 10.3, 10.4, 10.5, 10.6, 10.7, 10.8, 10.9, 11.0, 11.1, 11.2]
     })
-    spec = AnalysisSpecification('Xbar', {
+    spec = AnalysisSpecification({
+        'analysis_type': 'Xbar',
         'rsg_vars': ['lane', 'head'],
         'response_var': 'weight'
     })
@@ -759,7 +788,8 @@ def test_sorting_correctness_for_moving_range(prep):
         'time': ['1', '10', '2', '20', '3'],  # Intentionally scrambled strings
         'weight': [10.1, 10.2, 10.3, 10.4, 10.5]
     })
-    spec = AnalysisSpecification('Imr', {
+    spec = AnalysisSpecification({
+        'analysis_type': 'Imr',
         'time_var': 'time',
         'response_var': 'weight'
     })
@@ -779,7 +809,8 @@ def test_sorting_correctness_for_signal_detection(prep):
         'time': ['1', '10', '11', '2', '20', '21', '3', '30', '4', '5'],  # Scrambled
         'weight': [10.1, 10.2, 10.3, 10.4, 10.5, 10.6, 10.7, 10.8, 10.9, 11.0]
     })
-    spec = AnalysisSpecification('Xbar', {
+    spec = AnalysisSpecification({
+        'analysis_type': 'Xbar',
         'rsg_vars': ['lane'],
         'time_var': 'time',
         'response_var': 'weight'
@@ -803,7 +834,8 @@ def test_integration_string_numeric_time_correct_chart_ordering(prep):
         'time': ['1', '2', '3', '10', '11', '12'] * 2,  # Strings
         'weight': np.random.normal(10, 0.1, 12)
     })
-    spec = AnalysisSpecification('Xbar', {
+    spec = AnalysisSpecification({
+        'analysis_type': 'Xbar',
         'rsg_vars': ['lane'],
         'time_var': 'time',
         'response_var': 'weight'
@@ -823,7 +855,8 @@ def test_integration_mixed_factor_types_correct_stratification(prep):
         'operator': ['A', 'B'] * 6,  # Categorical
         'weight': np.random.normal(10, 0.1, 12)
     })
-    spec = AnalysisSpecification('Xbar', {
+    spec = AnalysisSpecification({
+        'analysis_type': 'Xbar',
         'rsg_vars': ['batch', 'operator'],
         'response_var': 'weight'
     })
@@ -849,7 +882,8 @@ def test_prepare_dataset_preserves_observation_counts(prep):
         'pull': [1, 2, 1, 2, 1, 2] * 3,
         'weight': [10.1, 10.2, 10.3, 10.4, 10.5, 10.6] * 3
     })
-    spec = AnalysisSpecification('Xbar', {
+    spec = AnalysisSpecification({
+        'analysis_type': 'Xbar',
         'rsg_vars': ['lane'],
         'time_var': 'pull',
         'response_var': 'weight'
@@ -872,7 +906,8 @@ def test_prepare_dataset_handles_missing_data_correctly(prep):
         'pull': [1, 2, 3, 1, 2, 3, 1, 2, 3],
         'weight': [10.1, None, 10.3, 10.4, 10.5, None, 10.7, 10.8, 10.9]
     })
-    spec = AnalysisSpecification('Xbar', {
+    spec = AnalysisSpecification({
+        'analysis_type': 'Xbar',
         'rsg_vars': ['lane'],
         'time_var': 'pull',
         'response_var': 'weight'
@@ -904,7 +939,8 @@ def test_full_pipeline_observation_count_integrity(prep):
     # Add some missing values
     df.loc[[5, 67, 123], 'weight'] = None  # 3 missing values
 
-    spec = AnalysisSpecification('Xbar', {
+    spec = AnalysisSpecification({
+        'analysis_type': 'Xbar',
         'rsg_vars': ['lane'],
         'time_var': 'pull',
         'response_var': 'weight'

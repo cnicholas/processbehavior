@@ -24,7 +24,7 @@ from natsort import natsorted
 from pandas.api.types import is_numeric_dtype
 
 if TYPE_CHECKING:
-    from .analysis_dataset import AnalysisSpecification
+    from .analysis_specification import DataPrepConfig
 
 logger = logging.getLogger(__name__)
 
@@ -68,7 +68,7 @@ class DataPreparation:
     def prepare_dataset(
         self,
         df: pd.DataFrame,
-        spec: AnalysisSpecification
+        spec: DataPrepConfig
     ) -> pd.DataFrame:
         """
         Prepare raw data for analysis with automatic type conversion.
@@ -177,7 +177,7 @@ class DataPreparation:
     def validate_columns(
         self,
         df: pd.DataFrame,
-        spec: AnalysisSpecification
+        spec: DataPrepConfig
     ) -> None:
         """
         Validate that required columns exist and have correct types.
@@ -260,7 +260,7 @@ class DataPreparation:
     def build_keys(
         self,
         df: pd.DataFrame,
-        spec: AnalysisSpecification
+        spec: DataPrepConfig
     ) -> pd.DataFrame:
         """
         Add stable key columns for reproducible analysis.

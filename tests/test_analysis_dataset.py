@@ -248,7 +248,7 @@ def test_sds1_synthetic():
     logger.info(spec)
 
     # Create the AnalysisDataSet to access residuals
-    aspec = ad.AnalysisSpecification(analysis_type='Xbar', analysis_specification=spec)
+    aspec = ad.AnalysisSpecification(spec)
     ads = ad.AnalysisDataSet(df=df, analysis_specification=aspec)
 
     print("\n\n============== ANALYSIS DATASET ==============")
@@ -301,7 +301,7 @@ def test_perform_analysis_XbarS(df: pd.DataFrame):
 
     logger.info(f"Testing XbarS with spec: {spec}")
 
-    aspec = ad.AnalysisSpecification(analysis_type='Xbar',analysis_specification=spec)
+    aspec = ad.AnalysisSpecification(spec)
     logger.info(f"spec.has_grouping: {aspec.has_grouping}")
     ads = ad.AnalysisDataSet(df=df, analysis_specification=aspec)
     
@@ -441,7 +441,7 @@ def test_perform_analysis_Imr(df: pd.DataFrame):
 def test_perform_analysis_IMR_w_o_grouping_var(df: pd.DataFrame):
         spec = {'analysis_type': 'Imr', 'response_var': 'c','time_unit': None, 'round_to':2}
 
-        ad.AnalysisSpecification(analysis_type="Imr", analysis_specification=spec)
+        ad.AnalysisSpecification(spec)
         result = Analysis(df, spec).calculate()
 
         assert hasattr(result, "keys") and hasattr(result, "values")
@@ -451,7 +451,7 @@ def test_perform_analysis_IMR_w_o_grouping_var(df: pd.DataFrame):
 def test_perform_analysis_R(df: pd.DataFrame):
         spec = {'analysis_type': 'R', 'rsg_vars': ['a', 'b'], 'time_var': 'd', 'response_var': 'c',
                 'rsg_var_name': 'rsg', 'time_unit': None, 'round_to': 2}
-        ad.AnalysisSpecification(analysis_type='R', analysis_specification=spec)
+        ad.AnalysisSpecification(spec)
 
         result = Analysis(df, spec).calculate()
         logger.info('Testing with df for R with groups')
@@ -560,14 +560,14 @@ def test_time_var_as_object_and_sort(df_dt: pd.DataFrame):
         
         
 def test_IMR_w_o_grouping_var_FW800():
-        
+
             spec = {'analysis_type': 'Imr', 'response_var': 'fill_weight',
                     'time_unit': None, 'round_to':2}
-            
+
             f_path= "processbehavior/datasets/data/FILLWEIGHTDATA_800.csv"
             df = pd.read_csv(f_path)
             logger.debug(f'\n{df.columns.tolist()}')
-            ad.AnalysisSpecification(analysis_type="Imr", analysis_specification=spec)
+            ad.AnalysisSpecification(spec)
             result = Analysis(df, spec).calculate()
 
             assert hasattr(result, "keys") and hasattr(result, "values")
@@ -759,9 +759,7 @@ def test_sds2_synthetic(df_SDS2: pd.DataFrame):
             'time_var': 'time', 'response_var': 'y', 'rsg_var_name': 'rsg'
         }
 
-        analysis_specification = ad.AnalysisSpecification(
-            analysis_specification=spec, analysis_type=spec['analysis_type']
-        )
+        analysis_specification = ad.AnalysisSpecification(spec)
         theDataset = ad.AnalysisDataSet(df_SDS2, analysis_specification)
 
         print("\n\n============== ANALYSIS RESULTS ==============")
@@ -832,8 +830,8 @@ def test_analysis_dataset_no_groups(df: pd.DataFrame):
             'expect only the response variable to be returned...'
         )
         spec = {'analysis_type': 'Imr', 'response_var': 'c','time_unit': None, 'round_to':2}
-        
-        a_spec = ad.AnalysisSpecification(analysis_type = spec['analysis_type'], analysis_specification=spec)
+
+        a_spec = ad.AnalysisSpecification(spec)
         theDataset = ad.AnalysisDataSet(df=df, analysis_specification=a_spec)
         logger.info(
             f'the dataframe in test_analysis_dataset_no_groups:\n'
@@ -850,7 +848,7 @@ def test_analysis_dataset_no_groups(df: pd.DataFrame):
         )
         spec = {'analysis_type': 'Imr', 'time_var':'d', 'response_var': 'c','time_unit': None, 'round_to':2}
 
-        a_spec = ad.AnalysisSpecification(analysis_type = spec['analysis_type'], analysis_specification=spec)
+        a_spec = ad.AnalysisSpecification(spec)
         theDataset = ad.AnalysisDataSet(df=df, analysis_specification=a_spec)
         assert theDataset.sampling_design_state == 0
         assert theDataset.analysis_dataset.columns.to_list() == [

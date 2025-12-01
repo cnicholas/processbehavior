@@ -24,7 +24,7 @@ import logging
 import pandas as pd
 
 from .analysis import Analysis
-from .analysis_specification import AnalysisSpecification
+from .analysis_specification import AnalysisSpecification, DataPrepConfig
 from .sds_detector import SamplingDesignDetector, SDSAnalysisPlan
 
 logger = logging.getLogger(__name__)
@@ -339,22 +339,21 @@ class ProcessDataFrame:
             'rsg_var_name': rsg_var_name,
             'rsg_var_delim': rsg_var_delim,
             'round_to': round_to,
-            'zero-center': zero_center  # Note: hyphen not underscore (legacy API)
+            'zero_center': zero_center
         }
 
-        # Create a temporary spec to detect SDS
-        # We'll use 'Imr' as default since we don't know SDS yet
-        temp_spec = AnalysisSpecification('Imr', spec_dict)
+        # Create config for data preparation (no analysis_type needed yet)
+        config = DataPrepConfig(spec_dict)
 
         # Prepare data first (adds 'rsg' column if needed)
         from .data_preparation import DataPreparation
         prep = DataPreparation()
-        prep.validate_columns(self.data, temp_spec)
-        prepared_df = prep.prepare_dataset(self.data, temp_spec)
+        prep.validate_columns(self.data, config)
+        prepared_df = prep.prepare_dataset(self.data, config)
 
         # Detect SDS on prepared data
         detector = SamplingDesignDetector()
-        sds = detector.detect_sds(prepared_df, temp_spec)
+        sds = detector.detect_sds(prepared_df, config)
         sds_info = detector.get_sds_characteristics(sds)
 
         # Get SDS analysis plan to determine valid charts
@@ -396,9 +395,8 @@ class ProcessDataFrame:
 
         # Update spec with correct analysis type
         spec_dict['analysis_type'] = analysis_type
-        AnalysisSpecification(analysis_type, spec_dict)
 
-        # Run the analysis
+        # Run the analysis (will create and validate AnalysisSpecification internally)
         analysis = Analysis(self.data, spec_dict)
 
         return analysis

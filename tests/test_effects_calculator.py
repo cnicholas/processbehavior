@@ -77,7 +77,8 @@ def multi_factor_df():
 @pytest.fixture
 def spec_single_factor():
     """Single factor specification."""
-    return AnalysisSpecification('Xbar', {
+    return AnalysisSpecification({
+        'analysis_type': 'Xbar',
         'rsg_vars': ['lane'],
         'time_var': 'pull',
         'response_var': 'weight'
@@ -87,7 +88,8 @@ def spec_single_factor():
 @pytest.fixture
 def spec_multi_factor():
     """Multi-factor specification."""
-    return AnalysisSpecification('Xbar', {
+    return AnalysisSpecification({
+        'analysis_type': 'Xbar',
         'rsg_vars': ['lane', 'head'],
         'time_var': 'pull',
         'response_var': 'weight'
@@ -97,7 +99,8 @@ def spec_multi_factor():
 @pytest.fixture
 def spec_no_grouping():
     """Specification without grouping variables (IMR)."""
-    return AnalysisSpecification('Imr', {
+    return AnalysisSpecification({
+        'analysis_type': 'Imr',
         'time_var': 'pull',
         'response_var': 'weight'
     })

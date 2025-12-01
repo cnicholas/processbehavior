@@ -255,7 +255,8 @@ def sds1_df():
 @pytest.fixture
 def spec_sds1():
     """Specification for SDS 1 data."""
-    return AnalysisSpecification('Xbar', {
+    return AnalysisSpecification({
+        'analysis_type': 'Xbar',
         'rsg_vars': ['rsg'],
         'rsg_var_name': 'rsg',
         'time_var': 'time',
@@ -312,7 +313,8 @@ def test_calculate_residuals_raises_on_unsupported_sds(calc, sds1_df, spec_sds1)
 
 def test_calculate_residuals_raises_without_grouping(calc, sds1_df):
     """Should raise if no grouping variables (VAS requires grouping)."""
-    spec_no_grouping = AnalysisSpecification('Imr', {
+    spec_no_grouping = AnalysisSpecification({
+        'analysis_type': 'Imr',
         'response_var': 'weight'
     })
 
@@ -406,7 +408,8 @@ def test_calculate_residuals_with_single_observation_per_row(calc):
         'time': [1, 1],
         'weight': [10.0, 10.5]
     })
-    spec = AnalysisSpecification('Xbar', {
+    spec = AnalysisSpecification({
+        'analysis_type': 'Xbar',
         'rsg_vars': ['rsg'],
         'rsg_var_name': 'rsg',
         'time_var': 'time',

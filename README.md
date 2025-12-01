@@ -13,7 +13,8 @@
 ## Quickstart
 ```python
 import pandas as pd
-from processbehavior import analyze, AnalysisSpecification
+import numpy as np
+from processbehavior import Analysis
 
 df = pd.DataFrame({
     "timestamp": pd.date_range("2024-01-01", periods=30, freq="D"),
@@ -21,15 +22,16 @@ df = pd.DataFrame({
     "x": np.random.normal(10, 1, 30),
 })
 
-spec = AnalysisSpecification(
-    response_var="x",
-    rsg_vars=["machine"],
-    time_var="timestamp",
-    time_unit="Month",
-    round_to=3
-)
+spec = {
+    'analysis_type': 'Xbar',
+    'response_var': 'x',
+    'rsg_vars': ['machine'],
+    'time_var': 'timestamp',
+    'time_unit': 'Month',
+    'round_to': 3
+}
 
-result = analyze(df, spec, chart="xbar_s")
+result = Analysis(df, spec).calculate()
 
 points    = result.points
 subgroups = result.subgroups
