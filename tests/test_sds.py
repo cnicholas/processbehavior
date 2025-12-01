@@ -32,10 +32,7 @@ def test_sds_comprehensive():
         'round_to': 3
     }
     
-    aspec1 = ad.AnalysisSpecification(
-        analysis_type='Xbar',
-        analysis_specification=spec1
-    )
+    aspec1 = ad.AnalysisSpecification(spec1)
     ads1 = ad.AnalysisDataSet(df=df1, analysis_specification=aspec1)
     
     print(f"Detected SDS: {ads1.sampling_design_state}")
@@ -57,10 +54,7 @@ def test_sds_comprehensive():
     df2 = make_sds2(K=3, T=10, seed=42)
     spec2 = spec1.copy()
 
-    aspec2 = ad.AnalysisSpecification(
-        analysis_type='Xbar',
-        analysis_specification=spec2
-    )
+    aspec2 = ad.AnalysisSpecification(spec2)
     ads2 = ad.AnalysisDataSet(df=df2, analysis_specification=aspec2)
 
     print(f"Detected SDS: {ads2.sampling_design_state}")
@@ -87,10 +81,7 @@ def test_sds_comprehensive():
     # This will likely need special handling in your code
     # Currently your __calculate_sampling_design_state() doesn't detect SDS3
     try:
-        aspec3 = ad.AnalysisSpecification(
-            analysis_type='Xbar',
-            analysis_specification=spec2
-        )
+        aspec3 = ad.AnalysisSpecification(spec2)
         ads3 = ad.AnalysisDataSet(df=df3, analysis_specification=aspec3)
         print(f"Detected SDS: {ads3.sampling_design_state}")
         print("⚠️  SDS3 detection needs implementation")
@@ -230,7 +221,7 @@ def test_stratified_imr_vs_vas_xbar():
     }
     
     # Create analysis dataset
-    aspec_imr = ad.AnalysisSpecification('Imr', spec_imr)
+    aspec_imr = ad.AnalysisSpecification(spec_imr)
     ads_imr = ad.AnalysisDataSet(df, aspec_imr)
     
     # Should NOT calculate VAS residuals
@@ -269,7 +260,7 @@ def test_stratified_imr_vs_vas_xbar():
     }
     
     # Create analysis dataset
-    aspec_xbar = ad.AnalysisSpecification('Xbar', spec_xbar)
+    aspec_xbar = ad.AnalysisSpecification(spec_xbar)
     ads_xbar = ad.AnalysisDataSet(df, aspec_xbar)
     
     # SHOULD calculate VAS residuals
@@ -560,7 +551,7 @@ def test_vas_decision_matrix():
         }
         
         try:
-            aspec = ad.AnalysisSpecification(analysis_type, spec)
+            aspec = ad.AnalysisSpecification(spec)
             ads = ad.AnalysisDataSet(df, aspec)
             
             actual_vas = 'R1' in ads.analysis_dataset.columns

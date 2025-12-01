@@ -211,8 +211,8 @@ class Analysis:
         from .analysis_dataset import AnalysisDataSet
 
         self.raw_df = df
-        self.analysis_type = specification['analysis_type']
-        self.spec = AnalysisSpecification(self.analysis_type, specification)
+        self.spec = AnalysisSpecification(specification)
+        self.analysis_type = self.spec.analysis_type
         self.ads = AnalysisDataSet(df, self.spec)
 
     def calculate(self) -> AnalysisResult:

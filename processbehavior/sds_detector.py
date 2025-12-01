@@ -25,7 +25,7 @@ from typing import TYPE_CHECKING
 import pandas as pd
 
 if TYPE_CHECKING:
-    from analysis_dataset import AnalysisSpecification
+    from .analysis_specification import DataPrepConfig
 
 logger = logging.getLogger(__name__)
 
@@ -247,7 +247,7 @@ class SamplingDesignDetector:
     def detect_sds(
         self,
         df: pd.DataFrame,
-        spec: AnalysisSpecification
+        spec: DataPrepConfig
     ) -> int:
         """
         Detect Sampling Design State from data structure.
@@ -286,25 +286,30 @@ class SamplingDesignDetector:
 
         # From here: have both grouping and time
         # CRITICAL: For SDS detection, we need TWO different counts:
-        # 1. Sample sizes per SUBGROUP (for SDS 1/2/3 classification)
+        # 1. Sample sizes per CELL (factor × time) for SDS 1/2/3 classification
         # 2. Grid coverage of (group × time) combinations (for SDS 6 detection)
 
-        # Count observations per SUBGROUP (across all time points)
-        # - This is for determining n per subgroup
-        # - Sample size n = observations per subgroup ACROSS ALL TIME POINTS
-        subgroup_sizes = (
-            df.groupby([spec.rsg_var_name], dropna=False)[spec.response_var]
-            .count()
+        # Count observations per CELL (factor × time combination)
+        # - This is for determining replication pattern (n=1 vs n≥2 per cell)
+        # - SDS 1: All cells have n≥2
+        # - SDS 2: All cells have n=1
+        # - SDS 3: Mixed cells (some n=1, some n≥2)
+        # CRITICAL: Use observed=True to only count cells with actual data
+        #           (categorical dtypes include all categories by default)
+        cell_sizes = (
+            df.groupby([spec.rsg_var_name, spec.time_var], dropna=False, observed=True)
+            .size()
         )
 
-        min_n = subgroup_sizes.min()
-        max_n = subgroup_sizes.max()
-        n_groups = len(subgroup_sizes)
+        min_n = cell_sizes.min()
+        max_n = cell_sizes.max()
+        n_groups = df[spec.rsg_var_name].nunique()
 
         # Count (group × time) grid coverage (for SDS 6 incomplete grid detection)
         # - This checks if we have a complete factorial design
         # - Independent of how many observations are in each cell
-        grid_cells = df.groupby([spec.rsg_var_name, spec.time_var], dropna=False).size()
+        # CRITICAL: Use observed=True to only count cells with actual data
+        grid_cells = df.groupby([spec.rsg_var_name, spec.time_var], dropna=False, observed=True).size()
         n_grid_cells = len(grid_cells)
         n_times = df[spec.time_var].nunique()
         full_grid_size = n_groups * n_times
@@ -338,9 +343,9 @@ class SamplingDesignDetector:
             )
             return 6
 
-        # SDS 1, 2, or 3: Based on subgroup sample sizes
+        # SDS 1, 2, or 3: Based on cell-level replication pattern
         return self._classify_by_replication(
-            subgroup_sizes, min_n, max_n, coverage_ratio
+            cell_sizes, min_n, max_n, coverage_ratio
         )
 
     def get_sds_characteristics(self, sds: int) -> dict:

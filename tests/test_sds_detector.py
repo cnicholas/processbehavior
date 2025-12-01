@@ -28,7 +28,8 @@ def detector():
 @pytest.fixture
 def spec_with_grouping_and_time():
     """Specification with both grouping and time."""
-    return AnalysisSpecification('Xbar', {
+    return AnalysisSpecification({
+        'analysis_type': 'Xbar',
         'rsg_vars': ['lane'],
         'rsg_var_name': 'rsg',
         'time_var': 'pull',
@@ -39,7 +40,8 @@ def spec_with_grouping_and_time():
 @pytest.fixture
 def spec_no_time():
     """Specification with grouping but no time."""
-    return AnalysisSpecification('Xbar', {
+    return AnalysisSpecification({
+        'analysis_type': 'Xbar',
         'rsg_vars': ['lane'],
         'rsg_var_name': 'rsg',
         'response_var': 'weight'
@@ -49,7 +51,8 @@ def spec_no_time():
 @pytest.fixture
 def spec_no_grouping():
     """Specification with time but no grouping."""
-    return AnalysisSpecification('Imr', {
+    return AnalysisSpecification({
+        'analysis_type': 'Imr',
         'time_var': 'pull',
         'response_var': 'weight'
     })
@@ -133,7 +136,8 @@ def sds6_data():
 
 def test_detect_sds0_no_structure(detector, sds0_data):
     """Should detect SDS 0 when no grouping or time."""
-    spec = AnalysisSpecification('Imr', {
+    spec = AnalysisSpecification({
+        'analysis_type': 'Imr',
         'response_var': 'weight'
     })
 
@@ -215,7 +219,8 @@ def test_detect_sds_nested_design(detector):
     # Add composite rsg column
     df['rsg'] = df['lane'] + '_' + df['head'].astype(str)
 
-    spec = AnalysisSpecification('Xbar', {
+    spec = AnalysisSpecification({
+        'analysis_type': 'Xbar',
         'rsg_vars': ['lane', 'head'],
         'rsg_var_name': 'rsg',
         'time_var': 'pull',
@@ -532,7 +537,8 @@ def test_detect_sds_with_three_factors(detector):
     # Add composite rsg
     df['rsg'] = df['f1'] + '_' + df['f2'].astype(str) + '_' + df['f3']
 
-    spec = AnalysisSpecification('Xbar', {
+    spec = AnalysisSpecification({
+        'analysis_type': 'Xbar',
         'rsg_vars': ['f1', 'f2', 'f3'],
         'rsg_var_name': 'rsg',
         'time_var': 'time',
@@ -562,7 +568,8 @@ def test_realistic_scenario_manufacturing_4_lanes_hourly(detector):
                 })
     df = pd.DataFrame(rows)
 
-    spec = AnalysisSpecification('Xbar', {
+    spec = AnalysisSpecification({
+        'analysis_type': 'Xbar',
         'rsg_vars': ['rsg'],
         'rsg_var_name': 'rsg',
         'time_var': 'hour',
@@ -592,7 +599,8 @@ def test_realistic_scenario_designed_experiment_no_replication(detector):
     df = pd.DataFrame(rows)
     df['rsg'] = df['temperature'] + '_' + df['pressure']
 
-    spec = AnalysisSpecification('Xbar', {
+    spec = AnalysisSpecification({
+        'analysis_type': 'Xbar',
         'rsg_vars': ['temperature', 'pressure'],
         'rsg_var_name': 'rsg',
         'time_var': 'time',

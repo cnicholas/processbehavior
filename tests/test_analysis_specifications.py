@@ -3,6 +3,7 @@ import logging
 import pytest
 
 from processbehavior import analysis_dataset as ad
+from processbehavior.analysis_specification import DataPrepConfig
 
 # Configure logging
 logging.basicConfig(
@@ -12,50 +13,184 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
+# =============================================================================
+# DataPrepConfig Tests (Base Class - No analysis_type)
+# =============================================================================
+
+def test_data_prep_config_basic():
+    """Test DataPrepConfig works without analysis_type."""
+    spec = {
+        'response_var': 'Height',
+        'rsg_vars': ['Operator'],
+        'time_var': 'Time'
+    }
+    config = DataPrepConfig(spec)
+
+    assert config.response_var == 'Height'
+    assert config.rsg_vars == ['Operator']
+    assert config.time_var == 'Time'
+    assert config.has_grouping
+    assert config.has_time
+    assert config.requires_sort
+
+
+def test_data_prep_config_requires_response_var():
+    """Test DataPrepConfig raises error without response_var."""
+    spec_no_response = {'rsg_vars': ['a', 'b'], 'time_var': 'd'}
+
+    with pytest.raises(ValueError, match='response variable is required'):
+        DataPrepConfig(spec_no_response)
+
+
+def test_data_prep_config_has_grouping():
+    """Test has_grouping property."""
+    spec_with_grouping = {'response_var': 'y', 'rsg_vars': ['a', 'b']}
+    config = DataPrepConfig(spec_with_grouping)
+    assert config.has_grouping
+
+    spec_no_grouping = {'response_var': 'y'}
+    config = DataPrepConfig(spec_no_grouping)
+    assert not config.has_grouping
+
+
+def test_data_prep_config_has_time():
+    """Test has_time property."""
+    spec_with_time = {'response_var': 'y', 'time_var': 't'}
+    config = DataPrepConfig(spec_with_time)
+    assert config.has_time
+
+    spec_no_time = {'response_var': 'y'}
+    config = DataPrepConfig(spec_no_time)
+    assert not config.has_time
+
+
+def test_data_prep_config_sort_cols():
+    """Test sort_cols are built correctly."""
+    # Both grouping and time
+    spec = {'response_var': 'y', 'rsg_vars': ['a'], 'time_var': 't'}
+    config = DataPrepConfig(spec)
+    assert config.sort_cols == ['rsg', 't']
+    assert config.requires_sort
+
+    # Only time
+    spec = {'response_var': 'y', 'time_var': 't'}
+    config = DataPrepConfig(spec)
+    assert config.sort_cols == ['t']
+    assert config.requires_sort
+
+    # No time
+    spec = {'response_var': 'y', 'rsg_vars': ['a']}
+    config = DataPrepConfig(spec)
+    assert config.sort_cols == []
+    assert not config.requires_sort
+
+
+def test_data_prep_config_zero_center():
+    """Test zero_center validation."""
+    # Default (False)
+    spec = {'response_var': 'y'}
+    config = DataPrepConfig(spec)
+    assert not config.zero_center
+
+    # Explicit True
+    spec = {'response_var': 'y', 'zero-center': True}
+    config = DataPrepConfig(spec)
+    assert config.zero_center
+
+    # Invalid (not boolean)
+    spec = {'response_var': 'y', 'zero-center': 'invalid'}
+    with pytest.raises(ValueError, match='zero_center needs to be True or False'):
+        DataPrepConfig(spec)
+
+
+def test_data_prep_config_rsg_delim():
+    """Test rsg_var_delim configuration."""
+    # Default delimiter
+    spec = {'response_var': 'y', 'rsg_vars': ['a', 'b']}
+    config = DataPrepConfig(spec)
+    assert config.rsg_var_delim == '_'
+
+    # Custom delimiter
+    spec = {'response_var': 'y', 'rsg_vars': ['a', 'b'], 'rsg_var_delim': '|'}
+    config = DataPrepConfig(spec)
+    assert config.rsg_var_delim == '|'
+
+
+# =============================================================================
+# AnalysisSpecification Tests (Extended Class - With analysis_type)
+# =============================================================================
+
 def test_analysis_specification_valid():
-
-    #Handles missing key and None value for valid key - get() resolves to None in both cases
-    spec_with_no_response = {'rsg_vars': ['a', 'b'], 'time_var': 'd',
-            'rsg_var_name': 'rsg','response_var': None}
-
-
-    with pytest.raises(ValueError):
-        ad.AnalysisSpecification(analysis_type='Imr',analysis_specification=spec_with_no_response)
-    #TODO: Make loop to test all analyis types
-    spec_with_no_rsg = {'response_var': 'c', 'time_var': 'd', 'rsg_var_name': 'rsg'}
-    with pytest.raises(ValueError):
-        ad.AnalysisSpecification(analysis_type='Xbar',analysis_specification=spec_with_no_rsg)
+    """Test AnalysisSpecification validation with new unified constructor."""
+    # Handles missing key and None value for valid key - get() resolves to None in both cases
+    spec_with_no_response = {
+        'analysis_type': 'Imr',
+        'rsg_vars': ['a', 'b'],
+        'time_var': 'd',
+        'rsg_var_name': 'rsg',
+        'response_var': None
+    }
 
     with pytest.raises(ValueError):
-        ad.AnalysisSpecification(analysis_type='S',analysis_specification=spec_with_no_rsg)
+        ad.AnalysisSpecification(spec_with_no_response)
 
-        #expect time and rsg to be first two columns of output cols
+    # TODO: Make loop to test all analysis types
+    spec_with_no_rsg_xbar = {
+        'analysis_type': 'Xbar',
+        'response_var': 'c',
+        'time_var': 'd',
+        'rsg_var_name': 'rsg'
+    }
+    with pytest.raises(ValueError):
+        ad.AnalysisSpecification(spec_with_no_rsg_xbar)
 
-    #Check configuration
+    spec_with_no_rsg_s = {
+        'analysis_type': 'S',
+        'response_var': 'c',
+        'time_var': 'd',
+        'rsg_var_name': 'rsg'
+    }
+    with pytest.raises(ValueError):
+        ad.AnalysisSpecification(spec_with_no_rsg_s)
+
+    # expect time and rsg to be first two columns of output cols
+
+    # Check configuration
 def test_analysis_specification_Imr_no_time_var():
-    spec = {'analysis_type': 'Imr', 'rsg_vars': ['a', 'b'],'response_var': 'c', 'rsg_var_name': 'rsg'}
+    spec = {
+        'analysis_type': 'Imr',
+        'rsg_vars': ['a', 'b'],
+        'response_var': 'c',
+        'rsg_var_name': 'rsg'
+    }
     logger.info(f'Key is: {spec.get("time_var")}')
-    asImr = ad.AnalysisSpecification(analysis_type='Imr',analysis_specification=spec)
+    asImr = ad.AnalysisSpecification(spec)
     logger.debug(f'{spec}')
     logger.info(f'\nAnalysis Type is: {asImr.analysis_type}')
 
-    #rsg_vars provided
+    # rsg_vars provided
     assert asImr.has_grouping
 
-    #group if there is an rsg
-    assert not asImr.has_time #no time_var
+    # group if there is an rsg
+    assert not asImr.has_time  # no time_var
 
-    #rsg is present sort by it only add time if it is provided
+    # rsg is present sort by it only add time if it is provided
     assert asImr.sort_cols == []
 
-    #expect x and rsg to be first two columns of output cols
+    # expect x and rsg to be first two columns of output cols
     assert asImr.analysis_output_cols == ['x', 'rsg', spec['response_var'], 'mean', 'lcl', 'ucl', 'beyond_limits']
 
-def test_analysis_specification_Imr_w_time_var():
 
-    spec = {'analysis_type': 'Imr', 'rsg_vars': ['a', 'b'],'time_var':'d', 'response_var': 'c', 'rsg_var_name': 'rsg'}
-    #[specs['time_var'], 'rsg', specs['response_var'], 'mean', 'lcl', 'ucl', 'beyond_limits']
-    asImr = ad.AnalysisSpecification(analysis_type='Imr',analysis_specification=spec)
+def test_analysis_specification_Imr_w_time_var():
+    spec = {
+        'analysis_type': 'Imr',
+        'rsg_vars': ['a', 'b'],
+        'time_var': 'd',
+        'response_var': 'c',
+        'rsg_var_name': 'rsg'
+    }
+    # [specs['time_var'], 'rsg', specs['response_var'], 'mean', 'lcl', 'ucl', 'beyond_limits']
+    asImr = ad.AnalysisSpecification(spec)
     logger.debug(f'{spec}')
     logger.info(f'\nAnalysis Type is: {asImr.analysis_type}')
     assert asImr.has_grouping
@@ -63,7 +198,7 @@ def test_analysis_specification_Imr_w_time_var():
     assert asImr.sort_cols == [spec['rsg_var_name'], spec['time_var']]
     assert asImr.requires_sort
 
-    #expect time_var and rsg to be first two columns of output cols
+    # expect time_var and rsg to be first two columns of output cols
     assert asImr.analysis_output_cols == [
         spec['time_var'], spec['rsg_var_name'], spec['response_var'],
         'mean', 'lcl', 'ucl', 'beyond_limits'
@@ -108,29 +243,45 @@ def test_analysis_specification_Imr_w_time_var():
     #     print(f'Requires sort: {result.requires_sort}')
 
 def test_analysis_specification_sort_required():
-    time_w_group_spec = {'analysis_type': 'Imr', 'rsg_vars': ['a', 'b'], 'time_var':'d',
-            'response_var': 'c', 'rsg_var_name': 'rsg','time_unit':'Month'}
+    time_w_group_spec = {
+        'analysis_type': 'Imr',
+        'rsg_vars': ['a', 'b'],
+        'time_var': 'd',
+        'response_var': 'c',
+        'rsg_var_name': 'rsg',
+        'time_unit': 'Month'
+    }
     sortable = True
 
     logger.info(
         '\nTesting: Sort required when time_var and rsg_var specified '
         'and that sortcols from match....'
     )
-    aspec = ad.AnalysisSpecification(analysis_type='Imr', analysis_specification=time_w_group_spec)
+    aspec = ad.AnalysisSpecification(time_w_group_spec)
     assert aspec.requires_sort == sortable
-    assert aspec.sort_cols == ['rsg','d']
+    assert aspec.sort_cols == ['rsg', 'd']
 
-    time_no_group_spec = {'analysis_type': 'Imr', 'time_var':'d',
-            'response_var': 'c'}
+    time_no_group_spec = {
+        'analysis_type': 'Imr',
+        'time_var': 'd',
+        'response_var': 'c'
+    }
     logger.info('\nTesting: Sort required when only time_var specified and that sortcols from match...')
-    aspec = ad.AnalysisSpecification(analysis_type='Imr', analysis_specification=time_no_group_spec)
+    aspec = ad.AnalysisSpecification(time_no_group_spec)
     assert aspec.requires_sort == sortable
     assert aspec.sort_cols == ['d']
 
+
 def test_analysis_specification_rsg_delim():
-    no_delim_spec = {'analysis_type': 'Imr', 'rsg_vars': ['a', 'b'], 'time_var':'d',
-            'response_var': 'c', 'rsg_var_name': 'rsg', 'time_unit':'Month'}
-    aspec = ad.AnalysisSpecification(analysis_type='Imr', analysis_specification=no_delim_spec)
+    no_delim_spec = {
+        'analysis_type': 'Imr',
+        'rsg_vars': ['a', 'b'],
+        'time_var': 'd',
+        'response_var': 'c',
+        'rsg_var_name': 'rsg',
+        'time_unit': 'Month'
+    }
+    aspec = ad.AnalysisSpecification(no_delim_spec)
     logger.info('\nTesting rsg_var_delim is set properly to default: "_" specified in spec:...')
     assert aspec.rsg_var_delim == "_"
 
@@ -138,41 +289,64 @@ def test_analysis_specification_rsg_delim():
     actual = "n" in aspec.data_prep_output_cols
     assert actual
 
-    delim_spec = {'analysis_type': 'Imr', 'rsg_vars': ['a', 'b'], 'time_var':'d',
-            'response_var': 'c', 'rsg_var_name': 'rsg', 'rsg_var_delim': '|', 'time_unit':'Month'}
-    aspec = ad.AnalysisSpecification(analysis_type='Imr', analysis_specification=delim_spec)
+    delim_spec = {
+        'analysis_type': 'Imr',
+        'rsg_vars': ['a', 'b'],
+        'time_var': 'd',
+        'response_var': 'c',
+        'rsg_var_name': 'rsg',
+        'rsg_var_delim': '|',
+        'time_unit': 'Month'
+    }
+    aspec = ad.AnalysisSpecification(delim_spec)
 
     logger.info('\nTesting rsg_var_delim is set properly to: "|" specified in spec:...')
     assert aspec.rsg_var_delim == "|"
 
 
-
 def test_analysis_specification_zero_center():
-    zero_center_spec_false= {'analysis_type': 'Imr', 'rsg_vars': ['a', 'b'], 'time_var':'d',
-            'response_var': 'c', 'rsg_var_name': 'rsg','time_unit':'Month'}
+    zero_center_spec_false = {
+        'analysis_type': 'Imr',
+        'rsg_vars': ['a', 'b'],
+        'time_var': 'd',
+        'response_var': 'c',
+        'rsg_var_name': 'rsg',
+        'time_unit': 'Month'
+    }
 
-    logger.info('\nTesting: Value of zero-center is False when not set in spec....')
-    aspec = ad.AnalysisSpecification(analysis_type='Imr', analysis_specification=zero_center_spec_false)
+    logger.info('\nTesting: Value of zero_center is False when not set in spec....')
+    aspec = ad.AnalysisSpecification(zero_center_spec_false)
     assert not aspec.zero_center
 
-    zero_center_spec_true= {'analysis_type': 'Imr', 'rsg_vars': ['a', 'b'], 'time_var':'d',
-            'response_var': 'c', 'rsg_var_name': 'rsg','time_unit':'Month','zero-center':True}
+    zero_center_spec_true = {
+        'analysis_type': 'Imr',
+        'rsg_vars': ['a', 'b'],
+        'time_var': 'd',
+        'response_var': 'c',
+        'rsg_var_name': 'rsg',
+        'time_unit': 'Month',
+        'zero_center': True
+    }
 
-    logger.info('\nTesting: Value of zero-center is True when set in spec....')
-    aspec = ad.AnalysisSpecification(analysis_type='Imr', analysis_specification=zero_center_spec_true)
+    logger.info('\nTesting: Value of zero_center is True when set in spec....')
+    aspec = ad.AnalysisSpecification(zero_center_spec_true)
     assert aspec.zero_center
 
-    zero_center_spec_invalid= {'analysis_type': 'Imr', 'rsg_vars': ['a', 'b'], 'time_var':'d',
-            'response_var': 'c', 'rsg_var_name': 'rsg','time_unit':'Month','zero-center':1234}
+    zero_center_spec_invalid = {
+        'analysis_type': 'Imr',
+        'rsg_vars': ['a', 'b'],
+        'time_var': 'd',
+        'response_var': 'c',
+        'rsg_var_name': 'rsg',
+        'time_unit': 'Month',
+        'zero_center': 1234
+    }
 
     logger.info(
-        '\nTesting: ValueError raised when zero-center is set to '
-        'none boolean value in spec....'
+        '\nTesting: ValueError raised when zero_center is set to '
+        'non-boolean value in spec....'
     )
     with pytest.raises(ValueError):
-        ad.AnalysisSpecification(
-            analysis_type='Imr',
-            analysis_specification=zero_center_spec_invalid
-        )
+        ad.AnalysisSpecification(zero_center_spec_invalid)
         
        

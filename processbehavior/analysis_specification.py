@@ -1,13 +1,24 @@
 """
 AnalysisSpecification - Configuration and validation for process behavior analyses.
 
-This module provides the AnalysisSpecification class which:
-- Validates analysis parameters
-- Stores configuration for chart calculations
-- Determines data preparation requirements
-- Ensures analysis type compatibility with provided data structure
+This module provides two classes:
+
+1. DataPrepConfig: Base configuration for data preparation (no analysis_type needed)
+2. AnalysisSpecification: Extended configuration with analysis_type validation
+
+The separation allows data preparation and SDS detection to work without knowing
+the analysis type, which is determined after SDS detection.
 
 Usage:
+    # For data preparation only (no analysis_type):
+    config = DataPrepConfig({
+        'response_var': 'Height',
+        'time_var': 'Time',
+        'rsg_vars': ['Operator', 'Machine'],
+        'round_to': 3
+    })
+
+    # For full analysis (with analysis_type):
     spec = AnalysisSpecification(
         analysis_type='Xbar',
         analysis_specification={
@@ -26,47 +37,32 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-class AnalysisSpecification:
+class DataPrepConfig:
     """
-    Configuration and validation for statistical process control analyses.
+    Base configuration for data preparation (no analysis_type required).
 
-    This class is responsible for validating and processing analysis specifications.
-    It determines how an analysis is executed and what results are returned.
+    This class handles structural configuration needed for data preparation
+    and SDS detection. It has no knowledge of analysis_type, making it suitable
+    for use before the analysis type is determined.
 
     Parameters
     ----------
-    analysis_type : str
-        Type of analysis: 'Xbar', 'S', 'Imr', or 'R'
-    analysis_specification : dict
-        Dictionary containing analysis parameters:
-
-        - **rsg_vars** (list, optional): Rational subgrouping variables. If provided,
-          the input dataset will be grouped by these columns. A concatenated column
-          will be created with name specified by rsg_var_name.
-
-        - **time_var** (str, optional): Time dimension or ordering variable. If provided,
-          data will be sorted by rsg and time or time only.
+    specification : dict
+        Dictionary containing data preparation parameters:
 
         - **response_var** (str, required): Response variable being analyzed.
-
+        - **rsg_vars** (list, optional): Rational subgrouping variables.
+        - **time_var** (str, optional): Time dimension or ordering variable.
         - **rsg_var_name** (str, optional): Label for rational subgroup column.
-          Defaults to 'rsg'. A tuple-based key 'rsg_key' is also created
-          for correct numeric sorting in internal operations.
-
+          Defaults to 'rsg'.
         - **rsg_var_delim** (str, optional): Delimiter for multi-variable grouping.
-          Default is '_'. For example, col_a and col_b will create 'col_a_col_b'.
-
-        - **time_unit** (str, optional): Time aggregation unit (Year, Quarter, Month, Week).
-          Not currently implemented.
-
+          Default is '_'.
         - **round_to** (int, optional): Decimal places for rounding. Defaults to 3.
-
-        - **zero-center** (bool, optional): Whether to center data at zero. Defaults to False.
+        - **zero-center** (bool, optional): Whether to center data at zero.
+          Defaults to False.
 
     Attributes
     ----------
-    analysis_type : str
-        Type of analysis being performed
     rsg_vars : list or None
         Rational subgrouping variables
     rsg_var_name : str
@@ -91,45 +87,35 @@ class AnalysisSpecification:
     Raises
     ------
     ValueError
-        If analysis_type is not supported
-        If required parameters are missing
-        If Xbar/S analysis is requested without grouping variables
+        If response_var is not provided
+        If zero-center is not boolean
 
     Examples
     --------
-    >>> spec = AnalysisSpecification(
-    ...     analysis_type='Xbar',
-    ...     analysis_specification={
-    ...         'rsg_vars': ['Operator', 'Machine'],
-    ...         'time_var': 'Time',
-    ...         'response_var': 'Height'
-    ...     }
-    ... )
-    >>> spec.has_grouping
+    >>> config = DataPrepConfig({
+    ...     'response_var': 'Height',
+    ...     'rsg_vars': ['Operator'],
+    ...     'time_var': 'Time'
+    ... })
+    >>> config.has_grouping
     True
-    >>> spec.response_var
+    >>> config.response_var
     'Height'
     """
 
     VALID_TIME_UNITS = ['Year', 'Quarter', 'Month', 'Week']
 
-    def __init__(self, analysis_type: str, analysis_specification: dict):
+    def __init__(self, specification: dict):
         """
-        Initialize and validate analysis specification.
+        Initialize data preparation configuration.
 
         Parameters
         ----------
-        analysis_type : str
-            Type of analysis: 'Xbar', 'S', 'Imr', or 'R'
-        analysis_specification : dict
-            Configuration parameters
+        specification : dict
+            Configuration parameters (no analysis_type required)
         """
-        SUPPORTED_ANALYSIS_TYPES = ['Xbar', 'S', 'Imr', 'R']
-        GROUPED_ANALYSES = ['Xbar', 'S']
-
         # Store raw specification
-        self.analysis_type = analysis_type
-        self.spec = analysis_specification
+        self.spec = specification
 
         # Extract parameters
         self.rsg_vars = self.spec.get('rsg_vars')
@@ -137,37 +123,24 @@ class AnalysisSpecification:
         self.rsg_var_delim = self.spec.get('rsg_var_delim', '_')
         self.time_var = self.spec.get('time_var')
         self.response_var = self.spec.get('response_var')
+        self.round_to = self.spec.get('round_to', 3)
+        # Support both 'zero_center' (preferred) and 'zero-center' (legacy) for migration
+        self.zero_center = self.spec.get('zero_center', self.spec.get('zero-center', False))
 
-        self.round_to = self.spec.get('round_to', 3)  # default round to 3 if none
+        # Initialize lists
         self.data_prep_output_cols = []
         self.sort_cols = []
         self.time_grouping_units = []
         self.time_grouping_cols = {}
         self.grouping_cols = []
-        self.zero_center = self.spec.get('zero-center', False)
 
-        # Validate analysis type
-        if self.analysis_type not in SUPPORTED_ANALYSIS_TYPES:
-            raise ValueError(
-                f'Analysis type: {self.analysis_type} is not supported, '
-                f'specify one of: {SUPPORTED_ANALYSIS_TYPES}!'
-            )
-
-        # Validate grouped analyses have grouping variables
-        if self.analysis_type in GROUPED_ANALYSES and self.rsg_vars is None:
-            raise ValueError(
-                f'A grouping variable is required to produce a {self.analysis_type} analysis!'
-            )
-
-        # Validate response variable provided
+        # Validate response variable (always required)
         if self.response_var is None:
-            raise ValueError(
-                f'A response variable is required to produce a {self.analysis_type} analysis!'
-            )
+            raise ValueError('A response variable is required!')
 
         # Validate zero_center parameter
         if self.zero_center not in [True, False]:
-            raise ValueError('Supplied value for zero-center needs to be True or False')
+            raise ValueError('Supplied value for zero_center needs to be True or False')
 
         # Set derived properties
         self.has_time = self.time_var is not None
@@ -178,12 +151,7 @@ class AnalysisSpecification:
 
         # Build column specifications
         self._build_data_prep_cols()
-
-        # Initialize output cols
-        self.analysis_output_cols = [self.response_var, 'mean', 'lcl', 'ucl', 'beyond_limits']
-
         self._build_sort_cols()
-        self._build_output_cols()
 
     # =========================================================================
     # Properties
@@ -197,18 +165,6 @@ class AnalysisSpecification:
     # =========================================================================
     # Column Building Methods
     # =========================================================================
-
-    def _build_output_cols(self):
-        """Build list of output columns based on configuration."""
-        # Address Grouping var in output
-        if self.has_grouping:
-            self.analysis_output_cols.insert(0, self.rsg_var_name)
-
-        # Address time var in output
-        if self.has_time:
-            self.analysis_output_cols.insert(0, self.time_var)
-        else:
-            self.analysis_output_cols.insert(0, "x")
 
     def _build_sort_cols(self):
         """Build list of columns to sort by."""
@@ -230,7 +186,7 @@ class AnalysisSpecification:
         list
             Column names to retain
         """
-        self.data_prep_output_cols.insert(0, self.response_var)  # this is the default value
+        self.data_prep_output_cols.insert(0, self.response_var)
 
         # Add time unit cols
         for col in self.time_grouping_cols:
@@ -244,30 +200,109 @@ class AnalysisSpecification:
         if self.has_time:
             self.data_prep_output_cols.insert(0, self.time_var)
 
+
+class AnalysisSpecification(DataPrepConfig):
+    """
+    Extended configuration with analysis_type validation (inherits from DataPrepConfig).
+
+    This class extends DataPrepConfig with analysis_type-specific validation
+    and output column configuration.
+
+    Parameters
+    ----------
+    specification : dict
+        Dictionary containing analysis parameters, including:
+
+        - **analysis_type** (str, required): Type of analysis ('Xbar', 'S', 'Imr', 'R')
+        - **response_var** (str, required): Response variable
+        - **rsg_vars** (list, optional): Rational subgrouping variables
+        - **time_var** (str, optional): Time/sequence variable
+        - **zero_center** (bool, optional): Center data at zero (default: False)
+        - **round_to** (int, optional): Decimal places (default: 3)
+
+    Attributes
+    ----------
+    analysis_type : str
+        Type of analysis being performed
+    analysis_output_cols : list
+        Columns to include in analysis output
+
+    Inherits all attributes from DataPrepConfig:
+        rsg_vars, rsg_var_name, rsg_var_delim, time_var, response_var,
+        round_to, zero_center, has_grouping, has_time, requires_sort
+
+    Raises
+    ------
+    ValueError
+        If analysis_type is not provided or not supported
+        If Xbar/S analysis is requested without grouping variables
+
+    Examples
+    --------
+    >>> spec = AnalysisSpecification({
+    ...     'analysis_type': 'Xbar',
+    ...     'response_var': 'Height',
+    ...     'rsg_vars': ['Operator', 'Machine'],
+    ...     'time_var': 'Time'
+    ... })
+    >>> spec.has_grouping
+    True
+    >>> spec.analysis_type
+    'Xbar'
+    """
+
+    def __init__(self, specification: dict):
+        """
+        Initialize and validate analysis specification.
+
+        Parameters
+        ----------
+        specification : dict
+            Configuration parameters including 'analysis_type'
+        """
+        SUPPORTED_ANALYSIS_TYPES = ['Xbar', 'S', 'Imr', 'R']
+        GROUPED_ANALYSES = ['Xbar', 'S']
+
+        # Extract and validate analysis_type from specification dict
+        self.analysis_type = specification.get('analysis_type')
+
+        if self.analysis_type is None:
+            raise ValueError(
+                "specification must include 'analysis_type'. "
+                f"Valid types: {SUPPORTED_ANALYSIS_TYPES}"
+            )
+
+        if self.analysis_type not in SUPPORTED_ANALYSIS_TYPES:
+            raise ValueError(
+                f'Analysis type: {self.analysis_type} is not supported, '
+                f'specify one of: {SUPPORTED_ANALYSIS_TYPES}!'
+            )
+
+        # Initialize base class (DataPrepConfig)
+        super().__init__(specification)
+
+        # Validate grouped analyses have grouping variables
+        if self.analysis_type in GROUPED_ANALYSES and self.rsg_vars is None:
+            raise ValueError(
+                f'A grouping variable is required to produce a {self.analysis_type} analysis!'
+            )
+
+        # Initialize analysis output columns
+        self.analysis_output_cols = [self.response_var, 'mean', 'lcl', 'ucl', 'beyond_limits']
+        self._build_output_cols()
+
     # =========================================================================
-    # Legacy Methods (for backward compatibility)
+    # Column Building Methods (analysis_type-specific)
     # =========================================================================
 
-    def data_prep_output_cols(self) -> list:
-        """Get data preparation output columns."""
-        return self.data_prep_output_cols
+    def _build_output_cols(self):
+        """Build list of output columns based on configuration."""
+        # Address Grouping var in output
+        if self.has_grouping:
+            self.analysis_output_cols.insert(0, self.rsg_var_name)
 
-    def analysis_output_cols(self) -> list:
-        """Get analysis output columns."""
-        return self.analysis_output_cols
-
-    def sort_cols(self) -> list:
-        """Get sort columns."""
-        return self.sort_cols
-
-    def grouping_cols(self) -> list:
-        """Get grouping columns."""
-        return self.grouping_cols
-
-    def has_time(self) -> bool:
-        """Check if time variable is defined."""
-        return self._has_time
-
-    def requires_sort(self) -> bool:
-        """Check if sorting is required."""
-        return self.requires_sort
+        # Address time var in output
+        if self.has_time:
+            self.analysis_output_cols.insert(0, self.time_var)
+        else:
+            self.analysis_output_cols.insert(0, "x")
