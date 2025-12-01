@@ -766,9 +766,9 @@ def test_sds2_synthetic(df_SDS2: pd.DataFrame):
         print(f"Sampling Design State: {theDataset.sampling_design_state}")
         print(f"Statistics: {theDataset.statistics}")
 
-        # With new SDS detection: cells=subgroups (not subgroup×time)
-        # Each factor has n=8 observations (across 8 time points) → SDS 1
-        assert theDataset.sampling_design_state == 1, f"Expected SDS=1, got {theDataset.sampling_design_state}"
+        # With corrected SDS detection: cells are (factor × time) combinations
+        # K=2 factors, T=8 times, n=1 per cell → SDS 2 (no replication)
+        assert theDataset.sampling_design_state == 2, f"Expected SDS=2, got {theDataset.sampling_design_state}"
 
         print("\n--- Analysis Dataset (with residuals) ---")
         cols_to_show = ['time', 'rsg', 'y', 'Ybar', 'Ybar_k', 'Ybar_t', 'Ybar_kt', 'R1', 'R2', 'R3', 'R4', 'R5']

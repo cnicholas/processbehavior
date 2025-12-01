@@ -46,8 +46,8 @@ def test_sds_comprehensive():
           f"{np.corrcoef(ads1.analysis_dataset['R2'], expected_r2)[0,1]:.4f}")
     
     # Test with synthetic SDS2 data (K×T with n=1 per grid cell)
-    # NOTE: With new SDS detection, this is classified as SDS 1
-    # because each factor has n=10 observations (across 10 time points)
+    # With corrected SDS detection: cells are (factor × time) combinations
+    # K=3 factors, T=10 times, n=1 per cell → SDS 2 (no replication)
     print("\n" + "=" * 60)
     print("Testing SDS 2: No Replication")
     print("=" * 60)
@@ -58,9 +58,9 @@ def test_sds_comprehensive():
     ads2 = ad.AnalysisDataSet(df=df2, analysis_specification=aspec2)
 
     print(f"Detected SDS: {ads2.sampling_design_state}")
-    # With grouping_vars=['factor 1'], time_var='time':
-    # Each factor has n=10 observations → SDS 1
-    assert ads2.sampling_design_state == 1, "Should detect SDS 1 (n=10 per factor)"
+    # With corrected cell-level detection logic:
+    # K=3 factors × T=10 times, all cells have n=1 → SDS 2
+    assert ads2.sampling_design_state == 2, "Should detect SDS 2 (n=1 per cell)"
     
     # Verify R2 uses moving average (should NOT equal y - ybar_kt)
     print(f"R2 std dev: {ads2.analysis_dataset['R2'].std():.4f}")
