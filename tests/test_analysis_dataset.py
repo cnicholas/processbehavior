@@ -779,7 +779,7 @@ def test_sds2_synthetic(df_SDS2: pd.DataFrame):
         print(theDataset.analysis_dataset[rcr_cols])
 
         # Verify basic structure: 1 observation per (k,t) grid cell
-        cell_counts = theDataset.analysis_dataset.groupby(['rsg', 'time'])['y'].count()
+        cell_counts = theDataset.analysis_dataset.groupby(['rsg', 'time'], observed=True)['y'].count()
         assert all(cell_counts == 1), "Should have exactly 1 observation per (k,t) grid cell"
 
         # Verify Ybar_kt equals y (since n=1 per grid cell)

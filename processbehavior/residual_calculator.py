@@ -104,7 +104,7 @@ def calculate_factor_means(
     3     9.25
     Name: weight, dtype: float64
     """
-    return df.groupby(rsg_var)[response_var].transform('mean')
+    return df.groupby(rsg_var, observed=True)[response_var].transform('mean')
 
 
 def calculate_time_means(
@@ -144,7 +144,7 @@ def calculate_time_means(
     3     9.25
     Name: weight, dtype: float64
     """
-    return df.groupby(time_var)[response_var].transform('mean')
+    return df.groupby(time_var, observed=True)[response_var].transform('mean')
 
 
 def calculate_cell_means(
@@ -188,7 +188,7 @@ def calculate_cell_means(
     3     9.25
     Name: weight, dtype: float64
     """
-    return df.groupby([rsg_var, time_var])[response_var].transform('mean')
+    return df.groupby([rsg_var, time_var], observed=True)[response_var].transform('mean')
 
 
 # ============================================================================
@@ -322,7 +322,7 @@ def calculate_r2_residual_sds2(
     """
     # Backward-looking moving average: (Y_j + Y_{j-1}) / 2
     # This is the current value + the lagged value, divided by 2
-    ma2 = df.groupby(rsg_var)[response_var].transform(
+    ma2 = df.groupby(rsg_var, observed=True)[response_var].transform(
         lambda s: (s + s.shift(1)) / 2.0
     )
 
@@ -378,7 +378,7 @@ def calculate_r2_residual_sds3(
     >>> # R2: [-0.25, 0.25, 0.0]  (B gets 0 because n=1)
     """
     # Count observations per cell
-    n_per_cell = df.groupby([rsg_var, time_var])[response_var].transform('count')
+    n_per_cell = df.groupby([rsg_var, time_var], observed=True)[response_var].transform('count')
 
     # Calculate within-cell deviation
     r2_within = df[response_var] - cell_means

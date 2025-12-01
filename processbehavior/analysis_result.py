@@ -981,7 +981,7 @@ class AnalysisResult:
 
         summary_rows = []
 
-        for stratum, group in combined_data.groupby('rsg', sort=False):
+        for stratum, group in combined_data.groupby('rsg', sort=False, observed=True):
             n_obs = len(group)
 
             # Get mean, lcl, ucl (should be constant within stratum)

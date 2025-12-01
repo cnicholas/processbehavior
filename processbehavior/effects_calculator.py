@@ -90,7 +90,7 @@ def calculate_factor_main_effects(
         )
 
     me = (
-        df.groupby(factor, sort=False)['R5']
+        df.groupby(factor, sort=False, observed=True)['R5']
         .mean()
         .rename('Main_Effect')
         .reset_index()
@@ -146,7 +146,7 @@ def calculate_time_main_effects(
         )
 
     te = (
-        df.groupby(time_var, sort=False)['R1']
+        df.groupby(time_var, sort=False, observed=True)['R1']
         .mean()
         .rename('PT_ME')
         .reset_index()
@@ -287,7 +287,7 @@ def calculate_interaction_cell_means(
     keys = rsg_vars + [time_var]
 
     # Use transform to broadcast cell means back to all rows
-    return df.groupby(keys, sort=False)['R3'].transform('mean')
+    return df.groupby(keys, sort=False, observed=True)['R3'].transform('mean')
 
 
 def calculate_pdc_by_time_sds2(
@@ -387,7 +387,7 @@ def calculate_factor_interaction_effects(
 
     # Calculate mean R5 for each factor combination
     rsg_r5 = (
-        df.groupby(rsg_vars[:2], as_index=False)['R5']
+        df.groupby(rsg_vars[:2], as_index=False, observed=True)['R5']
         .mean()
     )
 

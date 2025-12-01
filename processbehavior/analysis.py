@@ -72,7 +72,7 @@ def split_df_by_group(df: pd.DataFrame, grouping_var: str) -> dict:
         )
 
     out = {}
-    grouped = df.groupby(grouping_var)
+    grouped = df.groupby(grouping_var, observed=True)
 
     # package_results
     for g in grouped.groups:
@@ -119,11 +119,11 @@ def gather_analysis_statistics(
     if is_valid:
         if grouping_var is not None:
             statistics_to_collect.append("n")
-            N = out.groupby(grouping_var, as_index=False).size()
+            N = out.groupby(grouping_var, as_index=False, observed=True).size()
             N.reset_index()
             N.rename(columns={"size": "n"}, inplace=True)
 
-            summarized = df.groupby([grouping_var]).max()
+            summarized = df.groupby([grouping_var], observed=True).max()
             summarized = pd.merge(N, summarized, how='left', on=grouping_var)
 
             for _index, row in summarized.iterrows():
@@ -496,7 +496,7 @@ class Analysis:
                 cols_to_keep.insert(0, self.spec.time_var)
         else:
             if self.spec.has_grouping:
-                result['x'] = result.groupby(self.spec.rsg_var_name).cumcount() + 1
+                result['x'] = result.groupby(self.spec.rsg_var_name, observed=True).cumcount() + 1
                 cols_to_keep.insert(0, self.spec.rsg_var_name)
                 cols_to_keep.insert(0, 'x')
             else:
@@ -534,7 +534,7 @@ class Analysis:
         # Apply zero-centering if requested
         out = self._apply_zero_centering(out)
 
-        out = out.groupby(spec.rsg_var_name, as_index=False).agg(
+        out = out.groupby(spec.rsg_var_name, as_index=False, observed=True).agg(
             s=pd.NamedAgg(column=spec.response_var, aggfunc="std"),
             mean=pd.NamedAgg(column=spec.response_var, aggfunc="mean"),
             n=pd.NamedAgg(column='n', aggfunc="max")
@@ -649,7 +649,7 @@ class Analysis:
         spec = self.spec
         out = self.ads.analysis_dataset.copy()
 
-        out = out.groupby(spec.rsg_var_name, as_index=False).agg(
+        out = out.groupby(spec.rsg_var_name, as_index=False, observed=True).agg(
             s=pd.NamedAgg(column=spec.response_var, aggfunc="std"),
             n=pd.NamedAgg(column=spec.rsg_var_name, aggfunc="count"),
         )
@@ -712,7 +712,7 @@ class Analysis:
                 out = out.sort_values(sort_cols, kind='stable')
 
             # Moving range per subgroup (must exist BEFORE agg)
-            out['mr'] = out.groupby(spec.rsg_var_name, sort=False)[y].diff().abs()
+            out['mr'] = out.groupby(spec.rsg_var_name, sort=False, observed=True)[y].diff().abs()
 
             # Build a SAFE aggregation spec (only include existing cols)
             agg = {}
@@ -728,7 +728,7 @@ class Analysis:
                 )
 
             grouped = (
-                out.groupby(spec.rsg_var_name, sort=False)
+                out.groupby(spec.rsg_var_name, sort=False, observed=True)
                 .agg(**agg)
                 .reset_index()
             )
@@ -828,8 +828,8 @@ class Analysis:
         logger.debug('Dataframe has columns: %s', out.columns.to_list())
 
         if spec.has_grouping:
-            out['mr'] = abs(out.groupby(spec.rsg_var_name)[spec.response_var].diff())
-            grouped = out.groupby(spec.rsg_var_name, as_index=False)
+            out['mr'] = abs(out.groupby(spec.rsg_var_name, observed=True)[spec.response_var].diff())
+            grouped = out.groupby(spec.rsg_var_name, as_index=False, observed=True)
             # Rename 'mR' to 'center' for consistency
             grouped = grouped.agg(center=pd.NamedAgg('mr', 'mean'))
 
