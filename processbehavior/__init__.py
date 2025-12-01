@@ -34,7 +34,7 @@ Analysis : Core analysis engine
 AnalysisDataSet : Analysis dataset manager
 """
 
-__version__ = "0.3.0"
+__version__ = "0.1.0"
 
 # Main user-facing API
 # Core analysis classes

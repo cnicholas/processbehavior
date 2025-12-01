@@ -187,10 +187,10 @@ class AnalysisDataSet:
         df = self.analysis_dataset
 
         # Calculate centered residual means
-        rsg_time_groups = df.groupby([self.spec.rsg_var_name, self.spec.time_var])
+        rsg_time_groups = df.groupby([self.spec.rsg_var_name, self.spec.time_var], observed=True)
         df["Rbar_kt"] = rsg_time_groups["R1"].transform("mean")
-        df['Rbar_k'] = df.groupby([self.spec.rsg_var_name])["R1"].transform('mean')
-        df['Rbar_t'] = df.groupby([self.spec.time_var])["R1"].transform("mean")
+        df['Rbar_k'] = df.groupby([self.spec.rsg_var_name], observed=True)["R1"].transform('mean')
+        df['Rbar_t'] = df.groupby([self.spec.time_var], observed=True)["R1"].transform("mean")
 
         # Calculate RCR (Reconstructed Centered Residuals)
         # These verify that Y can be reconstructed from components
@@ -259,7 +259,7 @@ class AnalysisDataSet:
         if spec.has_grouping and k_vars:
             # counts by factor combo
             k_counts = (
-                df.groupby(k_vars, sort=False)
+                df.groupby(k_vars, sort=False, observed=True)
                 .size()
                 .rename('n_k')
                 .reset_index()
@@ -302,7 +302,7 @@ class AnalysisDataSet:
 
         if spec.has_time and t:
             t_counts = (
-                df.groupby([t], sort=False)
+                df.groupby([t], sort=False, observed=True)
                 .size()
                 .rename('n_t')
                 .reset_index()
@@ -341,7 +341,7 @@ class AnalysisDataSet:
 
             # n per cell
             cdf = (
-                df.groupby(keys, sort=False)
+                df.groupby(keys, sort=False, observed=True)
                 .size()
                 .rename('n_cell')
                 .reset_index()
@@ -405,7 +405,7 @@ class AnalysisDataSet:
         if col not in df.columns:
             return pd.DataFrame(columns=keys + [col])
         return (
-            df.groupby(keys, sort=False)[col]
+            df.groupby(keys, sort=False, observed=True)[col]
             .first()
             .reset_index()
         )
