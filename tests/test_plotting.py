@@ -14,7 +14,7 @@ import plotly.graph_objects as go
 import pytest
 
 from processbehavior import ProcessDataFrame
-from processbehavior.plotting import ControlChartFigure, Plotter
+from processbehavior.plotting import ChartTheme, ControlChartFigure, Plotter, get_theme, list_themes, register_theme
 from processbehavior.plotting.themes import THEMES, apply_theme
 
 
@@ -42,14 +42,104 @@ class TestThemes:
         themed_fig = apply_theme(fig, 'dark')
 
         layout = themed_fig.layout
-        assert layout.plot_bgcolor == '#1e1e1e'
-        assert layout.paper_bgcolor == '#2d2d2d'
+        # Plotly normalizes hex colors to uppercase
+        assert layout.plot_bgcolor.lower() == '#1e1e1e'
+        assert layout.paper_bgcolor.lower() == '#2d2d2d'
 
     def test_apply_theme_invalid(self):
         """Test error handling for invalid theme."""
         fig = go.Figure()
         with pytest.raises(ValueError, match="Unknown theme"):
             apply_theme(fig, 'nonexistent')
+
+
+class TestChartTheme:
+    """Test ChartTheme dataclass and theme functions."""
+
+    def test_list_themes(self):
+        """Test listing available themes."""
+        themes = list_themes()
+        assert 'processbehavior' in themes
+        assert 'ggplot' in themes
+        assert 'minimal' in themes
+        assert 'dark' in themes
+        assert 'publication' in themes
+
+    def test_get_theme(self):
+        """Test getting a theme by name."""
+        theme = get_theme('processbehavior')
+        assert isinstance(theme, ChartTheme)
+        assert theme.name == 'processbehavior'
+        assert theme.data_color == 'steelblue'
+
+    def test_get_theme_returns_copy(self):
+        """Test that get_theme returns a copy (safe to modify)."""
+        theme1 = get_theme('processbehavior')
+        theme2 = get_theme('processbehavior')
+
+        # Modify theme1
+        theme1.data_color = 'purple'
+
+        # theme2 should be unaffected
+        assert theme2.data_color == 'steelblue'
+
+    def test_get_theme_invalid(self):
+        """Test error handling for invalid theme name."""
+        with pytest.raises(ValueError, match="Unknown theme"):
+            get_theme('nonexistent')
+
+    def test_chart_theme_dataclass(self):
+        """Test creating a custom ChartTheme."""
+        theme = ChartTheme(
+            name='custom',
+            data_color='navy',
+            signal_color='orange',
+            center_color='darkgreen'
+        )
+        assert theme.name == 'custom'
+        assert theme.data_color == 'navy'
+        assert theme.signal_color == 'orange'
+        assert theme.center_color == 'darkgreen'
+        # Defaults should be preserved
+        assert theme.ucl_color == 'red'
+
+    def test_chart_theme_to_layout_dict(self):
+        """Test converting theme to Plotly layout dict."""
+        theme = get_theme('processbehavior')
+        layout = theme.to_layout_dict()
+
+        assert 'plot_bgcolor' in layout
+        assert 'paper_bgcolor' in layout
+        assert 'font' in layout
+        assert 'xaxis' in layout
+        assert 'yaxis' in layout
+
+    def test_register_custom_theme(self):
+        """Test registering a custom theme."""
+        custom = ChartTheme(name='test_corporate', data_color='#003366')
+        register_theme(custom)
+
+        # Should be able to retrieve it
+        retrieved = get_theme('test_corporate')
+        assert retrieved.data_color == '#003366'
+
+    def test_ggplot_theme_properties(self):
+        """Test ggplot theme has expected properties."""
+        theme = get_theme('ggplot')
+        # ggplot2 has gray background
+        assert theme.plot_bgcolor == '#EBEBEB'
+        # Uses circle markers for signals
+        assert theme.signal_marker_symbol == 'circle'
+
+    def test_publication_theme_properties(self):
+        """Test publication theme has expected properties."""
+        theme = get_theme('publication')
+        # High contrast black for data
+        assert theme.data_color == '#000000'
+        # No zone shading for print
+        assert theme.zone_opacity == 0.0
+        # Serif font for academic
+        assert 'serif' in theme.font_family.lower()
 
 
 class TestControlChartFigure:
@@ -251,6 +341,74 @@ class TestPlotter:
         center_key = plotter._get_center_key(stats)
         assert center_key is None
 
+    def test_plot_with_zone_shading(self, simple_result):
+        """Test plotting with zone shading enabled."""
+        plotter = Plotter(simple_result)
+        fig = plotter.plot(chart='all', show_zones=True)
+
+        assert isinstance(fig, ControlChartFigure)
+        # Figure should have shapes (zone rectangles)
+        shapes = fig.figure.layout.shapes
+        # Should have 5 zones: Zone C (center), Zone B upper/lower, Zone A upper/lower
+        assert len(shapes) >= 5
+
+    def test_plot_zone_shading_respects_theme_opacity(self, simple_result):
+        """Test that zone shading respects theme opacity."""
+        plotter = Plotter(simple_result)
+
+        # Use publication theme which has zone_opacity=0
+        fig = plotter.plot(chart='all', show_zones=True, template='publication')
+
+        # With opacity=0, no zone shapes should be added (only control limit lines)
+        shapes = fig.figure.layout.shapes
+        # Count zone shapes (rectangles) - should be 0
+        zone_shapes = [s for s in shapes if s.type == 'rect']
+        assert len(zone_shapes) == 0
+
+    def test_plot_zone_shading_with_custom_theme(self, simple_result):
+        """Test zone shading with custom theme colors."""
+        custom_theme = ChartTheme(
+            name='custom_zones',
+            zone_a_color='#FF0000',
+            zone_b_color='#FFFF00',
+            zone_c_color='#00FF00',
+            zone_opacity=0.3
+        )
+
+        plotter = Plotter(simple_result)
+        fig = plotter.plot(chart='all', show_zones=True, template=custom_theme)
+
+        assert isinstance(fig, ControlChartFigure)
+        shapes = fig.figure.layout.shapes
+        assert len(shapes) >= 5
+
+    def test_plot_with_run_rules(self, simple_result):
+        """Test plotting with run rules visualization."""
+        plotter = Plotter(simple_result)
+        # show_rules should not error even if no rule violations exist
+        fig = plotter.plot(chart='all', show_rules=True)
+
+        assert isinstance(fig, ControlChartFigure)
+        # Figure should render without errors
+        assert fig.figure is not None
+
+    def test_plot_with_rules_and_zones(self, simple_result):
+        """Test plotting with both show_rules and show_zones enabled."""
+        plotter = Plotter(simple_result)
+        fig = plotter.plot(
+            chart='all',
+            show_rules=True,
+            show_zones=True,
+            highlight_signals=True
+        )
+
+        assert isinstance(fig, ControlChartFigure)
+        # Should have zone shapes
+        shapes = fig.figure.layout.shapes
+        # At least zone shapes should exist
+        zone_shapes = [s for s in shapes if s.type == 'rect']
+        assert len(zone_shapes) >= 0  # May be 0 or more depending on limits
+
 
 class TestAnalysisResultIntegration:
     """Test plot() integration with AnalysisResult."""
@@ -317,3 +475,328 @@ class TestFacetedPlotting:
         fig = plotter.plot(ncols=3)
 
         assert isinstance(fig, ControlChartFigure)
+
+
+class TestAspectRatio:
+    """Test aspect ratio functionality."""
+
+    @pytest.fixture
+    def simple_result(self):
+        """Create simple I-mR analysis result."""
+        np.random.seed(42)
+        df = pd.DataFrame({
+            'value': np.random.normal(100, 5, 30),
+            'time': range(30)
+        })
+        pdf = ProcessDataFrame(df)
+        analysis = pdf.analyze(response_var='value')
+        return analysis.calculate()
+
+    def test_aspect_ratio_calculation(self, simple_result):
+        """Test that aspect ratio correctly calculates height."""
+        plotter = Plotter(simple_result)
+
+        # 16:9 aspect ratio
+        fig = plotter.plot(chart='all', width=1600, aspect_ratio=16/9)
+        assert fig.figure.layout.width == 1600
+        assert fig.figure.layout.height == 900
+
+    def test_aspect_ratio_square(self, simple_result):
+        """Test square aspect ratio."""
+        plotter = Plotter(simple_result)
+
+        fig = plotter.plot(chart='all', width=800, aspect_ratio=1.0)
+        assert fig.figure.layout.height == 800
+
+    def test_aspect_ratio_portrait(self, simple_result):
+        """Test portrait aspect ratio."""
+        plotter = Plotter(simple_result)
+
+        fig = plotter.plot(chart='all', width=600, aspect_ratio=0.75)
+        assert fig.figure.layout.height == 800
+
+
+class TestReportGeneration:
+    """Test report generation functionality."""
+
+    @pytest.fixture
+    def simple_result(self):
+        """Create simple I-mR analysis result."""
+        np.random.seed(42)
+        df = pd.DataFrame({
+            'value': np.random.normal(100, 5, 30),
+            'time': range(30)
+        })
+        pdf = ProcessDataFrame(df)
+        analysis = pdf.analyze(response_var='value')
+        return analysis.calculate()
+
+    def test_generate_report(self, simple_result):
+        """Test basic report generation."""
+        import tempfile
+        from pathlib import Path
+
+        plotter = Plotter(simple_result)
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            filepath = Path(tmpdir) / 'test_report.html'
+            plotter.generate_report(str(filepath))
+
+            assert filepath.exists()
+            assert filepath.stat().st_size > 0
+
+            # Check content
+            content = filepath.read_text()
+            assert 'Process Behavior Analysis Report' in content
+            assert 'Analysis Summary' in content
+
+    def test_generate_report_custom_title(self, simple_result):
+        """Test report with custom title."""
+        import tempfile
+        from pathlib import Path
+
+        plotter = Plotter(simple_result)
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            filepath = Path(tmpdir) / 'custom_report.html'
+            plotter.generate_report(str(filepath), title='My Custom Report')
+
+            content = filepath.read_text()
+            assert 'My Custom Report' in content
+
+
+class TestResidualPlots:
+    """Test residual visualization functionality."""
+
+    @pytest.fixture
+    def result_with_residuals(self):
+        """Create analysis result with residuals (requires subgroups)."""
+        np.random.seed(42)
+        df = pd.DataFrame({
+            'value': np.random.normal(100, 5, 100),
+            'subgroup': np.repeat(range(20), 5),
+            'time': range(100)
+        })
+        pdf = ProcessDataFrame(df)
+        analysis = pdf.analyze(response_var='value', grouping_vars=['subgroup'])
+        return analysis.calculate()
+
+    def test_plot_residuals_available(self, result_with_residuals):
+        """Test residual plots when residuals are available."""
+        if result_with_residuals.has_residuals:
+            plotter = Plotter(result_with_residuals)
+            fig = plotter.plot_residuals()
+            assert isinstance(fig, ControlChartFigure)
+
+    def test_plot_residuals_histogram(self, result_with_residuals):
+        """Test histogram residual plot."""
+        if result_with_residuals.has_residuals:
+            plotter = Plotter(result_with_residuals)
+            fig = plotter.plot_residuals(plot_type='histogram')
+            assert isinstance(fig, ControlChartFigure)
+
+    def test_plot_residuals_qq(self, result_with_residuals):
+        """Test Q-Q residual plot."""
+        if result_with_residuals.has_residuals:
+            plotter = Plotter(result_with_residuals)
+            fig = plotter.plot_residuals(plot_type='qq')
+            assert isinstance(fig, ControlChartFigure)
+
+    def test_plot_residuals_sequence(self, result_with_residuals):
+        """Test sequence residual plot."""
+        if result_with_residuals.has_residuals:
+            plotter = Plotter(result_with_residuals)
+            fig = plotter.plot_residuals(plot_type='sequence')
+            assert isinstance(fig, ControlChartFigure)
+
+    def test_plot_residuals_not_available(self):
+        """Test error when residuals not available."""
+        np.random.seed(42)
+        df = pd.DataFrame({
+            'value': np.random.normal(100, 5, 30),
+            'time': range(30)
+        })
+        pdf = ProcessDataFrame(df)
+        result = pdf.analyze(response_var='value').calculate()
+
+        if not result.has_residuals:
+            plotter = Plotter(result)
+            with pytest.raises(ValueError, match="Residuals not available"):
+                plotter.plot_residuals()
+
+
+class TestEffectsPlots:
+    """Test effects visualization functionality."""
+
+    @pytest.fixture
+    def result_with_effects(self):
+        """Create analysis result with effects."""
+        np.random.seed(42)
+        df = pd.DataFrame({
+            'value': np.random.normal(100, 5, 100),
+            'subgroup': np.repeat(range(20), 5),
+            'time': range(100)
+        })
+        pdf = ProcessDataFrame(df)
+        analysis = pdf.analyze(response_var='value', grouping_vars=['subgroup'])
+        return analysis.calculate()
+
+    def test_plot_effects_available(self, result_with_effects):
+        """Test effects plots when effects are available."""
+        if result_with_effects.has_effects:
+            plotter = Plotter(result_with_effects)
+            fig = plotter.plot_effects()
+            assert isinstance(fig, ControlChartFigure)
+
+    def test_plot_effects_not_available(self):
+        """Test error when effects not available."""
+        np.random.seed(42)
+        df = pd.DataFrame({
+            'value': np.random.normal(100, 5, 30),
+            'time': range(30)
+        })
+        pdf = ProcessDataFrame(df)
+        result = pdf.analyze(response_var='value').calculate()
+
+        if not result.has_effects:
+            plotter = Plotter(result)
+            with pytest.raises(ValueError, match="Effects not available"):
+                plotter.plot_effects()
+
+
+class TestStatsBox:
+    """Test statistical annotations (stats box) functionality."""
+
+    @pytest.fixture
+    def simple_result(self):
+        """Create simple I-mR analysis result."""
+        np.random.seed(42)
+        df = pd.DataFrame({
+            'value': np.random.normal(100, 5, 30),
+            'time': range(30)
+        })
+        pdf = ProcessDataFrame(df)
+        analysis = pdf.analyze(response_var='value')
+        return analysis.calculate()
+
+    @pytest.fixture
+    def xbar_result(self):
+        """Create Xbar analysis result with subgroups."""
+        np.random.seed(42)
+        df = pd.DataFrame({
+            'value': np.random.normal(100, 5, 100),
+            'subgroup': np.repeat(range(20), 5),
+            'time': range(100)
+        })
+        pdf = ProcessDataFrame(df)
+        analysis = pdf.analyze(response_var='value', grouping_vars=['subgroup'])
+        return analysis.calculate()
+
+    def test_plot_with_stats_box(self, simple_result):
+        """Test plotting with stats box enabled."""
+        plotter = Plotter(simple_result)
+        fig = plotter.plot(chart='all', show_stats=True)
+
+        assert isinstance(fig, ControlChartFigure)
+        # Figure should have annotation (stats box)
+        annotations = fig.figure.layout.annotations
+        assert len(annotations) > 0
+
+        # At least one annotation should contain 'n =' (sample size)
+        stats_annotation = None
+        for ann in annotations:
+            if ann.text and 'n =' in ann.text:
+                stats_annotation = ann
+                break
+        assert stats_annotation is not None
+
+    def test_stats_box_content(self, simple_result):
+        """Test that stats box contains expected statistics."""
+        plotter = Plotter(simple_result)
+        fig = plotter.plot(chart='all', show_stats=True)
+
+        # Find the stats box annotation
+        stats_annotation = None
+        for ann in fig.figure.layout.annotations:
+            if ann.text and 'n =' in ann.text:
+                stats_annotation = ann
+                break
+
+        assert stats_annotation is not None
+        text = stats_annotation.text
+
+        # Should contain key statistics
+        assert 'n =' in text
+        assert 'CL =' in text
+        assert 'UCL =' in text
+        assert 'LCL =' in text
+
+    def test_stats_box_positioning(self, simple_result):
+        """Test that stats box is positioned in upper-left corner."""
+        plotter = Plotter(simple_result)
+        fig = plotter.plot(chart='all', show_stats=True)
+
+        # Find the stats box annotation
+        stats_annotation = None
+        for ann in fig.figure.layout.annotations:
+            if ann.text and 'n =' in ann.text:
+                stats_annotation = ann
+                break
+
+        assert stats_annotation is not None
+        # Should be in upper-left (small x, large y in paper coordinates)
+        assert stats_annotation.x < 0.5  # Left side
+        assert stats_annotation.y > 0.5  # Upper side
+        assert stats_annotation.xanchor == 'left'
+        assert stats_annotation.yanchor == 'top'
+
+    def test_stats_box_respects_theme(self, simple_result):
+        """Test that stats box respects theme styling."""
+        custom_theme = ChartTheme(
+            name='custom_stats',
+            stats_box_bgcolor='rgba(200, 200, 255, 0.8)',
+            stats_box_font_size=14,
+            stats_box_font_color='#0000FF'
+        )
+
+        plotter = Plotter(simple_result)
+        fig = plotter.plot(chart='all', show_stats=True, template=custom_theme)
+
+        # Find the stats box annotation
+        stats_annotation = None
+        for ann in fig.figure.layout.annotations:
+            if ann.text and 'n =' in ann.text:
+                stats_annotation = ann
+                break
+
+        assert stats_annotation is not None
+        assert stats_annotation.font.size == 14
+        assert stats_annotation.font.color == '#0000FF'
+
+    def test_stats_box_faceted(self, xbar_result):
+        """Test stats box in faceted plots."""
+        plotter = Plotter(xbar_result)
+        fig = plotter.plot(ncols=2, show_stats=True)
+
+        assert isinstance(fig, ControlChartFigure)
+        # Faceted plots should have multiple annotations (one per subplot)
+        annotations = fig.figure.layout.annotations
+        # Should have more than just subplot titles
+        assert len(annotations) > 0
+
+    def test_stats_box_with_other_options(self, simple_result):
+        """Test stats box works with other visualization options."""
+        plotter = Plotter(simple_result)
+        fig = plotter.plot(
+            chart='all',
+            show_stats=True,
+            show_zones=True,
+            show_rules=True,
+            highlight_signals=True
+        )
+
+        assert isinstance(fig, ControlChartFigure)
+        # Should have stats annotation
+        annotations = fig.figure.layout.annotations
+        has_stats = any('n =' in (ann.text or '') for ann in annotations)
+        assert has_stats

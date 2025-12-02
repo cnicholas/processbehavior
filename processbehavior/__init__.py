@@ -52,6 +52,9 @@ from processbehavior.residual_calculator import ResidualCalculator
 # Utility classes (advanced users)
 from processbehavior.sds_detector import SamplingDesignDetector, SDSAnalysisPlan
 
+# Plotting/theming
+from processbehavior.plotting import ChartTheme, get_theme, list_themes, register_theme
+
 __all__ = [
     # Main API
     'ProcessDataFrame',
@@ -68,4 +71,10 @@ __all__ = [
     'DataPreparation',
     'EffectsCalculator',
     'ResidualCalculator',
+
+    # Plotting/theming
+    'ChartTheme',
+    'get_theme',
+    'list_themes',
+    'register_theme',
 ]
