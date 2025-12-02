@@ -307,9 +307,6 @@ def test_calculate_residuals_raises_on_unsupported_sds(calc, sds1_df, spec_sds1)
     with pytest.raises(ValueError, match="not supported for SDS 0"):
         calc.calculate_residuals(sds1_df, spec_sds1, sds=0)
 
-    with pytest.raises(ValueError, match="not supported for SDS 4"):
-        calc.calculate_residuals(sds1_df, spec_sds1, sds=4)
-
 
 def test_calculate_residuals_raises_without_grouping(calc, sds1_df):
     """Should raise if no grouping variables (VAS requires grouping)."""
@@ -367,6 +364,42 @@ def test_calculate_residuals_sds3_hybrid_approach(calc, spec_sds1):
 
     assert not (a_rows['R2'] == 0).all()  # A has within-cell variation
     assert (b_rows['R2'] == 0).all()      # B has no variation (n=1)
+
+
+def test_calculate_residuals_sds4_same_as_sds3(calc, spec_sds1):
+    """SDS 4 (replicated design) should use same R2 method as SDS 1/3/5."""
+    # SDS 4: Full replication like SDS 1
+    sds4_df = pd.DataFrame({
+        'rsg': ['A', 'A', 'B', 'B'] * 2,
+        'time': [1, 1, 1, 1, 2, 2, 2, 2],
+        'weight': [10.0, 10.5, 9.0, 9.5, 10.2, 10.4, 9.1, 9.3]
+    })
+
+    result = calc.calculate_residuals(sds4_df, spec_sds1, sds=4)
+
+    # R2 should be Y - Ybar_kt (within-cell deviation)
+    expected_r2 = result['weight'] - result['Ybar_kt']
+    pd.testing.assert_series_equal(result['R2'], expected_r2, check_names=False)
+
+
+def test_calculate_residuals_sds6_uses_moving_average(calc, spec_sds1):
+    """SDS 6 (sparse design) should use backward moving average for R2 like SDS 2."""
+    # SDS 6: Each cell has n=1 (sparse design)
+    sds6_df = pd.DataFrame({
+        'rsg': ['A', 'A', 'A'],
+        'time': [1, 2, 3],
+        'weight': [10.0, 11.0, 12.0]
+    }).sort_values(['rsg', 'time'])
+
+    result = calc.calculate_residuals(sds6_df, spec_sds1, sds=6)
+
+    # R2 should use backward moving average: R2 = (Y_j - Y_{j-1}) / 2
+    assert 'R2' in result.columns
+    # First observation should be NaN (no lag)
+    assert pd.isna(result['R2'].iloc[0])
+    # Remaining should equal (Y_j - Y_{j-1}) / 2
+    assert pytest.approx(result['R2'].iloc[1], 0.01) == 0.5  # (11-10)/2
+    assert pytest.approx(result['R2'].iloc[2], 0.01) == 0.5  # (12-11)/2
 
 
 # ============================================================================

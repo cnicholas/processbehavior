@@ -12,8 +12,11 @@ total variation into interpretable components:
 
 The calculations adapt based on Sampling Design State (SDS):
 - SDS 1: Direct within-cell variance (full replication)
-- SDS 2: Moving average approximation (no replication)
+- SDS 2: Moving average approximation (no replication, all N_kt = 1)
 - SDS 3: Hybrid approach (partial replication)
+- SDS 4: Direct within-cell variance (replicated design)
+- SDS 5: Hybrid approach (nested design)
+- SDS 6: Moving average approximation (sparse design, some N_kt = 0)
 
 Follows the Pythonic Hadley philosophy:
 - Pure functions (no mutation)
@@ -572,11 +575,12 @@ class ResidualCalculator:
                 "No grouping variables specified in spec."
             )
 
-        if sds not in [1, 2, 3, 5]:
+        if sds not in [1, 2, 3, 4, 5, 6]:
             raise ValueError(
                 f"VAS residuals not supported for SDS {sds}.\n"
                 f"Valid SDS values: 1 (full replication), "
-                f"2 (no replication), 3 (partial replication), 5 (nested).\n"
+                f"2 (no replication), 3 (partial replication), "
+                f"4 (replicated design), 5 (nested), 6 (sparse design).\n"
                 f"Current SDS: {sds}"
             )
 
@@ -636,12 +640,14 @@ class ResidualCalculator:
 
         if sds == 1:
             # Full replication: direct within-cell variance
+            # R2 = Y - Ȳ_kt (Equation 59)
             logger.debug("SDS 1: R2 = Y - Ybar_kt")
             return calculate_r2_residual_sds1(df, y, df['Ybar_kt'])
 
         elif sds == 2:
-            # No replication: moving average approximation
-            logger.debug("SDS 2: R2 ≈ Y - MA2_k(t)")
+            # No replication (all N_kt = 1): moving average approximation
+            # R2 = Y - Y_ma where Y_ma = (Y_j + Y_{j-1}) / 2 (Equations 64-66)
+            logger.debug("SDS 2: R2 = Y - MA2 (moving average method)")
             # Must sort for moving average to work correctly
             df_sorted = df.sort_values([spec.rsg_var_name, spec.time_var]).copy()
             r2 = calculate_r2_residual_sds2(df_sorted, y, spec.rsg_var_name)
@@ -650,20 +656,37 @@ class ResidualCalculator:
 
         elif sds == 3:
             # Partial replication: hybrid approach
+            # R2 = Y - Ȳ_kt for cells with n > 1, else 0
             logger.debug("SDS 3: R2 = Y - Ybar_kt (n>1), else 0")
             return calculate_r2_residual_sds3(
                 df, y, df['Ybar_kt'], spec.rsg_var_name, spec.time_var
             )
 
-        elif sds == 5:
-            # Nested: use SDS 3 approach for now
-            logger.warning(
-                "SDS 5: Using SDS 3 hybrid approach for R2.\n"
-                "Nested designs may require custom variance components."
-            )
+        elif sds == 4:
+            # Replicated design: same as SDS 1, 3, 5
+            # R2 = Y - Ȳ_kt (Equation 59)
+            logger.debug("SDS 4: R2 = Y - Ybar_kt")
             return calculate_r2_residual_sds3(
                 df, y, df['Ybar_kt'], spec.rsg_var_name, spec.time_var
             )
+
+        elif sds == 5:
+            # Nested: use hybrid approach
+            # R2 = Y - Ȳ_kt (Equation 59)
+            logger.debug("SDS 5: R2 = Y - Ybar_kt (hybrid approach)")
+            return calculate_r2_residual_sds3(
+                df, y, df['Ybar_kt'], spec.rsg_var_name, spec.time_var
+            )
+
+        elif sds == 6:
+            # Sparse design (some N_kt = 0, rest N_kt = 1): moving average method
+            # Same as SDS 2 - R2 = Y - Y_ma (Equations 64-66)
+            logger.debug("SDS 6: R2 = Y - MA2 (moving average method, sparse design)")
+            # Must sort for moving average to work correctly
+            df_sorted = df.sort_values([spec.rsg_var_name, spec.time_var]).copy()
+            r2 = calculate_r2_residual_sds2(df_sorted, y, spec.rsg_var_name)
+            # Re-index to match original order
+            return r2.reindex(df.index)
 
         else:
             raise ValueError(f"R2 calculation not defined for SDS {sds}")
