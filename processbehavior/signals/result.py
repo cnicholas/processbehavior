@@ -73,7 +73,7 @@ class SignalResult:
 
         return {
             rule: group
-            for rule, group in self.violations.groupby('rule_name')
+            for rule, group in self.violations.groupby('rule_name', observed=True)
         }
 
     @property
@@ -84,7 +84,7 @@ class SignalResult:
 
         return {
             obs_id: group
-            for obs_id, group in self.violations.groupby('obs_id')
+            for obs_id, group in self.violations.groupby('obs_id', observed=True)
         }
 
     def get_rule_violations(self, rule_name: str) -> pd.DataFrame:

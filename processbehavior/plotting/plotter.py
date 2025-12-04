@@ -1090,7 +1090,7 @@ class Plotter:
                 return
 
             # Group violations by observation
-            grouped = violations.groupby('obs_id')
+            grouped = violations.groupby('obs_id', observed=True)
 
             # Rule descriptions for hover text
             rule_short_names = {

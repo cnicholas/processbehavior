@@ -627,7 +627,7 @@ class SamplingDesignDetector:
 
         # Count how many levels of factor1 each level of factor2 appears with
         nesting_check = (
-            df.groupby(factor2)[factor1]
+            df.groupby(factor2, observed=True)[factor1]
             .nunique()
         )
 

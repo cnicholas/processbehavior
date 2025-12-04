@@ -276,7 +276,8 @@ def test_pdc_by_pt_consistency(df_SDS1):
     # Calculate expected PDC using formula
     sanity = (df.groupby(['FACTOR 1','FACTOR 2','TIME'])
                 .apply(lambda g: g['Ybar_kt'].iloc[0] - g['Ybar_k'].iloc[0]
-                                  - g['Ybar_t'].iloc[0] + g['Ybar'].iloc[0])
+                                  - g['Ybar_t'].iloc[0] + g['Ybar'].iloc[0],
+                       include_groups=False)
                 .rename('pdc_by_pt'))
 
     # Get actual PDC from interactions (new architecture stores it there)
