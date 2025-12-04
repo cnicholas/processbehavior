@@ -746,11 +746,11 @@ def test_rsg_categorical_preserves_groupby_order(prep):
 
     result = prep.prepare_dataset(df, spec)
 
-    # Groupby should respect categorical order
-    grouped = result.groupby('rsg', sort=False)
+    # Groupby should respect categorical order when sorted
+    grouped = result.groupby('rsg', sort=True, observed=True)
     group_names = list(grouped.groups.keys())
 
-    # Should be in categorical order: '1', '2', '10' (not '1', '10', '2')
+    # Should be in categorical order: '1', '2', '10' (not '1', '10', '2' string sort)
     assert group_names == ['1', '2', '10']
 
 
@@ -895,7 +895,7 @@ def test_prepare_dataset_preserves_observation_counts(prep):
     assert len(result) == 18, f"Expected 18 rows, got {len(result)}"
 
     # Should preserve per-group counts
-    counts = result.groupby('rsg').size()
+    counts = result.groupby('rsg', observed=True).size()
     assert all(counts == 6), f"Expected 6 observations per lane, got {counts.tolist()}"
 
 
@@ -919,7 +919,7 @@ def test_prepare_dataset_handles_missing_data_correctly(prep):
     assert len(result) == 7, f"Expected 7 rows after dropna, got {len(result)}"
 
     # Check per-lane counts are correct
-    counts = result.groupby('rsg').size().to_dict()
+    counts = result.groupby('rsg', observed=True).size().to_dict()
     assert counts['1'] == 2, f"Lane 1 should have 2 observations, got {counts.get('1', 0)}"
     assert counts['2'] == 2, f"Lane 2 should have 2 observations, got {counts.get('2', 0)}"
     assert counts['3'] == 3, f"Lane 3 should have 3 observations, got {counts.get('3', 0)}"
@@ -952,7 +952,7 @@ def test_full_pipeline_observation_count_integrity(prep):
     assert len(result) == 197, f"Expected 197 rows, got {len(result)}"
 
     # Verify per-lane counts
-    lane_counts = result.groupby('rsg').size().to_dict()
+    lane_counts = result.groupby('rsg', observed=True).size().to_dict()
     # Row 5 is lane 1, row 67 is lane 2, row 123 is lane 3
     expected_counts = {'1': 49, '2': 49, '3': 49, '4': 50}  # Missing values in lanes 1, 2, 3
 

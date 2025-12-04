@@ -396,7 +396,7 @@ class DataPreparation:
         per group to estimate within-group variance.
         """
         # Count observations per group
-        grouped = df.groupby(spec.rsg_var_name).size()
+        grouped = df.groupby(spec.rsg_var_name, observed=True).size()
         starting_count = grouped.count()
         logger.debug('Starting with %s groups', starting_count)
 
