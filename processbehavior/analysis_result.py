@@ -1428,9 +1428,10 @@ class AnalysisResult:
                 )
             value_col = chart_info['metadata']['value_col']
 
-            # Extract chart type from chart name
-            # Examples: 'Xbar' -> 'Xbar', 'Sbar' -> 'S', 'Imr_lane_1' -> 'Imr'
-            chart_type = self._extract_chart_type(chart)
+            # Get chart type from metadata (preferred) or extract from name
+            chart_type = chart_info['metadata'].get(
+                'chart_type', self._extract_chart_type(chart)
+            )
 
             return detector.detect(
                 data=chart_info['data'],
@@ -1453,8 +1454,10 @@ class AnalysisResult:
                     )
                 value_col = chart_info['metadata']['value_col']
 
-                # Extract chart type from chart name
-                chart_type = self._extract_chart_type(chart_name)
+                # Get chart type from metadata (preferred) or extract from name
+                chart_type = chart_info['metadata'].get(
+                    'chart_type', self._extract_chart_type(chart_name)
+                )
 
                 results[chart_name] = detector.detect(
                     data=chart_info['data'],

@@ -136,12 +136,16 @@ class ChartTheme:
     limit_line_width: float = 1.5
     center_line_width: float = 1.5
 
-    # Signal markers
+    # Signal markers - Two-tier system:
+    # Both tiers use same marker style/size as data (circle, size 8), differentiated only by color
+    # Tier 1 (Rule 1): Red - points outside control limits
     signal_color: str = '#DC143C'  # Crimson - attention-grabbing red
-    signal_marker_size: int = 14
-    signal_marker_symbol: str = 'x'
-    signal_marker_line_width: float = 2.0
-    signal_marker_line_color: str = '#8B0000'  # DarkRed
+    signal_marker_size: int = 8    # Same size as data points
+    signal_marker_symbol: str = 'circle'  # Same as data points
+    signal_marker_line_width: float = 1.0
+    signal_marker_line_color: str = '#8B0000'  # DarkRed border
+    # Tier 2 (Rules 2-8): Orange - pattern-based signals
+    pattern_signal_color: str = '#FF8C00'  # Dark Orange
 
     # Zone shading
     zone_a_color: str = '#FFB3B3'  # Light red
@@ -267,10 +271,10 @@ def _create_ggplot_theme() -> ChartTheme:
         center_color='#33A02C',  # ggplot2 green
         limit_line_width=1.2,
         center_line_width=1.2,
-        # Signals
+        # Signals - same marker as data, just red fill
         signal_color='#E31A1C',
-        signal_marker_size=12,
-        signal_marker_symbol='circle',  # ggplot uses circles
+        signal_marker_size=7,   # Same as data_marker_size
+        signal_marker_symbol='circle',
         signal_marker_line_color='#B2182B',
         # Zones
         zone_a_color='#FDAE61',
@@ -306,10 +310,10 @@ def _create_minimal_theme() -> ChartTheme:
         limit_line_dash='dot',
         limit_line_width=1.0,
         center_line_width=1.0,
-        # Signals - still prominent
+        # Signals - same marker as data, just red fill
         signal_color='#E74C3C',  # Flat red
-        signal_marker_size=10,
-        signal_marker_symbol='diamond',
+        signal_marker_size=6,   # Same as data_marker_size
+        signal_marker_symbol='circle',
         signal_marker_line_color='#C0392B',
         # Zones - very subtle
         zone_a_color='#FADBD8',
@@ -345,10 +349,10 @@ def _create_dark_theme() -> ChartTheme:
         center_color='#4ECDC4',  # Bright teal
         limit_line_width=1.5,
         center_line_width=1.5,
-        # Signals
+        # Signals - same marker as data, just red fill
         signal_color='#FF4757',  # Bright red
-        signal_marker_size=14,
-        signal_marker_symbol='x',
+        signal_marker_size=8,   # Same as data_marker_size
+        signal_marker_symbol='circle',
         signal_marker_line_color='#FF6B81',
         # Zones - semi-transparent on dark
         zone_a_color='#FF6B6B',
@@ -384,10 +388,10 @@ def _create_publication_theme() -> ChartTheme:
         limit_line_dash='dash',
         limit_line_width=0.8,
         center_line_width=1.0,
-        # Signals - distinct pattern
+        # Signals - same marker as data, just filled
         signal_color='#000000',
-        signal_marker_size=8,
-        signal_marker_symbol='circle-open',  # Hollow circle
+        signal_marker_size=5,   # Same as data_marker_size
+        signal_marker_symbol='circle',
         signal_marker_line_width=2.0,
         signal_marker_line_color='#000000',
         # Zones - not used in print (set opacity to 0)
