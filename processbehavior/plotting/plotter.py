@@ -299,7 +299,7 @@ class Plotter:
         x_col = self._get_x_column(data)
 
         # Determine axis labels
-        x_label = xaxis_title or self._get_xaxis_label()
+        x_label = xaxis_title or self._get_xaxis_label(x_col)
         y_label = yaxis_title or self._get_yaxis_label(value_col)
 
         theme = self._theme
@@ -456,7 +456,10 @@ class Plotter:
         )
 
         # Determine axis labels (same for all subplots)
-        x_label = xaxis_title or self._get_xaxis_label()
+        # Get x_col from first chart to determine appropriate label
+        first_chart_data = next(iter(charts.values()))['data']
+        x_col = self._get_x_column(first_chart_data)
+        x_label = xaxis_title or self._get_xaxis_label(x_col)
         y_label = yaxis_title or self._get_yaxis_label(None)
 
         # Calculate global y-range for shared axis
@@ -644,19 +647,25 @@ class Plotter:
         """
         Determine the x-axis column for plotting.
 
-        Chart calculation logic (_build_output_columns) guarantees one of two cases:
-        1. time_var was specified → data contains time_var column
-        2. time_var not specified → data contains 'x' column (auto-generated)
+        Checks in order:
+        1. time_var if specified AND present in data
+        2. 'rsg' column (subgroup identifier for Xbar/S charts)
+        3. 'x' column (auto-generated)
+        4. Falls back to index if none found
 
         Returns
         -------
         str
             Column name to use for x-axis
         """
-        # Use time variable if specified in analysis
+        # Use time variable if specified and present in data
         time_var = self.summary.get('time_var')
-        if time_var:
+        if time_var and time_var in data.columns:
             return time_var
+
+        # Use subgroup identifier for Xbar/S charts
+        if 'rsg' in data.columns:
+            return 'rsg'
 
         # Otherwise use auto-generated 'x' column
         return 'x'
@@ -881,21 +890,29 @@ class Plotter:
 
         return result if result != chart_name else None
 
-    def _get_xaxis_label(self) -> str:
+    def _get_xaxis_label(self, x_col: str | None = None) -> str:
         """
         Get intelligent x-axis label.
 
-        Uses time variable name if available, otherwise "Observation".
+        Parameters
+        ----------
+        x_col : str, optional
+            The x-axis column being used. If 'rsg', returns 'Subgroup'.
 
         Returns
         -------
         str
             X-axis label
         """
+        # Subgroup charts (Xbar, S) use 'rsg' column
+        if x_col == 'rsg':
+            return 'Subgroup'
+
+        # Time series charts use time variable
         time_var = self.summary.get('time_var')
-        if time_var:
-            # Capitalize first letter of each word
+        if time_var and (x_col is None or x_col == time_var):
             return time_var.replace('_', ' ').title()
+
         return 'Observation'
 
     def _get_yaxis_label(self, value_col: str | None) -> str:
