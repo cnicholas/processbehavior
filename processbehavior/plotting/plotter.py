@@ -85,7 +85,10 @@ class Plotter:
         aspect_ratio: float | None = None,
         title: str | None = None,
         xaxis_title: str | None = None,
-        yaxis_title: str | None = None
+        yaxis_title: str | None = None,
+        shared_yaxis: bool = True,
+        yaxis_padding: float = 0.05,
+        vertical_spacing: float = 0.15
     ) -> ControlChartFigure:
         """
         Create control chart visualization.
@@ -137,6 +140,17 @@ class Plotter:
             Custom x-axis label. If None, uses time variable name or "Observation"
         yaxis_title : str, optional
             Custom y-axis label. If None, uses response variable name
+        shared_yaxis : bool, default True
+            Whether faceted charts share the same y-axis range. When True,
+            all facets use a common scale for honest cross-facet comparison.
+            When False, each facet scales independently to maximize visibility.
+        yaxis_padding : float, default 0.05
+            Padding added above and below the y-axis range as a fraction of
+            the data range (e.g., 0.05 = 5% padding on each side).
+        vertical_spacing : float, default 0.15
+            Vertical spacing between rows in faceted layouts, as a fraction
+            of the figure height (0.15 = 15%). Increase if subplot titles
+            overlap with x-axis labels from the row above.
 
         Returns
         -------
@@ -239,7 +253,10 @@ class Plotter:
                 width=width,
                 height=height,
                 xaxis_title=xaxis_title,
-                yaxis_title=yaxis_title
+                yaxis_title=yaxis_title,
+                shared_yaxis=shared_yaxis,
+                yaxis_padding=yaxis_padding,
+                vertical_spacing=vertical_spacing
             )
 
         # Apply theme
@@ -401,7 +418,10 @@ class Plotter:
         width: int,
         height: int,
         xaxis_title: str | None = None,
-        yaxis_title: str | None = None
+        yaxis_title: str | None = None,
+        shared_yaxis: bool = True,
+        yaxis_padding: float = 0.05,
+        vertical_spacing: float = 0.15
     ) -> go.Figure:
         """Create faceted control charts."""
         n_charts = len(charts)
@@ -416,28 +436,33 @@ class Plotter:
         # Constraint: spacing <= 1 / (n - 1) where n is rows or cols
         if nrows > 1:
             max_v_spacing = 1.0 / (nrows - 1) - 0.01  # Small buffer
-            vertical_spacing = min(0.1, max_v_spacing)
+            v_spacing = min(vertical_spacing, max_v_spacing)
         else:
-            vertical_spacing = 0.1
+            v_spacing = vertical_spacing
 
         if ncols > 1:
             max_h_spacing = 1.0 / (ncols - 1) - 0.01
-            horizontal_spacing = min(0.08, max_h_spacing)
+            h_spacing = min(0.08, max_h_spacing)
         else:
-            horizontal_spacing = 0.08
+            h_spacing = 0.08
 
         # Create subplot grid
         fig = make_subplots(
             rows=nrows,
             cols=ncols,
             subplot_titles=subplot_titles,
-            vertical_spacing=vertical_spacing,
-            horizontal_spacing=horizontal_spacing
+            vertical_spacing=v_spacing,
+            horizontal_spacing=h_spacing
         )
 
         # Determine axis labels (same for all subplots)
         x_label = xaxis_title or self._get_xaxis_label()
         y_label = yaxis_title or self._get_yaxis_label(None)
+
+        # Calculate global y-range for shared axis
+        global_y_range = None
+        if shared_yaxis:
+            global_y_range = self._calculate_global_yrange(charts, yaxis_padding)
 
         # Get theme
         theme = self._theme
@@ -560,6 +585,10 @@ class Plotter:
         fig.update_xaxes(title_text=x_label)
         fig.update_yaxes(title_text=y_label)
 
+        # Apply shared y-axis range if calculated
+        if global_y_range is not None:
+            fig.update_yaxes(range=global_y_range)
+
         return fig
 
     def list_charts(self) -> list[str]:
@@ -655,6 +684,64 @@ class Plotter:
 
         # If no stratified charts found, return all charts
         return stratified if stratified else self.charts
+
+    def _calculate_global_yrange(
+        self,
+        charts: dict,
+        padding: float = 0.05
+    ) -> list[float]:
+        """
+        Calculate global y-axis range across all charts.
+
+        Examines all chart data and control limits to determine a common
+        y-axis range that encompasses all values with appropriate padding.
+
+        Parameters
+        ----------
+        charts : dict
+            Dictionary of chart_name -> chart_info dicts
+        padding : float, default 0.05
+            Padding as fraction of data range (0.05 = 5% on each side)
+
+        Returns
+        -------
+        list[float]
+            [y_min, y_max] range for y-axis
+        """
+        global_min = float('inf')
+        global_max = float('-inf')
+
+        for chart_name, chart_info in charts.items():
+            data = chart_info['data']
+            stats = chart_info['statistics']
+
+            # Get value column
+            value_col = self._get_value_column(chart_info, chart_name)
+
+            # Update bounds with data values
+            data_min = data[value_col].min()
+            data_max = data[value_col].max()
+            global_min = min(global_min, data_min)
+            global_max = max(global_max, data_max)
+
+            # Include control limits in range
+            ucl = stats.get('ucl')
+            lcl = stats.get('lcl')
+
+            if ucl is not None and ucl != 'Varies':
+                global_max = max(global_max, ucl)
+            if lcl is not None and lcl != 'Varies':
+                global_min = min(global_min, lcl)
+
+        # Calculate padding amount
+        data_range = global_max - global_min
+        padding_amount = data_range * padding
+
+        # Apply padding
+        y_min = global_min - padding_amount
+        y_max = global_max + padding_amount
+
+        return [y_min, y_max]
 
     # =========================================================================
     # Title and Label Generation (Smart Defaults)
