@@ -344,6 +344,7 @@ class Plotter:
                 )
 
         # Highlight signals (Rule 1 - beyond limits)
+        # Uses same marker style/size as data, just red color - no legend entry
         if highlight_signals and 'beyond_limits' in data.columns:
             signals = data[data['beyond_limits'] != 0]
             if not signals.empty:
@@ -353,7 +354,7 @@ class Plotter:
                     mode='markers',
                     name='Out of Control',
                     marker=dict(
-                        size=theme.signal_marker_size,
+                        size=theme.data_marker_size,  # Same size as data
                         color=theme.signal_color,
                         symbol=theme.signal_marker_symbol,
                         line=dict(
@@ -361,7 +362,8 @@ class Plotter:
                             color=theme.signal_marker_line_color
                         )
                     ),
-                    hovertemplate='Out of Control<br>%{x}<br>%{y:.3f}<extra></extra>'
+                    hovertemplate='Out of Control<br>%{x}<br>%{y:.3f}<extra></extra>',
+                    showlegend=False  # Color is enough, no legend clutter
                 ))
 
         # Run rules visualization (Rules 2-8)
@@ -515,7 +517,7 @@ class Plotter:
                         row=row, col=col
                     )
 
-            # Signals (Rule 1 - beyond limits)
+            # Signals (Rule 1 - beyond limits) - same size as facet data points
             if highlight_signals and 'beyond_limits' in data.columns:
                 signals = data[data['beyond_limits'] != 0]
                 if not signals.empty:
@@ -525,7 +527,7 @@ class Plotter:
                             y=signals[value_col],
                             mode='markers',
                             marker=dict(
-                                size=theme.facet_signal_marker_size,
+                                size=theme.facet_marker_size,  # Same size as facet data
                                 color=theme.signal_color,
                                 symbol=theme.signal_marker_symbol
                             ),
@@ -1147,30 +1149,26 @@ class Plotter:
                 for p in annotated_points
             ]
 
-            # Get color for first rule of each point
-            colors = [
-                theme.rule_colors.get(p['rules'][0], theme.signal_color)
-                for p in annotated_points
-            ]
+            # Two-tier color system: all pattern rules (2-8) use orange
+            # Rule 1 (beyond limits) is handled separately with red markers
+            # Both use circle markers (same as data) for professional appearance
+            # No legend entry - color differentiation is sufficient
 
             # Add scatter trace for rule violation markers
             scatter_kwargs = dict(
                 x=x_vals,
                 y=y_vals,
-                mode='markers+text',
-                name='Rule Violations',
+                mode='markers',
+                name='Pattern Signals',
                 marker=dict(
-                    size=theme.rule_marker_size,
-                    color=colors,
-                    symbol='diamond',
-                    line=dict(width=1, color='white')
+                    size=theme.data_marker_size,  # Same size as data points
+                    color=theme.pattern_signal_color,  # Orange for rules 2-8
+                    symbol='circle',  # Same as data points
+                    line=dict(width=1, color='darkorange')  # Subtle border
                 ),
-                text=[','.join(p['rule_nums']) for p in annotated_points],
-                textposition='top center',
-                textfont=dict(size=theme.rule_annotation_size, color='black'),
                 hovertext=hover_texts,
                 hoverinfo='text',
-                showlegend=True
+                showlegend=False  # Color is enough, no legend clutter
             )
 
             if row is not None and col is not None:
