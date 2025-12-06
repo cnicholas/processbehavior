@@ -20,7 +20,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, ClassVar
 
 import pandas as pd
 
@@ -122,6 +122,29 @@ class SDSAnalysisPlan:
     typical_use_cases: list[str]
     limitations: list[str]
     bishop_reference: str
+
+    # Class constant: questions each residual chart answers
+    RESIDUAL_CHART_QUESTIONS: ClassVar[dict[str, str]] = {
+        'R2_S': 'Is within-subgroup variation stable?',
+        'R2_Imr': 'Is within-subgroup variation stable?',
+        'R3_Imr': 'Is there factor×time interaction?',
+        'R4_Imr': 'Does time have a significant effect?',
+        'R5_Imr': 'Does the factor have a significant effect?',
+    }
+
+    @property
+    def residual_charts(self) -> list[str]:
+        """
+        Residual chart types available for this SDS.
+
+        Returns the appropriate residual charts based on VAS support
+        and replication type. R2 uses S chart when full replication
+        exists, otherwise Imr.
+        """
+        if not self.vas_residuals_supported:
+            return []
+        r2_chart = 'R2_S' if self.has_replication == 'full' else 'R2_Imr'
+        return [r2_chart, 'R3_Imr', 'R4_Imr', 'R5_Imr']
 
     def __str__(self) -> str:
         """Pretty print the analysis plan."""
@@ -889,9 +912,9 @@ class SamplingDesignDetector:
                 valid_charts=['Xbar', 'S', 'R', 'Imr'],
                 recommended_chart='Xbar',
                 invalid_charts=[],
-                vas_residuals_supported=False,
-                residuals_available=[],
-                residual_calculation_method='none',
+                vas_residuals_supported=True,
+                residuals_available=['R1', 'R2', 'R3', 'R4', 'R5'],
+                residual_calculation_method='hybrid',
                 main_effects_supported=True,
                 interaction_effects_supported=False,
                 supports_stratification=True,
@@ -902,7 +925,6 @@ class SamplingDesignDetector:
                     'Multi-stream process monitoring'
                 ],
                 limitations=[
-                    'No VAS residuals (requires time dimension)',
                     'Cannot analyze time trends',
                     'Cannot detect factor × time interactions',
                     'Limited to factor main effects'
@@ -920,9 +942,9 @@ class SamplingDesignDetector:
                 valid_charts=['Xbar', 'S', 'R', 'Imr'],
                 recommended_chart='Xbar',
                 invalid_charts=[],
-                vas_residuals_supported=False,
-                residuals_available=[],
-                residual_calculation_method='none',
+                vas_residuals_supported=True,
+                residuals_available=['R1', 'R2', 'R3', 'R4', 'R5'],
+                residual_calculation_method='hybrid',
                 main_effects_supported=False,
                 interaction_effects_supported=False,
                 supports_stratification=False,
@@ -933,7 +955,6 @@ class SamplingDesignDetector:
                     'Rational subgrouping by time period only'
                 ],
                 limitations=[
-                    'No VAS residuals (requires factors)',
                     'Cannot analyze factor effects',
                     'Cannot detect interactions',
                     'Limited to time-based grouping'
@@ -951,9 +972,9 @@ class SamplingDesignDetector:
                 valid_charts=['Imr', 'R'],
                 recommended_chart='Imr',
                 invalid_charts=['Xbar (requires complete grid)', 'S (requires complete grid)'],
-                vas_residuals_supported=False,
-                residuals_available=[],
-                residual_calculation_method='none',
+                vas_residuals_supported=True,
+                residuals_available=['R1', 'R2', 'R3', 'R4', 'R5'],
+                residual_calculation_method='moving_average',
                 main_effects_supported=False,
                 interaction_effects_supported=False,
                 supports_stratification=True,
@@ -964,7 +985,6 @@ class SamplingDesignDetector:
                     'Ad-hoc measurements with irregular sampling'
                 ],
                 limitations=[
-                    'No VAS residuals (incomplete grid)',
                     'Cannot calculate reliable main effects',
                     'Cannot analyze interactions',
                     'Limited to stratified IMR charts per factor level',
