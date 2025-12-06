@@ -174,13 +174,6 @@ class ChartTheme:
     # Faceted plot settings
     facet_marker_size: int = 6
     facet_line_width: float = 1.5
-    facet_signal_marker_size: int = 10
-
-    # Run rules visualization
-    rule_annotation_size: int = 9
-    rule_annotation_bgcolor: str = 'rgba(255, 255, 255, 0.8)'
-    rule_marker_size: int = 12
-    rule_colors: dict = None  # Initialized in __post_init__
 
     # Stats box
     stats_box_bgcolor: str = 'rgba(255, 255, 255, 0.9)'
@@ -188,20 +181,6 @@ class ChartTheme:
     stats_box_borderwidth: int = 1
     stats_box_font_size: int = 10
     stats_box_font_color: str = '#333333'
-
-    def __post_init__(self):
-        """Initialize mutable defaults."""
-        if self.rule_colors is None:
-            self.rule_colors = {
-                'rule_1': '#DC143C',  # Crimson - beyond limits
-                'rule_2': '#FF8C00',  # Dark orange - zone A
-                'rule_3': '#FFD700',  # Gold - zone B
-                'rule_4': '#9370DB',  # Medium purple - run
-                'rule_5': '#20B2AA',  # Light sea green - trend
-                'rule_6': '#FF69B4',  # Hot pink - oscillation
-                'rule_7': '#32CD32',  # Lime green - reduced variation
-                'rule_8': '#4169E1',  # Royal blue - avoiding center
-            }
 
     def to_layout_dict(self) -> dict:
         """
@@ -414,7 +393,6 @@ def _create_publication_theme() -> ChartTheme:
         # Smaller markers for facets
         facet_marker_size=4,
         facet_line_width=0.8,
-        facet_signal_marker_size=6,
     )
 
 

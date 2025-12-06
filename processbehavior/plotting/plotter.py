@@ -994,46 +994,51 @@ class Plotter:
     # Zone Shading
     # =========================================================================
 
-    def _add_zone_shading(
+    def _calculate_zone_boundaries(
         self,
-        fig: go.Figure,
         stats: dict,
         theme: ChartTheme
-    ) -> None:
+    ) -> list[tuple[float, float, str]] | None:
         """
-        Add zone shading to a single chart figure.
+        Calculate zone boundaries for Western Electric rules visualization.
 
-        Creates horizontal bands showing zones A, B, and C on both sides
-        of the centerline. Zones are:
+        Returns zone definitions as (y0, y1, color) tuples, or None if
+        zones cannot be calculated (e.g., limits vary or are missing).
+
+        Zones are:
         - Zone C: 0σ to ±1σ (green - normal variation)
         - Zone B: ±1σ to ±2σ (yellow - watch)
         - Zone A: ±2σ to ±3σ (red - warning)
 
         Parameters
         ----------
-        fig : go.Figure
-            Plotly figure to add shapes to
         stats : dict
             Chart statistics with 'center', 'ucl', 'lcl' keys
         theme : ChartTheme
-            Theme with zone colors and opacity
+            Theme with zone colors
+
+        Returns
+        -------
+        list of tuple or None
+            List of (y0, y1, color) tuples defining zone rectangles,
+            or None if zones cannot be calculated
         """
         # Skip if limits vary (can't calculate consistent zones)
         if stats.get('ucl') == 'Varies' or stats.get('lcl') == 'Varies':
-            return
+            return None
 
         center = stats.get('center')
         ucl = stats.get('ucl')
         lcl = stats.get('lcl')
 
         if center is None or ucl is None or lcl is None:
-            return
+            return None
 
         # Calculate sigma from control limits (UCL = center + 3σ)
         sigma = (ucl - center) / 3
 
         # Zone boundaries
-        zones = [
+        return [
             # Zone C (closest to center): 0σ to ±1σ
             (center - sigma, center + sigma, theme.zone_c_color),
             # Zone B: ±1σ to ±2σ (upper)
@@ -1045,6 +1050,28 @@ class Plotter:
             # Zone A: ±2σ to ±3σ (lower)
             (lcl, center - 2 * sigma, theme.zone_a_color),
         ]
+
+    def _add_zone_shading(
+        self,
+        fig: go.Figure,
+        stats: dict,
+        theme: ChartTheme
+    ) -> None:
+        """
+        Add zone shading to a single chart figure.
+
+        Parameters
+        ----------
+        fig : go.Figure
+            Plotly figure to add shapes to
+        stats : dict
+            Chart statistics with 'center', 'ucl', 'lcl' keys
+        theme : ChartTheme
+            Theme with zone colors and opacity
+        """
+        zones = self._calculate_zone_boundaries(stats, theme)
+        if zones is None:
+            return
 
         for y0, y1, color in zones:
             fig.add_hrect(
@@ -1080,19 +1107,9 @@ class Plotter:
         col : int
             Column number of subplot (1-indexed)
         """
-        # Skip if limits vary
-        if stats.get('ucl') == 'Varies' or stats.get('lcl') == 'Varies':
+        zones = self._calculate_zone_boundaries(stats, theme)
+        if zones is None:
             return
-
-        center = stats.get('center')
-        ucl = stats.get('ucl')
-        lcl = stats.get('lcl')
-
-        if center is None or ucl is None or lcl is None:
-            return
-
-        # Calculate sigma from control limits
-        sigma = (ucl - center) / 3
 
         # Calculate axis references for this subplot
         # For subplot at row r, col c, the axis names are:
@@ -1105,20 +1122,6 @@ class Plotter:
         else:
             xref = f'x{subplot_idx}'
             yref = f'y{subplot_idx}'
-
-        # Zone boundaries
-        zones = [
-            # Zone C (closest to center): 0σ to ±1σ
-            (center - sigma, center + sigma, theme.zone_c_color),
-            # Zone B: ±1σ to ±2σ (upper)
-            (center + sigma, center + 2 * sigma, theme.zone_b_color),
-            # Zone B: ±1σ to ±2σ (lower)
-            (center - 2 * sigma, center - sigma, theme.zone_b_color),
-            # Zone A: ±2σ to ±3σ (upper)
-            (center + 2 * sigma, ucl, theme.zone_a_color),
-            # Zone A: ±2σ to ±3σ (lower)
-            (lcl, center - 2 * sigma, theme.zone_a_color),
-        ]
 
         for y0, y1, color in zones:
             fig.add_shape(
@@ -1289,6 +1292,57 @@ class Plotter:
     # Statistics Box
     # =========================================================================
 
+    def _build_stats_text(
+        self,
+        stats: dict,
+        data: pd.DataFrame,
+        compact: bool = False
+    ) -> str | None:
+        """
+        Build statistics text for display in a stats box.
+
+        Parameters
+        ----------
+        stats : dict
+            Chart statistics with 'center', 'ucl', 'lcl' keys
+        data : DataFrame
+            Chart data (for calculating n)
+        compact : bool, default False
+            If True, use compact format (n=X | CL=Y) for faceted charts.
+            If False, use full format with line breaks.
+
+        Returns
+        -------
+        str or None
+            Formatted stats text, or None if no stats available
+        """
+        n = len(data)
+
+        if compact:
+            # Compact format for faceted charts: "n=X | CL=Y"
+            parts = [f"n={n}"]
+            center = stats.get('center')
+            if center is not None and center != 'Varies':
+                parts.append(f"CL={self._format_stat_value(center, compact=True)}")
+            return ' | '.join(parts) if parts else None
+        else:
+            # Full format: multi-line with n, CL, UCL, LCL
+            lines = [f"n = {n}"]
+
+            center = stats.get('center')
+            if center is not None and center != 'Varies':
+                lines.append(f"CL = {self._format_stat_value(center)}")
+
+            ucl = stats.get('ucl')
+            if ucl is not None and ucl != 'Varies':
+                lines.append(f"UCL = {self._format_stat_value(ucl)}")
+
+            lcl = stats.get('lcl')
+            if lcl is not None and lcl != 'Varies':
+                lines.append(f"LCL = {self._format_stat_value(lcl)}")
+
+            return '<br>'.join(lines) if lines else None
+
     def _add_stats_box(
         self,
         fig: go.Figure,
@@ -1298,9 +1352,6 @@ class Plotter:
     ) -> None:
         """
         Add a statistics box annotation to a single chart.
-
-        Displays key statistics (CL, UCL, LCL, n) in a clean box in the
-        upper-left corner of the chart.
 
         Parameters
         ----------
@@ -1313,34 +1364,10 @@ class Plotter:
         theme : ChartTheme
             Theme with stats box styling
         """
-        # Build stats text
-        stats_lines = []
-
-        # Number of observations
-        n = len(data)
-        stats_lines.append(f"n = {n}")
-
-        # Centerline
-        center = stats.get('center')
-        if center is not None and center != 'Varies':
-            stats_lines.append(f"CL = {self._format_stat_value(center)}")
-
-        # UCL
-        ucl = stats.get('ucl')
-        if ucl is not None and ucl != 'Varies':
-            stats_lines.append(f"UCL = {self._format_stat_value(ucl)}")
-
-        # LCL
-        lcl = stats.get('lcl')
-        if lcl is not None and lcl != 'Varies':
-            stats_lines.append(f"LCL = {self._format_stat_value(lcl)}")
-
-        if not stats_lines:
+        stats_text = self._build_stats_text(stats, data, compact=False)
+        if stats_text is None:
             return
 
-        stats_text = '<br>'.join(stats_lines)
-
-        # Add annotation in upper-left corner
         fig.add_annotation(
             text=stats_text,
             xref='paper',
@@ -1376,8 +1403,6 @@ class Plotter:
         """
         Add a compact statistics box to a subplot in a faceted figure.
 
-        Uses a smaller, more compact format suitable for faceted layouts.
-
         Parameters
         ----------
         fig : go.Figure
@@ -1397,29 +1422,13 @@ class Plotter:
         ncols : int
             Total number of columns in the facet grid
         """
-        # Build compact stats text
-        stats_parts = []
-
-        # Number of observations
-        n = len(data)
-        stats_parts.append(f"n={n}")
-
-        # Centerline (compact)
-        center = stats.get('center')
-        if center is not None and center != 'Varies':
-            stats_parts.append(f"CL={self._format_stat_value(center, compact=True)}")
-
-        if not stats_parts:
+        stats_text = self._build_stats_text(stats, data, compact=True)
+        if stats_text is None:
             return
 
-        stats_text = ' | '.join(stats_parts)
-
         # Calculate position within subplot
-        # Each subplot occupies a fraction of the paper
         col_width = 1.0 / ncols
         row_height = 1.0 / nrows
-
-        # Calculate x, y position (upper-left of this subplot)
         x_pos = (col - 1) * col_width + 0.02 * col_width
         y_pos = 1.0 - (row - 1) * row_height - 0.05 * row_height
 
