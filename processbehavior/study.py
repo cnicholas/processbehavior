@@ -20,6 +20,8 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
+    import pandas as pd
+
     from .analysis_result import AnalysisResult
     from .analysis_specification import AnalysisSpecification
     from .process_dataframe import ProcessDataFrame
@@ -87,6 +89,7 @@ class Study:
     - Valid and recommended chart types
     - Available residual analyses
     - Guidance on methodology
+    - Pre-calculated dataset with residuals (R1-R5, RCR1-RCR5)
 
     This is an immutable object - to change the formulation, create a new Study.
 
@@ -98,6 +101,8 @@ class Study:
         Internal specification (parameter mapping)
     _plan : SDSAnalysisPlan
         Analysis plan based on detected SDS
+    _ads : AnalysisDataSet
+        Pre-calculated AnalysisDataSet with rsg, means, and residuals (R1-R5)
 
     Examples
     --------
@@ -113,6 +118,10 @@ class Study:
     >>> study.valid_charts  # ['Xbar', 'S', ...]
     >>> study.recommended_chart  # 'Xbar'
 
+    Access the prepared dataset:
+
+    >>> study.dataset  # DataFrame with rsg, R1-R5, RCR1-RCR5
+
     Run the analysis:
 
     >>> result = study.analyze()  # Uses recommended chart
@@ -127,6 +136,7 @@ class Study:
     _pdf: Any  # ProcessDataFrame - use Any to avoid circular import issues
     _spec: Any  # AnalysisSpecification
     _plan: Any  # SDSAnalysisPlan
+    _ads: Any  # AnalysisDataSet with pre-calculated residuals (R1-R5, RCR1-RCR5)
 
     # =========================================================================
     # User-Facing Properties (Clean Names)
@@ -171,6 +181,33 @@ class Study:
         Statistics and chart values will be rounded to this many decimal places.
         """
         return self._spec.round_to
+
+    @property
+    def dataset(self) -> 'pd.DataFrame':
+        """
+        Full analysis dataset with means and residuals.
+
+        This is the pre-calculated dataset produced during formulate().
+        It includes:
+        - rsg: Rational subgroup identifier
+        - Ybar, Ybar_k, Ybar_t, Ybar_kt: Hierarchical means
+        - R1-R5: VAS residuals (where applicable for the SDS)
+        - RCR1-RCR5: Re-centered residuals (Y reconstructed from components)
+
+        Returns a copy to preserve immutability.
+
+        Returns
+        -------
+        pd.DataFrame
+            Copy of the analysis dataset
+
+        Examples
+        --------
+        >>> study = pdf.formulate(response='weight', factors=['lane'], time='pull')
+        >>> df = study.dataset
+        >>> df[['rsg', 'weight', 'R1', 'R2', 'R3', 'R4', 'R5']].head()
+        """
+        return self._ads.analysis_dataset.copy()
 
     # =========================================================================
     # SDS Properties (Sampling Design State)
@@ -440,8 +477,9 @@ class Study:
                 'zero_center': self._spec.zero_center
             }
 
-        # Create and run analysis
-        analysis = Analysis(self._pdf.data, spec_dict)
+        # Create and run analysis using pre-calculated AnalysisDataSet
+        # This makes analyze() cheap - the expensive residual calculation was done in formulate()
+        analysis = Analysis(self._pdf.data, spec_dict, analysis_dataset=self._ads)
         return analysis.calculate()
 
     def _is_residual_chart(self, chart: str) -> bool:

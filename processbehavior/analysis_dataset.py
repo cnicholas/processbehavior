@@ -21,15 +21,22 @@ class AnalysisDataSet:
 
     This class coordinates the workflow:
     1. Data preparation and validation
-    2. Sampling Design State (SDS) detection
-    3. VAS residual calculation (R1-R5)
-    4. Effects and interactions analysis
-    5. Control chart frame building
+    2. VAS residual calculation (R1-R5) based on provided SDS
+    3. Effects and interactions analysis
+
+    SDS (Sampling Design State) is required and must be detected at the entry
+    point (ProcessDataFrame) before creating an AnalysisDataSet. This ensures
+    SDS is detected exactly once per workflow.
 
     Uses composition pattern - delegates to focused classes for each concern.
     """
 
-    def __init__(self, df: pd.DataFrame, analysis_specification: AnalysisSpecification):
+    def __init__(
+        self,
+        df: pd.DataFrame,
+        analysis_specification: AnalysisSpecification,
+        sds: int
+    ):
         """
         Initialize analysis with data and specification.
 
@@ -39,16 +46,18 @@ class AnalysisDataSet:
             Raw input data
         analysis_specification : AnalysisSpecification
             Configuration for the analysis
+        sds : int
+            Sampling Design State (0-6). This is required because SDS is the
+            driver of the analysis system - it determines which calculations
+            are performed. SDS should be detected once at the entry point
+            (ProcessDataFrame) and passed through the system.
         """
         # Store inputs
         self.raw_dataset = df
         self.spec = analysis_specification
+        self._sds = sds
 
-        # Initialize output containers (for backward compatibility)
-        self.obs_df = None
-        self.cell_df = None
-        self.k_df = None
-        self.t_df = None
+        # Initialize output containers
         self.statistics = {}
         self.residuals = {}
         self.interactions = {}
@@ -70,10 +79,9 @@ class AnalysisDataSet:
 
         Clear orchestration that reads like a recipe:
         1. Validate and prepare data
-        2. Build frames for charting
-        3. Detect sampling design state
-        4. Calculate VAS residuals (if appropriate)
-        5. Calculate effects and interactions (if appropriate)
+        2. Apply SDS (passed from entry point)
+        3. Calculate VAS residuals (if appropriate for SDS)
+        4. Calculate effects and interactions (if appropriate)
         """
         # Step 1: Validate and prepare data
         logger.info("Preparing dataset")
@@ -81,14 +89,9 @@ class AnalysisDataSet:
         self.analysis_dataset = self.prep.prepare_dataset(self.raw_dataset, self.spec)
         self.analysis_dataset = self.prep.build_keys(self.analysis_dataset, self.spec)
 
-        # Step 2: Build frames for charting
-        self._build_frames()
-
-        # Step 3: Detect SDS
-        logger.info("Detecting sampling design state")
-        self.sampling_design_state = self.sds_detector.detect_sds(
-            self.analysis_dataset, self.spec
-        )
+        # Step 2: Use the provided SDS (required - detected at entry point)
+        logger.info(f"Using SDS: {self._sds}")
+        self.sampling_design_state = self._sds
         self.sds_characteristics = self.sds_detector.get_sds_characteristics(
             self.sampling_design_state
         )
@@ -212,210 +215,3 @@ class AnalysisDataSet:
         # Y = (Ybar + Ybar_kt - Ybar_k) + R5
         df['RCR5'] = (df['Ybar'] + df['Ybar_kt'] - df['Ybar_k']) + df['R5']
 
-    # =========================================================================
-    # Frame Building (kept as-is for backward compatibility)
-    # =========================================================================
-
-    def _build_frames(self) -> None:
-        """
-        Materialize canonical frames by grain:
-        - obs_df : one row per observation
-        - cell_df: one row per (k_vars + time)
-        - k_df   : one row per k_vars combination
-        - t_df   : one row per time point
-        """
-        df = self.__ensure_keys(self.analysis_dataset)
-
-        # Build each frame using extracted helper methods
-        self.obs_df = self._build_obs_df(df)
-        self.k_df = self._build_k_df(df)
-        self.t_df = self._build_t_df(df)
-        self.cell_df = self._build_cell_df(df)
-
-    def _build_obs_df(self, df: pd.DataFrame) -> pd.DataFrame:
-        """Build observation-level frame (one row per observation)."""
-        spec = self.spec
-        y = spec.response_var
-        k_vars = list(spec.rsg_vars or [])
-        t = spec.time_var
-
-        base_cols = [
-            c for c in [*k_vars, t, spec.rsg_var_name, 'obs_id', 'n']
-            if c in df.columns
-        ]
-        means = [c for c in ['Ybar','Ybar_k','Ybar_t','Ybar_kt'] if c in df.columns]
-        residuals = [c for c in ['R1','R2','R3','R4','R5'] if c in df.columns]
-        rcrs = [c for c in ['RCR1','RCR2','RCR3','RCR4','RCR5'] if c in df.columns]
-        centered = [c for c in ['Rbar_k','Rbar_t','Rbar_kt'] if c in df.columns]
-        inter_row = [
-            c for c in ['pdc_by_pt','interaction_cell','factor_interaction_effects']
-            if c in df.columns
-        ]
-
-        obs_keep = [
-            c for c in [y, *base_cols, *means, *residuals, *rcrs, *centered, *inter_row]
-            if c in df.columns
-        ]
-        return (df[obs_keep]
-                .sort_values('obs_id', kind='stable')
-                .reset_index(drop=True))
-
-    def _build_k_df(self, df: pd.DataFrame) -> pd.DataFrame:
-        """Build factor-level frame (one row per k_vars combination)."""
-        spec = self.spec
-        k_vars = list(spec.rsg_vars or [])
-
-        if spec.has_grouping and k_vars:
-            # counts by factor combo
-            k_counts = (
-                df.groupby(k_vars, sort=False, observed=True)
-                .size()
-                .rename('n_k')
-                .reset_index()
-            )
-            k_df = k_counts
-
-            # add factor-level means if present
-            if 'Ybar_k' in df.columns:
-                k_first = self.__safe_first(df, k_vars, 'Ybar_k')
-                k_df = k_df.merge(k_first, on=k_vars, how='left', validate='one_to_one')
-
-            # join per-factor Main_Effect tables
-            for factor in k_vars:
-                me = self.effects.get(factor)
-                required_cols = {factor, 'Main_Effect'}
-                if isinstance(me, pd.DataFrame) and required_cols <= set(me.columns):
-                    me_renamed = me[[factor, 'Main_Effect']].rename(
-                        columns={'Main_Effect': f'{factor}_Main_Effect'}
-                    )
-                    k_df = k_df.merge(
-                        me_renamed,
-                        on=factor, how='left', validate='many_to_one'
-                    )
-
-            # single-factor convenience alias
-            if len(k_vars) == 1 and f"{k_vars[0]}_Main_Effect" in k_df.columns:
-                k_df['Main_Effect_k'] = k_df[f"{k_vars[0]}_Main_Effect"]
-
-            return k_df.sort_values(k_vars, kind='stable').reset_index(drop=True)
-        else:
-            cols = k_vars + ['n_k']
-            if 'Ybar_k' in df.columns:
-                cols += ['Ybar_k']
-            return pd.DataFrame(columns=cols)
-
-    def _build_t_df(self, df: pd.DataFrame) -> pd.DataFrame:
-        """Build time-level frame (one row per time point)."""
-        spec = self.spec
-        t = spec.time_var
-
-        if spec.has_time and t:
-            t_counts = (
-                df.groupby([t], sort=False, observed=True)
-                .size()
-                .rename('n_t')
-                .reset_index()
-            )
-            t_df = t_counts
-
-            if 'Ybar_t' in df.columns:
-                t_first = self.__safe_first(df, [t], 'Ybar_t')
-                t_df = t_df.merge(t_first, on=[t], how='left', validate='one_to_one')
-
-            # time main effect
-            pt_me = self.effects.get('pt_me')
-            if isinstance(pt_me, pd.DataFrame):
-                # normalize shape: either index=t or column=t
-                if t not in pt_me.columns and pt_me.index.name == t:
-                    pt_me = pt_me.reset_index()
-                if {'PT_ME'} <= set(pt_me.columns) and t in pt_me.columns:
-                    t_df = t_df.merge(pt_me[[t, 'PT_ME']], on=t, how='left', validate='many_to_one')
-
-            return t_df.sort_values([t], kind='stable').reset_index(drop=True)
-        else:
-            cols = ([t] if t else []) + ['n_t']
-            if 'Ybar_t' in df.columns:
-                cols += ['Ybar_t']
-            cols += ['PT_ME']
-            return pd.DataFrame(columns=cols)
-
-    def _build_cell_df(self, df: pd.DataFrame) -> pd.DataFrame:
-        """Build cell-level frame (one row per k_vars × time combination)."""
-        spec = self.spec
-        k_vars = list(spec.rsg_vars or [])
-        t = spec.time_var
-
-        if spec.has_grouping and spec.has_time and k_vars and t:
-            keys = k_vars + [t]
-
-            # n per cell
-            cdf = (
-                df.groupby(keys, sort=False, observed=True)
-                .size()
-                .rename('n_cell')
-                .reset_index()
-            )
-
-            # firsts of broadcast means (only if present)
-            for col in ['Ybar_kt', 'Ybar_k', 'Ybar_t']:
-                if col in df.columns:
-                    c_first = self.__safe_first(df, keys, col)
-                    cdf = cdf.merge(c_first, on=keys, how='left', validate='one_to_one')
-
-            # interaction per cell: prefer explicit column else reconstruct
-            if 'interaction_cell' in df.columns:
-                ic = self.__safe_first(df, keys, 'interaction_cell')
-                cdf = cdf.merge(ic, on=keys, how='left', validate='one_to_one')
-            else:
-                required_cols = ['Ybar_kt', 'Ybar_k', 'Ybar_t']
-                has_cols = all(c in cdf.columns for c in required_cols)
-                if has_cols and 'Ybar' in self.statistics:
-                    ybar = float(self.statistics['Ybar'])
-                    cdf['interaction_cell'] = (
-                        cdf['Ybar_kt'] - cdf['Ybar_k'] - cdf['Ybar_t'] + ybar
-                    )
-
-            # centered residual cell means if present
-            for col in ['Rbar_kt']:
-                if col in df.columns:
-                    c_first = self.__safe_first(df, keys, col)
-                    cdf = cdf.merge(c_first, on=keys, how='left', validate='one_to_one')
-
-            return cdf.sort_values(keys, kind='stable').reset_index(drop=True)
-        else:
-            # empty shell with predictable columns
-            cols = k_vars + ([t] if t else [])
-            cols += ['n_cell', 'Ybar_kt', 'Ybar_k', 'Ybar_t', 'interaction_cell', 'Rbar_kt']
-            return pd.DataFrame(columns=cols)
-
-
-    # --- helpers (put inside the class) ------------------------------------------
-    def __ensure_keys(self, df: pd.DataFrame) -> pd.DataFrame:
-        """Make sure key columns exist; create a deterministic obs_id if missing."""
-        spec = self.spec
-        out = df.copy()
-
-        # ensure obs_id (stable) for row-grain sorting/debug
-        if 'obs_id' not in out.columns:
-            sort_cols = []
-            if spec.has_grouping:
-                sort_cols += [spec.rsg_var_name]
-            if spec.has_time:
-                sort_cols += [spec.time_var]
-            if sort_cols:
-                out = out.sort_values(sort_cols, kind='stable')
-            out = out.reset_index(drop=True)
-            out['obs_id'] = np.arange(len(out), dtype=int)
-
-        return out
-
-    def __safe_first(self, df: pd.DataFrame, keys: list[str], col: str) -> pd.DataFrame:
-        """Return one row per keys with the first value of col, if col exists; else empty."""
-        if col not in df.columns:
-            return pd.DataFrame(columns=keys + [col])
-        return (
-            df.groupby(keys, sort=False, observed=True)[col]
-            .first()
-            .reset_index()
-        )
-    # -----------------------------------------------------------------------------

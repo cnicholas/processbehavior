@@ -12,6 +12,21 @@ import pandas as pd
 
 from processbehavior.analysis import Analysis
 from processbehavior.plotting.plotter import Plotter
+from processbehavior.sds_detector import SamplingDesignDetector
+from processbehavior.data_preparation import DataPreparation
+
+
+def detect_sds_for_test(df: pd.DataFrame, spec: dict) -> int:
+    """
+    Helper to detect SDS for tests that need to create Analysis directly.
+    """
+    from processbehavior.analysis_specification import AnalysisSpecification
+    config = AnalysisSpecification(spec)
+    prep = DataPreparation()
+    prep.validate_columns(df, config)
+    prepared_df = prep.prepare_dataset(df, config)
+    detector = SamplingDesignDetector()
+    return detector.detect_sds(prepared_df, config)
 
 
 def test_xbar_chart_column_contract():
@@ -36,7 +51,8 @@ def test_xbar_chart_column_contract():
         'time_var': 'd'
     }
 
-    result = Analysis(df, spec).calculate()
+    sds = detect_sds_for_test(df, spec)
+    result = Analysis(df, spec, sds=sds).calculate()
     xbar_data = result.charts['Xbar']['data']
 
     # Test column structure
@@ -85,7 +101,8 @@ def test_s_chart_column_contract():
         'time_var': 'd'
     }
 
-    result = Analysis(df, spec).calculate()
+    sds = detect_sds_for_test(df, spec)
+    result = Analysis(df, spec, sds=sds).calculate()
     sbar_data = result.charts['Sbar']['data']
 
     # Test column structure
@@ -130,7 +147,8 @@ def test_imr_chart_column_contract():
         'time_var': 'time'
     }
 
-    result = Analysis(df, spec).calculate()
+    sds = detect_sds_for_test(df, spec)
+    result = Analysis(df, spec, sds=sds).calculate()
 
     # Get the chart (not 'all', but the actual group chart)
     chart_name = [k for k in result.charts if k != 'all'][0]

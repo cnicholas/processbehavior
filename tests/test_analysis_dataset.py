@@ -8,6 +8,23 @@ from processbehavior import Analysis
 from processbehavior import analysis_dataset as ad
 from processbehavior.analysis import gather_analysis_statistics, package_analysis
 from processbehavior.spc_constants import c4
+from processbehavior.sds_detector import SamplingDesignDetector
+from processbehavior.data_preparation import DataPreparation
+
+
+def detect_sds_for_test(df: pd.DataFrame, spec: dict) -> int:
+    """
+    Helper to detect SDS for tests that need to create AnalysisDataSet or Analysis directly.
+
+    This mimics what ProcessDataFrame does at the entry point.
+    """
+    from processbehavior.analysis_specification import AnalysisSpecification
+    config = AnalysisSpecification(spec)
+    prep = DataPreparation()
+    prep.validate_columns(df, config)
+    prepared_df = prep.prepare_dataset(df, config)
+    detector = SamplingDesignDetector()
+    return detector.detect_sds(prepared_df, config)
 
 # Configure logging
 logging.basicConfig(
@@ -247,9 +264,12 @@ def test_sds1_synthetic():
     }
     logger.info(spec)
 
+    # Detect SDS first (as ProcessDataFrame does)
+    sds = detect_sds_for_test(df, spec)
+
     # Create the AnalysisDataSet to access residuals
     aspec = ad.AnalysisSpecification(spec)
-    ads = ad.AnalysisDataSet(df=df, analysis_specification=aspec)
+    ads = ad.AnalysisDataSet(df=df, analysis_specification=aspec, sds=sds)
 
     print("\n\n============== ANALYSIS DATASET ==============")
     print(f"\nSampling Design State: {ads.sampling_design_state}")
@@ -277,7 +297,7 @@ def test_sds1_synthetic():
         else:
             print(value)
 
-    result = Analysis(df, spec).calculate()
+    result = Analysis(df, spec, sds=sds).calculate()
 
     print("\n\n============== CONTROL CHART RESULTS ==============")
     print("\n--- Xbar Chart Results ---")
@@ -295,19 +315,20 @@ def test_sds1_synthetic():
               
 
 def test_perform_analysis_XbarS(df: pd.DataFrame):
-    
+
     spec = {'analysis_type': 'Xbar', 'rsg_vars': ['a', 'b'], 'response_var': 'c', 'rsg_var_name': 'rsg',
             'time_var': 'd', 'round_to': 2}
 
     logger.info(f"Testing XbarS with spec: {spec}")
 
+    sds = detect_sds_for_test(df, spec)
     aspec = ad.AnalysisSpecification(spec)
     logger.info(f"spec.has_grouping: {aspec.has_grouping}")
-    ads = ad.AnalysisDataSet(df=df, analysis_specification=aspec)
-    
+    ads = ad.AnalysisDataSet(df=df, analysis_specification=aspec, sds=sds)
+
     summary = ads.analysis_summary
     logger.info(summary)
-    result = Analysis(df, spec).calculate()
+    result = Analysis(df, spec, sds=sds).calculate()
 
     conditionsXbar = {
                     'center':5.0,
@@ -351,9 +372,10 @@ def test_perform_analysis_XbarS_differing_Ns(df_differing_Ns: pd.DataFrame):
 
         spec = {'analysis_type': 'Xbar', 'rsg_vars': ['a', 'b'], 'response_var': 'c', 'rsg_var_name': 'rsg',
                 'time_var': 'd', 'round_to': 2}
-        
+
         logger.info(f"Testing XbarS with differing Ns, spec: {spec}")
-        theAnalysis = Analysis(df_differing_Ns, spec)
+        sds = detect_sds_for_test(df_differing_Ns, spec)
+        theAnalysis = Analysis(df_differing_Ns, spec, sds=sds)
         result = theAnalysis.calculate()
         
         print(f'#############################Differing Ns:\n {result}')
@@ -401,14 +423,10 @@ def test_perform_analysis_XbarS_differing_Ns(df_differing_Ns: pd.DataFrame):
 def test_perform_analysis_Imr(df: pd.DataFrame):
         spec = {'analysis_type': 'Imr', 'rsg_vars': ['a', 'b'], 'time_var': 'd', 'response_var': 'c',
                 'rsg_var_name': 'rsg', 'time_unit': None, 'round_to': 2}
-        # spec = {
-        #     'analysis_type':'Imr', 'rsg_vars':['a','b'],
-        #     'response_var':'c','rsg_var_name':'rsg', 'time_unit':None
-        # }
 
         logger.info(f'{spec}')
-        #a_spec = ad.AnalysisSpecification(analysis_type='Imr', analysis_specification=spec)
-        theAnalysis = Analysis(df=df, specification=spec)
+        sds = detect_sds_for_test(df, spec)
+        theAnalysis = Analysis(df=df, specification=spec, sds=sds)
         result = theAnalysis.calculate()#(df=df, specification=spec)
         logger.info('Testing with df for IMR with groups')
 
@@ -442,7 +460,8 @@ def test_perform_analysis_IMR_w_o_grouping_var(df: pd.DataFrame):
         spec = {'analysis_type': 'Imr', 'response_var': 'c','time_unit': None, 'round_to':2}
 
         ad.AnalysisSpecification(spec)
-        result = Analysis(df, spec).calculate()
+        sds = detect_sds_for_test(df, spec)
+        result = Analysis(df, spec, sds=sds).calculate()
 
         assert hasattr(result, "keys") and hasattr(result, "values")
 
@@ -453,7 +472,8 @@ def test_perform_analysis_R(df: pd.DataFrame):
                 'rsg_var_name': 'rsg', 'time_unit': None, 'round_to': 2}
         ad.AnalysisSpecification(spec)
 
-        result = Analysis(df, spec).calculate()
+        sds = detect_sds_for_test(df, spec)
+        result = Analysis(df, spec, sds=sds).calculate()
         logger.info('Testing with df for R with groups')
         logger.debug(f'Test: {result}')
         logger.info(f'Testing return is a dictionary{type(result)}')
@@ -483,7 +503,8 @@ def test_perform_analysis_R_w_o_grouping(df: pd.DataFrame):
         spec = {'analysis_type': 'R', 'response_var': 'c', 'rsg_var_name': 'rsg',
                 'time_unit': None}
         logger.info('spec')
-        result = Analysis(df, spec).calculate()
+        sds = detect_sds_for_test(df, spec)
+        result = Analysis(df, spec, sds=sds).calculate()
 
         assert hasattr(result, "keys") and hasattr(result, "values")
         assert result['all']['statistics']['center'] == 2.917
@@ -503,7 +524,8 @@ def test_R_with_FW800():
             'response_var': 'fill_weight', 'rsg_var_name': 'rsg', 'time_var': 'pull'
         }
 
-        result = Analysis(df, spec).calculate()
+        sds = detect_sds_for_test(df, spec)
+        result = Analysis(df, spec, sds=sds).calculate()
 
         assert hasattr(result, "keys") and hasattr(result, "values") #expect dict
         assert len(result) == 8 #expect 8 rsgs
@@ -521,7 +543,7 @@ def test_analysis_types_dt_col_handling(df_dt: pd.DataFrame, analysis_types: lis
                 'rsg_var_name': 'rsg', 'time_unit': None}
 
         has_time='d'
-        date_conditions = [has_time] # Test each chart type with and without a datetime column    
+        date_conditions = [has_time] # Test each chart type with and without a datetime column
 #TODO: Resolve and validate  cases where no time variable is present
         for cond in date_conditions:
             spec['time_var'] = cond
@@ -530,7 +552,8 @@ def test_analysis_types_dt_col_handling(df_dt: pd.DataFrame, analysis_types: lis
                 spec['analysis_type'] = analysis
                 logger.info(f'Running datetime column in {analysis} analysis')
                 logger.info(f'Using spec: {spec}')
-                result = Analysis(df, spec).calculate()
+                sds = detect_sds_for_test(df, spec)
+                result = Analysis(df, spec, sds=sds).calculate()
                 logger.debug(f'{result}')
                 if analysis in ['Imr','R']:
                     out = result['a_c']['data']
@@ -546,8 +569,9 @@ def test_time_var_as_object_and_sort(df_dt: pd.DataFrame):
         df = df_dt
         spec = {'analysis_type': 'Imr', 'rsg_vars': ['a', 'b'], 'time_var': 'd2', 'response_var': 'c',
                 'rsg_var_name': 'rsg', 'time_unit': None}
-        
-        result = Analysis(df, spec).calculate()
+
+        sds = detect_sds_for_test(df, spec)
+        result = Analysis(df, spec, sds=sds).calculate()
 
         # With type conversion, string dates are converted to datetime
         o_type=result['a_c']['data']['d2'].dtype
@@ -568,7 +592,8 @@ def test_IMR_w_o_grouping_var_FW800():
             df = pd.read_csv(f_path)
             logger.debug(f'\n{df.columns.tolist()}')
             ad.AnalysisSpecification(spec)
-            result = Analysis(df, spec).calculate()
+            sds = detect_sds_for_test(df, spec)
+            result = Analysis(df, spec, sds=sds).calculate()
 
             assert hasattr(result, "keys") and hasattr(result, "values")
             _keys = result.keys()
@@ -632,26 +657,29 @@ def test_perform_analysis_XbarS_zero_center(df: pd.DataFrame):
                 'rsg_var_name': 'rsg', 'zero-center':True}
 
         logger.info(f'{spec}')
-        result = Analysis(df, spec).calculate()
+        sds = detect_sds_for_test(df, spec)
+        result = Analysis(df, spec, sds=sds).calculate()
         assert result['Xbar']['statistics']['center'] == 0
-        
+
 def test_perform_analysis_IMR_zero_center(df: pd.DataFrame):
         spec = {'analysis_type': 'Imr', 'rsg_vars': ['a', 'b'], 'time_var': 'd', 'response_var': 'c',
                 'rsg_var_name': 'rsg', 'zero-center':True}
 
         logger.info(f'{spec}')
         logger.debug(f'{df}')
-        result = Analysis(df, spec).calculate()
+        sds = detect_sds_for_test(df, spec)
+        result = Analysis(df, spec, sds=sds).calculate()
         logger.debug(f'{result}')
         #assert result['Xbar']['statistics']['Mean'] == 0
-        
+
 def test_perform_analysis_R_zero_center(df: pd.DataFrame):
         spec = {'analysis_type': 'R', 'rsg_vars': ['a', 'b'], 'time_var': 'd', 'response_var': 'c',
                 'rsg_var_name': 'rsg', 'zero-center':True}
 
         logger.info(f'{spec}')
         logger.debug(f'{df}')
-        result = Analysis(df, spec).calculate()
+        sds = detect_sds_for_test(df, spec)
+        result = Analysis(df, spec, sds=sds).calculate()
         logger.debug(f'{result}')
         #assert result['Xbar']['statistics']['Mean'] == 0
         
@@ -759,8 +787,9 @@ def test_sds2_synthetic(df_SDS2: pd.DataFrame):
             'time_var': 'time', 'response_var': 'y', 'rsg_var_name': 'rsg'
         }
 
+        sds = detect_sds_for_test(df_SDS2, spec)
         analysis_specification = ad.AnalysisSpecification(spec)
-        theDataset = ad.AnalysisDataSet(df_SDS2, analysis_specification)
+        theDataset = ad.AnalysisDataSet(df_SDS2, analysis_specification, sds=sds)
 
         print("\n\n============== ANALYSIS RESULTS ==============")
         print(f"Sampling Design State: {theDataset.sampling_design_state}")
@@ -831,8 +860,9 @@ def test_analysis_dataset_no_groups(df: pd.DataFrame):
         )
         spec = {'analysis_type': 'Imr', 'response_var': 'c','time_unit': None, 'round_to':2}
 
+        sds = detect_sds_for_test(df, spec)
         a_spec = ad.AnalysisSpecification(spec)
-        theDataset = ad.AnalysisDataSet(df=df, analysis_specification=a_spec)
+        theDataset = ad.AnalysisDataSet(df=df, analysis_specification=a_spec, sds=sds)
         logger.info(
             f'the dataframe in test_analysis_dataset_no_groups:\n'
             f'{theDataset.analysis_dataset.columns.to_list()}'
@@ -848,8 +878,9 @@ def test_analysis_dataset_no_groups(df: pd.DataFrame):
         )
         spec = {'analysis_type': 'Imr', 'time_var':'d', 'response_var': 'c','time_unit': None, 'round_to':2}
 
+        sds = detect_sds_for_test(df, spec)
         a_spec = ad.AnalysisSpecification(spec)
-        theDataset = ad.AnalysisDataSet(df=df, analysis_specification=a_spec)
+        theDataset = ad.AnalysisDataSet(df=df, analysis_specification=a_spec, sds=sds)
         assert theDataset.sampling_design_state == 0
         assert theDataset.analysis_dataset.columns.to_list() == [
             'd','c','obs_id', 'rsg_key','cell_key'
