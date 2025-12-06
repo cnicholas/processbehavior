@@ -254,34 +254,17 @@ class Study:
         Available residual chart types for VAS analysis.
 
         Residual charts help diagnose sources of variation:
-        - R2: Factor effects residual
-        - R3: Time effects residual
-        - R4: Interaction effects residual
-        - R5: Noise/measurement error
+        - R2: Within-subgroup variation (measurement noise)
+        - R3: Interaction effects (factor × time)
+        - R4: Time effects (trends, shifts over time)
+        - R5: Factor effects (differences between levels)
 
         Returns
         -------
         list of str
             Available residual chart types (e.g., ['R2_S', 'R3_Imr'])
         """
-        residuals = self._plan.residuals_available
-        charts = []
-
-        # Map residuals to their chart types based on SDS
-        # R2 uses S chart if replication exists, else Imr
-        # R3, R4, R5 typically use Imr
-        for r in residuals:
-            if r == 'R1':
-                continue  # R1 is the raw data, not a separate chart
-            elif r == 'R2':
-                if self._plan.has_replication == 'full':
-                    charts.append('R2_S')
-                else:
-                    charts.append('R2_Imr')
-            else:
-                charts.append(f'{r}_Imr')
-
-        return charts
+        return self._plan.residual_charts
 
     @property
     def charts(self) -> StudyChartAccessor:
