@@ -480,7 +480,7 @@ class Plotter:
 
             # Zone shading for this subplot (add first so it's behind data)
             if show_zones and theme.zone_opacity > 0:
-                self._add_zone_shading_facet(fig, stats, theme, row, col)
+                self._add_zone_shading_facet(fig, stats, theme, row, col, ncols)
 
             value_col = self._get_value_column(chart_info, chart_name)
             x_col = self._get_x_column(data)
@@ -1089,7 +1089,8 @@ class Plotter:
         stats: dict,
         theme: ChartTheme,
         row: int,
-        col: int
+        col: int,
+        ncols: int
     ) -> None:
         """
         Add zone shading to a subplot in a faceted figure.
@@ -1106,6 +1107,8 @@ class Plotter:
             Row number of subplot (1-indexed)
         col : int
             Column number of subplot (1-indexed)
+        ncols : int
+            Number of columns in the faceted layout
         """
         zones = self._calculate_zone_boundaries(stats, theme)
         if zones is None:
@@ -1115,7 +1118,7 @@ class Plotter:
         # For subplot at row r, col c, the axis names are:
         # First subplot: xaxis, yaxis
         # Others: xaxis2, yaxis2, etc.
-        subplot_idx = (row - 1) * 2 + col  # Assuming ncols=2, adjust if needed
+        subplot_idx = (row - 1) * ncols + col
         if subplot_idx == 1:
             xref = 'x'
             yref = 'y'
