@@ -49,6 +49,9 @@ from processbehavior.effects_calculator import EffectsCalculator
 from processbehavior.process_dataframe import ProcessDataFrame
 from processbehavior.residual_calculator import ResidualCalculator
 
+# Study class (formulation layer)
+from processbehavior.study import Study
+
 # Utility classes (advanced users)
 from processbehavior.sds_detector import SamplingDesignDetector, SDSAnalysisPlan
 
@@ -58,6 +61,7 @@ from processbehavior.plotting import ChartTheme, get_theme, list_themes, registe
 __all__ = [
     # Main API
     'ProcessDataFrame',
+    'Study',
     'AnalysisResult',
 
     # Core classes

@@ -401,6 +401,111 @@ class ProcessDataFrame:
 
         return analysis
 
+    def formulate(
+        self,
+        response: str,
+        factors: list[str] | None = None,
+        time: str | None = None,
+        precision: int = 3
+    ) -> 'Study':
+        """
+        Formulate a study for process behavior analysis.
+
+        This creates a Study object that describes your data structure and
+        guides you toward correct analysis. Unlike analyze(), this method
+        does not run calculations immediately - it helps you understand
+        what's possible first.
+
+        Parameters
+        ----------
+        response : str
+            The response variable (measurement) to analyze.
+            Use pdf.columns for IDE auto-completion.
+        factors : list of str, optional
+            Grouping factors defining rational subgroups (e.g., ['Lane', 'Operator']).
+            If provided, enables Xbar/S analysis.
+        time : str, optional
+            Time/sequence variable for ordering observations.
+        precision : int, default 3
+            Decimal places for output values.
+
+        Returns
+        -------
+        Study
+            A Study object with:
+            - SDS detection results
+            - Valid and recommended chart types
+            - guidance methods like study.why_not()
+            - study.analyze() to run calculations
+
+        Examples
+        --------
+        Basic formulation:
+
+        >>> pdf = ProcessDataFrame(df)
+        >>> study = pdf.formulate(response='weight')
+        >>> print(study)  # Shows SDS, valid charts, next steps
+
+        With factors and time:
+
+        >>> study = pdf.formulate(
+        ...     response='fill_weight',
+        ...     factors=['lane', 'phase'],
+        ...     time='pull'
+        ... )
+        >>> study.sds  # Check detected SDS
+        >>> study.valid_charts  # See what's available
+        >>> study.charts.Xbar  # IDE auto-complete
+
+        Run the analysis:
+
+        >>> result = study.analyze()  # Uses recommended chart
+        >>> result = study.analyze(chart='Xbar')  # Explicit chart
+
+        See Also
+        --------
+        Study : The returned Study object
+        analyze : Alternative that runs immediately
+        """
+        from .study import Study
+
+        # Build spec dict with user-friendly parameter names mapped to internal names
+        spec_dict = {
+            'response_var': response,       # response → response_var
+            'rsg_vars': factors,            # factors → rsg_vars
+            'time_var': time,               # time → time_var
+            'round_to': precision,          # precision → round_to
+            'rsg_var_name': 'rsg',          # Auto-generated (hidden from user)
+            'rsg_var_delim': '_',           # Auto-generated (hidden from user)
+            'zero_center': False            # Default
+        }
+
+        # Create config for data preparation (no analysis_type needed yet)
+        config = DataPrepConfig(spec_dict)
+
+        # Prepare data (adds 'rsg' column if needed)
+        from .data_preparation import DataPreparation
+        prep = DataPreparation()
+        prep.validate_columns(self.data, config)
+        prepared_df = prep.prepare_dataset(self.data, config)
+
+        # Detect SDS on prepared data
+        detector = SamplingDesignDetector()
+        sds = detector.detect_sds(prepared_df, config)
+
+        # Get SDS analysis plan with all metadata
+        plan = SamplingDesignDetector.get_analysis_plan(sds)
+
+        # Set up charts accessor for IDE auto-completion
+        self.charts = ChartTypeAccessor(plan.valid_charts)
+
+        # Create and return Study object
+        return Study(
+            _pdf=self,
+            _spec=config,
+            _plan=plan
+        )
+
     def _determine_analysis_type(
         self,
         sds: int,
