@@ -11,6 +11,21 @@ from processbehavior.datasets import (
     make_sds5,
     make_sds6,
 )
+from processbehavior.sds_detector import SamplingDesignDetector
+from processbehavior.data_preparation import DataPreparation
+
+
+def detect_sds_for_test(df: pd.DataFrame, spec: dict) -> int:
+    """
+    Helper to detect SDS for tests that need to create AnalysisDataSet or Analysis directly.
+    """
+    from processbehavior.analysis_specification import AnalysisSpecification
+    config = AnalysisSpecification(spec)
+    prep = DataPreparation()
+    prep.validate_columns(df, config)
+    prepared_df = prep.prepare_dataset(df, config)
+    detector = SamplingDesignDetector()
+    return detector.detect_sds(prepared_df, config)
 
 
 def test_sds_comprehensive():
@@ -32,8 +47,9 @@ def test_sds_comprehensive():
         'round_to': 3
     }
     
+    sds1 = detect_sds_for_test(df1, spec1)
     aspec1 = ad.AnalysisSpecification(spec1)
-    ads1 = ad.AnalysisDataSet(df=df1, analysis_specification=aspec1)
+    ads1 = ad.AnalysisDataSet(df=df1, analysis_specification=aspec1, sds=sds1)
     
     print(f"Detected SDS: {ads1.sampling_design_state}")
     assert ads1.sampling_design_state == 1, "Should detect SDS 1"
@@ -54,8 +70,9 @@ def test_sds_comprehensive():
     df2 = make_sds2(K=3, T=10, seed=42)
     spec2 = spec1.copy()
 
+    sds2 = detect_sds_for_test(df2, spec2)
     aspec2 = ad.AnalysisSpecification(spec2)
-    ads2 = ad.AnalysisDataSet(df=df2, analysis_specification=aspec2)
+    ads2 = ad.AnalysisDataSet(df=df2, analysis_specification=aspec2, sds=sds2)
 
     print(f"Detected SDS: {ads2.sampling_design_state}")
     # With corrected cell-level detection logic:
@@ -81,8 +98,9 @@ def test_sds_comprehensive():
     # This will likely need special handling in your code
     # Currently your __calculate_sampling_design_state() doesn't detect SDS3
     try:
+        sds3 = detect_sds_for_test(df3, spec2)
         aspec3 = ad.AnalysisSpecification(spec2)
-        ads3 = ad.AnalysisDataSet(df=df3, analysis_specification=aspec3)
+        ads3 = ad.AnalysisDataSet(df=df3, analysis_specification=aspec3, sds=sds3)
         print(f"Detected SDS: {ads3.sampling_design_state}")
         print("⚠️  SDS3 detection needs implementation")
     except Exception as e:
@@ -100,7 +118,8 @@ def test_sds_comprehensive():
         'round_to': 3
     }
     
-    result4 = Analysis(df4, spec4).calculate()
+    sds4 = detect_sds_for_test(df4, spec4)
+    result4 = Analysis(df4, spec4, sds=sds4).calculate()
     print("IMR analysis completed for SDS4")
     print(f"Center: {result4['all']['statistics']['center']:.2f}")
     print(f"Control limits: [{result4['all']['statistics']['lcl']:.2f}, "
@@ -125,7 +144,8 @@ def test_sds_comprehensive():
     }
     
     try:
-        Analysis(df5, spec5).calculate()
+        sds5 = detect_sds_for_test(df5, spec5)
+        Analysis(df5, spec5, sds=sds5).calculate()
         print("✓ SDS5 analysis completed")
     except Exception as e:
         print(f"⚠️  SDS5 analysis issue: {e}")
@@ -148,7 +168,8 @@ def test_sds_comprehensive():
         'round_to': 3
     }
     
-    result6 = Analysis(df6, spec6).calculate()
+    sds6 = detect_sds_for_test(df6, spec6)
+    result6 = Analysis(df6, spec6, sds=sds6).calculate()
     print(f"✓ Analyzed {len(result6)} groups")
     
     print("\n" + "=" * 60)
@@ -221,15 +242,16 @@ def test_stratified_imr_vs_vas_xbar():
     }
     
     # Create analysis dataset
+    sds_imr = detect_sds_for_test(df, spec_imr)
     aspec_imr = ad.AnalysisSpecification(spec_imr)
-    ads_imr = ad.AnalysisDataSet(df, aspec_imr)
-    
+    ads_imr = ad.AnalysisDataSet(df, aspec_imr, sds=sds_imr)
+
     # Should NOT calculate VAS residuals
     assert 'R1' not in ads_imr.analysis_dataset.columns, \
         "IMR should not calculate VAS residuals"
-    
+
     # Perform analysis - get stratified charts
-    result_imr = Analysis(df, spec_imr).calculate()
+    result_imr = Analysis(df, spec_imr, sds=sds_imr).calculate()
     
     print(f"\n✓ Created {len(result_imr)} individual IMR charts (one per group)")
     print(f"  Groups: {list(result_imr.keys())}")
@@ -260,8 +282,9 @@ def test_stratified_imr_vs_vas_xbar():
     }
     
     # Create analysis dataset
+    sds_xbar = detect_sds_for_test(df, spec_xbar)
     aspec_xbar = ad.AnalysisSpecification(spec_xbar)
-    ads_xbar = ad.AnalysisDataSet(df, aspec_xbar)
+    ads_xbar = ad.AnalysisDataSet(df, aspec_xbar, sds=sds_xbar)
     
     # SHOULD calculate VAS residuals
     assert 'R1' in ads_xbar.analysis_dataset.columns, \
@@ -322,7 +345,8 @@ def test_stratified_imr_with_sds6():
     }
     
     # Should work even with irregular data
-    result = Analysis(df, spec).calculate()
+    sds = detect_sds_for_test(df, spec)
+    result = Analysis(df, spec, sds=sds).calculate()
     
     assert hasattr(result, "keys") and hasattr(result, "values")
     assert len(result) >= 2  # Should have multiple groups
@@ -378,7 +402,8 @@ def test_automatic_stratification_demo():
     print("  response_var: 'y'")
     
     # One function call
-    result = Analysis(df, spec).calculate()
+    sds = detect_sds_for_test(df, spec)
+    result = Analysis(df, spec, sds=sds).calculate()
     
     print(f"\n✓ ONE function call created {len(result)} control charts:")
     
@@ -551,9 +576,10 @@ def test_vas_decision_matrix():
         }
         
         try:
+            detected_sds = detect_sds_for_test(df, spec)
             aspec = ad.AnalysisSpecification(spec)
-            ads = ad.AnalysisDataSet(df, aspec)
-            
+            ads = ad.AnalysisDataSet(df, aspec, sds=detected_sds)
+
             actual_vas = 'R1' in ads.analysis_dataset.columns
             
             status = "✓" if actual_vas == expected_vas else "✗"

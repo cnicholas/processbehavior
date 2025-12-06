@@ -14,9 +14,24 @@ import pytest
 # Import analysis components
 from processbehavior import analysis_dataset as ad
 from processbehavior import Analysis
+from processbehavior.sds_detector import SamplingDesignDetector
+from processbehavior.data_preparation import DataPreparation
 
 # Import test data generators
 from processbehavior.datasets import make_sds1, make_sds2
+
+
+def detect_sds_for_test(df: pd.DataFrame, spec: dict) -> int:
+    """
+    Helper to detect SDS for tests that need to create Analysis directly.
+    """
+    from processbehavior.analysis_specification import AnalysisSpecification
+    config = AnalysisSpecification(spec)
+    prep = DataPreparation()
+    prep.validate_columns(df, config)
+    prepared_df = prep.prepare_dataset(df, config)
+    detector = SamplingDesignDetector()
+    return detector.detect_sds(prepared_df, config)
 
 
 @pytest.fixture
@@ -43,7 +58,8 @@ def test_excel_export_basic(temp_excel_file):
     }
 
     # Run analysis
-    analysis = Analysis(df, spec)
+    sds = detect_sds_for_test(df, spec)
+    analysis = Analysis(df, spec, sds=sds)
     result = analysis.calculate()
 
     # Export to Excel
@@ -78,7 +94,8 @@ def test_excel_export_with_full_dataset(temp_excel_file):
         'response_var': 'y'
     }
 
-    analysis = Analysis(df, spec)
+    sds = detect_sds_for_test(df, spec)
+    analysis = Analysis(df, spec, sds=sds)
     result = analysis.calculate()
 
     # Export with full dataset
@@ -105,7 +122,8 @@ def test_excel_export_stratified_imr(temp_excel_file):
         'response_var': 'y'
     }
 
-    analysis = Analysis(df, spec)
+    sds = detect_sds_for_test(df, spec)
+    analysis = Analysis(df, spec, sds=sds)
     result = analysis.calculate()
 
     # Export to Excel
@@ -140,7 +158,8 @@ def test_excel_export_with_residuals(temp_excel_file):
         'response_var': 'y'
     }
 
-    analysis = Analysis(df, spec)
+    sds = detect_sds_for_test(df, spec)
+    analysis = Analysis(df, spec, sds=sds)
     result = analysis.calculate()
 
     # Export to Excel
@@ -166,7 +185,8 @@ def test_excel_export_minimal(temp_excel_file):
         'response_var': 'y'
     }
 
-    analysis = Analysis(df, spec)
+    sds = detect_sds_for_test(df, spec)
+    analysis = Analysis(df, spec, sds=sds)
     result = analysis.calculate()
 
     # Export with minimal options
@@ -198,7 +218,8 @@ def test_excel_export_no_formatting(temp_excel_file):
         'response_var': 'y'
     }
 
-    analysis = Analysis(df, spec)
+    sds = detect_sds_for_test(df, spec)
+    analysis = Analysis(df, spec, sds=sds)
     result = analysis.calculate()
 
     # Export without formatting
@@ -221,7 +242,8 @@ def test_excel_export_chart_data_integrity(temp_excel_file):
         'response_var': 'y'
     }
 
-    analysis = Analysis(df, spec)
+    sds = detect_sds_for_test(df, spec)
+    analysis = Analysis(df, spec, sds=sds)
     result = analysis.calculate()
 
     # Get original chart data
@@ -249,7 +271,8 @@ def test_excel_export_summary_content(temp_excel_file):
         'response_var': 'y'
     }
 
-    analysis = Analysis(df, spec)
+    sds = detect_sds_for_test(df, spec)
+    analysis = Analysis(df, spec, sds=sds)
     result = analysis.calculate()
 
     # Export to Excel
@@ -277,7 +300,8 @@ def test_excel_export_effects_tab(temp_excel_file):
         'response_var': 'y'
     }
 
-    analysis = Analysis(df, spec)
+    sds = detect_sds_for_test(df, spec)
+    analysis = Analysis(df, spec, sds=sds)
     result = analysis.calculate()
 
     # Export to Excel
@@ -304,7 +328,8 @@ def test_excel_export_invalid_path():
         'response_var': 'y'
     }
 
-    analysis = Analysis(df, spec)
+    sds = detect_sds_for_test(df, spec)
+    analysis = Analysis(df, spec, sds=sds)
     result = analysis.calculate()
 
     # Try to export to invalid path
@@ -324,7 +349,8 @@ def test_excel_export_multiple_analyses(temp_excel_file):
         'response_var': 'y'
     }
 
-    analysis = Analysis(df, spec_s)
+    sds = detect_sds_for_test(df, spec_s)
+    analysis = Analysis(df, spec_s, sds=sds)
     result = analysis.calculate()
 
     # Should successfully export
@@ -352,7 +378,8 @@ def test_excel_tab_name_truncation(temp_excel_file):
         'response_var': 'y'
     }
 
-    analysis = Analysis(df, spec)
+    sds = detect_sds_for_test(df, spec)
+    analysis = Analysis(df, spec, sds=sds)
     result = analysis.calculate()
 
     # Export to Excel
@@ -375,7 +402,8 @@ def test_excel_export_preserves_statistics(temp_excel_file):
         'response_var': 'y'
     }
 
-    analysis = Analysis(df, spec)
+    sds = detect_sds_for_test(df, spec)
+    analysis = Analysis(df, spec, sds=sds)
     result = analysis.calculate()
 
     # Get original statistics

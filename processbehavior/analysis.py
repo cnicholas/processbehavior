@@ -195,17 +195,37 @@ class Analysis:
     strategy methods.
 
     Usage:
+        # Standard usage (calculates AnalysisDataSet from scratch)
         analysis = Analysis(df, specification)
         result = analysis.calculate()
+
+        # With pre-calculated AnalysisDataSet (for Study.analyze())
+        analysis = Analysis(df, specification, analysis_dataset=ads)
+        result = analysis.calculate()  # Reuses pre-calculated data
     """
 
-    def __init__(self, df: pd.DataFrame, specification: dict):
+    def __init__(
+        self,
+        df: pd.DataFrame,
+        specification: dict,
+        analysis_dataset: 'AnalysisDataSet | None' = None,
+        sds: int | None = None
+    ):
         """
         Initialize analysis with data and specification.
 
         Args:
             df: Input DataFrame with raw data
             specification: Dictionary containing analysis configuration including 'analysis_type'
+            analysis_dataset: Optional pre-calculated AnalysisDataSet.
+                If provided, skips expensive residual calculation.
+                Used by Study.analyze() to reuse formulate() calculations.
+            sds: Sampling Design State (0-6). Required if analysis_dataset is not
+                provided. SDS should be detected at the entry point (ProcessDataFrame)
+                and passed through the system.
+
+        Raises:
+            ValueError: If neither analysis_dataset nor sds is provided.
         """
         # Import here to avoid circular dependency
         from .analysis_dataset import AnalysisDataSet
@@ -213,7 +233,18 @@ class Analysis:
         self.raw_df = df
         self.spec = AnalysisSpecification(specification)
         self.analysis_type = self.spec.analysis_type
-        self.ads = AnalysisDataSet(df, self.spec)
+
+        # Use pre-calculated AnalysisDataSet if provided, otherwise calculate
+        if analysis_dataset is not None:
+            self.ads = analysis_dataset
+        else:
+            if sds is None:
+                raise ValueError(
+                    "sds is required when analysis_dataset is not provided. "
+                    "SDS should be detected at the entry point (ProcessDataFrame) "
+                    "and passed to Analysis."
+                )
+            self.ads = AnalysisDataSet(df, self.spec, sds=sds)
 
     def calculate(self) -> AnalysisResult:
         """

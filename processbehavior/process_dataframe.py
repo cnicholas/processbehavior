@@ -396,8 +396,8 @@ class ProcessDataFrame:
         # Update spec with correct analysis type
         spec_dict['analysis_type'] = analysis_type
 
-        # Run the analysis (will create and validate AnalysisSpecification internally)
-        analysis = Analysis(self.data, spec_dict)
+        # Run the analysis, passing SDS to avoid redundant detection
+        analysis = Analysis(self.data, spec_dict, sds=sds)
 
         return analysis
 
@@ -496,14 +496,29 @@ class ProcessDataFrame:
         # Get SDS analysis plan with all metadata
         plan = SamplingDesignDetector.get_analysis_plan(sds)
 
+        # Calculate full dataset with residuals (R1-R5, RCR1-RCR5)
+        # Use AnalysisDataSet with the recommended chart type to trigger calculation
+        # Pass SDS to avoid redundant detection (SDS is the driver of the system)
+        from .analysis_dataset import AnalysisDataSet
+        from .analysis_specification import AnalysisSpecification
+
+        full_spec_dict = {
+            **spec_dict,
+            'analysis_type': plan.recommended_chart
+        }
+        full_spec = AnalysisSpecification(full_spec_dict)
+        ads = AnalysisDataSet(self.data, full_spec, sds=sds)
+
         # Set up charts accessor for IDE auto-completion
         self.charts = ChartTypeAccessor(plan.valid_charts)
 
-        # Create and return Study object
+        # Create and return Study object with pre-calculated AnalysisDataSet
+        # This enables analyze() to reuse the expensive calculation
         return Study(
             _pdf=self,
             _spec=config,
-            _plan=plan
+            _plan=plan,
+            _ads=ads
         )
 
     def _determine_analysis_type(
