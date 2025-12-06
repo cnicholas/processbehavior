@@ -287,6 +287,12 @@ class AnalysisSpecification(DataPrepConfig):
                 f'A grouping variable is required to produce a {self.analysis_type} analysis!'
             )
 
+        # Extract residual chart parameters (for VAS residual charting)
+        # These are optional - only used when charting residuals
+        self.residual = specification.get('residual')  # e.g., 'R2', 'R3', 'R4', 'R5'
+        self.residual_chart_type = specification.get('residual_chart_type')  # e.g., 'S', 'Imr'
+        self.recentered = specification.get('recentered', False)  # Use RCR columns
+
         # Initialize analysis output columns
         self.analysis_output_cols = [self.response_var, 'mean', 'lcl', 'ucl', 'beyond_limits']
         self._build_output_cols()

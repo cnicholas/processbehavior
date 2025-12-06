@@ -242,21 +242,35 @@ class Analysis:
         >>> if result.has_residuals:
         ...     residuals = result.residuals
         """
-        strategies = {
-            'Xbar': self._calculate_xbar,
-            'S': self._calculate_s,
-            'Imr': self._calculate_imr,
-            'R': self._calculate_r
-        }
+        # Check if this is a residual chart request
+        residual = getattr(self.spec, 'residual', None)
+        if residual:
+            # Residual chart analysis
+            chart_type = getattr(self.spec, 'residual_chart_type', 'Imr')
+            recentered = getattr(self.spec, 'recentered', False)
 
-        if self.analysis_type not in strategies:
-            raise ValueError(
-                f'Analysis type {self.analysis_type} not supported! '
-                f'Valid types: {list(strategies.keys())}'
+            chart_data = self._calculate_residual_chart(
+                residual=residual,
+                chart_type=chart_type,
+                recentered=recentered
             )
+        else:
+            # Standard chart analysis
+            strategies = {
+                'Xbar': self._calculate_xbar,
+                'S': self._calculate_s,
+                'Imr': self._calculate_imr,
+                'R': self._calculate_r
+            }
 
-        # Execute analysis strategy
-        chart_data = strategies[self.spec.analysis_type]()
+            if self.analysis_type not in strategies:
+                raise ValueError(
+                    f'Analysis type {self.analysis_type} not supported! '
+                    f'Valid types: {list(strategies.keys())}'
+                )
+
+            # Execute analysis strategy
+            chart_data = strategies[self.spec.analysis_type]()
 
         # Wrap in AnalysisResult for unified access
         return AnalysisResult(
@@ -811,6 +825,141 @@ class Analysis:
             chart_type='Imr',
             value_col=spec.response_var
         )
+
+    def _calculate_residual_chart(
+        self,
+        residual: str,
+        chart_type: str,
+        recentered: bool = False
+    ) -> dict:
+        """
+        Calculate control chart from residual column.
+
+        This method creates control charts from VAS residuals (R2-R5) to answer
+        specific questions about variance sources:
+
+        - R2_S or R2_Imr: Is unexplained within-cell variation stable?
+        - R3_Imr: Is there significant interaction between factors and time?
+        - R4_Imr: Does time have a significant effect?
+        - R5_Imr: Does the factor have a significant effect?
+
+        Parameters
+        ----------
+        residual : str
+            Residual type ('R2', 'R3', 'R4', 'R5')
+        chart_type : str
+            Base chart type ('S' or 'Imr')
+        recentered : bool, default False
+            If True, use re-centered residuals (RCR2, RCR3, etc.)
+            Re-centered residuals add back the appropriate mean for interpretation.
+
+        Returns
+        -------
+        dict
+            Chart data in standard format:
+            {'ChartName': {'data': DataFrame, 'statistics': dict, 'metadata': dict}}
+
+        Raises
+        ------
+        ValueError
+            If residual column not found in dataset
+            If chart_type is not supported for the residual
+
+        Notes
+        -----
+        Re-centered residuals (Tom Bishop Equation 80):
+            RCR = R + Ȳ (appropriate mean for each residual type)
+
+        The question each residual answers:
+            R2: Within-subgroup variation (measurement noise)
+            R3: Interaction effects (factor × time)
+            R4: Time effects (trends, shifts over time)
+            R5: Factor effects (differences between levels)
+        """
+        # Determine column name
+        col_prefix = 'RCR' if recentered else 'R'
+        residual_num = residual[1]  # Extract number from 'R2', 'R3', etc.
+        col_name = f'{col_prefix}{residual_num}'
+
+        # Check column exists
+        if col_name not in self.ads.analysis_dataset.columns:
+            available = [c for c in self.ads.analysis_dataset.columns
+                        if c.startswith('R') and len(c) == 2]
+            raise ValueError(
+                f"Residual column '{col_name}' not found.\n"
+                f"Available residuals: {available}\n"
+                f"This may indicate the SDS doesn't support this residual type."
+            )
+
+        # Question answered by each residual
+        questions = {
+            'R2': 'Is within-subgroup variation stable?',
+            'R3': 'Is there interaction between factors and time?',
+            'R4': 'Does time have a significant effect?',
+            'R5': 'Do factors have a significant effect?'
+        }
+
+        # Create a modified spec for residual analysis
+        # We temporarily treat the residual column as the response variable
+        original_response = self.spec.response_var
+
+        # Store original values and temporarily modify
+        self.spec._response_var = col_name
+
+        try:
+            if chart_type == 'S':
+                # S chart for R2 (within-subgroup variation)
+                result = self._calculate_s()
+                # Wrap in dict format if needed
+                if isinstance(result, pd.DataFrame):
+                    chart_name = f'{residual}_S'
+                    result = {
+                        chart_name: {
+                            'data': result,
+                            'statistics': {
+                                'center': result['center'].iloc[0] if 'center' in result.columns else None,
+                                'lcl': result['lcl'].iloc[0] if 'lcl' in result.columns else None,
+                                'ucl': result['ucl'].iloc[0] if 'ucl' in result.columns else None,
+                            },
+                            'metadata': {
+                                'chart_type': 'S',
+                                'value_col': 's',
+                                'center_col': 'center',
+                                'residual_type': residual,
+                                'recentered': recentered,
+                                'question_answered': questions.get(residual, '')
+                            }
+                        }
+                    }
+            elif chart_type == 'Imr':
+                # IMR chart for R3, R4, R5 (and R2 when no replication)
+                result = self._calculate_imr()
+
+                # Add residual metadata to each chart
+                for chart_key in result:
+                    if 'metadata' not in result[chart_key]:
+                        result[chart_key]['metadata'] = {}
+                    result[chart_key]['metadata']['residual_type'] = residual
+                    result[chart_key]['metadata']['recentered'] = recentered
+                    result[chart_key]['metadata']['question_answered'] = questions.get(residual, '')
+
+                # Rename chart keys to include residual prefix
+                renamed_result = {}
+                for chart_key, chart_data in result.items():
+                    new_key = f'{residual}_{chart_key}' if chart_key != 'all' else f'{residual}_Imr'
+                    renamed_result[new_key] = chart_data
+
+                result = renamed_result
+            else:
+                raise ValueError(
+                    f"Chart type '{chart_type}' not supported for residual charts.\n"
+                    f"Valid types: 'S' (for R2 with replication), 'Imr' (for R2-R5)"
+                )
+        finally:
+            # Restore original response variable
+            self.spec._response_var = original_response
+
+        return result
 
     def _calculate_r(self) -> pd.DataFrame:
         """

@@ -106,9 +106,18 @@ class AnalysisDataSet:
         )
 
         # Step 5: Calculate VAS residuals only when appropriate
-        if self.sds_detector.should_calculate_vas_residuals(
+        # Force VAS calculation if residual charting is requested
+        needs_residuals = self.sds_detector.should_calculate_vas_residuals(
             self.sampling_design_state, self.spec.analysis_type
-        ):
+        )
+
+        # Also calculate residuals if a residual chart is requested
+        residual_requested = getattr(self.spec, 'residual', None) is not None
+        if residual_requested:
+            needs_residuals = True
+            logger.info("Residual chart requested - forcing VAS residual calculation")
+
+        if needs_residuals:
             logger.info("Calculating VAS residuals (R1-R5)")
             self.analysis_dataset = self.residual_calc.calculate_residuals(
                 self.analysis_dataset, self.spec, self.sampling_design_state
