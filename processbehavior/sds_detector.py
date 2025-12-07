@@ -302,25 +302,29 @@ class SamplingDesignDetector:
         >>> sds
         1
         """
-        # SDS 0: No structure
-        if not (spec.has_grouping and spec.has_time):
-            logger.info("SDS 0: No grouping or time structure")
+        # SDS 0: No structure (no grouping factors defined)
+        if not spec.has_grouping:
+            logger.info("SDS 0: No grouping factors defined")
             return 0
 
-        # From here: have both grouping and time
-        # CRITICAL: For SDS detection, we need TWO different counts:
-        # 1. Sample sizes per CELL (factor × time) for SDS 1/2/3 classification
-        # 2. Grid coverage of (group × time) combinations (for SDS 6 detection)
+        # From here: have grouping factors
+        # CRITICAL DESIGN DECISION:
+        # - Cells are defined by FACTORS only (rsg_var_name)
+        # - Time is for ORDERING only, not for defining cells
+        # - If user wants time as a factor, they add it to factors list
+        #
+        # This means:
+        # - factors=[lane] with time=pull → 4 cells (lanes), n≈200 each
+        # - factors=[lane, phase] with time=pull → 8 cells, n≈100 each
+        # - factors=[lane, phase, pull] → 800 cells, n=1 each
 
-        # Count observations per CELL (factor × time combination)
+        # Count observations per CELL (factor combination only, NOT factor × time)
         # - This is for determining replication pattern (n=1 vs n≥2 per cell)
         # - SDS 1: All cells have n≥2
         # - SDS 2: All cells have n=1
         # - SDS 3: Mixed cells (some n=1, some n≥2)
-        # CRITICAL: Use observed=True to only count cells with actual data
-        #           (categorical dtypes include all categories by default)
         cell_sizes = (
-            df.groupby([spec.rsg_var_name, spec.time_var], dropna=False, observed=True)
+            df.groupby([spec.rsg_var_name], dropna=False, observed=True)
             .size()
         )
 
@@ -328,47 +332,28 @@ class SamplingDesignDetector:
         max_n = cell_sizes.max()
         n_groups = df[spec.rsg_var_name].nunique()
 
-        # Count (group × time) grid coverage (for SDS 6 incomplete grid detection)
-        # - This checks if we have a complete factorial design
-        # - Independent of how many observations are in each cell
-        # CRITICAL: Use observed=True to only count cells with actual data
-        grid_cells = df.groupby([spec.rsg_var_name, spec.time_var], dropna=False, observed=True).size()
-        n_grid_cells = len(grid_cells)
-        n_times = df[spec.time_var].nunique()
-        full_grid_size = n_groups * n_times
-
         logger.debug(
-            f"SDS Detection: {n_groups} groups × {n_times} times "
-            f"= {full_grid_size} possible grid cells"
-        )
-        logger.debug(
-            f"SDS Detection: {n_grid_cells} grid cells observed, "
-            f"subgroup sizes n range: [{min_n}, {max_n}]"
+            f"SDS Detection: {n_groups} groups (factor combinations), "
+            f"n range: [{min_n}, {max_n}]"
         )
 
-        # Check for nested design (SDS 5)
+        # Check for nested design (SDS 5) - only if multiple factor variables
         if len(spec.rsg_vars) >= 2:
-            sds5 = self._check_nested_design(df, spec, n_grid_cells, full_grid_size)
+            # For nested design check, we still consider all factor combinations
+            n_cells = len(cell_sizes)
+            sds5 = self._check_nested_design(df, spec, n_cells, n_groups)
             if sds5 is not None:
                 return sds5
 
-        # SDS 4: Single condition over time
-        if n_groups == 1 and n_times > 1:
-            logger.info(f"SDS 4: Single condition over time ({n_times} time points)")
+        # SDS 4: Single group (only one factor level)
+        if n_groups == 1:
+            logger.info(f"SDS 4: Single group ({n_groups} factor level)")
             return 4
 
-        # SDS 6: Incomplete grid (< 75% of group×time combinations present)
-        coverage_ratio = n_grid_cells / full_grid_size
-        if coverage_ratio < 0.75:
-            logger.info(
-                f"SDS 6: Unstructured/incomplete grid - "
-                f"{n_grid_cells}/{full_grid_size} grid cells present ({coverage_ratio:.1%})"
-            )
-            return 6
-
         # SDS 1, 2, or 3: Based on cell-level replication pattern
+        # Coverage ratio is 1.0 since cells are just the factor combinations
         return self._classify_by_replication(
-            cell_sizes, min_n, max_n, coverage_ratio
+            cell_sizes, min_n, max_n, coverage_ratio=1.0
         )
 
     def get_sds_characteristics(self, sds: int) -> dict:

@@ -153,7 +153,18 @@ class DataPreparation:
         # Add composite grouping variable if needed
         if spec.has_grouping:
             out = self._add_grouping_column(out, spec)
-            out = self._filter_small_groups(out, spec)
+            # Filter small groups for any analysis that uses grouping (require n≥2)
+            # - Xbar/S need n≥2 for within-group variance
+            # - Imr/R need n≥2 to calculate at least one moving range
+            # Use getattr since DataPrepConfig doesn't have analysis_type
+            analysis_type = getattr(spec, 'analysis_type', None)
+            if analysis_type is not None:
+                # Known analysis type - filter small groups
+                out = self._filter_small_groups(out, spec)
+            else:
+                # DataPrepConfig (SDS detection phase) - just add group sizes, don't filter
+                # We need all data to correctly detect SDS
+                out = self._add_group_sizes(out, spec)
 
             # Make RSG categorical with natural sort order
             # This ensures 'Lane_1', 'Lane_2', 'Lane_10' (not 'Lane_1', 'Lane_10', 'Lane_2')
@@ -421,6 +432,23 @@ class DataPreparation:
         # Merge to filter
         out = pd.merge(df, grouped, how='inner', on=spec.rsg_var_name)
 
+        return out
+
+    def _add_group_sizes(
+        self,
+        df: pd.DataFrame,
+        spec: DataPrepConfig
+    ) -> pd.DataFrame:
+        """
+        Add 'n' column with group sizes without filtering.
+
+        Used for Imr/R analyses where n=1 per group is valid.
+        """
+        grouped = df.groupby(spec.rsg_var_name, observed=True).size()
+        grouped = grouped.reset_index()
+        grouped = grouped.rename(columns={0: 'n'})
+
+        out = pd.merge(df, grouped, how='left', on=spec.rsg_var_name)
         return out
 
     def _add_column(

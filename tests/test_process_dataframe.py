@@ -539,3 +539,510 @@ def test_formulate_with_chart_selection():
 
     result_imr = study.analyze(chart='Imr')
     assert result_imr is not None
+
+
+# ============================================================================
+# Test: Study properties - SDS information
+# ============================================================================
+
+def test_study_sds_name():
+    """Study should expose human-readable SDS name."""
+    np.random.seed(42)
+
+    # SDS 0 - Simple series
+    df = pd.DataFrame({'Value': np.random.normal(100, 5, 30)})
+    study = ProcessDataFrame(df).formulate(response='Value')
+
+    assert hasattr(study, 'sds_name')
+    assert isinstance(study.sds_name, str)
+    assert len(study.sds_name) > 0
+
+
+def test_study_sds_description():
+    """Study should expose SDS description explaining the data structure."""
+    np.random.seed(42)
+    df = pd.DataFrame({'Value': np.random.normal(100, 5, 30)})
+    study = ProcessDataFrame(df).formulate(response='Value')
+
+    assert hasattr(study, 'sds_description')
+    assert isinstance(study.sds_description, str)
+    assert len(study.sds_description) > 0
+
+
+def test_study_response_property():
+    """Study should expose the response variable name."""
+    df = pd.DataFrame({'Measurement': [1, 2, 3, 4, 5]})
+    study = ProcessDataFrame(df).formulate(response='Measurement')
+
+    assert study.response == 'Measurement'
+
+
+def test_study_factors_property():
+    """Study should expose the factors list."""
+    np.random.seed(42)
+    data_rows = []
+    for batch in ['A', 'B']:
+        for time in range(1, 6):
+            for _ in range(3):
+                data_rows.append({'Value': np.random.normal(50, 3), 'Batch': batch, 'Time': time})
+
+    df = pd.DataFrame(data_rows)
+    study = ProcessDataFrame(df).formulate(
+        response='Value',
+        factors=['Batch'],
+        time='Time'
+    )
+
+    assert study.factors == ['Batch']
+
+
+def test_study_factors_none_when_no_grouping():
+    """Study.factors should be None when no grouping specified."""
+    df = pd.DataFrame({'Value': [1, 2, 3, 4, 5]})
+    study = ProcessDataFrame(df).formulate(response='Value')
+
+    assert study.factors is None
+
+
+def test_study_time_property():
+    """Study should expose the time variable name."""
+    df = pd.DataFrame({
+        'Value': [1, 2, 3, 4, 5],
+        'Sequence': [1, 2, 3, 4, 5]
+    })
+    study = ProcessDataFrame(df).formulate(response='Value', time='Sequence')
+
+    assert study.time == 'Sequence'
+
+
+def test_study_time_none_when_not_specified():
+    """Study.time should be None when no time specified."""
+    df = pd.DataFrame({'Value': [1, 2, 3, 4, 5]})
+    study = ProcessDataFrame(df).formulate(response='Value')
+
+    assert study.time is None
+
+
+def test_study_precision_property():
+    """Study should expose precision setting."""
+    df = pd.DataFrame({'Value': [1, 2, 3, 4, 5]})
+    study = ProcessDataFrame(df).formulate(response='Value', precision=5)
+
+    assert study.precision == 5
+
+
+def test_study_precision_default():
+    """Study precision should default to 3."""
+    df = pd.DataFrame({'Value': [1, 2, 3, 4, 5]})
+    study = ProcessDataFrame(df).formulate(response='Value')
+
+    assert study.precision == 3
+
+
+# ============================================================================
+# Test: Study.dataset - Pre-calculated analysis data
+# ============================================================================
+
+def test_study_dataset_exists():
+    """Study should expose the analysis dataset."""
+    df = pd.DataFrame({'Value': [1, 2, 3, 4, 5]})
+    study = ProcessDataFrame(df).formulate(response='Value')
+
+    assert hasattr(study, 'dataset')
+    assert study.dataset is not None
+
+
+def test_study_dataset_is_dataframe():
+    """Study.dataset should be a pandas DataFrame."""
+    df = pd.DataFrame({'Value': [1, 2, 3, 4, 5]})
+    study = ProcessDataFrame(df).formulate(response='Value')
+
+    assert isinstance(study.dataset, pd.DataFrame)
+
+
+def test_study_dataset_returns_copy():
+    """Study.dataset should return a copy (immutability)."""
+    df = pd.DataFrame({'Value': [1, 2, 3, 4, 5]})
+    study = ProcessDataFrame(df).formulate(response='Value')
+
+    dataset1 = study.dataset
+    dataset2 = study.dataset
+
+    # Modify dataset1
+    dataset1['test_col'] = 999
+
+    # dataset2 should not have the modification
+    assert 'test_col' not in dataset2.columns
+
+
+def test_study_dataset_has_ybar_for_grouped_data():
+    """Study.dataset should contain Ybar for grouped data."""
+    np.random.seed(42)
+    data_rows = []
+    for batch in ['A', 'B']:
+        for time in range(1, 6):
+            for _ in range(3):
+                data_rows.append({'Value': np.random.normal(50, 3), 'Batch': batch, 'Time': time})
+
+    df = pd.DataFrame(data_rows)
+    study = ProcessDataFrame(df).formulate(
+        response='Value',
+        factors=['Batch'],
+        time='Time'
+    )
+
+    dataset = study.dataset
+    assert 'Ybar' in dataset.columns
+
+
+def test_study_dataset_has_residuals_for_sds1():
+    """Study.dataset should contain VAS residuals (R1-R5) for SDS 1."""
+    np.random.seed(42)
+    data_rows = []
+    for batch in ['A', 'B']:
+        for time in range(1, 6):
+            for _ in range(3):
+                data_rows.append({'Value': np.random.normal(50, 3), 'Batch': batch, 'Time': time})
+
+    df = pd.DataFrame(data_rows)
+    study = ProcessDataFrame(df).formulate(
+        response='Value',
+        factors=['Batch'],
+        time='Time'
+    )
+
+    dataset = study.dataset
+    # SDS 1 should have all residuals
+    for r in ['R1', 'R2', 'R3', 'R4', 'R5']:
+        assert r in dataset.columns, f"Missing residual {r}"
+
+
+def test_study_dataset_has_rsg_column():
+    """Study.dataset should contain rsg (rational subgroup) column."""
+    np.random.seed(42)
+    data_rows = []
+    for batch in ['A', 'B']:
+        for time in range(1, 6):
+            for _ in range(3):
+                data_rows.append({'Value': np.random.normal(50, 3), 'Batch': batch, 'Time': time})
+
+    df = pd.DataFrame(data_rows)
+    study = ProcessDataFrame(df).formulate(
+        response='Value',
+        factors=['Batch'],
+        time='Time'
+    )
+
+    dataset = study.dataset
+    assert 'rsg' in dataset.columns
+
+
+# ============================================================================
+# Test: Study.residual_charts
+# ============================================================================
+
+def test_study_residual_charts_property():
+    """Study should expose available residual chart types."""
+    np.random.seed(42)
+    data_rows = []
+    for batch in ['A', 'B']:
+        for time in range(1, 6):
+            for _ in range(3):
+                data_rows.append({'Value': np.random.normal(50, 3), 'Batch': batch, 'Time': time})
+
+    df = pd.DataFrame(data_rows)
+    study = ProcessDataFrame(df).formulate(
+        response='Value',
+        factors=['Batch'],
+        time='Time'
+    )
+
+    assert hasattr(study, 'residual_charts')
+    assert isinstance(study.residual_charts, list)
+
+
+def test_study_residual_charts_sds1_has_all():
+    """SDS 1 should have all residual charts available."""
+    np.random.seed(42)
+    data_rows = []
+    for batch in ['A', 'B']:
+        for time in range(1, 6):
+            for _ in range(3):
+                data_rows.append({'Value': np.random.normal(50, 3), 'Batch': batch, 'Time': time})
+
+    df = pd.DataFrame(data_rows)
+    study = ProcessDataFrame(df).formulate(
+        response='Value',
+        factors=['Batch'],
+        time='Time'
+    )
+
+    # SDS 1 should have R2_S, R3_Imr, R4_Imr, R5_Imr
+    residual_charts = study.residual_charts
+    assert 'R2_S' in residual_charts or 'R2_Imr' in residual_charts
+    assert any('R3' in r for r in residual_charts)
+    assert any('R4' in r for r in residual_charts)
+    assert any('R5' in r for r in residual_charts)
+
+
+def test_study_residual_charts_empty_for_sds0():
+    """SDS 0 should have no residual charts (no factors)."""
+    df = pd.DataFrame({'Value': [1, 2, 3, 4, 5]})
+    study = ProcessDataFrame(df).formulate(response='Value')
+
+    # SDS 0 has no residual charts
+    assert study.residual_charts == [] or len(study.residual_charts) == 0
+
+
+# ============================================================================
+# Test: Study.why_not() - Teaching method
+# ============================================================================
+
+def test_study_why_not_valid_chart():
+    """why_not() should confirm valid charts."""
+    df = pd.DataFrame({'Value': [1, 2, 3, 4, 5]})
+    study = ProcessDataFrame(df).formulate(response='Value')
+
+    # Imr is valid for SDS 0
+    result = study.why_not('Imr')
+    assert 'IS valid' in result or 'valid' in result.lower()
+
+
+def test_study_why_not_invalid_chart():
+    """why_not() should explain why a chart is invalid."""
+    df = pd.DataFrame({'Value': [1, 2, 3, 4, 5]})
+    study = ProcessDataFrame(df).formulate(response='Value')
+
+    # S chart requires n≥2, not valid for SDS 0
+    result = study.why_not('S')
+    assert isinstance(result, str)
+    assert len(result) > 0
+
+
+def test_study_why_not_unknown_chart():
+    """why_not() should handle unknown chart types."""
+    df = pd.DataFrame({'Value': [1, 2, 3, 4, 5]})
+    study = ProcessDataFrame(df).formulate(response='Value')
+
+    result = study.why_not('NonExistentChart')
+    assert 'not a recognized' in result.lower() or 'valid types' in result.lower()
+
+
+# ============================================================================
+# Test: Study.charts accessor - IDE auto-completion
+# ============================================================================
+
+def test_study_charts_accessor_has_valid_charts():
+    """Study.charts should have attributes for each valid chart."""
+    df = pd.DataFrame({'Value': [1, 2, 3, 4, 5]})
+    study = ProcessDataFrame(df).formulate(response='Value')
+
+    # For SDS 0, Imr should be available
+    assert hasattr(study.charts, 'Imr')
+    assert study.charts.Imr == 'Imr'
+
+
+def test_study_charts_accessor_dir():
+    """Study.charts should support tab-completion via __dir__."""
+    df = pd.DataFrame({'Value': [1, 2, 3, 4, 5]})
+    study = ProcessDataFrame(df).formulate(response='Value')
+
+    chart_attrs = dir(study.charts)
+    assert 'Imr' in chart_attrs
+
+
+def test_study_charts_accessor_xbar_for_grouped():
+    """Study.charts should have Xbar for grouped data."""
+    np.random.seed(42)
+    data_rows = []
+    for batch in ['A', 'B']:
+        for time in range(1, 6):
+            for _ in range(3):
+                data_rows.append({'Value': np.random.normal(50, 3), 'Batch': batch, 'Time': time})
+
+    df = pd.DataFrame(data_rows)
+    study = ProcessDataFrame(df).formulate(
+        response='Value',
+        factors=['Batch'],
+        time='Time'
+    )
+
+    assert hasattr(study.charts, 'Xbar')
+    assert hasattr(study.charts, 'S')
+
+
+def test_study_charts_accessor_repr():
+    """Study.charts should have informative repr."""
+    df = pd.DataFrame({'Value': [1, 2, 3, 4, 5]})
+    study = ProcessDataFrame(df).formulate(response='Value')
+
+    repr_str = repr(study.charts)
+    assert 'StudyChartAccessor' in repr_str
+
+
+# ============================================================================
+# Test: Study.analyze() - Error handling
+# ============================================================================
+
+def test_study_analyze_invalid_chart_raises():
+    """analyze() should raise ValueError for invalid chart type."""
+    df = pd.DataFrame({'Value': [1, 2, 3, 4, 5]})
+    study = ProcessDataFrame(df).formulate(response='Value')
+
+    with pytest.raises(ValueError, match="not valid"):
+        study.analyze(chart='S')  # S not valid for SDS 0
+
+
+def test_study_analyze_invalid_chart_shows_valid():
+    """analyze() error should show valid chart options."""
+    df = pd.DataFrame({'Value': [1, 2, 3, 4, 5]})
+    study = ProcessDataFrame(df).formulate(response='Value')
+
+    try:
+        study.analyze(chart='S')
+    except ValueError as e:
+        assert 'Imr' in str(e)  # Should mention valid charts
+
+
+def test_study_analyze_with_charts_accessor():
+    """analyze() should work with charts accessor."""
+    df = pd.DataFrame({'Value': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]})
+    study = ProcessDataFrame(df).formulate(response='Value')
+
+    result = study.analyze(chart=study.charts.Imr)
+    assert result is not None
+
+
+# ============================================================================
+# Test: Study.analyze() - Residual charts
+# ============================================================================
+
+def test_study_analyze_residual_chart():
+    """analyze() should work with residual chart types."""
+    np.random.seed(42)
+    data_rows = []
+    for batch in ['A', 'B']:
+        for time in range(1, 6):
+            for _ in range(3):
+                data_rows.append({'Value': np.random.normal(50, 3), 'Batch': batch, 'Time': time})
+
+    df = pd.DataFrame(data_rows)
+    study = ProcessDataFrame(df).formulate(
+        response='Value',
+        factors=['Batch'],
+        time='Time'
+    )
+
+    # Get first available residual chart
+    if study.residual_charts:
+        residual_chart = study.residual_charts[0]
+        result = study.analyze(chart=residual_chart)
+        assert result is not None
+
+
+def test_study_analyze_invalid_residual_chart_raises():
+    """analyze() should raise for invalid residual chart."""
+    df = pd.DataFrame({'Value': [1, 2, 3, 4, 5]})
+    study = ProcessDataFrame(df).formulate(response='Value')
+
+    # SDS 0 has no residual charts
+    with pytest.raises(ValueError, match="not available"):
+        study.analyze(chart='R4_Imr')
+
+
+# ============================================================================
+# Test: AnalysisResult integration
+# ============================================================================
+
+def test_study_analyze_returns_analysis_result():
+    """analyze() should return an AnalysisResult object."""
+    df = pd.DataFrame({'Value': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]})
+    study = ProcessDataFrame(df).formulate(response='Value')
+
+    result = study.analyze()
+
+    # Should have expected attributes
+    assert hasattr(result, 'charts')
+    assert hasattr(result, 'summary')
+
+
+def test_study_analyze_result_has_charts():
+    """AnalysisResult should contain chart data."""
+    df = pd.DataFrame({'Value': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]})
+    study = ProcessDataFrame(df).formulate(response='Value')
+
+    result = study.analyze()
+
+    assert isinstance(result.charts, dict)
+    assert len(result.charts) > 0
+
+
+def test_study_analyze_result_has_plot():
+    """AnalysisResult should have plot() method."""
+    df = pd.DataFrame({'Value': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]})
+    study = ProcessDataFrame(df).formulate(response='Value')
+
+    result = study.analyze()
+
+    assert hasattr(result, 'plot')
+    assert callable(result.plot)
+
+
+def test_study_analyze_result_has_detect_signals():
+    """AnalysisResult should have detect_signals() method."""
+    df = pd.DataFrame({'Value': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]})
+    study = ProcessDataFrame(df).formulate(response='Value')
+
+    result = study.analyze()
+
+    assert hasattr(result, 'detect_signals')
+    assert callable(result.detect_signals)
+
+
+# ============================================================================
+# Test: formulate() validation
+# ============================================================================
+
+def test_formulate_invalid_factor_column():
+    """formulate() should raise for non-existent factor column."""
+    df = pd.DataFrame({'Value': [1, 2, 3]})
+    pdata = ProcessDataFrame(df)
+
+    with pytest.raises(ValueError, match="not found"):
+        pdata.formulate(response='Value', factors=['NonExistent'])
+
+
+def test_formulate_invalid_time_column():
+    """formulate() should raise for non-existent time column."""
+    df = pd.DataFrame({'Value': [1, 2, 3]})
+    pdata = ProcessDataFrame(df)
+
+    with pytest.raises(ValueError, match="not found"):
+        pdata.formulate(response='Value', time='NonExistent')
+
+
+# ============================================================================
+# Test: Edge cases
+# ============================================================================
+
+def test_formulate_single_observation():
+    """formulate() should handle single observation gracefully."""
+    df = pd.DataFrame({'Value': [100.0]})
+    pdata = ProcessDataFrame(df)
+
+    # Should not crash
+    study = pdata.formulate(response='Value')
+    assert study.sds == 0
+
+
+def test_formulate_with_nan_values():
+    """formulate() should handle NaN values in response."""
+    df = pd.DataFrame({
+        'Value': [1.0, 2.0, np.nan, 4.0, 5.0],
+        'Time': [1, 2, 3, 4, 5]
+    })
+    pdata = ProcessDataFrame(df)
+
+    # Should handle NaN gracefully
+    study = pdata.formulate(response='Value', time='Time')
+    assert study is not None
