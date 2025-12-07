@@ -22,8 +22,9 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     import pandas as pd
 
+    from .analysis_dataset import AnalysisDataSet
     from .analysis_result import AnalysisResult
-    from .analysis_specification import AnalysisSpecification
+    from .analysis_specification import DataPrepConfig
     from .process_dataframe import ProcessDataFrame
     from .sds_detector import SDSAnalysisPlan
 
@@ -133,10 +134,10 @@ class Study:
     ProcessDataFrame.formulate : Create a Study from data
     AnalysisResult : Result of study.analyze()
     """
-    _pdf: Any  # ProcessDataFrame - use Any to avoid circular import issues
-    _spec: Any  # AnalysisSpecification
-    _plan: Any  # SDSAnalysisPlan
-    _ads: Any  # AnalysisDataSet with pre-calculated residuals (R1-R5, RCR1-RCR5)
+    _pdf: 'ProcessDataFrame'
+    _spec: 'DataPrepConfig'
+    _plan: 'SDSAnalysisPlan'
+    _ads: 'AnalysisDataSet'
 
     # =========================================================================
     # User-Facing Properties (Clean Names)

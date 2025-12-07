@@ -48,7 +48,7 @@ class ControlChartFigure:
         self._fig = plotly_fig
         self._result = analysis_result
 
-    def show(self):
+    def show(self) -> None:
         """Display figure in browser or notebook."""
         self._fig.show()
 
@@ -57,7 +57,7 @@ class ControlChartFigure:
         filepath: str | Path,
         include_plotlyjs: bool = True,
         auto_open: bool = False
-    ):
+    ) -> None:
         """
         Save as standalone HTML file.
 
@@ -86,7 +86,7 @@ class ControlChartFigure:
         width: int | None = None,
         height: int | None = None,
         scale: float = 2.0
-    ):
+    ) -> None:
         """
         Save as static image (requires kaleido).
 
@@ -118,12 +118,12 @@ class ControlChartFigure:
                 ) from e
             raise
 
-    def add_annotation(self, text: str, x, y, **kwargs):
+    def add_annotation(self, text: str, x, y, **kwargs) -> 'ControlChartFigure':
         """Add text annotation to the figure."""
         self._fig.add_annotation(text=text, x=x, y=y, **kwargs)
         return self
 
-    def update_layout(self, **kwargs):
+    def update_layout(self, **kwargs) -> 'ControlChartFigure':
         """Update figure layout (full Plotly API)."""
         self._fig.update_layout(**kwargs)
         return self
