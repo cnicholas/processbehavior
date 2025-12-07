@@ -221,10 +221,16 @@ def test_prepare_dataset_sorts_when_needed(prep, simple_df, spec_xbar):
 
 
 def test_prepare_dataset_drops_na_rows(prep):
-    """Should drop rows with missing values."""
+    """Should drop rows with missing values before calculating n.
+
+    This ensures n reflects actual usable observations, not raw count.
+    Groups with insufficient observations after NA removal are filtered out.
+    """
     df = pd.DataFrame({
-        'lane': ['A', 'A', 'B', 'B'],
-        'weight': [10.1, np.nan, 9.9, 10.0]  # One NaN
+        # Lane A: 3 rows, 1 NaN → 2 usable (passes n≥2 filter)
+        # Lane B: 2 rows, 0 NaN → 2 usable (passes n≥2 filter)
+        'lane': ['A', 'A', 'A', 'B', 'B'],
+        'weight': [10.1, np.nan, 10.2, 9.9, 10.0]
     })
     spec = AnalysisSpecification({
         'analysis_type': 'Xbar',
@@ -234,7 +240,13 @@ def test_prepare_dataset_drops_na_rows(prep):
 
     result = prep.prepare_dataset(df, spec)
 
-    assert len(result) == 3  # 4 - 1 NaN = 3
+    # 5 rows - 1 NaN = 4 rows, both groups have n≥2
+    assert len(result) == 4
+
+    # Verify n column reflects actual usable observations (not raw count)
+    n_by_group = result.groupby('rsg')['n'].first()
+    assert n_by_group['A'] == 2  # 3 raw - 1 NaN = 2 usable
+    assert n_by_group['B'] == 2  # 2 raw - 0 NaN = 2 usable
 
 
 def test_prepare_dataset_keeps_only_requested_columns(prep, simple_df, spec_xbar):
