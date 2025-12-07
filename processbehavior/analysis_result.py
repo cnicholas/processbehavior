@@ -498,6 +498,148 @@ class AnalysisResult:
         for name, chart_info in self.charts.items():
             yield name, chart_info['data'], chart_info['statistics']
 
+    def chart_table(
+        self,
+        chart: str | None = None,
+        include_signal_col: bool = True,
+        signal_symbols: bool = True
+    ) -> pd.DataFrame:
+        """
+        Get a summary table of chart data with subgroup sizes.
+
+        Returns a clean DataFrame suitable for display in notebooks,
+        including the subgroup size (n) which affects control limit
+        calculations when n varies across subgroups.
+
+        Parameters
+        ----------
+        chart : str, optional
+            Chart name (e.g., 'Xbar', 'Sbar'). If None, uses first chart.
+        include_signal_col : bool, default True
+            Whether to include a signal indicator column
+        signal_symbols : bool, default True
+            If True, use symbols (↑/↓) for signals; if False, use -1/0/1
+
+        Returns
+        -------
+        pd.DataFrame
+            Summary table with columns:
+            - subgroup: Subgroup identifier (RSG)
+            - n: Number of observations in subgroup
+            - value: The statistic value (xbar, s, etc.)
+            - center: Center line value
+            - lcl: Lower control limit
+            - ucl: Upper control limit
+            - signal: Signal indicator (if include_signal_col=True)
+
+        Examples
+        --------
+        Display subgroup summary in notebook:
+
+        >>> result = study.analyze()
+        >>> result.chart_table('Sbar')
+          subgroup   n  value  center    lcl    ucl signal
+        0      1_1  99  1.241   1.289  1.012  1.565
+        1      1_2  98  0.977   1.289  1.011  1.567      ↓
+        2      2_1 100  0.902   1.289  1.014  1.564      ↓
+        ...
+
+        Get table for Xbar chart:
+
+        >>> result.chart_table('Xbar')
+
+        Use numeric signal values:
+
+        >>> result.chart_table('Sbar', signal_symbols=False)
+        """
+        # Determine which chart to use
+        if chart is None:
+            chart = self.all_charts[0]
+
+        if chart not in self.charts:
+            raise KeyError(
+                f"Chart '{chart}' not found. Available charts: {self.all_charts}"
+            )
+
+        # Get chart data
+        chart_data = self.charts[chart]['data'].copy()
+
+        # Identify the value column - try response variable first, then infer
+        value_col = None
+        if self._ads is not None:
+            response_var = self._ads.spec.response_var
+            if response_var in chart_data.columns:
+                value_col = response_var
+
+        # If not found, infer by excluding known non-value columns
+        if value_col is None:
+            meta_cols = {
+                'rsg', 'center', 'lcl', 'ucl', 'beyond_limits', 'n', 'N',
+                'obs_id', 'x', 'pull', 'time', 'date', 'datetime',
+                'rsg_key', 'cell_key'
+            }
+            # Also exclude any time variable from spec
+            if self._ads is not None and self._ads.spec.time_var:
+                meta_cols.add(self._ads.spec.time_var)
+
+            value_cols = [c for c in chart_data.columns if c not in meta_cols]
+            # Prefer known statistic columns
+            for preferred in ['xbar', 's', 'mr', 'r']:
+                if preferred in value_cols:
+                    value_col = preferred
+                    break
+            else:
+                value_col = value_cols[0] if value_cols else None
+
+        # Try to add n from analysis dataset if available
+        if 'n' not in chart_data.columns and self._ads is not None:
+            ads = self._ads.analysis_dataset
+            if 'n' in ads.columns and 'rsg' in ads.columns and 'rsg' in chart_data.columns:
+                n_per_rsg = ads.groupby('rsg', observed=True)['n'].first()
+                chart_data['n'] = chart_data['rsg'].map(n_per_rsg)
+
+        # Build output columns in logical order
+        output_cols = []
+        col_renames = {}
+
+        # Subgroup column
+        if 'rsg' in chart_data.columns:
+            output_cols.append('rsg')
+            col_renames['rsg'] = 'subgroup'
+
+        # n column
+        if 'n' in chart_data.columns:
+            output_cols.append('n')
+
+        # Value column
+        if value_col:
+            output_cols.append(value_col)
+            col_renames[value_col] = 'value'
+
+        # Control chart columns
+        for col in ['center', 'lcl', 'ucl']:
+            if col in chart_data.columns:
+                output_cols.append(col)
+
+        # Signal column
+        if include_signal_col and 'beyond_limits' in chart_data.columns:
+            output_cols.append('beyond_limits')
+            col_renames['beyond_limits'] = 'signal'
+
+        # Select and rename columns
+        result = chart_data[output_cols].copy()
+        result = result.rename(columns=col_renames)
+
+        # Format signal column
+        if include_signal_col and 'signal' in result.columns:
+            if signal_symbols:
+                # Convert -1/0/1 to ↓/blank/↑
+                signal_map = {-1: '↓', 0: '', 1: '↑'}
+                result['signal'] = result['signal'].map(signal_map)
+            # Keep as numeric if signal_symbols=False
+
+        return result.reset_index(drop=True)
+
     def get_signals(self, chart_name: str | None = None) -> pd.DataFrame:
         """
         Get points beyond control limits.
