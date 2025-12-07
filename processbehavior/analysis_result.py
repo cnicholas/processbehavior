@@ -36,6 +36,8 @@ import pandas as pd
 
 if TYPE_CHECKING:
     from .analysis_dataset import AnalysisDataSet
+    from .plotting.control_chart import ControlChartFigure
+    from .signals.result import SignalResult
 
 logger = logging.getLogger(__name__)
 
@@ -1320,7 +1322,7 @@ class AnalysisResult:
         rules: str | list[str] | None = None,
         config: Any | None = None,
         **kwargs
-    ):
+    ) -> 'SignalResult | dict[str, SignalResult]':
         """
         Detect Western Electric rule violations in control charts.
 
@@ -1534,7 +1536,23 @@ class AnalysisResult:
             adjusted_width = min(max_length + 2, 50)  # Cap at 50
             worksheet.column_dimensions[column_letter].width = adjusted_width
 
-    def plot(self, **kwargs):
+    def plot(
+        self,
+        chart: str | None = None,
+        facet: bool = False,
+        facet_by: str | None = None,
+        ncols: int = 2,
+        highlight_signals: bool = True,
+        show_limits: bool = True,
+        show_zones: bool = False,
+        show_rules: bool = False,
+        show_stats: bool = False,
+        template: str = 'processbehavior',
+        width: int = 1000,
+        height: int | None = None,
+        title: str | None = None,
+        **kwargs
+    ) -> 'ControlChartFigure':
         """
         Create interactive control chart visualization.
 
@@ -1556,16 +1574,22 @@ class AnalysisResult:
             Whether to highlight points beyond control limits
         show_limits : bool, default True
             Whether to show control limit lines
+        show_zones : bool, default False
+            Whether to show zone shading (A/B/C zones at 1-2-3 sigma)
         show_rules : bool, default False
-            Whether to show additional run rules
+            Whether to show additional run rules (WECO Rules 2-8)
+        show_stats : bool, default False
+            Whether to show statistics box with CL, UCL, LCL values
         template : str, default 'processbehavior'
-            Visual theme ('processbehavior', 'minimal', 'dark')
+            Visual theme ('processbehavior', 'minimal', 'dark', 'ggplot')
         width : int, default 1000
             Figure width in pixels
         height : int, optional
             Figure height in pixels (auto-calculated if None)
         title : str, optional
             Custom title for the figure
+        **kwargs
+            Additional parameters passed to Plotter.plot()
 
         Returns
         -------
@@ -1576,13 +1600,13 @@ class AnalysisResult:
         --------
         Simple plotting:
 
-        >>> result = analyze(df, 'value', chart_type='xbar')
+        >>> result = study.analyze()
         >>> fig = result.plot()
         >>> fig.show()
 
-        Specific chart:
+        Specific chart with zones:
 
-        >>> fig = result.plot(chart='Xbar')
+        >>> fig = result.plot(chart='Xbar', show_zones=True, show_stats=True)
 
         Faceted by operator:
 
@@ -1609,4 +1633,19 @@ class AnalysisResult:
         from .plotting import Plotter
 
         plotter = Plotter(self)
-        return plotter.plot(**kwargs)
+        return plotter.plot(
+            chart=chart,
+            facet=facet,
+            facet_by=facet_by,
+            ncols=ncols,
+            highlight_signals=highlight_signals,
+            show_limits=show_limits,
+            show_zones=show_zones,
+            show_rules=show_rules,
+            show_stats=show_stats,
+            template=template,
+            width=width,
+            height=height,
+            title=title,
+            **kwargs
+        )
