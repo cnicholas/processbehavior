@@ -146,8 +146,12 @@ def test_detect_sds0_no_structure(detector, sds0_data):
     assert sds == 0
 
 
-def test_detect_sds0_only_grouping(detector, spec_no_time):
-    """Should detect SDS 0 when only grouping (no time)."""
+def test_detect_sds1_grouping_only(detector, spec_no_time):
+    """With factors only (no time), detect SDS based on replication.
+
+    NEW BEHAVIOR: Time is for ordering only, not a factorial dimension.
+    Cells are defined by factors only. This data has 2 groups with n=2 each.
+    """
     df = pd.DataFrame({
         'rsg': ['A', 'A', 'B', 'B'],
         'weight': [10.1, 10.2, 9.9, 10.0]
@@ -155,7 +159,8 @@ def test_detect_sds0_only_grouping(detector, spec_no_time):
 
     sds = detector.detect_sds(df, spec_no_time)
 
-    assert sds == 0
+    # 2 groups with n=2 each = full replication
+    assert sds == 1
 
 
 def test_detect_sds0_only_time(detector, spec_no_grouping):
@@ -198,11 +203,17 @@ def test_detect_sds4_single_condition(detector, sds4_data, spec_with_grouping_an
     assert sds == 4
 
 
-def test_detect_sds6_irregular_grid(detector, sds6_data, spec_with_grouping_and_time):
-    """Should detect SDS 6 when incomplete grid (< 75% coverage)."""
+def test_detect_sds1_with_time_as_ordering(detector, sds6_data, spec_with_grouping_and_time):
+    """Time is for ordering only, not a factorial dimension.
+
+    NEW BEHAVIOR: Cells are defined by factors only.
+    This data has 2 groups ('A', 'B') with n=5 each = SDS 1.
+    The sparse time coverage doesn't affect SDS detection.
+    """
     sds = detector.detect_sds(sds6_data, spec_with_grouping_and_time)
 
-    assert sds == 6
+    # 2 groups with n=5 each = full replication
+    assert sds == 1
 
 
 def test_detect_sds_nested_design(detector):
@@ -461,20 +472,22 @@ def test_detect_sds_boundary_75_percent_coverage(detector, spec_with_grouping_an
     assert sds != 6
 
 
-def test_detect_sds_boundary_74_percent_coverage(detector, spec_with_grouping_and_time):
-    """Test coverage threshold: 74% should be SDS 6."""
-    # 2 groups × 10 time points = 20 possible cells
-    # 14 cells present = 70% (< 75%)
-    # Need to ensure time points 1-10 are all referenced to create full grid
+def test_detect_sds1_sparse_time_coverage(detector, spec_with_grouping_and_time):
+    """Time is ordering only - sparse time coverage doesn't affect SDS.
+
+    NEW BEHAVIOR: Cells are defined by factors only.
+    This data has 2 groups ('A', 'B') with n=7 each = SDS 1.
+    """
     df = pd.DataFrame({
         'rsg': ['A'] * 7 + ['B'] * 7,
-        'pull': [1, 2, 3, 4, 5, 6, 7, 1, 2, 3, 4, 8, 9, 10],  # A:1-7, B:1-4,8-10 = 14 cells, times span 1-10
+        'pull': [1, 2, 3, 4, 5, 6, 7, 1, 2, 3, 4, 8, 9, 10],
         'weight': [10.0] * 14
     })
 
     sds = detector.detect_sds(df, spec_with_grouping_and_time)
 
-    assert sds == 6
+    # 2 groups with n=7 each = full replication
+    assert sds == 1
 
 
 def test_detect_sds_with_large_n_values(detector, spec_with_grouping_and_time):

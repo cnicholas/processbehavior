@@ -198,7 +198,9 @@ class DataPrepConfig:
             self.data_prep_output_cols.extend(self.rsg_vars)
 
         if self.has_time:
-            self.data_prep_output_cols.insert(0, self.time_var)
+            # Avoid duplicating time_var if it's already in rsg_vars
+            if self.time_var not in self.data_prep_output_cols:
+                self.data_prep_output_cols.insert(0, self.time_var)
 
 
 class AnalysisSpecification(DataPrepConfig):

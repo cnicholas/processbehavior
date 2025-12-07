@@ -114,6 +114,15 @@ class AnalysisDataSet:
             self.sampling_design_state, self.spec.analysis_type
         )
 
+        # VAS residuals also require both grouping AND time
+        # (need Ybar_k for factor effects and Ybar_t for time effects)
+        if needs_residuals and not (self.spec.has_grouping and self.spec.has_time):
+            logger.debug(
+                "Skipping VAS residuals: requires both grouping and time variables. "
+                f"has_grouping={self.spec.has_grouping}, has_time={self.spec.has_time}"
+            )
+            needs_residuals = False
+
         # Also calculate residuals if a residual chart is requested
         residual_requested = getattr(self.spec, 'residual', None) is not None
         if residual_requested:
