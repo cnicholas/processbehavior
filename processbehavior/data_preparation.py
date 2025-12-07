@@ -153,6 +153,15 @@ class DataPreparation:
         # Add composite grouping variable if needed
         if spec.has_grouping:
             out = self._add_grouping_column(out, spec)
+
+            # Drop rows with missing values in analysis-critical columns BEFORE
+            # calculating n. This ensures n reflects actual usable observations,
+            # not the raw count which may include rows that will be dropped later.
+            drop_cols = [spec.response_var, spec.rsg_var_name]
+            if spec.has_time:
+                drop_cols.append(spec.time_var)
+            out = out.dropna(subset=drop_cols)
+
             # Filter small groups for any analysis that uses grouping (require n≥2)
             # - Xbar/S need n≥2 for within-group variance
             # - Imr/R need n≥2 to calculate at least one moving range
@@ -180,7 +189,8 @@ class DataPreparation:
         # Keep only requested columns
         out = out[spec.data_prep_output_cols]
 
-        # Drop any rows with missing data
+        # Final safety net: drop any remaining rows with missing data
+        # (Primary dropna for grouped data happens earlier, before n calculation)
         out = out.dropna()
 
         return out
