@@ -154,8 +154,8 @@ class TestControlChartFigure:
             'time': range(30)
         })
         pdf = ProcessDataFrame(df)
-        analysis = pdf.analyze(response_var='value')
-        return analysis.calculate()
+        study = pdf.formulate(response=pdf.columns.value)
+        return study.analyze()
 
     @pytest.fixture
     def sample_figure(self, sample_result):
@@ -211,8 +211,8 @@ class TestPlotter:
             'time': range(30)
         })
         pdf = ProcessDataFrame(df)
-        analysis = pdf.analyze(response_var='value')
-        return analysis.calculate()
+        study = pdf.formulate(response=pdf.columns.value)
+        return study.analyze()
 
     @pytest.fixture
     def xbar_result(self):
@@ -224,8 +224,8 @@ class TestPlotter:
             'time': range(100)
         })
         pdf = ProcessDataFrame(df)
-        analysis = pdf.analyze(response_var='value', grouping_vars=['subgroup'])
-        return analysis.calculate()
+        study = pdf.formulate(response=pdf.columns.value, factors=[pdf.columns.subgroup])
+        return study.analyze()
 
     def test_initialization(self, simple_result):
         """Test plotter initialization."""
@@ -422,8 +422,8 @@ class TestAnalysisResultIntegration:
             'time': range(30)
         })
         pdf = ProcessDataFrame(df)
-        analysis = pdf.analyze(response_var='value')
-        return analysis.calculate()
+        study = pdf.formulate(response=pdf.columns.value)
+        return study.analyze()
 
     def test_plot_method_exists(self, result):
         """Test that plot() method exists on AnalysisResult."""
@@ -459,8 +459,8 @@ class TestFacetedPlotting:
             'time': range(100)
         })
         pdf = ProcessDataFrame(df)
-        analysis = pdf.analyze(response_var='value', grouping_vars=['subgroup'])
-        return analysis.calculate()
+        study = pdf.formulate(response=pdf.columns.value, factors=[pdf.columns.subgroup])
+        return study.analyze()
 
     def test_faceted_plot(self, xbar_result):
         """Test creating faceted plot."""
@@ -489,8 +489,8 @@ class TestAspectRatio:
             'time': range(30)
         })
         pdf = ProcessDataFrame(df)
-        analysis = pdf.analyze(response_var='value')
-        return analysis.calculate()
+        study = pdf.formulate(response=pdf.columns.value)
+        return study.analyze()
 
     def test_aspect_ratio_calculation(self, simple_result):
         """Test that aspect ratio correctly calculates height."""
@@ -528,8 +528,8 @@ class TestReportGeneration:
             'time': range(30)
         })
         pdf = ProcessDataFrame(df)
-        analysis = pdf.analyze(response_var='value')
-        return analysis.calculate()
+        study = pdf.formulate(response=pdf.columns.value)
+        return study.analyze()
 
     def test_generate_report(self, simple_result):
         """Test basic report generation."""
@@ -578,8 +578,8 @@ class TestResidualPlots:
             'time': range(100)
         })
         pdf = ProcessDataFrame(df)
-        analysis = pdf.analyze(response_var='value', grouping_vars=['subgroup'])
-        return analysis.calculate()
+        study = pdf.formulate(response=pdf.columns.value, factors=[pdf.columns.subgroup])
+        return study.analyze()
 
     def test_plot_residuals_available(self, result_with_residuals):
         """Test residual plots when residuals are available."""
@@ -617,7 +617,8 @@ class TestResidualPlots:
             'time': range(30)
         })
         pdf = ProcessDataFrame(df)
-        result = pdf.analyze(response_var='value').calculate()
+        study = pdf.formulate(response=pdf.columns.value)
+        result = study.analyze()
 
         if not result.has_residuals:
             plotter = Plotter(result)
@@ -638,8 +639,8 @@ class TestEffectsPlots:
             'time': range(100)
         })
         pdf = ProcessDataFrame(df)
-        analysis = pdf.analyze(response_var='value', grouping_vars=['subgroup'])
-        return analysis.calculate()
+        study = pdf.formulate(response=pdf.columns.value, factors=[pdf.columns.subgroup])
+        return study.analyze()
 
     def test_plot_effects_available(self, result_with_effects):
         """Test effects plots when effects are available."""
@@ -656,7 +657,8 @@ class TestEffectsPlots:
             'time': range(30)
         })
         pdf = ProcessDataFrame(df)
-        result = pdf.analyze(response_var='value').calculate()
+        study = pdf.formulate(response=pdf.columns.value)
+        result = study.analyze()
 
         if not result.has_effects:
             plotter = Plotter(result)
@@ -676,8 +678,8 @@ class TestStatsBox:
             'time': range(30)
         })
         pdf = ProcessDataFrame(df)
-        analysis = pdf.analyze(response_var='value')
-        return analysis.calculate()
+        study = pdf.formulate(response=pdf.columns.value)
+        return study.analyze()
 
     @pytest.fixture
     def xbar_result(self):
@@ -689,8 +691,8 @@ class TestStatsBox:
             'time': range(100)
         })
         pdf = ProcessDataFrame(df)
-        analysis = pdf.analyze(response_var='value', grouping_vars=['subgroup'])
-        return analysis.calculate()
+        study = pdf.formulate(response=pdf.columns.value, factors=[pdf.columns.subgroup])
+        return study.analyze()
 
     def test_plot_with_stats_box(self, simple_result):
         """Test plotting with stats box enabled."""

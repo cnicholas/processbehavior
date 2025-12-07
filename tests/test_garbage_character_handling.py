@@ -296,12 +296,12 @@ class TestIntegrationWithAnalysis:
         pdf = ProcessDataFrame(df)
 
         # Analysis should run without crashing
-        analysis = pdf.analyze(
-            response_var='Y',
-            grouping_vars=['FACTOR'],
-            time_var='TIME'
+        study = pdf.formulate(
+            response=pdf.columns.Y,
+            factors=[pdf.columns.FACTOR],
+            time=pdf.columns.TIME
         )
-        result = analysis.calculate()
+        result = study.analyze()
 
         # Should complete successfully
         assert result is not None

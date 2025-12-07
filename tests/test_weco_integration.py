@@ -22,12 +22,12 @@ class TestWECOIntegration:
 
         # Analyze
         pdf = ProcessDataFrame(df)
-        analysis = pdf.analyze(
-            response_var='y',
-            grouping_vars=['factor 1'],
-            time_var='time'
+        study = pdf.formulate(
+            response=pdf.columns.y,
+            factors=[pdf.columns.factor_1],
+            time=pdf.columns.time
         )
-        result = analysis.calculate()
+        result = study.analyze()
 
         # Verify Xbar chart has metadata
         assert 'Xbar' in result.charts
@@ -51,12 +51,12 @@ class TestWECOIntegration:
 
         # Analyze
         pdf = ProcessDataFrame(df)
-        analysis = pdf.analyze(
-            response_var='y',
-            grouping_vars=['factor 1'],
-            time_var='time'
+        study = pdf.formulate(
+            response=pdf.columns.y,
+            factors=[pdf.columns.factor_1],
+            time=pdf.columns.time
         )
-        result = analysis.calculate()
+        result = study.analyze()
 
         # Verify Sbar chart has metadata
         assert 'Sbar' in result.charts
@@ -80,11 +80,11 @@ class TestWECOIntegration:
 
         # Analyze
         pdf = ProcessDataFrame(df)
-        analysis = pdf.analyze(
-            response_var='y',
-            time_var='time'
+        study = pdf.formulate(
+            response=pdf.columns.y,
+            time=pdf.columns.time
         )
-        result = analysis.calculate()
+        result = study.analyze()
 
         # IMR analysis returns stratified results with 'all' key
         assert 'all' in result.charts
@@ -107,11 +107,11 @@ class TestWECOIntegration:
 
         # Analyze - IMR analysis includes moving range calculation
         pdf = ProcessDataFrame(df)
-        analysis = pdf.analyze(
-            response_var='y',
-            time_var='time'
+        study = pdf.formulate(
+            response=pdf.columns.y,
+            time=pdf.columns.time
         )
-        result = analysis.calculate()
+        result = study.analyze()
 
         # IMR analysis returns results with 'all' key
         # The chart includes moving range data with metadata
@@ -130,12 +130,12 @@ class TestWECOIntegration:
 
         # Analyze
         pdf = ProcessDataFrame(df)
-        analysis = pdf.analyze(
-            response_var='y',
-            grouping_vars=['factor 1'],
-            time_var='time'
+        study = pdf.formulate(
+            response=pdf.columns.y,
+            factors=[pdf.columns.factor_1],
+            time=pdf.columns.time
         )
-        result = analysis.calculate()
+        result = study.analyze()
 
         # Detect signals on all charts
         # Use config with lower min_observations
@@ -164,12 +164,12 @@ class TestWECOIntegration:
 
         # Analyze
         pdf = ProcessDataFrame(df)
-        analysis = pdf.analyze(
-            response_var='y',
-            grouping_vars=['factor 1'],
-            time_var='time'
+        study = pdf.formulate(
+            response=pdf.columns.y,
+            factors=[pdf.columns.factor_1],
+            time=pdf.columns.time
         )
-        result = analysis.calculate()
+        result = study.analyze()
 
         # Detect signals with Rule 1 (beyond limits)
         # Use config with lower min_observations
@@ -186,12 +186,12 @@ class TestWECOIntegration:
         df = synthetic.make_sds1(K=2, T=6, n_min=2, n_max=3, seed=42)
 
         pdf = ProcessDataFrame(df)
-        analysis = pdf.analyze(
-            response_var='y',
-            grouping_vars=['factor 1'],
-            time_var='time'
+        study = pdf.formulate(
+            response=pdf.columns.y,
+            factors=[pdf.columns.factor_1],
+            time=pdf.columns.time
         )
-        result = analysis.calculate()
+        result = study.analyze()
 
         # Manually remove metadata to simulate bug
         del result.charts['Xbar']['metadata']
@@ -207,12 +207,12 @@ class TestWECOIntegration:
 
         # Analyze
         pdf = ProcessDataFrame(df)
-        analysis = pdf.analyze(
-            response_var='y',
-            grouping_vars=['factor 1'],
-            time_var='time'
+        study = pdf.formulate(
+            response=pdf.columns.y,
+            factors=[pdf.columns.factor_1],
+            time=pdf.columns.time
         )
-        result = analysis.calculate()
+        result = study.analyze()
 
         # Get Xbar chart
         xbar_chart = result.charts['Xbar']
@@ -240,12 +240,12 @@ class TestMetadataContract:
         df = synthetic.make_sds1(K=2, T=8, n_min=2, n_max=4, seed=42)
 
         pdf = ProcessDataFrame(df)
-        analysis = pdf.analyze(
-            response_var='y',
-            grouping_vars=['factor 1'],
-            time_var='time'
+        study = pdf.formulate(
+            response=pdf.columns.y,
+            factors=[pdf.columns.factor_1],
+            time=pdf.columns.time
         )
-        result = analysis.calculate()
+        result = study.analyze()
 
         # Check Xbar metadata
         xbar_meta = result.charts['Xbar']['metadata']
@@ -264,11 +264,11 @@ class TestMetadataContract:
         df = synthetic.make_sds4(T=50, seed=42)
 
         pdf = ProcessDataFrame(df)
-        analysis = pdf.analyze(
-            response_var='y',
-            time_var='time'
+        study = pdf.formulate(
+            response=pdf.columns.y,
+            time=pdf.columns.time
         )
-        result = analysis.calculate()
+        result = study.analyze()
 
         # Check IMR metadata
         imr_meta = result.charts['all']['metadata']
@@ -281,12 +281,12 @@ class TestMetadataContract:
         df = synthetic.make_sds1(K=2, T=8, n_min=2, n_max=4, seed=42)
 
         pdf = ProcessDataFrame(df)
-        analysis = pdf.analyze(
-            response_var='y',
-            grouping_vars=['factor 1'],
-            time_var='time'
+        study = pdf.formulate(
+            response=pdf.columns.y,
+            factors=[pdf.columns.factor_1],
+            time=pdf.columns.time
         )
-        result = analysis.calculate()
+        result = study.analyze()
 
         # All charts should have metadata with required keys
         for chart_name, chart_info in result.charts.items():
