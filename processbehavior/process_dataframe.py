@@ -23,11 +23,15 @@ Usage:
 from __future__ import annotations
 
 import logging
+from typing import TYPE_CHECKING
 
 import pandas as pd
 
 from .analysis_specification import DataPrepConfig
 from .sds_detector import SamplingDesignDetector
+
+if TYPE_CHECKING:
+    from .study import Study
 
 logger = logging.getLogger(__name__)
 
@@ -263,7 +267,7 @@ class ProcessDataFrame:
         factors: list[str] | None = None,
         time: str | None = None,
         precision: int = 3
-    ) -> 'Study':
+    ) -> Study:
         """
         Formulate a study for process behavior analysis.
 
