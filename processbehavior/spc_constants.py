@@ -19,7 +19,6 @@ import math
 
 import numpy as np
 import pandas as pd
-import scipy.special
 
 # ============================================================================
 # Statistical Control Chart Constants
@@ -84,7 +83,7 @@ def c4(n: int) -> float:
         raise ValueError(f"Subgroup size must be >= 2, got {n}")
 
     out = np.sqrt(2 / (n - 1)) * (
-        np.exp(scipy.special.loggamma(n / 2) - scipy.special.loggamma((n - 1) / 2))
+        np.exp(math.lgamma(n / 2) - math.lgamma((n - 1) / 2))
     )
     return out
 
