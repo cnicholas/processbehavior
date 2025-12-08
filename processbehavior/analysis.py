@@ -944,14 +944,29 @@ class Analysis:
                 # Wrap in dict format if needed
                 if isinstance(result, pd.DataFrame):
                     chart_name = f'{residual}_S'
+
+                    # Check if limits vary (different values across rows)
+                    lpl_varies = result['lpl'].nunique() > 1 if 'lpl' in result.columns else False
+                    upl_varies = result['upl'].nunique() > 1 if 'upl' in result.columns else False
+                    limits_vary = lpl_varies or upl_varies
+
+                    if limits_vary:
+                        statistics = {
+                            'center': result['center'].iloc[0] if 'center' in result.columns else None,
+                            'lpl': 'Varies',
+                            'upl': 'Varies',
+                        }
+                    else:
+                        statistics = {
+                            'center': result['center'].iloc[0] if 'center' in result.columns else None,
+                            'lpl': result['lpl'].iloc[0] if 'lpl' in result.columns else None,
+                            'upl': result['upl'].iloc[0] if 'upl' in result.columns else None,
+                        }
+
                     result = {
                         chart_name: {
                             'data': result,
-                            'statistics': {
-                                'center': result['center'].iloc[0] if 'center' in result.columns else None,
-                                'lpl': result['lpl'].iloc[0] if 'lpl' in result.columns else None,
-                                'upl': result['upl'].iloc[0] if 'upl' in result.columns else None,
-                            },
+                            'statistics': statistics,
                             'metadata': {
                                 'chart_type': 'S',
                                 'value_col': 's',
