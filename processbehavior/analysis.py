@@ -344,13 +344,13 @@ class Analysis:
         self,
         df: pd.DataFrame,
         value_col: str,
-        lcl_col: str = 'lcl',
-        ucl_col: str = 'ucl'
+        lpl_col: str = 'lpl',
+        upl_col: str = 'upl'
     ) -> pd.DataFrame:
         """
         Add beyond_limits flag column.
 
-        Returns -1 for below LCL, 1 for above UCL, 0 for in control.
+        Returns -1 for below LPL, 1 for above UPL, 0 for in control.
 
         Pure function: doesn't modify input.
 
@@ -360,10 +360,10 @@ class Analysis:
             Input data with control limits
         value_col : str
             Column name containing values to check
-        lcl_col : str, default 'lcl'
-            Column name for lower control limit
-        ucl_col : str, default 'ucl'
-            Column name for upper control limit
+        lpl_col : str, default 'lpl'
+            Column name for lower process limit
+        upl_col : str, default 'upl'
+            Column name for upper process limit
 
         Returns
         -------
@@ -375,8 +375,8 @@ class Analysis:
         result['beyond_limits'] = result.apply(
             lambda row: detect_beyond_limits(
                 x=row[value_col],
-                ucl=row[ucl_col],
-                lcl=row[lcl_col]
+                upl=row[upl_col],
+                lpl=row[lpl_col]
             ),
             axis=1
         )
@@ -434,7 +434,7 @@ class Analysis:
         df : pd.DataFrame
             Analysis results with chart data
         statistics_cols : list[str]
-            Columns to collect statistics for (e.g., ['mean', 'lcl', 'ucl'])
+            Columns to collect statistics for (e.g., ['mean', 'lpl', 'upl'])
         chart_type : str
             Type of chart ('Imr' or 'R')
         value_col : str
@@ -450,7 +450,7 @@ class Analysis:
         --------
         >>> result = self._package_stratified_results(
         ...     df=out,
-        ...     statistics_cols=['center', 'lcl', 'ucl'],
+        ...     statistics_cols=['center', 'lpl', 'upl'],
         ...     chart_type='Imr',
         ...     value_col='measurement'
         ... )
@@ -509,7 +509,7 @@ class Analysis:
         df : pd.DataFrame
             Input data
         value_cols : list[str]
-            Columns to keep (e.g., ['mean', 'lcl', 'ucl', 'beyond_limits'])
+            Columns to keep (e.g., ['mean', 'lpl', 'upl', 'beyond_limits'])
 
         Returns
         -------
@@ -527,7 +527,7 @@ class Analysis:
         --------
         >>> out = self._build_output_columns(
         ...     df=out,
-        ...     value_cols=[spec.response_var, 'mean', 'lcl', 'ucl', 'beyond_limits']
+        ...     value_cols=[spec.response_var, 'mean', 'lpl', 'upl', 'beyond_limits']
         ... )
         """
         result = df.copy()
@@ -603,7 +603,7 @@ class Analysis:
         # CALCULATE XBAR
         xbar = out.copy()
         xbar['center'] = _Xbar  # Add center column for Xbar chart
-        xbar[['lcl', 'ucl']] = xbar.apply(
+        xbar[['lpl', 'upl']] = xbar.apply(
             lambda row: calculate_limits(
                 mean=row['center'],
                 sd=_S,
@@ -620,15 +620,15 @@ class Analysis:
         statistics['center'] = round(_Xbar, spec.round_to)
         if n_to_use == "N":
             statistics['N'] = _N
-            statistics['ucl'] = xbar['ucl'].max()
-            statistics['lcl'] = xbar['lcl'].max()
+            statistics['upl'] = xbar['upl'].max()
+            statistics['lpl'] = xbar['lpl'].max()
         else:
             variable_stats = 'Varies'
             statistics['N'] = variable_stats
-            statistics['lcl'] = variable_stats
-            statistics['ucl'] = variable_stats
+            statistics['lpl'] = variable_stats
+            statistics['upl'] = variable_stats
 
-        cols_to_keep = ['rsg', 'xbar', 'center', 'lcl', 'ucl', 'beyond_limits']
+        cols_to_keep = ['rsg', 'xbar', 'center', 'lpl', 'upl', 'beyond_limits']
         xbar = xbar[cols_to_keep]
         result['Xbar'] = {
             'data': xbar,
@@ -646,7 +646,7 @@ class Analysis:
 
         sbar = out.copy()
         sbar['center'] = _S  # Add center column for S chart
-        sbar[['lcl', 'ucl']] = sbar.apply(
+        sbar[['lpl', 'upl']] = sbar.apply(
             lambda row: calculate_limits(
                 mean=0,
                 sd=row['center'],
@@ -663,15 +663,15 @@ class Analysis:
 
         if n_to_use == "N":
             statistics['N'] = _N
-            statistics['ucl'] = sbar['ucl'].max()
-            statistics['lcl'] = sbar['lcl'].max()
+            statistics['upl'] = sbar['upl'].max()
+            statistics['lpl'] = sbar['lpl'].max()
         else:
             variable_stats = 'Varies'
             statistics['N'] = variable_stats
-            statistics['lcl'] = variable_stats
-            statistics['ucl'] = variable_stats
+            statistics['lpl'] = variable_stats
+            statistics['upl'] = variable_stats
 
-        cols_to_keep = ['rsg', 's', 'center', 'lcl', 'ucl', 'beyond_limits']
+        cols_to_keep = ['rsg', 's', 'center', 'lpl', 'upl', 'beyond_limits']
         sbar = sbar[cols_to_keep]
         result['Sbar'] = {
             'data': sbar,
@@ -712,7 +712,7 @@ class Analysis:
         n_to_use, n_max = self._determine_n_to_use(out)
 
         # Add limits columns
-        out[['lcl', 'ucl']] = out.apply(
+        out[['lpl', 'upl']] = out.apply(
             lambda row: calculate_limits(
                 mean=0,
                 sd=row['center'],
@@ -726,7 +726,7 @@ class Analysis:
         # FIX: Should use 's' (varying values) not 'center' (constant)
         out = self._add_beyond_limits_flag(out, value_col='s')
 
-        cols_to_keep = ['rsg', 's', 'center', 'lcl', 'ucl', 'beyond_limits']
+        cols_to_keep = ['rsg', 's', 'center', 'lpl', 'upl', 'beyond_limits']
         out = out[cols_to_keep]
         out = out.round(spec.round_to)
 
@@ -791,28 +791,28 @@ class Analysis:
                 axis=1
             )
 
-            # --- Normalize/join lcl/ucl regardless of return type ---
+            # --- Normalize/join lpl/upl regardless of return type ---
             if isinstance(lims, pd.DataFrame):
-                # Your case: lims already has columns ['lcl','ucl'], index aligned to grouped
-                grouped = grouped.join(lims[['lcl','ucl']])
+                # Your case: lims already has columns ['lpl','upl'], index aligned to grouped
+                grouped = grouped.join(lims[['lpl','upl']])
             else:
                 # lims is a Series; each element could be dict/Series/tuple
                 def _to_pair(x):
                     if isinstance(x, dict):
-                        return x.get('lcl', np.nan), x.get('ucl', np.nan)
+                        return x.get('lpl', np.nan), x.get('upl', np.nan)
                     try:
-                        return x['lcl'], x['ucl']         # pandas Series-like
+                        return x['lpl'], x['upl']         # pandas Series-like
                     except Exception:
                         pass
-                    if hasattr(x, 'lcl') and hasattr(x, 'ucl'):
-                        return getattr(x, 'lcl', np.nan), getattr(x, 'ucl', np.nan)
+                    if hasattr(x, 'lpl') and hasattr(x, 'upl'):
+                        return getattr(x, 'lpl', np.nan), getattr(x, 'upl', np.nan)
                     if isinstance(x, (list, tuple)) and len(x) >= 2:
                         return x[0], x[1]
                     return np.nan, np.nan
 
                 lims_df = pd.DataFrame(lims.map(_to_pair).tolist(),
                                     index=grouped.index,
-                                    columns=['lcl','ucl'])
+                                    columns=['lpl','upl'])
                 grouped = grouped.join(lims_df)
 
 
@@ -821,7 +821,7 @@ class Analysis:
 
             # Attach back to rows
             out = out.merge(
-                grouped[[spec.rsg_var_name, 'center', 'mR', 'lcl', 'ucl']],
+                grouped[[spec.rsg_var_name, 'center', 'mR', 'lpl', 'upl']],
                 on=spec.rsg_var_name, how='left', validate='many_to_one'
             )
         else:
@@ -837,8 +837,8 @@ class Analysis:
             )
             out['center'] = mean_  # Renamed from 'mean' to 'center'
             out['mR']   = mR
-            out['lcl']  = lims['lcl']
-            out['ucl']  = lims['ucl']
+            out['lpl']  = lims['lpl']
+            out['upl']  = lims['upl']
 
         # Detect beyond limits signals
         out = self._add_beyond_limits_flag(out, value_col=spec.response_var)
@@ -846,13 +846,13 @@ class Analysis:
         # Format output with appropriate columns
         out = self._build_output_columns(
             df=out,
-            value_cols=[spec.response_var, 'center', 'lcl', 'ucl', 'beyond_limits']
+            value_cols=[spec.response_var, 'center', 'lpl', 'upl', 'beyond_limits']
         )
 
         # Package results with statistics and metadata
         return self._package_stratified_results(
             df=out,
-            statistics_cols=['center', 'lcl', 'ucl'],
+            statistics_cols=['center', 'lpl', 'upl'],
             chart_type='Imr',
             value_col=spec.response_var
         )
@@ -949,8 +949,8 @@ class Analysis:
                             'data': result,
                             'statistics': {
                                 'center': result['center'].iloc[0] if 'center' in result.columns else None,
-                                'lcl': result['lcl'].iloc[0] if 'lcl' in result.columns else None,
-                                'ucl': result['ucl'].iloc[0] if 'ucl' in result.columns else None,
+                                'lpl': result['lpl'].iloc[0] if 'lpl' in result.columns else None,
+                                'upl': result['upl'].iloc[0] if 'upl' in result.columns else None,
                             },
                             'metadata': {
                                 'chart_type': 'S',
@@ -1039,8 +1039,8 @@ class Analysis:
                 limits_type="R",
                 round_to=spec.round_to
             )
-            out['lcl'] = limits['lcl']
-            out['ucl'] = limits["ucl"]
+            out['lpl'] = limits['lpl']
+            out['upl'] = limits['upl']
 
         # Drop NAs
         out = out.dropna()
@@ -1051,13 +1051,13 @@ class Analysis:
         # Format output with appropriate columns
         out = self._build_output_columns(
             df=out,
-            value_cols=['mr', 'center', 'lcl', 'ucl', 'beyond_limits']
+            value_cols=['mr', 'center', 'lpl', 'upl', 'beyond_limits']
         )
 
         # Package results with statistics and metadata
         return self._package_stratified_results(
             df=out,
-            statistics_cols=['center', 'lcl', 'ucl'],
+            statistics_cols=['center', 'lpl', 'upl'],
             chart_type='R',
             value_col='mr'
         )

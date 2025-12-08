@@ -125,8 +125,8 @@ class TestSignalDetector:
         """Create simple test statistics."""
         return {
             'center': 100.0,
-            'ucl': 115.0,  # center + 3*sigma
-            'lcl': 85.0    # center - 3*sigma
+            'upl': 115.0,  # center + 3*sigma
+            'lpl': 85.0    # center - 3*sigma
         }
 
     def test_no_violations(self, simple_data, simple_stats):
@@ -144,14 +144,14 @@ class TestSignalDetector:
         """Test Rule 1: beyond limits detection."""
         # Create data with violations
         data = pd.DataFrame({
-            'mean': [100, 100, 120, 100, 100],  # 120 is beyond UCL
+            'mean': [100, 100, 120, 100, 100],  # 120 is beyond UPL
             'obs_id': range(5)
         })
 
         stats = {
             'center': 100.0,
-            'ucl': 115.0,
-            'lcl': 85.0
+            'upl': 115.0,
+            'lpl': 85.0
         }
 
         detector = SignalDetector()
@@ -173,8 +173,8 @@ class TestSignalDetector:
 
         stats = {
             'center': 96.0,
-            'ucl': 110.0,
-            'lcl': 82.0
+            'upl': 110.0,
+            'lpl': 82.0
         }
 
         detector = SignalDetector()
@@ -226,12 +226,12 @@ class TestSignalResult:
             'description': ['Beyond limits', 'Beyond limits', 'Zone A', 'Trend'],
             'value': [120.0, 85.0, 112.0, 108.0],
             'center': [100.0, 100.0, 100.0, 100.0],
-            'ucl': [115.0, 115.0, 115.0, 115.0],
-            'lcl': [85.0, 85.0, 85.0, 85.0]
+            'upl': [115.0, 115.0, 115.0, 115.0],
+            'lpl': [85.0, 85.0, 85.0, 85.0]
         })
 
         data = pd.DataFrame({'mean': [100] * 10})
-        stats = {'center': 100, 'ucl': 115, 'lcl': 85}
+        stats = {'center': 100, 'upl': 115, 'lpl': 85}
 
         return SignalResult(violations, 'Test Chart', data, stats)
 

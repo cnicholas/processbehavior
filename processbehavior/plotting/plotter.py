@@ -112,7 +112,7 @@ class Plotter:
         show_limits : bool, default True
             Whether to show control limit lines
         show_limit_values : bool, default True
-            Whether to show numeric values in limit labels (e.g., "UCL = 52.34")
+            Whether to show numeric values in limit labels (e.g., "UPL = 52.34")
         show_zones : bool, default False
             Whether to show zone shading (A/B/C zones at ±1σ, ±2σ, ±3σ).
             Zone colors are controlled by the theme's zone_a_color, zone_b_color,
@@ -120,7 +120,7 @@ class Plotter:
         show_rules : bool, default False
             Whether to show additional run rules (Western Electric Rules 2-8)
         show_stats : bool, default False
-            Whether to show a statistics box with CL, UCL, LCL, and n values
+            Whether to show a statistics box with CL, UPL, LPL, and n values
         template : str or ChartTheme, default 'processbehavior'
             Visual theme. Can be a theme name string ('processbehavior', 'ggplot',
             'minimal', 'dark', 'publication') or a ChartTheme instance for full
@@ -319,32 +319,64 @@ class Plotter:
             hovertemplate='%{x}<br>%{y:.3f}<extra></extra>'
         ))
 
-        # Control limits
+        # Process limits
         if show_limits:
-            # UCL
-            if 'ucl' in stats and stats['ucl'] != 'Varies':
-                ucl_label = self._format_limit_label('UCL', stats['ucl'], show_limit_values)
-                fig.add_hline(
-                    y=stats['ucl'],
-                    line_dash=theme.limit_line_dash,
-                    line_color=theme.ucl_color,
-                    line_width=theme.limit_line_width,
-                    annotation_text=ucl_label,
-                    annotation_position='right',
-                    annotation_font_size=theme.annotation_font_size
-                )
+            limits_vary = stats.get('upl') == 'Varies' or stats.get('lpl') == 'Varies'
 
-            # LCL
-            if 'lcl' in stats and stats['lcl'] != 'Varies':
-                lcl_label = self._format_limit_label('LCL', stats['lcl'], show_limit_values)
-                fig.add_hline(
-                    y=stats['lcl'],
-                    line_dash=theme.limit_line_dash,
-                    line_color=theme.lcl_color,
-                    line_width=theme.limit_line_width,
-                    annotation_text=lcl_label,
-                    annotation_position='right',
-                    annotation_font_size=theme.annotation_font_size
+            # UPL
+            if 'upl' in stats:
+                if stats['upl'] != 'Varies':
+                    # Fixed limit - draw horizontal line
+                    upl_label = self._format_limit_label('UPL', stats['upl'], show_limit_values)
+                    fig.add_hline(
+                        y=stats['upl'],
+                        line_dash=theme.limit_line_dash,
+                        line_color=theme.ucl_color,
+                        line_width=theme.limit_line_width,
+                        annotation_text=upl_label,
+                        annotation_position='right',
+                        annotation_font_size=theme.annotation_font_size
+                    )
+                elif 'upl' in data.columns:
+                    # Varying limit - draw stepped line
+                    self._add_stepped_limit_line(
+                        fig, data, x_col, 'upl',
+                        theme.ucl_color, theme.limit_line_dash, theme.limit_line_width,
+                        'UPL', theme
+                    )
+
+            # LPL
+            if 'lpl' in stats:
+                if stats['lpl'] != 'Varies':
+                    # Fixed limit - draw horizontal line
+                    lpl_label = self._format_limit_label('LPL', stats['lpl'], show_limit_values)
+                    fig.add_hline(
+                        y=stats['lpl'],
+                        line_dash=theme.limit_line_dash,
+                        line_color=theme.lcl_color,
+                        line_width=theme.limit_line_width,
+                        annotation_text=lpl_label,
+                        annotation_position='right',
+                        annotation_font_size=theme.annotation_font_size
+                    )
+                elif 'lpl' in data.columns:
+                    # Varying limit - draw stepped line
+                    self._add_stepped_limit_line(
+                        fig, data, x_col, 'lpl',
+                        theme.lcl_color, theme.limit_line_dash, theme.limit_line_width,
+                        'LPL', theme
+                    )
+
+            # Add annotation when limits vary
+            if limits_vary:
+                fig.add_annotation(
+                    text="Process limits vary by subgroup size (n)",
+                    xref="paper", yref="paper",
+                    x=0.02, y=0.98,
+                    showarrow=False,
+                    font=dict(size=10, color="gray"),
+                    bgcolor="rgba(255,255,255,0.8)",
+                    borderpad=3
                 )
 
             # Centerline
@@ -506,12 +538,12 @@ class Plotter:
             if show_limits:
                 x_range = [x_data.min(), x_data.max()]
 
-                # UCL
-                if 'ucl' in stats and stats['ucl'] != 'Varies':
+                # UPL
+                if 'upl' in stats and stats['upl'] != 'Varies':
                     fig.add_shape(
                         type='line',
                         x0=x_range[0], x1=x_range[1],
-                        y0=stats['ucl'], y1=stats['ucl'],
+                        y0=stats['upl'], y1=stats['upl'],
                         line=dict(
                             color=theme.ucl_color,
                             dash=theme.limit_line_dash,
@@ -520,12 +552,12 @@ class Plotter:
                         row=row, col=col
                     )
 
-                # LCL
-                if 'lcl' in stats and stats['lcl'] != 'Varies':
+                # LPL
+                if 'lpl' in stats and stats['lpl'] != 'Varies':
                     fig.add_shape(
                         type='line',
                         x0=x_range[0], x1=x_range[1],
-                        y0=stats['lcl'], y1=stats['lcl'],
+                        y0=stats['lpl'], y1=stats['lpl'],
                         line=dict(
                             color=theme.lcl_color,
                             dash=theme.limit_line_dash,
@@ -734,8 +766,8 @@ class Plotter:
             global_max = max(global_max, data_max)
 
             # Include control limits in range
-            ucl = stats.get('ucl')
-            lcl = stats.get('lcl')
+            ucl = stats.get('upl')
+            lcl = stats.get('lpl')
 
             if ucl is not None and ucl != 'Varies':
                 global_max = max(global_max, ucl)
@@ -969,7 +1001,7 @@ class Plotter:
         Parameters
         ----------
         limit_name : str
-            Name of the limit ('UCL', 'LCL', 'CL')
+            Name of the limit ('UPL', 'LPL', 'CL')
         value : float
             Numeric value of the limit
         show_value : bool
@@ -978,7 +1010,7 @@ class Plotter:
         Returns
         -------
         str
-            Formatted label like "UCL = 52.34" or just "UCL"
+            Formatted label like "UPL = 52.34" or just "UPL"
         """
         if show_value:
             # Determine appropriate decimal places based on magnitude
@@ -989,6 +1021,81 @@ class Plotter:
             else:
                 return f"{limit_name} = {value:.3f}"
         return limit_name
+
+    def _add_stepped_limit_line(
+        self,
+        fig: go.Figure,
+        data: pd.DataFrame,
+        x_col: str,
+        limit_col: str,
+        line_color: str,
+        line_dash: str,
+        line_width: float,
+        limit_name: str,
+        theme: 'ChartTheme'
+    ) -> None:
+        """
+        Add a stepped limit line that follows varying per-row limits.
+
+        Creates a step pattern connecting limit values, stepping vertically
+        at each point where the limit changes.
+
+        Parameters
+        ----------
+        fig : go.Figure
+            Plotly figure to add the line to
+        data : pd.DataFrame
+            Chart data with limit column
+        x_col : str
+            Name of x-axis column
+        limit_col : str
+            Name of limit column ('upl' or 'lpl')
+        line_color : str
+            Color for the limit line
+        line_dash : str
+            Dash pattern for the line
+        line_width : float
+            Width of the line
+        limit_name : str
+            Name for legend ('UPL' or 'LPL')
+        theme : ChartTheme
+            Chart theme for styling
+        """
+        if limit_col not in data.columns:
+            return
+
+        # Get x values and limit values
+        if x_col in data.columns:
+            x_vals = data[x_col].tolist()
+        else:
+            x_vals = data.index.tolist()
+
+        limit_vals = data[limit_col].tolist()
+
+        # Build stepped line coordinates
+        # For each point, we draw a horizontal line to the next point's x,
+        # then step up/down to the next point's limit value
+        x_stepped = []
+        y_stepped = []
+
+        for i in range(len(x_vals)):
+            x_stepped.append(x_vals[i])
+            y_stepped.append(limit_vals[i])
+
+            # Add horizontal segment to next point's x position (if not last point)
+            if i < len(x_vals) - 1:
+                x_stepped.append(x_vals[i + 1])
+                y_stepped.append(limit_vals[i])
+
+        fig.add_trace(go.Scatter(
+            x=x_stepped,
+            y=y_stepped,
+            mode='lines',
+            name=f'{limit_name} (varies)',
+            line=dict(color=line_color, dash=line_dash, width=line_width),
+            hovertemplate=f'{limit_name}: %{{y:.3f}}<extra></extra>',
+            showlegend=False
+        ))
 
     # =========================================================================
     # Zone Shading
@@ -1013,7 +1120,7 @@ class Plotter:
         Parameters
         ----------
         stats : dict
-            Chart statistics with 'center', 'ucl', 'lcl' keys
+            Chart statistics with 'center', 'upl', 'lpl' keys
         theme : ChartTheme
             Theme with zone colors
 
@@ -1024,17 +1131,17 @@ class Plotter:
             or None if zones cannot be calculated
         """
         # Skip if limits vary (can't calculate consistent zones)
-        if stats.get('ucl') == 'Varies' or stats.get('lcl') == 'Varies':
+        if stats.get('upl') == 'Varies' or stats.get('lpl') == 'Varies':
             return None
 
         center = stats.get('center')
-        ucl = stats.get('ucl')
-        lcl = stats.get('lcl')
+        ucl = stats.get('upl')
+        lcl = stats.get('lpl')
 
         if center is None or ucl is None or lcl is None:
             return None
 
-        # Calculate sigma from control limits (UCL = center + 3σ)
+        # Calculate sigma from control limits (UPL = center + 3σ)
         sigma = (ucl - center) / 3
 
         # Zone boundaries
@@ -1065,7 +1172,7 @@ class Plotter:
         fig : go.Figure
             Plotly figure to add shapes to
         stats : dict
-            Chart statistics with 'center', 'ucl', 'lcl' keys
+            Chart statistics with 'center', 'upl', 'lpl' keys
         theme : ChartTheme
             Theme with zone colors and opacity
         """
@@ -1100,7 +1207,7 @@ class Plotter:
         fig : go.Figure
             Plotly figure with subplots
         stats : dict
-            Chart statistics with 'center', 'ucl', 'lcl' keys
+            Chart statistics with 'center', 'upl', 'lpl' keys
         theme : ChartTheme
             Theme with zone colors and opacity
         row : int
@@ -1307,7 +1414,7 @@ class Plotter:
         Parameters
         ----------
         stats : dict
-            Chart statistics with 'center', 'ucl', 'lcl' keys
+            Chart statistics with 'center', 'upl', 'lpl' keys
         data : DataFrame
             Chart data (for calculating n)
         compact : bool, default False
@@ -1329,20 +1436,20 @@ class Plotter:
                 parts.append(f"CL={self._format_stat_value(center, compact=True)}")
             return ' | '.join(parts) if parts else None
         else:
-            # Full format: multi-line with n, CL, UCL, LCL
+            # Full format: multi-line with n, CL, UPL, LPL
             lines = [f"n = {n}"]
 
             center = stats.get('center')
             if center is not None and center != 'Varies':
                 lines.append(f"CL = {self._format_stat_value(center)}")
 
-            ucl = stats.get('ucl')
+            ucl = stats.get('upl')
             if ucl is not None and ucl != 'Varies':
-                lines.append(f"UCL = {self._format_stat_value(ucl)}")
+                lines.append(f"UPL = {self._format_stat_value(ucl)}")
 
-            lcl = stats.get('lcl')
+            lcl = stats.get('lpl')
             if lcl is not None and lcl != 'Varies':
-                lines.append(f"LCL = {self._format_stat_value(lcl)}")
+                lines.append(f"LPL = {self._format_stat_value(lcl)}")
 
             return '<br>'.join(lines) if lines else None
 
@@ -1361,7 +1468,7 @@ class Plotter:
         fig : go.Figure
             Plotly figure to add annotation to
         stats : dict
-            Chart statistics with 'center', 'ucl', 'lcl' keys
+            Chart statistics with 'center', 'upl', 'lpl' keys
         data : DataFrame
             Chart data (for calculating n)
         theme : ChartTheme
@@ -1411,7 +1518,7 @@ class Plotter:
         fig : go.Figure
             Plotly figure with subplots
         stats : dict
-            Chart statistics with 'center', 'ucl', 'lcl' keys
+            Chart statistics with 'center', 'upl', 'lpl' keys
         data : DataFrame
             Chart data (for calculating n)
         theme : ChartTheme

@@ -24,13 +24,13 @@ def detect_beyond_limits(
     Parameters
     ----------
     data : DataFrame
-        Chart data with optional 'ucl' and 'lcl' columns for varying limits
+        Chart data with optional 'upl' and 'lpl' columns for varying limits
     stats : dict
-        Chart statistics with 'ucl' and 'lcl' keys
+        Chart statistics with 'upl' and 'lpl' keys
     value_col : str
         Name of value column
     limits_vary : bool, default False
-        If True, use per-row 'ucl' and 'lcl' from data columns
+        If True, use per-row 'upl' and 'lpl' from data columns
 
     Returns
     -------
@@ -40,12 +40,12 @@ def detect_beyond_limits(
     values = data[value_col]
 
     # Use per-row limits if they vary, else use constant limits from stats
-    if limits_vary and 'ucl' in data.columns and 'lcl' in data.columns:
-        ucl = data['ucl']
-        lcl = data['lcl']
+    if limits_vary and 'upl' in data.columns and 'lpl' in data.columns:
+        ucl = data['upl']
+        lcl = data['lpl']
     else:
-        ucl = stats['ucl']
-        lcl = stats['lcl']
+        ucl = stats['upl']
+        lcl = stats['lpl']
 
     return (values > ucl) | (values < lcl)
 

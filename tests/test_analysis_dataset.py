@@ -117,14 +117,14 @@ class TestXbarSAnalysis:
         # Check Xbar statistics
         xbar_stats = result['Xbar']['statistics']
         assert xbar_stats['center'] == 5.0
-        assert xbar_stats['lcl'] == 1.52
-        assert xbar_stats['ucl'] == 8.48
+        assert xbar_stats['lpl'] == 1.52
+        assert xbar_stats['upl'] == 8.48
 
         # Check Sbar statistics
         sbar_stats = result['Sbar']['statistics']
         assert sbar_stats['center'] == 1.78
-        assert sbar_stats['lcl'] == 0
-        assert sbar_stats['ucl'] == 4.57
+        assert sbar_stats['lpl'] == 0
+        assert sbar_stats['upl'] == 4.57
 
     def test_xbar_s_differing_ns(self, df_differing_Ns):
         """Test Xbar-S with varying group sizes (limits vary by subgroup)."""
@@ -143,12 +143,12 @@ class TestXbarSAnalysis:
         # Center should be calculated
         assert result['Xbar']['statistics']['center'] == 4.17
         # Limits should vary when group sizes differ
-        assert result['Xbar']['statistics']['lcl'] == 'Varies'
-        assert result['Xbar']['statistics']['ucl'] == 'Varies'
+        assert result['Xbar']['statistics']['lpl'] == 'Varies'
+        assert result['Xbar']['statistics']['upl'] == 'Varies'
 
         assert result['Sbar']['statistics']['center'] == 2.48
-        assert result['Sbar']['statistics']['lcl'] == 'Varies'
-        assert result['Sbar']['statistics']['ucl'] == 'Varies'
+        assert result['Sbar']['statistics']['lpl'] == 'Varies'
+        assert result['Sbar']['statistics']['upl'] == 'Varies'
 
     def test_xbar_zero_center(self, df):
         """Test Xbar analysis with zero-centered option."""
@@ -202,10 +202,10 @@ class TestImrAnalysis:
         assert result['b_d']['statistics']['center'] == 7.67
 
         # Check limits
-        assert result['a_c']['statistics']['lcl'] == -0.33
-        assert result['b_d']['statistics']['lcl'] == 1.02
-        assert result['a_c']['statistics']['ucl'] == 4.99
-        assert result['b_d']['statistics']['ucl'] == 14.32
+        assert result['a_c']['statistics']['lpl'] == -0.33
+        assert result['b_d']['statistics']['lpl'] == 1.02
+        assert result['a_c']['statistics']['upl'] == 4.99
+        assert result['b_d']['statistics']['upl'] == 14.32
 
         # Check sample sizes
         assert result['a_c']['statistics']['n'] == 3
@@ -248,8 +248,8 @@ class TestImrAnalysis:
         out = result.get("all")
         # Verify against R (qcc) results
         assert out['statistics']['center'] == 237.78
-        assert out['statistics']['lcl'] == 232.23
-        assert out['statistics']['ucl'] == 243.33
+        assert out['statistics']['lpl'] == 232.23
+        assert out['statistics']['upl'] == 243.33
 
 
 # ========================
@@ -283,10 +283,10 @@ class TestRChartAnalysis:
         assert result['b_d']['statistics']['center'] == 2.5
 
         # Check limits
-        assert result['a_c']['statistics']['lcl'] == 0
-        assert result['b_d']['statistics']['lcl'] == 0
-        assert result['a_c']['statistics']['ucl'] == 3.27
-        assert result['b_d']['statistics']['ucl'] == 8.17
+        assert result['a_c']['statistics']['lpl'] == 0
+        assert result['b_d']['statistics']['lpl'] == 0
+        assert result['a_c']['statistics']['upl'] == 3.27
+        assert result['b_d']['statistics']['upl'] == 8.17
 
         # Check data row counts (first row drops for MR calculation)
         assert len(result['a_c']['data']) == 2
@@ -306,8 +306,8 @@ class TestRChartAnalysis:
         assert hasattr(result, "keys") and hasattr(result, "values")
         assert result['all']['statistics']['center'] == 2.917
         assert result['all']['statistics']['n'] == 6
-        assert result['all']['statistics']['lcl'] == 0
-        assert result['all']['statistics']['ucl'] == 9.532
+        assert result['all']['statistics']['lpl'] == 0
+        assert result['all']['statistics']['upl'] == 9.532
 
     def test_r_with_fillweight_data(self):
         """Test R chart on FillWeight800 dataset with stratification."""
@@ -485,10 +485,10 @@ class TestUtilityFunctions:
         result = pd.DataFrame({'mean': mean, 'sd': sd, 'N': N})
         result['c4'] = result['N'].apply(c4)
         result['Wd'] = result['sd'] / result['c4']
-        result['lcl'] = result['mean'] + (-1 * ((3 * result['Wd']) / np.sqrt(result['N'])))
-        result['ucl'] = result['mean'] + ((3 * result['Wd']) / np.sqrt(result['N']))
+        result['lpl'] = result['mean'] + (-1 * ((3 * result['Wd']) / np.sqrt(result['N'])))
+        result['upl'] = result['mean'] + ((3 * result['Wd']) / np.sqrt(result['N']))
 
         # Verify c4 is calculated for each row
         assert len(result['c4']) == 10
         # Verify limits are symmetric around mean
-        assert (result['ucl'] - result['mean']).equals(result['mean'] - result['lcl'])
+        assert (result['upl'] - result['mean']).equals(result['mean'] - result['lpl'])

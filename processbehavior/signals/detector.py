@@ -83,7 +83,7 @@ class SignalDetector:
         data : DataFrame
             Chart data with observations
         stats : dict
-            Chart statistics (ucl, lcl, center, etc.)
+            Chart statistics (upl, lpl, center, etc.)
         config : SignalConfig, optional
             Detection configuration (uses defaults if None)
         value_col : str, default 'mean'
@@ -141,7 +141,7 @@ class SignalDetector:
         else:
             # Use constant limits from stats
             center = stats['center']
-            sigma = (stats['ucl'] - center) / 3
+            sigma = (stats['upl'] - center) / 3
             zones = config.zone_definition.get_boundaries(center, sigma)
 
         # Detect violations for each applicable rule
@@ -206,7 +206,7 @@ class SignalDetector:
         if data.empty:
             raise ValueError("Cannot detect signals on empty DataFrame")
 
-        required_stats = ['ucl', 'lcl', 'center']
+        required_stats = ['upl', 'lpl', 'center']
         missing = [s for s in required_stats if s not in stats]
         if missing:
             raise ValueError(
@@ -270,12 +270,12 @@ class SignalDetector:
             for rule_name in violations.columns:
                 if violations.loc[idx, rule_name]:
                     # Use per-row limits if they vary, else use stats
-                    if limits_vary and 'ucl' in data.columns and 'lcl' in data.columns:
-                        ucl = data.loc[idx, 'ucl']
-                        lcl = data.loc[idx, 'lcl']
+                    if limits_vary and 'upl' in data.columns and 'lpl' in data.columns:
+                        ucl = data.loc[idx, 'upl']
+                        lcl = data.loc[idx, 'lpl']
                     else:
-                        ucl = stats['ucl']
-                        lcl = stats['lcl']
+                        ucl = stats['upl']
+                        lcl = stats['lpl']
 
                     records.append({
                         'obs_id': idx,
@@ -284,8 +284,8 @@ class SignalDetector:
                         'description': self.RULE_DESCRIPTIONS[rule_name],
                         'value': data.loc[idx, value_col],
                         'center': stats['center'],
-                        'ucl': ucl,
-                        'lcl': lcl
+                        'upl': ucl,
+                        'lpl': lcl
                     })
 
         violation_df = pd.DataFrame(records) if records else pd.DataFrame()
@@ -299,7 +299,7 @@ class SignalDetector:
 
     def _limits_vary(self, stats: dict) -> bool:
         """Check if control limits vary (per-row limits)."""
-        return stats.get('ucl') == 'Varies' or stats.get('lcl') == 'Varies'
+        return stats.get('upl') == 'Varies' or stats.get('lpl') == 'Varies'
 
     def _calculate_per_row_zones(
         self,
@@ -308,16 +308,16 @@ class SignalDetector:
         config: SignalConfig
     ) -> pd.DataFrame:
         """
-        Calculate per-row zone boundaries for varying control limits.
+        Calculate per-row zone boundaries for varying process limits.
 
-        When control limits vary per row (e.g., Xbar with varying n),
+        When process limits vary per row (e.g., Xbar with varying n),
         this calculates zone boundaries for each row based on that row's
-        specific ucl/lcl values.
+        specific upl/lpl values.
 
         Parameters
         ----------
         data : DataFrame
-            Chart data with 'ucl' and 'lcl' columns
+            Chart data with 'upl' and 'lpl' columns
         stats : dict
             Chart statistics with 'center' key
         config : SignalConfig
@@ -328,16 +328,16 @@ class SignalDetector:
         DataFrame
             Per-row zone boundaries with columns like 'A_upper_lower', 'A_upper_upper', etc.
         """
-        if 'ucl' not in data.columns or 'lcl' not in data.columns:
+        if 'upl' not in data.columns or 'lpl' not in data.columns:
             raise ValueError(
-                "Cannot calculate per-row zones: data missing 'ucl' or 'lcl' columns"
+                "Cannot calculate per-row zones: data missing 'upl' or 'lpl' columns"
             )
 
         center = stats['center']
         zone_def = config.zone_definition
 
         # Calculate sigma per row
-        sigma = (data['ucl'] - center) / 3
+        sigma = (data['upl'] - center) / 3
 
         # Calculate all zone boundaries per row
         zones_df = pd.DataFrame(index=data.index)
