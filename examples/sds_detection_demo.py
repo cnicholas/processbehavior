@@ -14,11 +14,12 @@ Author: ProcessBehavior Team
 Date: 2024-11-30
 """
 
-import pandas as pd
 import numpy as np
-from processbehavior.datasets import synthetic
+import pandas as pd
+
 from processbehavior import Analysis
 from processbehavior.analysis_dataset import AnalysisDataSet, AnalysisSpecification
+from processbehavior.datasets import synthetic
 from processbehavior.sds_detector import SamplingDesignDetector
 
 # Configure display
@@ -62,7 +63,7 @@ def validate_sds(expected_sds: int, df: pd.DataFrame, spec: dict, name: str, des
     print(f"   Detected: SDS {detected_sds}")
 
     # Show auto-completion information
-    print(f"\n⚙️  Auto-Completed Analysis Information:")
+    print("\n⚙️  Auto-Completed Analysis Information:")
     print(f"   • Has grouping: {aspec.has_grouping}")
     print(f"   • Has time: {aspec.has_time}")
     print(f"   • Requires sort: {aspec.requires_sort}")
@@ -82,12 +83,12 @@ def validate_sds(expected_sds: int, df: pd.DataFrame, spec: dict, name: str, des
     print(f"   • Interaction Analysis: {characteristics['interaction_analysis']}")
 
     # Show sample of prepared data
-    print(f"\n📋 Sample of Prepared Data:")
+    print("\n📋 Sample of Prepared Data:")
     print(ads.analysis_dataset.head(3))
 
     # If SDS 1, show VAS residuals
     if detected_sds == 1 and 'R1' in ads.analysis_dataset.columns:
-        print(f"\n🔬 VAS Residual Decomposition (SDS 1 Specialty):")
+        print("\n🔬 VAS Residual Decomposition (SDS 1 Specialty):")
         vas_cols = ['R1', 'R2', 'R3', 'R4', 'R5']
         for col in vas_cols:
             if col in ads.analysis_dataset.columns:
@@ -96,12 +97,12 @@ def validate_sds(expected_sds: int, df: pd.DataFrame, spec: dict, name: str, des
 
     # Warn if detection doesn't match expectation
     if detected_sds != expected_sds:
-        print(f"\n⚠️  WARNING: SDS detection mismatch!")
-        print(f"   This may indicate:")
-        print(f"   • Issue with data generation")
-        print(f"   • Issue with detection logic")
-        print(f"   • Incorrect specification (rsg_vars, time_var)")
-        print(f"   • Need to review rational subgrouping rules")
+        print("\n⚠️  WARNING: SDS detection mismatch!")
+        print("   This may indicate:")
+        print("   • Issue with data generation")
+        print("   • Issue with detection logic")
+        print("   • Incorrect specification (rsg_vars, time_var)")
+        print("   • Need to review rational subgrouping rules")
 
     return ads
 
@@ -114,7 +115,8 @@ sds_configs = [
     {
         'sds': 0,
         'name': 'No Structure',
-        'description': 'Data has no grouping variables and no time ordering.\nTypically indicates user needs to specify rsg_vars or time_var.',
+        'description': ('Data has no grouping variables and no time ordering.\n'
+                        'Typically indicates user needs to specify rsg_vars or time_var.'),
         'spec': {
             'analysis_type': 'Imr',
             'response_var': 'y'
@@ -125,7 +127,8 @@ sds_configs = [
     {
         'sds': 1,
         'name': 'Full Replication',
-        'description': 'Every (factor × time) cell has n≥2 observations.\nAllows true estimation of within-cell variance → most statistically powerful.',
+        'description': ('Every (factor × time) cell has n≥2 observations.\n'
+                        'Allows true estimation of within-cell variance → most powerful.'),
         'spec': {
             'analysis_type': 'Xbar',
             'rsg_vars': ['factor 1'],
@@ -139,7 +142,8 @@ sds_configs = [
     {
         'sds': 2,
         'name': 'No Replication',
-        'description': 'Classic designed experiment: each (factor × time) cell has exactly n=1.\nCan\'t estimate within-cell variance directly → uses moving range.',
+        'description': ('Classic designed experiment: each (factor × time) cell has n=1.\n'
+                        'Can\'t estimate within-cell variance directly → uses moving range.'),
         'spec': {
             'analysis_type': 'Xbar',
             'rsg_vars': ['factor 1'],
@@ -153,7 +157,8 @@ sds_configs = [
     {
         'sds': 3,
         'name': 'Partial Replication',
-        'description': 'Realistic scenario: some conditions replicated, others not.\nMore complex analysis - blends SDS1 and SDS2 approaches.',
+        'description': ('Realistic scenario: some conditions replicated, others not.\n'
+                        'More complex analysis - blends SDS1 and SDS2 approaches.'),
         'spec': {
             'analysis_type': 'Xbar',
             'rsg_vars': ['factor 1'],
@@ -167,7 +172,8 @@ sds_configs = [
     {
         'sds': 4,
         'name': 'Single Stream Over Time',
-        'description': 'One process, measured over time with no grouping.\nTraditional individuals chart - perfect for continuous monitoring.',
+        'description': ('One process, measured over time with no grouping.\n'
+                        'Traditional individuals chart - perfect for continuous monitoring.'),
         'spec': {
             'analysis_type': 'Imr',
             'rsg_vars': ['factor 1'],  # Need grouping var even though K=1 for SDS detection
@@ -182,7 +188,8 @@ sds_configs = [
     {
         'sds': 5,
         'name': 'Nested/Hierarchical Design',
-        'description': 'Factors sampled at different frequencies (asynchronous).\nExample: Operators sampled weekly, machines hourly.',
+        'description': ('Factors sampled at different frequencies (asynchronous).\n'
+                        'Example: Operators sampled weekly, machines hourly.'),
         'spec': {
             'analysis_type': 'Xbar',
             'rsg_vars': ['factor 1', 'factor 2'],
@@ -197,7 +204,8 @@ sds_configs = [
     {
         'sds': 6,
         'name': 'Unstructured/Regime Changes',
-        'description': 'Sparse or irregular sampling patterns - process changes mid-stream.\nRequires special handling - can\'t assume consistent structure.',
+        'description': ('Sparse or irregular sampling patterns - process changes mid-stream.\n'
+                        'Requires special handling - can\'t assume consistent structure.'),
         'spec': {
             'analysis_type': 'Imr',
             'rsg_vars': ['factor 1'],
@@ -298,8 +306,8 @@ for group_name in sorted(result_imr.keys())[:3]:
     print(f"     • {group_name}: μ={stats['center']:.2f}, "
           f"UCL={stats['ucl']:.2f}, LCL={stats['lcl']:.2f}")
 
-print(f"\n   💡 This automatic stratification is NOT available in Minitab/JMP!")
-print(f"      They require manual filtering for each subgroup.")
+print("\n   💡 This automatic stratification is NOT available in Minitab/JMP!")
+print("      They require manual filtering for each subgroup.")
 
 # Xbar-S analysis
 spec_xbar = {
@@ -315,7 +323,7 @@ print("   Treats each (factor × time) cell as a subgroup")
 print("   Calculates VAS residual decomposition")
 
 result_xbar = Analysis(df_sds1, spec_xbar).calculate()
-print(f"\n   ✓ Created combined analysis:")
+print("\n   ✓ Created combined analysis:")
 for key in sorted(result_xbar.keys())[:2]:
     stats = result_xbar[key]['statistics']
     print(f"     • {key} chart: μ={stats['center']}, "

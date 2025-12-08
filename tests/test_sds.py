@@ -9,13 +9,12 @@ These tests verify:
 
 import numpy as np
 import pandas as pd
-import pytest
 
 from processbehavior import ProcessDataFrame
 from processbehavior import analysis_dataset as ad
+from processbehavior.data_preparation import DataPreparation
 from processbehavior.datasets import synthetic
 from processbehavior.sds_detector import SamplingDesignDetector
-from processbehavior.data_preparation import DataPreparation
 
 
 def detect_sds_for_test(df: pd.DataFrame, spec: dict) -> int:

@@ -25,7 +25,7 @@ from typing import TYPE_CHECKING, ClassVar
 import pandas as pd
 
 if TYPE_CHECKING:
-    from .analysis_specification import DataPrepConfig
+    from .analysis_specification import AnalysisSpecification, DataPrepConfig
 
 logger = logging.getLogger(__name__)
 

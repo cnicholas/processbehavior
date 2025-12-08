@@ -11,9 +11,9 @@ These tests verify the DECLARATIVE CONTRACT that each chart type should follow.
 import pandas as pd
 
 from processbehavior.analysis import Analysis
+from processbehavior.data_preparation import DataPreparation
 from processbehavior.plotting.plotter import Plotter
 from processbehavior.sds_detector import SamplingDesignDetector
-from processbehavior.data_preparation import DataPreparation
 
 
 def detect_sds_for_test(df: pd.DataFrame, spec: dict) -> int:

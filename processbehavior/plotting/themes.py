@@ -7,7 +7,7 @@ sizes, fonts, and layout properties. Inspired by ggplot2's theme system.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -511,10 +511,7 @@ def apply_theme(fig: go.Figure, template: str | ChartTheme = 'processbehavior') 
     >>> custom_theme = ChartTheme(name='custom', plot_bgcolor='#F0F0F0')
     >>> fig = apply_theme(fig, custom_theme)
     """
-    if isinstance(template, str):
-        theme = get_theme(template)
-    else:
-        theme = template
+    theme = get_theme(template) if isinstance(template, str) else template
 
     fig.update_layout(**theme.to_layout_dict())
 
