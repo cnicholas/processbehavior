@@ -188,17 +188,19 @@ class TestSignalDetector:
 
     def test_insufficient_data(self, simple_stats):
         """Test error handling for insufficient data."""
-        # Only 5 observations, but config requires 20
+        # Only 5 observations, but Rule 4 needs 8 consecutive points
+        # For IMR charts, all 8 rules apply including rule 4 (8+ same side)
         data = pd.DataFrame({
             'mean': [100, 100, 100, 100, 100],
             'obs_id': range(5)
         })
 
         detector = SignalDetector()
-        config = SignalConfig(min_observations=20)
+        config = SignalConfig()  # Default config
 
+        # IMR charts apply all rules, including rule_4 which needs 8 observations
         with pytest.raises(ValueError, match="Insufficient observations"):
-            detector.detect(data, simple_stats, config)
+            detector.detect(data, simple_stats, config, chart_type='Imr')
 
     def test_missing_stats(self, simple_data):
         """Test error handling for missing statistics."""

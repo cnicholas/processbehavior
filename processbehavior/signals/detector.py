@@ -125,8 +125,13 @@ class SignalDetector:
                     f"Applying all rules {applicable_rules}"
                 )
 
-        # Validate data
-        self._validate_inputs(data, stats, config)
+        # Calculate minimum observations needed for applicable rules
+        min_obs_needed = max(
+            self._get_min_observations(rule) for rule in applicable_rules
+        ) if applicable_rules else 1
+
+        # Validate data (using rule-based minimum, not global config)
+        self._validate_inputs(data, stats, config, min_obs_needed)
 
         # Apply filtering
         filtered_data = self._filter_data(data, config)
@@ -200,7 +205,8 @@ class SignalDetector:
         self,
         data: pd.DataFrame,
         stats: dict,
-        config: SignalConfig
+        config: SignalConfig,
+        min_obs_for_rules: int = 1
     ):
         """Validate inputs and provide helpful errors."""
         if data.empty:
@@ -214,11 +220,13 @@ class SignalDetector:
                 f"Available: {list(stats.keys())}"
             )
 
-        if len(data) < config.min_observations:
+        # Use the minimum observations needed for applicable rules
+        # This respects chart-type-specific rule filtering (e.g., S charts only need Rule 1)
+        if len(data) < min_obs_for_rules:
             raise ValueError(
                 f"Insufficient observations for signal detection.\n"
-                f"Required: {config.min_observations}, provided: {len(data)}\n"
-                f"Hint: Reduce config.min_observations or provide more data"
+                f"Required: {min_obs_for_rules}, provided: {len(data)}\n"
+                f"Hint: Provide more data"
             )
 
     def _filter_data(
