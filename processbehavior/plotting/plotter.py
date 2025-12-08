@@ -1643,7 +1643,13 @@ class Plotter:
         >>> fig = plotter.plot_residuals('R5', plot_type='qq')
         """
         import numpy as np
-        from scipy import stats as scipy_stats
+        try:
+            from scipy import stats as scipy_stats
+        except ImportError:
+            raise ImportError(
+                "scipy is required for residual diagnostic plots.\n"
+                "Install with: pip install scipy"
+            ) from None
 
         # Check residuals are available
         if not self.result.has_residuals:
