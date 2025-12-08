@@ -332,12 +332,12 @@ class TestPlotter:
         plotter = Plotter(simple_result)
 
         # All chart types now use 'center'
-        stats = {'center': 100, 'ucl': 115, 'lcl': 85}
+        stats = {'center': 100, 'upl': 115, 'lpl': 85}
         center_key = plotter._get_center_key(stats)
         assert center_key == 'center'
 
         # Test with missing center
-        stats = {'ucl': 15, 'lcl': 0}
+        stats = {'upl': 15, 'lpl': 0}
         center_key = plotter._get_center_key(stats)
         assert center_key is None
 
@@ -730,8 +730,8 @@ class TestStatsBox:
         # Should contain key statistics
         assert 'n =' in text
         assert 'CL =' in text
-        assert 'UCL =' in text
-        assert 'LCL =' in text
+        assert 'UPL =' in text
+        assert 'LPL =' in text
 
     def test_stats_box_positioning(self, simple_result):
         """Test that stats box is positioned in upper-left corner."""

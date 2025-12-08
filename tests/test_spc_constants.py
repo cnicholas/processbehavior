@@ -159,16 +159,16 @@ def test_calculate_limits_xbar():
         N=5
     )
 
-    assert 'lcl' in result
-    assert 'ucl' in result
+    assert 'lpl' in result
+    assert 'upl' in result
 
     # Wd = sd / c4(n) = 0.5 / 0.9400 = 0.5319
     # Limits = 10 ± (3 * 0.5319) / sqrt(5) = 10 ± 0.714
     expected_lcl = 10.0 - 0.714
     expected_ucl = 10.0 + 0.714
 
-    assert abs(result['lcl'] - expected_lcl) < 0.01
-    assert abs(result['ucl'] - expected_ucl) < 0.01
+    assert abs(result['lpl'] - expected_lcl) < 0.01
+    assert abs(result['upl'] - expected_ucl) < 0.01
 
 
 def test_calculate_limits_xbar_missing_params():
@@ -193,8 +193,8 @@ def test_calculate_limits_xbar_symmetric():
     )
 
     # Distance from mean should be equal
-    lcl_dist = 100.0 - result['lcl']
-    ucl_dist = result['ucl'] - 100.0
+    lcl_dist = 100.0 - result['lpl']
+    ucl_dist = result['upl'] - 100.0
 
     assert abs(lcl_dist - ucl_dist) < 0.001
 
@@ -211,13 +211,13 @@ def test_calculate_limits_s():
         N=5
     )
 
-    assert 'lcl' in result
-    assert 'ucl' in result
+    assert 'lpl' in result
+    assert 'upl' in result
 
-    # LCL = 0.5 * b3(5) = 0.5 * 0 = 0
-    # UCL = 0.5 * b4(5) = 0.5 * 2.089 = 1.044
-    assert result['lcl'] == 0.0
-    assert abs(result['ucl'] - 1.044) < 0.01
+    # LPL = 0.5 * b3(5) = 0.5 * 0 = 0
+    # UPL = 0.5 * b4(5) = 0.5 * 2.089 = 1.044
+    assert result['lpl'] == 0.0
+    assert abs(result['upl'] - 1.044) < 0.01
 
 
 def test_calculate_limits_s_missing_params():
@@ -230,10 +230,10 @@ def test_calculate_limits_s_missing_params():
 
 
 def test_calculate_limits_s_lcl_always_nonnegative():
-    """S chart LCL should never be negative."""
+    """S chart LPL should never be negative."""
     for n in [2, 3, 4, 5, 10, 25]:
         result = calculate_limits(limits_type='S', sd=1.0, N=n)
-        assert result['lcl'] >= 0
+        assert result['lpl'] >= 0
 
 
 # ============================================================================
@@ -248,16 +248,16 @@ def test_calculate_limits_imr():
         mR=0.3
     )
 
-    assert 'lcl' in result
-    assert 'ucl' in result
+    assert 'lpl' in result
+    assert 'upl' in result
 
-    # LCL = 10.0 - (2.66 * 0.3) = 10.0 - 0.798 = 9.202
-    # UCL = 10.0 + (2.66 * 0.3) = 10.0 + 0.798 = 10.798
+    # LPL = 10.0 - (2.66 * 0.3) = 10.0 - 0.798 = 9.202
+    # UPL = 10.0 + (2.66 * 0.3) = 10.0 + 0.798 = 10.798
     expected_lcl = 10.0 - (2.66 * 0.3)
     expected_ucl = 10.0 + (2.66 * 0.3)
 
-    assert abs(result['lcl'] - expected_lcl) < 0.001
-    assert abs(result['ucl'] - expected_ucl) < 0.001
+    assert abs(result['lpl'] - expected_lcl) < 0.001
+    assert abs(result['upl'] - expected_ucl) < 0.001
 
 
 def test_calculate_limits_imr_missing_params():
@@ -277,8 +277,8 @@ def test_calculate_limits_imr_symmetric():
         mR=1.5
     )
 
-    lcl_dist = 50.0 - result['lcl']
-    ucl_dist = result['ucl'] - 50.0
+    lcl_dist = 50.0 - result['lpl']
+    ucl_dist = result['upl'] - 50.0
 
     assert abs(lcl_dist - ucl_dist) < 0.001
 
@@ -294,13 +294,13 @@ def test_calculate_limits_r():
         mR=0.3
     )
 
-    assert 'lcl' in result
-    assert 'ucl' in result
+    assert 'lpl' in result
+    assert 'upl' in result
 
-    # LCL = 0 (ranges cannot be negative)
-    # UCL = 0.3 * 3.268 = 0.9804
-    assert result['lcl'] == 0.0
-    assert abs(result['ucl'] - (0.3 * 3.268)) < 0.001
+    # LPL = 0 (ranges cannot be negative)
+    # UPL = 0.3 * 3.268 = 0.9804
+    assert result['lpl'] == 0.0
+    assert abs(result['upl'] - (0.3 * 3.268)) < 0.001
 
 
 def test_calculate_limits_r_missing_params():
@@ -310,10 +310,10 @@ def test_calculate_limits_r_missing_params():
 
 
 def test_calculate_limits_r_lcl_always_zero():
-    """R chart LCL should always be 0."""
+    """R chart LPL should always be 0."""
     for mR in [0.1, 0.5, 1.0, 5.0]:
         result = calculate_limits(limits_type='R', mR=mR)
-        assert result['lcl'] == 0.0
+        assert result['lpl'] == 0.0
 
 
 # ============================================================================
@@ -343,7 +343,7 @@ def test_calculate_limits_returns_series():
     )
 
     assert isinstance(result, pd.Series)
-    assert list(result.index) == ['lcl', 'ucl']
+    assert list(result.index) == ['lpl', 'upl']
     assert len(result) == 2
 
 
@@ -353,43 +353,43 @@ def test_calculate_limits_returns_series():
 
 def test_detect_beyond_limits_within():
     """Should return 0 when value is within limits."""
-    assert detect_beyond_limits(10.0, lcl=9.0, ucl=11.0) == 0
-    assert detect_beyond_limits(9.5, lcl=9.0, ucl=11.0) == 0
-    assert detect_beyond_limits(10.5, lcl=9.0, ucl=11.0) == 0
+    assert detect_beyond_limits(10.0, lpl=9.0, upl=11.0) == 0
+    assert detect_beyond_limits(9.5, lpl=9.0, upl=11.0) == 0
+    assert detect_beyond_limits(10.5, lpl=9.0, upl=11.0) == 0
 
 
 def test_detect_beyond_limits_at_boundaries():
     """Should return 0 when value exactly at limits."""
-    assert detect_beyond_limits(9.0, lcl=9.0, ucl=11.0) == 0
-    assert detect_beyond_limits(11.0, lcl=9.0, ucl=11.0) == 0
+    assert detect_beyond_limits(9.0, lpl=9.0, upl=11.0) == 0
+    assert detect_beyond_limits(11.0, lpl=9.0, upl=11.0) == 0
 
 
 def test_detect_beyond_limits_below_lcl():
-    """Should return -1 when value below LCL."""
-    assert detect_beyond_limits(8.9, lcl=9.0, ucl=11.0) == -1
-    assert detect_beyond_limits(5.0, lcl=9.0, ucl=11.0) == -1
-    assert detect_beyond_limits(0.0, lcl=9.0, ucl=11.0) == -1
+    """Should return -1 when value below LPL."""
+    assert detect_beyond_limits(8.9, lpl=9.0, upl=11.0) == -1
+    assert detect_beyond_limits(5.0, lpl=9.0, upl=11.0) == -1
+    assert detect_beyond_limits(0.0, lpl=9.0, upl=11.0) == -1
 
 
 def test_detect_beyond_limits_above_ucl():
-    """Should return 1 when value above UCL."""
-    assert detect_beyond_limits(11.1, lcl=9.0, ucl=11.0) == 1
-    assert detect_beyond_limits(15.0, lcl=9.0, ucl=11.0) == 1
-    assert detect_beyond_limits(100.0, lcl=9.0, ucl=11.0) == 1
+    """Should return 1 when value above UPL."""
+    assert detect_beyond_limits(11.1, lpl=9.0, upl=11.0) == 1
+    assert detect_beyond_limits(15.0, lpl=9.0, upl=11.0) == 1
+    assert detect_beyond_limits(100.0, lpl=9.0, upl=11.0) == 1
 
 
 def test_detect_beyond_limits_with_negative_limits():
     """Should work correctly with negative control limits."""
-    assert detect_beyond_limits(-5.0, lcl=-10.0, ucl=0.0) == 0
-    assert detect_beyond_limits(-11.0, lcl=-10.0, ucl=0.0) == -1
-    assert detect_beyond_limits(1.0, lcl=-10.0, ucl=0.0) == 1
+    assert detect_beyond_limits(-5.0, lpl=-10.0, upl=0.0) == 0
+    assert detect_beyond_limits(-11.0, lpl=-10.0, upl=0.0) == -1
+    assert detect_beyond_limits(1.0, lpl=-10.0, upl=0.0) == 1
 
 
 def test_detect_beyond_limits_with_floats():
     """Should handle floating point values correctly."""
-    assert detect_beyond_limits(9.999, lcl=9.0, ucl=11.0) == 0
-    assert detect_beyond_limits(11.001, lcl=9.0, ucl=11.0) == 1
-    assert detect_beyond_limits(8.999, lcl=9.0, ucl=11.0) == -1
+    assert detect_beyond_limits(9.999, lpl=9.0, upl=11.0) == 0
+    assert detect_beyond_limits(11.001, lpl=9.0, upl=11.0) == 1
+    assert detect_beyond_limits(8.999, lpl=9.0, upl=11.0) == -1
 
 
 # ============================================================================
@@ -414,7 +414,7 @@ def test_full_xbar_workflow():
     # Test values
     values = [99.0, 100.0, 101.0, 95.0, 105.0]
     signals = [
-        detect_beyond_limits(v, limits['lcl'], limits['ucl'])
+        detect_beyond_limits(v, limits['lpl'], limits['upl'])
         for v in values
     ]
 
@@ -441,9 +441,9 @@ def test_full_imr_workflow():
     )
 
     # Test detection
-    assert detect_beyond_limits(50.0, limits['lcl'], limits['ucl']) == 0
-    assert detect_beyond_limits(mean + 10, limits['lcl'], limits['ucl']) == 1
-    assert detect_beyond_limits(mean - 10, limits['lcl'], limits['ucl']) == -1
+    assert detect_beyond_limits(50.0, limits['lpl'], limits['upl']) == 0
+    assert detect_beyond_limits(mean + 10, limits['lpl'], limits['upl']) == 1
+    assert detect_beyond_limits(mean - 10, limits['lpl'], limits['upl']) == -1
 
 
 # ============================================================================
@@ -460,8 +460,8 @@ def test_calculate_limits_with_zero_sd():
     )
 
     # Limits should collapse to mean
-    assert result['lcl'] == 10.0
-    assert result['ucl'] == 10.0
+    assert result['lpl'] == 10.0
+    assert result['upl'] == 10.0
 
 
 def test_calculate_limits_with_large_values():
@@ -473,8 +473,8 @@ def test_calculate_limits_with_large_values():
         N=5
     )
 
-    assert result['lcl'] < result['ucl']
-    assert result['lcl'] < 1e6 < result['ucl']
+    assert result['lpl'] < result['upl']
+    assert result['lpl'] < 1e6 < result['upl']
 
 
 def test_calculate_limits_with_small_values():
@@ -486,5 +486,5 @@ def test_calculate_limits_with_small_values():
         N=5
     )
 
-    assert result['lcl'] < result['ucl']
-    assert result['lcl'] < 1e-6 < result['ucl']
+    assert result['lpl'] < result['upl']
+    assert result['lpl'] < 1e-6 < result['upl']

@@ -93,7 +93,7 @@ def b3(n: int) -> float:
     """
     Calculate b3 lower control limit constant for S charts.
 
-    The b3 constant is used to calculate the lower control limit (LCL)
+    The b3 constant is used to calculate the lower process limit (LPL)
     for the standard deviation (S) chart.
 
     Parameters
@@ -139,7 +139,7 @@ def b4(n: int) -> float:
     """
     Calculate b4 upper control limit constant for S charts.
 
-    The b4 constant is used to calculate the upper control limit (UCL)
+    The b4 constant is used to calculate the upper process limit (UPL)
     for the standard deviation (S) chart.
 
     Parameters
@@ -216,32 +216,32 @@ def calculate_limits(
     Returns
     -------
     pd.Series
-        Series with 'lcl' and 'ucl' keys
+        Series with 'lpl' and 'upl' keys (Lower/Upper Process Limits)
 
     Examples
     --------
     Calculate Xbar chart limits:
     >>> calculate_limits(limits_type='Xbar', mean=10.0, sd=0.5, N=5)
-    lcl    9.366...
-    ucl   10.633...
+    lpl    9.366...
+    upl   10.633...
     dtype: float64
 
     Calculate S chart limits:
     >>> calculate_limits(limits_type='S', sd=0.5, N=5)
-    lcl    0.0
-    ucl    1.044...
+    lpl    0.0
+    upl    1.044...
     dtype: float64
 
     Calculate IMR chart limits:
     >>> calculate_limits(limits_type='Imr', mean=10.0, mR=0.3)
-    lcl    9.202
-    ucl   10.798
+    lpl    9.202
+    upl   10.798
     dtype: float64
 
     Calculate R chart limits:
     >>> calculate_limits(limits_type='R', mR=0.3)
-    lcl    0.000
-    ucl    0.980...
+    lpl    0.000
+    upl    0.980...
     dtype: float64
 
     Raises
@@ -270,11 +270,11 @@ def calculate_limits(
         # Wd = S / c4(n) - within-subgroup standard deviation
         Wd = sd / c4(N)
 
-        # Studentized Control Limits for sub-group means
-        # LCLx = X̄ - (3 * Wd) / √n
-        # UCLx = X̄ + (3 * Wd) / √n
-        lcl = mean - ((SIGMA_MULTIPLIER * Wd) / math.sqrt(N))
-        ucl = mean + ((SIGMA_MULTIPLIER * Wd) / math.sqrt(N))
+        # Studentized Process Limits for sub-group means
+        # LPLx = X̄ - (3 * Wd) / √n
+        # UPLx = X̄ + (3 * Wd) / √n
+        lpl = mean - ((SIGMA_MULTIPLIER * Wd) / math.sqrt(N))
+        upl = mean + ((SIGMA_MULTIPLIER * Wd) / math.sqrt(N))
 
     elif limits_type == "S":
         if None in [sd, N]:
@@ -283,10 +283,10 @@ def calculate_limits(
                 f"Got: sd={sd}, N={N}"
             )
 
-        # LCL = S * b3(N)
-        # UCL = S * b4(N)
-        lcl = sd * b3(N)
-        ucl = sd * b4(N)
+        # LPL = S * b3(N)
+        # UPL = S * b4(N)
+        lpl = sd * b3(N)
+        upl = sd * b4(N)
 
     elif limits_type == "Imr":
         if None in [mean, mR]:
@@ -295,10 +295,10 @@ def calculate_limits(
                 f"Got: mean={mean}, mR={mR}"
             )
 
-        # LCL = X̄ - (E2 * mR)
-        # UCL = X̄ + (E2 * mR)
-        lcl = mean - (IMR_LIMIT_MULTIPLIER * mR)
-        ucl = mean + (IMR_LIMIT_MULTIPLIER * mR)
+        # LPL = X̄ - (E2 * mR)
+        # UPL = X̄ + (E2 * mR)
+        lpl = mean - (IMR_LIMIT_MULTIPLIER * mR)
+        upl = mean + (IMR_LIMIT_MULTIPLIER * mR)
 
     elif limits_type == "R":
         if mR is None:
@@ -307,10 +307,10 @@ def calculate_limits(
                 f"Got: mR={mR}"
             )
 
-        # LCL = 0 (ranges cannot be negative)
-        # UCL = mR * D4
-        lcl = 0
-        ucl = mR * R_UPPER_LIMIT_MULTIPLIER
+        # LPL = 0 (ranges cannot be negative)
+        # UPL = mR * D4
+        lpl = 0
+        upl = mR * R_UPPER_LIMIT_MULTIPLIER
 
     else:
         raise ValueError(
@@ -318,47 +318,47 @@ def calculate_limits(
             f"Supported types: 'Xbar', 'S', 'Imr', 'R'"
         )
 
-    return pd.Series({'lcl': lcl, 'ucl': ucl}, index=['lcl', 'ucl'])
+    return pd.Series({'lpl': lpl, 'upl': upl}, index=['lpl', 'upl'])
 
 
 # ============================================================================
 # Signal Detection
 # ============================================================================
 
-def detect_beyond_limits(x: float, lcl: float, ucl: float) -> int:
+def detect_beyond_limits(x: float, lpl: float, upl: float) -> int:
     """
-    Detect if a point is beyond control limits.
+    Detect if a point is beyond process limits.
 
     This is the most basic signal detection rule (Rule 1 in Western Electric
-    rules): a single point beyond the 3-sigma control limits.
+    rules): a single point beyond the 3-sigma process limits.
 
     Parameters
     ----------
     x : float
         Value to check
-    lcl : float
-        Lower control limit
-    ucl : float
-        Upper control limit
+    lpl : float
+        Lower process limit
+    upl : float
+        Upper process limit
 
     Returns
     -------
     int
-        -1 if below LCL, 1 if above UCL, 0 if within limits
+        -1 if below LPL, 1 if above UPL, 0 if within limits
 
     Examples
     --------
-    >>> detect_beyond_limits(10.5, lcl=9.0, ucl=11.0)
+    >>> detect_beyond_limits(10.5, lpl=9.0, upl=11.0)
     0
-    >>> detect_beyond_limits(8.5, lcl=9.0, ucl=11.0)
+    >>> detect_beyond_limits(8.5, lpl=9.0, upl=11.0)
     -1
-    >>> detect_beyond_limits(11.5, lcl=9.0, ucl=11.0)
+    >>> detect_beyond_limits(11.5, lpl=9.0, upl=11.0)
     1
 
     Notes
     -----
     This implements "Test 1" from Western Electric rules:
-    - One point beyond the 3-sigma control limits
+    - One point beyond the 3-sigma process limits
 
     Additional tests (runs, trends, etc.) are not implemented here.
 
@@ -367,9 +367,9 @@ def detect_beyond_limits(x: float, lcl: float, ucl: float) -> int:
     Western Electric (1956). Statistical Quality Control Handbook
     Wheeler & Chambers (1992). Understanding Statistical Process Control
     """
-    if x < lcl:
+    if x < lpl:
         return -1
-    elif x > ucl:
+    elif x > upl:
         return 1
     else:
         return 0

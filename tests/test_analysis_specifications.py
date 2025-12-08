@@ -178,7 +178,7 @@ def test_analysis_specification_Imr_no_time_var():
     assert asImr.sort_cols == []
 
     # expect x and rsg to be first two columns of output cols
-    assert asImr.analysis_output_cols == ['x', 'rsg', spec['response_var'], 'mean', 'lcl', 'ucl', 'beyond_limits']
+    assert asImr.analysis_output_cols == ['x', 'rsg', spec['response_var'], 'mean', 'lpl', 'upl', 'beyond_limits']
 
 
 def test_analysis_specification_Imr_w_time_var():
@@ -189,7 +189,7 @@ def test_analysis_specification_Imr_w_time_var():
         'response_var': 'c',
         'rsg_var_name': 'rsg'
     }
-    # [specs['time_var'], 'rsg', specs['response_var'], 'mean', 'lcl', 'ucl', 'beyond_limits']
+    # [specs['time_var'], 'rsg', specs['response_var'], 'mean', 'lpl', 'upl', 'beyond_limits']
     asImr = ad.AnalysisSpecification(spec)
     logger.debug(f'{spec}')
     logger.info(f'\nAnalysis Type is: {asImr.analysis_type}')
@@ -201,7 +201,7 @@ def test_analysis_specification_Imr_w_time_var():
     # expect time_var and rsg to be first two columns of output cols
     assert asImr.analysis_output_cols == [
         spec['time_var'], spec['rsg_var_name'], spec['response_var'],
-        'mean', 'lcl', 'ucl', 'beyond_limits'
+        'mean', 'lpl', 'upl', 'beyond_limits'
     ]
         
     # def test_analysis_specification_test_time_unit(self):

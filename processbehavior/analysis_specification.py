@@ -296,7 +296,7 @@ class AnalysisSpecification(DataPrepConfig):
         self.recentered = specification.get('recentered', False)  # Use RCR columns
 
         # Initialize analysis output columns
-        self.analysis_output_cols = [self.response_var, 'mean', 'lcl', 'ucl', 'beyond_limits']
+        self.analysis_output_cols = [self.response_var, 'mean', 'lpl', 'upl', 'beyond_limits']
         self._build_output_cols()
 
     # =========================================================================

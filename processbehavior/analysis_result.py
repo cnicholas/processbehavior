@@ -325,7 +325,7 @@ class AnalysisResult:
         Returns
         -------
         dict
-            Statistics dictionary with keys like 'mean', 'lcl', 'ucl', 'n'
+            Statistics dictionary with keys like 'mean', 'lpl', 'upl', 'n'
 
         Raises
         ------
@@ -335,7 +335,7 @@ class AnalysisResult:
         Examples
         --------
         >>> stats = result.get_statistics('Xbar')
-        >>> print(f"Mean: {stats['Mean']}, UCL: {stats['ucl']}")
+        >>> print(f"Mean: {stats['Mean']}, UPL: {stats['upl']}")
         """
         if name not in self.charts:
             raise KeyError(
@@ -528,8 +528,8 @@ class AnalysisResult:
             - n: Number of observations in subgroup
             - value: The statistic value (xbar, s, etc.)
             - center: Center line value
-            - lcl: Lower control limit
-            - ucl: Upper control limit
+            - lpl: Lower process limit
+            - upl: Upper process limit
             - signal: Signal indicator (if include_signal_col=True)
 
         Examples
@@ -538,7 +538,7 @@ class AnalysisResult:
 
         >>> result = study.analyze()
         >>> result.chart_table('Sbar')
-          subgroup   n  value  center    lcl    ucl signal
+          subgroup   n  value  center    lpl    upl signal
         0      1_1  99  1.241   1.289  1.012  1.565
         1      1_2  98  0.977   1.289  1.011  1.567      ↓
         2      2_1 100  0.902   1.289  1.014  1.564      ↓
@@ -574,7 +574,7 @@ class AnalysisResult:
         # If not found, infer by excluding known non-value columns
         if value_col is None:
             meta_cols = {
-                'rsg', 'center', 'lcl', 'ucl', 'beyond_limits', 'n', 'N',
+                'rsg', 'center', 'lpl', 'upl', 'beyond_limits', 'n', 'N',
                 'obs_id', 'x', 'pull', 'time', 'date', 'datetime',
                 'rsg_key', 'cell_key'
             }
@@ -617,7 +617,7 @@ class AnalysisResult:
             col_renames[value_col] = 'value'
 
         # Control chart columns
-        for col in ['center', 'lcl', 'ucl']:
+        for col in ['center', 'lpl', 'upl']:
             if col in chart_data.columns:
                 output_cols.append(col)
 
@@ -1087,7 +1087,7 @@ class AnalysisResult:
         Provides a high-level comparison across all strata showing:
         - Stratum identifier (RSG)
         - Number of observations per stratum
-        - Mean, LCL, UCL for each stratum
+        - Mean, LPL, UPL for each stratum
         - Total signals (beyond_limits != 0)
         - Signal rate (% of observations with signals)
 
@@ -1128,10 +1128,10 @@ class AnalysisResult:
         for stratum, group in combined_data.groupby('rsg', sort=False, observed=True):
             n_obs = len(group)
 
-            # Get mean, lcl, ucl (should be constant within stratum)
+            # Get mean, lpl, upl (should be constant within stratum)
             mean_val = group['mean'].iloc[0] if 'mean' in group.columns else None
-            lcl_val = group['lcl'].iloc[0] if 'lcl' in group.columns else None
-            ucl_val = group['ucl'].iloc[0] if 'ucl' in group.columns else None
+            lpl_val = group['lpl'].iloc[0] if 'lpl' in group.columns else None
+            upl_val = group['upl'].iloc[0] if 'upl' in group.columns else None
 
             # Count signals
             if 'beyond_limits' in group.columns:
@@ -1145,8 +1145,8 @@ class AnalysisResult:
                 'Stratum': stratum,
                 'Observations': n_obs,
                 'Mean': mean_val,
-                'LCL': lcl_val,
-                'UCL': ucl_val,
+                'LPL': lpl_val,
+                'UPL': upl_val,
                 'Signals': n_signals,
                 'Signal_Rate_%': signal_rate
             })
@@ -1721,7 +1721,7 @@ class AnalysisResult:
         show_rules : bool, default False
             Whether to show additional run rules (WECO Rules 2-8)
         show_stats : bool, default False
-            Whether to show statistics box with CL, UCL, LCL values
+            Whether to show statistics box with CL, UPL, LPL values
         template : str, default 'processbehavior'
             Visual theme ('processbehavior', 'minimal', 'dark', 'ggplot')
         width : int, default 1000
