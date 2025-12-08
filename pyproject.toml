@@ -55,7 +55,7 @@ exclude = ["examples", "docs"]
 module = "processbehavior.*"
 ignore_errors = false
 disable_error_code = [
-    "import-untyped",      # External libs without stubs (plotly, openpyxl, scipy)
+    "import-untyped",      # External libs without stubs (plotly, openpyxl)
     "import-not-found",    # Relative import issues
     "method-assign",       # Property/method confusion in analysis_specification
     "truthy-function",     # has_time() checks
