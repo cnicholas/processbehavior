@@ -1642,16 +1642,7 @@ class Plotter:
         >>> fig = plotter.plot_residuals('R2', plot_type='histogram')
         >>> fig = plotter.plot_residuals('R5', plot_type='qq')
         """
-        import numpy as np
-        try:
-            from scipy import stats as scipy_stats
-        except ImportError:
-            raise ImportError(
-                "scipy is required for residual diagnostic plots.\n"
-                "Install with: pip install scipy"
-            ) from None
-
-        # Check residuals are available
+        # Check residuals are available first (before requiring scipy)
         if not self.result.has_residuals:
             raise ValueError(
                 "Residuals not available for this analysis.\n"
@@ -1665,6 +1656,16 @@ class Plotter:
                 f"Residual '{residual_type}' not found.\n"
                 f"Available: {available}"
             )
+
+        # Now import scipy (only needed if we actually have residuals to plot)
+        import numpy as np
+        try:
+            from scipy import stats as scipy_stats
+        except ImportError:
+            raise ImportError(
+                "scipy is required for residual diagnostic plots.\n"
+                "Install with: pip install scipy"
+            ) from None
 
         # Resolve theme
         theme = get_theme(template) if isinstance(template, str) else template
