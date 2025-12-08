@@ -570,48 +570,59 @@ class TestResidualPlots:
 
     @pytest.fixture
     def result_with_residuals(self):
-        """Create analysis result with residuals (requires subgroups)."""
+        """Create analysis result with residuals (requires SDS 1 - replicated data)."""
         np.random.seed(42)
+        # Create replicated design: 4 factors x 5 time points x 3 replicates = 60 obs
+        # This ensures SDS 1 detection (full replication) which produces residuals
+        n_factors = 4
+        n_times = 5
+        n_reps = 3
+        n_total = n_factors * n_times * n_reps
+
         df = pd.DataFrame({
-            'value': np.random.normal(100, 5, 100),
-            'subgroup': np.repeat(range(20), 5),
-            'time': range(100)
+            'value': np.random.normal(100, 5, n_total),
+            'factor': np.tile(np.repeat(['A', 'B', 'C', 'D'], n_reps), n_times),
+            'time': np.repeat(range(n_times), n_factors * n_reps)
         })
         pdf = ProcessDataFrame(df)
-        study = pdf.formulate(response=pdf.columns.value, factors=[pdf.columns.subgroup])
-        return study.analyze()
+        study = pdf.formulate(
+            response=pdf.columns.value,
+            factors=[pdf.columns.factor],
+            time=pdf.columns.time
+        )
+        result = study.analyze()
+        # Verify fixture produces residuals
+        assert result.has_residuals, "Fixture should produce result with residuals"
+        return result
 
     def test_plot_residuals_available(self, result_with_residuals):
         """Test residual plots when residuals are available."""
-        if result_with_residuals.has_residuals:
-            plotter = Plotter(result_with_residuals)
-            fig = plotter.plot_residuals()
-            assert isinstance(fig, ControlChartFigure)
+        plotter = Plotter(result_with_residuals)
+        fig = plotter.plot_residuals()
+        assert isinstance(fig, ControlChartFigure)
 
     def test_plot_residuals_histogram(self, result_with_residuals):
         """Test histogram residual plot."""
-        if result_with_residuals.has_residuals:
-            plotter = Plotter(result_with_residuals)
-            fig = plotter.plot_residuals(plot_type='histogram')
-            assert isinstance(fig, ControlChartFigure)
+        plotter = Plotter(result_with_residuals)
+        fig = plotter.plot_residuals(plot_type='histogram')
+        assert isinstance(fig, ControlChartFigure)
 
     def test_plot_residuals_qq(self, result_with_residuals):
         """Test Q-Q residual plot."""
-        if result_with_residuals.has_residuals:
-            plotter = Plotter(result_with_residuals)
-            fig = plotter.plot_residuals(plot_type='qq')
-            assert isinstance(fig, ControlChartFigure)
+        plotter = Plotter(result_with_residuals)
+        fig = plotter.plot_residuals(plot_type='qq')
+        assert isinstance(fig, ControlChartFigure)
 
     def test_plot_residuals_sequence(self, result_with_residuals):
         """Test sequence residual plot."""
-        if result_with_residuals.has_residuals:
-            plotter = Plotter(result_with_residuals)
-            fig = plotter.plot_residuals(plot_type='sequence')
-            assert isinstance(fig, ControlChartFigure)
+        plotter = Plotter(result_with_residuals)
+        fig = plotter.plot_residuals(plot_type='sequence')
+        assert isinstance(fig, ControlChartFigure)
 
     def test_plot_residuals_not_available(self):
         """Test error when residuals not available."""
         np.random.seed(42)
+        # Simple time series without replication - no residuals
         df = pd.DataFrame({
             'value': np.random.normal(100, 5, 30),
             'time': range(30)
@@ -620,10 +631,10 @@ class TestResidualPlots:
         study = pdf.formulate(response=pdf.columns.value)
         result = study.analyze()
 
-        if not result.has_residuals:
-            plotter = Plotter(result)
-            with pytest.raises(ValueError, match="Residuals not available"):
-                plotter.plot_residuals()
+        assert not result.has_residuals, "This fixture should NOT have residuals"
+        plotter = Plotter(result)
+        with pytest.raises(ValueError, match="Residuals not available"):
+            plotter.plot_residuals()
 
 
 class TestEffectsPlots:
