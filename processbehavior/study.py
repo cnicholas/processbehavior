@@ -17,7 +17,7 @@ Design Philosophy (Pythonic Hadley):
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     import pandas as pd
@@ -134,10 +134,10 @@ class Study:
     ProcessDataFrame.formulate : Create a Study from data
     AnalysisResult : Result of study.analyze()
     """
-    _pdf: 'ProcessDataFrame'
-    _spec: 'DataPrepConfig'
-    _plan: 'SDSAnalysisPlan'
-    _ads: 'AnalysisDataSet'
+    _pdf: ProcessDataFrame
+    _spec: DataPrepConfig
+    _plan: SDSAnalysisPlan
+    _ads: AnalysisDataSet
 
     # =========================================================================
     # User-Facing Properties (Clean Names)
@@ -184,7 +184,7 @@ class Study:
         return self._spec.round_to
 
     @property
-    def dataset(self) -> 'pd.DataFrame':
+    def dataset(self) -> pd.DataFrame:
         """
         Full analysis dataset with means and residuals.
 
@@ -365,7 +365,7 @@ class Study:
         self,
         chart: str | None = None,
         recentered: bool = False
-    ) -> 'AnalysisResult':
+    ) -> AnalysisResult:
         """
         Run the analysis and return results.
 
@@ -565,7 +565,7 @@ class Study:
         lines.append("╠" + "═" * width + "╣")
 
         # Next steps
-        lines.append("║" + f"  Next: study.analyze() or study.analyze(chart='Xbar')".ljust(width) + "║")
+        lines.append("║" + "  Next: study.analyze() or study.analyze(chart='Xbar')".ljust(width) + "║")
 
         lines.append("╚" + "═" * width + "╝")
 

@@ -15,9 +15,9 @@ import pytest
 from processbehavior import Analysis
 from processbehavior import analysis_dataset as ad
 from processbehavior.analysis import gather_analysis_statistics, package_analysis
-from processbehavior.spc_constants import c4
-from processbehavior.sds_detector import SamplingDesignDetector
 from processbehavior.data_preparation import DataPreparation
+from processbehavior.sds_detector import SamplingDesignDetector
+from processbehavior.spc_constants import c4
 
 
 def detect_sds_for_test(df: pd.DataFrame, spec: dict) -> int:

@@ -24,7 +24,7 @@ from natsort import natsorted
 from pandas.api.types import is_numeric_dtype
 
 if TYPE_CHECKING:
-    from .analysis_specification import DataPrepConfig
+    from .analysis_specification import AnalysisSpecification, DataPrepConfig
 
 logger = logging.getLogger(__name__)
 

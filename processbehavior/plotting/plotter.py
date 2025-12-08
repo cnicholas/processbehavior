@@ -461,7 +461,7 @@ class Plotter:
 
         # Generate descriptive subplot titles
         subplot_titles = [
-            self._generate_subplot_title(name) for name in charts.keys()
+            self._generate_subplot_title(name) for name in charts
         ]
 
         # Calculate spacing dynamically to avoid Plotly errors
@@ -1032,7 +1032,7 @@ class Plotter:
         line_dash: str,
         line_width: float,
         limit_name: str,
-        theme: 'ChartTheme'
+        theme: ChartTheme
     ) -> None:
         """
         Add a stepped limit line that follows varying per-row limits.
@@ -1065,10 +1065,7 @@ class Plotter:
             return
 
         # Get x values and limit values
-        if x_col in data.columns:
-            x_vals = data[x_col].tolist()
-        else:
-            x_vals = data.index.tolist()
+        x_vals = data[x_col].tolist() if x_col in data.columns else data.index.tolist()
 
         limit_vals = data[limit_col].tolist()
 
@@ -1333,10 +1330,7 @@ class Plotter:
                     continue
 
                 # Get x and y values
-                if x_col in data.columns:
-                    x_val = obs_data[x_col]
-                else:
-                    x_val = obs_id
+                x_val = obs_data[x_col] if x_col in data.columns else obs_id
 
                 y_val = obs_data[value_col]
 
@@ -1580,9 +1574,7 @@ class Plotter:
             Formatted value string
         """
         if compact:
-            if abs(value) >= 100:
-                return f"{value:.1f}"
-            elif abs(value) >= 10:
+            if abs(value) >= 100 or abs(value) >= 10:
                 return f"{value:.1f}"
             else:
                 return f"{value:.2f}"
@@ -1669,10 +1661,7 @@ class Plotter:
             )
 
         # Resolve theme
-        if isinstance(template, str):
-            theme = get_theme(template)
-        else:
-            theme = template
+        theme = get_theme(template) if isinstance(template, str) else template
 
         # Get residual data
         r_data = residuals[residual_type].dropna()
@@ -1866,7 +1855,7 @@ class Plotter:
 
         return ControlChartFigure(fig, self.result)
 
-    def plot_effects(
+    def plot_effects(  # noqa: C901
         self,
         effect_type: str = 'factor',
         template: str | ChartTheme = 'processbehavior',
@@ -1919,10 +1908,7 @@ class Plotter:
         effects = self.result.effects
 
         # Resolve theme
-        if isinstance(template, str):
-            theme = get_theme(template)
-        else:
-            theme = template
+        theme = get_theme(template) if isinstance(template, str) else template
 
         if effect_type == 'all':
             # Find factor and time effects
@@ -2049,7 +2035,7 @@ class Plotter:
         elif effect_type == 'time':
             # Plot time effects
             time_effects = None
-            for name, data in effects.items():
+            for _name, data in effects.items():
                 if isinstance(data, pd.DataFrame) and 'PT_ME' in data.columns:
                     time_effects = data
                     break
@@ -2154,6 +2140,8 @@ class Plotter:
         # Summary section
         if include_summary:
             summary = self.result.summary
+            has_res = 'Yes' if summary['has_residuals'] else 'No'
+            has_eff = 'Yes' if summary['has_effects'] else 'No'
             summary_html = f"""
             <div class="section">
                 <h2>Analysis Summary</h2>
@@ -2163,8 +2151,8 @@ class Plotter:
                     <tr><td><strong>Observations</strong></td><td>{summary['n_observations']}</td></tr>
                     <tr><td><strong>Charts</strong></td><td>{', '.join(summary['chart_types'])}</td></tr>
                     <tr><td><strong>Signals Detected</strong></td><td>{summary['n_signals_total']}</td></tr>
-                    <tr><td><strong>Has Residuals</strong></td><td>{'Yes' if summary['has_residuals'] else 'No'}</td></tr>
-                    <tr><td><strong>Has Effects</strong></td><td>{'Yes' if summary['has_effects'] else 'No'}</td></tr>
+                    <tr><td><strong>Has Residuals</strong></td><td>{has_res}</td></tr>
+                    <tr><td><strong>Has Effects</strong></td><td>{has_eff}</td></tr>
                 </table>
             </div>
             """

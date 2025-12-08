@@ -46,17 +46,17 @@ from processbehavior.analysis_result import AnalysisResult
 from processbehavior.analysis_specification import AnalysisSpecification
 from processbehavior.data_preparation import DataPreparation
 from processbehavior.effects_calculator import EffectsCalculator
+
+# Plotting/theming
+from processbehavior.plotting import ChartTheme, get_theme, list_themes, register_theme
 from processbehavior.process_dataframe import ProcessDataFrame
 from processbehavior.residual_calculator import ResidualCalculator
-
-# Study class (formulation layer)
-from processbehavior.study import Study
 
 # Utility classes (advanced users)
 from processbehavior.sds_detector import SamplingDesignDetector, SDSAnalysisPlan
 
-# Plotting/theming
-from processbehavior.plotting import ChartTheme, get_theme, list_themes, register_theme
+# Study class (formulation layer)
+from processbehavior.study import Study
 
 __all__ = [
     # Main API

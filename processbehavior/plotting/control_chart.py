@@ -118,12 +118,12 @@ class ControlChartFigure:
                 ) from e
             raise
 
-    def add_annotation(self, text: str, x, y, **kwargs) -> 'ControlChartFigure':
+    def add_annotation(self, text: str, x, y, **kwargs) -> ControlChartFigure:
         """Add text annotation to the figure."""
         self._fig.add_annotation(text=text, x=x, y=y, **kwargs)
         return self
 
-    def update_layout(self, **kwargs) -> 'ControlChartFigure':
+    def update_layout(self, **kwargs) -> ControlChartFigure:
         """Update figure layout (full Plotly API)."""
         self._fig.update_layout(**kwargs)
         return self

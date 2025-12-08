@@ -36,6 +36,7 @@ import logging
 import numpy as np
 import pandas as pd
 
+from .analysis_dataset import AnalysisDataSet
 from .analysis_result import AnalysisResult
 from .analysis_specification import AnalysisSpecification
 from .spc_constants import calculate_limits, detect_beyond_limits
@@ -208,7 +209,7 @@ class Analysis:
         self,
         df: pd.DataFrame,
         specification: dict,
-        analysis_dataset: 'AnalysisDataSet | None' = None,
+        analysis_dataset: AnalysisDataSet | None = None,
         sds: int | None = None
     ):
         """

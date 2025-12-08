@@ -498,7 +498,7 @@ class AnalysisResult:
         for name, chart_info in self.charts.items():
             yield name, chart_info['data'], chart_info['statistics']
 
-    def chart_table(
+    def chart_table(  # noqa: C901
         self,
         chart: str | None = None,
         include_signal_col: bool = True,
@@ -631,11 +631,10 @@ class AnalysisResult:
         result = result.rename(columns=col_renames)
 
         # Format signal column
-        if include_signal_col and 'signal' in result.columns:
-            if signal_symbols:
-                # Convert -1/0/1 to ↓/blank/↑
-                signal_map = {-1: '↓', 0: '', 1: '↑'}
-                result['signal'] = result['signal'].map(signal_map)
+        if include_signal_col and 'signal' in result.columns and signal_symbols:
+            # Convert -1/0/1 to ↓/blank/↑
+            signal_map = {-1: '↓', 0: '', 1: '↑'}
+            result['signal'] = result['signal'].map(signal_map)
             # Keep as numeric if signal_symbols=False
 
         return result.reset_index(drop=True)
@@ -1464,7 +1463,7 @@ class AnalysisResult:
         rules: str | list[str] | None = None,
         config: Any | None = None,
         **kwargs
-    ) -> 'SignalResult | dict[str, SignalResult]':
+    ) -> SignalResult | dict[str, SignalResult]:
         """
         Detect Western Electric rule violations in control charts.
 
@@ -1694,7 +1693,7 @@ class AnalysisResult:
         height: int | None = None,
         title: str | None = None,
         **kwargs
-    ) -> 'ControlChartFigure':
+    ) -> ControlChartFigure:
         """
         Create interactive control chart visualization.
 

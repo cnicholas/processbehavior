@@ -6,8 +6,8 @@ import pandas as pd
 import pytest
 
 from processbehavior import Analysis
-from processbehavior.sds_detector import SamplingDesignDetector
 from processbehavior.data_preparation import DataPreparation
+from processbehavior.sds_detector import SamplingDesignDetector
 
 logger = logging.getLogger(__name__)
 
