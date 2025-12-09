@@ -120,11 +120,15 @@ Not all charts are valid for all Sampling Design States:
 | S | ✅ | ✅ | ✅ | ❌ | ❌ |
 | Imr | ✅ | ✅ | ✅ | ✅ | ✅ |
 | R | ✅ | ✅ | ✅ | ✅ | ✅ |
-| R2_S | ✅ | ❌ | ⚠️ | ❌ | ❌ |
-| R2_Imr | ✅ | ✅ | ✅ | ⚠️ | ⚠️ |
-| R3_Imr | ✅ | ✅ | ✅ | ⚠️ | ⚠️ |
-| R4_Imr | ✅ | ✅ | ✅ | ⚠️ | ⚠️ |
-| R5_Imr | ✅ | ✅ | ✅ | ⚠️ | ⚠️ |
+| R2_S | ✅ | ❌ | ⚠️ | ⚠️ | ⚠️* |
+| R2_Imr | ✅ | ✅ | ✅ | ✅ | ✅ |
+| R3_Imr | ✅ | ✅ | ✅ | ✅ | ✅ |
+| R4_Imr | ✅ | ✅ | ✅ | ✅ | ✅ |
+| R5_Imr | ✅ | ✅ | ✅ | ✅ | ✅ |
+
+*For SDS 5-6: R2_S available for SDS 5 when cells have n≥2; SDS 6 uses MR chart only.
+
+**Note on R2**: SDS 2 and 6 use the moving average method; SDS 1, 3, 4, 5 use within-cell deviation (R2 = Y - Ȳ_kt). See [VAS Residuals](residuals.md) for details.
 
 Use `study.valid_charts` to see what's available:
 

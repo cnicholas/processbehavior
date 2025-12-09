@@ -143,12 +143,17 @@ Re-centering formulas:
 
 | SDS | R1 | R2 | R3 | R4 | R5 |
 |-----|----|----|----|----|-----|
-| 1 (Full Replication) | ✅ Exact | ✅ Exact | ✅ Full | ✅ Full | ✅ Full |
-| 2 (No Replication) | ✅ | ⚠️ MR-based | ⚠️ Approx | ⚠️ Approx | ⚠️ Approx |
-| 3 (Partial) | ✅ | ⚠️ Hybrid | ⚠️ Approx | ⚠️ Approx | ⚠️ Approx |
-| 4 (Single Stream) | ✅ | ⚠️ Hybrid | ⚠️ Approx | ⚠️ Approx | ⚠️ Approx |
-| 5 (Nested) | ✅ | ⚠️ Hybrid | ⚠️ Approx | ⚠️ Approx | ⚠️ Approx |
-| 6 (Unstructured) | ✅ | ⚠️ MR-based | ⚠️ Approx | ⚠️ Approx | ⚠️ Approx |
+| 1 (Full Replication) | ✅ | ✅ Within-cell | ✅ | ✅ | ✅ |
+| 2 (No Replication) | ✅ | ✅ MR-based | ✅ | ✅ | ✅ |
+| 3 (Partial) | ✅ | ✅ Hybrid | ✅ | ✅ | ✅ |
+| 4 (Single Stream) | ✅ | ✅ Hybrid | ✅ | ✅ | ✅ |
+| 5 (Nested) | ✅ | ✅ Hybrid | ✅ | ✅ | ✅ |
+| 6 (Unstructured) | ✅ | ✅ MR-based | ✅ | ✅ | ✅ |
+
+**Note on R2 calculation**: R2 adapts to your sampling structure:
+- **SDS 1**: Within-cell deviation (`R2 = Y - Ȳ_kt`)
+- **SDS 2, 6**: Moving average method (`R2 = Y - MA2`) for unreplicated/sparse designs
+- **SDS 3, 4, 5**: Hybrid approach (within-cell for n>1 cells, zero for n=1 cells)
 
 ## Analysis Workflow with Residuals
 

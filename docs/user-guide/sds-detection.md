@@ -185,12 +185,19 @@ The SDS affects three key aspects:
 
 | SDS | Xbar-S | Stratified IMR | VAS Residuals |
 |-----|--------|----------------|---------------|
-| 1 | ✅ | ✅ | ✅ Full |
-| 2 | ✅ (MR) | ✅ | ⚠️ Approx |
-| 3 | ✅ (hybrid) | ✅ | ⚠️ Approx |
-| 4 | ❌ | ✅ | ⚠️ Approx |
-| 5 | ❌ | ✅ | ⚠️ Approx |
-| 6 | ❌ | ✅ | ⚠️ Approx |
+| 1 | ✅ | ✅ | ✅ |
+| 2 | ✅ (MR) | ✅ | ✅ |
+| 3 | ✅ (hybrid) | ✅ | ✅ |
+| 4 | ❌ | ✅ | ✅ |
+| 5 | ❌ | ✅ | ✅ |
+| 6 | ❌ | ✅ | ✅ |
+
+**Note on R2 calculation**: R2 adapts to your sampling structure:
+- **SDS 1**: Within-cell deviation (`R2 = Y - Ȳ_kt`)
+- **SDS 2, 6**: Moving average method (`R2 = Y - MA2`) for unreplicated/sparse designs
+- **SDS 3, 4, 5**: Hybrid approach (within-cell for n>1 cells, zero for n=1 cells)
+
+These are Wheeler's prescribed methods for each sampling structure.
 
 ### 3. Signal Detection Rules
 
