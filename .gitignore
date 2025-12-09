@@ -46,8 +46,8 @@ coverage.xml
 # Jupyter
 .ipynb_checkpoints/
 *.ipynb
+!docs/**/*.ipynb  # Keep Jupyter Book notebooks
 !*_tutorial.ipynb  # Keep tutorial notebooks in repo
-examples/**/*.ipynb  # Ignore working copies in examples/
 
 # Temporary files
 *.tmp

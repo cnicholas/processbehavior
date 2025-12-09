@@ -1,0 +1,63 @@
+# Jupyter Book configuration
+# See https://jupyterbook.org/customize/config.html
+
+title: ProcessBehavior
+author: Chris Nicholas & Tom Bishop
+copyright: "2025"
+logo: _static/logo.png
+
+# Execute notebooks during build
+execute:
+  execute_notebooks: auto
+  timeout: 120
+  allow_errors: false
+
+# Repository settings
+repository:
+  url: https://github.com/cnicholas/processbehavior
+  path_to_book: docs
+  branch: main
+
+# Launch buttons for interactive use
+launch_buttons:
+  notebook_interface: "classic"
+  colab: true
+  binderhub_url: ""
+
+# HTML settings
+html:
+  use_repository_button: true
+  use_issues_button: true
+  use_edit_page_button: true
+  home_page_in_navbar: false
+  extra_footer: |
+    <p>Built with <a href="https://jupyterbook.org">Jupyter Book</a></p>
+
+# Sphinx extensions
+sphinx:
+  extra_extensions:
+    - sphinx.ext.autodoc
+    - sphinx.ext.napoleon
+    - sphinx.ext.viewcode
+  config:
+    autodoc_member_order: bysource
+    napoleon_google_docstring: true
+    napoleon_numpy_docstring: true
+    html_theme_options:
+      navigation_with_keys: true
+
+# Parse settings
+parse:
+  myst_enable_extensions:
+    - colon_fence
+    - deflist
+    - dollarmath
+    - linkify
+    - substitution
+
+# Exclude patterns
+exclude_patterns:
+  - _build
+  - Thumbs.db
+  - .DS_Store
+  - "**.ipynb_checkpoints"
