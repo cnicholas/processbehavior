@@ -121,10 +121,10 @@ Not all charts are valid for all Sampling Design States:
 | Imr | ✅ | ✅ | ✅ | ✅ | ✅ |
 | R | ✅ | ✅ | ✅ | ✅ | ✅ |
 | R2_S | ✅ | ❌ | ⚠️ | ❌ | ❌ |
-| R2_Imr | ✅ | ✅ | ✅ | ❌ | ❌ |
-| R3_Imr | ✅ | ✅ | ✅ | ❌ | ❌ |
-| R4_Imr | ✅ | ✅ | ✅ | ❌ | ❌ |
-| R5_Imr | ✅ | ✅ | ✅ | ❌ | ❌ |
+| R2_Imr | ✅ | ✅ | ✅ | ⚠️ | ⚠️ |
+| R3_Imr | ✅ | ✅ | ✅ | ⚠️ | ⚠️ |
+| R4_Imr | ✅ | ✅ | ✅ | ⚠️ | ⚠️ |
+| R5_Imr | ✅ | ✅ | ✅ | ⚠️ | ⚠️ |
 
 Use `study.valid_charts` to see what's available:
 

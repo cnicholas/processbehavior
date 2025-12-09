@@ -146,7 +146,9 @@ Re-centering formulas:
 | 1 (Full Replication) | ✅ Exact | ✅ Exact | ✅ Full | ✅ Full | ✅ Full |
 | 2 (No Replication) | ✅ | ⚠️ MR-based | ⚠️ Approx | ⚠️ Approx | ⚠️ Approx |
 | 3 (Partial) | ✅ | ⚠️ Hybrid | ⚠️ Approx | ⚠️ Approx | ⚠️ Approx |
-| 4+ | ✅ | ❌ | ❌ | ❌ | ❌ |
+| 4 (Single Stream) | ✅ | ⚠️ Hybrid | ⚠️ Approx | ⚠️ Approx | ⚠️ Approx |
+| 5 (Nested) | ✅ | ⚠️ Hybrid | ⚠️ Approx | ⚠️ Approx | ⚠️ Approx |
+| 6 (Unstructured) | ✅ | ⚠️ MR-based | ⚠️ Approx | ⚠️ Approx | ⚠️ Approx |
 
 ## Analysis Workflow with Residuals
 
