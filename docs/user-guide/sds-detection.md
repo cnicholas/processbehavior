@@ -178,17 +178,19 @@ The SDS affects three key aspects:
 | 1 | Within-cell standard deviation (exact) |
 | 2 | 2-point backward moving average |
 | 3 | Hybrid: exact for n>1, zero for n=1 |
-| 4-6 | Moving range |
+| 4-5 | Hybrid: exact for n>1, zero for n=1 |
+| 6 | 2-point backward moving average |
 
 ### 2. Available Charts
 
 | SDS | Xbar-S | Stratified IMR | VAS Residuals |
 |-----|--------|----------------|---------------|
 | 1 | ✅ | ✅ | ✅ Full |
-| 2 | ✅ (MR) | ✅ | ⚠️ Limited |
-| 3 | ✅ (hybrid) | ✅ | ⚠️ Limited |
-| 4 | ❌ | ✅ | ❌ |
-| 5-6 | ❌ | ✅ | ❌ |
+| 2 | ✅ (MR) | ✅ | ⚠️ Approx |
+| 3 | ✅ (hybrid) | ✅ | ⚠️ Approx |
+| 4 | ❌ | ✅ | ⚠️ Approx |
+| 5 | ❌ | ✅ | ⚠️ Approx |
+| 6 | ❌ | ✅ | ⚠️ Approx |
 
 ### 3. Signal Detection Rules
 
