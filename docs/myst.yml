@@ -1,0 +1,71 @@
+version: 1
+
+project:
+  title: ProcessBehavior
+  description: Python-native Process Behavior Charts with Wheeler's Variance Analysis System
+  keywords:
+    - SPC
+    - statistical process control
+    - control charts
+    - Wheeler
+    - process behavior
+    - quality engineering
+  authors:
+    - name: Chris Nicholas
+    - name: Tom Bishop
+  github: https://github.com/cnicholas/processbehavior
+  license: Apache-2.0
+  copyright: "2025"
+  toc:
+    - file: intro.md
+    - title: Getting Started
+      children:
+        - file: getting-started/installation.md
+        - file: getting-started/quickstart.ipynb
+        - file: getting-started/key-concepts.md
+    - title: Tutorials
+      children:
+        - file: tutorials/basic-imr.ipynb
+          title: Basic IMR Chart
+        - file: tutorials/xbar-s-analysis.ipynb
+          title: Xbar-S Analysis
+        - file: tutorials/stratified-analysis.ipynb
+          title: Stratified Analysis
+        - file: tutorials/signal-detection.ipynb
+          title: Signal Detection
+    - title: User Guide
+      children:
+        - file: user-guide/formulation.md
+          title: Data Formulation
+        - file: user-guide/sds-detection.md
+          title: Sampling Design States
+        - file: user-guide/chart-types.md
+          title: Chart Types
+        - file: user-guide/plotting.md
+          title: Plotting & Themes
+        - file: user-guide/residuals.md
+          title: VAS Residuals
+        - file: user-guide/excel-export.md
+          title: Excel Export
+    - title: Reference
+      children:
+        - file: reference/api.md
+          title: API Reference
+        - file: reference/weco-rules.md
+          title: Western Electric Rules
+    - title: Appendix
+      children:
+        - file: appendix/wheeler-terminology.md
+          title: Wheeler Terminology
+        - file: appendix/changelog.md
+          title: Changelog
+
+site:
+  template: book-theme
+  title: ProcessBehavior
+  nav: []
+  actions:
+    - title: GitHub
+      url: https://github.com/cnicholas/processbehavior
+    - title: PyPI
+      url: https://pypi.org/project/processbehavior/
