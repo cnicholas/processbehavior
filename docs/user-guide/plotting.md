@@ -334,6 +334,6 @@ fig.save_image('fillweight_xbar.png')
 
 ## Next Steps
 
-- {doc}`excel-export` - Include charts in Excel exports
-- {doc}`../tutorials/signal-detection` - Visualizing rule violations
-- {doc}`chart-types` - Available chart types
+- [Excel Export](excel-export.md) - Include charts in Excel exports
+- [Signal Detection](../tutorials/signal-detection.ipynb) - Visualizing rule violations
+- [Chart Types](chart-types.md) - Available chart types

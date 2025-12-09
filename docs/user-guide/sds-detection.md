@@ -265,6 +265,6 @@ print(cell_counts['n'].value_counts())
 
 ## Next Steps
 
-- {doc}`chart-types` - Choosing the right chart for your SDS
-- {doc}`residuals` - VAS residual interpretation by SDS
-- {doc}`../reference/api` - Complete SDS detection API
+- [Chart Types](chart-types.md) - Choosing the right chart for your SDS
+- [VAS Residuals](residuals.md) - VAS residual interpretation by SDS
+- [API Reference](../reference/api.md) - Complete SDS detection API

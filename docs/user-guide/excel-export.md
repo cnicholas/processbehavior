@@ -244,6 +244,6 @@ pip install kaleido
 
 ## Next Steps
 
-- {doc}`plotting` - Chart customization before export
-- {doc}`../tutorials/xbar-s-analysis` - Complete analysis workflow
-- {doc}`../reference/api` - Full to_excel() API
+- [Plotting & Themes](plotting.md) - Chart customization before export
+- [Xbar-S Analysis](../tutorials/xbar-s-analysis.ipynb) - Complete analysis workflow
+- [API Reference](../reference/api.md) - Full to_excel() API
