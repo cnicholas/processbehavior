@@ -183,21 +183,40 @@ The SDS affects three key aspects:
 
 ### 2. Available Charts
 
-| SDS | Xbar-S | Stratified IMR | VAS Residuals |
-|-----|--------|----------------|---------------|
-| 1 | ✅ | ✅ | ✅ |
-| 2 | ✅ (MR) | ✅ | ✅ |
-| 3 | ✅ (hybrid) | ✅ | ✅ |
-| 4 | ❌ | ✅ | ✅ |
-| 5 | ❌ | ✅ | ✅ |
-| 6 | ❌ | ✅ | ✅ |
+#### Standard Charts
+
+| SDS | Xbar-S | Stratified IMR |
+|-----|--------|----------------|
+| 1 | ✅ | ✅ |
+| 2 | ✅ (MR-based limits) | ✅ |
+| 3 | ✅ (hybrid limits) | ✅ |
+| 4 | ❌ | ✅ |
+| 5 | ❌ | ✅ |
+| 6 | ❌ | ✅ |
+
+#### VAS Residual Charts
+
+The available chart types for each residual depend on the **rational subgrouping structure**:
+
+| Residual | Subgrouping | Xbar/S Available | IMR Available |
+|----------|-------------|------------------|---------------|
+| **R2** | By cell (k,t) | SDS 1, 3, 4, 5* | All SDS |
+| **R3** | By cell (k,t) | SDS 1, 3, 4, 5* | All SDS |
+| **R4** | By time (aggregate across factors) | All SDS | All SDS |
+| **R5** | By factor (aggregate across time) | All SDS | All SDS |
+
+*When cells have n≥2. SDS 2 and 6 use IMR only.
+
+**Key insight**: R4 and R5 use different rational subgrouping than R2/R3:
+- **R4**: Aggregates observations across factor levels for each time point (N_.t = Σ_k N_kt)
+- **R5**: Aggregates observations across time for each factor level (N_k. = Σ_t N_kt)
+
+This enables Xbar/S analysis for R4 and R5 even when individual cells have n=1, because the aggregated subgroups have larger sample sizes.
 
 **Note on R2 calculation**: R2 adapts to your sampling structure:
 - **SDS 1**: Within-cell deviation (`R2 = Y - Ȳ_kt`)
 - **SDS 2, 6**: Moving average method (`R2 = Y - MA2`) for unreplicated/sparse designs
-- **SDS 3, 4, 5**: Hybrid approach (within-cell for n>1 cells, zero for n=1 cells)
-
-These are Wheeler's prescribed methods for each sampling structure.
+- **SDS 3, 4, 5**: Within-cell deviation (R2=0 for cells with n=1)
 
 ### 3. Signal Detection Rules
 
