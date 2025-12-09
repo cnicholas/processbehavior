@@ -242,6 +242,6 @@ Do you have factors?
 
 ## Next Steps
 
-- {doc}`plotting` - Visualization options for all charts
-- {doc}`residuals` - Deep dive into VAS residuals
-- {doc}`../tutorials/stratified-analysis` - Stratified IMR tutorial
+- [Plotting & Themes](plotting.md) - Visualization options for all charts
+- [VAS Residuals](residuals.md) - Deep dive into VAS residuals
+- [Stratified Analysis](../tutorials/stratified-analysis.ipynb) - Stratified IMR tutorial

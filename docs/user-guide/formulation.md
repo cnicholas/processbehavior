@@ -241,6 +241,6 @@ This uses `natsort` for intelligent alphanumeric sorting.
 
 ## Next Steps
 
-- {doc}`sds-detection` - Understanding Sampling Design States
-- {doc}`chart-types` - Choosing the right chart
-- {doc}`residuals` - Working with VAS residuals
+- [Sampling Design States](sds-detection.md) - Understanding Sampling Design States
+- [Chart Types](chart-types.md) - Choosing the right chart
+- [VAS Residuals](residuals.md) - Working with VAS residuals

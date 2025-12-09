@@ -122,4 +122,4 @@ pip install jupyterlab "ipywidgets>=7.6"
 
 ## Next Steps
 
-Now that ProcessBehavior is installed, continue to the {doc}`quickstart` tutorial to create your first process behavior chart.
+Now that ProcessBehavior is installed, continue to the [Quickstart](quickstart.ipynb) tutorial to create your first process behavior chart.

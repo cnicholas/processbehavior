@@ -277,6 +277,6 @@ R5 = Ȳ_k - Ȳ + R2
 
 ## Next Steps
 
-- {doc}`../tutorials/xbar-s-analysis` - Practical VAS analysis
-- {doc}`chart-types` - All residual chart types
-- {doc}`../reference/api` - ResidualCalculator API
+- [Xbar-S Analysis](../tutorials/xbar-s-analysis.ipynb) - Practical VAS analysis
+- [Chart Types](chart-types.md) - All residual chart types
+- [API Reference](../reference/api.md) - ResidualCalculator API

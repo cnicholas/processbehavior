@@ -76,10 +76,10 @@ pip install processbehavior[plotting]
 
 ## Quick Links
 
-- {doc}`getting-started/quickstart` - Get up and running in 5 minutes
-- {doc}`tutorials/basic-imr` - Your first control chart
-- {doc}`user-guide/sds-detection` - Understanding sampling designs
-- {doc}`reference/api` - Complete API reference
+- [Quickstart](getting-started/quickstart.ipynb) - Get up and running in 5 minutes
+- [Basic IMR Chart](tutorials/basic-imr.ipynb) - Your first control chart
+- [Sampling Design States](user-guide/sds-detection.md) - Understanding sampling designs
+- [API Reference](reference/api.md) - Complete API reference
 
 ## Philosophy
 

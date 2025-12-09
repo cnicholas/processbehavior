@@ -152,6 +152,6 @@ ProcessBehavior follows Wheeler's philosophy:
 
 ## Next Steps
 
-- {doc}`../tutorials/basic-imr` - Create your first IMR chart
-- {doc}`../user-guide/sds-detection` - Deep dive into SDS
-- {doc}`../user-guide/residuals` - Understanding VAS residuals
+- [Basic IMR Chart](../tutorials/basic-imr.ipynb) - Create your first IMR chart
+- [Sampling Design States](../user-guide/sds-detection.md) - Deep dive into SDS
+- [VAS Residuals](../user-guide/residuals.md) - Understanding VAS residuals
