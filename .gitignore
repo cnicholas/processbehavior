@@ -114,3 +114,5 @@ dmypy.json
 
 # OS
 Thumbs.db
+_build/
+docs/_build/
