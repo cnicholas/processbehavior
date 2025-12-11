@@ -131,8 +131,14 @@ class SDSAnalysisPlan:
         'R2_S': 'Is within-subgroup variation stable?',
         'R2_Imr': 'Is within-subgroup variation stable?',
         'R3_Imr': 'Is there factor×time interaction?',
+        'R3_Xbar': 'Is there factor×time interaction affecting the mean?',
+        'R3_S': 'Is there factor×time interaction affecting variation?',
         'R4_Imr': 'Does time have a significant effect?',
+        'R4_Xbar': 'Does time have a significant effect on the mean?',
+        'R4_S': 'Does time have a significant effect on variation?',
         'R5_Imr': 'Does the factor have a significant effect?',
+        'R5_Xbar': 'Do factors have a significant effect on the mean?',
+        'R5_S': 'Do factors have a significant effect on variation?',
     }
 
     @property
@@ -141,17 +147,38 @@ class SDSAnalysisPlan:
         Residual chart types available for this SDS.
 
         Returns the appropriate residual charts based on VAS support
-        and actual cell replication. R2 uses S chart when cells have
-        n>=2 (enabling standard deviation calculation), otherwise Imr.
+        and data structure:
 
-        Per Wheeler/Bishop Section 20.6.1, R2_S is available for
-        SDS 1, 3, 4, and 5 when rational subgroups have n>=2.
+        - R2: S chart when cells have n>=2, otherwise Imr
+        - R3: Xbar/S when cells have n>=2, otherwise Imr (same subgrouping as R2)
+        - R4: Xbar/S when has_factors (aggregate across factors by time)
+        - R5: Xbar/S when has_time (aggregate across time by factor)
+
+        Per Wheeler/Bishop Sections 20.6.1-4:
+        - R2 uses (k,t) cell subgrouping - S when n>=2
+        - R3 uses (k,t) cell subgrouping - Xbar/S when n>=2
+        - R4_Xbar/S use time-based subgrouping (N_.t = Σ_k N_kt)
+        - R5_Xbar/S use factor-based subgrouping (N_k. = Σ_t N_kt)
         """
         if not self.vas_residuals_supported:
             return []
-        # R2_S available when actual data has replication (min_cell_size >= 2)
+
+        # R2: S chart when cells have replication (min_cell_size >= 2)
         r2_chart = 'R2_S' if self.min_cell_size >= 2 else 'R2_Imr'
-        return [r2_chart, 'R3_Imr', 'R4_Imr', 'R5_Imr']
+
+        # R3: Same subgrouping as R2 - Xbar/S when min_cell_size >= 2
+        # Per Wheeler Section 20.6.2: "Xbar and S charts can be used for SDS 1, 3, 4, 5"
+        r3_charts = ['R3_Xbar', 'R3_S'] if self.min_cell_size >= 2 else ['R3_Imr']
+
+        # R4: Xbar/S when aggregating across factors gives n>=2 per time subgroup
+        # Requires has_factors=True (multiple factors to aggregate)
+        r4_charts = ['R4_Xbar', 'R4_S'] if self.has_factors else ['R4_Imr']
+
+        # R5: Xbar/S when aggregating across time gives n>=2 per factor subgroup
+        # Requires has_time=True (multiple time points to aggregate)
+        r5_charts = ['R5_Xbar', 'R5_S'] if self.has_time else ['R5_Imr']
+
+        return [r2_chart] + r3_charts + r4_charts + r5_charts
 
     def __str__(self) -> str:
         """Pretty print the analysis plan."""
