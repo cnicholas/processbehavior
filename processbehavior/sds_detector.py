@@ -19,7 +19,7 @@ Follows the Pythonic Hadley philosophy:
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import TYPE_CHECKING, ClassVar
 
 import pandas as pd
@@ -123,6 +123,9 @@ class SDSAnalysisPlan:
     limitations: list[str]
     bishop_reference: str
 
+    # Actual data characteristics (populated during detection)
+    min_cell_size: int = 0  # Minimum observations per cell from actual data
+
     # Class constant: questions each residual chart answers
     RESIDUAL_CHART_QUESTIONS: ClassVar[dict[str, str]] = {
         'R2_S': 'Is within-subgroup variation stable?',
@@ -138,12 +141,16 @@ class SDSAnalysisPlan:
         Residual chart types available for this SDS.
 
         Returns the appropriate residual charts based on VAS support
-        and replication type. R2 uses S chart when full replication
-        exists, otherwise Imr.
+        and actual cell replication. R2 uses S chart when cells have
+        n>=2 (enabling standard deviation calculation), otherwise Imr.
+
+        Per Wheeler/Bishop Section 20.6.1, R2_S is available for
+        SDS 1, 3, 4, and 5 when rational subgroups have n>=2.
         """
         if not self.vas_residuals_supported:
             return []
-        r2_chart = 'R2_S' if self.has_replication == 'full' else 'R2_Imr'
+        # R2_S available when actual data has replication (min_cell_size >= 2)
+        r2_chart = 'R2_S' if self.min_cell_size >= 2 else 'R2_Imr'
         return [r2_chart, 'R3_Imr', 'R4_Imr', 'R5_Imr']
 
     def __str__(self) -> str:
@@ -271,7 +278,7 @@ class SamplingDesignDetector:
         self,
         df: pd.DataFrame,
         spec: DataPrepConfig
-    ) -> int:
+    ) -> tuple[int, int]:
         """
         Detect Sampling Design State from data structure.
 
@@ -287,8 +294,8 @@ class SamplingDesignDetector:
 
         Returns
         -------
-        int
-            SDS number (0-6)
+        tuple[int, int]
+            (sds, min_cell_size) - SDS number (0-6) and minimum cell size
 
         Examples
         --------
@@ -298,14 +305,16 @@ class SamplingDesignDetector:
         ...     'time': [1, 1, 1, 1],
         ...     'y': [10, 11, 9, 10]
         ... })
-        >>> sds = detector.detect_sds(df, spec)
+        >>> sds, min_n = detector.detect_sds(df, spec)
         >>> sds
         1
+        >>> min_n
+        2
         """
         # SDS 0: No structure (no grouping factors defined)
         if not spec.has_grouping:
             logger.info("SDS 0: No grouping factors defined")
-            return 0
+            return (0, 0)
 
         # From here: have grouping factors
         # CRITICAL DESIGN DECISION:
@@ -343,18 +352,19 @@ class SamplingDesignDetector:
             n_cells = len(cell_sizes)
             sds5 = self._check_nested_design(df, spec, n_cells, n_groups)
             if sds5 is not None:
-                return sds5
+                return (sds5, min_n)
 
         # SDS 4: Single group (only one factor level)
         if n_groups == 1:
             logger.info(f"SDS 4: Single group ({n_groups} factor level)")
-            return 4
+            return (4, min_n)
 
         # SDS 1, 2, or 3: Based on cell-level replication pattern
         # Coverage ratio is 1.0 since cells are just the factor combinations
-        return self._classify_by_replication(
+        sds = self._classify_by_replication(
             cell_sizes, min_n, max_n, coverage_ratio=1.0
         )
+        return (sds, min_n)
 
     def get_sds_characteristics(self, sds: int) -> dict:
         """
@@ -728,7 +738,7 @@ class SamplingDesignDetector:
     # =========================================================================
 
     @staticmethod
-    def get_analysis_plan(sds: int) -> SDSAnalysisPlan:
+    def get_analysis_plan(sds: int, min_cell_size: int = 0) -> SDSAnalysisPlan:
         """
         Get comprehensive analysis plan for a Sampling Design State.
 
@@ -743,6 +753,10 @@ class SamplingDesignDetector:
         ----------
         sds : int
             Sampling Design State (0-6)
+        min_cell_size : int, optional
+            Actual minimum cell size from the data. If provided, enables
+            data-driven R2 chart selection (R2_S when min_cell_size >= 2).
+            Default is 0.
 
         Returns
         -------
@@ -766,8 +780,8 @@ class SamplingDesignDetector:
 
         >>> # Check what your data structure supports
         >>> detector = SamplingDesignDetector()
-        >>> sds = detector.detect_sds(df, spec)
-        >>> plan = detector.get_analysis_plan(sds)
+        >>> sds, min_n = detector.detect_sds(df, spec)
+        >>> plan = detector.get_analysis_plan(sds, min_cell_size=min_n)
         >>> print(f"Your data supports: {', '.join(plan.valid_charts)}")
         """
         plans = {
@@ -985,7 +999,9 @@ class SamplingDesignDetector:
                 f"Available: {list(plans.keys())}"
             )
 
-        return plans[sds]
+        plan = plans[sds]
+        # Set min_cell_size from actual data
+        return replace(plan, min_cell_size=min_cell_size)
 
     @staticmethod
     def print_all_analysis_plans() -> None:

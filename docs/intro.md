@@ -4,6 +4,62 @@
 
 ProcessBehavior brings Donald Wheeler's rigorous statistical process control methodology to Python, with a modern API designed for data scientists and quality engineers.
 
+## Analyst Workflow
+
+The ProcessBehavior workflow guides you from raw data to actionable insights:
+
+```{mermaid}
+flowchart LR
+    subgraph Input
+        A[📊 pandas DataFrame]
+    end
+
+    subgraph Formulation
+        B[ProcessDataFrame]
+        C[formulate]
+        D[Study]
+    end
+
+    subgraph Analysis
+        E[analyze]
+        F[AnalysisResult]
+    end
+
+    subgraph Output
+        G[📈 plot]
+        H[📁 to_excel]
+        I[🔍 detect_signals]
+    end
+
+    A --> B
+    B --> C
+    C -->|"SDS detection"| D
+    D --> E
+    E --> F
+    F --> G
+    F --> H
+    F --> I
+
+    style A fill:#e1f5fe
+    style D fill:#fff3e0
+    style F fill:#e8f5e9
+    style G fill:#fce4ec
+    style H fill:#fce4ec
+    style I fill:#fce4ec
+```
+
+**Key Steps:**
+1. **Load** your process data into a pandas DataFrame
+2. **Wrap** with `ProcessDataFrame` for IDE auto-completion
+3. **Formulate** your study — ProcessBehavior detects the Sampling Design State (SDS) and determines:
+   - Design state (SDS 0–6)
+   - Valid and recommended charts
+   - Available VAS residuals (R1–R5)
+   - Main effects analysis
+   - Interaction analysis
+4. **Analyze** — run calculations and get results with charts, statistics, and residuals
+5. **Output** — visualize with interactive plots, export to Excel, or detect Western Electric rule violations
+
 ## What Makes ProcessBehavior Different?
 
 Unlike traditional SPC packages that require you to manually select chart types and configure parameters, ProcessBehavior automatically detects your data's **Sampling Design State (SDS)** and recommends the appropriate analysis approach.

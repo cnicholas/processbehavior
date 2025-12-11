@@ -1,6 +1,6 @@
-# Data Formulation
+# Study Formulation
 
-The `formulate()` method is the heart of ProcessBehavior. It transforms your raw data into a structured study, automatically detecting the sampling design and preparing for analysis.
+The `formulate()` method is the heart of ProcessBehavior. It enables the analyst to specify the key inputs defined during problem forumlation to create a structured study.  The system automatically detects the sampling design and prepares the analysis.
 
 ## The Formulation API
 
@@ -108,7 +108,7 @@ When you call `formulate()`, ProcessBehavior:
 2. **Cleans data** - Handles missing values and garbage characters
 3. **Detects SDS** - Determines the Sampling Design State (0-6)
 4. **Calculates means** - Computes Y̅, Y̅_k, Y̅_t, Y̅_kt
-5. **Computes residuals** - Calculates R1-R5 (for replicated designs)
+5. **Computes residuals** - Calculates R1-R5
 6. **Determines valid charts** - Lists which analyses are appropriate
 
 ## The Study Object
