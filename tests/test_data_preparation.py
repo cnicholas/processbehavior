@@ -244,7 +244,7 @@ def test_prepare_dataset_drops_na_rows(prep):
     assert len(result) == 4
 
     # Verify n column reflects actual usable observations (not raw count)
-    n_by_group = result.groupby('rsg')['n'].first()
+    n_by_group = result.groupby('rsg', observed=True)['n'].first()
     assert n_by_group['A'] == 2  # 3 raw - 1 NaN = 2 usable
     assert n_by_group['B'] == 2  # 2 raw - 0 NaN = 2 usable
 

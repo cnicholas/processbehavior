@@ -351,10 +351,10 @@ class ProcessDataFrame:
 
         # Detect SDS on prepared data
         detector = SamplingDesignDetector()
-        sds = detector.detect_sds(prepared_df, config)
+        sds, min_cell_size = detector.detect_sds(prepared_df, config)
 
         # Get SDS analysis plan with all metadata
-        plan = SamplingDesignDetector.get_analysis_plan(sds)
+        plan = SamplingDesignDetector.get_analysis_plan(sds, min_cell_size=min_cell_size)
 
         # Calculate full dataset with residuals (R1-R5, RCR1-RCR5)
         # Use AnalysisDataSet with the recommended chart type to trigger calculation

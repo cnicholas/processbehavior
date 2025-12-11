@@ -141,9 +141,10 @@ def test_detect_sds0_no_structure(detector, sds0_data):
         'response_var': 'weight'
     })
 
-    sds = detector.detect_sds(sds0_data, spec)
+    sds, min_n = detector.detect_sds(sds0_data, spec)
 
     assert sds == 0
+    assert min_n == 0  # No grouping means no cell size
 
 
 def test_detect_sds1_grouping_only(detector, spec_no_time):
@@ -157,10 +158,11 @@ def test_detect_sds1_grouping_only(detector, spec_no_time):
         'weight': [10.1, 10.2, 9.9, 10.0]
     })
 
-    sds = detector.detect_sds(df, spec_no_time)
+    sds, min_n = detector.detect_sds(df, spec_no_time)
 
     # 2 groups with n=2 each = full replication
     assert sds == 1
+    assert min_n == 2
 
 
 def test_detect_sds0_only_time(detector, spec_no_grouping):
@@ -170,37 +172,42 @@ def test_detect_sds0_only_time(detector, spec_no_grouping):
         'weight': [10.1, 10.2, 10.3]
     })
 
-    sds = detector.detect_sds(df, spec_no_grouping)
+    sds, min_n = detector.detect_sds(df, spec_no_grouping)
 
     assert sds == 0
+    assert min_n == 0
 
 
 def test_detect_sds1_full_replication(detector, sds1_data, spec_with_grouping_and_time):
     """Should detect SDS 1 when all cells have n≥2."""
-    sds = detector.detect_sds(sds1_data, spec_with_grouping_and_time)
+    sds, min_n = detector.detect_sds(sds1_data, spec_with_grouping_and_time)
 
     assert sds == 1
+    assert min_n >= 2
 
 
 def test_detect_sds2_no_replication(detector, sds2_data, spec_with_grouping_and_time):
     """Should detect SDS 2 when all cells have n=1 with complete grid."""
-    sds = detector.detect_sds(sds2_data, spec_with_grouping_and_time)
+    sds, min_n = detector.detect_sds(sds2_data, spec_with_grouping_and_time)
 
     assert sds == 2
+    assert min_n == 1
 
 
 def test_detect_sds3_partial_replication(detector, sds3_data, spec_with_grouping_and_time):
     """Should detect SDS 3 when mix of n=1 and n≥2 cells."""
-    sds = detector.detect_sds(sds3_data, spec_with_grouping_and_time)
+    sds, min_n = detector.detect_sds(sds3_data, spec_with_grouping_and_time)
 
     assert sds == 3
+    assert min_n == 1  # Minimum is 1 for partial replication
 
 
 def test_detect_sds4_single_condition(detector, sds4_data, spec_with_grouping_and_time):
     """Should detect SDS 4 when single group over multiple times."""
-    sds = detector.detect_sds(sds4_data, spec_with_grouping_and_time)
+    sds, min_n = detector.detect_sds(sds4_data, spec_with_grouping_and_time)
 
     assert sds == 4
+    assert min_n >= 1
 
 
 def test_detect_sds1_with_time_as_ordering(detector, sds6_data, spec_with_grouping_and_time):
@@ -210,10 +217,11 @@ def test_detect_sds1_with_time_as_ordering(detector, sds6_data, spec_with_groupi
     This data has 2 groups ('A', 'B') with n=5 each = SDS 1.
     The sparse time coverage doesn't affect SDS detection.
     """
-    sds = detector.detect_sds(sds6_data, spec_with_grouping_and_time)
+    sds, min_n = detector.detect_sds(sds6_data, spec_with_grouping_and_time)
 
     # 2 groups with n=5 each = full replication
     assert sds == 1
+    assert min_n >= 2
 
 
 def test_detect_sds_nested_design(detector):
@@ -238,7 +246,7 @@ def test_detect_sds_nested_design(detector):
         'response_var': 'weight'
     })
 
-    sds = detector.detect_sds(df, spec)
+    sds, min_n = detector.detect_sds(df, spec)
 
     # With 2 RSG × 2 time = 4 possible cells, all 4 present (100%)
     # Nested design requires BOTH nesting AND < 90% coverage
@@ -484,10 +492,11 @@ def test_detect_sds1_sparse_time_coverage(detector, spec_with_grouping_and_time)
         'weight': [10.0] * 14
     })
 
-    sds = detector.detect_sds(df, spec_with_grouping_and_time)
+    sds, min_n = detector.detect_sds(df, spec_with_grouping_and_time)
 
     # 2 groups with n=7 each = full replication
     assert sds == 1
+    assert min_n == 7
 
 
 def test_detect_sds_with_large_n_values(detector, spec_with_grouping_and_time):
@@ -499,9 +508,10 @@ def test_detect_sds_with_large_n_values(detector, spec_with_grouping_and_time):
         'weight': list(range(400))
     })
 
-    sds = detector.detect_sds(df, spec_with_grouping_and_time)
+    sds, min_n = detector.detect_sds(df, spec_with_grouping_and_time)
 
     assert sds == 1  # Full replication
+    assert min_n == 200  # 200 per group (A and B)
 
 
 def test_detect_sds_with_varying_cell_sizes(detector, spec_with_grouping_and_time):
@@ -523,9 +533,10 @@ def test_detect_sds_with_varying_cell_sizes(detector, spec_with_grouping_and_tim
     # Grid: 3 groups × 2 times = 6 cells, all 6 present = 100% coverage
     # Subgroup sizes: A=5, B=1, C=2 → mix of n=1 and n≥2 → SDS 3
 
-    sds = detector.detect_sds(df, spec_with_grouping_and_time)
+    sds, min_n = detector.detect_sds(df, spec_with_grouping_and_time)
 
     assert sds == 3  # Partial replication (mix of n=1 and n≥2)
+    assert min_n == 1  # Minimum is 1 (group B)
 
 
 def test_detect_sds_logs_debug_info(detector, sds1_data, spec_with_grouping_and_time, caplog):
@@ -559,7 +570,7 @@ def test_detect_sds_with_three_factors(detector):
     })
 
     # Should not crash, should detect some SDS
-    sds = detector.detect_sds(df, spec)
+    sds, min_n = detector.detect_sds(df, spec)
     assert sds in range(7)  # Valid SDS 0-6
 
 
@@ -589,11 +600,12 @@ def test_realistic_scenario_manufacturing_4_lanes_hourly(detector):
         'response_var': 'weight'
     })
 
-    sds = detector.detect_sds(df, spec)
+    sds, min_n = detector.detect_sds(df, spec)
     info = detector.get_sds_characteristics(sds)
     should_calc_vas = detector.should_calculate_vas_residuals(sds, 'Xbar')
 
     assert sds == 1  # Full replication
+    assert min_n == 40  # 4 lanes × 8 hours × 5 samples / 4 lanes = 40 per lane
     assert info['r2_method'] == 'within_cell'
     assert should_calc_vas is True
 
@@ -620,6 +632,151 @@ def test_realistic_scenario_designed_experiment_no_replication(detector):
         'response_var': 'yield'
     })
 
-    sds = detector.detect_sds(df, spec)
+    sds, min_n = detector.detect_sds(df, spec)
 
     assert sds == 2  # No replication, complete grid
+    assert min_n == 1
+
+
+# ============================================================================
+# Test: R2_S Availability Based on min_cell_size (GitHub Issue #49)
+# ============================================================================
+
+class TestR2ChartAvailability:
+    """Tests for R2_S vs R2_Imr selection based on actual cell sizes.
+
+    Per Wheeler/Bishop Section 20.6.1:
+    - R2_S is available when rational subgroups have n≥2
+    - R2_Imr is used when n=1 (no within-cell variation)
+    """
+
+    def test_sds1_always_has_r2_s(self):
+        """SDS 1 (full replication) should always have R2_S available.
+
+        By definition, SDS 1 requires all cells to have n≥2.
+        """
+        plan = SamplingDesignDetector.get_analysis_plan(sds=1, min_cell_size=3)
+
+        assert plan.vas_residuals_supported is True
+        assert plan.min_cell_size == 3
+        assert 'R2_S' in plan.residual_charts
+        assert 'R2_Imr' not in plan.residual_charts
+
+    def test_sds2_always_has_r2_imr(self):
+        """SDS 2 (no replication) should always have R2_Imr.
+
+        By definition, SDS 2 requires all cells to have n=1.
+        """
+        plan = SamplingDesignDetector.get_analysis_plan(sds=2, min_cell_size=1)
+
+        assert plan.vas_residuals_supported is True
+        assert plan.min_cell_size == 1
+        assert 'R2_Imr' in plan.residual_charts
+        assert 'R2_S' not in plan.residual_charts
+
+    def test_sds3_with_replication_has_r2_s(self):
+        """SDS 3 with min_cell_size≥2 should have R2_S available.
+
+        SDS 3 is "partial replication" - some cells have n≥2, some n=1.
+        When the minimum is ≥2, we can use S chart for R2.
+        """
+        plan = SamplingDesignDetector.get_analysis_plan(sds=3, min_cell_size=2)
+
+        assert plan.vas_residuals_supported is True
+        assert plan.min_cell_size == 2
+        assert 'R2_S' in plan.residual_charts
+        assert 'R2_Imr' not in plan.residual_charts
+
+    def test_sds3_without_replication_has_r2_imr(self):
+        """SDS 3 with min_cell_size=1 should use R2_Imr.
+
+        When some cells have only n=1, we must use Imr for R2.
+        """
+        plan = SamplingDesignDetector.get_analysis_plan(sds=3, min_cell_size=1)
+
+        assert plan.vas_residuals_supported is True
+        assert plan.min_cell_size == 1
+        assert 'R2_Imr' in plan.residual_charts
+        assert 'R2_S' not in plan.residual_charts
+
+    def test_sds4_with_replication_has_r2_s(self):
+        """SDS 4 with min_cell_size≥2 should have R2_S available.
+
+        This is the main fix from GitHub Issue #49 - SDS 4 can
+        have R2_S when cells have replication.
+        """
+        plan = SamplingDesignDetector.get_analysis_plan(sds=4, min_cell_size=3)
+
+        assert plan.vas_residuals_supported is True
+        assert plan.min_cell_size == 3
+        assert 'R2_S' in plan.residual_charts
+        assert 'R2_Imr' not in plan.residual_charts
+
+    def test_sds4_without_replication_has_r2_imr(self):
+        """SDS 4 with min_cell_size=1 should use R2_Imr."""
+        plan = SamplingDesignDetector.get_analysis_plan(sds=4, min_cell_size=1)
+
+        assert plan.vas_residuals_supported is True
+        assert plan.min_cell_size == 1
+        assert 'R2_Imr' in plan.residual_charts
+        assert 'R2_S' not in plan.residual_charts
+
+    def test_sds5_with_replication_has_r2_s(self):
+        """SDS 5 (nested) with min_cell_size≥2 should have R2_S available.
+
+        Another key fix from GitHub Issue #49 - nested designs can
+        have R2_S when cells have replication.
+        """
+        plan = SamplingDesignDetector.get_analysis_plan(sds=5, min_cell_size=2)
+
+        assert plan.vas_residuals_supported is True
+        assert plan.min_cell_size == 2
+        assert 'R2_S' in plan.residual_charts
+        assert 'R2_Imr' not in plan.residual_charts
+
+    def test_sds5_without_replication_has_r2_imr(self):
+        """SDS 5 with min_cell_size=1 should use R2_Imr."""
+        plan = SamplingDesignDetector.get_analysis_plan(sds=5, min_cell_size=1)
+
+        assert plan.vas_residuals_supported is True
+        assert plan.min_cell_size == 1
+        assert 'R2_Imr' in plan.residual_charts
+        assert 'R2_S' not in plan.residual_charts
+
+    def test_sds6_with_replication_has_r2_s(self):
+        """SDS 6 (irregular) with replication can have R2_S.
+
+        Even irregular grids can use S chart for R2 if cells have n≥2.
+        """
+        plan = SamplingDesignDetector.get_analysis_plan(sds=6, min_cell_size=5)
+
+        # SDS 6 supports VAS residuals (with moving average method)
+        assert plan.vas_residuals_supported is True
+        assert plan.min_cell_size == 5
+        assert 'R2_S' in plan.residual_charts
+
+    def test_sds6_without_replication_has_r2_imr(self):
+        """SDS 6 (irregular) without replication uses R2_Imr."""
+        plan = SamplingDesignDetector.get_analysis_plan(sds=6, min_cell_size=1)
+
+        assert plan.vas_residuals_supported is True
+        assert plan.min_cell_size == 1
+        assert 'R2_Imr' in plan.residual_charts
+        assert 'R2_S' not in plan.residual_charts
+
+    def test_sds0_no_residual_charts(self):
+        """SDS 0 (no structure) has no residual charts."""
+        plan = SamplingDesignDetector.get_analysis_plan(sds=0, min_cell_size=0)
+
+        assert plan.vas_residuals_supported is False
+        assert plan.residual_charts == []
+
+    def test_all_r2_supporting_sds_have_other_residuals(self):
+        """All SDS types with R2 should also have R3, R4, R5."""
+        for sds in [1, 2, 3, 4, 5]:
+            plan = SamplingDesignDetector.get_analysis_plan(sds=sds, min_cell_size=2)
+
+            if plan.vas_residuals_supported:
+                assert 'R3_Imr' in plan.residual_charts
+                assert 'R4_Imr' in plan.residual_charts
+                assert 'R5_Imr' in plan.residual_charts

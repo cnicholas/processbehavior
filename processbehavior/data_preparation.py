@@ -601,7 +601,7 @@ class DataPreparation:
 
         # Try datetime conversion
         try:
-            datetime_vals = pd.to_datetime(series, errors='coerce')
+            datetime_vals = pd.to_datetime(series, errors='coerce', format='mixed')
             # Only convert if most values succeeded
             success_rate = datetime_vals.notna().sum() / len(series)
             if success_rate > 0.5:  # At least 50% converted

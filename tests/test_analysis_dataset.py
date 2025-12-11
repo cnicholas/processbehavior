@@ -23,6 +23,8 @@ from processbehavior.spc_constants import c4
 def detect_sds_for_test(df: pd.DataFrame, spec: dict) -> int:
     """
     Helper to detect SDS for tests that need to create AnalysisDataSet or Analysis directly.
+
+    Returns only the SDS integer, not the (sds, min_cell_size) tuple.
     """
     from processbehavior.analysis_specification import AnalysisSpecification
     config = AnalysisSpecification(spec)
@@ -30,7 +32,8 @@ def detect_sds_for_test(df: pd.DataFrame, spec: dict) -> int:
     prep.validate_columns(df, config)
     prepared_df = prep.prepare_dataset(df, config)
     detector = SamplingDesignDetector()
-    return detector.detect_sds(prepared_df, config)
+    sds, _min_cell_size = detector.detect_sds(prepared_df, config)
+    return sds
 
 
 # ========================

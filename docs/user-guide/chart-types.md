@@ -11,7 +11,7 @@ ProcessBehavior supports multiple chart types, each suited for different data st
 | **Xbar** | X-bar Chart | Monitor subgroup means | n >= 2 per subgroup |
 | **S** | S Chart | Monitor subgroup variation | n >= 2 per subgroup |
 | **Imr** | Individual-Moving Range | Monitor individual values | Any structure |
-| **R** | Range Chart | Monitor subgroup ranges | n >= 2 per subgroup |
+| **R** | Range Chart | Monitor Individual ranges | n >= 2 per subgroup |
 
 ### VAS Residual Charts
 
