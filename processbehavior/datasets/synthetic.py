@@ -55,13 +55,14 @@ logger = logging.getLogger(__name__)
 
 __all__ = [
     'make_sds1',
-    'make_sds2', 
+    'make_sds2',
     'make_sds3',
     'make_sds4',
     'make_sds5',
     'make_sds6',
     'make_sds',
-    'make_edge_cases'
+    'make_edge_cases',
+    'make_large_dataset',
 ]
 
 
@@ -1883,6 +1884,105 @@ def print_sds_summary():
             print(f"  • {char}")
         print(f"\nCommon in: {info['common_in']}")
         print(f"Chart types: {', '.join(info['chart_types'])}")
+
+
+# ============================================================================
+# Large Dataset Generator for Performance Testing
+# ============================================================================
+
+
+def make_large_dataset(
+    n_rows: int = 1_000_000,
+    n_extra_cols: int = 46,
+    sds: int = 1,
+    seed: int = 42,
+) -> pd.DataFrame:
+    """
+    Generate large dataset for performance testing.
+
+    Creates dataset with specified row count plus extra columns that won't
+    be used in analysis, simulating real-world data dumps with many unused
+    columns.
+
+    This is useful for:
+    - Performance benchmarking
+    - Memory usage testing
+    - Scalability validation
+    - Stress testing the analysis pipeline
+
+    Args:
+        n_rows: Target number of rows (approximate, actual may vary slightly
+                due to SDS structure constraints)
+        n_extra_cols: Extra columns to add beyond the 4 core analysis columns
+                      (factor 1, factor 2, time, y). Default 46 gives 50 total.
+        sds: Sampling Design State to generate (1, 2, or 4 supported for large)
+        seed: Random seed for reproducibility
+
+    Returns:
+        DataFrame with approximately n_rows and (4 + n_extra_cols) columns
+
+    Examples:
+        >>> # Generate 1M row dataset with 50 columns
+        >>> df = make_large_dataset(n_rows=1_000_000, n_extra_cols=46)
+        >>> len(df)
+        1000000
+        >>> len(df.columns)
+        50
+
+        >>> # Generate 100K rows for faster testing
+        >>> df = make_large_dataset(n_rows=100_000, seed=42)
+
+        >>> # Test SDS 2 (no replication) at scale
+        >>> df = make_large_dataset(n_rows=500_000, sds=2)
+
+    Notes:
+        - SDS 1: Uses K factors × T times × n replicates = n_rows
+        - SDS 2: Uses K factors × T times = n_rows (no replication)
+        - SDS 4: Uses T time points = n_rows (single factor)
+        - Extra columns are randomly typed (60% float, 20% int, 20% string)
+          to simulate realistic mixed-type data exports.
+    """
+    rng = np.random.default_rng(seed)
+
+    if sds == 1:
+        # Calculate K, T, n to hit target rows
+        # K × T × n = n_rows
+        n = 10  # Fixed replication
+        cells = n_rows // n
+        K = int(np.sqrt(cells))
+        T = cells // K
+
+        df = make_sds1(K=K, T=T, n_min=n, n_max=n, seed=seed)
+
+    elif sds == 2:
+        # K × T = n_rows (no replication)
+        K = int(np.sqrt(n_rows))
+        T = n_rows // K
+        df = make_sds2(K=K, T=T, seed=seed)
+
+    elif sds == 4:
+        # Single factor, T time points
+        df = make_sds4(T=n_rows, seed=seed)
+
+    else:
+        raise ValueError(
+            f'SDS {sds} not optimized for large datasets. '
+            f'Supported: 1 (full replication), 2 (no replication), 4 (time series)'
+        )
+
+    # Add extra columns with mixed data types
+    for i in range(n_extra_cols):
+        dtype_choice = rng.choice(['float', 'int', 'str'], p=[0.6, 0.2, 0.2])
+
+        if dtype_choice == 'float':
+            df[f'extra_{i}'] = rng.normal(0, 100, len(df))
+        elif dtype_choice == 'int':
+            df[f'extra_{i}'] = rng.integers(0, 1000, len(df))
+        else:
+            df[f'extra_{i}'] = rng.choice(['A', 'B', 'C', 'D'], len(df))
+
+    logger.info(f'Generated large dataset: {len(df):,} rows × {len(df.columns)} cols')
+    return df
 
 
 # ============================================================================
