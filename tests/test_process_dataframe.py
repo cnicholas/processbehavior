@@ -1046,3 +1046,347 @@ def test_formulate_with_nan_values():
     # Should handle NaN gracefully
     study = pdata.formulate(response='Value', time='Time')
     assert study is not None
+
+
+# ============================================================================
+# Test: R4/R5 Xbar/S Charts (GitHub Issues #51 & #52)
+# ============================================================================
+
+def test_r4_xbar_chart_calculation():
+    """R4_Xbar should use time-based subgrouping."""
+    np.random.seed(42)
+    data_rows = []
+    # Create SDS 1 data: 3 factors × 5 time points × 2 replicates
+    for factor in ['A', 'B', 'C']:
+        for time in range(1, 6):
+            for _ in range(2):
+                data_rows.append({
+                    'Value': np.random.normal(50, 3),
+                    'Factor': factor,
+                    'Time': time
+                })
+
+    df = pd.DataFrame(data_rows)
+    study = ProcessDataFrame(df).formulate(
+        response='Value',
+        factors=['Factor'],
+        time='Time'
+    )
+
+    # Should be SDS 1 (all cells have n≥2)
+    assert study.sds == 1
+    assert 'R4_Xbar' in study.residual_charts
+
+    # Analyze R4_Xbar
+    result = study.analyze(chart='R4_Xbar')
+    assert result is not None
+    assert 'R4_Xbar' in result.charts
+
+    chart_data = result.charts['R4_Xbar']
+    assert 'data' in chart_data
+    assert 'statistics' in chart_data
+
+    # R4_Xbar should have one point per time (5 time points)
+    data_df = chart_data['data']
+    assert len(data_df) == 5
+
+
+def test_r4_s_chart_calculation():
+    """R4_S should use time-based subgrouping."""
+    np.random.seed(42)
+    data_rows = []
+    # Create SDS 1 data: 3 factors × 5 time points × 2 replicates
+    for factor in ['A', 'B', 'C']:
+        for time in range(1, 6):
+            for _ in range(2):
+                data_rows.append({
+                    'Value': np.random.normal(50, 3),
+                    'Factor': factor,
+                    'Time': time
+                })
+
+    df = pd.DataFrame(data_rows)
+    study = ProcessDataFrame(df).formulate(
+        response='Value',
+        factors=['Factor'],
+        time='Time'
+    )
+
+    assert 'R4_S' in study.residual_charts
+
+    # Analyze R4_S
+    result = study.analyze(chart='R4_S')
+    assert result is not None
+    assert 'R4_S' in result.charts
+
+    chart_data = result.charts['R4_S']
+    assert 'data' in chart_data
+    assert 'statistics' in chart_data
+
+    # R4_S should have one point per time (5 time points)
+    data_df = chart_data['data']
+    assert len(data_df) == 5
+
+
+def test_r5_xbar_chart_calculation():
+    """R5_Xbar should use factor-based subgrouping."""
+    np.random.seed(42)
+    data_rows = []
+    # Create SDS 1 data: 3 factors × 5 time points × 2 replicates
+    for factor in ['A', 'B', 'C']:
+        for time in range(1, 6):
+            for _ in range(2):
+                data_rows.append({
+                    'Value': np.random.normal(50, 3),
+                    'Factor': factor,
+                    'Time': time
+                })
+
+    df = pd.DataFrame(data_rows)
+    study = ProcessDataFrame(df).formulate(
+        response='Value',
+        factors=['Factor'],
+        time='Time'
+    )
+
+    assert 'R5_Xbar' in study.residual_charts
+
+    # Analyze R5_Xbar
+    result = study.analyze(chart='R5_Xbar')
+    assert result is not None
+    assert 'R5_Xbar' in result.charts
+
+    chart_data = result.charts['R5_Xbar']
+    assert 'data' in chart_data
+    assert 'statistics' in chart_data
+
+    # R5_Xbar should have one point per factor (3 factors)
+    data_df = chart_data['data']
+    assert len(data_df) == 3
+
+
+def test_r5_s_chart_calculation():
+    """R5_S should use factor-based subgrouping."""
+    np.random.seed(42)
+    data_rows = []
+    # Create SDS 1 data: 3 factors × 5 time points × 2 replicates
+    for factor in ['A', 'B', 'C']:
+        for time in range(1, 6):
+            for _ in range(2):
+                data_rows.append({
+                    'Value': np.random.normal(50, 3),
+                    'Factor': factor,
+                    'Time': time
+                })
+
+    df = pd.DataFrame(data_rows)
+    study = ProcessDataFrame(df).formulate(
+        response='Value',
+        factors=['Factor'],
+        time='Time'
+    )
+
+    assert 'R5_S' in study.residual_charts
+
+    # Analyze R5_S
+    result = study.analyze(chart='R5_S')
+    assert result is not None
+    assert 'R5_S' in result.charts
+
+    chart_data = result.charts['R5_S']
+    assert 'data' in chart_data
+    assert 'statistics' in chart_data
+
+    # R5_S should have one point per factor (3 factors)
+    data_df = chart_data['data']
+    assert len(data_df) == 3
+
+
+def test_r4_xbar_subgrouping_different_from_r5():
+    """R4 and R5 should have different subgroup counts."""
+    np.random.seed(42)
+    data_rows = []
+    # Create SDS 1 data: 4 factors × 6 time points × 2 replicates
+    for factor in ['A', 'B', 'C', 'D']:
+        for time in range(1, 7):
+            for _ in range(2):
+                data_rows.append({
+                    'Value': np.random.normal(50, 3),
+                    'Factor': factor,
+                    'Time': time
+                })
+
+    df = pd.DataFrame(data_rows)
+    study = ProcessDataFrame(df).formulate(
+        response='Value',
+        factors=['Factor'],
+        time='Time'
+    )
+
+    # Analyze both R4 and R5 Xbar charts
+    r4_result = study.analyze(chart='R4_Xbar')
+    r5_result = study.analyze(chart='R5_Xbar')
+
+    r4_data = r4_result.charts['R4_Xbar']['data']
+    r5_data = r5_result.charts['R5_Xbar']['data']
+
+    # R4 subgroups by time: 6 time points
+    # R5 subgroups by factor: 4 factors
+    assert len(r4_data) == 6, f"R4 should have 6 subgroups (time), got {len(r4_data)}"
+    assert len(r5_data) == 4, f"R5 should have 4 subgroups (factor), got {len(r5_data)}"
+
+
+def test_r4_r5_xbar_s_control_limits_structure():
+    """R4 and R5 Xbar/S charts should have proper control limit structure."""
+    np.random.seed(42)
+    data_rows = []
+    for factor in ['A', 'B', 'C']:
+        for time in range(1, 6):
+            for _ in range(2):
+                data_rows.append({
+                    'Value': np.random.normal(50, 3),
+                    'Factor': factor,
+                    'Time': time
+                })
+
+    df = pd.DataFrame(data_rows)
+    study = ProcessDataFrame(df).formulate(
+        response='Value',
+        factors=['Factor'],
+        time='Time'
+    )
+
+    for chart_type in ['R4_Xbar', 'R4_S', 'R5_Xbar', 'R5_S']:
+        result = study.analyze(chart=chart_type)
+        chart_data = result.charts[chart_type]
+
+        # Should have statistics with control limits
+        stats = chart_data['statistics']
+        assert 'center' in stats, f"{chart_type} missing center"
+        assert 'upl' in stats, f"{chart_type} missing upl"
+        assert 'lpl' in stats, f"{chart_type} missing lpl"
+
+        # Control limits should be numeric
+        assert isinstance(stats['center'], (int, float, np.number))
+        assert isinstance(stats['upl'], (int, float, np.number))
+        assert isinstance(stats['lpl'], (int, float, np.number))
+
+        # UPL > center > LPL (for properly behaved data)
+        assert stats['upl'] >= stats['center'], f"{chart_type}: UPL should be >= center"
+        assert stats['center'] >= stats['lpl'], f"{chart_type}: center should be >= LPL"
+
+
+# ============================================================================
+# Test: R3 Xbar/S Charts (GitHub Issue #50)
+# ============================================================================
+
+def test_r3_xbar_chart_calculation():
+    """R3_Xbar should use factor-based subgrouping (same as R2)."""
+    np.random.seed(42)
+    data_rows = []
+    # Create SDS 1 data: 3 factors × 5 time points × 2 replicates
+    for factor in ['A', 'B', 'C']:
+        for time in range(1, 6):
+            for _ in range(2):
+                data_rows.append({
+                    'Value': np.random.normal(50, 3),
+                    'Factor': factor,
+                    'Time': time
+                })
+
+    df = pd.DataFrame(data_rows)
+    study = ProcessDataFrame(df).formulate(
+        response='Value',
+        factors=['Factor'],
+        time='Time'
+    )
+
+    # Should be SDS 1 (all cells have n≥2)
+    assert study.sds == 1
+    assert 'R3_Xbar' in study.residual_charts
+
+    # Analyze R3_Xbar
+    result = study.analyze(chart='R3_Xbar')
+    assert result is not None
+    assert 'R3_Xbar' in result.charts
+
+    chart_data = result.charts['R3_Xbar']
+    assert 'data' in chart_data
+    assert 'statistics' in chart_data
+
+    # R3_Xbar uses factor-based subgrouping (same as R5), so 3 factors
+    data_df = chart_data['data']
+    assert len(data_df) == 3
+
+
+def test_r3_s_chart_calculation():
+    """R3_S should use factor-based subgrouping (same as R2)."""
+    np.random.seed(42)
+    data_rows = []
+    # Create SDS 1 data: 3 factors × 5 time points × 2 replicates
+    for factor in ['A', 'B', 'C']:
+        for time in range(1, 6):
+            for _ in range(2):
+                data_rows.append({
+                    'Value': np.random.normal(50, 3),
+                    'Factor': factor,
+                    'Time': time
+                })
+
+    df = pd.DataFrame(data_rows)
+    study = ProcessDataFrame(df).formulate(
+        response='Value',
+        factors=['Factor'],
+        time='Time'
+    )
+
+    assert 'R3_S' in study.residual_charts
+
+    # Analyze R3_S
+    result = study.analyze(chart='R3_S')
+    assert result is not None
+    assert 'R3_S' in result.charts
+
+    chart_data = result.charts['R3_S']
+    assert 'data' in chart_data
+    assert 'statistics' in chart_data
+
+    # R3_S uses factor-based subgrouping, so 3 factors
+    data_df = chart_data['data']
+    assert len(data_df) == 3
+
+
+def test_r3_xbar_s_control_limits_structure():
+    """R3 Xbar/S charts should have proper control limit structure."""
+    np.random.seed(42)
+    data_rows = []
+    for factor in ['A', 'B', 'C']:
+        for time in range(1, 6):
+            for _ in range(2):
+                data_rows.append({
+                    'Value': np.random.normal(50, 3),
+                    'Factor': factor,
+                    'Time': time
+                })
+
+    df = pd.DataFrame(data_rows)
+    study = ProcessDataFrame(df).formulate(
+        response='Value',
+        factors=['Factor'],
+        time='Time'
+    )
+
+    for chart_type in ['R3_Xbar', 'R3_S']:
+        result = study.analyze(chart=chart_type)
+        chart_data = result.charts[chart_type]
+
+        # Should have statistics with control limits
+        stats = chart_data['statistics']
+        assert 'center' in stats, f"{chart_type} missing center"
+        assert 'upl' in stats, f"{chart_type} missing upl"
+        assert 'lpl' in stats, f"{chart_type} missing lpl"
+
+        # Control limits should be numeric
+        assert isinstance(stats['center'], (int, float, np.number))
+        assert isinstance(stats['upl'], (int, float, np.number))
+        assert isinstance(stats['lpl'], (int, float, np.number))
