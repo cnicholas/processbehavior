@@ -32,6 +32,10 @@ dev = [
 [tool.pytest.ini_options]
 addopts = "-q"
 testpaths = ["tests"]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "benchmark: performance benchmark tests",
+]
 
 [tool.ruff]
 line-length = 120
