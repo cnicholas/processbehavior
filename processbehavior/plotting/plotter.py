@@ -735,9 +735,20 @@ class Plotter:
             hovermode='closest'
         )
 
-        # Add axis labels to all subplots
-        fig.update_xaxes(title_text=x_label)
-        fig.update_yaxes(title_text=y_label)
+        # Add axis labels and line styling to all subplots
+        # (Template only applies to xaxis/yaxis, not xaxis2/yaxis2/etc.)
+        fig.update_xaxes(
+            title_text=x_label,
+            showline=theme.show_axis_line,
+            linecolor=theme.axis_line_color,
+            linewidth=theme.axis_line_width
+        )
+        fig.update_yaxes(
+            title_text=y_label,
+            showline=theme.show_axis_line,
+            linecolor=theme.axis_line_color,
+            linewidth=theme.axis_line_width
+        )
 
         # Apply shared y-axis range if calculated
         if global_y_range is not None:

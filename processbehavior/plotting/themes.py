@@ -161,6 +161,7 @@ class ChartTheme:
     show_grid: bool = True
     axis_line_color: str = '#999999'
     axis_line_width: float = 1.0
+    show_axis_line: bool = True
 
     # Typography
     font_family: str = 'Arial, sans-serif'
@@ -211,6 +212,7 @@ class ChartTheme:
                 'showgrid': self.show_grid,
                 'gridcolor': self.grid_color,
                 'gridwidth': self.grid_width,
+                'showline': self.show_axis_line,
                 'linecolor': self.axis_line_color,
                 'linewidth': self.axis_line_width
             },
@@ -218,6 +220,7 @@ class ChartTheme:
                 'showgrid': self.show_grid,
                 'gridcolor': self.grid_color,
                 'gridwidth': self.grid_width,
+                'showline': self.show_axis_line,
                 'linecolor': self.axis_line_color,
                 'linewidth': self.axis_line_width
             }
