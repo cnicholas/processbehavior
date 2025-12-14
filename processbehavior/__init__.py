@@ -42,6 +42,14 @@ __version__ = "0.1.0"
 # Main user-facing API
 # Core analysis classes
 from processbehavior.analysis import Analysis
+
+# Exceptions
+from processbehavior.exceptions import (
+    ChartNotAvailableError,
+    ColumnNotFoundError,
+    ProcessBehaviorError,
+    ValidationError,
+)
 from processbehavior.analysis_dataset import AnalysisDataSet
 
 # Result object
@@ -66,6 +74,12 @@ __all__ = [
     'ProcessBehavior',
     'Study',
     'AnalysisResult',
+
+    # Exceptions
+    'ProcessBehaviorError',
+    'ValidationError',
+    'ColumnNotFoundError',
+    'ChartNotAvailableError',
 
     # Core classes
     'Analysis',
