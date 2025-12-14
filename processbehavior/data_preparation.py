@@ -276,7 +276,7 @@ class DataPreparation:
                 f"Fix: Convert to numeric or choose a different column"
             )
 
-        logger.info('Column validation passed')
+        logger.debug('Column validation passed')
 
     def build_keys(
         self,

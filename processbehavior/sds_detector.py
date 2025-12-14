@@ -352,7 +352,7 @@ class SDSRegistry:
         """
         # SDS 0: No structure (no grouping factors defined)
         if not spec.has_grouping:
-            logger.info("SDS 0: No grouping factors defined")
+            logger.debug("SDS 0: No grouping factors defined")
             return (0, 0)
 
         # From here: have grouping factors
@@ -395,7 +395,7 @@ class SDSRegistry:
 
         # SDS 4: Single group (only one factor level)
         if n_groups == 1:
-            logger.info(f"SDS 4: Single group ({n_groups} factor level)")
+            logger.debug(f"SDS 4: Single group ({n_groups} factor level)")
             return (4, min_n)
 
         # SDS 1, 2, or 3: Based on cell-level replication pattern
@@ -695,7 +695,7 @@ class SDSRegistry:
             coverage_ratio = n_cells / full_grid_size
 
             if coverage_ratio < 0.90:  # Less than 90% coverage
-                logger.info(
+                logger.debug(
                     f"SDS 5: Nested design detected - {factor2} nested in {factor1}, "
                     f"{coverage_ratio:.1%} grid coverage"
                 )
@@ -733,7 +733,7 @@ class SDSRegistry:
 
         # SDS 1: Full replication
         if min_n >= 2:
-            logger.info(
+            logger.debug(
                 f"SDS 1: Full replication "
                 f"(all cells have n≥2, range: [{min_n}, {max_n}])"
             )
@@ -742,14 +742,14 @@ class SDSRegistry:
         # SDS 2: No replication
         if max_n == 1:
             if coverage_ratio >= 0.95:  # Complete grid
-                logger.info(
+                logger.debug(
                     f"SDS 2: No replication "
                     f"(all cells have n=1, {coverage_ratio:.1%} complete)"
                 )
                 return 2
             else:
                 # Incomplete grid with no replication → SDS 6
-                logger.info(
+                logger.debug(
                     f"SDS 6: Incomplete grid with no replication "
                     f"({coverage_ratio:.1%} coverage)"
                 )
@@ -758,7 +758,7 @@ class SDSRegistry:
         # SDS 3: Partial replication
         if cells_with_n1 > 0 and cells_with_n2_plus > 0:
             pct_replicated = 100 * cells_with_n2_plus / n_cells
-            logger.info(
+            logger.debug(
                 f"SDS 3: Partial replication - "
                 f"{cells_with_n2_plus}/{n_cells} cells replicated ({pct_replicated:.1f}%), "
                 f"n range: [{min_n}, {max_n}]"

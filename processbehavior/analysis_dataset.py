@@ -83,21 +83,21 @@ class AnalysisDataSet:
         4. Calculate effects and interactions (if appropriate)
         """
         # Step 1: Validate and prepare data
-        logger.info("Preparing dataset")
+        logger.debug("Preparing dataset")
         self.prep.validate_columns(self.raw_dataset, self.spec)
         self.analysis_dataset = self.prep.prepare_dataset(self.raw_dataset, self.spec)
         self.analysis_dataset = self.prep.build_keys(self.analysis_dataset, self.spec)
 
         # Step 2: Use the provided SDS (required - detected at entry point)
-        logger.info(f"Using SDS: {self._sds}")
+        logger.debug(f"Using SDS: {self._sds}")
         self.sampling_design_state = self._sds
         self.sds_characteristics = self.sds_detector.get_sds_characteristics(
             self.sampling_design_state
         )
 
         # Log analysis summary and SDS
-        logger.info(self.analysis_summary)
-        logger.info(
+        logger.debug(self.analysis_summary)
+        logger.debug(
             f"Detected: SDS {self.sampling_design_state} - "
             f"{self.sds_characteristics['description']}"
         )
@@ -126,10 +126,10 @@ class AnalysisDataSet:
         residual_requested = getattr(self.spec, 'residual', None) is not None
         if residual_requested:
             needs_residuals = True
-            logger.info("Residual chart requested - forcing VAS residual calculation")
+            logger.debug("Residual chart requested - forcing VAS residual calculation")
 
         if needs_residuals:
-            logger.info("Calculating VAS residuals (R1-R5)")
+            logger.debug("Calculating VAS residuals (R1-R5)")
             self.analysis_dataset = self.residual_calc.calculate_residuals(
                 self.analysis_dataset, self.spec, self.sampling_design_state
             )
@@ -138,7 +138,7 @@ class AnalysisDataSet:
             self._calculate_centered_residuals()
 
             # Step 6: Calculate effects and interactions
-            logger.info("Calculating effects and interactions")
+            logger.debug("Calculating effects and interactions")
             self.effects = self.effects_calc.calculate_all_effects(
                 self.analysis_dataset, self.spec
             )

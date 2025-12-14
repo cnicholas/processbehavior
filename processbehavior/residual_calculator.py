@@ -621,7 +621,7 @@ class ResidualCalculator:
         logger.debug("Calculating R5 residual")
         out['R5'] = calculate_r5_residual(out['Ybar_k'], grand_mean, out['R2'])
 
-        logger.info("VAS residuals calculated successfully")
+        logger.debug("VAS residuals calculated successfully")
         return out
 
     def _calculate_r2_for_sds(
