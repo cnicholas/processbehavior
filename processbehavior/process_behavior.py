@@ -226,10 +226,10 @@ class ProcessBehavior:
         """
         Formulate a study for process behavior analysis.
 
-        This creates a Study object that describes your data structure and
-        guides you toward correct analysis. Unlike analyze(), this method
-        does not run calculations immediately - it helps you understand
-        what's possible first.
+        This method prepares and enriches the dataset (including residuals and
+        effects as applicable) and returns a Study describing what analyses are
+        valid. Call study.execute() to perform chart-specific calculations and
+        produce an AnalysisResult.
 
         Parameters
         ----------
@@ -250,8 +250,8 @@ class ProcessBehavior:
             A Study object with:
             - SDS detection results
             - Valid and recommended chart types
-            - guidance methods like study.why_not()
-            - study.execute() to run calculations
+            - Pre-calculated residuals and effects (via study.dataset)
+            - study.execute() to run chart-specific analysis
 
         Examples
         --------
@@ -280,7 +280,6 @@ class ProcessBehavior:
         See Also
         --------
         Study : The returned Study object
-        analyze : Alternative that runs immediately
         """
         from .study import Study
 
