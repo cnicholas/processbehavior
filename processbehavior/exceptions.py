@@ -64,13 +64,24 @@ class ColumnNotFoundError(ValidationError):
     Raised when a specified column (response, factor, time) doesn't exist
     in the input DataFrame.
 
+    Attributes
+    ----------
+    column : str | None
+        The column name that was not found
+    available : list[str] | None
+        List of available column names
+
     Suggested actions:
     - Check `pb.cols` for available columns with auto-completion
     - Verify column names match exactly (case-sensitive)
     - Check `df.columns` to see all available columns
     """
 
-    pass
+    def __init__(self, message: str, column: str | None = None,
+                 available: list[str] | None = None):
+        super().__init__(message)
+        self.column = column
+        self.available = available
 
 
 class ChartNotAvailableError(ProcessBehaviorError):
@@ -80,10 +91,21 @@ class ChartNotAvailableError(ProcessBehaviorError):
     Raised when requesting a chart that cannot be produced given the
     current data structure and Sampling Design State (SDS).
 
+    Attributes
+    ----------
+    chart : str | None
+        The chart type that was requested
+    available : list[str] | None
+        List of available chart types
+
     Suggested actions:
     - Check `study.valid_charts` for available chart types
     - Use `study.why_not(chart_type)` for explanation
     - Use `study.support` DataFrame for full availability matrix
     """
 
-    pass
+    def __init__(self, message: str, chart: str | None = None,
+                 available: list[str] | None = None):
+        super().__init__(message)
+        self.chart = chart
+        self.available = available

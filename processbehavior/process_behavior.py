@@ -123,9 +123,12 @@ class ColumnAccessor:
             ColumnNotFoundError: If column doesn't exist
         """
         if col_name not in self._df.columns:
+            available = list(self._df.columns)
             raise ColumnNotFoundError(
                 f"Column '{col_name}' not found. "
-                f"Available: {list(self._df.columns)}"
+                f"Available: {available}",
+                column=col_name,
+                available=available
             )
         return col_name
 

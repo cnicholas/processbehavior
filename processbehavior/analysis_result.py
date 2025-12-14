@@ -338,7 +338,9 @@ class AnalysisResult:
         """
         if name not in self.charts:
             raise ChartNotAvailableError(
-                f"Chart '{name}' not found. Available charts: {self.all_charts}"
+                f"Chart '{name}' not found. Available charts: {self.all_charts}",
+                chart=name,
+                available=self.all_charts
             )
         return self.charts[name]['data'].copy()
 
@@ -368,7 +370,9 @@ class AnalysisResult:
         """
         if name not in self.charts:
             raise ChartNotAvailableError(
-                f"Chart '{name}' not found. Available charts: {self.all_charts}"
+                f"Chart '{name}' not found. Available charts: {self.all_charts}",
+                chart=name,
+                available=self.all_charts
             )
         return self.charts[name]['statistics'].copy()
 
@@ -469,7 +473,9 @@ class AnalysisResult:
         if not matching_charts:
             raise ChartNotAvailableError(
                 f"No chart found for stratum '{stratum}'. "
-                f"Available charts: {self.all_charts}"
+                f"Available charts: {self.all_charts}",
+                chart=stratum,
+                available=self.all_charts
             )
 
         if len(matching_charts) > 1:
@@ -587,7 +593,9 @@ class AnalysisResult:
 
         if chart not in self.charts:
             raise ChartNotAvailableError(
-                f"Chart '{chart}' not found. Available charts: {self.all_charts}"
+                f"Chart '{chart}' not found. Available charts: {self.all_charts}",
+                chart=chart,
+                available=self.all_charts
             )
 
         # Get chart data
