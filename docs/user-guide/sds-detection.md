@@ -25,9 +25,9 @@ When you call `formulate()`, ProcessBehavior examines:
 
 ```python
 study = pdf.formulate(
-    response=pdf.columns.weight,
-    factors=[pdf.columns.lane],
-    time=pdf.columns.batch
+    response=pdf.cols.weight,
+    factors=[pdf.cols.lane],
+    time=pdf.cols.batch
 )
 
 print(f"SDS: {study.sds}")
@@ -148,9 +148,9 @@ After formulation, inspect the SDS information:
 
 ```python
 study = pdf.formulate(
-    response=pdf.columns.weight,
-    factors=[pdf.columns.lane],
-    time=pdf.columns.batch
+    response=pdf.cols.weight,
+    factors=[pdf.cols.lane],
+    time=pdf.cols.batch
 )
 
 # Quick check
@@ -261,9 +261,9 @@ from processbehavior import ProcessBehavior
 
 # Check cell sizes to understand your SDS
 study = pdf.formulate(
-    response=pdf.columns.weight,
-    factors=[pdf.columns.lane],
-    time=pdf.columns.batch
+    response=pdf.cols.weight,
+    factors=[pdf.cols.lane],
+    time=pdf.cols.batch
 )
 
 # Get cell counts

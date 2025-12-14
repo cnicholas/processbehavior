@@ -25,9 +25,9 @@ Residuals are calculated during formulation and available after analysis:
 
 ```python
 study = pdf.formulate(
-    response=pdf.columns.weight,
-    factors=[pdf.columns.lane],
-    time=pdf.columns.batch
+    response=pdf.cols.weight,
+    factors=[pdf.cols.lane],
+    time=pdf.cols.batch
 )
 
 # Access via study.dataset
@@ -210,9 +210,9 @@ from processbehavior import ProcessBehavior
 
 pdf = ProcessBehavior(df)
 study = pdf.formulate(
-    response=pdf.columns.weight,
-    factors=[pdf.columns.lane],
-    time=pdf.columns.batch
+    response=pdf.cols.weight,
+    factors=[pdf.cols.lane],
+    time=pdf.cols.batch
 )
 
 # Check available residual charts

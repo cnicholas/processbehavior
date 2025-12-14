@@ -146,7 +146,7 @@ If you were using a pre-release version, note these changes:
 result = pdf.analyze(response_var='weight', chart_type='Imr').calculate()
 
 # New (v0.1.0)
-study = pdf.formulate(response=pdf.columns.weight)
+study = pdf.formulate(response=pdf.cols.weight)
 result = study.analyze()
 ```
 

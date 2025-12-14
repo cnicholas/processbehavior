@@ -11,9 +11,9 @@ Usage:
 
     # Step 1: formulate() - analyze structure and get recommendations
     study = pb.formulate(
-        response=pb.columns.Measurement,
-        factors=[pb.columns.Operator],
-        time=pb.columns.ProductionTime
+        response=pb.cols.Measurement,
+        factors=[pb.cols.Operator],
+        time=pb.cols.ProductionTime
     )
 
     # Step 2: analyze() - run the chart
@@ -42,10 +42,11 @@ class ColumnAccessor:
 
     Usage:
         pb = ProcessBehavior(df)
-        pb.columns.Height  # Auto-completes to column name string
+        pb.cols.Height  # Auto-completes to column name string
 
     This class dynamically creates attributes for each column in the DataFrame,
-    enabling IDE auto-completion and preventing typos.
+    enabling IDE auto-completion and preventing typos. Columns are sorted
+    alphabetically for consistent tab-completion ordering.
     """
 
     def __init__(self, df: pd.DataFrame):
@@ -56,7 +57,7 @@ class ColumnAccessor:
             df: The DataFrame whose columns will be accessible
         """
         self._df = df
-        self._columns = list(df.columns)
+        self._columns = sorted(df.columns)  # Sort alphabetically for consistent ordering
 
         # Dynamically add each column as an attribute
         for col in self._columns:
@@ -155,9 +156,9 @@ class ProcessBehavior:
 
         # Step 1: formulate() - analyze structure and get recommendations
         study = pb.formulate(
-            response=pb.columns.Measurement,
-            time=pb.columns.Time,
-            factors=[pb.columns.Operator, pb.columns.Machine]
+            response=pb.cols.Measurement,
+            time=pb.cols.Time,
+            factors=[pb.cols.Operator, pb.cols.Machine]
         )
 
         # Inspect the study
@@ -170,7 +171,7 @@ class ProcessBehavior:
         result = study.analyze(chart='Xbar')  # Or explicit chart
 
     Attributes:
-        columns: ColumnAccessor for IDE auto-completion of column names
+        cols: ColumnAccessor for IDE auto-completion of column names
         charts: ChartTypeAccessor for valid chart types (set after formulate())
         data: The underlying pandas DataFrame
     """
@@ -253,7 +254,7 @@ class ProcessBehavior:
             )
 
         self.data = cleaned_df
-        self.columns = ColumnAccessor(self.data)
+        self.cols = ColumnAccessor(self.data)
         self.charts = None  # Will be populated after first formulate() call
 
         logger.info(f"ProcessBehavior: {len(df)} rows, {len(df.columns)} columns")
@@ -277,7 +278,7 @@ class ProcessBehavior:
         ----------
         response : str
             The response variable (measurement) to analyze.
-            Use pb.columns for IDE auto-completion.
+            Use pb.cols for IDE auto-completion.
         factors : list of str, optional
             Grouping factors defining rational subgroups (e.g., ['Lane', 'Operator']).
             If provided, enables Xbar/S analysis.

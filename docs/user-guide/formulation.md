@@ -10,9 +10,9 @@ from processbehavior import ProcessBehavior
 pdf = ProcessBehavior(df)
 
 study = pdf.formulate(
-    response=pdf.columns.weight,        # Required: measurement variable
-    factors=[pdf.columns.lane],         # Optional: grouping variables
-    time=pdf.columns.batch,             # Optional: time/sequence variable
+    response=pdf.cols.weight,        # Required: measurement variable
+    factors=[pdf.cols.lane],         # Optional: grouping variables
+    time=pdf.cols.batch,             # Optional: time/sequence variable
     precision=3                         # Optional: decimal places
 )
 ```
@@ -23,15 +23,15 @@ One of ProcessBehavior's key features is **IDE auto-completion** for column name
 
 ### Column Auto-Completion
 
-After creating a ProcessBehavior, access columns via the `.columns` accessor:
+After creating a ProcessBehavior, access columns via the `.cols` accessor:
 
 ```python
 pdf = ProcessBehavior(df)
 
-# Type pdf.columns. and your IDE will show all available columns
-pdf.columns.weight      # Instead of 'weight' string
-pdf.columns.lane        # Instead of 'lane' string
-pdf.columns.batch       # Instead of 'batch' string
+# Type pdf.cols. and your IDE will show all available columns
+pdf.cols.weight      # Instead of 'weight' string
+pdf.cols.lane        # Instead of 'lane' string
+pdf.cols.batch       # Instead of 'batch' string
 ```
 
 This works in:
@@ -61,7 +61,7 @@ The measurement variable to analyze.
 
 ```python
 # Using auto-completion (recommended)
-response=pdf.columns.measurement
+response=pdf.cols.measurement
 
 # Using string (still works)
 response='measurement'
@@ -73,10 +73,10 @@ A list of categorical variables that define subgroups. These become the "rationa
 
 ```python
 # Single factor
-factors=[pdf.columns.operator]
+factors=[pdf.cols.operator]
 
 # Multiple factors (creates combined subgroups)
-factors=[pdf.columns.machine, pdf.columns.shift]
+factors=[pdf.cols.machine, pdf.cols.shift]
 ```
 
 When multiple factors are specified, they're combined into a single grouping variable (e.g., `Machine_A_Shift_1`).
@@ -86,9 +86,9 @@ When multiple factors are specified, they're combined into a single grouping var
 The variable that defines time ordering. This enables time-series analysis and certain signal detection rules.
 
 ```python
-time=pdf.columns.batch
-time=pdf.columns.timestamp
-time=pdf.columns.sequence
+time=pdf.cols.batch
+time=pdf.cols.timestamp
+time=pdf.cols.sequence
 ```
 
 ### precision (optional, default=3)
@@ -117,9 +117,9 @@ Formulation returns a `Study` object with rich information:
 
 ```python
 study = pdf.formulate(
-    response=pdf.columns.weight,
-    factors=[pdf.columns.lane],
-    time=pdf.columns.batch
+    response=pdf.cols.weight,
+    factors=[pdf.cols.lane],
+    time=pdf.cols.batch
 )
 
 # SDS information
@@ -160,8 +160,8 @@ No factors, just measurements over time:
 
 ```python
 study = pdf.formulate(
-    response=pdf.columns.temperature,
-    time=pdf.columns.day
+    response=pdf.cols.temperature,
+    time=pdf.cols.day
 )
 # Results in SDS 4, recommends IMR
 ```
@@ -172,8 +172,8 @@ Factors but no time dimension:
 
 ```python
 study = pdf.formulate(
-    response=pdf.columns.yield_pct,
-    factors=[pdf.columns.machine, pdf.columns.operator]
+    response=pdf.cols.yield_pct,
+    factors=[pdf.cols.machine, pdf.cols.operator]
 )
 # Results in SDS varies, recommends Xbar or IMR
 ```
@@ -184,9 +184,9 @@ Full analysis with factors and time:
 
 ```python
 study = pdf.formulate(
-    response=pdf.columns.fillweight,
-    factors=[pdf.columns.lane],
-    time=pdf.columns.pull
+    response=pdf.cols.fillweight,
+    factors=[pdf.cols.lane],
+    time=pdf.cols.pull
 )
 # Results in SDS 1-3, recommends Xbar-S with VAS residuals
 ```
@@ -198,9 +198,9 @@ Multiple observations per factor-time cell:
 ```python
 # 4 lanes x 10 batches x 3 replicates = 120 observations
 study = pdf.formulate(
-    response=pdf.columns.weight,
-    factors=[pdf.columns.lane],
-    time=pdf.columns.batch
+    response=pdf.cols.weight,
+    factors=[pdf.cols.lane],
+    time=pdf.cols.batch
 )
 # Results in SDS 1 (Full Replication) - most powerful design
 ```

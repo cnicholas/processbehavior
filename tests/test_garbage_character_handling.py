@@ -297,9 +297,9 @@ class TestIntegrationWithAnalysis:
 
         # Analysis should run without crashing
         study = pdf.formulate(
-            response=pdf.columns.Y,
-            factors=[pdf.columns.FACTOR],
-            time=pdf.columns.TIME
+            response=pdf.cols.Y,
+            factors=[pdf.cols.FACTOR],
+            time=pdf.cols.TIME
         )
         result = study.analyze()
 
