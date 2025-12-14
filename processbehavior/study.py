@@ -321,45 +321,130 @@ class Study:
         """
         return StudyChartAccessor(self.valid_charts, self.residual_charts)
 
+    @property
+    def support(self) -> pd.DataFrame:
+        """
+        Chart support matrix for this study.
+
+        Returns a DataFrame with one row per chart type showing availability,
+        recommendations, and explanations. This is the single source of truth
+        for chart capabilities.
+
+        Returns
+        -------
+        pd.DataFrame
+            Columns: chart, category, available, recommended, reason, question
+
+        Examples
+        --------
+        >>> study.support
+               chart  category  available  recommended  ...
+        0       Xbar   primary       True         True  ...
+        1          S   primary       True        False  ...
+
+        >>> study.support[study.support['available']]  # Filter to available
+        >>> study.support.query("category == 'residual'")  # Residual charts
+        """
+        import pandas as pd
+
+        from .sds_detector import SDSAnalysisPlan
+
+        rows = []
+
+        # All possible primary charts
+        ALL_PRIMARY = ['Xbar', 'S', 'Imr', 'R']
+
+        # Build invalid_reasons dict from _plan.invalid_charts
+        invalid_reasons = self._parse_invalid_charts()
+
+        for chart in ALL_PRIMARY:
+            rows.append({
+                'chart': chart,
+                'category': 'primary',
+                'available': chart in self.valid_charts,
+                'recommended': chart == self.recommended_chart,
+                'reason': invalid_reasons.get(chart),
+                'question': SDSAnalysisPlan.CHART_QUESTIONS.get(chart, '')
+            })
+
+        # All possible residual charts
+        ALL_RESIDUALS = [
+            'R2_S', 'R2_Imr',
+            'R3_Xbar', 'R3_S', 'R3_Imr',
+            'R4_Xbar', 'R4_S', 'R4_Imr',
+            'R5_Xbar', 'R5_S', 'R5_Imr'
+        ]
+
+        for chart in ALL_RESIDUALS:
+            available = chart in self.residual_charts
+            rows.append({
+                'chart': chart,
+                'category': 'residual',
+                'available': available,
+                'recommended': False,
+                'reason': None if available else 'Not available for this SDS',
+                'question': SDSAnalysisPlan.CHART_QUESTIONS.get(chart, '')
+            })
+
+        return pd.DataFrame(rows)
+
+    def _parse_invalid_charts(self) -> dict[str, str]:
+        """
+        Parse invalid_charts list into dict of chart → reason.
+
+        The _plan.invalid_charts format is: ['S (requires n≥2 per subgroup)']
+        This parses to: {'S': 'requires n≥2 per subgroup'}
+        """
+        result = {}
+        for entry in self._plan.invalid_charts:
+            # Format: 'ChartType (reason)'
+            if '(' in entry and entry.endswith(')'):
+                chart = entry.split('(')[0].strip()
+                reason = entry[entry.index('(') + 1:-1]
+                result[chart] = reason
+        return result
+
     # =========================================================================
     # Guidance Methods
     # =========================================================================
 
     def why_not(self, chart: str) -> str:
         """
-        Explain why a chart type is not valid for this study.
+        Explain why a chart type is or isn't available for this study.
 
         This is a teaching method - it helps users understand the
-        methodology by explaining constraints.
+        methodology by explaining constraints. Uses the support DataFrame
+        as the single source of truth.
 
         Parameters
         ----------
         chart : str
-            Chart type to check (e.g., 'Imr', 'S')
+            Chart type to check (e.g., 'Imr', 'S', 'R2_S')
 
         Returns
         -------
         str
-            Explanation of validity or invalidity
+            Explanation of availability with the question the chart answers
 
         Examples
         --------
         >>> study.why_not('S')
-        "S chart requires n≥2 observations per subgroup. Your data has n=1."
+        "'S' unavailable: requires n≥2 per subgroup"
 
         >>> study.why_not('Xbar')
-        "Xbar IS valid for this study. Use study.execute(chart='Xbar')"
+        "'Xbar' IS available. Are subgroup means stable over time?"
         """
-        if chart in self.valid_charts:
-            return f"'{chart}' IS valid for this study. Use study.execute(chart='{chart}')"
+        df = self.support
+        row = df[df['chart'] == chart]
 
-        # Check the invalid_charts list for the reason
-        invalid_charts = self._plan.invalid_charts
-        for invalid in invalid_charts:
-            if chart in invalid:
-                return invalid
+        if row.empty:
+            return f"'{chart}' is not a recognized chart type. Use study.support to see all options."
 
-        return f"'{chart}' is not a recognized chart type. Valid types: {self.valid_charts}"
+        row = row.iloc[0]
+        if row['available']:
+            return f"'{chart}' IS available. {row['question']}"
+        else:
+            return f"'{chart}' unavailable: {row['reason']}"
 
     def execute(
         self,
@@ -520,72 +605,48 @@ class Study:
 
     def __repr__(self) -> str:
         """
-        Rich display of study formulation.
+        Concise study summary.
 
-        Provides a teaching-focused view showing:
-        - What was formulated
-        - What SDS was detected
-        - What charts are valid
-        - What to do next
+        Shows formulation, SDS, and available charts in minimal format.
+        Use study.support for the full chart availability DataFrame.
         """
-        width = 66
+        # 1-line formulation summary
+        factors_str = ', '.join(self.factors) if self.factors else 'None'
+        time_str = self.time or 'None'
 
-        lines = []
-        lines.append("╔" + "═" * width + "╗")
-        lines.append("║" + "STUDY FORMULATION".center(width) + "║")
-        lines.append("╠" + "═" * width + "╣")
+        # Get available charts from support DataFrame
+        avail = self.support[self.support['available']]
+        primary = avail[avail['category'] == 'primary']['chart'].tolist()
+        residual = avail[avail['category'] == 'residual']['chart'].tolist()
 
-        # Formulation details
-        lines.append("║" + f"  Response: {self.response}".ljust(width) + "║")
-
-        if self.factors:
-            factors_str = ', '.join(self.factors)
-            lines.append("║" + f"  Factors:  {factors_str}".ljust(width) + "║")
-
-        if self.time:
-            lines.append("║" + f"  Time:     {self.time}".ljust(width) + "║")
-
-        lines.append("║" + f"  Precision: {self.precision} decimal places".ljust(width) + "║")
-
-        lines.append("╠" + "═" * width + "╣")
-
-        # SDS detection
-        lines.append("║" + f"  Detected: SDS {self.sds} - {self.sds_name}".ljust(width) + "║")
-        lines.append("║" + "".ljust(width) + "║")
-
-        # Charts
-        valid_str = ', '.join(self.valid_charts)
-        lines.append("║" + f"  Valid Charts:  {valid_str}".ljust(width) + "║")
-        lines.append("║" + f"  Recommended:   {self.recommended_chart}".ljust(width) + "║")
-
-        if self.residual_charts:
-            residual_str = ', '.join(self.residual_charts)
-            lines.append("║" + f"  Residuals:     {residual_str}".ljust(width) + "║")
-
-        lines.append("╠" + "═" * width + "╣")
-
-        # Next steps
-        lines.append("║" + "  Next: study.execute() or study.execute(chart='Xbar')".ljust(width) + "║")
-
-        lines.append("╚" + "═" * width + "╝")
+        lines = [
+            f"Study(response='{self.response}', factors=[{factors_str}], time='{time_str}', sds={self.sds})",
+            f"  Valid: {', '.join(primary)} | Recommended: {self.recommended_chart}",
+        ]
+        if residual:
+            lines.append(f"  Residuals: {', '.join(residual)}")
+        lines.append("  → study.execute() or study.support for details")
 
         return '\n'.join(lines)
 
     def _repr_html_(self) -> str:
         """HTML representation for Jupyter notebooks."""
-        # Simple HTML version - could be enhanced later
+        factors_str = ', '.join(self.factors) if self.factors else 'None'
+        time_str = self.time or 'None'
+
+        # Get available charts from support DataFrame
+        avail = self.support[self.support['available']]
+        primary = avail[avail['category'] == 'primary']['chart'].tolist()
+        residual = avail[avail['category'] == 'residual']['chart'].tolist()
+
+        residual_html = f"<br><strong>Residuals:</strong> {', '.join(residual)}" if residual else ""
+
         html = f"""
-        <div style="font-family: monospace; padding: 10px; border: 1px solid #ccc; border-radius: 5px;">
-            <h3>Study Formulation</h3>
-            <p><strong>Response:</strong> {self.response}</p>
-            <p><strong>Factors:</strong> {', '.join(self.factors) if self.factors else 'None'}</p>
-            <p><strong>Time:</strong> {self.time or 'None'}</p>
-            <hr>
-            <p><strong>SDS {self.sds}:</strong> {self.sds_name}</p>
-            <p><strong>Valid Charts:</strong> {', '.join(self.valid_charts)}</p>
-            <p><strong>Recommended:</strong> {self.recommended_chart}</p>
-            <hr>
-            <p><em>Next: study.execute() or study.execute(chart='{self.recommended_chart}')</em></p>
+        <div style="font-family: monospace; padding: 8px; border: 1px solid #ccc; border-radius: 4px; background: #f9f9f9;">
+            <code>Study(response='{self.response}', factors=[{factors_str}], time='{time_str}', sds={self.sds})</code>
+            <br><strong>Valid:</strong> {', '.join(primary)} | <strong>Recommended:</strong> {self.recommended_chart}
+            {residual_html}
+            <br><em>→ study.execute() or study.support for details</em>
         </div>
         """
         return html
