@@ -20,7 +20,7 @@ Quick Start
     )
 
     # Run analysis
-    result = study.analyze()
+    result = study.execute()
 
     # Access results
     print(result.summary)

@@ -35,9 +35,9 @@ study = pdf.formulate(
 )
 
 # Type study.charts. and your IDE shows only valid charts
-result = study.analyze(study.charts.Xbar)    # Xbar-S analysis
-result = study.analyze(study.charts.Imr)     # Stratified IMR
-result = study.analyze(study.charts.R4_Imr)  # Time effects chart
+result = study.execute(study.charts.Xbar)    # Xbar-S analysis
+result = study.execute(study.charts.Imr)     # Stratified IMR
+result = study.execute(study.charts.R4_Imr)  # Time effects chart
 ```
 
 This prevents errors from using invalid chart types.
@@ -49,7 +49,7 @@ This prevents errors from using invalid chart types.
 **Use: Xbar Chart**
 
 ```python
-result = study.analyze(study.charts.Xbar)
+result = study.execute(study.charts.Xbar)
 fig = result.plot(chart='Xbar', show_zones=True, show_signals=True)
 ```
 
@@ -60,7 +60,7 @@ Points beyond limits indicate subgroups that differ from the overall average.
 **Use: S Chart**
 
 ```python
-result = study.analyze(study.charts.Xbar)  # Creates both Xbar and S
+result = study.execute(study.charts.Xbar)  # Creates both Xbar and S
 fig = result.plot(chart='S', show_zones=True)
 ```
 
@@ -71,7 +71,7 @@ Points beyond limits indicate subgroups with unusual variation.
 **Use: IMR Chart**
 
 ```python
-result = study.analyze(study.charts.Imr)
+result = study.execute(study.charts.Imr)
 fig = result.plot(show_zones=True, show_rules=True)
 ```
 
@@ -82,7 +82,7 @@ For stratified data, this creates one IMR per factor level.
 **Use: R3_Imr Chart (Interactions)**
 
 ```python
-result = study.analyze(study.charts.R3_Imr)
+result = study.execute(study.charts.R3_Imr)
 fig = result.plot(title='Factor × Time Interactions')
 ```
 
@@ -93,7 +93,7 @@ Signals indicate that factor effects are not consistent over time.
 **Use: R4_Imr Chart**
 
 ```python
-result = study.analyze(study.charts.R4_Imr)
+result = study.execute(study.charts.R4_Imr)
 fig = result.plot(title='Time Effects')
 ```
 
@@ -104,7 +104,7 @@ Signals indicate process drift or shifts over time.
 **Use: R5_Imr Chart**
 
 ```python
-result = study.analyze(study.charts.R5_Imr)
+result = study.execute(study.charts.R5_Imr)
 fig = result.plot(title='Factor Effects')
 ```
 
@@ -185,7 +185,7 @@ Plots the absolute difference between consecutive observations.
 When you have factors and time, IMR creates **one chart per factor level**:
 
 ```python
-result = study.analyze(study.charts.Imr)
+result = study.execute(study.charts.Imr)
 
 # Creates: Imr_Lane_A, Imr_Lane_B, Imr_Lane_C, Imr_Lane_D
 print(result.all_charts)
@@ -208,10 +208,10 @@ By default, residual charts are centered at zero. Use `recentered=True` to show 
 
 ```python
 # Zero-centered (default)
-result = study.analyze(study.charts.R4_Imr)
+result = study.execute(study.charts.R4_Imr)
 
 # Re-centered on original scale
-result = study.analyze(study.charts.R4_Imr, recentered=True)
+result = study.execute(study.charts.R4_Imr, recentered=True)
 ```
 
 Re-centering uses:

@@ -301,7 +301,7 @@ class TestIntegrationWithAnalysis:
             factors=[pdf.cols.FACTOR],
             time=pdf.cols.TIME
         )
-        result = study.analyze()
+        result = study.execute()
 
         # Should complete successfully
         assert result is not None

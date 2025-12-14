@@ -200,7 +200,7 @@ class Analysis:
         analysis = Analysis(df, specification)
         result = analysis.calculate()
 
-        # With pre-calculated AnalysisDataSet (for Study.analyze())
+        # With pre-calculated AnalysisDataSet (for Study.execute())
         analysis = Analysis(df, specification, analysis_dataset=ads)
         result = analysis.calculate()  # Reuses pre-calculated data
     """
@@ -220,7 +220,7 @@ class Analysis:
             specification: Dictionary containing analysis configuration including 'analysis_type'
             analysis_dataset: Optional pre-calculated AnalysisDataSet.
                 If provided, skips expensive residual calculation.
-                Used by Study.analyze() to reuse formulate() calculations.
+                Used by Study.execute() to reuse formulate() calculations.
             sds: Sampling Design State (0-6). Required if analysis_dataset is not
                 provided. SDS should be detected at the entry point (ProcessBehavior)
                 and passed through the system.

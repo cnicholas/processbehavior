@@ -139,7 +139,7 @@ class TestSDSDetection:
             time=pdf.cols.time
         )
 
-        result = study.analyze(chart='Imr')
+        result = study.execute(chart='Imr')
 
         assert result is not None
         # Should have separate charts per group

@@ -536,7 +536,7 @@ class AnalysisResult:
         --------
         Display subgroup summary in notebook:
 
-        >>> result = study.analyze()
+        >>> result = study.execute()
         >>> result.chart_table('Sbar')
           subgroup   n  value  center    lpl    upl signal
         0      1_1  99  1.241   1.289  1.012  1.565
@@ -1741,7 +1741,7 @@ class AnalysisResult:
         --------
         Simple plotting:
 
-        >>> result = study.analyze()
+        >>> result = study.execute()
         >>> fig = result.plot()
         >>> fig.show()
 

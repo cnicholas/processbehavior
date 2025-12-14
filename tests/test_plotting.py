@@ -155,7 +155,7 @@ class TestControlChartFigure:
         })
         pdf = ProcessBehavior(df)
         study = pdf.formulate(response=pdf.cols.value)
-        return study.analyze()
+        return study.execute()
 
     @pytest.fixture
     def sample_figure(self, sample_result):
@@ -212,7 +212,7 @@ class TestPlotter:
         })
         pdf = ProcessBehavior(df)
         study = pdf.formulate(response=pdf.cols.value)
-        return study.analyze()
+        return study.execute()
 
     @pytest.fixture
     def xbar_result(self):
@@ -225,7 +225,7 @@ class TestPlotter:
         })
         pdf = ProcessBehavior(df)
         study = pdf.formulate(response=pdf.cols.value, factors=[pdf.cols.subgroup])
-        return study.analyze()
+        return study.execute()
 
     def test_initialization(self, simple_result):
         """Test plotter initialization."""
@@ -423,7 +423,7 @@ class TestAnalysisResultIntegration:
         })
         pdf = ProcessBehavior(df)
         study = pdf.formulate(response=pdf.cols.value)
-        return study.analyze()
+        return study.execute()
 
     def test_plot_method_exists(self, result):
         """Test that plot() method exists on AnalysisResult."""
@@ -460,7 +460,7 @@ class TestFacetedPlotting:
         })
         pdf = ProcessBehavior(df)
         study = pdf.formulate(response=pdf.cols.value, factors=[pdf.cols.subgroup])
-        return study.analyze()
+        return study.execute()
 
     def test_faceted_plot(self, xbar_result):
         """Test creating faceted plot."""
@@ -490,7 +490,7 @@ class TestAspectRatio:
         })
         pdf = ProcessBehavior(df)
         study = pdf.formulate(response=pdf.cols.value)
-        return study.analyze()
+        return study.execute()
 
     def test_aspect_ratio_calculation(self, simple_result):
         """Test that aspect ratio correctly calculates height."""
@@ -529,7 +529,7 @@ class TestReportGeneration:
         })
         pdf = ProcessBehavior(df)
         study = pdf.formulate(response=pdf.cols.value)
-        return study.analyze()
+        return study.execute()
 
     def test_generate_report(self, simple_result):
         """Test basic report generation."""
@@ -590,7 +590,7 @@ class TestResidualPlots:
             factors=[pdf.cols.factor],
             time=pdf.cols.time
         )
-        result = study.analyze()
+        result = study.execute()
         # Verify fixture produces residuals
         assert result.has_residuals, "Fixture should produce result with residuals"
         return result
@@ -629,7 +629,7 @@ class TestResidualPlots:
         })
         pdf = ProcessBehavior(df)
         study = pdf.formulate(response=pdf.cols.value)
-        result = study.analyze()
+        result = study.execute()
 
         assert not result.has_residuals, "This fixture should NOT have residuals"
         plotter = Plotter(result)
@@ -651,7 +651,7 @@ class TestEffectsPlots:
         })
         pdf = ProcessBehavior(df)
         study = pdf.formulate(response=pdf.cols.value, factors=[pdf.cols.subgroup])
-        return study.analyze()
+        return study.execute()
 
     def test_plot_effects_available(self, result_with_effects):
         """Test effects plots when effects are available."""
@@ -669,7 +669,7 @@ class TestEffectsPlots:
         })
         pdf = ProcessBehavior(df)
         study = pdf.formulate(response=pdf.cols.value)
-        result = study.analyze()
+        result = study.execute()
 
         if not result.has_effects:
             plotter = Plotter(result)
@@ -690,7 +690,7 @@ class TestStatsBox:
         })
         pdf = ProcessBehavior(df)
         study = pdf.formulate(response=pdf.cols.value)
-        return study.analyze()
+        return study.execute()
 
     @pytest.fixture
     def xbar_result(self):
@@ -703,7 +703,7 @@ class TestStatsBox:
         })
         pdf = ProcessBehavior(df)
         study = pdf.formulate(response=pdf.cols.value, factors=[pdf.cols.subgroup])
-        return study.analyze()
+        return study.execute()
 
     def test_plot_with_stats_box(self, simple_result):
         """Test plotting with stats box enabled."""

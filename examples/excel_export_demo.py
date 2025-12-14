@@ -149,13 +149,15 @@ print("=" * 70)
 # Create ProcessBehavior
 pdf = ProcessBehavior(df1)
 
-# Analyze and export in one go
-result5 = pdf.analyze(
-    response_var=pdf.cols.y,
-    time_var=pdf.cols.time,
-    grouping_vars=[pdf.cols.factor_1]
+# Formulate and execute
+study5 = pdf.formulate(
+    response=pdf.cols.y,
+    time=pdf.cols.time,
+    factors=[pdf.cols.factor_1]
 )
+result5 = study5.execute()
 
+# Export to Excel
 result5.to_excel('example5_frictionless.xlsx')
 
 print("✓ Exported to: example5_frictionless.xlsx")
