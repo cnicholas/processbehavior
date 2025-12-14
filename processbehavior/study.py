@@ -520,11 +520,14 @@ class Study:
 
             # Validate residual chart is available for this SDS
             if chart_request not in self.residual_charts:
-                available = ', '.join(self.residual_charts) if self.residual_charts else 'None'
+                available_list = list(self.residual_charts) if self.residual_charts else []
+                available_str = ', '.join(available_list) if available_list else 'None'
                 raise ChartNotAvailableError(
                     f"Residual chart '{chart_request}' is not available for SDS {self.sds}.\n"
-                    f"Available residual charts: {available}\n"
-                    f"Use study.residual_charts to see available options."
+                    f"Available residual charts: {available_str}\n"
+                    f"Use study.residual_charts to see available options.",
+                    chart=chart_request,
+                    available=available_list
                 )
 
             # Build spec dict for residual chart
@@ -545,12 +548,14 @@ class Study:
         else:
             # Primary chart validation
             if chart_request not in self.valid_charts:
-                valid_list = ', '.join(self.valid_charts)
+                available_list = list(self.valid_charts)
                 raise ChartNotAvailableError(
                     f"Chart type '{chart_request}' is not valid for SDS {self.sds}.\n"
-                    f"Valid charts: {valid_list}\n"
+                    f"Valid charts: {', '.join(available_list)}\n"
                     f"Recommended: {self.recommended_chart}\n"
-                    f"Use study.why_not('{chart_request}') for explanation."
+                    f"Use study.why_not('{chart_request}') for explanation.",
+                    chart=chart_request,
+                    available=available_list
                 )
 
             # Build spec dict for primary chart
