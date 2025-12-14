@@ -14,9 +14,9 @@ Quick Start
 
     # Formulate the study (detect SDS, get recommendations)
     study = pb.formulate(
-        response=pb.columns.measurement,
-        time=pb.columns.time,
-        factors=[pb.columns.line]
+        response=pb.cols.measurement,
+        time=pb.cols.time,
+        factors=[pb.cols.line]
     )
 
     # Run analysis

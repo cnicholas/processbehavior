@@ -151,15 +151,15 @@ pdf = ProcessBehavior(df1)
 
 # Analyze and export in one go
 result5 = pdf.analyze(
-    response_var=pdf.columns.y,
-    time_var=pdf.columns.time,
-    grouping_vars=[pdf.columns.factor_1]
+    response_var=pdf.cols.y,
+    time_var=pdf.cols.time,
+    grouping_vars=[pdf.cols.factor_1]
 )
 
 result5.to_excel('example5_frictionless.xlsx')
 
 print("✓ Exported to: example5_frictionless.xlsx")
-print("  - Used auto-completion: pdf.columns.y, pdf.columns.time, etc.")
+print("  - Used auto-completion: pdf.cols.y, pdf.cols.time, etc.")
 print("  - Auto-detected SDS and ran best analysis")
 print("  - Exported results with one method call")
 

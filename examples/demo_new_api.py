@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-Demonstration of the new ProcessDataFrame API
+Demonstration of the new ProcessBehavior API
 
 This script shows how the new API makes process behavior analysis
 frictionless by auto-detecting the Sampling Design State (SDS) and
@@ -17,7 +17,7 @@ Key features demonstrated:
 import numpy as np
 import pandas as pd
 
-from processbehavior import ProcessDataFrame
+from processbehavior import ProcessBehavior
 
 # Set random seed for reproducibility
 np.random.seed(42)
@@ -38,14 +38,14 @@ def example1_simple_series():
     print("\nData preview:")
     print(df.head())
 
-    # Wrap in ProcessDataFrame
-    data = ProcessDataFrame(df)
+    # Wrap in ProcessBehavior
+    data = ProcessBehavior(df)
 
     # Auto-completion for column names!
-    # In an IDE, typing `data.columns.` will show Measurement and Time
+    # In an IDE, typing `data.cols.` will show Measurement and Time
     analysis = data.analyze(
-        response_var=data.columns.Measurement,
-        time_var=data.columns.Time
+        response_var=data.cols.Measurement,
+        time_var=data.cols.Time
     )
 
     # System prints explanation of SDS detection and chosen analysis
@@ -77,13 +77,13 @@ def example2_grouped_data():
     print("\nData preview:")
     print(df.head(10))
 
-    data = ProcessDataFrame(df)
+    data = ProcessBehavior(df)
 
     # Auto-complete works for all columns!
     analysis = data.analyze(
-        response_var=data.columns.Height,
-        time_var=data.columns.ProductionTime,
-        grouping_vars=[data.columns.Operator, data.columns.Machine]
+        response_var=data.cols.Height,
+        time_var=data.cols.ProductionTime,
+        grouping_vars=[data.cols.Operator, data.cols.Machine]
     )
 
     # System should detect SDS 1, 2, or 3 and run Xbar/S charts
@@ -117,12 +117,12 @@ def example3_single_factor():
     print("\nData preview:")
     print(df.head())
 
-    data = ProcessDataFrame(df)
+    data = ProcessBehavior(df)
 
     analysis = data.analyze(
-        response_var=data.columns.Strength,
-        time_var=data.columns.Sequence,
-        grouping_vars=[data.columns.Batch]
+        response_var=data.cols.Strength,
+        time_var=data.cols.Sequence,
+        grouping_vars=[data.cols.Batch]
     )
 
     result = analysis.calculate()
@@ -141,7 +141,7 @@ def example4_no_autocomplete():
         'Time': range(1, 21)
     })
 
-    data = ProcessDataFrame(df)
+    data = ProcessBehavior(df)
 
     # Still works with plain strings (no auto-completion though)
     analysis = data.analyze(
@@ -172,11 +172,11 @@ def example5_zero_centering():
     print("\nOriginal data (centered around 1000):")
     print(df.head())
 
-    data = ProcessDataFrame(df)
+    data = ProcessBehavior(df)
 
     analysis = data.analyze(
-        response_var=data.columns.Temperature,
-        time_var=data.columns.Reading,
+        response_var=data.cols.Temperature,
+        time_var=data.cols.Reading,
         zero_center=True  # Subtract mean to focus on variation
     )
 
@@ -192,7 +192,7 @@ def example5_zero_centering():
 def main():
     """Run all examples"""
     print("\n" + "="*80)
-    print("ProcessDataFrame API Demonstration")
+    print("ProcessBehavior API Demonstration")
     print("Frictionless Process Behavior Analysis")
     print("="*80)
 
@@ -206,7 +206,7 @@ def main():
     print("All examples complete!")
     print("="*80)
     print("\nKey Takeaways:")
-    print("  1. No more typos - use data.columns.ColumnName for auto-completion")
+    print("  1. No more typos - use data.cols.ColumnName for auto-completion")
     print("  2. No more wrong analysis types - system detects SDS automatically")
     print("  3. Clear explanations - always tells you what it's doing and why")
     print("  4. Follows your data - analysis adapts to data structure")

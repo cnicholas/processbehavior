@@ -74,9 +74,9 @@ df = pd.read_csv("process_data.csv")
 # Formulate your study
 pdf = ProcessBehavior(df)
 study = pdf.formulate(
-    response=pdf.columns.measurement,
-    factors=[pdf.columns.machine, pdf.columns.operator],
-    time=pdf.columns.timestamp
+    response=pdf.cols.measurement,
+    factors=[pdf.cols.machine, pdf.cols.operator],
+    time=pdf.cols.timestamp
 )
 
 # ProcessBehavior automatically detects SDS and recommends charts

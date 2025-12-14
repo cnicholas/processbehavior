@@ -87,9 +87,9 @@ from processbehavior import ProcessBehavior
 # Setup
 pdf = ProcessBehavior(df)
 study = pdf.formulate(
-    response=pdf.columns.weight,
-    factors=[pdf.columns.lane],
-    time=pdf.columns.batch
+    response=pdf.cols.weight,
+    factors=[pdf.cols.lane],
+    time=pdf.cols.batch
 )
 result = study.analyze()
 

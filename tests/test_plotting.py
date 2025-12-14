@@ -154,7 +154,7 @@ class TestControlChartFigure:
             'time': range(30)
         })
         pdf = ProcessBehavior(df)
-        study = pdf.formulate(response=pdf.columns.value)
+        study = pdf.formulate(response=pdf.cols.value)
         return study.analyze()
 
     @pytest.fixture
@@ -211,7 +211,7 @@ class TestPlotter:
             'time': range(30)
         })
         pdf = ProcessBehavior(df)
-        study = pdf.formulate(response=pdf.columns.value)
+        study = pdf.formulate(response=pdf.cols.value)
         return study.analyze()
 
     @pytest.fixture
@@ -224,7 +224,7 @@ class TestPlotter:
             'time': range(100)
         })
         pdf = ProcessBehavior(df)
-        study = pdf.formulate(response=pdf.columns.value, factors=[pdf.columns.subgroup])
+        study = pdf.formulate(response=pdf.cols.value, factors=[pdf.cols.subgroup])
         return study.analyze()
 
     def test_initialization(self, simple_result):
@@ -422,7 +422,7 @@ class TestAnalysisResultIntegration:
             'time': range(30)
         })
         pdf = ProcessBehavior(df)
-        study = pdf.formulate(response=pdf.columns.value)
+        study = pdf.formulate(response=pdf.cols.value)
         return study.analyze()
 
     def test_plot_method_exists(self, result):
@@ -459,7 +459,7 @@ class TestFacetedPlotting:
             'time': range(100)
         })
         pdf = ProcessBehavior(df)
-        study = pdf.formulate(response=pdf.columns.value, factors=[pdf.columns.subgroup])
+        study = pdf.formulate(response=pdf.cols.value, factors=[pdf.cols.subgroup])
         return study.analyze()
 
     def test_faceted_plot(self, xbar_result):
@@ -489,7 +489,7 @@ class TestAspectRatio:
             'time': range(30)
         })
         pdf = ProcessBehavior(df)
-        study = pdf.formulate(response=pdf.columns.value)
+        study = pdf.formulate(response=pdf.cols.value)
         return study.analyze()
 
     def test_aspect_ratio_calculation(self, simple_result):
@@ -528,7 +528,7 @@ class TestReportGeneration:
             'time': range(30)
         })
         pdf = ProcessBehavior(df)
-        study = pdf.formulate(response=pdf.columns.value)
+        study = pdf.formulate(response=pdf.cols.value)
         return study.analyze()
 
     def test_generate_report(self, simple_result):
@@ -586,9 +586,9 @@ class TestResidualPlots:
         })
         pdf = ProcessBehavior(df)
         study = pdf.formulate(
-            response=pdf.columns.value,
-            factors=[pdf.columns.factor],
-            time=pdf.columns.time
+            response=pdf.cols.value,
+            factors=[pdf.cols.factor],
+            time=pdf.cols.time
         )
         result = study.analyze()
         # Verify fixture produces residuals
@@ -628,7 +628,7 @@ class TestResidualPlots:
             'time': range(30)
         })
         pdf = ProcessBehavior(df)
-        study = pdf.formulate(response=pdf.columns.value)
+        study = pdf.formulate(response=pdf.cols.value)
         result = study.analyze()
 
         assert not result.has_residuals, "This fixture should NOT have residuals"
@@ -650,7 +650,7 @@ class TestEffectsPlots:
             'time': range(100)
         })
         pdf = ProcessBehavior(df)
-        study = pdf.formulate(response=pdf.columns.value, factors=[pdf.columns.subgroup])
+        study = pdf.formulate(response=pdf.cols.value, factors=[pdf.cols.subgroup])
         return study.analyze()
 
     def test_plot_effects_available(self, result_with_effects):
@@ -668,7 +668,7 @@ class TestEffectsPlots:
             'time': range(30)
         })
         pdf = ProcessBehavior(df)
-        study = pdf.formulate(response=pdf.columns.value)
+        study = pdf.formulate(response=pdf.cols.value)
         result = study.analyze()
 
         if not result.has_effects:
@@ -689,7 +689,7 @@ class TestStatsBox:
             'time': range(30)
         })
         pdf = ProcessBehavior(df)
-        study = pdf.formulate(response=pdf.columns.value)
+        study = pdf.formulate(response=pdf.cols.value)
         return study.analyze()
 
     @pytest.fixture
@@ -702,7 +702,7 @@ class TestStatsBox:
             'time': range(100)
         })
         pdf = ProcessBehavior(df)
-        study = pdf.formulate(response=pdf.columns.value, factors=[pdf.columns.subgroup])
+        study = pdf.formulate(response=pdf.cols.value, factors=[pdf.cols.subgroup])
         return study.analyze()
 
     def test_plot_with_stats_box(self, simple_result):

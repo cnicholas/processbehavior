@@ -46,9 +46,9 @@ class TestSDSDetection:
 
         pdf = ProcessBehavior(df)
         study = pdf.formulate(
-            response=pdf.columns.y,
-            factors=[pdf.columns.factor_1],
-            time=pdf.columns.time
+            response=pdf.cols.y,
+            factors=[pdf.cols.factor_1],
+            time=pdf.cols.time
         )
 
         assert study.sds == 1, f"Expected SDS=1, got {study.sds}"
@@ -95,8 +95,8 @@ class TestSDSDetection:
 
         pdf = ProcessBehavior(df)
         study = pdf.formulate(
-            response=pdf.columns.y,
-            time=pdf.columns.time
+            response=pdf.cols.y,
+            time=pdf.cols.time
         )
 
         # SDS 4 or SDS 0 (depending on implementation)
@@ -134,9 +134,9 @@ class TestSDSDetection:
 
         pdf = ProcessBehavior(df)
         study = pdf.formulate(
-            response=pdf.columns.y,
-            factors=[pdf.columns.factor_1],
-            time=pdf.columns.time
+            response=pdf.cols.y,
+            factors=[pdf.cols.factor_1],
+            time=pdf.cols.time
         )
 
         result = study.analyze(chart='Imr')

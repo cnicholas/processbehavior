@@ -97,7 +97,7 @@ def test_process_dataframe_init():
 
     assert len(pdata) == 3
     assert len(pdata.data.columns) == 2
-    assert isinstance(pdata.columns, ColumnAccessor)
+    assert isinstance(pdata.cols, ColumnAccessor)
 
 
 def test_process_dataframe_copies_data():
@@ -139,8 +139,8 @@ def test_formulate_simple_series():
 
     # Formulate without factors → should get SDS 0
     study = pdata.formulate(
-        response=pdata.columns.Measurement,
-        time=pdata.columns.Time
+        response=pdata.cols.Measurement,
+        time=pdata.cols.Time
     )
 
     # Should have detected SDS 0 and recommend IMR
@@ -157,7 +157,7 @@ def test_formulate_simple_series_no_time():
 
     pdata = ProcessBehavior(df)
 
-    study = pdata.formulate(response=pdata.columns.Value)
+    study = pdata.formulate(response=pdata.cols.Value)
 
     assert study.sds == 0
     assert study.recommended_chart == 'Imr'
@@ -174,8 +174,8 @@ def test_formulate_and_analyze_simple_series():
     pdata = ProcessBehavior(df)
 
     study = pdata.formulate(
-        response=pdata.columns.Measurement,
-        time=pdata.columns.Time
+        response=pdata.cols.Measurement,
+        time=pdata.cols.Time
     )
 
     # Analyze using recommended chart
@@ -219,9 +219,9 @@ def test_formulate_with_grouping():
     pdata = ProcessBehavior(df)
 
     study = pdata.formulate(
-        response=pdata.columns.Height,
-        time=pdata.columns.Time,
-        factors=[pdata.columns.Operator, pdata.columns.Machine]
+        response=pdata.cols.Height,
+        time=pdata.cols.Time,
+        factors=[pdata.cols.Operator, pdata.cols.Machine]
     )
 
     # Should detect grouped structure and recommend Xbar
@@ -257,9 +257,9 @@ def test_formulate_with_single_grouping():
     pdata = ProcessBehavior(df)
 
     study = pdata.formulate(
-        response=pdata.columns.Value,
-        time=pdata.columns.Sequence,
-        factors=[pdata.columns.Batch]
+        response=pdata.cols.Value,
+        time=pdata.cols.Sequence,
+        factors=[pdata.cols.Batch]
     )
 
     assert study.sds == 1
@@ -281,9 +281,9 @@ def test_formulate_and_analyze_with_grouping():
     pdata = ProcessBehavior(df)
 
     study = pdata.formulate(
-        response=pdata.columns.Height,
-        time=pdata.columns.ProductionTime,
-        factors=[pdata.columns.Operator, pdata.columns.Shift]
+        response=pdata.cols.Height,
+        time=pdata.cols.ProductionTime,
+        factors=[pdata.cols.Operator, pdata.cols.Shift]
     )
 
     # Should be able to analyze
@@ -420,8 +420,8 @@ def test_full_workflow_simple_series():
 
     # Formulate study
     study = data.formulate(
-        response=data.columns.Measurement,
-        time=data.columns.Time
+        response=data.cols.Measurement,
+        time=data.cols.Time
     )
 
     # Check study properties
@@ -458,9 +458,9 @@ def test_full_workflow_grouped_data():
     data = ProcessBehavior(df)
 
     study = data.formulate(
-        response=data.columns.Height,
-        time=data.columns.ProductionTime,
-        factors=[data.columns.Operator, data.columns.Shift]
+        response=data.cols.Height,
+        time=data.cols.ProductionTime,
+        factors=[data.cols.Operator, data.cols.Shift]
     )
 
     # Verify study
@@ -486,8 +486,8 @@ def test_formulate_with_precision():
     pdata = ProcessBehavior(df)
 
     study = pdata.formulate(
-        response=pdata.columns.Value,
-        time=pdata.columns.Time,
+        response=pdata.cols.Value,
+        time=pdata.cols.Time,
         precision=5
     )
 
@@ -528,9 +528,9 @@ def test_formulate_with_chart_selection():
     pdata = ProcessBehavior(df)
 
     study = pdata.formulate(
-        response=pdata.columns.Value,
-        time=pdata.columns.Time,
-        factors=[pdata.columns.Batch]
+        response=pdata.cols.Value,
+        time=pdata.cols.Time,
+        factors=[pdata.cols.Batch]
     )
 
     # Should be able to analyze with different valid chart types

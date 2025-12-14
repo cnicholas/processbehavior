@@ -23,9 +23,9 @@ class TestWECOIntegration:
         # Analyze
         pdf = ProcessBehavior(df)
         study = pdf.formulate(
-            response=pdf.columns.y,
-            factors=[pdf.columns.factor_1],
-            time=pdf.columns.time
+            response=pdf.cols.y,
+            factors=[pdf.cols.factor_1],
+            time=pdf.cols.time
         )
         result = study.analyze()
 
@@ -52,9 +52,9 @@ class TestWECOIntegration:
         # Analyze
         pdf = ProcessBehavior(df)
         study = pdf.formulate(
-            response=pdf.columns.y,
-            factors=[pdf.columns.factor_1],
-            time=pdf.columns.time
+            response=pdf.cols.y,
+            factors=[pdf.cols.factor_1],
+            time=pdf.cols.time
         )
         result = study.analyze()
 
@@ -81,8 +81,8 @@ class TestWECOIntegration:
         # Analyze
         pdf = ProcessBehavior(df)
         study = pdf.formulate(
-            response=pdf.columns.y,
-            time=pdf.columns.time
+            response=pdf.cols.y,
+            time=pdf.cols.time
         )
         result = study.analyze()
 
@@ -108,8 +108,8 @@ class TestWECOIntegration:
         # Analyze - IMR analysis includes moving range calculation
         pdf = ProcessBehavior(df)
         study = pdf.formulate(
-            response=pdf.columns.y,
-            time=pdf.columns.time
+            response=pdf.cols.y,
+            time=pdf.cols.time
         )
         result = study.analyze()
 
@@ -131,9 +131,9 @@ class TestWECOIntegration:
         # Analyze
         pdf = ProcessBehavior(df)
         study = pdf.formulate(
-            response=pdf.columns.y,
-            factors=[pdf.columns.factor_1],
-            time=pdf.columns.time
+            response=pdf.cols.y,
+            factors=[pdf.cols.factor_1],
+            time=pdf.cols.time
         )
         result = study.analyze()
 
@@ -165,9 +165,9 @@ class TestWECOIntegration:
         # Analyze
         pdf = ProcessBehavior(df)
         study = pdf.formulate(
-            response=pdf.columns.y,
-            factors=[pdf.columns.factor_1],
-            time=pdf.columns.time
+            response=pdf.cols.y,
+            factors=[pdf.cols.factor_1],
+            time=pdf.cols.time
         )
         result = study.analyze()
 
@@ -187,9 +187,9 @@ class TestWECOIntegration:
 
         pdf = ProcessBehavior(df)
         study = pdf.formulate(
-            response=pdf.columns.y,
-            factors=[pdf.columns.factor_1],
-            time=pdf.columns.time
+            response=pdf.cols.y,
+            factors=[pdf.cols.factor_1],
+            time=pdf.cols.time
         )
         result = study.analyze()
 
@@ -208,9 +208,9 @@ class TestWECOIntegration:
         # Analyze
         pdf = ProcessBehavior(df)
         study = pdf.formulate(
-            response=pdf.columns.y,
-            factors=[pdf.columns.factor_1],
-            time=pdf.columns.time
+            response=pdf.cols.y,
+            factors=[pdf.cols.factor_1],
+            time=pdf.cols.time
         )
         result = study.analyze()
 
@@ -241,9 +241,9 @@ class TestMetadataContract:
 
         pdf = ProcessBehavior(df)
         study = pdf.formulate(
-            response=pdf.columns.y,
-            factors=[pdf.columns.factor_1],
-            time=pdf.columns.time
+            response=pdf.cols.y,
+            factors=[pdf.cols.factor_1],
+            time=pdf.cols.time
         )
         result = study.analyze()
 
@@ -265,8 +265,8 @@ class TestMetadataContract:
 
         pdf = ProcessBehavior(df)
         study = pdf.formulate(
-            response=pdf.columns.y,
-            time=pdf.columns.time
+            response=pdf.cols.y,
+            time=pdf.cols.time
         )
         result = study.analyze()
 
@@ -282,9 +282,9 @@ class TestMetadataContract:
 
         pdf = ProcessBehavior(df)
         study = pdf.formulate(
-            response=pdf.columns.y,
-            factors=[pdf.columns.factor_1],
-            time=pdf.columns.time
+            response=pdf.cols.y,
+            factors=[pdf.cols.factor_1],
+            time=pdf.cols.time
         )
         result = study.analyze()
 

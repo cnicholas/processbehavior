@@ -29,9 +29,9 @@ After formulation, use the `study.charts` accessor for IDE auto-completion:
 
 ```python
 study = pdf.formulate(
-    response=pdf.columns.weight,
-    factors=[pdf.columns.lane],
-    time=pdf.columns.batch
+    response=pdf.cols.weight,
+    factors=[pdf.cols.lane],
+    time=pdf.cols.batch
 )
 
 # Type study.charts. and your IDE shows only valid charts
