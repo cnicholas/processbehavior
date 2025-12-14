@@ -115,6 +115,24 @@ def test_process_dataframe_copies_data():
     assert list(pdata.data['X']) == [1, 2, 3]
 
 
+def test_input_dataframe_never_modified():
+    """Input DataFrame should remain unchanged through full analysis pipeline."""
+    df = pd.DataFrame({
+        'Value': [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0],
+        'Time': [1, 1, 2, 2, 3, 3, 4, 4, 5, 5],
+        'Factor': ['A', 'B', 'A', 'B', 'A', 'B', 'A', 'B', 'A', 'B']
+    })
+    original = df.copy()
+
+    # Run full pipeline: formulate → execute → plot
+    study = ProcessBehavior(df).formulate(response='Value', time='Time', factors=['Factor'])
+    result = study.execute()
+    _ = result.plot()
+
+    # Original DataFrame should be identical
+    pd.testing.assert_frame_equal(df, original)
+
+
 def test_process_dataframe_rejects_non_dataframe():
     """ProcessBehavior should reject non-DataFrame input."""
     with pytest.raises(TypeError, match="Expected pandas DataFrame"):
