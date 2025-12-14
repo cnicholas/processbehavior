@@ -41,6 +41,9 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+# Standard SPC chart type names
+STANDARD_CHART_NAMES = {'Xbar', 'S', 'Imr', 'R'}
+
 
 class AnalysisResult:
     """
@@ -194,9 +197,9 @@ class AnalysisResult:
         Returns
         -------
         bool
-            True if multiple charts exist and none are named 'Xbar', 'Sbar', 'R', 'all'
+            True if multiple charts exist and none are named 'Xbar', 'S', 'R', 'all'
         """
-        standard_chart_names = {'Xbar', 'Sbar', 'R', 'all'}
+        standard_chart_names = STANDARD_CHART_NAMES
         chart_names = set(self.charts.keys())
 
         # If we have charts that aren't standard names, it's stratified
@@ -209,43 +212,47 @@ class AnalysisResult:
     # =========================================================================
 
     @property
-    def residuals(self) -> pd.DataFrame | None:
+    def residuals(self) -> pd.DataFrame:
         """
         Get VAS residuals (R1-R5) if calculated.
 
         Returns
         -------
-        DataFrame or None
+        DataFrame
             DataFrame with columns [R1, R2, R3, R4, R5] if residuals were
-            calculated, None otherwise
+            calculated, empty DataFrame with same schema otherwise
         """
-        return self._residuals
+        if self._residuals is None:
+            return pd.DataFrame(columns=['R1', 'R2', 'R3', 'R4', 'R5'])
+        return self._residuals.copy()
 
     @property
-    def effects(self) -> dict | None:
+    def effects(self) -> dict:
         """
         Get main effects if calculated.
 
         Returns
         -------
-        dict or None
+        dict
             Dictionary with main effects:
             - 'k_effects': Factor effects (Series)
             - 't_effects': Time effects (Series)
+            Empty dict if not calculated.
         """
-        return self._effects
+        return self._effects.copy() if self._effects else {}
 
     @property
-    def interactions(self) -> dict | None:
+    def interactions(self) -> dict:
         """
         Get interaction effects if calculated.
 
         Returns
         -------
-        dict or None
-            Dictionary with interaction terms (varies by SDS)
+        dict
+            Dictionary with interaction terms (varies by SDS).
+            Empty dict if not calculated.
         """
-        return self._interactions
+        return self._interactions.copy() if self._interactions else {}
 
     @property
     def summary(self) -> dict:
@@ -257,7 +264,7 @@ class AnalysisResult:
         dict
             Summary with SDS info, capabilities, dimensions, and statistics
         """
-        return self._summary
+        return self._summary.copy()
 
     @property
     def has_residuals(self) -> bool:
@@ -290,7 +297,7 @@ class AnalysisResult:
         Parameters
         ----------
         name : str
-            Chart name (e.g., 'Xbar', 'Sbar', 'GroupA', 'all')
+            Chart name (e.g., 'Xbar', 'S', 'GroupA', 'all')
 
         Returns
         -------
@@ -311,7 +318,7 @@ class AnalysisResult:
             raise KeyError(
                 f"Chart '{name}' not found. Available charts: {self.all_charts}"
             )
-        return self.charts[name]['data']
+        return self.charts[name]['data'].copy()
 
     def get_statistics(self, name: str) -> dict:
         """
@@ -320,7 +327,7 @@ class AnalysisResult:
         Parameters
         ----------
         name : str
-            Chart name (e.g., 'Xbar', 'Sbar', 'GroupA')
+            Chart name (e.g., 'Xbar', 'S', 'GroupA')
 
         Returns
         -------
@@ -341,9 +348,9 @@ class AnalysisResult:
             raise KeyError(
                 f"Chart '{name}' not found. Available charts: {self.all_charts}"
             )
-        return self.charts[name]['statistics']
+        return self.charts[name]['statistics'].copy()
 
-    def get_residual(self, residual_type: str) -> pd.Series | None:
+    def get_residual(self, residual_type: str) -> pd.Series:
         """
         Get specific residual (R1, R2, R3, R4, or R5).
 
@@ -354,8 +361,8 @@ class AnalysisResult:
 
         Returns
         -------
-        Series or None
-            Residual values if calculated, None otherwise
+        Series
+            Residual values if calculated, empty Series with proper name otherwise
 
         Examples
         --------
@@ -363,7 +370,7 @@ class AnalysisResult:
         >>> r2 = result.get_residual('R2')
         """
         if not self.has_residuals:
-            return None
+            return pd.Series([], name=residual_type, dtype=float)
 
         if residual_type not in self._residuals.columns:
             available = list(self._residuals.columns)
@@ -371,9 +378,9 @@ class AnalysisResult:
                 f"Residual '{residual_type}' not found. "
                 f"Available: {available}"
             )
-            return None
+            return pd.Series([], name=residual_type, dtype=float)
 
-        return self._residuals[residual_type]
+        return self._residuals[residual_type].copy()
 
     def get_stratified_charts(self) -> dict[str, dict[str, Any]]:
         """
@@ -395,7 +402,7 @@ class AnalysisResult:
             return {}
 
         # Filter out standard chart names
-        standard_chart_names = {'Xbar', 'Sbar', 'R', 'all'}
+        standard_chart_names = STANDARD_CHART_NAMES
         stratified = {
             name: chart
             for name, chart in self.charts.items()
@@ -450,7 +457,7 @@ class AnalysisResult:
             )
 
         chart_name = matching_charts[0]
-        return self.charts[chart_name]['data']
+        return self.charts[chart_name]['data'].copy()
 
     def list_strata(self) -> list[str]:
         """
@@ -514,7 +521,7 @@ class AnalysisResult:
         Parameters
         ----------
         chart : str, optional
-            Chart name (e.g., 'Xbar', 'Sbar'). If None, uses first chart.
+            Chart name (e.g., 'Xbar', 'S'). If None, uses first chart.
         include_signal_col : bool, default True
             Whether to include a signal indicator column
         signal_symbols : bool, default True
@@ -537,7 +544,7 @@ class AnalysisResult:
         Display subgroup summary in notebook:
 
         >>> result = study.execute()
-        >>> result.chart_table('Sbar')
+        >>> result.chart_table('S')
           subgroup   n  value  center    lpl    upl signal
         0      1_1  99  1.241   1.289  1.012  1.565
         1      1_2  98  0.977   1.289  1.011  1.567      ↓
@@ -550,7 +557,7 @@ class AnalysisResult:
 
         Use numeric signal values:
 
-        >>> result.chart_table('Sbar', signal_symbols=False)
+        >>> result.chart_table('S', signal_symbols=False)
         """
         # Determine which chart to use
         if chart is None:
@@ -790,7 +797,7 @@ class AnalysisResult:
 
         Creates a multi-sheet Excel workbook with organized analysis results:
         - Summary: Analysis metadata, SDS info, signal counts
-        - Charts: One tab per chart (Xbar, Sbar, stratified IMR, etc.)
+        - Charts: One tab per chart (Xbar, S, stratified IMR, etc.)
         - Residuals: R1-R5 variance decomposition (if available)
         - Effects: Main effects (if calculated)
         - Interactions: Interaction terms (if calculated)
@@ -1019,7 +1026,7 @@ class AnalysisResult:
         # Collect all stratified charts
         combined_data = []
 
-        standard_chart_names = {'Xbar', 'Sbar', 'R', 'all'}
+        standard_chart_names = STANDARD_CHART_NAMES
 
         for chart_name, chart_info in self.charts.items():
             # Skip standard charts (will be written separately)
@@ -1060,9 +1067,9 @@ class AnalysisResult:
                 ws = writer.sheets[tab_name]
                 self._apply_formatting(ws)
 
-        # Also write any standard charts (Xbar, Sbar, etc.)
+        # Also write any standard charts (Xbar, S, etc.)
         # These are separate analyses, not stratified
-        standard_chart_names = {'Xbar', 'Sbar', 'R', 'all'}
+        standard_chart_names = STANDARD_CHART_NAMES
         for chart_name in standard_chart_names:
             if chart_name in self.charts:
                 chart_info = self.charts[chart_name]
@@ -1105,7 +1112,7 @@ class AnalysisResult:
 
         for chart_name, chart_info in self.charts.items():
             # Skip standard charts
-            if chart_name in {'Xbar', 'Sbar', 'R', 'all'}:
+            if chart_name in STANDARD_CHART_NAMES:
                 continue
 
             chart_data = chart_info.get('data')
@@ -1340,9 +1347,9 @@ class AnalysisResult:
             # Track row position for layout
             current_row = 1
 
-            # Export combined charts first (Xbar, Sbar, etc.)
+            # Export combined charts first (Xbar, S, etc.)
             combined_charts = [name for name in self.charts
-                             if name in ['Xbar', 'Sbar', 'Imr', 'R', 'all']]
+                             if name in STANDARD_CHART_NAMES]
 
             if combined_charts:
                 ws[f'A{current_row}'] = 'COMBINED CONTROL CHARTS'
@@ -1404,7 +1411,7 @@ class AnalysisResult:
         Export interactive HTML charts alongside the Excel file.
 
         Creates HTML files in the same directory as the Excel file:
-        - {basename}_combined.html - Combined Xbar/Sbar charts
+        - {basename}_combined.html - Combined Xbar/S charts
         - {basename}_stratified.html - Stratified IMR charts (if applicable)
         """
         try:
@@ -1420,7 +1427,7 @@ class AnalysisResult:
 
             # Export combined charts
             combined_charts = [name for name in self.charts
-                             if name in ['Xbar', 'Sbar', 'Imr', 'R', 'all']]
+                             if name in STANDARD_CHART_NAMES]
 
             if combined_charts:
                 html_file = output_dir / f'{base_name}_combined.html'
@@ -1632,7 +1639,7 @@ class AnalysisResult:
         # Common chart type mapping
         type_mapping = {
             'Xbar': 'Xbar',
-            'Sbar': 'S',
+            'S': 'S',
             'Imr': 'Imr',
             'R': 'R'
         }
@@ -1703,7 +1710,7 @@ class AnalysisResult:
         Parameters
         ----------
         chart : str, optional
-            Specific chart to plot ('Xbar', 'Sbar', 'Imr', etc.)
+            Specific chart to plot ('Xbar', 'S', 'Imr', etc.)
             If None, plots all available charts
         facet : bool, default False
             Whether to create faceted plot for stratified data

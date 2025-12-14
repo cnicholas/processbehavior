@@ -26,7 +26,7 @@ Usage:
 
     # Access charts
     xbar = result.get_chart('Xbar')
-    s = result.get_chart('Sbar')
+    s = result.get_chart('S')
 """
 
 from __future__ import annotations
@@ -135,7 +135,7 @@ def gather_analysis_statistics(
 
             summarized = out[statistics_to_collect].max().to_dict()
             summarized["n"] = n
-            stats['all'] = summarized
+            stats['Imr'] = summarized
 
     else:
         raise ValueError(f'Statistics: {statistics_to_collect} are not in {df.columns.to_list()}')
@@ -472,7 +472,7 @@ class Analysis:
                 df=df,
                 statistics_to_collect=statistics_cols
             )
-            split_dict = {'all': df}
+            split_dict = {'Imr': df}
 
         result = package_analysis(
             analysis_output=split_dict,
@@ -674,11 +674,11 @@ class Analysis:
 
         cols_to_keep = ['rsg', 's', 'center', 'lpl', 'upl', 'beyond_limits']
         sbar = sbar[cols_to_keep]
-        result['Sbar'] = {
+        result['S'] = {
             'data': sbar,
             'statistics': statistics,
             'metadata': {
-                'chart_type': 'Sbar',
+                'chart_type': 'S',
                 'value_col': 's',
                 'center_col': 'center'
             }
@@ -741,7 +741,7 @@ class Analysis:
         Subgroups are time points, aggregating across all factor levels.
         Sample size per subgroup: N_.t = Σ_k N_kt
 
-        Returns dict with 'Xbar' and 'Sbar' chart data.
+        Returns dict with 'Xbar' and 'S' chart data.
         """
         spec = self.spec
         result = {}
@@ -838,11 +838,11 @@ class Analysis:
 
         cols_to_keep = ['rsg', 's', 'center', 'lpl', 'upl', 'beyond_limits']
         sbar = sbar[cols_to_keep]
-        result['Sbar'] = {
+        result['S'] = {
             'data': sbar,
             'statistics': statistics,
             'metadata': {
-                'chart_type': 'Sbar',
+                'chart_type': 'S',
                 'value_col': 's',
                 'center_col': 'center',
                 'subgroup_type': 'time'
@@ -1154,7 +1154,7 @@ class Analysis:
                 # R3/R5: subgroups by FACTOR (aggregate across time) - uses standard _calculate_xbar
                 xbar_result = self._calculate_xbar_by_time() if residual == 'R4' else self._calculate_xbar()
 
-                # Extract just the Xbar portion (not Sbar)
+                # Extract just the Xbar portion (not S)
                 chart_name = f'{residual}_Xbar'
                 xbar_data = xbar_result['Xbar']
 
@@ -1186,7 +1186,7 @@ class Analysis:
                 # Rename chart keys to include residual prefix
                 renamed_result = {}
                 for chart_key, chart_data in result.items():
-                    new_key = f'{residual}_{chart_key}' if chart_key != 'all' else f'{residual}_Imr'
+                    new_key = f'{residual}_{chart_key}'
                     renamed_result[new_key] = chart_data
 
                 result = renamed_result

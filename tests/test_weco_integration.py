@@ -45,7 +45,7 @@ class TestWECOIntegration:
         assert hasattr(signals, 'has_signals')
 
     def test_detect_signals_sbar_chart(self):
-        """Test detect_signals() works with Sbar chart (value_col='s')."""
+        """Test detect_signals() works with S chart (value_col='s')."""
         # Use synthetic SDS1 data (full replication)
         df = synthetic.make_sds1(K=4, T=10, n_min=2, n_max=5, seed=42)
 
@@ -58,15 +58,15 @@ class TestWECOIntegration:
         )
         result = study.execute()
 
-        # Verify Sbar chart has metadata
-        assert 'Sbar' in result.charts
-        assert 'metadata' in result.charts['Sbar']
-        assert result.charts['Sbar']['metadata']['value_col'] == 's'
+        # Verify S chart has metadata
+        assert 'S' in result.charts
+        assert 'metadata' in result.charts['S']
+        assert result.charts['S']['metadata']['value_col'] == 's'
 
         # Detect signals - should not crash
         # Use config with lower min_observations
         config = SignalConfig(min_observations=3)
-        signals = result.detect_signals(chart='Sbar', config=config)
+        signals = result.detect_signals(chart='S', config=config)
 
         # Verify signal detection worked
         assert signals is not None
@@ -86,14 +86,14 @@ class TestWECOIntegration:
         )
         result = study.execute()
 
-        # IMR analysis returns stratified results with 'all' key
-        assert 'all' in result.charts
-        assert 'metadata' in result.charts['all']
-        assert result.charts['all']['metadata']['value_col'] == 'y'
-        assert result.charts['all']['metadata']['chart_type'] == 'Imr'
+        # IMR analysis returns results with 'Imr' key
+        assert 'Imr' in result.charts
+        assert 'metadata' in result.charts['Imr']
+        assert result.charts['Imr']['metadata']['value_col'] == 'y'
+        assert result.charts['Imr']['metadata']['chart_type'] == 'Imr'
 
         # Detect signals - should not crash
-        signals = result.detect_signals(chart='all')
+        signals = result.detect_signals(chart='Imr')
 
         # Verify signal detection worked
         assert signals is not None
@@ -113,10 +113,10 @@ class TestWECOIntegration:
         )
         result = study.execute()
 
-        # IMR analysis returns results with 'all' key
+        # IMR analysis returns results with 'Imr' key
         # The chart includes moving range data with metadata
-        assert 'all' in result.charts
-        chart_info = result.charts['all']
+        assert 'Imr' in result.charts
+        chart_info = result.charts['Imr']
 
         # Verify metadata exists (IMR chart includes MR calculations)
         assert 'metadata' in chart_info
@@ -145,7 +145,7 @@ class TestWECOIntegration:
         # Should return dict with signals for each chart
         assert isinstance(all_signals, dict)
         assert 'Xbar' in all_signals
-        assert 'Sbar' in all_signals
+        assert 'S' in all_signals
 
         # Each should be a SignalResult
         for _chart_name, signals in all_signals.items():
@@ -236,7 +236,7 @@ class TestMetadataContract:
     """Test that all chart types have proper metadata."""
 
     def test_xbar_sbar_metadata(self):
-        """Test Xbar and Sbar charts have complete metadata."""
+        """Test Xbar and S charts have complete metadata."""
         df = synthetic.make_sds1(K=2, T=8, n_min=2, n_max=4, seed=42)
 
         pdf = ProcessBehavior(df)
@@ -253,9 +253,9 @@ class TestMetadataContract:
         assert xbar_meta['value_col'] == 'xbar'
         assert xbar_meta['center_col'] == 'center'
 
-        # Check Sbar metadata
-        sbar_meta = result.charts['Sbar']['metadata']
-        assert sbar_meta['chart_type'] == 'Sbar'
+        # Check S metadata
+        sbar_meta = result.charts['S']['metadata']
+        assert sbar_meta['chart_type'] == 'S'
         assert sbar_meta['value_col'] == 's'
         assert sbar_meta['center_col'] == 'center'
 
@@ -271,7 +271,7 @@ class TestMetadataContract:
         result = study.execute()
 
         # Check IMR metadata
-        imr_meta = result.charts['all']['metadata']
+        imr_meta = result.charts['Imr']['metadata']
         assert imr_meta['chart_type'] == 'Imr'
         assert imr_meta['value_col'] == 'y'
         assert imr_meta['center_col'] == 'center'

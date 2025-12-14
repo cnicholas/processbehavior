@@ -218,7 +218,7 @@ class Plotter:
         Parameters
         ----------
         chart : str, optional
-            Specific chart to plot ('Xbar', 'Sbar', 'Imr', etc.)
+            Specific chart to plot ('Xbar', 'S', 'Imr', etc.)
             If None, plots all available charts
         facet : bool, default False
             Whether to create faceted plot for stratified data
@@ -323,7 +323,7 @@ class Plotter:
             # Plot all standard charts
             charts_to_plot = {
                 k: v for k, v in self.charts.items()
-                if k in ['Xbar', 'Sbar', 'Imr', 'R', 'all']
+                if k in ['Xbar', 'S', 'Imr', 'R']
             }
 
         if not charts_to_plot:
@@ -955,7 +955,7 @@ class Plotter:
             title_parts.append(f"by {grouping_vars[0]}")
 
         # Check if this is a stratified chart (has stratum in name)
-        if '_' in chart_name and chart_name not in ['Xbar', 'Sbar', 'Imr']:
+        if '_' in chart_name and chart_name not in ['Xbar', 'S', 'Imr']:
             # Extract stratum name (e.g., "Operator_A" -> "Operator A")
             stratum = self._extract_stratum_name(chart_name)
             if stratum:
@@ -1005,11 +1005,10 @@ class Plotter:
         # Map technical names to display names
         display_names = {
             'Xbar': 'X̄',
-            'Sbar': 'S',
+            'S': 'S',
             'Imr': 'I-MR',
             'R': 'R',
-            'Mr': 'MR',
-            'all': 'I-MR'
+            'Mr': 'MR'
         }
 
         # Check for exact match first
@@ -1039,7 +1038,7 @@ class Plotter:
             Cleaned stratum name like "Operator A" or "Lane 1"
         """
         # Known chart type prefixes to strip
-        prefixes = ['Xbar_', 'Sbar_', 'Imr_', 'R_', 'Mr_']
+        prefixes = ['Xbar_', 'S_', 'Imr_', 'R_', 'Mr_']
 
         result = chart_name
         for prefix in prefixes:

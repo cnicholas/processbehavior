@@ -98,47 +98,6 @@ class ColumnAccessor:
         return [self._sanitize_column_name(col) for col in self._columns]
 
 
-class ChartTypeAccessor:
-    """
-    Provides IDE auto-completion for valid chart types based on detected SDS.
-
-    This class dynamically creates attributes for each valid chart type,
-    enabling IDE auto-completion and preventing invalid chart selections.
-
-    Usage:
-        pb = ProcessBehavior(df)
-
-        # After formulate(), pb.charts is populated
-        study = pb.formulate(response='height')
-
-        # Now you can use auto-completion for valid charts
-        result = study.execute(chart=pb.charts.Xbar)  # IDE auto-completes!
-
-    Attributes are set dynamically based on SDS-specific valid charts.
-    """
-
-    def __init__(self, valid_charts: list[str]):
-        """
-        Initialize accessor with valid chart types for the detected SDS.
-
-        Args:
-            valid_charts: List of valid chart type names for the current SDS
-        """
-        self._valid_charts = valid_charts
-
-        # Dynamically add each valid chart as an attribute
-        for chart in valid_charts:
-            setattr(self, chart, chart)
-
-    def __repr__(self) -> str:
-        """Display available chart types."""
-        return f"Available charts: {', '.join(self._valid_charts)}"
-
-    def __dir__(self):
-        """Support for tab-completion in IPython/Jupyter."""
-        return self._valid_charts
-
-
 class ProcessBehavior:
     """
     Main entry point for process behavior analysis with auto-completion.
@@ -172,7 +131,6 @@ class ProcessBehavior:
 
     Attributes:
         cols: ColumnAccessor for IDE auto-completion of column names
-        charts: ChartTypeAccessor for valid chart types (set after formulate())
         data: The underlying pandas DataFrame
     """
 
@@ -255,7 +213,6 @@ class ProcessBehavior:
 
         self.data = cleaned_df
         self.cols = ColumnAccessor(self.data)
-        self.charts = None  # Will be populated after first formulate() call
 
         logger.info(f"ProcessBehavior: {len(df)} rows, {len(df.columns)} columns")
 
@@ -367,11 +324,8 @@ class ProcessBehavior:
         full_spec = AnalysisSpecification(full_spec_dict)
         ads = AnalysisDataSet(self.data, full_spec, sds=sds)
 
-        # Set up charts accessor for IDE auto-completion
-        self.charts = ChartTypeAccessor(plan.valid_charts)
-
         # Create and return Study object with pre-calculated AnalysisDataSet
-        # This enables analyze() to reuse the expensive calculation
+        # This enables execute() to reuse the expensive calculation
         return Study(
             _pdf=self,
             _spec=config,

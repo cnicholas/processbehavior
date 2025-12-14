@@ -244,8 +244,8 @@ class TestPlotter:
     def test_plot_single_chart(self, simple_result):
         """Test plotting a single specific chart."""
         plotter = Plotter(simple_result)
-        # Use 'all' which is the key for combined IMR chart
-        fig = plotter.plot(chart='all')
+        # Use 'Imr' which is the key for the IMR chart
+        fig = plotter.plot(chart='Imr')
 
         assert isinstance(fig, ControlChartFigure)
         assert isinstance(fig.figure, go.Figure)
@@ -269,13 +269,13 @@ class TestPlotter:
 
         # Test each template
         for template in ['processbehavior', 'minimal', 'dark']:
-            fig = plotter.plot(chart='all', template=template)
+            fig = plotter.plot(chart='Imr', template=template)
             assert isinstance(fig, ControlChartFigure)
 
     def test_plot_with_custom_dimensions(self, simple_result):
         """Test plotting with custom dimensions."""
         plotter = Plotter(simple_result)
-        fig = plotter.plot(chart='all', width=1200, height=600)
+        fig = plotter.plot(chart='Imr', width=1200, height=600)
 
         assert fig.figure.layout.width == 1200
         assert fig.figure.layout.height == 600
@@ -283,21 +283,21 @@ class TestPlotter:
     def test_plot_with_title(self, simple_result):
         """Test plotting with custom title."""
         plotter = Plotter(simple_result)
-        fig = plotter.plot(chart='all', title='Custom Title')
+        fig = plotter.plot(chart='Imr', title='Custom Title')
 
         assert fig.figure.layout.title.text == 'Custom Title'
 
     def test_plot_without_limits(self, simple_result):
         """Test plotting without control limits."""
         plotter = Plotter(simple_result)
-        fig = plotter.plot(chart='all', show_limits=False)
+        fig = plotter.plot(chart='Imr', show_limits=False)
 
         assert isinstance(fig, ControlChartFigure)
 
     def test_plot_without_signals(self, simple_result):
         """Test plotting without signal highlighting."""
         plotter = Plotter(simple_result)
-        fig = plotter.plot(chart='all', highlight_signals=False)
+        fig = plotter.plot(chart='Imr', highlight_signals=False)
 
         assert isinstance(fig, ControlChartFigure)
 
@@ -344,7 +344,7 @@ class TestPlotter:
     def test_plot_with_zone_shading(self, simple_result):
         """Test plotting with zone shading enabled."""
         plotter = Plotter(simple_result)
-        fig = plotter.plot(chart='all', show_zones=True)
+        fig = plotter.plot(chart='Imr', show_zones=True)
 
         assert isinstance(fig, ControlChartFigure)
         # Figure should have shapes (zone rectangles)
@@ -357,7 +357,7 @@ class TestPlotter:
         plotter = Plotter(simple_result)
 
         # Use publication theme which has zone_opacity=0
-        fig = plotter.plot(chart='all', show_zones=True, template='publication')
+        fig = plotter.plot(chart='Imr', show_zones=True, template='publication')
 
         # With opacity=0, no zone shapes should be added (only control limit lines)
         shapes = fig.figure.layout.shapes
@@ -376,7 +376,7 @@ class TestPlotter:
         )
 
         plotter = Plotter(simple_result)
-        fig = plotter.plot(chart='all', show_zones=True, template=custom_theme)
+        fig = plotter.plot(chart='Imr', show_zones=True, template=custom_theme)
 
         assert isinstance(fig, ControlChartFigure)
         shapes = fig.figure.layout.shapes
@@ -386,7 +386,7 @@ class TestPlotter:
         """Test plotting with run rules visualization."""
         plotter = Plotter(simple_result)
         # show_rules should not error even if no rule violations exist
-        fig = plotter.plot(chart='all', show_rules=True)
+        fig = plotter.plot(chart='Imr', show_rules=True)
 
         assert isinstance(fig, ControlChartFigure)
         # Figure should render without errors
@@ -396,7 +396,7 @@ class TestPlotter:
         """Test plotting with both show_rules and show_zones enabled."""
         plotter = Plotter(simple_result)
         fig = plotter.plot(
-            chart='all',
+            chart='Imr',
             show_rules=True,
             show_zones=True,
             highlight_signals=True
@@ -497,7 +497,7 @@ class TestAspectRatio:
         plotter = Plotter(simple_result)
 
         # 16:9 aspect ratio
-        fig = plotter.plot(chart='all', width=1600, aspect_ratio=16/9)
+        fig = plotter.plot(chart='Imr', width=1600, aspect_ratio=16/9)
         assert fig.figure.layout.width == 1600
         assert fig.figure.layout.height == 900
 
@@ -505,14 +505,14 @@ class TestAspectRatio:
         """Test square aspect ratio."""
         plotter = Plotter(simple_result)
 
-        fig = plotter.plot(chart='all', width=800, aspect_ratio=1.0)
+        fig = plotter.plot(chart='Imr', width=800, aspect_ratio=1.0)
         assert fig.figure.layout.height == 800
 
     def test_aspect_ratio_portrait(self, simple_result):
         """Test portrait aspect ratio."""
         plotter = Plotter(simple_result)
 
-        fig = plotter.plot(chart='all', width=600, aspect_ratio=0.75)
+        fig = plotter.plot(chart='Imr', width=600, aspect_ratio=0.75)
         assert fig.figure.layout.height == 800
 
 
@@ -708,7 +708,7 @@ class TestStatsBox:
     def test_plot_with_stats_box(self, simple_result):
         """Test plotting with stats box enabled."""
         plotter = Plotter(simple_result)
-        fig = plotter.plot(chart='all', show_stats=True)
+        fig = plotter.plot(chart='Imr', show_stats=True)
 
         assert isinstance(fig, ControlChartFigure)
         # Figure should have annotation (stats box)
@@ -726,7 +726,7 @@ class TestStatsBox:
     def test_stats_box_content(self, simple_result):
         """Test that stats box contains expected statistics."""
         plotter = Plotter(simple_result)
-        fig = plotter.plot(chart='all', show_stats=True)
+        fig = plotter.plot(chart='Imr', show_stats=True)
 
         # Find the stats box annotation
         stats_annotation = None
@@ -747,7 +747,7 @@ class TestStatsBox:
     def test_stats_box_positioning(self, simple_result):
         """Test that stats box is positioned in upper-left corner."""
         plotter = Plotter(simple_result)
-        fig = plotter.plot(chart='all', show_stats=True)
+        fig = plotter.plot(chart='Imr', show_stats=True)
 
         # Find the stats box annotation
         stats_annotation = None
@@ -773,7 +773,7 @@ class TestStatsBox:
         )
 
         plotter = Plotter(simple_result)
-        fig = plotter.plot(chart='all', show_stats=True, template=custom_theme)
+        fig = plotter.plot(chart='Imr', show_stats=True, template=custom_theme)
 
         # Find the stats box annotation
         stats_annotation = None
@@ -801,7 +801,7 @@ class TestStatsBox:
         """Test stats box works with other visualization options."""
         plotter = Plotter(simple_result)
         fig = plotter.plot(
-            chart='all',
+            chart='Imr',
             show_stats=True,
             show_zones=True,
             show_rules=True,

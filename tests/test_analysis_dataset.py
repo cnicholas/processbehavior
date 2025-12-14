@@ -112,10 +112,10 @@ class TestXbarSAnalysis:
         sds = detect_sds_for_test(df, spec)
         result = Analysis(df, spec, sds=sds).calculate()
 
-        # Should return both Xbar and Sbar charts
+        # Should return both Xbar and S charts
         assert len(result) == 2
         assert 'Xbar' in result
-        assert 'Sbar' in result
+        assert 'S' in result
 
         # Check Xbar statistics
         xbar_stats = result['Xbar']['statistics']
@@ -123,8 +123,8 @@ class TestXbarSAnalysis:
         assert xbar_stats['lpl'] == 1.52
         assert xbar_stats['upl'] == 8.48
 
-        # Check Sbar statistics
-        sbar_stats = result['Sbar']['statistics']
+        # Check S statistics
+        sbar_stats = result['S']['statistics']
         assert sbar_stats['center'] == 1.78
         assert sbar_stats['lpl'] == 0
         assert sbar_stats['upl'] == 4.57
@@ -149,9 +149,9 @@ class TestXbarSAnalysis:
         assert result['Xbar']['statistics']['lpl'] == 'Varies'
         assert result['Xbar']['statistics']['upl'] == 'Varies'
 
-        assert result['Sbar']['statistics']['center'] == 2.48
-        assert result['Sbar']['statistics']['lpl'] == 'Varies'
-        assert result['Sbar']['statistics']['upl'] == 'Varies'
+        assert result['S']['statistics']['center'] == 2.48
+        assert result['S']['statistics']['lpl'] == 'Varies'
+        assert result['S']['statistics']['upl'] == 'Varies'
 
     def test_xbar_zero_center(self, df):
         """Test Xbar analysis with zero-centered option."""
@@ -227,7 +227,7 @@ class TestImrAnalysis:
         result = Analysis(df, spec, sds=sds).calculate()
 
         assert hasattr(result, "keys") and hasattr(result, "values")
-        assert 'all' in result
+        assert 'Imr' in result
 
     def test_imr_with_fillweight_data(self):
         """Test IMR without grouping on FillWeight800 dataset."""
@@ -245,10 +245,10 @@ class TestImrAnalysis:
         result = Analysis(df, spec, sds=sds).calculate()
 
         assert hasattr(result, "keys") and hasattr(result, "values")
-        assert list(result)[0] == 'all'
-        assert isinstance(result.get("all"), dict)
+        assert list(result)[0] == 'Imr'
+        assert isinstance(result.get("Imr"), dict)
 
-        out = result.get("all")
+        out = result.get("Imr")
         # Verify against R (qcc) results
         assert out['statistics']['center'] == 237.78
         assert out['statistics']['lpl'] == 232.23
@@ -307,10 +307,10 @@ class TestRChartAnalysis:
         result = Analysis(df, spec, sds=sds).calculate()
 
         assert hasattr(result, "keys") and hasattr(result, "values")
-        assert result['all']['statistics']['center'] == 2.917
-        assert result['all']['statistics']['n'] == 6
-        assert result['all']['statistics']['lpl'] == 0
-        assert result['all']['statistics']['upl'] == 9.532
+        assert result['Imr']['statistics']['center'] == 2.917
+        assert result['Imr']['statistics']['n'] == 6
+        assert result['Imr']['statistics']['lpl'] == 0
+        assert result['Imr']['statistics']['upl'] == 9.532
 
     def test_r_with_fillweight_data(self):
         """Test R chart on FillWeight800 dataset with stratification."""
@@ -476,8 +476,8 @@ class TestUtilityFunctions:
 
         out = gather_analysis_statistics(df, ['stat1', 'stat2', 'stat3'])
 
-        assert len(out) == 1  # Single 'all' group
-        assert len(out['all']) == 4  # 3 stats + n
+        assert len(out) == 1  # Single 'Imr' group
+        assert len(out['Imr']) == 4  # 3 stats + n
 
     def test_c4_limit_calculation(self):
         """Test c4 constant and limit calculation."""

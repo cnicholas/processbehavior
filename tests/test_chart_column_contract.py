@@ -103,7 +103,7 @@ def test_s_chart_column_contract():
 
     sds = detect_sds_for_test(df, spec)
     result = Analysis(df, spec, sds=sds).calculate()
-    sbar_data = result.charts['Sbar']['data']
+    sbar_data = result.charts['S']['data']
 
     # Test column structure
     assert 's' in sbar_data.columns, "S chart data must have 's' column"
@@ -122,8 +122,8 @@ def test_s_chart_column_contract():
 
     # Test plotter uses correct column (via metadata)
     plotter = Plotter(result)
-    sbar_chart_info = result.charts['Sbar']
-    value_col = plotter._get_value_column(sbar_chart_info, 'Sbar')
+    sbar_chart_info = result.charts['S']
+    value_col = plotter._get_value_column(sbar_chart_info, 'S')
     assert value_col == 's', f"Plotter must use 's' column for S chart, got '{value_col}'"
 
 
@@ -150,8 +150,8 @@ def test_imr_chart_column_contract():
     sds = detect_sds_for_test(df, spec)
     result = Analysis(df, spec, sds=sds).calculate()
 
-    # Get the chart (not 'all', but the actual group chart)
-    chart_name = [k for k in result.charts if k != 'all'][0]
+    # Get the chart (not standard chart names like 'Imr', but the actual group chart)
+    chart_name = [k for k in result.charts if k not in {'Xbar', 'S', 'Imr', 'R'}][0]
     imr_data = result.charts[chart_name]['data']
 
     # Test column structure
