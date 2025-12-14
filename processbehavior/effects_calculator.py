@@ -367,7 +367,7 @@ def calculate_factor_interaction_effects(
     >>> # Then Rx = 0.4 - 0.2 - 0.1 = 0.1 (synergistic interaction)
     """
     if len(rsg_vars) < 2:
-        logger.info(
+        logger.debug(
             f"Only {len(rsg_vars)} factor(s) - "
             f"factor interaction requires at least 2. Skipping."
         )
@@ -529,7 +529,7 @@ class EffectsCalculator:
         effects = {}
 
         if not spec.rsg_vars:
-            logger.info("No grouping variables - skipping effects calculation")
+            logger.debug("No grouping variables - skipping effects calculation")
             return effects
 
         # Validate residuals present
@@ -572,7 +572,7 @@ class EffectsCalculator:
                 if not fie.empty:
                     effects['factor_interaction_effects'] = fie
 
-        logger.info("All effects calculated successfully")
+        logger.debug("All effects calculated successfully")
         return effects
 
     def calculate_interactions(

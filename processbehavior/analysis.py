@@ -333,7 +333,7 @@ class Analysis:
         if not self.spec.zero_center:
             return df
 
-        logger.info('Zero-centering data')
+        logger.debug('Zero-centering data')
         result = df.copy()
         zero_mean = result[self.spec.response_var].mean()
         logger.debug('Zero-mean: %s', zero_mean)
@@ -410,7 +410,7 @@ class Analysis:
         n_max = df[n_col].max()
         n_to_use = "N" if df[n_col].eq(n_max).all() else "n"
 
-        logger.info(
+        logger.debug(
             'Analysis using %s for calculations (Scenario: %s)',
             n_to_use,
             1 if n_to_use == "N" else 2
