@@ -135,11 +135,13 @@ def test_input_dataframe_never_modified():
 
 
 def test_process_dataframe_rejects_non_dataframe():
-    """ProcessBehavior should reject non-DataFrame input."""
-    with pytest.raises(TypeError, match="Expected pandas DataFrame"):
+    """ProcessBehavior should reject non-DataFrame input with ValidationError."""
+    from processbehavior.exceptions import ValidationError
+
+    with pytest.raises(ValidationError, match="Expected pandas DataFrame"):
         ProcessBehavior([1, 2, 3])
 
-    with pytest.raises(TypeError, match="Expected pandas DataFrame"):
+    with pytest.raises(ValidationError, match="Expected pandas DataFrame"):
         ProcessBehavior("not a dataframe")
 
 

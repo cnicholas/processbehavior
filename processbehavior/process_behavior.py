@@ -28,7 +28,7 @@ from typing import TYPE_CHECKING
 import pandas as pd
 
 from .analysis_specification import DataPrepConfig
-from .exceptions import ColumnNotFoundError
+from .exceptions import ColumnNotFoundError, ValidationError
 from .sds_detector import SDSRegistry
 
 if TYPE_CHECKING:
@@ -191,7 +191,7 @@ class ProcessBehavior:
             >>> pb = ProcessBehavior(df, na_values=['-999', '9999', 'MISSING'])
         """
         if not isinstance(df, pd.DataFrame):
-            raise TypeError(f"Expected pandas DataFrame, got {type(df)}")
+            raise ValidationError(f"Expected pandas DataFrame, got {type(df).__name__}")
 
         # Default garbage characters commonly found in real-world data
         # These are NOT recognized by pandas by default

@@ -42,6 +42,13 @@ __version__ = "0.1.0"
 # Main user-facing API
 # Core analysis classes
 from processbehavior.analysis import Analysis
+from processbehavior.analysis_dataset import AnalysisDataSet
+
+# Result object
+from processbehavior.analysis_result import AnalysisResult
+from processbehavior.analysis_specification import AnalysisSpecification
+from processbehavior.data_preparation import DataPreparation
+from processbehavior.effects_calculator import EffectsCalculator
 
 # Exceptions
 from processbehavior.exceptions import (
@@ -50,13 +57,6 @@ from processbehavior.exceptions import (
     ProcessBehaviorError,
     ValidationError,
 )
-from processbehavior.analysis_dataset import AnalysisDataSet
-
-# Result object
-from processbehavior.analysis_result import AnalysisResult
-from processbehavior.analysis_specification import AnalysisSpecification
-from processbehavior.data_preparation import DataPreparation
-from processbehavior.effects_calculator import EffectsCalculator
 
 # Plotting/theming
 from processbehavior.plotting import ChartTheme, get_theme, list_themes, register_theme

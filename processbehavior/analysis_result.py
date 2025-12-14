@@ -34,7 +34,7 @@ from typing import TYPE_CHECKING, Any
 
 import pandas as pd
 
-from .exceptions import ChartNotAvailableError
+from .exceptions import ChartNotAvailableError, ProcessBehaviorError
 
 if TYPE_CHECKING:
     from .analysis_dataset import AnalysisDataSet
@@ -939,16 +939,18 @@ class AnalysisResult:
         # Detect on specific chart or all charts
         if chart:
             if chart not in self.charts:
-                raise ValueError(
+                raise ChartNotAvailableError(
                     f"Chart '{chart}' not found.\n"
-                    f"Available: {self.all_charts}"
+                    f"Available: {self.all_charts}",
+                    chart=chart,
+                    available=self.all_charts
                 )
 
             chart_info = self.charts[chart]
 
             # Extract value column from metadata (required)
             if 'metadata' not in chart_info:
-                raise ValueError(
+                raise ProcessBehaviorError(
                     f"Chart '{chart}' missing metadata. "
                     f"This indicates a bug in chart calculation."
                 )
@@ -974,7 +976,7 @@ class AnalysisResult:
             for chart_name, chart_info in self.charts.items():
                 # Extract value column from metadata (required)
                 if 'metadata' not in chart_info:
-                    raise ValueError(
+                    raise ProcessBehaviorError(
                         f"Chart '{chart_name}' missing metadata. "
                         f"This indicates a bug in chart calculation."
                     )

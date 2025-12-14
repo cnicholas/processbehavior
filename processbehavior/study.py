@@ -648,8 +648,9 @@ class Study:
 
         residual_html = f"<br><strong>Residuals:</strong> {', '.join(residual)}" if residual else ""
 
+        style = "font-family: monospace; padding: 8px; border: 1px solid #ccc; background: #f9f9f9"
         html = f"""
-        <div style="font-family: monospace; padding: 8px; border: 1px solid #ccc; border-radius: 4px; background: #f9f9f9;">
+        <div style="{style}">
             <code>Study(response='{self.response}', factors=[{factors_str}], time='{time_str}', sds={self.sds})</code>
             <br><strong>Valid:</strong> {', '.join(primary)} | <strong>Recommended:</strong> {self.recommended_chart}
             {residual_html}

@@ -197,7 +197,8 @@ class TestWECOIntegration:
         del result.charts['Xbar']['metadata']
 
         # Should raise helpful error
-        with pytest.raises(ValueError, match="missing metadata"):
+        from processbehavior.exceptions import ProcessBehaviorError
+        with pytest.raises(ProcessBehaviorError, match="missing metadata"):
             result.detect_signals(chart='Xbar')
 
     def test_value_column_used_correctly(self):
