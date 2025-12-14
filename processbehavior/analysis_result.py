@@ -231,13 +231,23 @@ class AnalysisResult:
         """
         Get main effects if calculated.
 
+        Returns a dict keyed by effect type rather than a single DataFrame.
+        This is intentional: each effect type has different semantics and
+        structure, and users typically work with one effect type at a time.
+
         Returns
         -------
-        dict
+        dict[str, DataFrame]
             Dictionary with main effects:
-            - 'k_effects': Factor effects (Series)
-            - 't_effects': Time effects (Series)
+            - 'k_effects': Factor effects DataFrame
+            - 't_effects': Time effects DataFrame
             Empty dict if not calculated.
+
+        Examples
+        --------
+        >>> effects = result.effects
+        >>> factor_effects = effects['k_effects']
+        >>> time_effects = effects['t_effects']
         """
         return self._effects.copy() if self._effects else {}
 
@@ -246,11 +256,21 @@ class AnalysisResult:
         """
         Get interaction effects if calculated.
 
+        Returns a dict keyed by interaction type rather than a single DataFrame.
+        This is intentional: interaction structures vary by SDS, and the dict
+        keys provide meaningful organization for different interaction terms.
+
         Returns
         -------
-        dict
-            Dictionary with interaction terms (varies by SDS).
+        dict[str, DataFrame | Series]
+            Dictionary with interaction terms (structure varies by SDS).
             Empty dict if not calculated.
+
+        Examples
+        --------
+        >>> interactions = result.interactions
+        >>> for name, data in interactions.items():
+        ...     print(f"{name}: {data.shape}")
         """
         return self._interactions.copy() if self._interactions else {}
 
