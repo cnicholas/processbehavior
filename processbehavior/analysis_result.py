@@ -34,6 +34,8 @@ from typing import TYPE_CHECKING, Any
 
 import pandas as pd
 
+from .exceptions import ChartNotAvailableError
+
 if TYPE_CHECKING:
     from .analysis_dataset import AnalysisDataSet
     from .plotting.control_chart import ControlChartFigure
@@ -335,7 +337,7 @@ class AnalysisResult:
         >>> alice = result.get_chart('Alice')  # For stratified IMR
         """
         if name not in self.charts:
-            raise KeyError(
+            raise ChartNotAvailableError(
                 f"Chart '{name}' not found. Available charts: {self.all_charts}"
             )
         return self.charts[name]['data'].copy()
@@ -365,7 +367,7 @@ class AnalysisResult:
         >>> print(f"Mean: {stats['Mean']}, UPL: {stats['upl']}")
         """
         if name not in self.charts:
-            raise KeyError(
+            raise ChartNotAvailableError(
                 f"Chart '{name}' not found. Available charts: {self.all_charts}"
             )
         return self.charts[name]['statistics'].copy()
@@ -465,7 +467,7 @@ class AnalysisResult:
         ]
 
         if not matching_charts:
-            raise KeyError(
+            raise ChartNotAvailableError(
                 f"No chart found for stratum '{stratum}'. "
                 f"Available charts: {self.all_charts}"
             )
@@ -584,7 +586,7 @@ class AnalysisResult:
             chart = self.all_charts[0]
 
         if chart not in self.charts:
-            raise KeyError(
+            raise ChartNotAvailableError(
                 f"Chart '{chart}' not found. Available charts: {self.all_charts}"
             )
 

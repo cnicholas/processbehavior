@@ -28,6 +28,7 @@ from typing import TYPE_CHECKING
 import pandas as pd
 
 from .analysis_specification import DataPrepConfig
+from .exceptions import ColumnNotFoundError
 from .sds_detector import SDSRegistry
 
 if TYPE_CHECKING:
@@ -119,10 +120,10 @@ class ColumnAccessor:
             The column name (for use in formulate())
 
         Raises:
-            KeyError: If column doesn't exist
+            ColumnNotFoundError: If column doesn't exist
         """
         if col_name not in self._df.columns:
-            raise KeyError(
+            raise ColumnNotFoundError(
                 f"Column '{col_name}' not found. "
                 f"Available: {list(self._df.columns)}"
             )
