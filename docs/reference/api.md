@@ -473,10 +473,94 @@ RuleSet().beyond_limits().run().build()
 
 ## Exceptions
 
-ProcessBehavior raises standard Python exceptions:
+ProcessBehavior provides a custom exception hierarchy for better error handling.
 
-- `ValueError`: Invalid parameter values
-- `KeyError`: Unknown chart or column names
-- `TypeError`: Wrong parameter types
+### Exception Hierarchy
 
-Error messages are descriptive and suggest fixes.
+```
+ProcessBehaviorError (base)
+├── ValidationError
+│   └── ColumnNotFoundError
+└── ChartNotAvailableError
+```
+
+### ProcessBehaviorError
+
+Base exception for all processbehavior errors. Catch this to handle any library error.
+
+```python
+from processbehavior import ProcessBehaviorError
+
+try:
+    result = study.execute()
+except ProcessBehaviorError as e:
+    print(f"Analysis failed: {e}")
+```
+
+### ValidationError
+
+Raised when input data, parameters, or configuration is invalid.
+
+```python
+from processbehavior import ValidationError
+
+try:
+    study = pb.formulate(response='nonexistent')
+except ValidationError as e:
+    print(f"Check your parameters: {e}")
+```
+
+### ColumnNotFoundError
+
+Raised when a required column is missing from the DataFrame. Subclass of `ValidationError`.
+
+```python
+from processbehavior import ColumnNotFoundError
+
+try:
+    study = pb.formulate(response=pb.cols.missing_column)
+except ColumnNotFoundError as e:
+    print(f"Column not found: {e}")
+    print(f"Available: {pb.data.columns.tolist()}")
+```
+
+### ChartNotAvailableError
+
+Raised when a chart type is invalid or unavailable for the current SDS.
+
+```python
+from processbehavior import ChartNotAvailableError
+
+try:
+    result = study.execute(chart='Xbar')
+except ChartNotAvailableError as e:
+    print(f"Chart not available: {e}")
+    print(f"Valid charts: {study.valid_charts}")
+    print(f"Recommended: {study.recommended_chart}")
+```
+
+### Catching Errors by Category
+
+```python
+from processbehavior import (
+    ProcessBehaviorError,
+    ValidationError,
+    ColumnNotFoundError,
+    ChartNotAvailableError
+)
+
+try:
+    result = study.execute(chart='Xbar')
+except ChartNotAvailableError as e:
+    # Chart-specific handling
+    print(f"Try one of: {study.valid_charts}")
+except ColumnNotFoundError as e:
+    # Column-specific handling
+    print(f"Check column names: {pb.cols}")
+except ValidationError as e:
+    # General validation errors
+    print(f"Invalid input: {e}")
+except ProcessBehaviorError as e:
+    # Catch-all for any library error
+    print(f"Unexpected error: {e}")
+```
