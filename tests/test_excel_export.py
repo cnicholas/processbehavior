@@ -14,7 +14,7 @@ import pytest
 # Import analysis components
 from processbehavior import analysis_dataset as ad
 from processbehavior import Analysis
-from processbehavior.sds_detector import SamplingDesignDetector
+from processbehavior.sds_detector import SDSRegistry
 from processbehavior.data_preparation import DataPreparation
 
 # Import test data generators
@@ -30,7 +30,7 @@ def detect_sds_for_test(df: pd.DataFrame, spec: dict) -> int:
     prep = DataPreparation()
     prep.validate_columns(df, config)
     prepared_df = prep.prepare_dataset(df, config)
-    detector = SamplingDesignDetector()
+    detector = SDSRegistry()
     return detector.detect_sds(prepared_df, config)
 
 

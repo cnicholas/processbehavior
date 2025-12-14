@@ -9,6 +9,8 @@ Tests cover:
 - User-friendly output and explanations
 """
 
+import logging
+
 import numpy as np
 import pandas as pd
 import pytest
@@ -1390,3 +1392,66 @@ def test_r3_xbar_s_control_limits_structure():
         assert isinstance(stats['center'], (int, float, np.number))
         assert isinstance(stats['upl'], (int, float, np.number))
         assert isinstance(stats['lpl'], (int, float, np.number))
+
+
+# ============================================================================
+# Test: ColumnAccessor - Collision detection and dict-style access
+# ============================================================================
+
+def test_column_accessor_collision_warning(caplog):
+    """Columns that sanitize to same name should warn."""
+    df = pd.DataFrame({
+        'A-B': [1, 2, 3],
+        'A B': [4, 5, 6],  # Collides with A-B → A_B
+        'Normal': [7, 8, 9]
+    })
+
+    with caplog.at_level(logging.WARNING):
+        pb = ProcessBehavior(df)
+
+    # Warning should be logged
+    assert 'collision' in caplog.text.lower()
+
+    # First column wins for attribute access
+    # (alphabetically: 'A B' before 'A-B' since space 0x20 < hyphen 0x2D)
+    assert pb.cols.A_B == 'A B'
+
+    # Both accessible via dict-style
+    assert pb.cols['A-B'] == 'A-B'
+    assert pb.cols['A B'] == 'A B'
+    assert pb.cols['Normal'] == 'Normal'
+
+
+def test_column_accessor_getitem():
+    """Dict-style access works for all columns."""
+    df = pd.DataFrame({
+        'Column With Spaces': [1, 2],
+        '123_starts_with_number': [3, 4]
+    })
+
+    pb = ProcessBehavior(df)
+
+    # Dict-style access works
+    assert pb.cols['Column With Spaces'] == 'Column With Spaces'
+    assert pb.cols['123_starts_with_number'] == '123_starts_with_number'
+
+    # KeyError for missing columns
+    with pytest.raises(KeyError):
+        pb.cols['nonexistent']
+
+
+def test_column_accessor_getitem_keyerror_message():
+    """Dict-style access should show available columns in error message."""
+    df = pd.DataFrame({
+        'Alpha': [1, 2],
+        'Beta': [3, 4]
+    })
+
+    pb = ProcessBehavior(df)
+
+    with pytest.raises(KeyError) as exc_info:
+        pb.cols['missing']
+
+    # Error message should mention available columns
+    assert 'Alpha' in str(exc_info.value)
+    assert 'Beta' in str(exc_info.value)

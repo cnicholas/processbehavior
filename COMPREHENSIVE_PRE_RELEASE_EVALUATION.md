@@ -265,7 +265,7 @@ ma2 = df.groupby(rsg_var)[response_var].transform(
 
 ```python
 DataPreparation: Validate, convert, filter, sort
-SamplingDesignDetector: Classify data structure
+SDSRegistry: Classify data structure
 ResidualCalculator: Calculate R1-R5
 EffectsCalculator: Calculate main effects, interactions
 Analysis: Execute chart calculations
@@ -391,7 +391,7 @@ class Analysis:
 
 #### ✅ Composition Pattern (AnalysisDataSet)
 **Score**: 8.5/10
-**Use**: Composes DataPreparation, SamplingDesignDetector, ResidualCalculator
+**Use**: Composes DataPreparation, SDSRegistry, ResidualCalculator
 **Assessment**: Excellent, promotes testability
 
 #### ✅ Facade Pattern (ProcessBehavior)

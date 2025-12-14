@@ -866,16 +866,6 @@ class AnalysisResult:
         - Interactive HTML files are exported alongside Excel for full interactivity
         - HTML charts support zoom, pan, and hover tooltips
         """
-        try:
-            import openpyxl  # noqa: F401
-            from openpyxl.styles import Alignment, Font  # noqa: F401
-            from openpyxl.utils.dataframe import dataframe_to_rows  # noqa: F401
-        except ImportError as e:
-            raise ImportError(
-                "Excel export requires openpyxl. Install it with: "
-                "pip install openpyxl"
-            ) from e
-
         # Create Excel writer
         with pd.ExcelWriter(filepath, engine='openpyxl') as writer:
 
@@ -1325,21 +1315,11 @@ class AnalysisResult:
             from openpyxl.drawing.image import Image
             from openpyxl.styles import Font
 
+            from .plotting import Plotter
+
             # Get workbook to add images
             wb = writer.book
             ws = wb.create_sheet('Visual_Charts')
-
-            # Try to import plotting dependencies
-            try:
-                from .plotting import Plotter
-            except ImportError:
-                logger.warning(
-                    "Plotly not available. Skipping chart images. "
-                    "Install with: pip install plotly"
-                )
-                ws['A1'] = "Chart visualizations require plotly"
-                ws['A2'] = "Install with: pip install plotly"
-                return
 
             # Create plotter
             plotter = Plotter(self)
@@ -1456,11 +1436,6 @@ class AnalysisResult:
                 fig.save_html(str(html_file))
                 logger.info(f"Exported interactive stratified charts to: {html_file}")
 
-        except ImportError:
-            logger.warning(
-                "Plotly not available for HTML export. "
-                "Install with: pip install plotly"
-            )
         except Exception as e:
             logger.warning(f"Could not export HTML charts: {e}")
 

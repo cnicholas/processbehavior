@@ -20,7 +20,7 @@ import pandas as pd
 from processbehavior import Analysis
 from processbehavior.analysis_dataset import AnalysisDataSet, AnalysisSpecification
 from processbehavior.datasets import synthetic
-from processbehavior.sds_detector import SamplingDesignDetector
+from processbehavior.sds_detector import SDSRegistry
 
 # Configure display
 pd.set_option('display.max_columns', None)
@@ -73,7 +73,7 @@ def validate_sds(expected_sds: int, df: pd.DataFrame, spec: dict, name: str, des
     print(f"   • Analysis output columns: {aspec.analysis_output_cols[:5]}...")  # First 5
 
     # Show SDS characteristics
-    detector = SamplingDesignDetector()
+    detector = SDSRegistry()
     characteristics = detector.get_sds_characteristics(detected_sds)
 
     print(f"\n📈 SDS {detected_sds} Characteristics:")

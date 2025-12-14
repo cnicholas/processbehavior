@@ -9,7 +9,7 @@ from .analysis_specification import AnalysisSpecification
 from .data_preparation import DataPreparation
 from .effects_calculator import EffectsCalculator
 from .residual_calculator import ResidualCalculator
-from .sds_detector import SamplingDesignDetector
+from .sds_detector import SDSRegistry
 
 # Configure module logger
 logger = logging.getLogger(__name__)
@@ -65,7 +65,7 @@ class AnalysisDataSet:
 
         # Composition - each component has one job (Single Responsibility Principle)
         self.prep = DataPreparation()
-        self.sds_detector = SamplingDesignDetector()
+        self.sds_detector = SDSRegistry()
         self.residual_calc = ResidualCalculator()
         self.effects_calc = EffectsCalculator()
 

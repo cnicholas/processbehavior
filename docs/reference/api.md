@@ -324,14 +324,14 @@ theme = get_theme('dark')
 
 ## SDS Detection
 
-### SamplingDesignDetector
+### SDSRegistry
 
 Automatic SDS detection (used internally).
 
 ```python
-from processbehavior import SamplingDesignDetector
+from processbehavior import SDSRegistry
 
-detector = SamplingDesignDetector()
+detector = SDSRegistry()
 plan = detector.detect(
     df: pd.DataFrame,
     factors: list[str],

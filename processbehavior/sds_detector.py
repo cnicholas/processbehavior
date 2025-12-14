@@ -84,7 +84,7 @@ class SDSAnalysisPlan:
 
     Examples
     --------
-    >>> plan = SamplingDesignDetector.get_analysis_plan(sds=1)
+    >>> plan = SDSRegistry.get_analysis_plan(sds=1)
     >>> print(plan.name)
     'Full Factorial with Complete Replication'
     >>> print(plan.vas_residuals_supported)
@@ -238,9 +238,15 @@ class SDSAnalysisPlan:
         return "\n".join(lines)
 
 
-class SamplingDesignDetector:
+class SDSRegistry:
     """
-    Detects and characterizes Sampling Design State (SDS 0-6).
+    Registry of Sampling Design State (SDS 0-6) definitions and rules.
+
+    Provides:
+    - SDS detection from data structure
+    - Analysis plans and capabilities for each SDS
+    - Validation of SDS/analysis compatibility
+    - VAS residual calculation rules
 
     The SDS classification system describes the structure of your data:
 
@@ -282,14 +288,14 @@ class SamplingDesignDetector:
     --------
     Detect SDS from prepared data:
 
-    >>> detector = SamplingDesignDetector()
-    >>> sds = detector.detect_sds(df, spec)
+    >>> registry = SDSRegistry()
+    >>> sds = registry.detect_sds(df, spec)
     >>> print(f"Detected SDS {sds}")
     Detected SDS 1
 
     Get detailed characteristics:
 
-    >>> info = detector.get_sds_characteristics(sds)
+    >>> info = registry.get_sds_characteristics(sds)
     >>> print(info['description'])
     'Full replication (all cells n≥2)'
     >>> print(info['r2_method'])
@@ -297,7 +303,7 @@ class SamplingDesignDetector:
 
     Validate SDS for analysis:
 
-    >>> detector.validate_sds_for_analysis(sds=2, analysis_type='Xbar')
+    >>> registry.validate_sds_for_analysis(sds=2, analysis_type='Xbar')
     # Logs warning about no replication
     """
 
@@ -797,7 +803,7 @@ class SamplingDesignDetector:
 
         Examples
         --------
-        >>> plan = SamplingDesignDetector.get_analysis_plan(sds=1)
+        >>> plan = SDSRegistry.get_analysis_plan(sds=1)
         >>> print(plan.name)
         'Full Factorial with Complete Replication'
         >>> print(plan.vas_residuals_supported)
@@ -806,7 +812,7 @@ class SamplingDesignDetector:
         ['Xbar', 'S', 'Imr']
 
         >>> # Check what your data structure supports
-        >>> detector = SamplingDesignDetector()
+        >>> detector = SDSRegistry()
         >>> sds, min_n = detector.detect_sds(df, spec)
         >>> plan = detector.get_analysis_plan(sds, min_cell_size=min_n)
         >>> print(f"Your data supports: {', '.join(plan.valid_charts)}")
@@ -1044,7 +1050,7 @@ class SamplingDesignDetector:
 
         Examples
         --------
-        >>> SamplingDesignDetector.print_all_analysis_plans()
+        >>> SDSRegistry.print_all_analysis_plans()
         # Prints complete analysis plan for SDS 0-6
         """
         print("=" * 70)
@@ -1054,7 +1060,7 @@ class SamplingDesignDetector:
         print()
 
         for sds in range(7):
-            plan = SamplingDesignDetector.get_analysis_plan(sds)
+            plan = SDSRegistry.get_analysis_plan(sds)
             print(plan)
             print()
             print()
@@ -1074,13 +1080,13 @@ class SamplingDesignDetector:
 
         Examples
         --------
-        >>> matrix = SamplingDesignDetector.get_capability_matrix()
+        >>> matrix = SDSRegistry.get_capability_matrix()
         >>> print(matrix)
         >>> matrix.to_excel('sds_capabilities.xlsx')
         """
         data = []
         for sds in range(7):
-            plan = SamplingDesignDetector.get_analysis_plan(sds)
+            plan = SDSRegistry.get_analysis_plan(sds)
             data.append({
                 'SDS': sds,
                 'Name': plan.name,

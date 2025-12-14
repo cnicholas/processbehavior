@@ -7,7 +7,7 @@ import pytest
 
 from processbehavior import Analysis
 from processbehavior.data_preparation import DataPreparation
-from processbehavior.sds_detector import SamplingDesignDetector
+from processbehavior.sds_detector import SDSRegistry
 
 logger = logging.getLogger(__name__)
 
@@ -23,7 +23,7 @@ def detect_sds_for_test(df: pd.DataFrame, spec: dict) -> int:
     prep = DataPreparation()
     prep.validate_columns(df, config)
     prepared_df = prep.prepare_dataset(df, config)
-    detector = SamplingDesignDetector()
+    detector = SDSRegistry()
     sds, _min_cell_size = detector.detect_sds(prepared_df, config)
     return sds
 
