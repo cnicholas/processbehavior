@@ -206,9 +206,9 @@ fig = result.plot(show_zones=True, show_signals=True)
 ## Example: Complete Residual Analysis
 
 ```python
-from processbehavior import ProcessDataFrame
+from processbehavior import ProcessBehavior
 
-pdf = ProcessDataFrame(df)
+pdf = ProcessBehavior(df)
 study = pdf.formulate(
     response=pdf.columns.weight,
     factors=[pdf.columns.lane],

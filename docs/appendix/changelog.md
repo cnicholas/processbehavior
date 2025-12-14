@@ -29,7 +29,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 #### Core Features
-- `ProcessDataFrame` class for data wrapping with IDE auto-completion
+- `ProcessBehavior` class for data wrapping with IDE auto-completion
 - `formulate()` method for study definition
 - Automatic Sampling Design State (SDS 0-6) detection
 - `Study` class with chart recommendations
@@ -81,7 +81,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 The following features were developed during the pre-release phase:
 
 #### Phase 1: Core Architecture
-- ProcessDataFrame wrapper
+- ProcessBehavior wrapper
 - Column auto-completion
 - Basic data validation
 
@@ -159,11 +159,11 @@ result = study.analyze()
 #### Import Changes
 ```python
 # Old
-from processbehavior import ProcessDataFrame
+from processbehavior import ProcessBehavior
 
 # New (same, but more exports available)
 from processbehavior import (
-    ProcessDataFrame,
+    ProcessBehavior,
     Study,
     AnalysisResult,
     SignalDetector,

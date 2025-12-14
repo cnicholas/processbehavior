@@ -81,7 +81,7 @@ nav:
     - Data Flow: architecture/data-flow.md
     - Components: architecture/components.md
   - API Reference:
-    - ProcessDataFrame: api/process-dataframe.md
+    - ProcessBehavior: api/process-behavior.md
     - AnalysisResult: api/analysis-result.md
     - Analysis: api/analysis.md
     - SDS Detector: api/sds-detector.md

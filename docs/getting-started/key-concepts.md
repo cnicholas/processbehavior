@@ -8,7 +8,7 @@ ProcessBehavior follows a deliberate three-step workflow:
 
 ```python
 # 1. Wrap your data
-pdf = ProcessDataFrame(df)
+pdf = ProcessBehavior(df)
 
 # 2. Formulate your study (SDS detection happens here)
 study = pdf.formulate(response=..., factors=..., time=...)

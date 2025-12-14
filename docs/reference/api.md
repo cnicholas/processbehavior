@@ -4,14 +4,14 @@ Complete API documentation for ProcessBehavior.
 
 ## Core Classes
 
-### ProcessDataFrame
+### ProcessBehavior
 
 The main entry point for working with process data.
 
 ```python
-from processbehavior import ProcessDataFrame
+from processbehavior import ProcessBehavior
 
-pdf = ProcessDataFrame(
+pdf = ProcessBehavior(
     df: pd.DataFrame,
     na_values: list[str] = ['*', '?', 'ND', 'BDL', 'NA', 'N/A', 'n/a',
                             '<LOD', '>LOQ', 'TNTC', 'QNS', '--']

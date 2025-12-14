@@ -10,7 +10,7 @@ These tests verify:
 import numpy as np
 import pandas as pd
 
-from processbehavior import ProcessDataFrame
+from processbehavior import ProcessBehavior
 from processbehavior import analysis_dataset as ad
 from processbehavior.data_preparation import DataPreparation
 from processbehavior.datasets import synthetic
@@ -44,7 +44,7 @@ class TestSDSDetection:
         """Test SDS 1: Multiple observations per cell (k,t)."""
         df = synthetic.make_sds1(K=3, T=6, n_min=2, n_max=4, seed=42)
 
-        pdf = ProcessDataFrame(df)
+        pdf = ProcessBehavior(df)
         study = pdf.formulate(
             response=pdf.columns.y,
             factors=[pdf.columns.factor_1],
@@ -93,7 +93,7 @@ class TestSDSDetection:
         """Test SDS 4: Single condition over time (no grouping)."""
         df = synthetic.make_sds4(T=40, seed=42)
 
-        pdf = ProcessDataFrame(df)
+        pdf = ProcessBehavior(df)
         study = pdf.formulate(
             response=pdf.columns.y,
             time=pdf.columns.time
@@ -132,7 +132,7 @@ class TestSDSDetection:
         """Test that stratified IMR works with irregular SDS6 data."""
         df = synthetic.make_sds6(T=80, K=3, p_sampled=0.6, seed=42)
 
-        pdf = ProcessDataFrame(df)
+        pdf = ProcessBehavior(df)
         study = pdf.formulate(
             response=pdf.columns.y,
             factors=[pdf.columns.factor_1],

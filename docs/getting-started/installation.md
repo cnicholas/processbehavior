@@ -70,7 +70,7 @@ df = pd.DataFrame({
 })
 
 # Run a simple analysis
-pdf = pb.ProcessDataFrame(df)
+pdf = pb.ProcessBehavior(df)
 study = pdf.formulate(response=pdf.columns.value, time=pdf.columns.time)
 result = study.analyze()
 

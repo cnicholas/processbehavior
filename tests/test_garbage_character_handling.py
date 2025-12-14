@@ -1,5 +1,5 @@
 """
-Tests for garbage character and NA value handling in ProcessDataFrame.
+Tests for garbage character and NA value handling in ProcessBehavior.
 
 These tests verify that real-world messy data with non-standard NA indicators
 is properly cleaned and handled gracefully.
@@ -7,7 +7,7 @@ is properly cleaned and handled gracefully.
 
 import pandas as pd
 
-from processbehavior import ProcessDataFrame
+from processbehavior import ProcessBehavior
 
 
 class TestDefaultGarbageCharacterHandling:
@@ -20,7 +20,7 @@ class TestDefaultGarbageCharacterHandling:
             'Y': [235.5, '*', 237.2, 239.1]
         })
 
-        pdf = ProcessDataFrame(df)
+        pdf = ProcessBehavior(df)
 
         # Asterisk should be converted to NA
         assert pd.isna(pdf.data['Y'].iloc[1])
@@ -35,7 +35,7 @@ class TestDefaultGarbageCharacterHandling:
             'Y': [235.5, '?', 237.2]
         })
 
-        pdf = ProcessDataFrame(df)
+        pdf = ProcessBehavior(df)
         assert pd.isna(pdf.data['Y'].iloc[1])
 
     def test_double_dash_treated_as_na(self):
@@ -45,7 +45,7 @@ class TestDefaultGarbageCharacterHandling:
             'FACTOR': ['A', '--', 'C']
         })
 
-        pdf = ProcessDataFrame(df)
+        pdf = ProcessBehavior(df)
         assert pd.isna(pdf.data['FACTOR'].iloc[1])
 
     def test_nd_treated_as_na(self):
@@ -55,7 +55,7 @@ class TestDefaultGarbageCharacterHandling:
             'Y': [235.5, 'ND', 237.2]
         })
 
-        pdf = ProcessDataFrame(df)
+        pdf = ProcessBehavior(df)
         assert pd.isna(pdf.data['Y'].iloc[1])
 
     def test_bdl_treated_as_na(self):
@@ -65,7 +65,7 @@ class TestDefaultGarbageCharacterHandling:
             'Y': [235.5, 'BDL', 237.2]
         })
 
-        pdf = ProcessDataFrame(df)
+        pdf = ProcessBehavior(df)
         assert pd.isna(pdf.data['Y'].iloc[1])
 
     def test_bql_treated_as_na(self):
@@ -75,7 +75,7 @@ class TestDefaultGarbageCharacterHandling:
             'Y': [235.5, 'BQL', 237.2]
         })
 
-        pdf = ProcessDataFrame(df)
+        pdf = ProcessBehavior(df)
         assert pd.isna(pdf.data['Y'].iloc[1])
 
     def test_lod_treated_as_na(self):
@@ -85,7 +85,7 @@ class TestDefaultGarbageCharacterHandling:
             'Y': [235.5, '<LOD', 237.2]
         })
 
-        pdf = ProcessDataFrame(df)
+        pdf = ProcessBehavior(df)
         assert pd.isna(pdf.data['Y'].iloc[1])
 
     def test_multiple_garbage_characters_in_same_column(self):
@@ -95,7 +95,7 @@ class TestDefaultGarbageCharacterHandling:
             'Y': [235.5, '*', '?', 'ND', 'BDL', 237.2]
         })
 
-        pdf = ProcessDataFrame(df)
+        pdf = ProcessBehavior(df)
 
         # All garbage should be NA
         assert pd.isna(pdf.data['Y'].iloc[1])
@@ -114,7 +114,7 @@ class TestDefaultGarbageCharacterHandling:
             'FACTOR': ['A', 'B', '--', 'D']
         })
 
-        pdf = ProcessDataFrame(df)
+        pdf = ProcessBehavior(df)
 
         # Check Y column
         assert pd.isna(pdf.data['Y'].iloc[1])
@@ -128,7 +128,7 @@ class TestDefaultGarbageCharacterHandling:
             'Y': [235.5, 'ND', 'n/d', 'N/D']
         })
 
-        pdf = ProcessDataFrame(df)
+        pdf = ProcessBehavior(df)
 
         # All should be NA
         assert pd.isna(pdf.data['Y'].iloc[1])
@@ -146,7 +146,7 @@ class TestCustomNAValues:
             'Y': [235.5, '-999', 237.2, '9999']
         })
 
-        pdf = ProcessDataFrame(df, na_values=['-999', '9999'])
+        pdf = ProcessBehavior(df, na_values=['-999', '9999'])
 
         # Custom NA values should be converted
         assert pd.isna(pdf.data['Y'].iloc[1])
@@ -162,7 +162,7 @@ class TestCustomNAValues:
             'Y': [235.5, '*', '-999', 'ND', 237.2]
         })
 
-        pdf = ProcessDataFrame(df, na_values=['-999'])
+        pdf = ProcessBehavior(df, na_values=['-999'])
 
         # Both default and custom should be NA
         assert pd.isna(pdf.data['Y'].iloc[1])  # Default: *
@@ -176,7 +176,7 @@ class TestCustomNAValues:
             'Y': [235.5, '*', 237.2]
         })
 
-        pdf = ProcessDataFrame(df, na_values=[])
+        pdf = ProcessBehavior(df, na_values=[])
 
         # Default garbage characters should still work
         assert pd.isna(pdf.data['Y'].iloc[1])
@@ -192,7 +192,7 @@ class TestDataIntegrity:
             'Y': [235.5, 237.2, 239.1, 236.8]
         })
 
-        pdf = ProcessDataFrame(df)
+        pdf = ProcessBehavior(df)
 
         # All values should be unchanged
         pd.testing.assert_series_equal(pdf.data['Y'], df['Y'])
@@ -204,7 +204,7 @@ class TestDataIntegrity:
             'FACTOR': ['A', 'B', 'C', 'D']
         })
 
-        pdf = ProcessDataFrame(df)
+        pdf = ProcessBehavior(df)
 
         # All values should be unchanged
         pd.testing.assert_series_equal(pdf.data['FACTOR'], df['FACTOR'])
@@ -216,7 +216,7 @@ class TestDataIntegrity:
             'Y': [235.5, -5.2, 237.2, -10.8]
         })
 
-        pdf = ProcessDataFrame(df)
+        pdf = ProcessBehavior(df)
 
         # Negative numbers should be preserved
         assert pdf.data['Y'].iloc[1] == -5.2
@@ -230,7 +230,7 @@ class TestDataIntegrity:
         })
 
         original_values = df['Y'].copy()
-        ProcessDataFrame(df)
+        ProcessBehavior(df)
 
         # Original should be unchanged
         pd.testing.assert_series_equal(df['Y'], original_values)
@@ -247,7 +247,7 @@ class TestWarningMessages:
         })
 
         with caplog.at_level('WARNING'):
-            ProcessDataFrame(df)
+            ProcessBehavior(df)
 
         # Should have warning about garbage values
         assert 'garbage/NA values' in caplog.text
@@ -262,7 +262,7 @@ class TestWarningMessages:
         })
 
         with caplog.at_level('WARNING'):
-            ProcessDataFrame(df)
+            ProcessBehavior(df)
 
         # Should show counts for both columns
         assert 'Y: 2 values' in caplog.text
@@ -276,7 +276,7 @@ class TestWarningMessages:
         })
 
         with caplog.at_level('WARNING'):
-            ProcessDataFrame(df)
+            ProcessBehavior(df)
 
         # Should not have warning
         assert 'garbage/NA values' not in caplog.text
@@ -293,7 +293,7 @@ class TestIntegrationWithAnalysis:
             'Y': [235.5, 237.2, '*', 239.1, 236.8, 'ND', 238.3, 237.5]
         })
 
-        pdf = ProcessDataFrame(df)
+        pdf = ProcessBehavior(df)
 
         # Analysis should run without crashing
         study = pdf.formulate(
@@ -315,7 +315,7 @@ class TestIntegrationWithAnalysis:
             'WEIGHT': [236.5, '*', 237.8, '?', 'BDL', 238.2, '--', 239.1]
         })
 
-        pdf = ProcessDataFrame(df, na_values=['-999'])
+        pdf = ProcessBehavior(df, na_values=['-999'])
 
         # Should handle gracefully
         assert pdf is not None

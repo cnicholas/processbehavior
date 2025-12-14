@@ -257,7 +257,7 @@ Add factor levels:
 
 ```python
 import pandas as pd
-from processbehavior import ProcessDataFrame
+from processbehavior import ProcessBehavior
 
 # Check cell sizes to understand your SDS
 study = pdf.formulate(

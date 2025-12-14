@@ -7,17 +7,20 @@ analysis with variance decomposition.
 
 Quick Start
 -----------
-    from processbehavior import ProcessDataFrame
+    from processbehavior import ProcessBehavior
 
     # Wrap your DataFrame
-    pdf = ProcessDataFrame(df)
+    pb = ProcessBehavior(df)
 
-    # Auto-detect SDS and run analysis
-    result = pdf.analyze(
-        response_var=pdf.columns.measurement,
-        time_var=pdf.columns.time,
-        grouping_vars=[pdf.columns.line]
+    # Formulate the study (detect SDS, get recommendations)
+    study = pb.formulate(
+        response=pb.columns.measurement,
+        time=pb.columns.time,
+        factors=[pb.columns.line]
     )
+
+    # Run analysis
+    result = study.analyze()
 
     # Access results
     print(result.summary)
@@ -28,7 +31,7 @@ Quick Start
 
 Main Classes
 ------------
-ProcessDataFrame : Main user-facing API with auto-completion
+ProcessBehavior : Main user-facing API with auto-completion
 AnalysisResult : Unified result container
 Analysis : Core analysis engine
 AnalysisDataSet : Analysis dataset manager
@@ -49,7 +52,7 @@ from processbehavior.effects_calculator import EffectsCalculator
 
 # Plotting/theming
 from processbehavior.plotting import ChartTheme, get_theme, list_themes, register_theme
-from processbehavior.process_dataframe import ProcessDataFrame
+from processbehavior.process_behavior import ProcessBehavior
 from processbehavior.residual_calculator import ResidualCalculator
 
 # Utility classes (advanced users)
@@ -60,7 +63,7 @@ from processbehavior.study import Study
 
 __all__ = [
     # Main API
-    'ProcessDataFrame',
+    'ProcessBehavior',
     'Study',
     'AnalysisResult',
 

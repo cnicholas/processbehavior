@@ -5,9 +5,9 @@ The `formulate()` method is the heart of ProcessBehavior. It enables the analyst
 ## The Formulation API
 
 ```python
-from processbehavior import ProcessDataFrame
+from processbehavior import ProcessBehavior
 
-pdf = ProcessDataFrame(df)
+pdf = ProcessBehavior(df)
 
 study = pdf.formulate(
     response=pdf.columns.weight,        # Required: measurement variable
@@ -23,10 +23,10 @@ One of ProcessBehavior's key features is **IDE auto-completion** for column name
 
 ### Column Auto-Completion
 
-After creating a ProcessDataFrame, access columns via the `.columns` accessor:
+After creating a ProcessBehavior, access columns via the `.columns` accessor:
 
 ```python
-pdf = ProcessDataFrame(df)
+pdf = ProcessBehavior(df)
 
 # Type pdf.columns. and your IDE will show all available columns
 pdf.columns.weight      # Instead of 'weight' string
@@ -207,7 +207,7 @@ study = pdf.formulate(
 
 ## Data Cleaning
 
-ProcessDataFrame automatically cleans common garbage values:
+ProcessBehavior automatically cleans common garbage values:
 
 ```python
 # These are automatically converted to NaN:
@@ -217,7 +217,7 @@ default_na_values = [
 ]
 
 # Custom NA values
-pdf = ProcessDataFrame(df, na_values=['*', 'missing', '<DL'])
+pdf = ProcessBehavior(df, na_values=['*', 'missing', '<DL'])
 ```
 
 ## Natural Sorting

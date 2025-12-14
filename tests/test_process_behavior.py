@@ -1,5 +1,5 @@
 """
-Unit tests for ProcessDataFrame - the user-friendly wrapper with auto-completion.
+Unit tests for ProcessBehavior - the user-friendly wrapper with auto-completion.
 
 Tests cover:
 - Column accessor with auto-completion
@@ -13,7 +13,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from processbehavior.process_dataframe import ColumnAccessor, ProcessDataFrame
+from processbehavior.process_behavior import ColumnAccessor, ProcessBehavior
 
 # ============================================================================
 # Test: ColumnAccessor - Auto-completion support
@@ -83,17 +83,17 @@ def test_column_accessor_dir():
 
 
 # ============================================================================
-# Test: ProcessDataFrame - Basic initialization
+# Test: ProcessBehavior - Basic initialization
 # ============================================================================
 
 def test_process_dataframe_init():
-    """ProcessDataFrame should initialize with a DataFrame."""
+    """ProcessBehavior should initialize with a DataFrame."""
     df = pd.DataFrame({
         'X': [1, 2, 3],
         'Y': [4, 5, 6]
     })
 
-    pdata = ProcessDataFrame(df)
+    pdata = ProcessBehavior(df)
 
     assert len(pdata) == 3
     assert len(pdata.data.columns) == 2
@@ -101,29 +101,29 @@ def test_process_dataframe_init():
 
 
 def test_process_dataframe_copies_data():
-    """ProcessDataFrame should copy the input DataFrame."""
+    """ProcessBehavior should copy the input DataFrame."""
     df = pd.DataFrame({'X': [1, 2, 3]})
 
-    pdata = ProcessDataFrame(df)
+    pdata = ProcessBehavior(df)
 
     # Modify original
     df['X'] = [9, 9, 9]
 
-    # ProcessDataFrame should have original values
+    # ProcessBehavior should have original values
     assert list(pdata.data['X']) == [1, 2, 3]
 
 
 def test_process_dataframe_rejects_non_dataframe():
-    """ProcessDataFrame should reject non-DataFrame input."""
+    """ProcessBehavior should reject non-DataFrame input."""
     with pytest.raises(TypeError, match="Expected pandas DataFrame"):
-        ProcessDataFrame([1, 2, 3])
+        ProcessBehavior([1, 2, 3])
 
     with pytest.raises(TypeError, match="Expected pandas DataFrame"):
-        ProcessDataFrame("not a dataframe")
+        ProcessBehavior("not a dataframe")
 
 
 # ============================================================================
-# Test: ProcessDataFrame.formulate() - Simple series (SDS 0)
+# Test: ProcessBehavior.formulate() - Simple series (SDS 0)
 # ============================================================================
 
 def test_formulate_simple_series():
@@ -135,7 +135,7 @@ def test_formulate_simple_series():
         'Time': range(1, 31)
     })
 
-    pdata = ProcessDataFrame(df)
+    pdata = ProcessBehavior(df)
 
     # Formulate without factors → should get SDS 0
     study = pdata.formulate(
@@ -155,7 +155,7 @@ def test_formulate_simple_series_no_time():
         'Value': [10, 12, 11, 13, 12, 14, 13, 15]
     })
 
-    pdata = ProcessDataFrame(df)
+    pdata = ProcessBehavior(df)
 
     study = pdata.formulate(response=pdata.columns.Value)
 
@@ -171,7 +171,7 @@ def test_formulate_and_analyze_simple_series():
         'Time': range(1, 31)
     })
 
-    pdata = ProcessDataFrame(df)
+    pdata = ProcessBehavior(df)
 
     study = pdata.formulate(
         response=pdata.columns.Measurement,
@@ -186,7 +186,7 @@ def test_formulate_and_analyze_simple_series():
 
 
 # ============================================================================
-# Test: ProcessDataFrame.formulate() - Grouped data
+# Test: ProcessBehavior.formulate() - Grouped data
 # ============================================================================
 
 def test_formulate_with_grouping():
@@ -216,7 +216,7 @@ def test_formulate_with_grouping():
         'Time': times
     })
 
-    pdata = ProcessDataFrame(df)
+    pdata = ProcessBehavior(df)
 
     study = pdata.formulate(
         response=pdata.columns.Height,
@@ -254,7 +254,7 @@ def test_formulate_with_single_grouping():
         'Sequence': sequences
     })
 
-    pdata = ProcessDataFrame(df)
+    pdata = ProcessBehavior(df)
 
     study = pdata.formulate(
         response=pdata.columns.Value,
@@ -278,7 +278,7 @@ def test_formulate_and_analyze_with_grouping():
         'ProductionTime': list(range(1, 16)) * 4
     })
 
-    pdata = ProcessDataFrame(df)
+    pdata = ProcessBehavior(df)
 
     study = pdata.formulate(
         response=pdata.columns.Height,
@@ -298,7 +298,7 @@ def test_formulate_and_analyze_with_grouping():
 def test_formulate_requires_response():
     """formulate() should require response parameter."""
     df = pd.DataFrame({'X': [1, 2, 3]})
-    pdata = ProcessDataFrame(df)
+    pdata = ProcessBehavior(df)
 
     with pytest.raises(TypeError):
         pdata.formulate()  # Missing required 'response' parameter
@@ -307,7 +307,7 @@ def test_formulate_requires_response():
 def test_formulate_validates_response_column():
     """formulate() should validate that response column exists."""
     df = pd.DataFrame({'X': [1, 2, 3]})
-    pdata = ProcessDataFrame(df)
+    pdata = ProcessBehavior(df)
 
     with pytest.raises(ValueError, match="not found"):
         pdata.formulate(response='NonExistent')
@@ -320,7 +320,7 @@ def test_formulate_validates_response_column():
 def test_study_has_sds():
     """Study should expose detected SDS."""
     df = pd.DataFrame({'Value': [1, 2, 3, 4, 5]})
-    pdata = ProcessDataFrame(df)
+    pdata = ProcessBehavior(df)
 
     study = pdata.formulate(response='Value')
 
@@ -331,7 +331,7 @@ def test_study_has_sds():
 def test_study_has_valid_charts():
     """Study should expose valid chart types."""
     df = pd.DataFrame({'Value': [1, 2, 3, 4, 5]})
-    pdata = ProcessDataFrame(df)
+    pdata = ProcessBehavior(df)
 
     study = pdata.formulate(response='Value')
 
@@ -342,7 +342,7 @@ def test_study_has_valid_charts():
 def test_study_has_recommended_chart():
     """Study should expose recommended chart type."""
     df = pd.DataFrame({'Value': [1, 2, 3, 4, 5]})
-    pdata = ProcessDataFrame(df)
+    pdata = ProcessBehavior(df)
 
     study = pdata.formulate(response='Value')
 
@@ -353,7 +353,7 @@ def test_study_has_recommended_chart():
 def test_study_has_charts_accessor():
     """Study should have charts accessor for IDE auto-completion."""
     df = pd.DataFrame({'Value': [1, 2, 3, 4, 5]})
-    pdata = ProcessDataFrame(df)
+    pdata = ProcessBehavior(df)
 
     study = pdata.formulate(response='Value')
 
@@ -368,24 +368,24 @@ def test_study_has_charts_accessor():
 # ============================================================================
 
 def test_process_dataframe_repr():
-    """ProcessDataFrame should have informative repr."""
+    """ProcessBehavior should have informative repr."""
     df = pd.DataFrame({
         'A': [1, 2, 3],
         'B': [4, 5, 6]
     })
 
-    pdata = ProcessDataFrame(df)
+    pdata = ProcessBehavior(df)
     repr_str = repr(pdata)
 
-    assert 'ProcessDataFrame' in repr_str
-    assert 'rows=3' in repr_str
-    assert 'columns=2' in repr_str
+    assert 'ProcessBehavior' in repr_str
+    assert '3 rows' in repr_str
+    assert '2 columns' in repr_str
 
 
 def test_process_dataframe_len():
-    """ProcessDataFrame should support len()."""
+    """ProcessBehavior should support len()."""
     df = pd.DataFrame({'X': range(100)})
-    pdata = ProcessDataFrame(df)
+    pdata = ProcessBehavior(df)
 
     assert len(pdata) == 100
 
@@ -393,7 +393,7 @@ def test_process_dataframe_len():
 def test_study_repr():
     """Study should have informative repr/str."""
     df = pd.DataFrame({'Value': [1, 2, 3, 4, 5]})
-    pdata = ProcessDataFrame(df)
+    pdata = ProcessBehavior(df)
 
     study = pdata.formulate(response='Value')
     study_str = str(study)
@@ -415,8 +415,8 @@ def test_full_workflow_simple_series():
         'Time': range(1, 21)
     })
 
-    # Wrap in ProcessDataFrame
-    data = ProcessDataFrame(df)
+    # Wrap in ProcessBehavior
+    data = ProcessBehavior(df)
 
     # Formulate study
     study = data.formulate(
@@ -455,7 +455,7 @@ def test_full_workflow_grouped_data():
     df = pd.DataFrame(data_rows)
 
     # Wrap and formulate
-    data = ProcessDataFrame(df)
+    data = ProcessBehavior(df)
 
     study = data.formulate(
         response=data.columns.Height,
@@ -483,7 +483,7 @@ def test_formulate_with_precision():
         'Time': [1, 2, 3, 4]
     })
 
-    pdata = ProcessDataFrame(df)
+    pdata = ProcessBehavior(df)
 
     study = pdata.formulate(
         response=pdata.columns.Value,
@@ -525,7 +525,7 @@ def test_formulate_with_chart_selection():
                 })
 
     df = pd.DataFrame(data_rows)
-    pdata = ProcessDataFrame(df)
+    pdata = ProcessBehavior(df)
 
     study = pdata.formulate(
         response=pdata.columns.Value,
@@ -551,7 +551,7 @@ def test_study_sds_name():
 
     # SDS 0 - Simple series
     df = pd.DataFrame({'Value': np.random.normal(100, 5, 30)})
-    study = ProcessDataFrame(df).formulate(response='Value')
+    study = ProcessBehavior(df).formulate(response='Value')
 
     assert hasattr(study, 'sds_name')
     assert isinstance(study.sds_name, str)
@@ -562,7 +562,7 @@ def test_study_sds_description():
     """Study should expose SDS description explaining the data structure."""
     np.random.seed(42)
     df = pd.DataFrame({'Value': np.random.normal(100, 5, 30)})
-    study = ProcessDataFrame(df).formulate(response='Value')
+    study = ProcessBehavior(df).formulate(response='Value')
 
     assert hasattr(study, 'sds_description')
     assert isinstance(study.sds_description, str)
@@ -572,7 +572,7 @@ def test_study_sds_description():
 def test_study_response_property():
     """Study should expose the response variable name."""
     df = pd.DataFrame({'Measurement': [1, 2, 3, 4, 5]})
-    study = ProcessDataFrame(df).formulate(response='Measurement')
+    study = ProcessBehavior(df).formulate(response='Measurement')
 
     assert study.response == 'Measurement'
 
@@ -587,7 +587,7 @@ def test_study_factors_property():
                 data_rows.append({'Value': np.random.normal(50, 3), 'Batch': batch, 'Time': time})
 
     df = pd.DataFrame(data_rows)
-    study = ProcessDataFrame(df).formulate(
+    study = ProcessBehavior(df).formulate(
         response='Value',
         factors=['Batch'],
         time='Time'
@@ -599,7 +599,7 @@ def test_study_factors_property():
 def test_study_factors_none_when_no_grouping():
     """Study.factors should be None when no grouping specified."""
     df = pd.DataFrame({'Value': [1, 2, 3, 4, 5]})
-    study = ProcessDataFrame(df).formulate(response='Value')
+    study = ProcessBehavior(df).formulate(response='Value')
 
     assert study.factors is None
 
@@ -610,7 +610,7 @@ def test_study_time_property():
         'Value': [1, 2, 3, 4, 5],
         'Sequence': [1, 2, 3, 4, 5]
     })
-    study = ProcessDataFrame(df).formulate(response='Value', time='Sequence')
+    study = ProcessBehavior(df).formulate(response='Value', time='Sequence')
 
     assert study.time == 'Sequence'
 
@@ -618,7 +618,7 @@ def test_study_time_property():
 def test_study_time_none_when_not_specified():
     """Study.time should be None when no time specified."""
     df = pd.DataFrame({'Value': [1, 2, 3, 4, 5]})
-    study = ProcessDataFrame(df).formulate(response='Value')
+    study = ProcessBehavior(df).formulate(response='Value')
 
     assert study.time is None
 
@@ -626,7 +626,7 @@ def test_study_time_none_when_not_specified():
 def test_study_precision_property():
     """Study should expose precision setting."""
     df = pd.DataFrame({'Value': [1, 2, 3, 4, 5]})
-    study = ProcessDataFrame(df).formulate(response='Value', precision=5)
+    study = ProcessBehavior(df).formulate(response='Value', precision=5)
 
     assert study.precision == 5
 
@@ -634,7 +634,7 @@ def test_study_precision_property():
 def test_study_precision_default():
     """Study precision should default to 3."""
     df = pd.DataFrame({'Value': [1, 2, 3, 4, 5]})
-    study = ProcessDataFrame(df).formulate(response='Value')
+    study = ProcessBehavior(df).formulate(response='Value')
 
     assert study.precision == 3
 
@@ -646,7 +646,7 @@ def test_study_precision_default():
 def test_study_dataset_exists():
     """Study should expose the analysis dataset."""
     df = pd.DataFrame({'Value': [1, 2, 3, 4, 5]})
-    study = ProcessDataFrame(df).formulate(response='Value')
+    study = ProcessBehavior(df).formulate(response='Value')
 
     assert hasattr(study, 'dataset')
     assert study.dataset is not None
@@ -655,7 +655,7 @@ def test_study_dataset_exists():
 def test_study_dataset_is_dataframe():
     """Study.dataset should be a pandas DataFrame."""
     df = pd.DataFrame({'Value': [1, 2, 3, 4, 5]})
-    study = ProcessDataFrame(df).formulate(response='Value')
+    study = ProcessBehavior(df).formulate(response='Value')
 
     assert isinstance(study.dataset, pd.DataFrame)
 
@@ -663,7 +663,7 @@ def test_study_dataset_is_dataframe():
 def test_study_dataset_returns_copy():
     """Study.dataset should return a copy (immutability)."""
     df = pd.DataFrame({'Value': [1, 2, 3, 4, 5]})
-    study = ProcessDataFrame(df).formulate(response='Value')
+    study = ProcessBehavior(df).formulate(response='Value')
 
     dataset1 = study.dataset
     dataset2 = study.dataset
@@ -685,7 +685,7 @@ def test_study_dataset_has_ybar_for_grouped_data():
                 data_rows.append({'Value': np.random.normal(50, 3), 'Batch': batch, 'Time': time})
 
     df = pd.DataFrame(data_rows)
-    study = ProcessDataFrame(df).formulate(
+    study = ProcessBehavior(df).formulate(
         response='Value',
         factors=['Batch'],
         time='Time'
@@ -705,7 +705,7 @@ def test_study_dataset_has_residuals_for_sds1():
                 data_rows.append({'Value': np.random.normal(50, 3), 'Batch': batch, 'Time': time})
 
     df = pd.DataFrame(data_rows)
-    study = ProcessDataFrame(df).formulate(
+    study = ProcessBehavior(df).formulate(
         response='Value',
         factors=['Batch'],
         time='Time'
@@ -727,7 +727,7 @@ def test_study_dataset_has_rsg_column():
                 data_rows.append({'Value': np.random.normal(50, 3), 'Batch': batch, 'Time': time})
 
     df = pd.DataFrame(data_rows)
-    study = ProcessDataFrame(df).formulate(
+    study = ProcessBehavior(df).formulate(
         response='Value',
         factors=['Batch'],
         time='Time'
@@ -751,7 +751,7 @@ def test_study_residual_charts_property():
                 data_rows.append({'Value': np.random.normal(50, 3), 'Batch': batch, 'Time': time})
 
     df = pd.DataFrame(data_rows)
-    study = ProcessDataFrame(df).formulate(
+    study = ProcessBehavior(df).formulate(
         response='Value',
         factors=['Batch'],
         time='Time'
@@ -771,7 +771,7 @@ def test_study_residual_charts_sds1_has_all():
                 data_rows.append({'Value': np.random.normal(50, 3), 'Batch': batch, 'Time': time})
 
     df = pd.DataFrame(data_rows)
-    study = ProcessDataFrame(df).formulate(
+    study = ProcessBehavior(df).formulate(
         response='Value',
         factors=['Batch'],
         time='Time'
@@ -788,7 +788,7 @@ def test_study_residual_charts_sds1_has_all():
 def test_study_residual_charts_empty_for_sds0():
     """SDS 0 should have no residual charts (no factors)."""
     df = pd.DataFrame({'Value': [1, 2, 3, 4, 5]})
-    study = ProcessDataFrame(df).formulate(response='Value')
+    study = ProcessBehavior(df).formulate(response='Value')
 
     # SDS 0 has no residual charts
     assert study.residual_charts == [] or len(study.residual_charts) == 0
@@ -801,7 +801,7 @@ def test_study_residual_charts_empty_for_sds0():
 def test_study_why_not_valid_chart():
     """why_not() should confirm valid charts."""
     df = pd.DataFrame({'Value': [1, 2, 3, 4, 5]})
-    study = ProcessDataFrame(df).formulate(response='Value')
+    study = ProcessBehavior(df).formulate(response='Value')
 
     # Imr is valid for SDS 0
     result = study.why_not('Imr')
@@ -811,7 +811,7 @@ def test_study_why_not_valid_chart():
 def test_study_why_not_invalid_chart():
     """why_not() should explain why a chart is invalid."""
     df = pd.DataFrame({'Value': [1, 2, 3, 4, 5]})
-    study = ProcessDataFrame(df).formulate(response='Value')
+    study = ProcessBehavior(df).formulate(response='Value')
 
     # S chart requires n≥2, not valid for SDS 0
     result = study.why_not('S')
@@ -822,7 +822,7 @@ def test_study_why_not_invalid_chart():
 def test_study_why_not_unknown_chart():
     """why_not() should handle unknown chart types."""
     df = pd.DataFrame({'Value': [1, 2, 3, 4, 5]})
-    study = ProcessDataFrame(df).formulate(response='Value')
+    study = ProcessBehavior(df).formulate(response='Value')
 
     result = study.why_not('NonExistentChart')
     assert 'not a recognized' in result.lower() or 'valid types' in result.lower()
@@ -835,7 +835,7 @@ def test_study_why_not_unknown_chart():
 def test_study_charts_accessor_has_valid_charts():
     """Study.charts should have attributes for each valid chart."""
     df = pd.DataFrame({'Value': [1, 2, 3, 4, 5]})
-    study = ProcessDataFrame(df).formulate(response='Value')
+    study = ProcessBehavior(df).formulate(response='Value')
 
     # For SDS 0, Imr should be available
     assert hasattr(study.charts, 'Imr')
@@ -845,7 +845,7 @@ def test_study_charts_accessor_has_valid_charts():
 def test_study_charts_accessor_dir():
     """Study.charts should support tab-completion via __dir__."""
     df = pd.DataFrame({'Value': [1, 2, 3, 4, 5]})
-    study = ProcessDataFrame(df).formulate(response='Value')
+    study = ProcessBehavior(df).formulate(response='Value')
 
     chart_attrs = dir(study.charts)
     assert 'Imr' in chart_attrs
@@ -861,7 +861,7 @@ def test_study_charts_accessor_xbar_for_grouped():
                 data_rows.append({'Value': np.random.normal(50, 3), 'Batch': batch, 'Time': time})
 
     df = pd.DataFrame(data_rows)
-    study = ProcessDataFrame(df).formulate(
+    study = ProcessBehavior(df).formulate(
         response='Value',
         factors=['Batch'],
         time='Time'
@@ -874,7 +874,7 @@ def test_study_charts_accessor_xbar_for_grouped():
 def test_study_charts_accessor_repr():
     """Study.charts should have informative repr."""
     df = pd.DataFrame({'Value': [1, 2, 3, 4, 5]})
-    study = ProcessDataFrame(df).formulate(response='Value')
+    study = ProcessBehavior(df).formulate(response='Value')
 
     repr_str = repr(study.charts)
     assert 'StudyChartAccessor' in repr_str
@@ -887,7 +887,7 @@ def test_study_charts_accessor_repr():
 def test_study_analyze_invalid_chart_raises():
     """analyze() should raise ValueError for invalid chart type."""
     df = pd.DataFrame({'Value': [1, 2, 3, 4, 5]})
-    study = ProcessDataFrame(df).formulate(response='Value')
+    study = ProcessBehavior(df).formulate(response='Value')
 
     with pytest.raises(ValueError, match="not valid"):
         study.analyze(chart='S')  # S not valid for SDS 0
@@ -896,7 +896,7 @@ def test_study_analyze_invalid_chart_raises():
 def test_study_analyze_invalid_chart_shows_valid():
     """analyze() error should show valid chart options."""
     df = pd.DataFrame({'Value': [1, 2, 3, 4, 5]})
-    study = ProcessDataFrame(df).formulate(response='Value')
+    study = ProcessBehavior(df).formulate(response='Value')
 
     try:
         study.analyze(chart='S')
@@ -907,7 +907,7 @@ def test_study_analyze_invalid_chart_shows_valid():
 def test_study_analyze_with_charts_accessor():
     """analyze() should work with charts accessor."""
     df = pd.DataFrame({'Value': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]})
-    study = ProcessDataFrame(df).formulate(response='Value')
+    study = ProcessBehavior(df).formulate(response='Value')
 
     result = study.analyze(chart=study.charts.Imr)
     assert result is not None
@@ -927,7 +927,7 @@ def test_study_analyze_residual_chart():
                 data_rows.append({'Value': np.random.normal(50, 3), 'Batch': batch, 'Time': time})
 
     df = pd.DataFrame(data_rows)
-    study = ProcessDataFrame(df).formulate(
+    study = ProcessBehavior(df).formulate(
         response='Value',
         factors=['Batch'],
         time='Time'
@@ -943,7 +943,7 @@ def test_study_analyze_residual_chart():
 def test_study_analyze_invalid_residual_chart_raises():
     """analyze() should raise for invalid residual chart."""
     df = pd.DataFrame({'Value': [1, 2, 3, 4, 5]})
-    study = ProcessDataFrame(df).formulate(response='Value')
+    study = ProcessBehavior(df).formulate(response='Value')
 
     # SDS 0 has no residual charts
     with pytest.raises(ValueError, match="not available"):
@@ -957,7 +957,7 @@ def test_study_analyze_invalid_residual_chart_raises():
 def test_study_analyze_returns_analysis_result():
     """analyze() should return an AnalysisResult object."""
     df = pd.DataFrame({'Value': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]})
-    study = ProcessDataFrame(df).formulate(response='Value')
+    study = ProcessBehavior(df).formulate(response='Value')
 
     result = study.analyze()
 
@@ -969,7 +969,7 @@ def test_study_analyze_returns_analysis_result():
 def test_study_analyze_result_has_charts():
     """AnalysisResult should contain chart data."""
     df = pd.DataFrame({'Value': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]})
-    study = ProcessDataFrame(df).formulate(response='Value')
+    study = ProcessBehavior(df).formulate(response='Value')
 
     result = study.analyze()
 
@@ -980,7 +980,7 @@ def test_study_analyze_result_has_charts():
 def test_study_analyze_result_has_plot():
     """AnalysisResult should have plot() method."""
     df = pd.DataFrame({'Value': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]})
-    study = ProcessDataFrame(df).formulate(response='Value')
+    study = ProcessBehavior(df).formulate(response='Value')
 
     result = study.analyze()
 
@@ -991,7 +991,7 @@ def test_study_analyze_result_has_plot():
 def test_study_analyze_result_has_detect_signals():
     """AnalysisResult should have detect_signals() method."""
     df = pd.DataFrame({'Value': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]})
-    study = ProcessDataFrame(df).formulate(response='Value')
+    study = ProcessBehavior(df).formulate(response='Value')
 
     result = study.analyze()
 
@@ -1006,7 +1006,7 @@ def test_study_analyze_result_has_detect_signals():
 def test_formulate_invalid_factor_column():
     """formulate() should raise for non-existent factor column."""
     df = pd.DataFrame({'Value': [1, 2, 3]})
-    pdata = ProcessDataFrame(df)
+    pdata = ProcessBehavior(df)
 
     with pytest.raises(ValueError, match="not found"):
         pdata.formulate(response='Value', factors=['NonExistent'])
@@ -1015,7 +1015,7 @@ def test_formulate_invalid_factor_column():
 def test_formulate_invalid_time_column():
     """formulate() should raise for non-existent time column."""
     df = pd.DataFrame({'Value': [1, 2, 3]})
-    pdata = ProcessDataFrame(df)
+    pdata = ProcessBehavior(df)
 
     with pytest.raises(ValueError, match="not found"):
         pdata.formulate(response='Value', time='NonExistent')
@@ -1028,7 +1028,7 @@ def test_formulate_invalid_time_column():
 def test_formulate_single_observation():
     """formulate() should handle single observation gracefully."""
     df = pd.DataFrame({'Value': [100.0]})
-    pdata = ProcessDataFrame(df)
+    pdata = ProcessBehavior(df)
 
     # Should not crash
     study = pdata.formulate(response='Value')
@@ -1041,7 +1041,7 @@ def test_formulate_with_nan_values():
         'Value': [1.0, 2.0, np.nan, 4.0, 5.0],
         'Time': [1, 2, 3, 4, 5]
     })
-    pdata = ProcessDataFrame(df)
+    pdata = ProcessBehavior(df)
 
     # Should handle NaN gracefully
     study = pdata.formulate(response='Value', time='Time')
@@ -1067,7 +1067,7 @@ def test_r4_xbar_chart_calculation():
                 })
 
     df = pd.DataFrame(data_rows)
-    study = ProcessDataFrame(df).formulate(
+    study = ProcessBehavior(df).formulate(
         response='Value',
         factors=['Factor'],
         time='Time'
@@ -1106,7 +1106,7 @@ def test_r4_s_chart_calculation():
                 })
 
     df = pd.DataFrame(data_rows)
-    study = ProcessDataFrame(df).formulate(
+    study = ProcessBehavior(df).formulate(
         response='Value',
         factors=['Factor'],
         time='Time'
@@ -1143,7 +1143,7 @@ def test_r5_xbar_chart_calculation():
                 })
 
     df = pd.DataFrame(data_rows)
-    study = ProcessDataFrame(df).formulate(
+    study = ProcessBehavior(df).formulate(
         response='Value',
         factors=['Factor'],
         time='Time'
@@ -1180,7 +1180,7 @@ def test_r5_s_chart_calculation():
                 })
 
     df = pd.DataFrame(data_rows)
-    study = ProcessDataFrame(df).formulate(
+    study = ProcessBehavior(df).formulate(
         response='Value',
         factors=['Factor'],
         time='Time'
@@ -1217,7 +1217,7 @@ def test_r4_xbar_subgrouping_different_from_r5():
                 })
 
     df = pd.DataFrame(data_rows)
-    study = ProcessDataFrame(df).formulate(
+    study = ProcessBehavior(df).formulate(
         response='Value',
         factors=['Factor'],
         time='Time'
@@ -1250,7 +1250,7 @@ def test_r4_r5_xbar_s_control_limits_structure():
                 })
 
     df = pd.DataFrame(data_rows)
-    study = ProcessDataFrame(df).formulate(
+    study = ProcessBehavior(df).formulate(
         response='Value',
         factors=['Factor'],
         time='Time'
@@ -1295,7 +1295,7 @@ def test_r3_xbar_chart_calculation():
                 })
 
     df = pd.DataFrame(data_rows)
-    study = ProcessDataFrame(df).formulate(
+    study = ProcessBehavior(df).formulate(
         response='Value',
         factors=['Factor'],
         time='Time'
@@ -1334,7 +1334,7 @@ def test_r3_s_chart_calculation():
                 })
 
     df = pd.DataFrame(data_rows)
-    study = ProcessDataFrame(df).formulate(
+    study = ProcessBehavior(df).formulate(
         response='Value',
         factors=['Factor'],
         time='Time'
@@ -1370,7 +1370,7 @@ def test_r3_xbar_s_control_limits_structure():
                 })
 
     df = pd.DataFrame(data_rows)
-    study = ProcessDataFrame(df).formulate(
+    study = ProcessBehavior(df).formulate(
         response='Value',
         factors=['Factor'],
         time='Time'

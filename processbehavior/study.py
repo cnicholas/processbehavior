@@ -25,7 +25,7 @@ if TYPE_CHECKING:
     from .analysis_dataset import AnalysisDataSet
     from .analysis_result import AnalysisResult
     from .analysis_specification import DataPrepConfig
-    from .process_dataframe import ProcessDataFrame
+    from .process_behavior import ProcessBehavior
     from .sds_detector import SDSAnalysisPlan
 
 
@@ -37,7 +37,7 @@ class StudyChartAccessor:
     enabling IDE auto-completion and preventing invalid chart selections.
 
     Usage:
-        study = pdf.formulate(response='weight', factors=['lane'])
+        study = pb.formulate(response='weight', factors=['lane'])
 
         # IDE auto-completes valid charts
         result = study.analyze(chart=study.charts.Xbar)
@@ -96,7 +96,7 @@ class Study:
 
     Parameters
     ----------
-    _pdf : ProcessDataFrame
+    _pdf : ProcessBehavior
         Reference to the data source
     _spec : AnalysisSpecification
         Internal specification (parameter mapping)
@@ -109,8 +109,8 @@ class Study:
     --------
     Create a study formulation:
 
-    >>> pdf = ProcessDataFrame(df)
-    >>> study = pdf.formulate(response='weight', factors=['lane'], time='pull')
+    >>> pb = ProcessBehavior(df)
+    >>> study = pb.formulate(response='weight', factors=['lane'], time='pull')
     >>> print(study)  # Rich display of formulation
 
     Check what's available:
@@ -131,10 +131,10 @@ class Study:
 
     See Also
     --------
-    ProcessDataFrame.formulate : Create a Study from data
+    ProcessBehavior.formulate : Create a Study from data
     AnalysisResult : Result of study.analyze()
     """
-    _pdf: ProcessDataFrame
+    _pdf: ProcessBehavior
     _spec: DataPrepConfig
     _plan: SDSAnalysisPlan
     _ads: AnalysisDataSet

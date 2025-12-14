@@ -222,7 +222,7 @@ class Analysis:
                 If provided, skips expensive residual calculation.
                 Used by Study.analyze() to reuse formulate() calculations.
             sds: Sampling Design State (0-6). Required if analysis_dataset is not
-                provided. SDS should be detected at the entry point (ProcessDataFrame)
+                provided. SDS should be detected at the entry point (ProcessBehavior)
                 and passed through the system.
 
         Raises:
@@ -242,7 +242,7 @@ class Analysis:
             if sds is None:
                 raise ValueError(
                     "sds is required when analysis_dataset is not provided. "
-                    "SDS should be detected at the entry point (ProcessDataFrame) "
+                    "SDS should be detected at the entry point (ProcessBehavior)"
                     "and passed to Analysis."
                 )
             self.ads = AnalysisDataSet(df, self.spec, sds=sds)

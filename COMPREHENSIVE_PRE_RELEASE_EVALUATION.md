@@ -30,7 +30,7 @@
 
 1. **Revolutionary SDS Detection**: Automatic classification of sampling design states (unique in industry)
 2. **VAS Residual System**: Variance decomposition (R1-R5) following Bishop's methodology
-3. **User-Friendly API**: `ProcessDataFrame` with auto-completion and intelligent defaults
+3. **User-Friendly API**: `ProcessBehavior` with auto-completion and intelligent defaults
 4. **Solid Architecture**: Clean layers, composition over inheritance, pure functions
 5. **Comprehensive Testing**: 428 tests passing, 76% code coverage
 6. **Production Code Quality**: Improved type hints, logging, error handling, fail-fast validation
@@ -347,7 +347,7 @@ class AnalysisSpecification:
 
 ```python
 # Simple API
-ProcessDataFrame(df).analyze(...)  # High-level
+ProcessBehavior(df).analyze(...)  # High-level
 
 # Advanced API
 Analysis(df, spec).calculate()     # Mid-level
@@ -394,7 +394,7 @@ class Analysis:
 **Use**: Composes DataPreparation, SamplingDesignDetector, ResidualCalculator
 **Assessment**: Excellent, promotes testability
 
-#### ✅ Facade Pattern (ProcessDataFrame)
+#### ✅ Facade Pattern (ProcessBehavior)
 **Score**: 9/10
 **Use**: Simple interface hiding complexity
 **Assessment**: Perfect for user-friendliness
@@ -651,7 +651,7 @@ ROADMAP.md
 └── v1.0.0 (Q3 2026): API stability guarantee
 
 API_STABILITY.md
-├── Stable API (won't break): ProcessDataFrame, AnalysisResult
+├── Stable API (won't break): ProcessBehavior, AnalysisResult
 ├── Beta API (may change): Signals, Plotting
 └── Internal API (no guarantees): DataPreparation, calculators
 ```
