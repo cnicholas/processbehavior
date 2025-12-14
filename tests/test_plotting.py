@@ -13,7 +13,7 @@ import pandas as pd
 import plotly.graph_objects as go
 import pytest
 
-from processbehavior import ProcessDataFrame
+from processbehavior import ProcessBehavior
 from processbehavior.plotting import ChartTheme, ControlChartFigure, Plotter, get_theme, list_themes, register_theme
 from processbehavior.plotting.themes import THEMES, apply_theme
 
@@ -153,7 +153,7 @@ class TestControlChartFigure:
             'value': np.random.normal(100, 5, 30),
             'time': range(30)
         })
-        pdf = ProcessDataFrame(df)
+        pdf = ProcessBehavior(df)
         study = pdf.formulate(response=pdf.columns.value)
         return study.analyze()
 
@@ -210,7 +210,7 @@ class TestPlotter:
             'value': np.random.normal(100, 5, 30),
             'time': range(30)
         })
-        pdf = ProcessDataFrame(df)
+        pdf = ProcessBehavior(df)
         study = pdf.formulate(response=pdf.columns.value)
         return study.analyze()
 
@@ -223,7 +223,7 @@ class TestPlotter:
             'subgroup': np.repeat(range(20), 5),
             'time': range(100)
         })
-        pdf = ProcessDataFrame(df)
+        pdf = ProcessBehavior(df)
         study = pdf.formulate(response=pdf.columns.value, factors=[pdf.columns.subgroup])
         return study.analyze()
 
@@ -421,7 +421,7 @@ class TestAnalysisResultIntegration:
             'value': np.random.normal(100, 5, 30),
             'time': range(30)
         })
-        pdf = ProcessDataFrame(df)
+        pdf = ProcessBehavior(df)
         study = pdf.formulate(response=pdf.columns.value)
         return study.analyze()
 
@@ -458,7 +458,7 @@ class TestFacetedPlotting:
             'subgroup': np.repeat(range(20), 5),
             'time': range(100)
         })
-        pdf = ProcessDataFrame(df)
+        pdf = ProcessBehavior(df)
         study = pdf.formulate(response=pdf.columns.value, factors=[pdf.columns.subgroup])
         return study.analyze()
 
@@ -488,7 +488,7 @@ class TestAspectRatio:
             'value': np.random.normal(100, 5, 30),
             'time': range(30)
         })
-        pdf = ProcessDataFrame(df)
+        pdf = ProcessBehavior(df)
         study = pdf.formulate(response=pdf.columns.value)
         return study.analyze()
 
@@ -527,7 +527,7 @@ class TestReportGeneration:
             'value': np.random.normal(100, 5, 30),
             'time': range(30)
         })
-        pdf = ProcessDataFrame(df)
+        pdf = ProcessBehavior(df)
         study = pdf.formulate(response=pdf.columns.value)
         return study.analyze()
 
@@ -584,7 +584,7 @@ class TestResidualPlots:
             'factor': np.tile(np.repeat(['A', 'B', 'C', 'D'], n_reps), n_times),
             'time': np.repeat(range(n_times), n_factors * n_reps)
         })
-        pdf = ProcessDataFrame(df)
+        pdf = ProcessBehavior(df)
         study = pdf.formulate(
             response=pdf.columns.value,
             factors=[pdf.columns.factor],
@@ -627,7 +627,7 @@ class TestResidualPlots:
             'value': np.random.normal(100, 5, 30),
             'time': range(30)
         })
-        pdf = ProcessDataFrame(df)
+        pdf = ProcessBehavior(df)
         study = pdf.formulate(response=pdf.columns.value)
         result = study.analyze()
 
@@ -649,7 +649,7 @@ class TestEffectsPlots:
             'subgroup': np.repeat(range(20), 5),
             'time': range(100)
         })
-        pdf = ProcessDataFrame(df)
+        pdf = ProcessBehavior(df)
         study = pdf.formulate(response=pdf.columns.value, factors=[pdf.columns.subgroup])
         return study.analyze()
 
@@ -667,7 +667,7 @@ class TestEffectsPlots:
             'value': np.random.normal(100, 5, 30),
             'time': range(30)
         })
-        pdf = ProcessDataFrame(df)
+        pdf = ProcessBehavior(df)
         study = pdf.formulate(response=pdf.columns.value)
         result = study.analyze()
 
@@ -688,7 +688,7 @@ class TestStatsBox:
             'value': np.random.normal(100, 5, 30),
             'time': range(30)
         })
-        pdf = ProcessDataFrame(df)
+        pdf = ProcessBehavior(df)
         study = pdf.formulate(response=pdf.columns.value)
         return study.analyze()
 
@@ -701,7 +701,7 @@ class TestStatsBox:
             'subgroup': np.repeat(range(20), 5),
             'time': range(100)
         })
-        pdf = ProcessDataFrame(df)
+        pdf = ProcessBehavior(df)
         study = pdf.formulate(response=pdf.columns.value, factors=[pdf.columns.subgroup])
         return study.analyze()
 

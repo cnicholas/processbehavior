@@ -7,7 +7,7 @@ the metadata-based value column resolution.
 
 import pytest
 
-from processbehavior import ProcessDataFrame
+from processbehavior import ProcessBehavior
 from processbehavior.datasets import synthetic
 from processbehavior.signals.config import SignalConfig
 
@@ -21,7 +21,7 @@ class TestWECOIntegration:
         df = synthetic.make_sds1(K=3, T=8, n_min=2, n_max=4, seed=42)
 
         # Analyze
-        pdf = ProcessDataFrame(df)
+        pdf = ProcessBehavior(df)
         study = pdf.formulate(
             response=pdf.columns.y,
             factors=[pdf.columns.factor_1],
@@ -50,7 +50,7 @@ class TestWECOIntegration:
         df = synthetic.make_sds1(K=4, T=10, n_min=2, n_max=5, seed=42)
 
         # Analyze
-        pdf = ProcessDataFrame(df)
+        pdf = ProcessBehavior(df)
         study = pdf.formulate(
             response=pdf.columns.y,
             factors=[pdf.columns.factor_1],
@@ -79,7 +79,7 @@ class TestWECOIntegration:
         df = synthetic.make_sds4(T=50, seed=42)
 
         # Analyze
-        pdf = ProcessDataFrame(df)
+        pdf = ProcessBehavior(df)
         study = pdf.formulate(
             response=pdf.columns.y,
             time=pdf.columns.time
@@ -106,7 +106,7 @@ class TestWECOIntegration:
         df = synthetic.make_sds4(T=50, seed=42)
 
         # Analyze - IMR analysis includes moving range calculation
-        pdf = ProcessDataFrame(df)
+        pdf = ProcessBehavior(df)
         study = pdf.formulate(
             response=pdf.columns.y,
             time=pdf.columns.time
@@ -129,7 +129,7 @@ class TestWECOIntegration:
         df = synthetic.make_sds1(K=3, T=8, n_min=2, n_max=4, seed=42)
 
         # Analyze
-        pdf = ProcessDataFrame(df)
+        pdf = ProcessBehavior(df)
         study = pdf.formulate(
             response=pdf.columns.y,
             factors=[pdf.columns.factor_1],
@@ -163,7 +163,7 @@ class TestWECOIntegration:
         df.loc[mask, 'y'] = df.loc[mask, 'y'] + 100  # Large shift to ensure detection
 
         # Analyze
-        pdf = ProcessDataFrame(df)
+        pdf = ProcessBehavior(df)
         study = pdf.formulate(
             response=pdf.columns.y,
             factors=[pdf.columns.factor_1],
@@ -185,7 +185,7 @@ class TestWECOIntegration:
         # Create result with charts
         df = synthetic.make_sds1(K=2, T=6, n_min=2, n_max=3, seed=42)
 
-        pdf = ProcessDataFrame(df)
+        pdf = ProcessBehavior(df)
         study = pdf.formulate(
             response=pdf.columns.y,
             factors=[pdf.columns.factor_1],
@@ -206,7 +206,7 @@ class TestWECOIntegration:
         df = synthetic.make_sds1(K=3, T=8, n_min=2, n_max=4, seed=42)
 
         # Analyze
-        pdf = ProcessDataFrame(df)
+        pdf = ProcessBehavior(df)
         study = pdf.formulate(
             response=pdf.columns.y,
             factors=[pdf.columns.factor_1],
@@ -239,7 +239,7 @@ class TestMetadataContract:
         """Test Xbar and Sbar charts have complete metadata."""
         df = synthetic.make_sds1(K=2, T=8, n_min=2, n_max=4, seed=42)
 
-        pdf = ProcessDataFrame(df)
+        pdf = ProcessBehavior(df)
         study = pdf.formulate(
             response=pdf.columns.y,
             factors=[pdf.columns.factor_1],
@@ -263,7 +263,7 @@ class TestMetadataContract:
         """Test IMR chart has complete metadata."""
         df = synthetic.make_sds4(T=50, seed=42)
 
-        pdf = ProcessDataFrame(df)
+        pdf = ProcessBehavior(df)
         study = pdf.formulate(
             response=pdf.columns.y,
             time=pdf.columns.time
@@ -280,7 +280,7 @@ class TestMetadataContract:
         """Test metadata has required keys."""
         df = synthetic.make_sds1(K=2, T=8, n_min=2, n_max=4, seed=42)
 
-        pdf = ProcessDataFrame(df)
+        pdf = ProcessBehavior(df)
         study = pdf.formulate(
             response=pdf.columns.y,
             factors=[pdf.columns.factor_1],

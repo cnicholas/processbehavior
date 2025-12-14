@@ -14,7 +14,7 @@ The to_excel() method creates multi-sheet workbooks with:
 """
 
 
-from processbehavior import ProcessDataFrame
+from processbehavior import ProcessBehavior
 from processbehavior import analysis_dataset as ad
 from processbehavior.datasets import make_sds1, make_sds2, make_sds3
 
@@ -140,14 +140,14 @@ print("  - Contains summary and chart tabs only")
 print("  - Ideal for sharing control charts without detailed analysis")
 
 # =============================================================================
-# Example 5: Using ProcessDataFrame (Frictionless API)
+# Example 5: Using ProcessBehavior (Frictionless API)
 # =============================================================================
 print("\n" + "=" * 70)
 print("Example 5: Frictionless API with Auto-Export")
 print("=" * 70)
 
-# Create ProcessDataFrame
-pdf = ProcessDataFrame(df1)
+# Create ProcessBehavior
+pdf = ProcessBehavior(df1)
 
 # Analyze and export in one go
 result5 = pdf.analyze(
@@ -213,7 +213,7 @@ Files created:
   2. example2_stratified_imr.xlsx  - Stratified IMR charts (killer feature!)
   3. example3_complete.xlsx        - Complete export with full dataset
   4. example4_minimal.xlsx         - Charts only
-  5. example5_frictionless.xlsx    - Using ProcessDataFrame API
+  5. example5_frictionless.xlsx    - Using ProcessBehavior API
   6. example6_custom.xlsx          - Custom formatting options
 
 Each Excel file contains:

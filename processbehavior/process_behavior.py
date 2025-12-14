@@ -1,19 +1,19 @@
 """
-ProcessDataFrame - Intelligent wrapper for process behavior analysis.
+ProcessBehavior - Main entry point for process behavior analysis.
 
 This module provides a user-friendly interface with IDE auto-completion for column names
 and SDS-driven automatic analysis selection.
 
 Usage:
-    from processbehavior import ProcessDataFrame
+    from processbehavior import ProcessBehavior
 
-    data = ProcessDataFrame(raw_df)
+    pb = ProcessBehavior(df)
 
     # Step 1: formulate() - analyze structure and get recommendations
-    study = data.formulate(
-        response=data.columns.Measurement,
-        factors=[data.columns.Operator],
-        time=data.columns.ProductionTime
+    study = pb.formulate(
+        response=pb.columns.Measurement,
+        factors=[pb.columns.Operator],
+        time=pb.columns.ProductionTime
     )
 
     # Step 2: analyze() - run the chart
@@ -41,8 +41,8 @@ class ColumnAccessor:
     Provides IDE auto-completion for DataFrame column names.
 
     Usage:
-        data = ProcessDataFrame(df)
-        data.columns.Height  # Auto-completes to column name string
+        pb = ProcessBehavior(df)
+        pb.columns.Height  # Auto-completes to column name string
 
     This class dynamically creates attributes for each column in the DataFrame,
     enabling IDE auto-completion and preventing typos.
@@ -105,16 +105,13 @@ class ChartTypeAccessor:
     enabling IDE auto-completion and preventing invalid chart selections.
 
     Usage:
-        data = ProcessDataFrame(df)
+        pb = ProcessBehavior(df)
 
-        # After first analyze(), data.charts is populated
-        result = data.analyze(response_var=data.columns.Height)
+        # After formulate(), pb.charts is populated
+        study = pb.formulate(response='height')
 
         # Now you can use auto-completion for valid charts
-        result2 = data.analyze(
-            response_var=data.columns.Height,
-            chart_type=data.charts.Xbar  # IDE auto-completes valid options!
-        )
+        result = study.analyze(chart=pb.charts.Xbar)  # IDE auto-completes!
 
     Attributes are set dynamically based on SDS-specific valid charts.
     """
@@ -141,9 +138,9 @@ class ChartTypeAccessor:
         return self._valid_charts
 
 
-class ProcessDataFrame:
+class ProcessBehavior:
     """
-    Intelligent wrapper for process behavior analysis with auto-completion.
+    Main entry point for process behavior analysis with auto-completion.
 
     This class makes analysis frictionless by:
     1. Providing IDE auto-completion for column names
@@ -154,13 +151,13 @@ class ProcessDataFrame:
 
     Usage:
         # Basic usage with auto-completion
-        data = ProcessDataFrame(raw_df)
+        pb = ProcessBehavior(df)
 
         # Step 1: formulate() - analyze structure and get recommendations
-        study = data.formulate(
-            response=data.columns.Measurement,
-            time=data.columns.Time,
-            factors=[data.columns.Operator, data.columns.Machine]
+        study = pb.formulate(
+            response=pb.columns.Measurement,
+            time=pb.columns.Time,
+            factors=[pb.columns.Operator, pb.columns.Machine]
         )
 
         # Inspect the study
@@ -180,7 +177,7 @@ class ProcessDataFrame:
 
     def __init__(self, df: pd.DataFrame, na_values: list[str] | None = None):
         """
-        Initialize ProcessDataFrame with data and optional NA value handling.
+        Initialize ProcessBehavior with data and optional NA value handling.
 
         Args:
             df: pandas DataFrame containing process data
@@ -190,10 +187,10 @@ class ProcessDataFrame:
 
         Examples:
             # Basic usage - automatic garbage character handling
-            >>> pdf = ProcessDataFrame(df)
+            >>> pb = ProcessBehavior(df)
 
             # Custom NA indicators (combined with defaults)
-            >>> pdf = ProcessDataFrame(df, na_values=['-999', '9999', 'MISSING'])
+            >>> pb = ProcessBehavior(df, na_values=['-999', '9999', 'MISSING'])
         """
         if not isinstance(df, pd.DataFrame):
             raise TypeError(f"Expected pandas DataFrame, got {type(df)}")
@@ -259,7 +256,7 @@ class ProcessDataFrame:
         self.columns = ColumnAccessor(self.data)
         self.charts = None  # Will be populated after first formulate() call
 
-        logger.info(f"ProcessDataFrame created with {len(df)} rows, {len(df.columns)} columns")
+        logger.info(f"ProcessBehavior: {len(df)} rows, {len(df.columns)} columns")
 
     def formulate(
         self,
@@ -280,7 +277,7 @@ class ProcessDataFrame:
         ----------
         response : str
             The response variable (measurement) to analyze.
-            Use pdf.columns for IDE auto-completion.
+            Use pb.columns for IDE auto-completion.
         factors : list of str, optional
             Grouping factors defining rational subgroups (e.g., ['Lane', 'Operator']).
             If provided, enables Xbar/S analysis.
@@ -302,13 +299,13 @@ class ProcessDataFrame:
         --------
         Basic formulation:
 
-        >>> pdf = ProcessDataFrame(df)
-        >>> study = pdf.formulate(response='weight')
+        >>> pb = ProcessBehavior(df)
+        >>> study = pb.formulate(response='weight')
         >>> print(study)  # Shows SDS, valid charts, next steps
 
         With factors and time:
 
-        >>> study = pdf.formulate(
+        >>> study = pb.formulate(
         ...     response='fill_weight',
         ...     factors=['lane', 'phase'],
         ...     time='pull'
@@ -384,8 +381,7 @@ class ProcessDataFrame:
     def __repr__(self) -> str:
         """String representation."""
         return (
-            f"ProcessDataFrame(rows={len(self.data)}, "
-            f"columns={len(self.data.columns)})\n"
+            f"ProcessBehavior({len(self.data)} rows × {len(self.data.columns)} columns)\n"
             f"Columns: {list(self.data.columns)}"
         )
 

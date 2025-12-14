@@ -82,10 +82,10 @@ If `include_full_dataset=True`:
 ## Example: Complete Export
 
 ```python
-from processbehavior import ProcessDataFrame
+from processbehavior import ProcessBehavior
 
 # Setup
-pdf = ProcessDataFrame(df)
+pdf = ProcessBehavior(df)
 study = pdf.formulate(
     response=pdf.columns.weight,
     factors=[pdf.columns.lane],

@@ -24,7 +24,7 @@ class AnalysisDataSet:
     3. Effects and interactions analysis
 
     SDS (Sampling Design State) is required and must be detected at the entry
-    point (ProcessDataFrame) before creating an AnalysisDataSet. This ensures
+    point (ProcessBehavior) before creating an AnalysisDataSet. This ensures
     SDS is detected exactly once per workflow.
 
     Uses composition pattern - delegates to focused classes for each concern.
@@ -49,7 +49,7 @@ class AnalysisDataSet:
             Sampling Design State (0-6). This is required because SDS is the
             driver of the analysis system - it determines which calculations
             are performed. SDS should be detected once at the entry point
-            (ProcessDataFrame) and passed through the system.
+            (ProcessBehavior) and passed through the system.
         """
         # Store inputs
         self.raw_dataset = df

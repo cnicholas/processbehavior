@@ -15,7 +15,7 @@ flowchart LR
     end
 
     subgraph Formulation
-        B[ProcessDataFrame]
+        B[ProcessBehavior]
         C[formulate]
         D[Study]
     end
@@ -50,7 +50,7 @@ flowchart LR
 
 **Key Steps:**
 1. **Load** your process data into a pandas DataFrame
-2. **Wrap** with `ProcessDataFrame` for IDE auto-completion
+2. **Wrap** with `ProcessBehavior` for IDE auto-completion
 3. **Formulate** your study — ProcessBehavior detects the Sampling Design State (SDS) and determines:
    - Design state (SDS 0–6)
    - Valid and recommended charts
@@ -66,13 +66,13 @@ Unlike traditional SPC packages that require you to manually select chart types 
 
 ```python
 import pandas as pd
-from processbehavior import ProcessDataFrame
+from processbehavior import ProcessBehavior
 
 # Load your data
 df = pd.read_csv("process_data.csv")
 
 # Formulate your study
-pdf = ProcessDataFrame(df)
+pdf = ProcessBehavior(df)
 study = pdf.formulate(
     response=pdf.columns.measurement,
     factors=[pdf.columns.machine, pdf.columns.operator],

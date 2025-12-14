@@ -26,7 +26,7 @@ import tracemalloc
 import numpy as np
 import pytest
 
-from processbehavior import ProcessDataFrame
+from processbehavior import ProcessBehavior
 from processbehavior.datasets import synthetic
 
 # ============================================================================
@@ -60,26 +60,26 @@ class TestDataGenerationPerformance:
 
 
 # ============================================================================
-# ProcessDataFrame Init Benchmarks
+# ProcessBehavior Init Benchmarks
 # ============================================================================
 
 
-class TestProcessDataFramePerformance:
-    """Benchmark ProcessDataFrame initialization."""
+class TestProcessBehaviorPerformance:
+    """Benchmark ProcessBehavior initialization."""
 
     def test_pdf_init_10k(self, large_dataset_10k):
-        """ProcessDataFrame init with 10K rows, 50 columns."""
+        """ProcessBehavior init with 10K rows, 50 columns."""
         start = time.perf_counter()
-        pdf = ProcessDataFrame(large_dataset_10k)
+        pdf = ProcessBehavior(large_dataset_10k)
         elapsed = time.perf_counter() - start
 
         assert pdf is not None
         print(f'\nPDF init (10K rows): {elapsed:.3f}s')
 
     def test_pdf_init_100k(self, large_dataset_100k):
-        """ProcessDataFrame init with 100K rows, 50 columns."""
+        """ProcessBehavior init with 100K rows, 50 columns."""
         start = time.perf_counter()
-        pdf = ProcessDataFrame(large_dataset_100k)
+        pdf = ProcessBehavior(large_dataset_100k)
         elapsed = time.perf_counter() - start
 
         assert pdf is not None
@@ -88,9 +88,9 @@ class TestProcessDataFramePerformance:
 
     @pytest.mark.slow
     def test_pdf_init_1m(self, large_dataset_1m):
-        """ProcessDataFrame init with 1M rows, 50 columns."""
+        """ProcessBehavior init with 1M rows, 50 columns."""
         start = time.perf_counter()
-        pdf = ProcessDataFrame(large_dataset_1m)
+        pdf = ProcessBehavior(large_dataset_1m)
         elapsed = time.perf_counter() - start
 
         assert pdf is not None
@@ -111,7 +111,7 @@ class TestFormulatePerformance:
 
     def test_formulate_10k(self, large_dataset_10k, perf_spec):
         """formulate() with 10K rows."""
-        pdf = ProcessDataFrame(large_dataset_10k)
+        pdf = ProcessBehavior(large_dataset_10k)
 
         start = time.perf_counter()
         study = pdf.formulate(
@@ -126,7 +126,7 @@ class TestFormulatePerformance:
 
     def test_formulate_100k(self, large_dataset_100k, perf_spec):
         """formulate() with 100K rows."""
-        pdf = ProcessDataFrame(large_dataset_100k)
+        pdf = ProcessBehavior(large_dataset_100k)
 
         start = time.perf_counter()
         study = pdf.formulate(
@@ -143,7 +143,7 @@ class TestFormulatePerformance:
     @pytest.mark.slow
     def test_formulate_1m(self, large_dataset_1m, perf_spec):
         """formulate() with 1M rows."""
-        pdf = ProcessDataFrame(large_dataset_1m)
+        pdf = ProcessBehavior(large_dataset_1m)
 
         start = time.perf_counter()
         study = pdf.formulate(
@@ -172,7 +172,7 @@ class TestAnalyzePerformance:
     @pytest.fixture
     def study_10k(self, large_dataset_10k, perf_spec):
         """Pre-formulated study for analyze benchmarks."""
-        pdf = ProcessDataFrame(large_dataset_10k)
+        pdf = ProcessBehavior(large_dataset_10k)
         return pdf.formulate(
             response=perf_spec['response_var'],
             factors=perf_spec['rsg_vars'],
@@ -182,7 +182,7 @@ class TestAnalyzePerformance:
     @pytest.fixture
     def study_100k(self, large_dataset_100k, perf_spec):
         """Pre-formulated study for analyze benchmarks."""
-        pdf = ProcessDataFrame(large_dataset_100k)
+        pdf = ProcessBehavior(large_dataset_100k)
         return pdf.formulate(
             response=perf_spec['response_var'],
             factors=perf_spec['rsg_vars'],
@@ -309,7 +309,7 @@ class TestMemoryUsage:
         """Check memory doesn't explode during formulate()."""
         tracemalloc.start()
 
-        pdf = ProcessDataFrame(large_dataset_10k)
+        pdf = ProcessBehavior(large_dataset_10k)
         study = pdf.formulate(
             response=perf_spec['response_var'],
             factors=perf_spec['rsg_vars'],
@@ -350,7 +350,7 @@ class TestScalability:
         df = synthetic.make_sds1(K=K, T=T, n_min=n, n_max=n, seed=42)
         actual_size = len(df)
 
-        pdf = ProcessDataFrame(df)
+        pdf = ProcessBehavior(df)
 
         start = time.perf_counter()
         study = pdf.formulate(
@@ -375,7 +375,7 @@ class TestScalability:
         n = 10
 
         df = synthetic.make_sds1(K=K, T=T, n_min=n, n_max=n, seed=42)
-        pdf = ProcessDataFrame(df)
+        pdf = ProcessBehavior(df)
 
         start = time.perf_counter()
         study = pdf.formulate(
@@ -401,9 +401,9 @@ class TestFullPipeline:
         """Complete workflow: PDF init -> formulate -> analyze -> get results."""
         start_total = time.perf_counter()
 
-        # Step 1: Create ProcessDataFrame
+        # Step 1: Create ProcessBehavior
         start = time.perf_counter()
-        pdf = ProcessDataFrame(large_dataset_10k)
+        pdf = ProcessBehavior(large_dataset_10k)
         time_init = time.perf_counter() - start
 
         # Step 2: Formulate
@@ -440,7 +440,7 @@ class TestFullPipeline:
         """Complete workflow with 100K rows."""
         start_total = time.perf_counter()
 
-        pdf = ProcessDataFrame(large_dataset_100k)
+        pdf = ProcessBehavior(large_dataset_100k)
         study = pdf.formulate(
             response=perf_spec['response_var'],
             factors=perf_spec['rsg_vars'],
