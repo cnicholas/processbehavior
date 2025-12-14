@@ -807,7 +807,7 @@ def test_study_why_not_valid_chart():
 
     # Imr is valid for SDS 0
     result = study.why_not('Imr')
-    assert 'IS valid' in result or 'valid' in result.lower()
+    assert 'IS available' in result or 'available' in result.lower()
 
 
 def test_study_why_not_invalid_chart():

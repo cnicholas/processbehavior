@@ -126,8 +126,14 @@ class SDSAnalysisPlan:
     # Actual data characteristics (populated during detection)
     min_cell_size: int = 0  # Minimum observations per cell from actual data
 
-    # Class constant: questions each residual chart answers
-    RESIDUAL_CHART_QUESTIONS: ClassVar[dict[str, str]] = {
+    # Class constant: questions each chart type answers
+    CHART_QUESTIONS: ClassVar[dict[str, str]] = {
+        # Primary charts
+        'Xbar': 'Are subgroup means stable over time?',
+        'S': 'Is within-subgroup variation stable?',
+        'Imr': 'Is individual variation stable over time?',
+        'R': 'Is range variation stable over time?',
+        # Residual charts
         'R2_S': 'Is within-subgroup variation stable?',
         'R2_Imr': 'Is within-subgroup variation stable?',
         'R3_Imr': 'Is there factor×time interaction?',
