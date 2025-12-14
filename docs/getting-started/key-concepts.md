@@ -14,7 +14,7 @@ pdf = ProcessBehavior(df)
 study = pdf.formulate(response=..., factors=..., time=...)
 
 # 3. Analyze and visualize
-result = study.analyze()
+result = study.execute()
 result.plot()
 ```
 
@@ -73,7 +73,7 @@ For replicated designs (SDS 1-3), ProcessBehavior computes five residual decompo
 print(study.dataset[['R1', 'R2', 'R3', 'R4', 'R5']].head())
 
 # Chart residuals
-result = study.analyze(chart='R4_Imr')
+result = study.execute(chart='R4_Imr')
 result.plot()
 ```
 

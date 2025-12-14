@@ -72,7 +72,7 @@ df = pd.DataFrame({
 # Run a simple analysis
 pdf = pb.ProcessBehavior(df)
 study = pdf.formulate(response=pdf.cols.value, time=pdf.cols.time)
-result = study.analyze()
+result = study.execute()
 
 print(f"SDS detected: {study.sds}")
 print(f"Charts available: {result.all_charts}")

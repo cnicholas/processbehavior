@@ -54,7 +54,8 @@ result = (
     load_data('file.csv')
     .filter(lambda df: df['value'] > 0)
     .group_by(['category'])
-    .analyze(measurement='value')
+    .formulate(response='value')
+    .execute()
 )
 
 # Return consistent types that enable chaining

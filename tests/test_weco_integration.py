@@ -27,7 +27,7 @@ class TestWECOIntegration:
             factors=[pdf.cols.factor_1],
             time=pdf.cols.time
         )
-        result = study.analyze()
+        result = study.execute()
 
         # Verify Xbar chart has metadata
         assert 'Xbar' in result.charts
@@ -56,7 +56,7 @@ class TestWECOIntegration:
             factors=[pdf.cols.factor_1],
             time=pdf.cols.time
         )
-        result = study.analyze()
+        result = study.execute()
 
         # Verify Sbar chart has metadata
         assert 'Sbar' in result.charts
@@ -84,7 +84,7 @@ class TestWECOIntegration:
             response=pdf.cols.y,
             time=pdf.cols.time
         )
-        result = study.analyze()
+        result = study.execute()
 
         # IMR analysis returns stratified results with 'all' key
         assert 'all' in result.charts
@@ -111,7 +111,7 @@ class TestWECOIntegration:
             response=pdf.cols.y,
             time=pdf.cols.time
         )
-        result = study.analyze()
+        result = study.execute()
 
         # IMR analysis returns results with 'all' key
         # The chart includes moving range data with metadata
@@ -135,7 +135,7 @@ class TestWECOIntegration:
             factors=[pdf.cols.factor_1],
             time=pdf.cols.time
         )
-        result = study.analyze()
+        result = study.execute()
 
         # Detect signals on all charts
         # Use config with lower min_observations
@@ -169,7 +169,7 @@ class TestWECOIntegration:
             factors=[pdf.cols.factor_1],
             time=pdf.cols.time
         )
-        result = study.analyze()
+        result = study.execute()
 
         # Detect signals with Rule 1 (beyond limits)
         # Use config with lower min_observations
@@ -191,7 +191,7 @@ class TestWECOIntegration:
             factors=[pdf.cols.factor_1],
             time=pdf.cols.time
         )
-        result = study.analyze()
+        result = study.execute()
 
         # Manually remove metadata to simulate bug
         del result.charts['Xbar']['metadata']
@@ -212,7 +212,7 @@ class TestWECOIntegration:
             factors=[pdf.cols.factor_1],
             time=pdf.cols.time
         )
-        result = study.analyze()
+        result = study.execute()
 
         # Get Xbar chart
         xbar_chart = result.charts['Xbar']
@@ -245,7 +245,7 @@ class TestMetadataContract:
             factors=[pdf.cols.factor_1],
             time=pdf.cols.time
         )
-        result = study.analyze()
+        result = study.execute()
 
         # Check Xbar metadata
         xbar_meta = result.charts['Xbar']['metadata']
@@ -268,7 +268,7 @@ class TestMetadataContract:
             response=pdf.cols.y,
             time=pdf.cols.time
         )
-        result = study.analyze()
+        result = study.execute()
 
         # Check IMR metadata
         imr_meta = result.charts['all']['metadata']
@@ -286,7 +286,7 @@ class TestMetadataContract:
             factors=[pdf.cols.factor_1],
             time=pdf.cols.time
         )
-        result = study.analyze()
+        result = study.execute()
 
         # All charts should have metadata with required keys
         for chart_name, chart_info in result.charts.items():

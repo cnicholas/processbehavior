@@ -347,7 +347,7 @@ class AnalysisSpecification:
 
 ```python
 # Simple API
-ProcessBehavior(df).analyze(...)  # High-level
+ProcessBehavior(df).formulate(...).execute()  # High-level
 
 # Advanced API
 Analysis(df, spec).calculate()     # Mid-level
@@ -528,7 +528,7 @@ architecture/     development/      guide/            tutorials/
 
 **Usage**:
 ```python
-result = pdf.analyze('Xbar')
+result = pdf.formulate(response='y').execute(chart='Xbar')
 result.chart_table()  # Returns DataFrame with subgroup, n, value, center, lcl, ucl, signal
 ```
 

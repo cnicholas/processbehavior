@@ -179,7 +179,7 @@ def test_formulate_and_analyze_simple_series():
     )
 
     # Analyze using recommended chart
-    result = study.analyze()
+    result = study.execute()
 
     assert result is not None
     assert 'all' in result.charts
@@ -287,7 +287,7 @@ def test_formulate_and_analyze_with_grouping():
     )
 
     # Should be able to analyze
-    result = study.analyze()
+    result = study.execute()
     assert result is not None
 
 
@@ -429,7 +429,7 @@ def test_full_workflow_simple_series():
     assert study.recommended_chart == 'Imr'
 
     # Analyze
-    result = study.analyze()
+    result = study.execute()
 
     assert result is not None
     assert 'all' in result.charts
@@ -468,7 +468,7 @@ def test_full_workflow_grouped_data():
     assert study.recommended_chart == 'Xbar'
 
     # Analyze
-    result = study.analyze()
+    result = study.execute()
     assert result is not None
 
 
@@ -534,10 +534,10 @@ def test_formulate_with_chart_selection():
     )
 
     # Should be able to analyze with different valid chart types
-    result_xbar = study.analyze(chart='Xbar')
+    result_xbar = study.execute(chart='Xbar')
     assert result_xbar is not None
 
-    result_imr = study.analyze(chart='Imr')
+    result_imr = study.execute(chart='Imr')
     assert result_imr is not None
 
 
@@ -881,7 +881,7 @@ def test_study_charts_accessor_repr():
 
 
 # ============================================================================
-# Test: Study.analyze() - Error handling
+# Test: Study.execute() - Error handling
 # ============================================================================
 
 def test_study_analyze_invalid_chart_raises():
@@ -890,7 +890,7 @@ def test_study_analyze_invalid_chart_raises():
     study = ProcessBehavior(df).formulate(response='Value')
 
     with pytest.raises(ValueError, match="not valid"):
-        study.analyze(chart='S')  # S not valid for SDS 0
+        study.execute(chart='S')  # S not valid for SDS 0
 
 
 def test_study_analyze_invalid_chart_shows_valid():
@@ -899,7 +899,7 @@ def test_study_analyze_invalid_chart_shows_valid():
     study = ProcessBehavior(df).formulate(response='Value')
 
     try:
-        study.analyze(chart='S')
+        study.execute(chart='S')
     except ValueError as e:
         assert 'Imr' in str(e)  # Should mention valid charts
 
@@ -909,12 +909,12 @@ def test_study_analyze_with_charts_accessor():
     df = pd.DataFrame({'Value': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]})
     study = ProcessBehavior(df).formulate(response='Value')
 
-    result = study.analyze(chart=study.charts.Imr)
+    result = study.execute(chart=study.charts.Imr)
     assert result is not None
 
 
 # ============================================================================
-# Test: Study.analyze() - Residual charts
+# Test: Study.execute() - Residual charts
 # ============================================================================
 
 def test_study_analyze_residual_chart():
@@ -936,7 +936,7 @@ def test_study_analyze_residual_chart():
     # Get first available residual chart
     if study.residual_charts:
         residual_chart = study.residual_charts[0]
-        result = study.analyze(chart=residual_chart)
+        result = study.execute(chart=residual_chart)
         assert result is not None
 
 
@@ -947,7 +947,7 @@ def test_study_analyze_invalid_residual_chart_raises():
 
     # SDS 0 has no residual charts
     with pytest.raises(ValueError, match="not available"):
-        study.analyze(chart='R4_Imr')
+        study.execute(chart='R4_Imr')
 
 
 # ============================================================================
@@ -959,7 +959,7 @@ def test_study_analyze_returns_analysis_result():
     df = pd.DataFrame({'Value': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]})
     study = ProcessBehavior(df).formulate(response='Value')
 
-    result = study.analyze()
+    result = study.execute()
 
     # Should have expected attributes
     assert hasattr(result, 'charts')
@@ -971,7 +971,7 @@ def test_study_analyze_result_has_charts():
     df = pd.DataFrame({'Value': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]})
     study = ProcessBehavior(df).formulate(response='Value')
 
-    result = study.analyze()
+    result = study.execute()
 
     assert isinstance(result.charts, dict)
     assert len(result.charts) > 0
@@ -982,7 +982,7 @@ def test_study_analyze_result_has_plot():
     df = pd.DataFrame({'Value': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]})
     study = ProcessBehavior(df).formulate(response='Value')
 
-    result = study.analyze()
+    result = study.execute()
 
     assert hasattr(result, 'plot')
     assert callable(result.plot)
@@ -993,7 +993,7 @@ def test_study_analyze_result_has_detect_signals():
     df = pd.DataFrame({'Value': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]})
     study = ProcessBehavior(df).formulate(response='Value')
 
-    result = study.analyze()
+    result = study.execute()
 
     assert hasattr(result, 'detect_signals')
     assert callable(result.detect_signals)
@@ -1078,7 +1078,7 @@ def test_r4_xbar_chart_calculation():
     assert 'R4_Xbar' in study.residual_charts
 
     # Analyze R4_Xbar
-    result = study.analyze(chart='R4_Xbar')
+    result = study.execute(chart='R4_Xbar')
     assert result is not None
     assert 'R4_Xbar' in result.charts
 
@@ -1115,7 +1115,7 @@ def test_r4_s_chart_calculation():
     assert 'R4_S' in study.residual_charts
 
     # Analyze R4_S
-    result = study.analyze(chart='R4_S')
+    result = study.execute(chart='R4_S')
     assert result is not None
     assert 'R4_S' in result.charts
 
@@ -1152,7 +1152,7 @@ def test_r5_xbar_chart_calculation():
     assert 'R5_Xbar' in study.residual_charts
 
     # Analyze R5_Xbar
-    result = study.analyze(chart='R5_Xbar')
+    result = study.execute(chart='R5_Xbar')
     assert result is not None
     assert 'R5_Xbar' in result.charts
 
@@ -1189,7 +1189,7 @@ def test_r5_s_chart_calculation():
     assert 'R5_S' in study.residual_charts
 
     # Analyze R5_S
-    result = study.analyze(chart='R5_S')
+    result = study.execute(chart='R5_S')
     assert result is not None
     assert 'R5_S' in result.charts
 
@@ -1224,8 +1224,8 @@ def test_r4_xbar_subgrouping_different_from_r5():
     )
 
     # Analyze both R4 and R5 Xbar charts
-    r4_result = study.analyze(chart='R4_Xbar')
-    r5_result = study.analyze(chart='R5_Xbar')
+    r4_result = study.execute(chart='R4_Xbar')
+    r5_result = study.execute(chart='R5_Xbar')
 
     r4_data = r4_result.charts['R4_Xbar']['data']
     r5_data = r5_result.charts['R5_Xbar']['data']
@@ -1257,7 +1257,7 @@ def test_r4_r5_xbar_s_control_limits_structure():
     )
 
     for chart_type in ['R4_Xbar', 'R4_S', 'R5_Xbar', 'R5_S']:
-        result = study.analyze(chart=chart_type)
+        result = study.execute(chart=chart_type)
         chart_data = result.charts[chart_type]
 
         # Should have statistics with control limits
@@ -1306,7 +1306,7 @@ def test_r3_xbar_chart_calculation():
     assert 'R3_Xbar' in study.residual_charts
 
     # Analyze R3_Xbar
-    result = study.analyze(chart='R3_Xbar')
+    result = study.execute(chart='R3_Xbar')
     assert result is not None
     assert 'R3_Xbar' in result.charts
 
@@ -1343,7 +1343,7 @@ def test_r3_s_chart_calculation():
     assert 'R3_S' in study.residual_charts
 
     # Analyze R3_S
-    result = study.analyze(chart='R3_S')
+    result = study.execute(chart='R3_S')
     assert result is not None
     assert 'R3_S' in result.charts
 
@@ -1377,7 +1377,7 @@ def test_r3_xbar_s_control_limits_structure():
     )
 
     for chart_type in ['R3_Xbar', 'R3_S']:
-        result = study.analyze(chart=chart_type)
+        result = study.execute(chart=chart_type)
         chart_data = result.charts[chart_type]
 
         # Should have statistics with control limits

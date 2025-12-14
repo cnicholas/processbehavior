@@ -192,7 +192,7 @@ class TestAnalyzePerformance:
     def test_analyze_xbar_10k(self, study_10k):
         """analyze() Xbar chart with 10K rows."""
         start = time.perf_counter()
-        result = study_10k.analyze(chart='Xbar')
+        result = study_10k.execute(chart='Xbar')
         elapsed = time.perf_counter() - start
 
         assert result is not None
@@ -201,7 +201,7 @@ class TestAnalyzePerformance:
     def test_analyze_xbar_100k(self, study_100k):
         """analyze() Xbar chart with 100K rows."""
         start = time.perf_counter()
-        result = study_100k.analyze(chart='Xbar')
+        result = study_100k.execute(chart='Xbar')
         elapsed = time.perf_counter() - start
 
         assert result is not None
@@ -210,7 +210,7 @@ class TestAnalyzePerformance:
     def test_analyze_imr_100k(self, study_100k):
         """analyze() Imr chart with 100K rows."""
         start = time.perf_counter()
-        result = study_100k.analyze(chart='Imr')
+        result = study_100k.execute(chart='Imr')
         elapsed = time.perf_counter() - start
 
         assert result is not None
@@ -417,7 +417,7 @@ class TestFullPipeline:
 
         # Step 3: Analyze
         start = time.perf_counter()
-        result = study.analyze(chart='Xbar')
+        result = study.execute(chart='Xbar')
         time_analyze = time.perf_counter() - start
 
         # Step 4: Get chart data
@@ -446,7 +446,7 @@ class TestFullPipeline:
             factors=perf_spec['rsg_vars'],
             time=perf_spec['time_var'],
         )
-        result = study.analyze(chart='Xbar')
+        result = study.execute(chart='Xbar')
         chart_data = result.get_chart('Xbar')
 
         total = time.perf_counter() - start_total

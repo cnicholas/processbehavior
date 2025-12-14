@@ -1,15 +1,15 @@
 #!/usr/bin/env python
 """
-Demonstration of the new ProcessBehavior API
+Demonstration of the ProcessBehavior API
 
-This script shows how the new API makes process behavior analysis
+This script shows how the API makes process behavior analysis
 frictionless by auto-detecting the Sampling Design State (SDS) and
 running the appropriate analysis.
 
 Key features demonstrated:
-1. Column name auto-completion
+1. Column name auto-completion via pb.cols
 2. SDS-driven automatic analysis selection
-3. IMR charts for simple series (like qcc)
+3. IMR charts for simple series
 4. Xbar/S charts for grouped data
 5. Clear explanations of what's running and why
 """
@@ -24,7 +24,7 @@ np.random.seed(42)
 
 
 def example1_simple_series():
-    """Example 1: Simple time series → IMR Chart (SDS 0)"""
+    """Example 1: Simple time series -> IMR Chart (SDS 4)"""
     print("\n" + "="*80)
     print("EXAMPLE 1: Simple Time Series")
     print("="*80)
@@ -32,105 +32,110 @@ def example1_simple_series():
     # Create simple measurement data
     df = pd.DataFrame({
         'Measurement': np.random.normal(100, 2, 30),
-        'Time': pd.date_range('2024-01-01', periods=30, freq='D')
+        'Time': range(1, 31)
     })
 
     print("\nData preview:")
     print(df.head())
 
     # Wrap in ProcessBehavior
-    data = ProcessBehavior(df)
+    pb = ProcessBehavior(df)
 
-    # Auto-completion for column names!
-    # In an IDE, typing `data.cols.` will show Measurement and Time
-    analysis = data.analyze(
-        response_var=data.cols.Measurement,
-        time_var=data.cols.Time
+    # Step 1: Formulate the study
+    # Auto-completion for column names - typing `pb.cols.` shows Measurement and Time
+    study = pb.formulate(
+        response=pb.cols.Measurement,
+        time=pb.cols.Time
     )
 
-    # System prints explanation of SDS detection and chosen analysis
-    # Should show: "Detected SDS 0: Running IMR Chart"
+    # Inspect the study
+    print(f"\nDetected SDS: {study.sds}")
+    print(f"Valid charts: {study.valid_charts}")
+    print(f"Recommended: {study.recommended_chart}")
 
-    result = analysis.calculate()
+    # Step 2: Execute the analysis
+    result = study.execute()
+
     print("\nIMR Chart Results:")
-    if isinstance(result, dict):
-        print(result)
-    else:
-        print(result.head(10))
+    print(result.summary)
 
 
 def example2_grouped_data():
-    """Example 2: Manufacturing data with operators → Xbar/S Charts"""
+    """Example 2: Manufacturing data with factors -> Xbar/S Charts"""
     print("\n" + "="*80)
     print("EXAMPLE 2: Grouped Manufacturing Data")
     print("="*80)
 
-    # Create manufacturing data with rational subgroups
-    n_obs = 60
+    # Create manufacturing data with replication (SDS 1)
+    # 2 operators x 3 time points x 5 replicates = 30 observations
+    data = []
+    for t in range(1, 4):
+        for op in ['Alice', 'Bob']:
+            for _ in range(5):
+                data.append({
+                    'Height': np.random.normal(50, 3),
+                    'Operator': op,
+                    'Time': t
+                })
+    df = pd.DataFrame(data)
+
+    print("\nData preview:")
+    print(df.head(10))
+
+    pb = ProcessBehavior(df)
+
+    # Formulate with factors
+    study = pb.formulate(
+        response=pb.cols.Height,
+        factors=[pb.cols.Operator],
+        time=pb.cols.Time
+    )
+
+    print(f"\nDetected SDS: {study.sds} ({study.sds_name})")
+    print(f"Valid charts: {study.valid_charts}")
+    print(f"Recommended: {study.recommended_chart}")
+
+    # Execute analysis
+    result = study.execute()
+
+    print("\nXbar Chart Summary:")
+    print(result.summary)
+
+
+def example3_single_factor():
+    """Example 3: Single factor with time -> Stratified IMR"""
+    print("\n" + "="*80)
+    print("EXAMPLE 3: Single Factor Analysis (SDS 2)")
+    print("="*80)
+
+    # Create data with single observation per cell (SDS 2)
     df = pd.DataFrame({
-        'Height': np.random.normal(50, 3, n_obs),
-        'Operator': np.random.choice(['Alice', 'Bob'], n_obs),
-        'Machine': np.random.choice(['M1', 'M2'], n_obs),
-        'ProductionTime': range(1, n_obs + 1)
+        'Strength': np.random.normal(100, 5, 20),
+        'Batch': ['A', 'B'] * 10,
+        'Sequence': list(range(1, 11)) + list(range(1, 11))
     })
 
     print("\nData preview:")
     print(df.head(10))
 
-    data = ProcessBehavior(df)
+    pb = ProcessBehavior(df)
 
-    # Auto-complete works for all columns!
-    analysis = data.analyze(
-        response_var=data.cols.Height,
-        time_var=data.cols.ProductionTime,
-        grouping_vars=[data.cols.Operator, data.cols.Machine]
+    study = pb.formulate(
+        response=pb.cols.Strength,
+        factors=[pb.cols.Batch],
+        time=pb.cols.Sequence
     )
 
-    # System should detect SDS 1, 2, or 3 and run Xbar/S charts
-    # Prints explanation of detected SDS and why Xbar/S is appropriate
+    print(f"\nDetected SDS: {study.sds} ({study.sds_name})")
+    print(f"Valid charts: {study.valid_charts}")
+    print(f"Recommended: {study.recommended_chart}")
 
-    result = analysis.calculate()
-    print("\nXbar Chart (Subgroup Means):")
-    print(result['Xbar']['data'].head())
-    print("\nXbar Statistics:")
-    print(result['Xbar']['statistics'])
-
-    print("\nS Chart (Subgroup Variation):")
-    print(result['Sbar']['data'].head())
-    print("\nS Statistics:")
-    print(result['Sbar']['statistics'])
+    result = study.execute()
+    print("\nAnalysis Summary:")
+    print(result.summary)
 
 
-def example3_single_factor():
-    """Example 3: Single factor with time → Simplified grouping"""
-    print("\n" + "="*80)
-    print("EXAMPLE 3: Single Factor Analysis")
-    print("="*80)
-
-    # Create data with single grouping factor
-    df = pd.DataFrame({
-        'Strength': np.random.normal(100, 5, 40),
-        'Batch': ['A', 'B'] * 20,
-        'Sequence': range(1, 41)
-    })
-
-    print("\nData preview:")
-    print(df.head())
-
-    data = ProcessBehavior(df)
-
-    analysis = data.analyze(
-        response_var=data.cols.Strength,
-        time_var=data.cols.Sequence,
-        grouping_vars=[data.cols.Batch]
-    )
-
-    result = analysis.calculate()
-    print("\nXbar Results:")
-    print(result['Xbar']['data'].head())
-
-
-def example4_no_autocomplete():
+def example4_string_names():
     """Example 4: You can still use strings if you prefer"""
     print("\n" + "="*80)
     print("EXAMPLE 4: Using String Names (backward compatible)")
@@ -141,52 +146,57 @@ def example4_no_autocomplete():
         'Time': range(1, 21)
     })
 
-    data = ProcessBehavior(df)
+    pb = ProcessBehavior(df)
 
     # Still works with plain strings (no auto-completion though)
-    analysis = data.analyze(
-        response_var='Value',
-        time_var='Time'
+    study = pb.formulate(
+        response='Value',
+        time='Time'
     )
 
-    result = analysis.calculate()
+    result = study.execute()
     print("\nResults:")
-    if isinstance(result, dict):
-        print(result)
-    else:
-        print(result.head())
+    print(result.summary)
 
 
-def example5_zero_centering():
-    """Example 5: Zero-centered analysis"""
+def example5_chart_type_selection():
+    """Example 5: Specifying chart type explicitly"""
     print("\n" + "="*80)
-    print("EXAMPLE 5: Zero-Centered Analysis")
+    print("EXAMPLE 5: Explicit Chart Type Selection")
     print("="*80)
 
-    # Data with large offset
-    df = pd.DataFrame({
-        'Temperature': np.random.normal(1000, 5, 25),
-        'Reading': range(1, 26)
-    })
+    # Create data with replication
+    data = []
+    for t in range(1, 6):
+        for lane in ['L1', 'L2']:
+            for _ in range(3):
+                data.append({
+                    'Weight': np.random.normal(100, 2),
+                    'Lane': lane,
+                    'Pull': t
+                })
+    df = pd.DataFrame(data)
 
-    print("\nOriginal data (centered around 1000):")
-    print(df.head())
+    pb = ProcessBehavior(df)
 
-    data = ProcessBehavior(df)
-
-    analysis = data.analyze(
-        response_var=data.cols.Temperature,
-        time_var=data.cols.Reading,
-        zero_center=True  # Subtract mean to focus on variation
+    study = pb.formulate(
+        response=pb.cols.Weight,
+        factors=[pb.cols.Lane],
+        time=pb.cols.Pull
     )
 
-    result = analysis.calculate()
-    print("\nZero-centered results:")
-    if isinstance(result, dict):
-        print(result)
-    else:
-        print(result.head())
-        print(f"\nData is now centered at: {result['mean'].iloc[0]:.3f}")
+    print(f"\nDetected SDS: {study.sds}")
+    print(f"Valid charts: {study.valid_charts}")
+
+    # Use recommended chart
+    result1 = study.execute()
+    print(f"\nDefault (recommended={study.recommended_chart}):")
+    print(result1.summary)
+
+    # Or specify chart explicitly using auto-completion
+    result2 = study.execute(chart=study.charts.Imr)
+    print(f"\nWith chart=study.charts.Imr:")
+    print(result2.summary)
 
 
 def main():
@@ -199,18 +209,18 @@ def main():
     example1_simple_series()
     example2_grouped_data()
     example3_single_factor()
-    example4_no_autocomplete()
-    example5_zero_centering()
+    example4_string_names()
+    example5_chart_type_selection()
 
     print("\n" + "="*80)
     print("All examples complete!")
     print("="*80)
     print("\nKey Takeaways:")
-    print("  1. No more typos - use data.cols.ColumnName for auto-completion")
+    print("  1. No more typos - use pb.cols.ColumnName for auto-completion")
     print("  2. No more wrong analysis types - system detects SDS automatically")
-    print("  3. Clear explanations - always tells you what it's doing and why")
-    print("  4. Follows your data - analysis adapts to data structure")
-    print("\nHappy analyzing! 📊")
+    print("  3. Two-step workflow: formulate() then execute()")
+    print("  4. Clear explanations - always tells you what it's doing and why")
+    print("  5. Follows your data - analysis adapts to data structure")
 
 
 if __name__ == '__main__':

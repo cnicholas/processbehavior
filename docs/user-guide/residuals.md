@@ -34,7 +34,7 @@ study = pdf.formulate(
 print(study.dataset[['R1', 'R2', 'R3', 'R4', 'R5']].head())
 
 # Access via result
-result = study.analyze()
+result = study.execute()
 print(result.residuals.head())
 ```
 
@@ -51,7 +51,7 @@ print(result.residuals.head())
 
 ```python
 # Chart the within-cell variation
-result = study.analyze(study.charts.R2_S)
+result = study.execute(study.charts.R2_S)
 fig = result.plot(show_zones=True, title='Within-Cell Variation')
 ```
 
@@ -71,7 +71,7 @@ This removes both main effects, leaving only the interaction.
 **Chart**: R3_Imr
 
 ```python
-result = study.analyze(study.charts.R3_Imr)
+result = study.execute(study.charts.R3_Imr)
 fig = result.plot(show_zones=True, title='Factor × Time Interactions')
 ```
 
@@ -91,7 +91,7 @@ This combines the time effect with within-cell variation.
 **Chart**: R4_Imr
 
 ```python
-result = study.analyze(study.charts.R4_Imr)
+result = study.execute(study.charts.R4_Imr)
 fig = result.plot(show_zones=True, show_rules=True, title='Time Effects')
 ```
 
@@ -112,7 +112,7 @@ This combines the factor effect with within-cell variation.
 **Chart**: R5_Imr
 
 ```python
-result = study.analyze(study.charts.R5_Imr)
+result = study.execute(study.charts.R5_Imr)
 fig = result.plot(show_zones=True, title='Factor Effects')
 ```
 
@@ -127,11 +127,11 @@ By default, residual charts are centered at zero. Use `recentered=True` to show 
 
 ```python
 # Zero-centered (default)
-result = study.analyze(study.charts.R4_Imr)
+result = study.execute(study.charts.R4_Imr)
 # Centerline at 0, values show deviation from time mean
 
 # Re-centered on original scale
-result = study.analyze(study.charts.R4_Imr, recentered=True)
+result = study.execute(study.charts.R4_Imr, recentered=True)
 # Centerline at grand mean, values on original measurement scale
 ```
 
@@ -160,7 +160,7 @@ Re-centering formulas:
 ### Step 1: Check R2 (Measurement Stability)
 
 ```python
-result = study.analyze(study.charts.R2_S)
+result = study.execute(study.charts.R2_S)
 signals = result.detect_signals(chart='R2_S')
 
 if signals.has_signals:
@@ -171,7 +171,7 @@ if signals.has_signals:
 ### Step 2: Check R3 (Interactions)
 
 ```python
-result = study.analyze(study.charts.R3_Imr)
+result = study.execute(study.charts.R3_Imr)
 signals = result.detect_signals(chart='R3_Imr')
 
 if signals.has_signals:
@@ -182,14 +182,14 @@ if signals.has_signals:
 ### Step 3: Check R4 (Time Effects)
 
 ```python
-result = study.analyze(study.charts.R4_Imr)
+result = study.execute(study.charts.R4_Imr)
 fig = result.plot(show_zones=True, show_rules=True)
 ```
 
 ### Step 4: Check R5 (Factor Effects)
 
 ```python
-result = study.analyze(study.charts.R5_Imr)
+result = study.execute(study.charts.R5_Imr)
 fig = result.plot(show_zones=True, show_signals=True)
 ```
 
@@ -221,7 +221,7 @@ print(f"Residual charts: {study.residual_charts}")
 # Analyze each component
 for chart in ['R2_S', 'R3_Imr', 'R4_Imr', 'R5_Imr']:
     if chart in study.residual_charts:
-        result = study.analyze(chart)
+        result = study.execute(chart)
         signals = result.detect_signals()
         print(f"{chart}: {signals.count} signals")
 ```

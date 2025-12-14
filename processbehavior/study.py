@@ -10,7 +10,7 @@ before running calculations.
 Design Philosophy (Pythonic Hadley):
 - Human-first: Rich __repr__ teaches users about their data
 - Pit of success: Valid charts shown, invalid charts explained
-- Composability: study.analyze() returns AnalysisResult for chaining
+- Composability: study.execute() returns AnalysisResult for chaining
 - Immutable: Frozen dataclass, different formulations create new objects
 """
 
@@ -40,7 +40,7 @@ class StudyChartAccessor:
         study = pb.formulate(response='weight', factors=['lane'])
 
         # IDE auto-completes valid charts
-        result = study.analyze(chart=study.charts.Xbar)
+        result = study.execute(chart=study.charts.Xbar)
 
     Attributes are set dynamically based on SDS-specific valid charts.
     """
@@ -125,14 +125,14 @@ class Study:
 
     Run the analysis:
 
-    >>> result = study.analyze()  # Uses recommended chart
-    >>> result = study.analyze(chart='Xbar')  # Explicit chart
-    >>> result = study.analyze(chart=study.charts.Xbar)  # Via accessor
+    >>> result = study.execute()  # Uses recommended chart
+    >>> result = study.execute(chart='Xbar')  # Explicit chart
+    >>> result = study.execute(chart=study.charts.Xbar)  # Via accessor
 
     See Also
     --------
     ProcessBehavior.formulate : Create a Study from data
-    AnalysisResult : Result of study.analyze()
+    AnalysisResult : Result of study.execute()
     """
     _pdf: ProcessBehavior
     _spec: DataPrepConfig
@@ -348,10 +348,10 @@ class Study:
         "S chart requires n≥2 observations per subgroup. Your data has n=1."
 
         >>> study.why_not('Xbar')
-        "Xbar IS valid for this study. Use study.analyze(chart='Xbar')"
+        "Xbar IS valid for this study. Use study.execute(chart='Xbar')"
         """
         if chart in self.valid_charts:
-            return f"'{chart}' IS valid for this study. Use study.analyze(chart='{chart}')"
+            return f"'{chart}' IS valid for this study. Use study.execute(chart='{chart}')"
 
         # Check the invalid_charts list for the reason
         invalid_charts = self._plan.invalid_charts
@@ -361,7 +361,7 @@ class Study:
 
         return f"'{chart}' is not a recognized chart type. Valid types: {self.valid_charts}"
 
-    def analyze(
+    def execute(
         self,
         chart: str | None = None,
         recentered: bool = False
@@ -401,22 +401,22 @@ class Study:
         --------
         Use recommended chart:
 
-        >>> result = study.analyze()
+        >>> result = study.execute()
 
         Specify chart explicitly:
 
-        >>> result = study.analyze(chart='Xbar')
-        >>> result = study.analyze(chart=study.charts.Xbar)
+        >>> result = study.execute(chart='Xbar')
+        >>> result = study.execute(chart=study.charts.Xbar)
 
         Analyze residual charts (VAS):
 
-        >>> result = study.analyze(chart='R4_Imr')  # Time effects
-        >>> result = study.analyze(chart='R5_Imr')  # Factor effects
-        >>> result = study.analyze(chart='R4_Imr', recentered=True)  # Re-centered
+        >>> result = study.execute(chart='R4_Imr')  # Time effects
+        >>> result = study.execute(chart='R5_Imr')  # Factor effects
+        >>> result = study.execute(chart='R4_Imr', recentered=True)  # Re-centered
 
         Chain to visualization:
 
-        >>> study.analyze().plot()
+        >>> study.execute().plot()
         """
         # Import here to avoid circular imports
         from .analysis import Analysis
@@ -479,7 +479,7 @@ class Study:
             }
 
         # Create and run analysis using pre-calculated AnalysisDataSet
-        # This makes analyze() cheap - the expensive residual calculation was done in formulate()
+        # This makes execute() cheap - the expensive residual calculation was done in formulate()
         analysis = Analysis(self._pdf.data, spec_dict, analysis_dataset=self._ads)
         return analysis.calculate()
 
@@ -565,7 +565,7 @@ class Study:
         lines.append("╠" + "═" * width + "╣")
 
         # Next steps
-        lines.append("║" + "  Next: study.analyze() or study.analyze(chart='Xbar')".ljust(width) + "║")
+        lines.append("║" + "  Next: study.execute() or study.execute(chart='Xbar')".ljust(width) + "║")
 
         lines.append("╚" + "═" * width + "╝")
 
@@ -585,7 +585,7 @@ class Study:
             <p><strong>Valid Charts:</strong> {', '.join(self.valid_charts)}</p>
             <p><strong>Recommended:</strong> {self.recommended_chart}</p>
             <hr>
-            <p><em>Next: study.analyze() or study.analyze(chart='{self.recommended_chart}')</em></p>
+            <p><em>Next: study.execute() or study.execute(chart='{self.recommended_chart}')</em></p>
         </div>
         """
         return html

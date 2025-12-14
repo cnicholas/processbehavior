@@ -16,8 +16,8 @@ Usage:
         time=pb.cols.ProductionTime
     )
 
-    # Step 2: analyze() - run the chart
-    result = study.analyze()
+    # Step 2: execute() - run the chart
+    result = study.execute()
 """
 
 from __future__ import annotations
@@ -112,7 +112,7 @@ class ChartTypeAccessor:
         study = pb.formulate(response='height')
 
         # Now you can use auto-completion for valid charts
-        result = study.analyze(chart=pb.charts.Xbar)  # IDE auto-completes!
+        result = study.execute(chart=pb.charts.Xbar)  # IDE auto-completes!
 
     Attributes are set dynamically based on SDS-specific valid charts.
     """
@@ -166,9 +166,9 @@ class ProcessBehavior:
         print(study.valid_charts)  # What's available
         print(study.recommended_chart)  # Best choice
 
-        # Step 2: analyze() - run the chart
-        result = study.analyze()  # Uses recommended chart
-        result = study.analyze(chart='Xbar')  # Or explicit chart
+        # Step 2: execute() - run the chart
+        result = study.execute()  # Uses recommended chart
+        result = study.execute(chart='Xbar')  # Or explicit chart
 
     Attributes:
         cols: ColumnAccessor for IDE auto-completion of column names
@@ -294,7 +294,7 @@ class ProcessBehavior:
             - SDS detection results
             - Valid and recommended chart types
             - guidance methods like study.why_not()
-            - study.analyze() to run calculations
+            - study.execute() to run calculations
 
         Examples
         --------
@@ -317,8 +317,8 @@ class ProcessBehavior:
 
         Run the analysis:
 
-        >>> result = study.analyze()  # Uses recommended chart
-        >>> result = study.analyze(chart='Xbar')  # Explicit chart
+        >>> result = study.execute()  # Uses recommended chart
+        >>> result = study.execute(chart='Xbar')  # Explicit chart
 
         See Also
         --------

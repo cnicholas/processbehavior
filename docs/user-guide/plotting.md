@@ -7,7 +7,7 @@ ProcessBehavior provides interactive Plotly-based visualizations with profession
 After analysis, call `plot()` to create a visualization:
 
 ```python
-result = study.analyze()
+result = study.execute()
 
 # Basic chart
 fig = result.plot()
@@ -74,7 +74,7 @@ fig = result.plot(chart='S', show_zones=True)
 
 ```python
 # For stratified IMR analysis
-result = study.analyze(study.charts.Imr)
+result = study.execute(study.charts.Imr)
 
 # All lanes in one figure
 fig = result.plot(

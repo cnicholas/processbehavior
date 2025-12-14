@@ -73,10 +73,10 @@ study = pdf.formulate(...)
 
 **Methods:**
 
-#### analyze()
+#### execute()
 
 ```python
-result = study.analyze(
+result = study.execute(
     chart: str = None,        # Chart type (default: recommended)
     recentered: bool = False  # Re-center residuals on original scale
 ) -> AnalysisResult
@@ -97,7 +97,7 @@ Explains why a chart type is invalid for this SDS.
 Contains all results from an analysis.
 
 ```python
-result = study.analyze()
+result = study.execute()
 ```
 
 **Properties - Charts:**

@@ -15,7 +15,7 @@ pip install openpyxl
 ## Basic Export
 
 ```python
-result = study.analyze()
+result = study.execute()
 
 # Export to Excel
 result.to_excel('analysis_results.xlsx')
@@ -91,7 +91,7 @@ study = pdf.formulate(
     factors=[pdf.cols.lane],
     time=pdf.cols.batch
 )
-result = study.analyze()
+result = study.execute()
 
 # Full export with all options
 result.to_excel(
@@ -196,7 +196,7 @@ This allows custom processing before export.
 
 ```python
 # Analyze
-result = study.analyze()
+result = study.execute()
 
 # Detect signals
 signals = result.detect_signals()

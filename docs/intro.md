@@ -84,7 +84,7 @@ print(f"Detected: SDS {study.sds}")
 print(f"Recommended: {study.recommended_chart}")
 
 # Analyze and visualize
-result = study.analyze()
+result = study.execute()
 result.plot(show_zones=True, show_signals=True)
 ```
 

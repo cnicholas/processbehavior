@@ -133,7 +133,7 @@ print(study.recommended_chart)  # 'Xbar'
 print(study.residual_charts)    # ['R2_S', 'R3_Imr', 'R4_Imr', 'R5_Imr']
 
 # Chart auto-completion
-result = study.analyze(study.charts.Xbar)  # IDE suggests valid charts
+result = study.execute(study.charts.Xbar)  # IDE suggests valid charts
 
 # Access the prepared dataset
 print(study.dataset.columns.tolist())
