@@ -28,7 +28,7 @@ from typing import TYPE_CHECKING
 import pandas as pd
 
 from .analysis_specification import DataPrepConfig
-from .sds_detector import SamplingDesignDetector
+from .sds_detector import SDSRegistry
 
 if TYPE_CHECKING:
     from .study import Study
@@ -58,12 +58,24 @@ class ColumnAccessor:
         """
         self._df = df
         self._columns = sorted(df.columns)  # Sort alphabetically for consistent ordering
+        self._attr_to_col = {}  # Track sanitized_name → original_column
 
         # Dynamically add each column as an attribute
         for col in self._columns:
             # Convert column name to valid Python identifier if needed
             attr_name = self._sanitize_column_name(col)
-            setattr(self, attr_name, col)
+
+            if attr_name in self._attr_to_col:
+                # Collision detected - warn and skip
+                existing_col = self._attr_to_col[attr_name]
+                logger.warning(
+                    f"Column name collision: '{col}' and '{existing_col}' "
+                    f"both sanitize to '{attr_name}'. "
+                    f"'{col}' will only be accessible via pb.cols['{col}']."
+                )
+            else:
+                self._attr_to_col[attr_name] = col
+                setattr(self, attr_name, col)
 
     def _sanitize_column_name(self, col_name: str) -> str:
         """
@@ -93,9 +105,32 @@ class ColumnAccessor:
         """Display available columns."""
         return f"ColumnAccessor({self._columns})"
 
+    def __getitem__(self, col_name: str) -> str:
+        """
+        Access column by original name (dict-style).
+
+        Useful for columns with names that can't be valid Python identifiers
+        or when collisions occur during sanitization.
+
+        Args:
+            col_name: Original column name
+
+        Returns:
+            The column name (for use in formulate())
+
+        Raises:
+            KeyError: If column doesn't exist
+        """
+        if col_name not in self._df.columns:
+            raise KeyError(
+                f"Column '{col_name}' not found. "
+                f"Available: {list(self._df.columns)}"
+            )
+        return col_name
+
     def __dir__(self):
         """Support for tab-completion in IPython/Jupyter."""
-        return [self._sanitize_column_name(col) for col in self._columns]
+        return list(self._attr_to_col.keys())
 
 
 class ProcessBehavior:
@@ -304,11 +339,11 @@ class ProcessBehavior:
         prepared_df = prep.prepare_dataset(self.data, config)
 
         # Detect SDS on prepared data
-        detector = SamplingDesignDetector()
+        detector = SDSRegistry()
         sds, min_cell_size = detector.detect_sds(prepared_df, config)
 
         # Get SDS analysis plan with all metadata
-        plan = SamplingDesignDetector.get_analysis_plan(sds, min_cell_size=min_cell_size)
+        plan = SDSRegistry.get_analysis_plan(sds, min_cell_size=min_cell_size)
 
         # Calculate full dataset with residuals (R1-R5, RCR1-RCR5)
         # Use AnalysisDataSet with the recommended chart type to trigger calculation

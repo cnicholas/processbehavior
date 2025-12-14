@@ -14,7 +14,7 @@ from processbehavior import ProcessBehavior
 from processbehavior import analysis_dataset as ad
 from processbehavior.data_preparation import DataPreparation
 from processbehavior.datasets import synthetic
-from processbehavior.sds_detector import SamplingDesignDetector
+from processbehavior.sds_detector import SDSRegistry
 
 
 def detect_sds_for_test(df: pd.DataFrame, spec: dict) -> int:
@@ -32,7 +32,7 @@ def detect_sds_for_test(df: pd.DataFrame, spec: dict) -> int:
     prep = DataPreparation()
     prep.validate_columns(df, config)
     prepared_df = prep.prepare_dataset(df, config)
-    detector = SamplingDesignDetector()
+    detector = SDSRegistry()
     sds, _min_cell_size = detector.detect_sds(prepared_df, config)
     return sds
 

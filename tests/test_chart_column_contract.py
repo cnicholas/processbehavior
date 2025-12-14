@@ -13,7 +13,7 @@ import pandas as pd
 from processbehavior.analysis import Analysis
 from processbehavior.data_preparation import DataPreparation
 from processbehavior.plotting.plotter import Plotter
-from processbehavior.sds_detector import SamplingDesignDetector
+from processbehavior.sds_detector import SDSRegistry
 
 
 def detect_sds_for_test(df: pd.DataFrame, spec: dict) -> int:
@@ -25,7 +25,7 @@ def detect_sds_for_test(df: pd.DataFrame, spec: dict) -> int:
     prep = DataPreparation()
     prep.validate_columns(df, config)
     prepared_df = prep.prepare_dataset(df, config)
-    detector = SamplingDesignDetector()
+    detector = SDSRegistry()
     return detector.detect_sds(prepared_df, config)
 
 

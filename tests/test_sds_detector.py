@@ -1,5 +1,5 @@
 """
-Unit tests for SamplingDesignDetector.
+Unit tests for SDSRegistry.
 
 Tests cover:
 - SDS detection for all 7 types (0-6)
@@ -13,7 +13,7 @@ import pandas as pd
 import pytest
 
 from processbehavior.analysis_dataset import AnalysisSpecification
-from processbehavior.sds_detector import SamplingDesignDetector
+from processbehavior.sds_detector import SDSRegistry
 
 # ============================================================================
 # Fixtures
@@ -21,8 +21,8 @@ from processbehavior.sds_detector import SamplingDesignDetector
 
 @pytest.fixture
 def detector():
-    """Create SamplingDesignDetector instance."""
-    return SamplingDesignDetector()
+    """Create SDSRegistry instance."""
+    return SDSRegistry()
 
 
 @pytest.fixture
@@ -655,7 +655,7 @@ class TestR2ChartAvailability:
 
         By definition, SDS 1 requires all cells to have n≥2.
         """
-        plan = SamplingDesignDetector.get_analysis_plan(sds=1, min_cell_size=3)
+        plan = SDSRegistry.get_analysis_plan(sds=1, min_cell_size=3)
 
         assert plan.vas_residuals_supported is True
         assert plan.min_cell_size == 3
@@ -667,7 +667,7 @@ class TestR2ChartAvailability:
 
         By definition, SDS 2 requires all cells to have n=1.
         """
-        plan = SamplingDesignDetector.get_analysis_plan(sds=2, min_cell_size=1)
+        plan = SDSRegistry.get_analysis_plan(sds=2, min_cell_size=1)
 
         assert plan.vas_residuals_supported is True
         assert plan.min_cell_size == 1
@@ -680,7 +680,7 @@ class TestR2ChartAvailability:
         SDS 3 is "partial replication" - some cells have n≥2, some n=1.
         When the minimum is ≥2, we can use S chart for R2.
         """
-        plan = SamplingDesignDetector.get_analysis_plan(sds=3, min_cell_size=2)
+        plan = SDSRegistry.get_analysis_plan(sds=3, min_cell_size=2)
 
         assert plan.vas_residuals_supported is True
         assert plan.min_cell_size == 2
@@ -692,7 +692,7 @@ class TestR2ChartAvailability:
 
         When some cells have only n=1, we must use Imr for R2.
         """
-        plan = SamplingDesignDetector.get_analysis_plan(sds=3, min_cell_size=1)
+        plan = SDSRegistry.get_analysis_plan(sds=3, min_cell_size=1)
 
         assert plan.vas_residuals_supported is True
         assert plan.min_cell_size == 1
@@ -705,7 +705,7 @@ class TestR2ChartAvailability:
         This is the main fix from GitHub Issue #49 - SDS 4 can
         have R2_S when cells have replication.
         """
-        plan = SamplingDesignDetector.get_analysis_plan(sds=4, min_cell_size=3)
+        plan = SDSRegistry.get_analysis_plan(sds=4, min_cell_size=3)
 
         assert plan.vas_residuals_supported is True
         assert plan.min_cell_size == 3
@@ -714,7 +714,7 @@ class TestR2ChartAvailability:
 
     def test_sds4_without_replication_has_r2_imr(self):
         """SDS 4 with min_cell_size=1 should use R2_Imr."""
-        plan = SamplingDesignDetector.get_analysis_plan(sds=4, min_cell_size=1)
+        plan = SDSRegistry.get_analysis_plan(sds=4, min_cell_size=1)
 
         assert plan.vas_residuals_supported is True
         assert plan.min_cell_size == 1
@@ -727,7 +727,7 @@ class TestR2ChartAvailability:
         Another key fix from GitHub Issue #49 - nested designs can
         have R2_S when cells have replication.
         """
-        plan = SamplingDesignDetector.get_analysis_plan(sds=5, min_cell_size=2)
+        plan = SDSRegistry.get_analysis_plan(sds=5, min_cell_size=2)
 
         assert plan.vas_residuals_supported is True
         assert plan.min_cell_size == 2
@@ -736,7 +736,7 @@ class TestR2ChartAvailability:
 
     def test_sds5_without_replication_has_r2_imr(self):
         """SDS 5 with min_cell_size=1 should use R2_Imr."""
-        plan = SamplingDesignDetector.get_analysis_plan(sds=5, min_cell_size=1)
+        plan = SDSRegistry.get_analysis_plan(sds=5, min_cell_size=1)
 
         assert plan.vas_residuals_supported is True
         assert plan.min_cell_size == 1
@@ -748,7 +748,7 @@ class TestR2ChartAvailability:
 
         Even irregular grids can use S chart for R2 if cells have n≥2.
         """
-        plan = SamplingDesignDetector.get_analysis_plan(sds=6, min_cell_size=5)
+        plan = SDSRegistry.get_analysis_plan(sds=6, min_cell_size=5)
 
         # SDS 6 supports VAS residuals (with moving average method)
         assert plan.vas_residuals_supported is True
@@ -757,7 +757,7 @@ class TestR2ChartAvailability:
 
     def test_sds6_without_replication_has_r2_imr(self):
         """SDS 6 (irregular) without replication uses R2_Imr."""
-        plan = SamplingDesignDetector.get_analysis_plan(sds=6, min_cell_size=1)
+        plan = SDSRegistry.get_analysis_plan(sds=6, min_cell_size=1)
 
         assert plan.vas_residuals_supported is True
         assert plan.min_cell_size == 1
@@ -766,7 +766,7 @@ class TestR2ChartAvailability:
 
     def test_sds0_no_residual_charts(self):
         """SDS 0 (no structure) has no residual charts."""
-        plan = SamplingDesignDetector.get_analysis_plan(sds=0, min_cell_size=0)
+        plan = SDSRegistry.get_analysis_plan(sds=0, min_cell_size=0)
 
         assert plan.vas_residuals_supported is False
         assert plan.residual_charts == []
@@ -774,7 +774,7 @@ class TestR2ChartAvailability:
     def test_all_r2_supporting_sds_have_other_residuals(self):
         """All SDS types with R2 should also have R3, R4, R5 charts."""
         for sds in [1, 2, 3, 4, 5]:
-            plan = SamplingDesignDetector.get_analysis_plan(sds=sds, min_cell_size=2)
+            plan = SDSRegistry.get_analysis_plan(sds=sds, min_cell_size=2)
 
             if plan.vas_residuals_supported:
                 # R3, R4 and R5 can be Xbar/S or Imr depending on data structure
@@ -801,7 +801,7 @@ class TestR4R5XbarSAvailability:
     def test_r4_xbar_s_when_has_factors(self):
         """R4_Xbar and R4_S available when has_factors=True."""
         # SDS 1 has_factors=True, has_time=True
-        plan = SamplingDesignDetector.get_analysis_plan(sds=1, min_cell_size=2)
+        plan = SDSRegistry.get_analysis_plan(sds=1, min_cell_size=2)
 
         assert plan.has_factors is True
         assert 'R4_Xbar' in plan.residual_charts
@@ -811,7 +811,7 @@ class TestR4R5XbarSAvailability:
     def test_r4_imr_when_no_factors(self):
         """R4_Imr fallback when has_factors=False."""
         # SDS 4 has_factors=False (single condition over time)
-        plan = SamplingDesignDetector.get_analysis_plan(sds=4, min_cell_size=2)
+        plan = SDSRegistry.get_analysis_plan(sds=4, min_cell_size=2)
 
         # SDS 4 actually has has_factors=True (single factor level)
         # Let's check what the plan says
@@ -823,7 +823,7 @@ class TestR4R5XbarSAvailability:
     def test_r5_xbar_s_when_has_time(self):
         """R5_Xbar and R5_S available when has_time=True."""
         # SDS 1 has_factors=True, has_time=True
-        plan = SamplingDesignDetector.get_analysis_plan(sds=1, min_cell_size=2)
+        plan = SDSRegistry.get_analysis_plan(sds=1, min_cell_size=2)
 
         assert plan.has_time is True
         assert 'R5_Xbar' in plan.residual_charts
@@ -836,7 +836,7 @@ class TestR4R5XbarSAvailability:
         # SDS 0 doesn't support VAS at all
         # Let's check SDS configurations
         for sds in range(7):
-            plan = SamplingDesignDetector.get_analysis_plan(sds=sds, min_cell_size=2)
+            plan = SDSRegistry.get_analysis_plan(sds=sds, min_cell_size=2)
             if plan.vas_residuals_supported and not plan.has_time:
                 assert 'R5_Imr' in plan.residual_charts
                 assert 'R5_Xbar' not in plan.residual_charts
@@ -845,14 +845,14 @@ class TestR4R5XbarSAvailability:
 
     def test_sds1_full_residual_charts(self):
         """SDS 1 should have full Xbar/S charts for R3, R4 and R5."""
-        plan = SamplingDesignDetector.get_analysis_plan(sds=1, min_cell_size=3)
+        plan = SDSRegistry.get_analysis_plan(sds=1, min_cell_size=3)
 
         expected = ['R2_S', 'R3_Xbar', 'R3_S', 'R4_Xbar', 'R4_S', 'R5_Xbar', 'R5_S']
         assert plan.residual_charts == expected
 
     def test_sds2_residual_charts(self):
         """SDS 2 (no replication) should still have R4/R5 Xbar/S."""
-        plan = SamplingDesignDetector.get_analysis_plan(sds=2, min_cell_size=1)
+        plan = SDSRegistry.get_analysis_plan(sds=2, min_cell_size=1)
 
         # R2 and R3 should be Imr (no replication)
         assert 'R2_Imr' in plan.residual_charts
@@ -868,13 +868,13 @@ class TestR4R5XbarSAvailability:
     def test_r3_xbar_s_when_replication(self):
         """R3 should have Xbar/S when min_cell_size >= 2, otherwise Imr."""
         # SDS 1 with replication should have R3_Xbar and R3_S
-        plan = SamplingDesignDetector.get_analysis_plan(sds=1, min_cell_size=2)
+        plan = SDSRegistry.get_analysis_plan(sds=1, min_cell_size=2)
         assert 'R3_Xbar' in plan.residual_charts
         assert 'R3_S' in plan.residual_charts
         assert 'R3_Imr' not in plan.residual_charts
 
         # SDS 2 (no replication by definition) should have R3_Imr
-        plan_sds2 = SamplingDesignDetector.get_analysis_plan(sds=2, min_cell_size=1)
+        plan_sds2 = SDSRegistry.get_analysis_plan(sds=2, min_cell_size=1)
         assert 'R3_Imr' in plan_sds2.residual_charts
         assert 'R3_Xbar' not in plan_sds2.residual_charts
         assert 'R3_S' not in plan_sds2.residual_charts
@@ -882,7 +882,7 @@ class TestR4R5XbarSAvailability:
     def test_r3_imr_when_no_replication(self):
         """R3 should use Imr when min_cell_size < 2."""
         # Even SDS 1 should use Imr if data happens to have no replication
-        plan = SamplingDesignDetector.get_analysis_plan(sds=1, min_cell_size=1)
+        plan = SDSRegistry.get_analysis_plan(sds=1, min_cell_size=1)
         assert 'R3_Imr' in plan.residual_charts
         assert 'R3_Xbar' not in plan.residual_charts
         assert 'R3_S' not in plan.residual_charts
