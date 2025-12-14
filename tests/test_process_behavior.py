@@ -182,7 +182,7 @@ def test_formulate_and_analyze_simple_series():
     result = study.execute()
 
     assert result is not None
-    assert 'all' in result.charts
+    assert 'Imr' in result.charts
 
 
 # ============================================================================
@@ -432,7 +432,7 @@ def test_full_workflow_simple_series():
     result = study.execute()
 
     assert result is not None
-    assert 'all' in result.charts
+    assert 'Imr' in result.charts
 
 
 def test_full_workflow_grouped_data():
