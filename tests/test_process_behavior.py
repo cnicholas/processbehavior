@@ -15,6 +15,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
+from processbehavior.exceptions import ChartNotAvailableError, ColumnNotFoundError
 from processbehavior.process_behavior import ColumnAccessor, ProcessBehavior
 
 # ============================================================================
@@ -905,11 +906,11 @@ def test_study_charts_accessor_repr():
 # ============================================================================
 
 def test_study_analyze_invalid_chart_raises():
-    """analyze() should raise ValueError for invalid chart type."""
+    """analyze() should raise ChartNotAvailableError for invalid chart type."""
     df = pd.DataFrame({'Value': [1, 2, 3, 4, 5]})
     study = ProcessBehavior(df).formulate(response='Value')
 
-    with pytest.raises(ValueError, match="not valid"):
+    with pytest.raises(ChartNotAvailableError, match="not valid"):
         study.execute(chart='S')  # S not valid for SDS 0
 
 
@@ -920,7 +921,7 @@ def test_study_analyze_invalid_chart_shows_valid():
 
     try:
         study.execute(chart='S')
-    except ValueError as e:
+    except ChartNotAvailableError as e:
         assert 'Imr' in str(e)  # Should mention valid charts
 
 
@@ -961,12 +962,12 @@ def test_study_analyze_residual_chart():
 
 
 def test_study_analyze_invalid_residual_chart_raises():
-    """analyze() should raise for invalid residual chart."""
+    """analyze() should raise ChartNotAvailableError for invalid residual chart."""
     df = pd.DataFrame({'Value': [1, 2, 3, 4, 5]})
     study = ProcessBehavior(df).formulate(response='Value')
 
     # SDS 0 has no residual charts
-    with pytest.raises(ValueError, match="not available"):
+    with pytest.raises(ChartNotAvailableError, match="not available"):
         study.execute(chart='R4_Imr')
 
 
@@ -1453,8 +1454,8 @@ def test_column_accessor_getitem():
     assert pb.cols['Column With Spaces'] == 'Column With Spaces'
     assert pb.cols['123_starts_with_number'] == '123_starts_with_number'
 
-    # KeyError for missing columns
-    with pytest.raises(KeyError):
+    # ColumnNotFoundError for missing columns
+    with pytest.raises(ColumnNotFoundError):
         pb.cols['nonexistent']
 
 
@@ -1467,7 +1468,7 @@ def test_column_accessor_getitem_keyerror_message():
 
     pb = ProcessBehavior(df)
 
-    with pytest.raises(KeyError) as exc_info:
+    with pytest.raises(ColumnNotFoundError) as exc_info:
         pb.cols['missing']
 
     # Error message should mention available columns

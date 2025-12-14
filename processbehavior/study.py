@@ -19,6 +19,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
+from .exceptions import ChartNotAvailableError
+
 if TYPE_CHECKING:
     import pandas as pd
 
@@ -519,7 +521,7 @@ class Study:
             # Validate residual chart is available for this SDS
             if chart_request not in self.residual_charts:
                 available = ', '.join(self.residual_charts) if self.residual_charts else 'None'
-                raise ValueError(
+                raise ChartNotAvailableError(
                     f"Residual chart '{chart_request}' is not available for SDS {self.sds}.\n"
                     f"Available residual charts: {available}\n"
                     f"Use study.residual_charts to see available options."
@@ -544,7 +546,7 @@ class Study:
             # Primary chart validation
             if chart_request not in self.valid_charts:
                 valid_list = ', '.join(self.valid_charts)
-                raise ValueError(
+                raise ChartNotAvailableError(
                     f"Chart type '{chart_request}' is not valid for SDS {self.sds}.\n"
                     f"Valid charts: {valid_list}\n"
                     f"Recommended: {self.recommended_chart}\n"
