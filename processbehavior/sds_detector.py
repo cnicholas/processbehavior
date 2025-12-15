@@ -356,34 +356,59 @@ class SDSRegistry:
             return (0, 0)
 
         # From here: have grouping factors
-        # CRITICAL DESIGN DECISION:
-        # - Cells are defined by FACTORS only (rsg_var_name)
-        # - Time is for ORDERING only, not for defining cells
-        # - If user wants time as a factor, they add it to factors list
         #
-        # This means:
-        # - factors=[lane] with time=pull → 4 cells (lanes), n≈200 each
-        # - factors=[lane, phase] with time=pull → 8 cells, n≈100 each
-        # - factors=[lane, phase, pull] → 800 cells, n=1 each
+        # DESIGN DECISION (Issue #60):
+        # SDS classification and analysis subgrouping serve different purposes:
+        #
+        # 1. SDS CLASSIFICATION (Wheeler/Bishop methodology):
+        #    - Based on N_kt = observations per (factor k × time t) cell
+        #    - Describes the DATA STRUCTURE
+        #    - SDS 1: All N_kt >= 2 (Complete)
+        #    - SDS 2: All N_kt = 1 (Semi-Complete)
+        #    - SDS 3: Mixed N_kt (Semi-Complete)
+        #
+        # 2. ANALYSIS SUBGROUPING (practical charts):
+        #    - Based on factor-only grouping
+        #    - Determines rational subgroups for Xbar-S charts
+        #    - Enables stratified Imr/R charts per subgroup
+        #    - min_cell_size used for chart selection (R2_S vs R2_Imr)
 
-        # Count observations per CELL (factor combination only, NOT factor × time)
-        # - This is for determining replication pattern (n=1 vs n≥2 per cell)
-        # - SDS 1: All cells have n≥2
-        # - SDS 2: All cells have n=1
-        # - SDS 3: Mixed cells (some n=1, some n≥2)
-        cell_sizes = (
+        # --- SDS Classification: Group by (factor × time) for N_kt ---
+        if spec.has_time:
+            nkt_counts = (
+                df.groupby([spec.rsg_var_name, spec.time_var], dropna=False, observed=True)
+                .size()
+            )
+            min_nkt = nkt_counts.min()
+            max_nkt = nkt_counts.max()
+        else:
+            # No time variable - N_kt reduces to N_k
+            nkt_counts = (
+                df.groupby([spec.rsg_var_name], dropna=False, observed=True)
+                .size()
+            )
+            min_nkt = nkt_counts.min()
+            max_nkt = nkt_counts.max()
+
+        # --- Analysis Subgrouping: Group by factor only for chart selection ---
+        subgroup_sizes = (
             df.groupby([spec.rsg_var_name], dropna=False, observed=True)
             .size()
         )
+        min_cell_size = subgroup_sizes.min()  # For R2_S vs R2_Imr decision
 
-        min_n = cell_sizes.min()
-        max_n = cell_sizes.max()
         n_groups = df[spec.rsg_var_name].nunique()
 
         logger.debug(
-            f"SDS Detection: {n_groups} groups (factor combinations), "
-            f"n range: [{min_n}, {max_n}]"
+            f"SDS Detection: N_kt range [{min_nkt}, {max_nkt}], "
+            f"subgroup size range [{min_cell_size}, {subgroup_sizes.max()}], "
+            f"{n_groups} factor groups"
         )
+
+        # Use N_kt values for SDS classification
+        min_n = min_nkt
+        max_n = max_nkt
+        cell_sizes = nkt_counts  # For downstream classification logic
 
         # Check for nested design (SDS 5) - only if multiple factor variables
         if len(spec.rsg_vars) >= 2:
@@ -391,19 +416,19 @@ class SDSRegistry:
             n_cells = len(cell_sizes)
             sds5 = self._check_nested_design(df, spec, n_cells, n_groups)
             if sds5 is not None:
-                return (sds5, min_n)
+                return (sds5, min_cell_size)
 
         # SDS 4: Single group (only one factor level)
         if n_groups == 1:
             logger.debug(f"SDS 4: Single group ({n_groups} factor level)")
-            return (4, min_n)
+            return (4, min_cell_size)
 
-        # SDS 1, 2, or 3: Based on cell-level replication pattern
-        # Coverage ratio is 1.0 since cells are just the factor combinations
+        # SDS 1, 2, or 3: Based on N_kt replication pattern (Wheeler/Bishop)
+        # Note: min_cell_size (factor-only) returned for chart selection
         sds = self._classify_by_replication(
             cell_sizes, min_n, max_n, coverage_ratio=1.0
         )
-        return (sds, min_n)
+        return (sds, min_cell_size)
 
     def get_sds_characteristics(self, sds: int) -> dict:
         """

@@ -210,17 +210,21 @@ def test_detect_sds4_single_condition(detector, sds4_data, spec_with_grouping_an
     assert min_n >= 1
 
 
-def test_detect_sds1_with_time_as_ordering(detector, sds6_data, spec_with_grouping_and_time):
-    """Time is for ordering only, not a factorial dimension.
+def test_detect_sds2_with_nkt_grouping(detector, sds6_data, spec_with_grouping_and_time):
+    """SDS detection uses N_kt (factor × time) per Wheeler/Bishop.
 
-    NEW BEHAVIOR: Cells are defined by factors only.
-    This data has 2 groups ('A', 'B') with n=5 each = SDS 1.
-    The sparse time coverage doesn't affect SDS detection.
+    DESIGN DECISION (Issue #60):
+    - SDS classification: based on N_kt (factor × time cells)
+    - Analysis subgrouping: based on factors only (for charts)
+
+    This data has 2 groups × unique time points = all N_kt = 1 → SDS 2
+    The min_cell_size (for chart selection) uses factor-only = 5.
     """
     sds, min_n = detector.detect_sds(sds6_data, spec_with_grouping_and_time)
 
-    # 2 groups with n=5 each = full replication
-    assert sds == 1
+    # Per Wheeler/Bishop: all N_kt = 1 → SDS 2
+    assert sds == 2
+    # min_cell_size uses factor-only grouping (A:5, B:5)
     assert min_n >= 2
 
 
@@ -480,11 +484,15 @@ def test_detect_sds_boundary_75_percent_coverage(detector, spec_with_grouping_an
     assert sds != 6
 
 
-def test_detect_sds1_sparse_time_coverage(detector, spec_with_grouping_and_time):
-    """Time is ordering only - sparse time coverage doesn't affect SDS.
+def test_detect_sds2_sparse_time_coverage(detector, spec_with_grouping_and_time):
+    """SDS detection uses N_kt per Wheeler/Bishop.
 
-    NEW BEHAVIOR: Cells are defined by factors only.
-    This data has 2 groups ('A', 'B') with n=7 each = SDS 1.
+    DESIGN DECISION (Issue #60):
+    - SDS classification: based on N_kt (factor × time cells)
+    - Analysis subgrouping: based on factors only (for charts)
+
+    This data has each (rsg, pull) cell with n=1 → SDS 2
+    min_cell_size uses factor-only (A:7, B:7) for chart selection.
     """
     df = pd.DataFrame({
         'rsg': ['A'] * 7 + ['B'] * 7,
@@ -494,8 +502,9 @@ def test_detect_sds1_sparse_time_coverage(detector, spec_with_grouping_and_time)
 
     sds, min_n = detector.detect_sds(df, spec_with_grouping_and_time)
 
-    # 2 groups with n=7 each = full replication
-    assert sds == 1
+    # Per Wheeler/Bishop: all N_kt = 1 → SDS 2
+    assert sds == 2
+    # min_cell_size uses factor-only grouping (A:7, B:7)
     assert min_n == 7
 
 
