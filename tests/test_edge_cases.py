@@ -9,8 +9,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from processbehavior import ProcessBehavior, ValidationError
-
+from processbehavior import ProcessBehavior
 
 # ============================================================================
 # TestMissingData: NaN handling
@@ -390,11 +389,12 @@ class TestUnbalancedData:
         })
         pb = ProcessBehavior(df)
 
-        # Library groups by factor, so A has 3 obs, B has 3 obs
-        # This gives replication at factor level, so SDS 1 is detected
+        # Per Wheeler/Bishop, SDS is based on N_kt (factor × time cells):
+        # Each (Factor, Time) cell has exactly n=1, so this is SDS 2
+        # Note: Analysis subgrouping uses factor-only (A:3, B:3) for chart selection
         study = pb.formulate(response='Value', factors=['Factor'], time='Time')
-        assert study.sds == 1
-        assert 'Xbar' in study.valid_charts
+        assert study.sds == 2  # Wheeler/Bishop: all N_kt = 1 → SDS 2
+        assert 'Xbar' in study.valid_charts  # Still valid due to factor-level subgrouping
 
     def test_unbalanced_time_points(self):
         """Different number of observations per time point."""

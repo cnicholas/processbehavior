@@ -72,11 +72,18 @@ class TestSDSDetection:
         sds = detect_sds_for_test(df, spec)
         assert sds == 2, f"Time as factor: Expected SDS=2, got {sds}"
 
-    def test_sds2_becomes_sds1_with_time_as_ordering(self):
-        """Test that time as ordering only collapses to SDS 1."""
+    def test_sds2_detection_with_nkt_grouping(self):
+        """Test that SDS 2 data is correctly detected as SDS 2 per Wheeler/Bishop.
+
+        Per Wheeler/Bishop methodology, SDS is based on N_kt (factor × time cells):
+        - make_sds2() generates data with all N_kt = 1 (no replication)
+        - This correctly classifies as SDS 2 (Semi-Complete, no replication)
+
+        Note: Analysis subgrouping uses factor-only (n=10 per factor), but
+        SDS classification uses N_kt.
+        """
         df = synthetic.make_sds2(K=3, T=10, seed=42)
 
-        # With time as ordering only: 3 factors with n=10 each = SDS 1
         spec = {
             'analysis_type': 'Xbar',
             'rsg_vars': ['factor 1'],
@@ -87,7 +94,7 @@ class TestSDSDetection:
         }
 
         sds = detect_sds_for_test(df, spec)
-        assert sds == 1, f"Time as ordering: Expected SDS=1, got {sds}"
+        assert sds == 2, f"Wheeler/Bishop: all N_kt=1 → Expected SDS=2, got {sds}"
 
     def test_sds4_single_condition(self):
         """Test SDS 4: Single condition over time (no grouping)."""
