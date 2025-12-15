@@ -30,6 +30,8 @@ Catch all library errors:
 ...     print(f"Analysis failed: {e}")
 """
 
+from __future__ import annotations
+
 
 class ProcessBehaviorError(Exception):
     """
