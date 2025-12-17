@@ -33,8 +33,8 @@ def detect_sds_for_test(df: pd.DataFrame, spec: dict) -> int:
     prep.validate_columns(df, config)
     prepared_df = prep.prepare_dataset(df, config)
     detector = SDSRegistry()
-    sds, _min_cell_size = detector.detect_sds(prepared_df, config)
-    return sds
+    result = detector.detect_sds(prepared_df, config)
+    return result.sds
 
 
 class TestSDSDetection:
