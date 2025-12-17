@@ -337,30 +337,44 @@ class ProcessBehavior:
 
     def _validate_plan(
         self,
-        plan: dict[str | ColumnRef, list]
-    ) -> tuple[dict[str, list], list[str]]:
+        plan: dict
+    ) -> tuple[dict[str, list], list[str], int | None, int | None]:
         """
         Validate and normalize sampling plan.
 
         Parameters
         ----------
         plan : dict
-            Sampling plan with column names/refs as keys and level lists as values
+            Sampling plan with required 'factors' key and optional 'T', 'N'.
+            Example: {'factors': {'Lane': [1,2,3,4], 'Phase': [1,2,3]}, 'T': 10, 'N': 2}
 
         Returns
         -------
-        tuple[dict[str, list], list[str]]
-            Normalized plan (str keys) and factor order
+        tuple[dict[str, list], list[str], int | None, int | None]
+            (normalized_factors, factor_order, T_planned, N_planned)
 
         Raises
         ------
+        ValidationError
+            If 'factors' key is missing
         ColumnNotFoundError
             If a plan column doesn't exist in the data
         """
+        # Require 'factors' key
+        if 'factors' not in plan:
+            raise ValidationError(
+                "Sampling plan must have 'factors' key.\n"
+                "Example: plan={'factors': {'Lane': [1,2,3,4], 'Phase': [1,2,3]}, 'T': 10, 'N': 2}"
+            )
+
+        plan_factors = plan['factors']
+        T_planned = plan.get('T')
+        N_planned = plan.get('N')
+
         normalized: dict[str, list] = {}
         factor_order: list[str] = []
 
-        for col, levels in plan.items():
+        for col, levels in plan_factors.items():
             col_name = self._to_column_name(col)
 
             # Validate column exists
@@ -390,12 +404,12 @@ class ProcessBehavior:
                     f"  Observed:  {observed_sorted}\n"
                     f"\n"
                     f"  To update your plan:\n"
-                    f"    plan['{col_name}'] = pb.cols['{col_name}'].levels  # Use observed\n"
+                    f"    plan['factors']['{col_name}'] = pb.cols['{col_name}'].levels  # Use observed\n"
                     f"    # or\n"
-                    f"    plan['{col_name}'] = {observed_sorted}  # Add manually"
+                    f"    plan['factors']['{col_name}'] = {observed_sorted}  # Add manually"
                 )
 
-        return normalized, factor_order
+        return normalized, factor_order, T_planned, N_planned
 
     def formulate(
         self,
@@ -494,10 +508,12 @@ class ProcessBehavior:
         sampling_plan: dict[str, list] | None = None
         factor_order: list[str] | None = None
         factors_str: list[str] | None = None
+        T_planned: int | None = None
+        N_planned: int | None = None
 
         if plan is not None:
             # Validate and normalize the plan
-            sampling_plan, factor_order = self._validate_plan(plan)
+            sampling_plan, factor_order, T_planned, N_planned = self._validate_plan(plan)
             # Extract factors from plan keys
             factors_str = factor_order
         elif factors is not None:
@@ -557,7 +573,10 @@ class ProcessBehavior:
             _plan=analysis_plan,
             _ads=ads,
             _sampling_plan=sampling_plan,
-            _factor_order=factor_order
+            _factor_order=factor_order,
+            _T=T_planned,
+            _N=N_planned,
+            _sds_result=sds_result
         )
 
     def __repr__(self) -> str:

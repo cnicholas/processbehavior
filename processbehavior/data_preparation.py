@@ -29,6 +29,31 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
+def natural_sort_key(s: str) -> list:
+    """
+    Key function for natural sorting of strings with embedded numbers.
+
+    This ensures '1_10' comes after '1_2', not before (lexicographic would put 10 before 2).
+
+    Parameters
+    ----------
+    s : str
+        String to generate sort key for
+
+    Returns
+    -------
+    list
+        Sort key that handles embedded numbers correctly
+
+    Examples
+    --------
+    >>> sorted(['1_2', '1_10', '1_1'], key=natural_sort_key)
+    ['1_1', '1_2', '1_10']
+    """
+    import re
+    return [int(text) if text.isdigit() else text.lower() for text in re.split(r'(\d+)', s)]
+
+
 def encode_rsg(factor_values: tuple | list, delimiter: str = '_') -> str:
     """
     Encode factor values into RSG (Rational Subgroup) string.
