@@ -6,21 +6,18 @@ for enabling SDS 4-6 detection with explicit factor level specifications.
 """
 
 import warnings
+from itertools import product
 
 import pandas as pd
 import pytest
 
-from itertools import product
-
 from processbehavior import (
     ColumnNotFoundError,
     ColumnRef,
-    DesignReport,
     ProcessBehavior,
     ValidationError,
     encode_rsg,
 )
-
 
 # =============================================================================
 # Test Fixtures
@@ -178,7 +175,7 @@ class TestColumnRef:
         lane_ref = pb.cols.Lane
 
         assert lane_ref == 'Lane'
-        assert 'Lane' == lane_ref  # Test reverse comparison
+        assert lane_ref == 'Lane'  # Test reverse comparison
 
     def test_column_ref_hash_equals_string_hash(self, simple_df):
         """ColumnRef should hash same as equivalent string."""
@@ -287,7 +284,7 @@ class TestPlanValidation:
         pb = ProcessBehavior(extra_phase_df)
 
         with caplog.at_level(logging.WARNING):
-            study = pb.formulate(
+            pb.formulate(
                 response=pb.cols.Weight,
                 plan={
                     'factors': {
@@ -880,7 +877,7 @@ class TestDocsAlignment:
         """SDS 6 should be 'Incomplete Without Replication' everywhere."""
         from processbehavior.sds_detector import SDSRegistry
 
-        chars = SDSRegistry().get_sds_characteristics(6)
+        SDSRegistry().get_sds_characteristics(6)
         plan = SDSRegistry.get_analysis_plan(6)
 
         assert plan.name == 'Incomplete Grid Without Replication'
@@ -1170,7 +1167,7 @@ class TestDesignReportKTN:
         )
 
         design = study.design()
-        assert design.K == design.K_observed  # K falls back to K_observed
+        assert design.K_observed == design.K  # K falls back to K_observed
         assert design.K_missing == 0  # No missing when no plan
         assert len(design.missing_combos) == 0
         assert len(design.extra_combos) == 0
