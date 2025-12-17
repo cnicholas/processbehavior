@@ -16,7 +16,7 @@ Design Philosophy (Pythonic Hadley):
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from .exceptions import ChartNotAvailableError
@@ -142,10 +142,7 @@ class DesignReport:
         rows = []
         for factor in self._factors:
             observed = self._observed_levels.get(factor, [])
-            if self._sampling_plan is not None:
-                planned = self._sampling_plan.get(factor, observed)
-            else:
-                planned = observed
+            planned = self._sampling_plan.get(factor, observed) if self._sampling_plan is not None else observed
 
             planned_set = set(planned)
             observed_set = set(observed)
@@ -169,10 +166,7 @@ class DesignReport:
         result: dict[str, list] = {}
         for factor in self._factors:
             observed = set(self._observed_levels.get(factor, []))
-            if self._sampling_plan is not None:
-                planned = set(self._sampling_plan.get(factor, []))
-            else:
-                planned = observed
+            planned = set(self._sampling_plan.get(factor, [])) if self._sampling_plan is not None else observed
             result[factor] = self._safe_sort(list(planned - observed))
         return result
 
@@ -182,10 +176,7 @@ class DesignReport:
         result: dict[str, list] = {}
         for factor in self._factors:
             observed = set(self._observed_levels.get(factor, []))
-            if self._sampling_plan is not None:
-                planned = set(self._sampling_plan.get(factor, []))
-            else:
-                planned = observed
+            planned = set(self._sampling_plan.get(factor, [])) if self._sampling_plan is not None else observed
             result[factor] = self._safe_sort(list(observed - planned))
         return result
 
@@ -447,10 +438,7 @@ class DesignReport:
         lines.append("  Factors:")
         for factor in self._factors:
             observed = self._observed_levels.get(factor, [])
-            if self._sampling_plan is not None:
-                planned = self._sampling_plan.get(factor, observed)
-            else:
-                planned = observed
+            planned = self._sampling_plan.get(factor, observed) if self._sampling_plan is not None else observed
 
             planned_set = set(planned)
             observed_set = set(observed)
@@ -980,10 +968,7 @@ class Study:
         """
         # _factors MUST be spec.rsg_vars order (not plan dict order)
         # to ensure correct cartesian product encoding
-        if self._spec.rsg_vars:
-            factors = list(self._spec.rsg_vars)
-        else:
-            factors = []
+        factors = list(self._spec.rsg_vars) if self._spec.rsg_vars else []
 
         # Use analysis dataset (post-filtering, NA-handled) for all observed values
         ads_df = self._ads.analysis_dataset
