@@ -1101,93 +1101,93 @@ class SDSRegistry:
 
             4: SDSAnalysisPlan(
                 sds=4,
-                name="Factors Only (No Time)",
-                description="Grouping factors present but no time variable",
-                has_factors=True,
-                has_time=False,
-                has_replication='full',
-                valid_charts=['Xbar', 'S', 'R', 'Imr'],
-                recommended_chart='Xbar',
+                name="Single Condition Over Time",
+                description="Single factor level (K=1) tracked over time",
+                has_factors=True,  # One factor level
+                has_time=True,     # Time series structure
+                has_replication='varies',  # Depends on subgroup size
+                valid_charts=['Imr', 'Xbar', 'S', 'R'],
+                recommended_chart='Imr',
                 invalid_charts=[],
-                vas_residuals_supported=True,
+                vas_residuals_supported=True,  # VAS works via time-based analysis
                 residuals_available=['R1', 'R2', 'R3', 'R4', 'R5'],
-                residual_calculation_method='hybrid',
-                main_effects_supported=True,
+                residual_calculation_method='varies',  # 'standard' if n≥2, 'moving_range' if n=1
+                main_effects_supported=False,  # Only one factor level
                 interaction_effects_supported=False,
-                supports_stratification=True,
+                supports_stratification=False,  # Single stream
                 typical_use_cases=[
-                    'Cross-sectional studies',
-                    'Between-group comparisons',
-                    'Baseline capability studies',
-                    'Multi-stream process monitoring'
+                    'Single process stream over time',
+                    'One machine/operator monitored continuously',
+                    'Baseline process monitoring',
+                    'Individual measurements over time (IMR)'
                 ],
                 limitations=[
-                    'Cannot analyze time trends',
-                    'Cannot detect factor × time interactions',
-                    'Limited to factor main effects'
+                    'Cannot compare factor levels (only one exists)',
+                    'Cannot analyze factor effects',
+                    'Limited to time-based trend analysis'
                 ],
-                bishop_reference="Wheeler/Bishop Methodology: Factors Only (SDS 4)"
+                bishop_reference="Wheeler/Bishop Methodology: Single Condition (SDS 4)"
             ),
 
             5: SDSAnalysisPlan(
                 sds=5,
-                name="Time Only (No Factors)",
-                description="Time variable present but no grouping factors",
-                has_factors=False,
+                name="Nested/Incomplete with Replication",
+                description="Nested factor structure OR incomplete grid with replication",
+                has_factors=True,
                 has_time=True,
-                has_replication='partial',
+                has_replication='partial',  # Has some n≥2 cells (can estimate variance)
                 valid_charts=['Xbar', 'S', 'R', 'Imr'],
                 recommended_chart='Xbar',
                 invalid_charts=[],
                 vas_residuals_supported=True,
-                residuals_available=['R1', 'R2', 'R3', 'R4', 'R5'],
+                residuals_available=['R2_S', 'R3_Xbar', 'R3_S', 'R4_Xbar', 'R4_S', 'R5_Xbar', 'R5_S'],
                 residual_calculation_method='hybrid',
-                main_effects_supported=False,
-                interaction_effects_supported=False,
-                supports_stratification=False,
+                main_effects_supported=True,
+                interaction_effects_supported=False,  # Incomplete grid limits this
+                supports_stratification=True,
                 typical_use_cases=[
-                    'Single process over time with subgroups',
-                    'Repeated measurements at time points',
-                    'Time series with natural grouping (hourly batches)',
-                    'Rational subgrouping by time period only'
+                    'Hierarchical/nested factor structures',
+                    'Incomplete sampling with some replication',
+                    'Heads nested within lanes',
+                    'Operators nested within shifts'
                 ],
                 limitations=[
-                    'Cannot analyze factor effects',
-                    'Cannot detect interactions',
-                    'Limited to time-based grouping'
+                    'Incomplete grid may limit effect estimation',
+                    'Cannot analyze all interactions',
+                    'Variance components may be confounded'
                 ],
-                bishop_reference="Wheeler/Bishop Methodology: Time Only (SDS 5)"
+                bishop_reference="Wheeler/Bishop Methodology: Nested/Incomplete (SDS 5)"
             ),
 
             6: SDSAnalysisPlan(
                 sds=6,
-                name="Incomplete/Irregular Grid",
-                description="Sparse factor × time grid with many missing cells",
+                name="Incomplete Grid Without Replication",
+                description="Incomplete factor × time grid with no replication (all n=1)",
                 has_factors=True,
                 has_time=True,
-                has_replication='none',
+                has_replication='none',  # Cannot estimate within-cell variance
                 valid_charts=['Imr', 'R'],
                 recommended_chart='Imr',
-                invalid_charts=['Xbar (requires complete grid)', 'S (requires complete grid)'],
-                vas_residuals_supported=True,
+                invalid_charts=['Xbar (no within-cell variance)', 'S (no within-cell variance)'],
+                vas_residuals_supported=True,  # VAS works via moving average (like SDS 2)
                 residuals_available=['R1', 'R2', 'R3', 'R4', 'R5'],
-                residual_calculation_method='moving_average',
-                main_effects_supported=False,
+                residual_calculation_method='moving_average',  # Approximate variance estimation
+                main_effects_supported=False,  # Incomplete grid limits this
                 interaction_effects_supported=False,
                 supports_stratification=True,
                 typical_use_cases=[
-                    'Opportunistic data collection',
-                    'Real-world incomplete data',
-                    'Sparse monitoring programs',
+                    'Opportunistic data collection without replication',
+                    'Sparse monitoring with single measurements',
+                    'Incomplete sampling plans',
                     'Ad-hoc measurements with irregular sampling'
                 ],
                 limitations=[
-                    'Cannot calculate reliable main effects',
+                    'Cannot estimate within-cell variance directly (no replication)',
+                    'R2 estimated via moving average (approximate)',
                     'Cannot analyze interactions',
-                    'Limited to stratified IMR charts per factor level',
-                    'Most limited analytical capabilities'
+                    'More limited than complete grid designs'
                 ],
-                bishop_reference="Wheeler/Bishop Methodology: Irregular Data (SDS 6)"
+                bishop_reference="Wheeler/Bishop Methodology: Irregular/No Replication (SDS 6)"
             ),
         }
 
