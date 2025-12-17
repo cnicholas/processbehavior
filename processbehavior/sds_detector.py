@@ -432,9 +432,14 @@ class SDSRegistry:
 
         # Check for nested design (SDS 5) - only if multiple factor variables
         if len(spec.rsg_vars) >= 2:
-            # For nested design check, we still consider all factor combinations
+            # For nested design check, compute proper full grid size
             n_cells = len(cell_sizes)
-            sds5 = self._check_nested_design(df, spec, n_cells, n_groups)
+            if spec.has_time:
+                T_obs = df[spec.time_var].nunique()
+                full_grid_size = n_groups * T_obs
+            else:
+                full_grid_size = n_groups
+            sds5 = self._check_nested_design(df, spec, n_cells, full_grid_size)
             if sds5 is not None:
                 return (sds5, min_cell_size)
 
@@ -910,17 +915,19 @@ class SDSRegistry:
             # Time expectation: use observed unique time values as planned time set.
             # This detects missing factor combos within observed time blocks.
             # (Plan only specifies factor levels, not time levels.)
+            # Use dropna() consistently: NaN time values are excluded from both
+            # expected and observed counts to avoid coverage > 1.0.
             time_values = df[spec.time_var].dropna().unique()
             expected_cells = len(expected_factor_combos) * len(time_values)
 
-            # Observed cells = unique (rsg, time) combos
+            # Observed cells = unique (rsg, time) combos, excluding NaN time
             observed_cells = df.groupby(
-                [spec.rsg_var_name, spec.time_var], dropna=False, observed=True
+                [spec.rsg_var_name, spec.time_var], dropna=True, observed=True
             ).ngroups
         else:
             # No time: expected = factor combos, observed = unique rsg values
             expected_cells = len(expected_factor_combos)
-            observed_cells = df[spec.rsg_var_name].nunique()
+            observed_cells = df[spec.rsg_var_name].nunique(dropna=True)
 
         if expected_cells == 0:
             return 1.0  # Avoid division by zero
