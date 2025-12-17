@@ -16,7 +16,7 @@ Design Philosophy (Pythonic Hadley):
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
 from .exceptions import ChartNotAvailableError
@@ -29,6 +29,158 @@ if TYPE_CHECKING:
     from .analysis_specification import DataPrepConfig
     from .process_behavior import ProcessBehavior
     from .sds_detector import SDSAnalysisPlan
+
+
+@dataclass
+class DesignReport:
+    """
+    Compares sampling plan to observed data.
+
+    Returned by study.design(). Provides insight into the experimental
+    design structure and any mismatches between plan and observation.
+
+    Attributes
+    ----------
+    factors : pd.DataFrame
+        Factor-level summary table with columns: factor, planned, observed,
+        missing_levels, extra_levels
+    missing_levels : dict[str, list]
+        Levels in plan but not observed, per factor
+    extra_levels : dict[str, list]
+        Levels observed but not in plan, per factor
+
+    Examples
+    --------
+    >>> design = study.design()
+    >>> design
+    DesignReport(2 factors, 1 missing_levels, 0 extra_levels)
+      Lane: planned=[1,2,3,4], observed=[1,2,3,4]
+      Phase: planned=[1,2,3], observed=[1,2], missing=[3]
+
+    >>> design.factors
+       factor     planned      observed  missing_levels  extra_levels
+    0    Lane  [1,2,3,4]    [1,2,3,4]              []            []
+    1   Phase    [1,2,3]        [1,2]             [3]            []
+
+    >>> design.missing_levels
+    {'Lane': [], 'Phase': [3]}
+    """
+
+    _sampling_plan: dict[str, list] | None
+    _observed_levels: dict[str, list]
+    _factors: list[str]
+
+    @property
+    def factors(self) -> pd.DataFrame:
+        """
+        Factor-level summary table.
+
+        Returns DataFrame with columns:
+        - factor: Factor column name
+        - planned: Levels in plan (or observed if no plan)
+        - observed: Levels actually in data
+        - missing_levels: Levels in plan but not in data
+        - extra_levels: Levels in data but not in plan
+        """
+        import pandas as pd
+
+        rows = []
+        for factor in self._factors:
+            observed = self._observed_levels.get(factor, [])
+            if self._sampling_plan is not None:
+                planned = self._sampling_plan.get(factor, observed)
+            else:
+                planned = observed
+
+            planned_set = set(planned)
+            observed_set = set(observed)
+
+            missing = self._safe_sort(list(planned_set - observed_set))
+            extra = self._safe_sort(list(observed_set - planned_set))
+
+            rows.append({
+                'factor': factor,
+                'planned': planned,
+                'observed': observed,
+                'missing_levels': missing,
+                'extra_levels': extra
+            })
+
+        return pd.DataFrame(rows)
+
+    @property
+    def missing_levels(self) -> dict[str, list]:
+        """Levels in plan but not observed, per factor."""
+        result: dict[str, list] = {}
+        for factor in self._factors:
+            observed = set(self._observed_levels.get(factor, []))
+            if self._sampling_plan is not None:
+                planned = set(self._sampling_plan.get(factor, []))
+            else:
+                planned = observed
+            result[factor] = self._safe_sort(list(planned - observed))
+        return result
+
+    @property
+    def extra_levels(self) -> dict[str, list]:
+        """Levels observed but not in plan, per factor."""
+        result: dict[str, list] = {}
+        for factor in self._factors:
+            observed = set(self._observed_levels.get(factor, []))
+            if self._sampling_plan is not None:
+                planned = set(self._sampling_plan.get(factor, []))
+            else:
+                planned = observed
+            result[factor] = self._safe_sort(list(observed - planned))
+        return result
+
+    @property
+    def has_plan(self) -> bool:
+        """Whether a sampling plan was provided."""
+        return self._sampling_plan is not None
+
+    @staticmethod
+    def _safe_sort(items: list) -> list:
+        """Sort items safely, handling mixed types."""
+        try:
+            return sorted(items)
+        except TypeError:
+            return list(items)
+
+    def __repr__(self) -> str:
+        """Nice summary showing plan vs observed per factor."""
+        # Count total missing and extra
+        total_missing = sum(len(v) for v in self.missing_levels.values())
+        total_extra = sum(len(v) for v in self.extra_levels.values())
+
+        plan_status = "with plan" if self.has_plan else "observed only"
+        header = f"DesignReport({len(self._factors)} factors, {plan_status})"
+
+        if total_missing > 0 or total_extra > 0:
+            header += f" [{total_missing} missing, {total_extra} extra]"
+
+        lines = [header]
+
+        for factor in self._factors:
+            observed = self._observed_levels.get(factor, [])
+            if self._sampling_plan is not None:
+                planned = self._sampling_plan.get(factor, observed)
+            else:
+                planned = observed
+
+            planned_set = set(planned)
+            observed_set = set(observed)
+            missing = self._safe_sort(list(planned_set - observed_set))
+
+            line = f"  {factor}: observed={observed}"
+            if self.has_plan:
+                line = f"  {factor}: planned={planned}, observed={observed}"
+            if missing:
+                line += f", missing={missing}"
+
+            lines.append(line)
+
+        return '\n'.join(lines)
 
 
 class StudyChartAccessor:
@@ -140,6 +292,8 @@ class Study:
     _spec: DataPrepConfig
     _plan: SDSAnalysisPlan
     _ads: AnalysisDataSet
+    _sampling_plan: dict[str, list] | None = None
+    _factor_order: list[str] | None = None
 
     # =========================================================================
     # User-Facing Properties (Clean Names)
@@ -447,6 +601,83 @@ class Study:
             return f"'{chart}' IS available. {row['question']}"
         else:
             return f"'{chart}' unavailable: {row['reason']}"
+
+    def design(self) -> DesignReport:
+        """
+        Get design report comparing sampling plan to observed data.
+
+        Returns a DesignReport showing factors, levels, and any mismatches
+        between planned and observed structure. Works with or without a
+        sampling plan:
+
+        - With plan: Shows planned vs observed, highlights missing/extra levels
+        - Without plan: Shows observed structure only
+
+        Note: Time Handling
+        -------------------
+        The sampling plan specifies factor levels only, not time levels.
+        For SDS detection, observed unique time values are used as the
+        "planned" time set. This means coverage detects missing factor
+        combos within observed time blocks, but time points not in the
+        data are not considered "missing."
+
+        Returns
+        -------
+        DesignReport
+            Object with:
+            - factors: DataFrame with planned/observed/missing/extra per factor
+            - missing_levels: dict of levels in plan but not observed
+            - extra_levels: dict of levels observed but not in plan
+            - has_plan: whether a sampling plan was provided
+
+        Examples
+        --------
+        >>> study = pb.formulate(
+        ...     response=pb.cols.Weight,
+        ...     plan={pb.cols.Lane: [1,2,3,4], pb.cols.Phase: [1,2,3]}
+        ... )
+        >>> design = study.design()
+        >>> design
+        DesignReport(2 factors, with plan)
+          Lane: planned=[1,2,3,4], observed=[1,2,3,4]
+          Phase: planned=[1,2,3], observed=[1,2], missing=[3]
+
+        >>> design.missing_levels
+        {'Lane': [], 'Phase': [3]}
+
+        Without a plan (shows observed structure):
+
+        >>> study = pb.formulate(response='weight', factors=['lane', 'phase'])
+        >>> study.design()
+        DesignReport(2 factors, observed only)
+          lane: observed=[1, 2, 3, 4]
+          phase: observed=[1, 2]
+        """
+        # Get the factors - either from factor_order (plan) or spec
+        if self._factor_order is not None:
+            factors = self._factor_order
+        elif self._spec.rsg_vars:
+            factors = list(self._spec.rsg_vars)
+        else:
+            factors = []
+
+        # Get observed levels from the data
+        observed_levels: dict[str, list] = {}
+        for factor in factors:
+            if factor in self._pdf.data.columns:
+                values = self._pdf.data[factor].dropna().unique()
+                try:
+                    observed_levels[factor] = sorted(values.tolist())
+                except TypeError:
+                    observed_levels[factor] = list(values)
+            else:
+                observed_levels[factor] = []
+
+        return DesignReport(
+            _sampling_plan=self._sampling_plan,
+            _observed_levels=observed_levels,
+            _factors=factors
+        )
 
     def execute(
         self,

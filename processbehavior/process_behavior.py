@@ -23,6 +23,7 @@ Usage:
 from __future__ import annotations
 
 import logging
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
 import pandas as pd
@@ -37,17 +38,91 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
+@dataclass
+class ColumnRef:
+    """
+    Column reference with level awareness for IDE discoverability.
+
+    NOT a str subclass to avoid pandas/numpy quirks, serialization issues,
+    and hashing/equality surprises. Implements __hash__ and __eq__ for
+    dict key usage. Compares equal to strings for flexibility.
+
+    Attributes
+    ----------
+    name : str
+        The column name in the DataFrame
+    levels : list
+        Sorted unique values from the data (property)
+    count : int
+        Number of distinct levels (property)
+
+    Examples
+    --------
+    >>> pb = ProcessBehavior(df)
+    >>> pb.cols.Lane           # Lane (4): [1, 2, 3, 4]
+    >>> pb.cols.Lane.levels    # [1, 2, 3, 4]
+    >>> pb.cols.Lane.count     # 4
+
+    Use in plan:
+
+    >>> study = pb.formulate(
+    ...     response=pb.cols.Weight,
+    ...     plan={pb.cols.Lane: [1, 2, 3, 4]}
+    ... )
+    """
+
+    name: str
+    _df: pd.DataFrame = field(repr=False, compare=False)
+
+    @property
+    def levels(self) -> list:
+        """Sorted unique values from the data."""
+        values = self._df[self.name].dropna().unique()
+        try:
+            return sorted(values.tolist())
+        except TypeError:
+            # Mixed types can't be sorted
+            return list(values)
+
+    @property
+    def count(self) -> int:
+        """Number of distinct levels."""
+        return len(self.levels)
+
+    def __str__(self) -> str:
+        return self.name
+
+    def __hash__(self) -> int:
+        return hash(self.name)
+
+    def __eq__(self, other: object) -> bool:
+        if isinstance(other, ColumnRef):
+            return self.name == other.name
+        if isinstance(other, str):
+            return self.name == other
+        return False
+
+    def __repr__(self) -> str:
+        lvls = self.levels
+        if len(lvls) <= 6:
+            return f"{self.name} ({len(lvls)}): {lvls}"
+        return f"{self.name} ({len(lvls)}): [{lvls[0]}..{lvls[-1]}]"
+
+
 class ColumnAccessor:
     """
-    Provides IDE auto-completion for DataFrame column names.
+    Provides IDE auto-completion for DataFrame column names with level awareness.
 
     Usage:
         pb = ProcessBehavior(df)
-        pb.cols.Height  # Auto-completes to column name string
+        pb.cols.Height         # ColumnRef with auto-completion
+        pb.cols.Height.levels  # [1.0, 1.5, 2.0, ...]
+        pb.cols.Height.count   # Number of unique levels
 
-    This class dynamically creates attributes for each column in the DataFrame,
-    enabling IDE auto-completion and preventing typos. Columns are sorted
-    alphabetically for consistent tab-completion ordering.
+    This class dynamically creates ColumnRef attributes for each column in the
+    DataFrame, enabling IDE auto-completion, preventing typos, and providing
+    level discoverability for sampling plans. Columns are sorted alphabetically
+    for consistent tab-completion ordering.
     """
 
     def __init__(self, df: pd.DataFrame):
@@ -61,7 +136,7 @@ class ColumnAccessor:
         self._columns = sorted(df.columns)  # Sort alphabetically for consistent ordering
         self._attr_to_col = {}  # Track sanitized_name → original_column
 
-        # Dynamically add each column as an attribute
+        # Dynamically add each column as a ColumnRef attribute
         for col in self._columns:
             # Convert column name to valid Python identifier if needed
             attr_name = self._sanitize_column_name(col)
@@ -76,7 +151,7 @@ class ColumnAccessor:
                 )
             else:
                 self._attr_to_col[attr_name] = col
-                setattr(self, attr_name, col)
+                setattr(self, attr_name, ColumnRef(col, df))
 
     def _sanitize_column_name(self, col_name: str) -> str:
         """
@@ -106,7 +181,7 @@ class ColumnAccessor:
         """Display available columns."""
         return f"ColumnAccessor({self._columns})"
 
-    def __getitem__(self, col_name: str) -> str:
+    def __getitem__(self, col_name: str) -> ColumnRef:
         """
         Access column by original name (dict-style).
 
@@ -117,7 +192,7 @@ class ColumnAccessor:
             col_name: Original column name
 
         Returns:
-            The column name (for use in formulate())
+            ColumnRef for the column (for use in formulate())
 
         Raises:
             ColumnNotFoundError: If column doesn't exist
@@ -130,7 +205,7 @@ class ColumnAccessor:
                 column=col_name,
                 available=available
             )
-        return col_name
+        return ColumnRef(col_name, self._df)
 
     def __dir__(self):
         """Support for tab-completion in IPython/Jupyter."""
@@ -255,11 +330,79 @@ class ProcessBehavior:
 
         logger.info(f"ProcessBehavior: {len(df)} rows, {len(df.columns)} columns")
 
+    @staticmethod
+    def _to_column_name(col: str | ColumnRef) -> str:
+        """Extract column name from str or ColumnRef."""
+        return col.name if isinstance(col, ColumnRef) else col
+
+    def _validate_plan(
+        self,
+        plan: dict[str | ColumnRef, list]
+    ) -> tuple[dict[str, list], list[str]]:
+        """
+        Validate and normalize sampling plan.
+
+        Parameters
+        ----------
+        plan : dict
+            Sampling plan with column names/refs as keys and level lists as values
+
+        Returns
+        -------
+        tuple[dict[str, list], list[str]]
+            Normalized plan (str keys) and factor order
+
+        Raises
+        ------
+        ColumnNotFoundError
+            If a plan column doesn't exist in the data
+        """
+        normalized: dict[str, list] = {}
+        factor_order: list[str] = []
+
+        for col, levels in plan.items():
+            col_name = self._to_column_name(col)
+
+            # Validate column exists
+            if col_name not in self.data.columns:
+                available = list(self.data.columns)
+                raise ColumnNotFoundError(
+                    f"Plan column '{col_name}' not found in data. "
+                    f"Available: {available}",
+                    column=col_name,
+                    available=available
+                )
+
+            normalized[col_name] = list(levels)
+            factor_order.append(col_name)
+
+            # Check for extra observed levels (warn, don't error)
+            observed = set(self.data[col_name].dropna().unique())
+            planned = set(levels)
+            extra = observed - planned
+
+            if extra:
+                extra_list = sorted(extra, key=lambda x: (type(x).__name__, x))
+                observed_sorted = sorted(observed, key=lambda x: (type(x).__name__, x))
+                logger.warning(
+                    f"Factor '{col_name}' has observed levels not in plan: {extra_list}\n"
+                    f"  Your plan: {levels}\n"
+                    f"  Observed:  {observed_sorted}\n"
+                    f"\n"
+                    f"  To update your plan:\n"
+                    f"    plan['{col_name}'] = pb.cols['{col_name}'].levels  # Use observed\n"
+                    f"    # or\n"
+                    f"    plan['{col_name}'] = {observed_sorted}  # Add manually"
+                )
+
+        return normalized, factor_order
+
     def formulate(
         self,
-        response: str,
-        factors: list[str] | None = None,
-        time: str | None = None,
+        response: str | ColumnRef,
+        factors: list[str | ColumnRef] | None = None,
+        time: str | ColumnRef | None = None,
+        plan: dict[str | ColumnRef, list] | None = None,
         precision: int = 3
     ) -> Study:
         """
@@ -272,14 +415,21 @@ class ProcessBehavior:
 
         Parameters
         ----------
-        response : str
+        response : str or ColumnRef
             The response variable (measurement) to analyze.
             Use pb.cols for IDE auto-completion.
-        factors : list of str, optional
+        factors : list of str or ColumnRef, optional
             Grouping factors defining rational subgroups (e.g., ['Lane', 'Operator']).
-            If provided, enables Xbar/S analysis.
-        time : str, optional
+            If provided, enables Xbar/S analysis. Cannot be used with `plan`.
+        time : str or ColumnRef, optional
             Time/sequence variable for ordering observations.
+        plan : dict, optional
+            Sampling plan specifying expected factor levels. Keys are column names
+            or ColumnRefs, values are lists of expected levels. Enables SDS 4-6
+            detection by comparing observed structure to planned structure.
+            Cannot be used with `factors`.
+
+            Example: plan={pb.cols.Lane: [1,2,3,4], pb.cols.Phase: [1,2,3]}
         precision : int, default 3
             Decimal places for output values.
 
@@ -291,42 +441,74 @@ class ProcessBehavior:
             - Valid and recommended chart types
             - Pre-calculated residuals and effects (via study.dataset)
             - study.execute() to run chart-specific analysis
+            - study.design() to compare plan vs observed (when plan provided)
 
         Examples
         --------
-        Basic formulation:
+        Basic formulation (infer factors from data):
 
         >>> pb = ProcessBehavior(df)
         >>> study = pb.formulate(response='weight')
         >>> print(study)  # Shows SDS, valid charts, next steps
 
-        With factors and time:
+        With factors (SDS 0-3):
 
         >>> study = pb.formulate(
         ...     response='fill_weight',
         ...     factors=['lane', 'phase'],
         ...     time='pull'
         ... )
-        >>> study.sds  # Check detected SDS
-        >>> study.valid_charts  # See what's available
-        >>> study.charts.Xbar  # IDE auto-complete
 
-        Run the analysis:
+        With sampling plan (enables SDS 4-6):
 
-        >>> result = study.execute()  # Uses recommended chart
-        >>> result = study.execute(chart='Xbar')  # Explicit chart
+        >>> study = pb.formulate(
+        ...     response=pb.cols.Weight,
+        ...     time=pb.cols.Pull,
+        ...     plan={
+        ...         pb.cols.Lane: [1, 2, 3, 4],
+        ...         pb.cols.Phase: [1, 2, 3]  # Even if Phase 3 not in data
+        ...     }
+        ... )
+        >>> study.design()  # Shows planned vs observed structure
 
         See Also
         --------
         Study : The returned Study object
+        ColumnRef : Column reference with .levels property for discoverability
         """
         from .study import Study
 
+        # Mutual exclusion: factors OR plan, not both
+        if factors is not None and plan is not None:
+            raise ValidationError(
+                "Cannot specify both 'factors' and 'plan'. Use either:\n"
+                "  • factors=[...] to infer structure from observed data (SDS 0-3)\n"
+                "  • plan={col: [levels], ...} to specify expected structure (SDS 0-6)"
+            )
+
+        # Normalize column names from ColumnRef to str
+        response_str = self._to_column_name(response)
+        time_str = self._to_column_name(time) if time is not None else None
+
+        # Process plan or factors
+        sampling_plan: dict[str, list] | None = None
+        factor_order: list[str] | None = None
+        factors_str: list[str] | None = None
+
+        if plan is not None:
+            # Validate and normalize the plan
+            sampling_plan, factor_order = self._validate_plan(plan)
+            # Extract factors from plan keys
+            factors_str = factor_order
+        elif factors is not None:
+            # Normalize factors list
+            factors_str = [self._to_column_name(f) for f in factors]
+
         # Build spec dict with user-friendly parameter names mapped to internal names
         spec_dict = {
-            'response_var': response,       # response → response_var
-            'rsg_vars': factors,            # factors → rsg_vars
-            'time_var': time,               # time → time_var
+            'response_var': response_str,   # response → response_var
+            'rsg_vars': factors_str,        # factors → rsg_vars
+            'time_var': time_str,           # time → time_var
             'round_to': precision,          # precision → round_to
             'rsg_var_name': 'rsg',          # Auto-generated (hidden from user)
             'rsg_var_delim': '_',           # Auto-generated (hidden from user)
@@ -343,11 +525,14 @@ class ProcessBehavior:
         prepared_df = prep.prepare_dataset(self.data, config)
 
         # Detect SDS on prepared data
+        # Pass sampling_plan to enable SDS 4-6 detection
         detector = SDSRegistry()
-        sds, min_cell_size = detector.detect_sds(prepared_df, config)
+        sds, min_cell_size = detector.detect_sds(
+            prepared_df, config, plan=sampling_plan
+        )
 
         # Get SDS analysis plan with all metadata
-        plan = SDSRegistry.get_analysis_plan(sds, min_cell_size=min_cell_size)
+        analysis_plan = SDSRegistry.get_analysis_plan(sds, min_cell_size=min_cell_size)
 
         # Calculate full dataset with residuals (R1-R5, RCR1-RCR5)
         # Use AnalysisDataSet with the recommended chart type to trigger calculation
@@ -357,7 +542,7 @@ class ProcessBehavior:
 
         full_spec_dict = {
             **spec_dict,
-            'analysis_type': plan.recommended_chart
+            'analysis_type': analysis_plan.recommended_chart
         }
         full_spec = AnalysisSpecification(full_spec_dict)
         ads = AnalysisDataSet(self.data, full_spec, sds=sds)
@@ -367,8 +552,10 @@ class ProcessBehavior:
         return Study(
             _pdf=self,
             _spec=config,
-            _plan=plan,
-            _ads=ads
+            _plan=analysis_plan,
+            _ads=ads,
+            _sampling_plan=sampling_plan,
+            _factor_order=factor_order
         )
 
     def __repr__(self) -> str:
