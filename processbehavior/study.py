@@ -28,7 +28,7 @@ if TYPE_CHECKING:
     from .analysis_result import AnalysisResult
     from .analysis_specification import DataPrepConfig
     from .process_behavior import ProcessBehavior
-    from .sds_detector import SDSAnalysisPlan
+    from .sds_detector import SDSAnalysisPlan, SDSResult
 
 
 @dataclass
@@ -48,14 +48,46 @@ class DesignReport:
         Levels in plan but not observed, per factor
     extra_levels : dict[str, list]
         Levels observed but not in plan, per factor
+    K : int
+        Planned K (product of factor level counts) or K_observed if no plan
+    K_observed : int
+        Observed K (nunique of rsg from analysis dataset)
+    K_missing : int
+        Count of missing RSG combinations
+    T : int | None
+        Planned T (time points) if specified
+    T_observed : int | None
+        Observed unique time points
+    T_missing : int | None
+        T - T_observed if T specified
+    N : int | None
+        Planned N (observations per cell) if specified
+    N_observed : tuple[int, float, int] | None
+        Observed (min, median, max) cell sizes
+    missing_combos : list[str]
+        RSG combinations in plan but not observed
+    extra_combos : list[str]
+        RSG combinations observed but not in plan
+    sds_reason : str | None
+        SDS classification reason from detector
+    structure_summary : str
+        Summary of structure discrepancies
 
     Examples
     --------
     >>> design = study.design()
     >>> design
-    DesignReport(2 factors, 1 missing_levels, 0 extra_levels)
-      Lane: planned=[1,2,3,4], observed=[1,2,3,4]
-      Phase: planned=[1,2,3], observed=[1,2], missing=[3]
+    DesignReport(2 factors, with plan)
+      SDS reason: incomplete_with_replication
+      K: planned=12, observed=8, missing=4
+      T: planned=10, observed=8, missing=2
+      N: planned=2, observed=(min=1, median=2.0, max=3)
+
+      Factors:
+        Lane: planned=[1,2,3,4], observed=[1,2,3,4]
+        Phase: planned=[1,2,3], observed=[1,2], missing=[3]
+
+      Structure: Incomplete: 4 RSG groups missing; 2 time points missing
 
     >>> design.factors
        factor     planned      observed  missing_levels  extra_levels
@@ -64,11 +96,25 @@ class DesignReport:
 
     >>> design.missing_levels
     {'Lane': [], 'Phase': [3]}
+
+    >>> design.K
+    12
+    >>> design.K_observed
+    8
+    >>> design.missing_combos
+    ['1_3', '2_3', '3_3', '4_3']
     """
 
     _sampling_plan: dict[str, list] | None
     _observed_levels: dict[str, list]
-    _factors: list[str]
+    _factors: list[str]  # Must be spec.rsg_vars order
+    _delim: str = '_'  # RSG delimiter (from spec.rsg_var_delim)
+    _T: int | None = None  # Planned T
+    _N: int | None = None  # Planned N
+    _T_observed: int | None = None  # nunique(time) from analysis dataset
+    _N_observed: tuple[int, float, int] | None = None  # (min, median, max) cell sizes
+    _observed_rsg_values: list[str] | None = None  # Actual rsg strings from analysis dataset
+    _sds_reason: str | None = None  # From SDSResult.reason
 
     @property
     def factors(self) -> pd.DataFrame:
@@ -147,20 +193,188 @@ class DesignReport:
         except TypeError:
             return list(items)
 
+    # =========================================================================
+    # K, T, N Properties
+    # =========================================================================
+
+    @property
+    def K(self) -> int:
+        """
+        Planned K: product of factor level counts.
+
+        If no plan is provided, returns K_observed.
+        Computed without materializing the cartesian product.
+        """
+        if not self._sampling_plan:
+            return self.K_observed
+        from math import prod
+        return prod(len(self._sampling_plan[f]) for f in self._factors)
+
+    @property
+    def K_observed(self) -> int:
+        """
+        Observed K: actual unique RSG groups in data (nunique).
+
+        This is the count of unique RSG values in the analysis dataset,
+        NOT the product of observed factor levels (which can overstate
+        sparse designs).
+        """
+        return len(self._observed_rsg_values) if self._observed_rsg_values else 0
+
+    @property
+    def K_missing(self) -> int:
+        """
+        Missing RSG groups: count of missing_combos.
+
+        This is len(missing_combos), not K - K_observed arithmetic,
+        to properly handle sparse designs.
+        """
+        if not self._sampling_plan:
+            return 0
+        return len(self.missing_combos)
+
+    @property
+    def T(self) -> int | None:
+        """Planned time points (if specified in the plan)."""
+        return self._T
+
+    @property
+    def T_observed(self) -> int | None:
+        """Observed unique time points from analysis dataset."""
+        return self._T_observed
+
+    @property
+    def T_missing(self) -> int | None:
+        """
+        Missing time points: T - T_observed.
+
+        Returns None if T was not specified in the plan.
+        """
+        if self._T is None or self._T_observed is None:
+            return None
+        return max(0, self._T - self._T_observed)
+
+    @property
+    def N(self) -> int | None:
+        """Planned observations per cell (if specified in the plan)."""
+        return self._N
+
+    @property
+    def N_observed(self) -> tuple[int, float, int] | None:
+        """
+        Observed (min, median, max) cell sizes.
+
+        Median is computed over cell sizes (groupby result), answering
+        "typical replication per cell."
+        """
+        return self._N_observed
+
+    @property
+    def sds_reason(self) -> str | None:
+        """
+        SDS classification reason from detector.
+
+        Possible values: 'no_structure', 'full_replication', 'no_replication',
+        'partial_replication', 'single_condition', 'nested',
+        'incomplete_with_replication', 'incomplete_no_replication'.
+        """
+        return self._sds_reason
+
+    @property
+    def missing_combos(self) -> list[str]:
+        """
+        RSG combinations in plan but not observed (as rsg strings).
+
+        Uses natural sort so '1_10' comes after '1_2'.
+        """
+        if not self._sampling_plan:
+            return []
+        from itertools import product
+
+        from processbehavior.data_preparation import encode_rsg, natural_sort_key
+
+        # Generate expected combos using _factors order (= spec.rsg_vars)
+        factor_levels = [self._sampling_plan[f] for f in self._factors]
+        # Use same delimiter as dataset
+        expected = {encode_rsg(combo, self._delim) for combo in product(*factor_levels)}
+
+        # Get observed combos
+        observed = set(self._observed_rsg_values) if self._observed_rsg_values else set()
+
+        # Natural sort (so 1_10 comes after 1_2, not before)
+        return sorted(expected - observed, key=natural_sort_key)
+
+    @property
+    def extra_combos(self) -> list[str]:
+        """
+        RSG combinations observed but not in plan (as rsg strings).
+
+        Uses natural sort so '1_10' comes after '1_2'.
+        """
+        if not self._sampling_plan:
+            return []
+        from itertools import product
+
+        from processbehavior.data_preparation import encode_rsg, natural_sort_key
+
+        factor_levels = [self._sampling_plan[f] for f in self._factors]
+        expected = {encode_rsg(combo, self._delim) for combo in product(*factor_levels)}
+        observed = set(self._observed_rsg_values) if self._observed_rsg_values else set()
+
+        return sorted(observed - expected, key=natural_sort_key)
+
+    @property
+    def structure_summary(self) -> str:
+        """
+        Summary of structure discrepancy (distinct from SDS reason).
+
+        Returns 'Complete structure' if plan matches observation,
+        otherwise lists what's missing.
+        """
+        issues = []
+        if self.K_missing > 0:
+            issues.append(f"{self.K_missing} RSG groups missing")
+        if self.T_missing and self.T_missing > 0:
+            issues.append(f"{self.T_missing} time points missing")
+        if self._N is not None and self._N_observed:
+            min_n, _, _ = self._N_observed
+            if min_n < self._N:
+                issues.append(f"some cells have n={min_n} < planned n={self._N}")
+
+        if not issues:
+            return "Complete structure"
+        return "Incomplete: " + "; ".join(issues)
+
     def __repr__(self) -> str:
-        """Nice summary showing plan vs observed per factor."""
-        # Count total missing and extra
-        total_missing = sum(len(v) for v in self.missing_levels.values())
-        total_extra = sum(len(v) for v in self.extra_levels.values())
-
+        """Nice summary showing plan vs observed per factor with K/T/N."""
         plan_status = "with plan" if self.has_plan else "observed only"
-        header = f"DesignReport({len(self._factors)} factors, {plan_status})"
+        lines = [f"DesignReport({len(self._factors)} factors, {plan_status})"]
 
-        if total_missing > 0 or total_extra > 0:
-            header += f" [{total_missing} missing, {total_extra} extra]"
+        # SDS classification reason (from detector)
+        if self._sds_reason:
+            lines.append(f"  SDS reason: {self._sds_reason}")
 
-        lines = [header]
+        # K/T/N summary
+        if self.has_plan:
+            lines.append(f"  K: planned={self.K}, observed={self.K_observed}, missing={self.K_missing}")
+        else:
+            lines.append(f"  K: observed={self.K_observed}")
 
+        if self._T is not None:
+            lines.append(f"  T: planned={self._T}, observed={self._T_observed}, missing={self.T_missing}")
+        elif self._T_observed is not None:
+            lines.append(f"  T: observed={self._T_observed}")
+
+        if self._N is not None and self._N_observed is not None:
+            min_n, med_n, max_n = self._N_observed
+            lines.append(f"  N: planned={self._N}, observed=(min={min_n}, median={med_n}, max={max_n})")
+        elif self._N_observed is not None:
+            min_n, med_n, max_n = self._N_observed
+            lines.append(f"  N: observed=(min={min_n}, median={med_n}, max={max_n})")
+
+        # Factor details
+        lines.append("")
+        lines.append("  Factors:")
         for factor in self._factors:
             observed = self._observed_levels.get(factor, [])
             if self._sampling_plan is not None:
@@ -172,13 +386,17 @@ class DesignReport:
             observed_set = set(observed)
             missing = self._safe_sort(list(planned_set - observed_set))
 
-            line = f"  {factor}: observed={observed}"
+            line = f"    {factor}: observed={observed}"
             if self.has_plan:
-                line = f"  {factor}: planned={planned}, observed={observed}"
+                line = f"    {factor}: planned={planned}, observed={observed}"
             if missing:
                 line += f", missing={missing}"
 
             lines.append(line)
+
+        # Structure summary (discrepancy details)
+        lines.append("")
+        lines.append(f"  Structure: {self.structure_summary}")
 
         return '\n'.join(lines)
 
@@ -294,6 +512,9 @@ class Study:
     _ads: AnalysisDataSet
     _sampling_plan: dict[str, list] | None = None
     _factor_order: list[str] | None = None
+    _T: int | None = None  # Planned time points
+    _N: int | None = None  # Planned observations per cell
+    _sds_result: SDSResult | None = None  # For accessing .reason in DesignReport
 
     # =========================================================================
     # User-Facing Properties (Clean Names)
@@ -629,43 +850,68 @@ class Study:
             - missing_levels: dict of levels in plan but not observed
             - extra_levels: dict of levels observed but not in plan
             - has_plan: whether a sampling plan was provided
+            - K, K_observed, K_missing: RSG group counts
+            - T, T_observed, T_missing: Time point counts (if T specified)
+            - N, N_observed: Cell size info (if N specified)
+            - missing_combos, extra_combos: RSG string lists
+            - sds_reason, structure_summary: Diagnostic info
 
         Examples
         --------
         >>> study = pb.formulate(
         ...     response=pb.cols.Weight,
-        ...     plan={pb.cols.Lane: [1,2,3,4], pb.cols.Phase: [1,2,3]}
+        ...     time=pb.cols.Pull,
+        ...     plan={
+        ...         'factors': {pb.cols.Lane: [1,2,3,4], pb.cols.Phase: [1,2,3]},
+        ...         'T': 10,
+        ...         'N': 2
+        ...     }
         ... )
         >>> design = study.design()
         >>> design
         DesignReport(2 factors, with plan)
-          Lane: planned=[1,2,3,4], observed=[1,2,3,4]
-          Phase: planned=[1,2,3], observed=[1,2], missing=[3]
+          SDS reason: incomplete_with_replication
+          K: planned=12, observed=8, missing=4
+          T: planned=10, observed=8, missing=2
+          N: planned=2, observed=(min=1, median=2.0, max=3)
+
+          Factors:
+            Lane: planned=[1,2,3,4], observed=[1,2,3,4]
+            Phase: planned=[1,2,3], observed=[1,2], missing=[3]
+
+          Structure: Incomplete: 4 RSG groups missing; 2 time points missing
 
         >>> design.missing_levels
         {'Lane': [], 'Phase': [3]}
+
+        >>> design.K
+        12
+        >>> design.missing_combos
+        ['1_3', '2_3', '3_3', '4_3']
 
         Without a plan (shows observed structure):
 
         >>> study = pb.formulate(response='weight', factors=['lane', 'phase'])
         >>> study.design()
         DesignReport(2 factors, observed only)
-          lane: observed=[1, 2, 3, 4]
-          phase: observed=[1, 2]
+          K: observed=4
+          ...
         """
-        # Get the factors - either from factor_order (plan) or spec
-        if self._factor_order is not None:
-            factors = self._factor_order
-        elif self._spec.rsg_vars:
+        # _factors MUST be spec.rsg_vars order (not plan dict order)
+        # to ensure correct cartesian product encoding
+        if self._spec.rsg_vars:
             factors = list(self._spec.rsg_vars)
         else:
             factors = []
 
-        # Get observed levels from the data
+        # Use analysis dataset (post-filtering, NA-handled) for all observed values
+        ads_df = self._ads.analysis_dataset
+
+        # Get observed levels from analysis dataset
         observed_levels: dict[str, list] = {}
         for factor in factors:
-            if factor in self._pdf.data.columns:
-                values = self._pdf.data[factor].dropna().unique()
+            if factor in ads_df.columns:
+                values = ads_df[factor].dropna().unique()
                 try:
                     observed_levels[factor] = sorted(values.tolist())
                 except TypeError:
@@ -673,10 +919,47 @@ class Study:
             else:
                 observed_levels[factor] = []
 
+        # Compute T_observed from analysis dataset
+        T_observed = None
+        if self._spec.time_var and self._spec.time_var in ads_df.columns:
+            T_observed = int(ads_df[self._spec.time_var].nunique())
+
+        # Compute observed RSG values and N_observed
+        N_observed = None
+        observed_rsg_values: list[str] = []
+        rsg_col = self._spec.rsg_var_name
+
+        if rsg_col and rsg_col in ads_df.columns:
+            # Get actual rsg values from analysis dataset
+            observed_rsg_values = ads_df[rsg_col].unique().tolist()
+
+            # Cell sizes: group by (rsg, time) or just rsg
+            if self._spec.time_var and self._spec.time_var in ads_df.columns:
+                cell_sizes = ads_df.groupby(
+                    [rsg_col, self._spec.time_var], observed=True
+                ).size()
+            else:
+                cell_sizes = ads_df.groupby([rsg_col], observed=True).size()
+
+            # N_observed = (min, median, max)
+            if len(cell_sizes) > 0:
+                N_observed = (
+                    int(cell_sizes.min()),
+                    float(cell_sizes.median()),
+                    int(cell_sizes.max())
+                )
+
         return DesignReport(
             _sampling_plan=self._sampling_plan,
             _observed_levels=observed_levels,
-            _factors=factors
+            _factors=factors,
+            _delim=self._spec.rsg_var_delim,
+            _T=self._T,
+            _N=self._N,
+            _T_observed=T_observed,
+            _N_observed=N_observed,
+            _observed_rsg_values=observed_rsg_values,
+            _sds_reason=self._sds_result.reason if self._sds_result else None,
         )
 
     def execute(

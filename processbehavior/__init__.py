@@ -47,7 +47,7 @@ from processbehavior.analysis_dataset import AnalysisDataSet
 # Result object
 from processbehavior.analysis_result import AnalysisResult
 from processbehavior.analysis_specification import AnalysisSpecification
-from processbehavior.data_preparation import DataPreparation, encode_rsg
+from processbehavior.data_preparation import DataPreparation, encode_rsg, natural_sort_key
 from processbehavior.effects_calculator import EffectsCalculator
 
 # Exceptions
@@ -96,6 +96,7 @@ __all__ = [
     'EffectsCalculator',
     'ResidualCalculator',
     'encode_rsg',
+    'natural_sort_key',
 
     # Plotting/theming
     'ChartTheme',
