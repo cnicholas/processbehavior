@@ -25,7 +25,7 @@ from typing import TYPE_CHECKING, ClassVar
 import pandas as pd
 
 if TYPE_CHECKING:
-    from .analysis_specification import AnalysisSpecification, DataPrepConfig
+    from .analysis_specification import DataPrepConfig
 
 logger = logging.getLogger(__name__)
 
@@ -360,8 +360,8 @@ class SDSRegistry:
         ----------
         df : DataFrame
             Prepared analysis dataset
-        spec : AnalysisSpecification
-            Analysis specification
+        spec : DataPrepConfig
+            Data preparation configuration
         plan : dict, optional
             Sampling plan specifying expected factor levels. Keys are column
             names, values are lists of expected levels. When provided, enables
@@ -398,8 +398,7 @@ class SDSRegistry:
         >>> plan = {'Lane': [1, 2, 3, 4], 'Phase': [1, 2, 3]}
         >>> result = detector.detect_sds(df, spec, plan=plan)
         """
-        # Store plan for potential use in classification
-        # (Currently used for future SDS 4-6 enhanced detection)
+        # Store plan for coverage ratio calculation (enables SDS 5/6 detection)
         self._plan = plan
         # SDS 0: No structure (no grouping factors defined)
         if not spec.has_grouping:
@@ -563,7 +562,7 @@ class SDSRegistry:
                 'r2_method': 'moving_range',
                 'capabilities': ['time_series', 'imr_chart', 'trend_analysis'],
                 'interaction_analysis': False,
-                'variance_decomposition': False
+                'variance_decomposition': True  # VAS supported via time-based analysis
             },
             5: {
                 'description': 'Nested design with asynchronous coverage',
@@ -571,7 +570,7 @@ class SDSRegistry:
                 'r2_method': 'nested_variance_components',
                 'capabilities': ['variance_components', 'nested_effects', 'hierarchical_analysis'],
                 'interaction_analysis': 'hierarchical',
-                'variance_decomposition': 'hierarchical'
+                'variance_decomposition': True  # VAS supported (hierarchical)
             },
             6: {
                 'description': 'Unstructured/irregular grid',
@@ -579,7 +578,7 @@ class SDSRegistry:
                 'r2_method': 'adaptive',
                 'capabilities': ['regime_detection', 'adaptive_limits', 'sparse_analysis'],
                 'interaction_analysis': False,
-                'variance_decomposition': 'limited'
+                'variance_decomposition': True  # VAS supported via moving average
             }
         }
 
@@ -755,7 +754,7 @@ class SDSRegistry:
     def _check_nested_design(
         self,
         df: pd.DataFrame,
-        spec: AnalysisSpecification,
+        spec: DataPrepConfig,
         n_cells: int,
         full_grid_size: int
     ) -> bool:
@@ -920,8 +919,9 @@ class SDSRegistry:
         use encode_rsg() from data_preparation to generate expected keys:
 
             from processbehavior.data_preparation import encode_rsg
+            factor_levels = [plan[var] for var in spec.rsg_vars]
             expected_keys = {encode_rsg(combo, spec.rsg_var_delim)
-                            for combo in product(*plan.values())}
+                            for combo in product(*factor_levels)}
             observed_keys = set(df[spec.rsg_var_name].unique())
             missing = expected_keys - observed_keys
 
@@ -938,39 +938,52 @@ class SDSRegistry:
         Returns
         -------
         float
-            Ratio of observed cells to expected cells (0.0 to 1.0+)
-            Can exceed 1.0 if observed has extra levels not in plan.
+            Ratio of observed cells to expected cells (0.0 to 1.0).
+            Only counts observed cells that match planned factor combinations,
+            so extra levels in data don't inflate coverage.
         """
         from itertools import product
 
+        from .data_preparation import encode_rsg
+
         # Get expected factor combinations from plan
-        factor_levels = list(plan.values())
+        # Use spec.rsg_vars order to match how rsg is encoded in data
+        factor_levels = [plan[var] for var in spec.rsg_vars]
         expected_factor_combos = set(product(*factor_levels))
+
+        # Generate planned rsg keys to filter observed data
+        planned_rsg_keys = {
+            encode_rsg(combo, spec.rsg_var_delim)
+            for combo in expected_factor_combos
+        }
+
+        # Filter to only rows with planned rsg values (ignore extras)
+        df_planned = df[df[spec.rsg_var_name].isin(planned_rsg_keys)]
 
         if spec.has_time:
             # Time expectation: use observed unique time values as planned time set.
             # This detects missing factor combos within observed time blocks.
             # (Plan only specifies factor levels, not time levels.)
             # Use dropna() consistently: NaN time values are excluded from both
-            # expected and observed counts to avoid coverage > 1.0.
+            # expected and observed counts.
             time_values = df[spec.time_var].dropna().unique()
             expected_cells = len(expected_factor_combos) * len(time_values)
 
-            # Observed cells = unique (rsg, time) combos, excluding NaN time
-            observed_cells = df.groupby(
+            # Observed cells = unique (rsg, time) combos from planned rsg only
+            observed_cells = df_planned.groupby(
                 [spec.rsg_var_name, spec.time_var], dropna=True, observed=True
             ).ngroups
         else:
-            # No time: expected = factor combos, observed = unique rsg values
+            # No time: expected = factor combos, observed = unique planned rsg values
             expected_cells = len(expected_factor_combos)
-            observed_cells = df[spec.rsg_var_name].nunique(dropna=True)
+            observed_cells = df_planned[spec.rsg_var_name].nunique(dropna=True)
 
         if expected_cells == 0:
             return 1.0  # Avoid division by zero
 
         ratio = observed_cells / expected_cells
         logger.debug(
-            f"Coverage: {observed_cells} observed / {expected_cells} expected = {ratio:.1%}"
+            f"Coverage: {observed_cells} observed (in plan) / {expected_cells} expected = {ratio:.1%}"
         )
         return ratio
 

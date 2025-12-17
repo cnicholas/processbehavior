@@ -620,3 +620,241 @@ class TestIntegration:
         # Execute should work
         result = study.execute()
         assert result is not None
+
+
+# =============================================================================
+# Coverage Ratio Edge Cases
+# =============================================================================
+
+class TestCoverageRatioEdgeCases:
+    """Tests for coverage ratio calculation edge cases."""
+
+    def test_plan_order_does_not_affect_coverage(self):
+        """Plan keys in different order than rsg_vars should still work.
+
+        The coverage calculation should use spec.rsg_vars order, not
+        dict insertion order, to generate expected combinations.
+        """
+        # Data has Lane first, Phase second in rsg encoding
+        df = pd.DataFrame({
+            'Lane': [1, 1, 2, 2] * 2,
+            'Phase': [1, 2, 1, 2] * 2,
+            'Pull': [1, 1, 1, 1, 2, 2, 2, 2],
+            'Weight': [10.0] * 8
+        })
+        pb = ProcessBehavior(df)
+
+        # Plan with keys in REVERSE order (Phase first, Lane second)
+        # This differs from rsg_vars order [Lane, Phase]
+        plan_reversed = {
+            'Phase': [1, 2],  # Phase first
+            'Lane': [1, 2],   # Lane second
+        }
+
+        study = pb.formulate(
+            response='Weight',
+            time='Pull',
+            plan=plan_reversed
+        )
+
+        # Should detect complete grid (SDS 1, 2, or 3 based on replication)
+        # NOT SDS 5/6 which would indicate incomplete coverage
+        assert study.sds in [1, 2, 3]
+
+    def test_extra_levels_do_not_inflate_coverage(self):
+        """Extra levels in data should not make coverage appear complete.
+
+        If plan says Lane=[1,2] but data has Lane=[1,2,3], and Lane=2
+        is missing, coverage should reflect the missing Lane=2, not
+        be inflated by the extra Lane=3.
+        """
+        # Data has Lane 1 and 3, but NOT Lane 2
+        # Plan expects Lane 1 and 2
+        # Need n≥2 per cell to avoid subgroup size validation errors
+        df = pd.DataFrame({
+            'Lane': [1, 1, 1, 1, 3, 3, 3, 3],  # Lane 2 is MISSING, Lane 3 is EXTRA
+            'Phase': [1, 1, 2, 2, 1, 1, 2, 2],
+            'Pull': [1, 1, 1, 1, 1, 1, 1, 1],
+            'Weight': [10.0] * 8
+        })
+        pb = ProcessBehavior(df)
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")  # Ignore extra levels warning
+            study = pb.formulate(
+                response='Weight',
+                time='Pull',
+                plan={
+                    'Lane': [1, 2],   # Expects Lane 1 and 2
+                    'Phase': [1, 2],
+                }
+            )
+
+        # Lane=2 is missing from plan, so grid is incomplete
+        # Should be SDS 5 or 6 (incomplete), NOT SDS 1/2/3 (complete)
+        assert study.sds in [5, 6]
+
+
+# =============================================================================
+# SDSResult Reason Field Tests
+# =============================================================================
+
+class TestSDSResultReason:
+    """Tests for SDSResult.reason field disambiguation."""
+
+    def test_sds_5_reason_nested(self):
+        """Nested design should return reason='nested'."""
+        # Heads nested in lanes (each head belongs to one lane only)
+        # With very incomplete temporal coverage (< 90%)
+        df = pd.DataFrame({
+            'lane': ['A'] * 5 + ['B'] * 5,
+            'head': [1] * 5 + [2] * 5,  # Head 1 only with lane A, head 2 only with B
+            'pull': [1, 2, 1, 2, 1, 1, 2, 1, 2, 1],  # Sparse time coverage
+            'weight': [10.0] * 10
+        })
+
+        from processbehavior.analysis_specification import AnalysisSpecification
+        from processbehavior.data_preparation import DataPreparation
+        from processbehavior.sds_detector import SDSRegistry
+
+        spec = AnalysisSpecification({
+            'analysis_type': 'Xbar',
+            'rsg_vars': ['lane', 'head'],
+            'rsg_var_name': 'rsg',
+            'time_var': 'pull',
+            'response_var': 'weight'
+        })
+
+        prep = DataPreparation()
+        prep.validate_columns(df, spec)
+        prepared_df = prep.prepare_dataset(df, spec)
+
+        detector = SDSRegistry()
+        result = detector.detect_sds(prepared_df, spec)
+
+        # If nested is detected, reason should be 'nested'
+        if result.sds == 5:
+            assert result.reason == 'nested'
+
+    def test_sds_5_reason_incomplete_with_replication(self):
+        """Incomplete grid with replication should return reason='incomplete_with_replication'."""
+        from processbehavior.analysis_specification import DataPrepConfig
+        from processbehavior.data_preparation import DataPreparation
+        from processbehavior.sds_detector import SDSRegistry
+
+        # Incomplete grid (missing Lane 3) with replication (n=2 per cell)
+        df = pd.DataFrame({
+            'Lane': [1, 1, 2, 2] * 2,  # Lane 3 is missing
+            'Phase': [1, 1, 1, 1, 2, 2, 2, 2],
+            'Pull': [1, 1, 1, 1, 1, 1, 1, 1],
+            'Weight': [10.0] * 8
+        })
+
+        spec_dict = {
+            'response_var': 'Weight',
+            'rsg_vars': ['Lane', 'Phase'],
+            'rsg_var_name': 'rsg',
+            'time_var': 'Pull',
+        }
+        config = DataPrepConfig(spec_dict)
+        prep = DataPreparation()
+        prep.validate_columns(df, config)
+        prepared_df = prep.prepare_dataset(df, config)
+
+        detector = SDSRegistry()
+        result = detector.detect_sds(
+            prepared_df, config,
+            plan={'Lane': [1, 2, 3], 'Phase': [1, 2]}
+        )
+
+        assert result.sds == 5
+        assert result.reason == 'incomplete_with_replication'
+
+    def test_sds_6_reason_incomplete_no_replication(self):
+        """Incomplete grid without replication should return reason='incomplete_no_replication'."""
+        from processbehavior.analysis_specification import DataPrepConfig
+        from processbehavior.data_preparation import DataPreparation
+        from processbehavior.sds_detector import SDSRegistry
+
+        # Incomplete grid (missing Lane 3) with NO replication (n=1 per cell)
+        df = pd.DataFrame({
+            'Lane': [1, 1, 2, 2],  # Lane 3 is missing
+            'Phase': [1, 2, 1, 2],
+            'Pull': [1, 2, 3, 4],  # Different time points, so each cell has n=1
+            'Weight': [10.0] * 4
+        })
+
+        spec_dict = {
+            'response_var': 'Weight',
+            'rsg_vars': ['Lane', 'Phase'],
+            'rsg_var_name': 'rsg',
+            'time_var': 'Pull',
+        }
+        config = DataPrepConfig(spec_dict)
+        prep = DataPreparation()
+        prep.validate_columns(df, config)
+        prepared_df = prep.prepare_dataset(df, config)
+
+        detector = SDSRegistry()
+        result = detector.detect_sds(
+            prepared_df, config,
+            plan={'Lane': [1, 2, 3], 'Phase': [1, 2]}
+        )
+
+        assert result.sds == 6
+        assert result.reason == 'incomplete_no_replication'
+
+
+# =============================================================================
+# Documentation Alignment Tests
+# =============================================================================
+
+class TestDocsAlignment:
+    """Tests to verify SDS definitions are consistent across all sources."""
+
+    def test_sds_characteristics_matches_analysis_plan(self):
+        """get_sds_characteristics and get_analysis_plan should agree on key properties."""
+        from processbehavior.sds_detector import SDSRegistry
+
+        for sds in range(7):
+            chars = SDSRegistry().get_sds_characteristics(sds)
+            plan = SDSRegistry.get_analysis_plan(sds, min_cell_size=2)
+
+            # Both should agree on SDS number
+            assert chars['sds'] == plan.sds == sds
+
+            # Both should agree on VAS support
+            assert chars['variance_decomposition'] == plan.vas_residuals_supported
+
+    def test_sds_4_is_single_condition_over_time(self):
+        """SDS 4 should be 'Single Condition Over Time' everywhere."""
+        from processbehavior.sds_detector import SDSRegistry
+
+        chars = SDSRegistry().get_sds_characteristics(4)
+        plan = SDSRegistry.get_analysis_plan(4)
+
+        assert 'Single condition over time' in chars['description']
+        assert plan.name == 'Single Condition Over Time'
+        assert plan.has_time is True
+        assert plan.has_factors is True
+
+    def test_sds_5_is_nested_or_incomplete_with_replication(self):
+        """SDS 5 should be 'Nested/Incomplete with Replication' everywhere."""
+        from processbehavior.sds_detector import SDSRegistry
+
+        chars = SDSRegistry().get_sds_characteristics(5)
+        plan = SDSRegistry.get_analysis_plan(5)
+
+        assert 'Nested' in chars['description'] or 'nested' in chars['description'].lower()
+        assert 'Nested' in plan.name
+        assert plan.has_replication == 'partial'
+
+    def test_sds_6_is_incomplete_without_replication(self):
+        """SDS 6 should be 'Incomplete Without Replication' everywhere."""
+        from processbehavior.sds_detector import SDSRegistry
+
+        chars = SDSRegistry().get_sds_characteristics(6)
+        plan = SDSRegistry.get_analysis_plan(6)
+
+        assert plan.name == 'Incomplete Grid Without Replication'
+        assert plan.has_replication == 'none'
