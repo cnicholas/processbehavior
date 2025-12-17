@@ -20,9 +20,21 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, replace
-from typing import TYPE_CHECKING, ClassVar
+from typing import TYPE_CHECKING, ClassVar, Literal
 
 import pandas as pd
+
+# Formal vocabulary for SDS classification reasons
+SDSReasonType = Literal[
+    "no_structure",
+    "full_replication",
+    "no_replication",
+    "partial_replication",
+    "single_condition",
+    "nested",
+    "incomplete_with_replication",
+    "incomplete_no_replication",
+]
 
 if TYPE_CHECKING:
     from .analysis_specification import DataPrepConfig
@@ -255,12 +267,12 @@ class SDSResult:
         Sampling Design State (0-6)
     min_cell_size : int
         Minimum observations per cell (for chart selection)
-    reason : str | None
+    reason : SDSReasonType | None
         Why this SDS was detected. Useful for disambiguation when
         multiple conditions can lead to the same SDS (e.g., SDS 5
         can be "nested" or "incomplete_with_replication").
 
-        Possible values:
+        Possible values (defined in SDSReasonType):
         - "no_structure": SDS 0
         - "full_replication": SDS 1
         - "no_replication": SDS 2
@@ -272,7 +284,7 @@ class SDSResult:
     """
     sds: int
     min_cell_size: int
-    reason: str | None = None
+    reason: SDSReasonType | None = None
 
 
 class SDSRegistry:

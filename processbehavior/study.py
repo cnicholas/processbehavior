@@ -31,6 +31,10 @@ if TYPE_CHECKING:
     from .sds_detector import SDSAnalysisPlan, SDSResult
 
 
+# Maximum number of combo strings to return in missing_combos/extra_combos
+MAX_COMBO_DISPLAY = 100
+
+
 @dataclass
 class DesignReport:
     """
@@ -65,11 +69,15 @@ class DesignReport:
     N_observed : tuple[int, float, int] | None
         Observed (min, median, max) cell sizes
     missing_combos : list[str]
-        RSG combinations in plan but not observed
+        RSG combinations in plan but not observed (capped at 100)
     extra_combos : list[str]
-        RSG combinations observed but not in plan
+        RSG combinations observed but not in plan (capped at 100)
+    extra_count : int
+        Total count of extras (use when list is capped)
     sds_reason : str | None
         SDS classification reason from detector
+    unit_of_analysis : str | None
+        The fundamental entity being measured (if specified)
     structure_summary : str
         Summary of structure discrepancies
 
@@ -115,6 +123,7 @@ class DesignReport:
     _N_observed: tuple[int, float, int] | None = None  # (min, median, max) cell sizes
     _observed_rsg_values: list[str] | None = None  # Actual rsg strings from analysis dataset
     _sds_reason: str | None = None  # From SDSResult.reason
+    _unit_of_analysis: str | None = None  # Fundamental entity being measured
 
     @property
     def factors(self) -> pd.DataFrame:
@@ -193,6 +202,25 @@ class DesignReport:
         except TypeError:
             return list(items)
 
+    def _rsg_in_plan(self, rsg: str) -> bool:
+        """
+        Check if an rsg string matches the sampling plan.
+
+        Parses the rsg back to factor values and checks each against
+        the plan levels. Avoids generating full cartesian product.
+        """
+        if not self._sampling_plan:
+            return False
+        parts = rsg.split(self._delim)
+        if len(parts) != len(self._factors):
+            return False
+        for factor, value_str in zip(self._factors, parts):
+            plan_levels = self._sampling_plan.get(factor, [])
+            # Check if value matches any plan level (with string coercion)
+            if not any(str(level) == value_str for level in plan_levels):
+                return False
+        return True
+
     # =========================================================================
     # K, T, N Properties
     # =========================================================================
@@ -224,14 +252,19 @@ class DesignReport:
     @property
     def K_missing(self) -> int:
         """
-        Missing RSG groups: count of missing_combos.
+        Missing RSG groups: K - (observed combos that are in plan).
 
-        This is len(missing_combos), not K - K_observed arithmetic,
-        to properly handle sparse designs.
+        Computed efficiently without generating the full cartesian product.
+        Handles sparse designs where observed may have extra combos not in plan.
         """
         if not self._sampling_plan:
             return 0
-        return len(self.missing_combos)
+        # Count observed rsg values that match the plan
+        observed_in_plan = sum(
+            1 for rsg in (self._observed_rsg_values or [])
+            if self._rsg_in_plan(rsg)
+        )
+        return max(0, self.K - observed_in_plan)
 
     @property
     def T(self) -> int | None:
@@ -281,9 +314,21 @@ class DesignReport:
         return self._sds_reason
 
     @property
+    def unit_of_analysis(self) -> str | None:
+        """
+        The fundamental entity being measured.
+
+        For example, 'filled cup' or 'loan contract'. Returns None if not specified.
+        """
+        return self._unit_of_analysis
+
+    @property
     def missing_combos(self) -> list[str]:
         """
         RSG combinations in plan but not observed (as rsg strings).
+
+        Returns at most MAX_COMBO_DISPLAY items to prevent memory issues
+        with large K. Use K_missing for the total count.
 
         Uses natural sort so '1_10' comes after '1_2'.
         """
@@ -302,26 +347,45 @@ class DesignReport:
         observed = set(self._observed_rsg_values) if self._observed_rsg_values else set()
 
         # Natural sort (so 1_10 comes after 1_2, not before)
-        return sorted(expected - observed, key=natural_sort_key)
+        result = sorted(expected - observed, key=natural_sort_key)
+        return result[:MAX_COMBO_DISPLAY]
+
+    @property
+    def extra_count(self) -> int:
+        """
+        Count of RSG combinations observed but not in plan.
+
+        Computed efficiently without generating full cartesian product.
+        """
+        if not self._sampling_plan:
+            return 0
+        return sum(
+            1 for rsg in (self._observed_rsg_values or [])
+            if not self._rsg_in_plan(rsg)
+        )
 
     @property
     def extra_combos(self) -> list[str]:
         """
         RSG combinations observed but not in plan (as rsg strings).
 
+        Returns at most MAX_COMBO_DISPLAY items. Use extra_count for total.
+
         Uses natural sort so '1_10' comes after '1_2'.
         """
         if not self._sampling_plan:
             return []
-        from itertools import product
 
-        from processbehavior.data_preparation import encode_rsg, natural_sort_key
+        from processbehavior.data_preparation import natural_sort_key
 
-        factor_levels = [self._sampling_plan[f] for f in self._factors]
-        expected = {encode_rsg(combo, self._delim) for combo in product(*factor_levels)}
-        observed = set(self._observed_rsg_values) if self._observed_rsg_values else set()
+        # Efficient: check each observed value against plan without cartesian product
+        extras = [
+            rsg for rsg in (self._observed_rsg_values or [])
+            if not self._rsg_in_plan(rsg)
+        ]
 
-        return sorted(observed - expected, key=natural_sort_key)
+        result = sorted(extras, key=natural_sort_key)
+        return result[:MAX_COMBO_DISPLAY]
 
     @property
     def structure_summary(self) -> str:
@@ -329,11 +393,13 @@ class DesignReport:
         Summary of structure discrepancy (distinct from SDS reason).
 
         Returns 'Complete structure' if plan matches observation,
-        otherwise lists what's missing.
+        otherwise lists what's missing or extra.
         """
         issues = []
         if self.K_missing > 0:
             issues.append(f"{self.K_missing} RSG groups missing")
+        if self.extra_count > 0:
+            issues.append(f"{self.extra_count} extra RSG groups in data")
         if self.T_missing and self.T_missing > 0:
             issues.append(f"{self.T_missing} time points missing")
         if self._N is not None and self._N_observed:
@@ -349,6 +415,10 @@ class DesignReport:
         """Nice summary showing plan vs observed per factor with K/T/N."""
         plan_status = "with plan" if self.has_plan else "observed only"
         lines = [f"DesignReport({len(self._factors)} factors, {plan_status})"]
+
+        # Unit of analysis (if specified)
+        if self._unit_of_analysis:
+            lines.append(f"  Unit of analysis: {self._unit_of_analysis}")
 
         # SDS classification reason (from detector)
         if self._sds_reason:
@@ -559,6 +629,17 @@ class Study:
         Statistics and chart values will be rounded to this many decimal places.
         """
         return self._spec.round_to
+
+    @property
+    def unit_of_analysis(self) -> str | None:
+        """
+        The fundamental entity being measured.
+
+        For example, in a manufacturing process producing cups filled with yogurt,
+        the unit of analysis is 'filled cup'. In a loan collection process, it
+        would be 'loan contract'. Returns None if not specified.
+        """
+        return self._spec.unit_of_analysis
 
     @property
     def dataset(self) -> pd.DataFrame:
@@ -960,6 +1041,7 @@ class Study:
             _N_observed=N_observed,
             _observed_rsg_values=observed_rsg_values,
             _sds_reason=self._sds_result.reason if self._sds_result else None,
+            _unit_of_analysis=self._spec.unit_of_analysis,
         )
 
     def execute(
@@ -1142,8 +1224,10 @@ class Study:
 
         lines = [
             f"Study(response='{self.response}', factors=[{factors_str}], time='{time_str}', sds={self.sds})",
-            f"  Valid: {', '.join(primary)} | Recommended: {self.recommended_chart}",
         ]
+        if self.unit_of_analysis:
+            lines.append(f"  Unit of analysis: {self.unit_of_analysis}")
+        lines.append(f"  Valid: {', '.join(primary)} | Recommended: {self.recommended_chart}")
         if residual:
             lines.append(f"  Residuals: {', '.join(residual)}")
         lines.append("  → study.execute() or study.support for details")
@@ -1161,11 +1245,13 @@ class Study:
         residual = avail[avail['category'] == 'residual']['chart'].tolist()
 
         residual_html = f"<br><strong>Residuals:</strong> {', '.join(residual)}" if residual else ""
+        uoa_html = f"<br><strong>Unit of analysis:</strong> {self.unit_of_analysis}" if self.unit_of_analysis else ""
 
         style = "font-family: monospace; padding: 8px; border: 1px solid #ccc; background: #f9f9f9"
         html = f"""
         <div style="{style}">
             <code>Study(response='{self.response}', factors=[{factors_str}], time='{time_str}', sds={self.sds})</code>
+            {uoa_html}
             <br><strong>Valid:</strong> {', '.join(primary)} | <strong>Recommended:</strong> {self.recommended_chart}
             {residual_html}
             <br><em>→ study.execute() or study.support for details</em>
