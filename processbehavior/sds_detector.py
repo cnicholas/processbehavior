@@ -877,7 +877,7 @@ class SDSRegistry:
         # SDS 2: No replication (coverage already checked above)
         if max_n == 1:
             logger.debug(
-                f"SDS 2: No replication (all cells have n=1)"
+                "SDS 2: No replication (all cells have n=1)"
             )
             return (2, "no_replication")
 
