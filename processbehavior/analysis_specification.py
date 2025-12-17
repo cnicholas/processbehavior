@@ -60,6 +60,8 @@ class DataPrepConfig:
         - **round_to** (int, optional): Decimal places for rounding. Defaults to 3.
         - **zero-center** (bool, optional): Whether to center data at zero.
           Defaults to False.
+        - **unit_of_analysis** (str, optional): The fundamental entity being
+          measured (e.g., 'filled cup', 'loan contract'). Informational only.
 
     Attributes
     ----------
@@ -77,6 +79,8 @@ class DataPrepConfig:
         Decimal places for rounding
     zero_center : bool
         Whether to center data at zero
+    unit_of_analysis : str or None
+        The fundamental entity being measured
     has_grouping : bool
         True if rational subgrouping variables are defined
     has_time : bool
@@ -126,6 +130,7 @@ class DataPrepConfig:
         self.round_to = self.spec.get('round_to', 3)
         # Support both 'zero_center' (preferred) and 'zero-center' (legacy) for migration
         self.zero_center = self.spec.get('zero_center', self.spec.get('zero-center', False))
+        self.unit_of_analysis = self.spec.get('unit_of_analysis')
 
         # Initialize lists
         self.data_prep_output_cols = []

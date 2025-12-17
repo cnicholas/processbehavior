@@ -417,7 +417,8 @@ class ProcessBehavior:
         factors: list[str | ColumnRef] | None = None,
         time: str | ColumnRef | None = None,
         plan: dict[str | ColumnRef, list] | None = None,
-        precision: int = 3
+        precision: int = 3,
+        unit_of_analysis: str | None = None
     ) -> Study:
         """
         Formulate a study for process behavior analysis.
@@ -446,6 +447,11 @@ class ProcessBehavior:
             Example: plan={pb.cols.Lane: [1,2,3,4], pb.cols.Phase: [1,2,3]}
         precision : int, default 3
             Decimal places for output values.
+        unit_of_analysis : str, optional
+            The fundamental entity being measured. For example, in a manufacturing
+            process producing cups filled with yogurt, the unit of analysis is
+            'filled cup'. In a loan collection process, it would be 'loan contract'.
+            This is informational metadata and does not affect calculations.
 
         Returns
         -------
@@ -528,7 +534,8 @@ class ProcessBehavior:
             'round_to': precision,          # precision → round_to
             'rsg_var_name': 'rsg',          # Auto-generated (hidden from user)
             'rsg_var_delim': '_',           # Auto-generated (hidden from user)
-            'zero_center': False            # Default
+            'zero_center': False,           # Default
+            'unit_of_analysis': unit_of_analysis
         }
 
         # Create config for data preparation (no analysis_type needed yet)
