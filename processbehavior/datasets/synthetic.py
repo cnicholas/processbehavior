@@ -54,6 +54,7 @@ from ..analysis_dataset import AnalysisSpecification
 logger = logging.getLogger(__name__)
 
 __all__ = [
+    'make_sds0',
     'make_sds1',
     'make_sds2',
     'make_sds3',
@@ -64,6 +65,94 @@ __all__ = [
     'make_edge_cases',
     'make_large_dataset',
 ]
+
+
+# ============================================================================
+# SDS 0: Response Only - Individual Measurements
+# ============================================================================
+
+def make_sds0(
+    n: int = 20,
+    mu: float = 50.0,
+    sigma: float = 2.0,
+    seed: Optional[int] = None,
+    include_truth: bool = False
+) -> pd.DataFrame:
+    """
+    Generate Sampling Design State 0 data (response only).
+
+    SDS0 is the simplest case - just individual measurements with no
+    grouping factors and no time structure. This represents a single
+    stream of measurements with no additional context.
+
+    Characteristics:
+    ---------------
+    - Response variable only
+    - No grouping factors (no factor 1 or factor 2)
+    - No time variable
+    - Appropriate for basic IMR (Individual-Moving Range) analysis
+
+    Use Cases:
+    ---------
+    - Simplest control chart scenario
+    - Data without any structure
+    - Legacy data with only measurements
+    - Quick process check
+
+    Args:
+        n: Number of observations
+        mu: Process mean
+        sigma: Process standard deviation
+        seed: Random seed for reproducibility
+        include_truth: Include true components as columns
+
+    Returns:
+        DataFrame with single column 'y' (response variable)
+
+    Mathematical Model:
+        Y_i = μ + ε_i
+
+        where:
+            μ: Process mean
+            ε_i: Random error ~ N(0, σ²)
+
+    Examples:
+        >>> # Basic usage
+        >>> df = make_sds0(n=20, seed=42)
+        >>> len(df)
+        20
+        >>> list(df.columns)
+        ['y']
+
+        >>> # With ground truth
+        >>> df = make_sds0(n=15, include_truth=True, seed=42)
+        >>> df[['y', 'true_error']].head()
+
+    See Also:
+        make_sds4: For time series (with time ordering)
+    """
+    rng = np.random.default_rng(seed)
+
+    rows = []
+    for _i in range(n):
+        epsilon = rng.normal(0, sigma)
+        y = mu + epsilon
+
+        row = {'y': y}
+
+        if include_truth:
+            row.update({
+                'true_mean': mu,
+                'true_error': epsilon
+            })
+
+        rows.append(row)
+
+    df = pd.DataFrame(rows)
+
+    logger.debug(f"Generated SDS0 data: {n} observations")
+
+    return df
 
 
 # ============================================================================
@@ -1278,46 +1367,49 @@ def make_sds(
     sds: int,
     K: int = 3,
     T: int = 8,
+    n: int = 20,
     seed: Optional[int] = None,
     **kwargs
 ) -> pd.DataFrame:
     """
     Generate synthetic data for any Sampling Design State.
-    
+
     Convenience function that dispatches to the appropriate SDS-specific
     generator. Useful for loops and parameterized testing.
-    
+
     Args:
-        sds: Sampling Design State (1, 2, 3, 4, 5, or 6)
-        K: Number of factor levels (not used for SDS 4)
-        T: Number of time periods
+        sds: Sampling Design State (0, 1, 2, 3, 4, 5, or 6)
+        K: Number of factor levels (not used for SDS 0, 4)
+        T: Number of time periods (not used for SDS 0)
+        n: Number of observations (used for SDS 0)
         seed: Random seed for reproducibility
         **kwargs: Additional arguments passed to specific generator
-        
+
     Returns:
         DataFrame appropriate for specified SDS
-        
+
     Examples:
         >>> # Generate data for each SDS type
-        >>> for sds in [1, 2, 3, 4, 5, 6]:
+        >>> for sds in [0, 1, 2, 3, 4, 5, 6]:
         ...     df = make_sds(sds, K=3, T=8, seed=42)
         ...     print(f"SDS {sds}: {len(df)} observations")
-        
+
         >>> # Useful for parameterized testing
-        >>> @pytest.mark.parametrize('sds', [1, 2, 3, 4, 5, 6])
+        >>> @pytest.mark.parametrize('sds', [0, 1, 2, 3, 4, 5, 6])
         >>> def test_all_sds(sds):
         ...     df = make_sds(sds, seed=42)
         ...     assert len(df) > 0
-        
+
         >>> # Pass through kwargs to specific generator
-        >>> df = make_sds(3, K=4, T=10, 
+        >>> df = make_sds(3, K=4, T=10,
         ...               p_replicated=0.3,  # SDS3-specific arg
         ...               seed=42)
-    
+
     Raises:
-        ValueError: If SDS type not in [1, 2, 3, 4, 5, 6]
+        ValueError: If SDS type not in [0, 1, 2, 3, 4, 5, 6]
     """
     generators = {
+        0: make_sds0,
         1: make_sds1,
         2: make_sds2,
         3: make_sds3,
@@ -1325,15 +1417,18 @@ def make_sds(
         5: make_sds5,
         6: make_sds6
     }
-    
+
     if sds not in generators:
         raise ValueError(
             f"SDS {sds} not implemented. "
             f"Available SDS types: {sorted(generators.keys())}"
         )
-    
+
+    # SDS 0 uses only n parameter
+    if sds == 0:
+        return generators[sds](n=n, seed=seed, **kwargs)
     # SDS 4 doesn't use K parameter
-    if sds == 4:
+    elif sds == 4:
         return generators[sds](T=T, seed=seed, **kwargs)
     # SDS 5 uses L and H_per_L instead of K
     elif sds == 5:
@@ -1991,6 +2086,7 @@ def make_large_dataset(
 
 # Quick access to all generators
 GENERATORS = {
+    0: make_sds0,
     1: make_sds1,
     2: make_sds2,
     3: make_sds3,
