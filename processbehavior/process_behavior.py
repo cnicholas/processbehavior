@@ -527,12 +527,14 @@ class ProcessBehavior:
         # Detect SDS on prepared data
         # Pass sampling_plan to enable SDS 4-6 detection
         detector = SDSRegistry()
-        sds, min_cell_size = detector.detect_sds(
+        sds_result = detector.detect_sds(
             prepared_df, config, plan=sampling_plan
         )
 
         # Get SDS analysis plan with all metadata
-        analysis_plan = SDSRegistry.get_analysis_plan(sds, min_cell_size=min_cell_size)
+        analysis_plan = SDSRegistry.get_analysis_plan(
+            sds_result.sds, min_cell_size=sds_result.min_cell_size
+        )
 
         # Calculate full dataset with residuals (R1-R5, RCR1-RCR5)
         # Use AnalysisDataSet with the recommended chart type to trigger calculation
@@ -545,7 +547,7 @@ class ProcessBehavior:
             'analysis_type': analysis_plan.recommended_chart
         }
         full_spec = AnalysisSpecification(full_spec_dict)
-        ads = AnalysisDataSet(self.data, full_spec, sds=sds)
+        ads = AnalysisDataSet(self.data, full_spec, sds=sds_result.sds)
 
         # Create and return Study object with pre-calculated AnalysisDataSet
         # This enables execute() to reuse the expensive calculation

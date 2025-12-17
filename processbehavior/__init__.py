@@ -64,7 +64,7 @@ from processbehavior.process_behavior import ColumnRef, ProcessBehavior
 from processbehavior.residual_calculator import ResidualCalculator
 
 # Utility classes (advanced users)
-from processbehavior.sds_detector import SDSAnalysisPlan, SDSRegistry
+from processbehavior.sds_detector import SDSAnalysisPlan, SDSRegistry, SDSResult
 
 # Study class (formulation layer)
 from processbehavior.study import DesignReport, Study
@@ -91,6 +91,7 @@ __all__ = [
     # Utilities
     'SDSRegistry',
     'SDSAnalysisPlan',
+    'SDSResult',
     'DataPreparation',
     'EffectsCalculator',
     'ResidualCalculator',

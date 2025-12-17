@@ -26,7 +26,8 @@ def detect_sds_for_test(df: pd.DataFrame, spec: dict) -> int:
     prep.validate_columns(df, config)
     prepared_df = prep.prepare_dataset(df, config)
     detector = SDSRegistry()
-    return detector.detect_sds(prepared_df, config)
+    result = detector.detect_sds(prepared_df, config)
+    return result
 
 
 def test_xbar_chart_column_contract():

@@ -244,6 +244,37 @@ class SDSAnalysisPlan:
         return "\n".join(lines)
 
 
+@dataclass(frozen=True)
+class SDSResult:
+    """
+    Result of SDS detection.
+
+    Attributes
+    ----------
+    sds : int
+        Sampling Design State (0-6)
+    min_cell_size : int
+        Minimum observations per cell (for chart selection)
+    reason : str | None
+        Why this SDS was detected. Useful for disambiguation when
+        multiple conditions can lead to the same SDS (e.g., SDS 5
+        can be "nested" or "incomplete_with_replication").
+
+        Possible values:
+        - "no_structure": SDS 0
+        - "full_replication": SDS 1
+        - "no_replication": SDS 2
+        - "partial_replication": SDS 3
+        - "single_condition": SDS 4
+        - "nested": SDS 5 (hierarchical factor structure)
+        - "incomplete_with_replication": SDS 5 (incomplete grid, some n≥2)
+        - "incomplete_no_replication": SDS 6
+    """
+    sds: int
+    min_cell_size: int
+    reason: str | None = None
+
+
 class SDSRegistry:
     """
     Registry of Sampling Design State (SDS 0-6) definitions and rules.
@@ -318,7 +349,7 @@ class SDSRegistry:
         df: pd.DataFrame,
         spec: DataPrepConfig,
         plan: dict[str, list] | None = None
-    ) -> tuple[int, int]:
+    ) -> SDSResult:
         """
         Detect Sampling Design State from data structure.
 
@@ -346,8 +377,8 @@ class SDSRegistry:
 
         Returns
         -------
-        tuple[int, int]
-            (sds, min_cell_size) - SDS number (0-6) and minimum cell size
+        SDSResult
+            Result containing sds (0-6), min_cell_size, and reason.
 
         Examples
         --------
@@ -357,15 +388,15 @@ class SDSRegistry:
         ...     'time': [1, 1, 1, 1],
         ...     'y': [10, 11, 9, 10]
         ... })
-        >>> sds, min_n = detector.detect_sds(df, spec)
-        >>> sds
+        >>> result = detector.detect_sds(df, spec)
+        >>> result.sds
         1
-        >>> min_n
-        2
+        >>> result.reason
+        'full_replication'
 
         >>> # With sampling plan (enables SDS 4-6 detection)
         >>> plan = {'Lane': [1, 2, 3, 4], 'Phase': [1, 2, 3]}
-        >>> sds, min_n = detector.detect_sds(df, spec, plan=plan)
+        >>> result = detector.detect_sds(df, spec, plan=plan)
         """
         # Store plan for potential use in classification
         # (Currently used for future SDS 4-6 enhanced detection)
@@ -373,7 +404,7 @@ class SDSRegistry:
         # SDS 0: No structure (no grouping factors defined)
         if not spec.has_grouping:
             logger.debug("SDS 0: No grouping factors defined")
-            return (0, 0)
+            return SDSResult(sds=0, min_cell_size=0, reason="no_structure")
 
         # From here: have grouping factors
         #
@@ -439,14 +470,14 @@ class SDSRegistry:
                 full_grid_size = n_groups * T_obs
             else:
                 full_grid_size = n_groups
-            sds5 = self._check_nested_design(df, spec, n_cells, full_grid_size)
-            if sds5 is not None:
-                return (sds5, min_cell_size)
+            is_nested = self._check_nested_design(df, spec, n_cells, full_grid_size)
+            if is_nested:
+                return SDSResult(sds=5, min_cell_size=min_cell_size, reason="nested")
 
         # SDS 4: Single group (only one factor level)
         if n_groups == 1:
             logger.debug(f"SDS 4: Single group ({n_groups} factor level)")
-            return (4, min_cell_size)
+            return SDSResult(sds=4, min_cell_size=min_cell_size, reason="single_condition")
 
         # Calculate coverage_ratio based on plan (if provided)
         if plan is not None:
@@ -455,12 +486,12 @@ class SDSRegistry:
         else:
             coverage_ratio = 1.0  # No plan = assume observed is complete
 
-        # SDS 1, 2, or 3: Based on N_kt replication pattern (Wheeler/Bishop)
+        # SDS 1, 2, 3, 5, or 6: Based on N_kt replication pattern (Wheeler/Bishop)
         # Note: min_cell_size (factor-only) returned for chart selection
-        sds = self._classify_by_replication(
+        sds, reason = self._classify_by_replication(
             cell_sizes, min_n, max_n, coverage_ratio=coverage_ratio
         )
-        return (sds, min_cell_size)
+        return SDSResult(sds=sds, min_cell_size=min_cell_size, reason=reason)
 
     def get_sds_characteristics(self, sds: int) -> dict:
         """
@@ -727,14 +758,14 @@ class SDSRegistry:
         spec: AnalysisSpecification,
         n_cells: int,
         full_grid_size: int
-    ) -> int | None:
+    ) -> bool:
         """
         Check if data has nested design structure (SDS 5).
 
         In nested designs, one factor is nested within another.
         Example: heads nested within lanes (each head belongs to one lane only)
 
-        Returns SDS 5 if nested and incomplete coverage, None otherwise.
+        Returns True if nested with incomplete coverage, False otherwise.
         """
         factor1 = spec.rsg_vars[0]
         factor2 = spec.rsg_vars[1]
@@ -756,14 +787,14 @@ class SDSRegistry:
                     f"SDS 5: Nested design detected - {factor2} nested in {factor1}, "
                     f"{coverage_ratio:.1%} grid coverage"
                 )
-                return 5
+                return True
             else:
                 logger.debug(
                     f"Nested structure detected but high coverage ({coverage_ratio:.1%}) - "
                     f"treating as crossed design"
                 )
 
-        return None
+        return False
 
     def _classify_by_replication(
         self,
@@ -771,7 +802,7 @@ class SDSRegistry:
         min_n: int,
         max_n: int,
         coverage_ratio: float
-    ) -> int:
+    ) -> tuple[int, str]:
         """
         Classify as SDS 1, 2, 3, 5, or 6 based on cell replication and coverage.
 
@@ -783,6 +814,11 @@ class SDSRegistry:
         - All n≥2 → SDS 1 (full replication)
         - All n=1 → SDS 2 (no replication)
         - Mixed → SDS 3 (partial replication)
+
+        Returns
+        -------
+        tuple[int, str]
+            (sds, reason) - SDS number and reason string
         """
         n_cells = len(cell_sizes)
         cells_with_n1 = (cell_sizes == 1).sum()
@@ -802,14 +838,14 @@ class SDSRegistry:
                     f"SDS 5: Incomplete grid with full replication "
                     f"({coverage_ratio:.1%} coverage, all cells n≥2)"
                 )
-                return 5
+                return (5, "incomplete_with_replication")
             elif max_n == 1:
                 # No replication + incomplete → SDS 6
                 logger.debug(
                     f"SDS 6: Incomplete grid without replication "
                     f"({coverage_ratio:.1%} coverage, all n=1)"
                 )
-                return 6
+                return (6, "incomplete_no_replication")
             else:
                 # Mixed replication + incomplete → SDS 5
                 # Rationale: Can estimate variance from replicated cells
@@ -817,7 +853,7 @@ class SDSRegistry:
                     f"SDS 5: Incomplete grid with mixed replication "
                     f"({coverage_ratio:.1%} coverage, {cells_with_n2_plus}/{n_cells} cells with n≥2)"
                 )
-                return 5
+                return (5, "incomplete_with_replication")
 
         # SDS 1: Full replication
         if min_n >= 2:
@@ -825,14 +861,14 @@ class SDSRegistry:
                 f"SDS 1: Full replication "
                 f"(all cells have n≥2, range: [{min_n}, {max_n}])"
             )
-            return 1
+            return (1, "full_replication")
 
         # SDS 2: No replication (coverage already checked above)
         if max_n == 1:
             logger.debug(
                 f"SDS 2: No replication (all cells have n=1)"
             )
-            return 2
+            return (2, "no_replication")
 
         # SDS 3: Partial replication
         if cells_with_n1 > 0 and cells_with_n2_plus > 0:
@@ -842,14 +878,14 @@ class SDSRegistry:
                 f"{cells_with_n2_plus}/{n_cells} cells replicated ({pct_replicated:.1f}%), "
                 f"n range: [{min_n}, {max_n}]"
             )
-            return 3
+            return (3, "partial_replication")
 
         # Fallback (shouldn't reach here)
         logger.warning(
             f"SDS Detection: Unexpected replication pattern - defaulting to SDS 0. "
             f"min_n={min_n}, max_n={max_n}"
         )
-        return 0
+        return (0, "no_structure")
 
     def _calculate_coverage_ratio(
         self,

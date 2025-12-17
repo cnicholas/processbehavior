@@ -141,10 +141,10 @@ def test_detect_sds0_no_structure(detector, sds0_data):
         'response_var': 'weight'
     })
 
-    sds, min_n = detector.detect_sds(sds0_data, spec)
+    result = detector.detect_sds(sds0_data, spec)
 
-    assert sds == 0
-    assert min_n == 0  # No grouping means no cell size
+    assert result.sds == 0
+    assert result.min_cell_size == 0  # No grouping means no cell size
 
 
 def test_detect_sds1_grouping_only(detector, spec_no_time):
@@ -158,11 +158,11 @@ def test_detect_sds1_grouping_only(detector, spec_no_time):
         'weight': [10.1, 10.2, 9.9, 10.0]
     })
 
-    sds, min_n = detector.detect_sds(df, spec_no_time)
+    result = detector.detect_sds(df, spec_no_time)
 
     # 2 groups with n=2 each = full replication
-    assert sds == 1
-    assert min_n == 2
+    assert result.sds == 1
+    assert result.min_cell_size == 2
 
 
 def test_detect_sds0_only_time(detector, spec_no_grouping):
@@ -172,42 +172,42 @@ def test_detect_sds0_only_time(detector, spec_no_grouping):
         'weight': [10.1, 10.2, 10.3]
     })
 
-    sds, min_n = detector.detect_sds(df, spec_no_grouping)
+    result = detector.detect_sds(df, spec_no_grouping)
 
-    assert sds == 0
-    assert min_n == 0
+    assert result.sds == 0
+    assert result.min_cell_size == 0
 
 
 def test_detect_sds1_full_replication(detector, sds1_data, spec_with_grouping_and_time):
     """Should detect SDS 1 when all cells have n≥2."""
-    sds, min_n = detector.detect_sds(sds1_data, spec_with_grouping_and_time)
+    result = detector.detect_sds(sds1_data, spec_with_grouping_and_time)
 
-    assert sds == 1
-    assert min_n >= 2
+    assert result.sds == 1
+    assert result.min_cell_size >= 2
 
 
 def test_detect_sds2_no_replication(detector, sds2_data, spec_with_grouping_and_time):
     """Should detect SDS 2 when all cells have n=1 with complete grid."""
-    sds, min_n = detector.detect_sds(sds2_data, spec_with_grouping_and_time)
+    result = detector.detect_sds(sds2_data, spec_with_grouping_and_time)
 
-    assert sds == 2
-    assert min_n == 1
+    assert result.sds == 2
+    assert result.min_cell_size == 1
 
 
 def test_detect_sds3_partial_replication(detector, sds3_data, spec_with_grouping_and_time):
     """Should detect SDS 3 when mix of n=1 and n≥2 cells."""
-    sds, min_n = detector.detect_sds(sds3_data, spec_with_grouping_and_time)
+    result = detector.detect_sds(sds3_data, spec_with_grouping_and_time)
 
-    assert sds == 3
-    assert min_n == 1  # Minimum is 1 for partial replication
+    assert result.sds == 3
+    assert result.min_cell_size == 1  # Minimum is 1 for partial replication
 
 
 def test_detect_sds4_single_condition(detector, sds4_data, spec_with_grouping_and_time):
     """Should detect SDS 4 when single group over multiple times."""
-    sds, min_n = detector.detect_sds(sds4_data, spec_with_grouping_and_time)
+    result = detector.detect_sds(sds4_data, spec_with_grouping_and_time)
 
-    assert sds == 4
-    assert min_n >= 1
+    assert result.sds == 4
+    assert result.min_cell_size >= 1
 
 
 def test_detect_sds2_with_nkt_grouping(detector, sds6_data, spec_with_grouping_and_time):
@@ -220,12 +220,12 @@ def test_detect_sds2_with_nkt_grouping(detector, sds6_data, spec_with_grouping_a
     This data has 2 groups × unique time points = all N_kt = 1 → SDS 2
     The min_cell_size (for chart selection) uses factor-only = 5.
     """
-    sds, min_n = detector.detect_sds(sds6_data, spec_with_grouping_and_time)
+    result = detector.detect_sds(sds6_data, spec_with_grouping_and_time)
 
     # Per Wheeler/Bishop: all N_kt = 1 → SDS 2
-    assert sds == 2
+    assert result.sds == 2
     # min_cell_size uses factor-only grouping (A:5, B:5)
-    assert min_n >= 2
+    assert result.min_cell_size >= 2
 
 
 def test_detect_sds_nested_design(detector):
@@ -250,13 +250,13 @@ def test_detect_sds_nested_design(detector):
         'response_var': 'weight'
     })
 
-    sds, min_n = detector.detect_sds(df, spec)
+    result = detector.detect_sds(df, spec)
 
     # With 2 RSG × 2 time = 4 possible cells, all 4 present (100%)
     # Nested design requires BOTH nesting AND < 90% coverage
     # This will be SDS 1 or 3, not 5 - let's just verify it detects nested structure in logs
     # Actually test that it doesn't crash with nested data
-    assert sds in [1, 2, 3]  # Valid detection, nested logic tested
+    assert result.sds in [1, 2, 3]  # Valid detection, nested logic tested
 
 
 # ============================================================================
@@ -478,10 +478,10 @@ def test_detect_sds_boundary_75_percent_coverage(detector, spec_with_grouping_an
         'weight': [10.0] * 6
     })
 
-    sds = detector.detect_sds(df, spec_with_grouping_and_time)
+    result = detector.detect_sds(df, spec_with_grouping_and_time)
 
     # Should NOT be SDS 6 (threshold is < 0.75)
-    assert sds != 6
+    assert result.sds != 6
 
 
 def test_detect_sds2_sparse_time_coverage(detector, spec_with_grouping_and_time):
@@ -500,12 +500,12 @@ def test_detect_sds2_sparse_time_coverage(detector, spec_with_grouping_and_time)
         'weight': [10.0] * 14
     })
 
-    sds, min_n = detector.detect_sds(df, spec_with_grouping_and_time)
+    result = detector.detect_sds(df, spec_with_grouping_and_time)
 
     # Per Wheeler/Bishop: all N_kt = 1 → SDS 2
-    assert sds == 2
+    assert result.sds == 2
     # min_cell_size uses factor-only grouping (A:7, B:7)
-    assert min_n == 7
+    assert result.min_cell_size == 7
 
 
 def test_detect_sds_with_large_n_values(detector, spec_with_grouping_and_time):
@@ -517,10 +517,10 @@ def test_detect_sds_with_large_n_values(detector, spec_with_grouping_and_time):
         'weight': list(range(400))
     })
 
-    sds, min_n = detector.detect_sds(df, spec_with_grouping_and_time)
+    result = detector.detect_sds(df, spec_with_grouping_and_time)
 
-    assert sds == 1  # Full replication
-    assert min_n == 200  # 200 per group (A and B)
+    assert result.sds == 1  # Full replication
+    assert result.min_cell_size == 200  # 200 per group (A and B)
 
 
 def test_detect_sds_with_varying_cell_sizes(detector, spec_with_grouping_and_time):
@@ -542,10 +542,10 @@ def test_detect_sds_with_varying_cell_sizes(detector, spec_with_grouping_and_tim
     # Grid: 3 groups × 2 times = 6 cells, all 6 present = 100% coverage
     # Subgroup sizes: A=5, B=1, C=2 → mix of n=1 and n≥2 → SDS 3
 
-    sds, min_n = detector.detect_sds(df, spec_with_grouping_and_time)
+    result = detector.detect_sds(df, spec_with_grouping_and_time)
 
-    assert sds == 3  # Partial replication (mix of n=1 and n≥2)
-    assert min_n == 1  # Minimum is 1 (group B)
+    assert result.sds == 3  # Partial replication (mix of n=1 and n≥2)
+    assert result.min_cell_size == 1  # Minimum is 1 (group B)
 
 
 def test_detect_sds_logs_debug_info(detector, sds1_data, spec_with_grouping_and_time, caplog):
@@ -579,8 +579,8 @@ def test_detect_sds_with_three_factors(detector):
     })
 
     # Should not crash, should detect some SDS
-    sds, min_n = detector.detect_sds(df, spec)
-    assert sds in range(7)  # Valid SDS 0-6
+    result = detector.detect_sds(df, spec)
+    assert result.sds in range(7)  # Valid SDS 0-6
 
 
 # ============================================================================
@@ -609,12 +609,12 @@ def test_realistic_scenario_manufacturing_4_lanes_hourly(detector):
         'response_var': 'weight'
     })
 
-    sds, min_n = detector.detect_sds(df, spec)
-    info = detector.get_sds_characteristics(sds)
-    should_calc_vas = detector.should_calculate_vas_residuals(sds, 'Xbar')
+    result = detector.detect_sds(df, spec)
+    info = detector.get_sds_characteristics(result.sds)
+    should_calc_vas = detector.should_calculate_vas_residuals(result.sds, 'Xbar')
 
-    assert sds == 1  # Full replication
-    assert min_n == 40  # 4 lanes × 8 hours × 5 samples / 4 lanes = 40 per lane
+    assert result.sds == 1  # Full replication
+    assert result.min_cell_size == 40  # 4 lanes × 8 hours × 5 samples / 4 lanes = 40 per lane
     assert info['r2_method'] == 'within_cell'
     assert should_calc_vas is True
 
@@ -641,10 +641,10 @@ def test_realistic_scenario_designed_experiment_no_replication(detector):
         'response_var': 'yield'
     })
 
-    sds, min_n = detector.detect_sds(df, spec)
+    result = detector.detect_sds(df, spec)
 
-    assert sds == 2  # No replication, complete grid
-    assert min_n == 1
+    assert result.sds == 2  # No replication, complete grid
+    assert result.min_cell_size == 1
 
 
 # ============================================================================
