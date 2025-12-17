@@ -316,7 +316,8 @@ class SDSRegistry:
     def detect_sds(
         self,
         df: pd.DataFrame,
-        spec: DataPrepConfig
+        spec: DataPrepConfig,
+        plan: dict[str, list] | None = None
     ) -> tuple[int, int]:
         """
         Detect Sampling Design State from data structure.
@@ -330,6 +331,18 @@ class SDSRegistry:
             Prepared analysis dataset
         spec : AnalysisSpecification
             Analysis specification
+        plan : dict, optional
+            Sampling plan specifying expected factor levels. Keys are column
+            names, values are lists of expected levels. When provided, enables
+            SDS 4-6 detection by comparing observed structure to planned
+            structure (e.g., detecting missing factor levels).
+
+            Mode 1 (plan=None): Infer structure from observed data → SDS 0-3
+            Mode 2 (plan={...}): Compare to plan → enables SDS 4-6
+
+            Time handling: The plan specifies factor levels only, not time.
+            Observed unique time values are used as the "planned" time set.
+            This detects missing factor combos within observed time blocks.
 
         Returns
         -------
@@ -349,7 +362,14 @@ class SDSRegistry:
         1
         >>> min_n
         2
+
+        >>> # With sampling plan (enables SDS 4-6 detection)
+        >>> plan = {'Lane': [1, 2, 3, 4], 'Phase': [1, 2, 3]}
+        >>> sds, min_n = detector.detect_sds(df, spec, plan=plan)
         """
+        # Store plan for potential use in classification
+        # (Currently used for future SDS 4-6 enhanced detection)
+        self._plan = plan
         # SDS 0: No structure (no grouping factors defined)
         if not spec.has_grouping:
             logger.debug("SDS 0: No grouping factors defined")
@@ -423,10 +443,17 @@ class SDSRegistry:
             logger.debug(f"SDS 4: Single group ({n_groups} factor level)")
             return (4, min_cell_size)
 
+        # Calculate coverage_ratio based on plan (if provided)
+        if plan is not None:
+            coverage_ratio = self._calculate_coverage_ratio(df, spec, plan)
+            logger.debug(f"Plan coverage ratio: {coverage_ratio:.2%}")
+        else:
+            coverage_ratio = 1.0  # No plan = assume observed is complete
+
         # SDS 1, 2, or 3: Based on N_kt replication pattern (Wheeler/Bishop)
         # Note: min_cell_size (factor-only) returned for chart selection
         sds = self._classify_by_replication(
-            cell_sizes, min_n, max_n, coverage_ratio=1.0
+            cell_sizes, min_n, max_n, coverage_ratio=coverage_ratio
         )
         return (sds, min_cell_size)
 
@@ -741,8 +768,13 @@ class SDSRegistry:
         coverage_ratio: float
     ) -> int:
         """
-        Classify as SDS 1, 2, or 3 based on cell replication pattern.
+        Classify as SDS 1, 2, 3, 5, or 6 based on cell replication and coverage.
 
+        Incomplete grid detection (coverage < 95%):
+        - With replication (any n≥2) → SDS 5
+        - No replication (all n=1) → SDS 6
+
+        Complete grid detection (coverage ≥ 95%):
         - All n≥2 → SDS 1 (full replication)
         - All n=1 → SDS 2 (no replication)
         - Mixed → SDS 3 (partial replication)
@@ -756,6 +788,32 @@ class SDSRegistry:
             f"{cells_with_n2_plus} cells with n≥2"
         )
 
+        # Incomplete grid detection (coverage < 95%)
+        # Key insight: SDS 5 vs 6 is about variance estimation capability
+        if coverage_ratio < 0.95:
+            if min_n >= 2:
+                # Full replication + incomplete → SDS 5
+                logger.debug(
+                    f"SDS 5: Incomplete grid with full replication "
+                    f"({coverage_ratio:.1%} coverage, all cells n≥2)"
+                )
+                return 5
+            elif max_n == 1:
+                # No replication + incomplete → SDS 6
+                logger.debug(
+                    f"SDS 6: Incomplete grid without replication "
+                    f"({coverage_ratio:.1%} coverage, all n=1)"
+                )
+                return 6
+            else:
+                # Mixed replication + incomplete → SDS 5
+                # Rationale: Can estimate variance from replicated cells
+                logger.debug(
+                    f"SDS 5: Incomplete grid with mixed replication "
+                    f"({coverage_ratio:.1%} coverage, {cells_with_n2_plus}/{n_cells} cells with n≥2)"
+                )
+                return 5
+
         # SDS 1: Full replication
         if min_n >= 2:
             logger.debug(
@@ -764,21 +822,12 @@ class SDSRegistry:
             )
             return 1
 
-        # SDS 2: No replication
+        # SDS 2: No replication (coverage already checked above)
         if max_n == 1:
-            if coverage_ratio >= 0.95:  # Complete grid
-                logger.debug(
-                    f"SDS 2: No replication "
-                    f"(all cells have n=1, {coverage_ratio:.1%} complete)"
-                )
-                return 2
-            else:
-                # Incomplete grid with no replication → SDS 6
-                logger.debug(
-                    f"SDS 6: Incomplete grid with no replication "
-                    f"({coverage_ratio:.1%} coverage)"
-                )
-                return 6
+            logger.debug(
+                f"SDS 2: No replication (all cells have n=1)"
+            )
+            return 2
 
         # SDS 3: Partial replication
         if cells_with_n1 > 0 and cells_with_n2_plus > 0:
@@ -796,6 +845,91 @@ class SDSRegistry:
             f"min_n={min_n}, max_n={max_n}"
         )
         return 0
+
+    def _calculate_coverage_ratio(
+        self,
+        df: pd.DataFrame,
+        spec: DataPrepConfig,
+        plan: dict[str, list]
+    ) -> float:
+        """
+        Calculate coverage ratio: observed cells / expected cells.
+
+        When a plan is provided, we can determine how complete the observed
+        data grid is compared to what was intended.
+
+        Expected cells = Cartesian product of all plan levels × time points (if any)
+        Observed cells = Unique (factor, time) combinations in data
+
+        Time Handling
+        -------------
+        The plan only specifies factor levels, not time levels. For time
+        expectation, we use observed unique time values as the "planned" set.
+        This means:
+        - Coverage detects missing factor combos within observed time blocks
+        - A factor combo missing at time=3 but present at time=1,2 counts as missing
+        - Time points not in the data are not considered "missing"
+
+        Example: If plan={'Lane': [1,2,3], 'Phase': [A,B]} and data has time=[1,2]:
+        - Expected cells = 6 factor combos × 2 time points = 12
+        - If Lane=3 is missing entirely: observed = 4 combos × 2 = 8, coverage = 67%
+
+        Note: This method compares COUNTS for efficiency. For identifying
+        specific missing/extra combinations (e.g., DesignReport.missing_combos),
+        use encode_rsg() from data_preparation to generate expected keys:
+
+            from processbehavior.data_preparation import encode_rsg
+            expected_keys = {encode_rsg(combo, spec.rsg_var_delim)
+                            for combo in product(*plan.values())}
+            observed_keys = set(df[spec.rsg_var_name].unique())
+            missing = expected_keys - observed_keys
+
+        Parameters
+        ----------
+        df : DataFrame
+            The analysis dataset
+        spec : DataPrepConfig
+            Analysis specification
+        plan : dict
+            Sampling plan with {column: [levels]} structure.
+            Specifies factor levels only; time is inferred from observed data.
+
+        Returns
+        -------
+        float
+            Ratio of observed cells to expected cells (0.0 to 1.0+)
+            Can exceed 1.0 if observed has extra levels not in plan.
+        """
+        from itertools import product
+
+        # Get expected factor combinations from plan
+        factor_levels = list(plan.values())
+        expected_factor_combos = set(product(*factor_levels))
+
+        if spec.has_time:
+            # Time expectation: use observed unique time values as planned time set.
+            # This detects missing factor combos within observed time blocks.
+            # (Plan only specifies factor levels, not time levels.)
+            time_values = df[spec.time_var].dropna().unique()
+            expected_cells = len(expected_factor_combos) * len(time_values)
+
+            # Observed cells = unique (rsg, time) combos
+            observed_cells = df.groupby(
+                [spec.rsg_var_name, spec.time_var], dropna=False, observed=True
+            ).ngroups
+        else:
+            # No time: expected = factor combos, observed = unique rsg values
+            expected_cells = len(expected_factor_combos)
+            observed_cells = df[spec.rsg_var_name].nunique()
+
+        if expected_cells == 0:
+            return 1.0  # Avoid division by zero
+
+        ratio = observed_cells / expected_cells
+        logger.debug(
+            f"Coverage: {observed_cells} observed / {expected_cells} expected = {ratio:.1%}"
+        )
+        return ratio
 
     # =========================================================================
     # SDS Analysis Plan Methods - Validation & Diagnostic Tools

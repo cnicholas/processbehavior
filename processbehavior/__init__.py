@@ -47,7 +47,7 @@ from processbehavior.analysis_dataset import AnalysisDataSet
 # Result object
 from processbehavior.analysis_result import AnalysisResult
 from processbehavior.analysis_specification import AnalysisSpecification
-from processbehavior.data_preparation import DataPreparation
+from processbehavior.data_preparation import DataPreparation, encode_rsg
 from processbehavior.effects_calculator import EffectsCalculator
 
 # Exceptions
@@ -60,19 +60,21 @@ from processbehavior.exceptions import (
 
 # Plotting/theming
 from processbehavior.plotting import ChartTheme, get_theme, list_themes, register_theme
-from processbehavior.process_behavior import ProcessBehavior
+from processbehavior.process_behavior import ColumnRef, ProcessBehavior
 from processbehavior.residual_calculator import ResidualCalculator
 
 # Utility classes (advanced users)
 from processbehavior.sds_detector import SDSAnalysisPlan, SDSRegistry
 
 # Study class (formulation layer)
-from processbehavior.study import Study
+from processbehavior.study import DesignReport, Study
 
 __all__ = [
     # Main API
     'ProcessBehavior',
+    'ColumnRef',
     'Study',
+    'DesignReport',
     'AnalysisResult',
 
     # Exceptions
@@ -92,6 +94,7 @@ __all__ = [
     'DataPreparation',
     'EffectsCalculator',
     'ResidualCalculator',
+    'encode_rsg',
 
     # Plotting/theming
     'ChartTheme',

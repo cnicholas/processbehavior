@@ -29,6 +29,40 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
+def encode_rsg(factor_values: tuple | list, delimiter: str = '_') -> str:
+    """
+    Encode factor values into RSG (Rational Subgroup) string.
+
+    This is the single source of truth for RSG encoding.
+    Used by both:
+    - DataPreparation._add_composite_column() for observed data
+    - Plan expansion for expected data (coverage calculation, missing_combos)
+
+    Parameters
+    ----------
+    factor_values : tuple or list
+        Values for each factor, in factor order.
+        Example: (1, 'A') or [2, 'B']
+    delimiter : str
+        Delimiter between values (default: '_')
+
+    Returns
+    -------
+    str
+        Encoded RSG string (e.g., "1_A", "2_B")
+
+    Examples
+    --------
+    >>> encode_rsg((1, 'A'))
+    '1_A'
+    >>> encode_rsg([2, 'B'], delimiter='-')
+    '2-B'
+    >>> encode_rsg((42,))
+    '42'
+    """
+    return delimiter.join(str(v) for v in factor_values)
+
+
 class DataPreparation:
     """
     Validates and prepares raw data for statistical process control analysis.
@@ -488,6 +522,8 @@ class DataPreparation:
         """
         Create composite column by combining multiple columns.
 
+        Uses encode_rsg() for consistent encoding with plan expansion.
+
         Example: ['lane', 'head'] → 'lane_head' with values like 'A_1', 'B_2'
         """
         missing = set(cols_to_combine) - set(df.columns)
@@ -502,17 +538,12 @@ class DataPreparation:
             # Single column - just copy
             return self._add_column(df, col_name, cols_to_combine[0])
 
-        # Multiple columns - combine with delimiter
+        # Multiple columns - combine with delimiter using shared encode_rsg()
         out = df.copy()
-        len_delim = len(col_delim)
-
-        # Build concatenated string
-        combined = (df[cols_to_combine].astype(str) + col_delim).cumsum(1).iloc[:, -1].values
-
-        # Remove trailing delimiter
-        combined = [x[:-len_delim] for x in combined]
-
-        out[col_name] = combined
+        out[col_name] = df[cols_to_combine].apply(
+            lambda row: encode_rsg(tuple(row), delimiter=col_delim),
+            axis=1
+        )
 
         return out
 
