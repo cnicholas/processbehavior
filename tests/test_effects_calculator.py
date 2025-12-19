@@ -388,7 +388,7 @@ def test_calculate_all_effects_multi_factor(calc, multi_factor_df, spec_multi_fa
     assert 'head_MEs' in result
 
     # Should have factor interaction effects (2+ factors)
-    assert 'F1xF2' in result
+    assert 'factor_interaction' in result
     assert 'factor_interaction_effects' in result
 
 
@@ -511,11 +511,11 @@ def test_multi_factor_effects_pipeline(calc, multi_factor_df, spec_multi_factor)
     assert 'head' in effects
 
     # Should have interaction between factors
-    assert 'F1xF2' in effects
+    assert 'factor_interaction' in effects
     assert 'factor_interaction_effects' in effects
 
     # Verify interaction has correct structure
-    fi = effects['F1xF2']
+    fi = effects['factor_interaction']
     assert 'lane' in fi.columns
     assert 'head' in fi.columns
     assert 'Rx' in fi.columns  # Column is called Rx

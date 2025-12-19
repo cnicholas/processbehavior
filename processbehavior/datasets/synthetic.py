@@ -1605,11 +1605,11 @@ def generate_test_suite(
     
     # SDS 6 variations
     files['sds6_basic'] = os.path.join(output_dir, 'sds6_basic.csv')
-    df = make_sds6(T=80, K=3, seed=seed)
+    df = make_sds6(T=80, K1=3, seed=seed)
     df.to_csv(files['sds6_basic'], index=False)
     
     files['sds6_sparse'] = os.path.join(output_dir, 'sds6_sparse.csv')
-    df = make_sds6(T=60, K=4, p_sampled=0.4, seed=seed)
+    df = make_sds6(T=60, K1=4, p_sampled=0.4, seed=seed)
     df.to_csv(files['sds6_sparse'], index=False)
     
     # Edge cases

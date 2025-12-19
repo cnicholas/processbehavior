@@ -565,7 +565,7 @@ class EffectsCalculator:
             fi = calculate_factor_interaction_effects(df, spec.rsg_vars, effects)
             if not fi.empty:
                 # Store the interaction effect lookup
-                effects['F1xF2'] = fi
+                effects['factor_interaction'] = fi
 
                 # Calculate per-row scores
                 fie = calculate_factor_interaction_scores(df, spec.rsg_vars, fi)
