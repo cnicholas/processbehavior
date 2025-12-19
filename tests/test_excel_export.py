@@ -18,7 +18,7 @@ from processbehavior.sds_detector import SDSRegistry
 from processbehavior.data_preparation import DataPreparation
 
 # Import test data generators
-from processbehavior.datasets import make_sds1, make_sds2
+from processbehavior.datasets.synthetic import make_sds
 
 
 def detect_sds_for_test(df: pd.DataFrame, spec: dict) -> int:
@@ -48,7 +48,7 @@ def temp_excel_file():
 def test_excel_export_basic(temp_excel_file):
     """Test basic Excel export with default parameters."""
     # Generate SDS1 data
-    df = make_sds1(K=3, T=5, n_min=2, n_max=3, seed=42)
+    df = make_sds(1, K1=3, K2=2, T=5, n_min=2, n_max=3, seed=42)
 
     spec = {
         'analysis_type': 'Xbar',
@@ -85,7 +85,7 @@ def test_excel_export_basic(temp_excel_file):
 
 def test_excel_export_with_full_dataset(temp_excel_file):
     """Test Excel export including full dataset."""
-    df = make_sds1(K=2, T=4, n_min=2, n_max=2, seed=42)
+    df = make_sds(1, K1=2, K2=2, T=4, n_min=2, n_max=2, seed=42)
 
     spec = {
         'analysis_type': 'Xbar',
@@ -113,7 +113,7 @@ def test_excel_export_with_full_dataset(temp_excel_file):
 
 def test_excel_export_stratified_imr(temp_excel_file):
     """Test Excel export with stratified IMR charts."""
-    df = make_sds1(K=3, T=5, n_min=2, n_max=3, seed=42)
+    df = make_sds(1, K1=3, K2=2, T=5, n_min=2, n_max=3, seed=42)
 
     spec = {
         'analysis_type': 'Imr',
@@ -149,7 +149,7 @@ def test_excel_export_stratified_imr(temp_excel_file):
 
 def test_excel_export_with_residuals(temp_excel_file):
     """Test Excel export includes residuals when calculated."""
-    df = make_sds2(K=3, T=5, seed=42)
+    df = make_sds(2, K1=3, K2=2, T=5, seed=42)
 
     spec = {
         'analysis_type': 'Xbar',
@@ -176,7 +176,7 @@ def test_excel_export_with_residuals(temp_excel_file):
 
 def test_excel_export_minimal(temp_excel_file):
     """Test Excel export with minimal options (only charts)."""
-    df = make_sds1(K=2, T=4, n_min=2, n_max=2, seed=42)
+    df = make_sds(1, K1=2, K2=2, T=4, n_min=2, n_max=2, seed=42)
 
     spec = {
         'analysis_type': 'Xbar',
@@ -209,7 +209,7 @@ def test_excel_export_minimal(temp_excel_file):
 
 def test_excel_export_no_formatting(temp_excel_file):
     """Test Excel export without formatting."""
-    df = make_sds1(K=2, T=4, n_min=2, n_max=2, seed=42)
+    df = make_sds(1, K1=2, K2=2, T=4, n_min=2, n_max=2, seed=42)
 
     spec = {
         'analysis_type': 'Xbar',
@@ -233,7 +233,7 @@ def test_excel_export_no_formatting(temp_excel_file):
 
 def test_excel_export_chart_data_integrity(temp_excel_file):
     """Test that chart data is correctly exported to Excel."""
-    df = make_sds1(K=2, T=5, n_min=3, n_max=3, seed=42)
+    df = make_sds(1, K1=2, K2=2, T=5, n_min=3, n_max=3, seed=42)
 
     spec = {
         'analysis_type': 'Xbar',
@@ -262,7 +262,7 @@ def test_excel_export_chart_data_integrity(temp_excel_file):
 
 def test_excel_export_summary_content(temp_excel_file):
     """Test that summary tab contains expected information."""
-    df = make_sds2(K=3, T=5, seed=42)
+    df = make_sds(2, K1=3, K2=2, T=5, seed=42)
 
     spec = {
         'analysis_type': 'Xbar',
@@ -291,7 +291,7 @@ def test_excel_export_summary_content(temp_excel_file):
 
 def test_excel_export_effects_tab(temp_excel_file):
     """Test that effects are properly exported when available."""
-    df = make_sds2(K=3, T=5, seed=42)
+    df = make_sds(2, K1=3, K2=2, T=5, seed=42)
 
     spec = {
         'analysis_type': 'Xbar',
@@ -319,7 +319,7 @@ def test_excel_export_effects_tab(temp_excel_file):
 
 def test_excel_export_invalid_path():
     """Test Excel export with invalid file path."""
-    df = make_sds1(K=2, T=3, n_min=2, n_max=2, seed=42)
+    df = make_sds(1, K1=2, K2=2, T=3, n_min=2, n_max=2, seed=42)
 
     spec = {
         'analysis_type': 'Xbar',
@@ -339,7 +339,7 @@ def test_excel_export_invalid_path():
 
 def test_excel_export_multiple_analyses(temp_excel_file):
     """Test exporting different analysis types."""
-    df = make_sds1(K=3, T=5, n_min=2, n_max=3, seed=42)
+    df = make_sds(1, K1=3, K2=2, T=5, n_min=2, n_max=3, seed=42)
 
     # Test with S chart
     spec_s = {
@@ -363,12 +363,12 @@ def test_excel_export_multiple_analyses(temp_excel_file):
 
 def test_excel_tab_name_truncation(temp_excel_file):
     """Test that long tab names are properly truncated to 31 characters."""
-    df = make_sds1(K=2, T=4, n_min=2, n_max=2, seed=42)
+    df = make_sds(1, K1=2, K2=2, T=4, n_min=2, n_max=2, seed=42)
 
     # Rename factor to create very long group names
     df['factor 1'] = df['factor 1'].replace({
-        'K1': 'Very_Long_Group_Name_That_Exceeds_31_Characters',
-        'K2': 'Another_Super_Long_Name_For_Testing'
+        'F1_1': 'Very_Long_Group_Name_That_Exceeds_31_Characters',
+        'F1_2': 'Another_Super_Long_Name_For_Testing'
     })
 
     spec = {
@@ -393,7 +393,7 @@ def test_excel_tab_name_truncation(temp_excel_file):
 
 def test_excel_export_preserves_statistics(temp_excel_file):
     """Test that chart statistics are accessible in exported data."""
-    df = make_sds1(K=2, T=5, n_min=3, n_max=3, seed=42)
+    df = make_sds(1, K1=2, K2=2, T=5, n_min=3, n_max=3, seed=42)
 
     spec = {
         'analysis_type': 'Xbar',

@@ -40,7 +40,8 @@ class TestDataGenerationPerformance:
     def test_generate_1m_sds1(self):
         """Generate 1M SDS1 observations and measure time."""
         start = time.perf_counter()
-        df = synthetic.make_sds1(K=100, T=1000, n_min=10, n_max=10, seed=42)
+        # K1=100 × K2=2 × T=500 × n=10 = 1,000,000
+        df = synthetic.make_sds(1, K1=100, K2=2, T=500, n_min=10, n_max=10, seed=42)
         elapsed = time.perf_counter() - start
 
         assert len(df) == 1_000_000
@@ -343,11 +344,13 @@ class TestScalability:
     def test_formulate_scaling(self, size, perf_spec):
         """Test formulate() scales reasonably with row count."""
         # Generate appropriately sized dataset
-        K = max(2, int(np.sqrt(size / 10)))
-        T = max(2, int(np.sqrt(size / 10)))
-        n = max(2, size // (K * T))
+        # K1 × K2 × T × n = size
+        K1 = max(2, int(np.sqrt(size / 20)))
+        K2 = 2
+        T = max(2, int(np.sqrt(size / 20)))
+        n = max(2, size // (K1 * K2 * T))
 
-        df = synthetic.make_sds1(K=K, T=T, n_min=n, n_max=n, seed=42)
+        df = synthetic.make_sds(1, K1=K1, K2=K2, T=T, n_min=n, n_max=n, seed=42)
         actual_size = len(df)
 
         pdf = ProcessBehavior(df)
@@ -370,11 +373,12 @@ class TestScalability:
     @pytest.mark.parametrize('n_factors', [1, 5, 10, 20])
     def test_factor_count_scaling(self, n_factors, perf_spec):
         """Test performance with varying number of factor levels."""
-        K = n_factors
-        T = 100
+        K1 = n_factors
+        K2 = 2
+        T = 50
         n = 10
 
-        df = synthetic.make_sds1(K=K, T=T, n_min=n, n_max=n, seed=42)
+        df = synthetic.make_sds(1, K1=K1, K2=K2, T=T, n_min=n, n_max=n, seed=42)
         pdf = ProcessBehavior(df)
 
         start = time.perf_counter()
@@ -386,7 +390,7 @@ class TestScalability:
         elapsed = time.perf_counter() - start
         assert study is not None  # Ensure formulate completed
 
-        print(f'\n{K} factors ({len(df):,} rows): {elapsed:.3f}s')
+        print(f'\n{K1} factors ({len(df):,} rows): {elapsed:.3f}s')
 
 
 # ============================================================================
