@@ -4,9 +4,11 @@ Unit tests for ProcessBehavior - the user-friendly wrapper with auto-completion.
 Tests cover:
 - Column accessor with auto-completion
 - SDS detection via formulate()
-- Simple series (SDS 0) → IMR chart
+- Simple series (SDS 4) → IMR chart
 - Grouped data → Xbar/S charts
 - User-friendly output and explanations
+
+Note: Uses shared fixtures from conftest.py for common test data patterns.
 """
 
 import logging
@@ -345,10 +347,9 @@ def test_formulate_validates_response_column():
 # Test: Study object properties
 # ============================================================================
 
-def test_study_has_sds():
+def test_study_has_sds(simple_values):
     """Study should expose detected SDS."""
-    df = pd.DataFrame({'Value': [1, 2, 3, 4, 5]})
-    pdata = ProcessBehavior(df)
+    pdata = ProcessBehavior(simple_values)
 
     study = pdata.formulate(response='Value')
 
@@ -356,10 +357,9 @@ def test_study_has_sds():
     assert isinstance(study.sds, int)
 
 
-def test_study_has_valid_charts():
+def test_study_has_valid_charts(simple_values):
     """Study should expose valid chart types."""
-    df = pd.DataFrame({'Value': [1, 2, 3, 4, 5]})
-    pdata = ProcessBehavior(df)
+    pdata = ProcessBehavior(simple_values)
 
     study = pdata.formulate(response='Value')
 
@@ -367,10 +367,9 @@ def test_study_has_valid_charts():
     assert isinstance(study.valid_charts, list)
 
 
-def test_study_has_recommended_chart():
+def test_study_has_recommended_chart(simple_values):
     """Study should expose recommended chart type."""
-    df = pd.DataFrame({'Value': [1, 2, 3, 4, 5]})
-    pdata = ProcessBehavior(df)
+    pdata = ProcessBehavior(simple_values)
 
     study = pdata.formulate(response='Value')
 
@@ -378,10 +377,9 @@ def test_study_has_recommended_chart():
     assert study.recommended_chart in study.valid_charts
 
 
-def test_study_has_charts_accessor():
+def test_study_has_charts_accessor(simple_values):
     """Study should have charts accessor for IDE auto-completion."""
-    df = pd.DataFrame({'Value': [1, 2, 3, 4, 5]})
-    pdata = ProcessBehavior(df)
+    pdata = ProcessBehavior(simple_values)
 
     study = pdata.formulate(response='Value')
 
@@ -418,10 +416,9 @@ def test_process_dataframe_len():
     assert len(pdata) == 100
 
 
-def test_study_repr():
+def test_study_repr(simple_values):
     """Study should have informative repr/str."""
-    df = pd.DataFrame({'Value': [1, 2, 3, 4, 5]})
-    pdata = ProcessBehavior(df)
+    pdata = ProcessBehavior(simple_values)
 
     study = pdata.formulate(response='Value')
     study_str = str(study)
@@ -624,10 +621,9 @@ def test_study_factors_property():
     assert study.factors == ['Batch']
 
 
-def test_study_factors_none_when_no_grouping():
+def test_study_factors_none_when_no_grouping(simple_values):
     """Study.factors should be None when no grouping specified."""
-    df = pd.DataFrame({'Value': [1, 2, 3, 4, 5]})
-    study = ProcessBehavior(df).formulate(response='Value')
+    study = ProcessBehavior(simple_values).formulate(response='Value')
 
     assert study.factors is None
 
@@ -643,26 +639,23 @@ def test_study_time_property():
     assert study.time == 'Sequence'
 
 
-def test_study_time_none_when_not_specified():
+def test_study_time_none_when_not_specified(simple_values):
     """Study.time should be None when no time specified."""
-    df = pd.DataFrame({'Value': [1, 2, 3, 4, 5]})
-    study = ProcessBehavior(df).formulate(response='Value')
+    study = ProcessBehavior(simple_values).formulate(response='Value')
 
     assert study.time is None
 
 
-def test_study_precision_property():
+def test_study_precision_property(simple_values):
     """Study should expose precision setting."""
-    df = pd.DataFrame({'Value': [1, 2, 3, 4, 5]})
-    study = ProcessBehavior(df).formulate(response='Value', precision=5)
+    study = ProcessBehavior(simple_values).formulate(response='Value', precision=5)
 
     assert study.precision == 5
 
 
-def test_study_precision_default():
+def test_study_precision_default(simple_values):
     """Study precision should default to 3."""
-    df = pd.DataFrame({'Value': [1, 2, 3, 4, 5]})
-    study = ProcessBehavior(df).formulate(response='Value')
+    study = ProcessBehavior(simple_values).formulate(response='Value')
 
     assert study.precision == 3
 
@@ -671,27 +664,24 @@ def test_study_precision_default():
 # Test: Study.dataset - Pre-calculated analysis data
 # ============================================================================
 
-def test_study_dataset_exists():
+def test_study_dataset_exists(simple_values):
     """Study should expose the analysis dataset."""
-    df = pd.DataFrame({'Value': [1, 2, 3, 4, 5]})
-    study = ProcessBehavior(df).formulate(response='Value')
+    study = ProcessBehavior(simple_values).formulate(response='Value')
 
     assert hasattr(study, 'dataset')
     assert study.dataset is not None
 
 
-def test_study_dataset_is_dataframe():
+def test_study_dataset_is_dataframe(simple_values):
     """Study.dataset should be a pandas DataFrame."""
-    df = pd.DataFrame({'Value': [1, 2, 3, 4, 5]})
-    study = ProcessBehavior(df).formulate(response='Value')
+    study = ProcessBehavior(simple_values).formulate(response='Value')
 
     assert isinstance(study.dataset, pd.DataFrame)
 
 
-def test_study_dataset_returns_copy():
+def test_study_dataset_returns_copy(simple_values):
     """Study.dataset should return a copy (immutability)."""
-    df = pd.DataFrame({'Value': [1, 2, 3, 4, 5]})
-    study = ProcessBehavior(df).formulate(response='Value')
+    study = ProcessBehavior(simple_values).formulate(response='Value')
 
     dataset1 = study.dataset
     dataset2 = study.dataset
@@ -703,17 +693,9 @@ def test_study_dataset_returns_copy():
     assert 'test_col' not in dataset2.columns
 
 
-def test_study_dataset_has_ybar_for_grouped_data():
+def test_study_dataset_has_ybar_for_grouped_data(grouped_single_factor):
     """Study.dataset should contain Ybar for grouped data."""
-    np.random.seed(42)
-    data_rows = []
-    for batch in ['A', 'B']:
-        for time in range(1, 6):
-            for _ in range(3):
-                data_rows.append({'Value': np.random.normal(50, 3), 'Batch': batch, 'Time': time})
-
-    df = pd.DataFrame(data_rows)
-    study = ProcessBehavior(df).formulate(
+    study = ProcessBehavior(grouped_single_factor).formulate(
         response='Value',
         factors=['Batch'],
         time='Time'
@@ -723,17 +705,9 @@ def test_study_dataset_has_ybar_for_grouped_data():
     assert 'Ybar' in dataset.columns
 
 
-def test_study_dataset_has_residuals_for_sds1():
+def test_study_dataset_has_residuals_for_sds1(grouped_single_factor):
     """Study.dataset should contain VAS residuals (R1-R5) for SDS 1."""
-    np.random.seed(42)
-    data_rows = []
-    for batch in ['A', 'B']:
-        for time in range(1, 6):
-            for _ in range(3):
-                data_rows.append({'Value': np.random.normal(50, 3), 'Batch': batch, 'Time': time})
-
-    df = pd.DataFrame(data_rows)
-    study = ProcessBehavior(df).formulate(
+    study = ProcessBehavior(grouped_single_factor).formulate(
         response='Value',
         factors=['Batch'],
         time='Time'
@@ -745,17 +719,9 @@ def test_study_dataset_has_residuals_for_sds1():
         assert r in dataset.columns, f"Missing residual {r}"
 
 
-def test_study_dataset_has_rsg_column():
+def test_study_dataset_has_rsg_column(grouped_single_factor):
     """Study.dataset should contain rsg (rational subgroup) column."""
-    np.random.seed(42)
-    data_rows = []
-    for batch in ['A', 'B']:
-        for time in range(1, 6):
-            for _ in range(3):
-                data_rows.append({'Value': np.random.normal(50, 3), 'Batch': batch, 'Time': time})
-
-    df = pd.DataFrame(data_rows)
-    study = ProcessBehavior(df).formulate(
+    study = ProcessBehavior(grouped_single_factor).formulate(
         response='Value',
         factors=['Batch'],
         time='Time'
@@ -769,17 +735,9 @@ def test_study_dataset_has_rsg_column():
 # Test: Study.residual_charts
 # ============================================================================
 
-def test_study_residual_charts_property():
+def test_study_residual_charts_property(grouped_single_factor):
     """Study should expose available residual chart types."""
-    np.random.seed(42)
-    data_rows = []
-    for batch in ['A', 'B']:
-        for time in range(1, 6):
-            for _ in range(3):
-                data_rows.append({'Value': np.random.normal(50, 3), 'Batch': batch, 'Time': time})
-
-    df = pd.DataFrame(data_rows)
-    study = ProcessBehavior(df).formulate(
+    study = ProcessBehavior(grouped_single_factor).formulate(
         response='Value',
         factors=['Batch'],
         time='Time'
@@ -789,17 +747,9 @@ def test_study_residual_charts_property():
     assert isinstance(study.residual_charts, list)
 
 
-def test_study_residual_charts_sds1_has_all():
+def test_study_residual_charts_sds1_has_all(grouped_single_factor):
     """SDS 1 should have all residual charts available."""
-    np.random.seed(42)
-    data_rows = []
-    for batch in ['A', 'B']:
-        for time in range(1, 6):
-            for _ in range(3):
-                data_rows.append({'Value': np.random.normal(50, 3), 'Batch': batch, 'Time': time})
-
-    df = pd.DataFrame(data_rows)
-    study = ProcessBehavior(df).formulate(
+    study = ProcessBehavior(grouped_single_factor).formulate(
         response='Value',
         factors=['Batch'],
         time='Time'
@@ -813,10 +763,9 @@ def test_study_residual_charts_sds1_has_all():
     assert any('R5' in r for r in residual_charts)
 
 
-def test_study_residual_charts_for_sds4():
+def test_study_residual_charts_for_sds4(simple_values):
     """SDS 4 (implicit single condition) should have residual charts available."""
-    df = pd.DataFrame({'Value': [1, 2, 3, 4, 5]})
-    study = ProcessBehavior(df).formulate(response='Value')
+    study = ProcessBehavior(simple_values).formulate(response='Value')
 
     # SDS 4 supports VAS residuals - should have residual charts available
     assert study.sds == 4
@@ -829,20 +778,18 @@ def test_study_residual_charts_for_sds4():
 # Test: Study.why_not() - Teaching method
 # ============================================================================
 
-def test_study_why_not_valid_chart():
+def test_study_why_not_valid_chart(simple_values):
     """why_not() should confirm valid charts."""
-    df = pd.DataFrame({'Value': [1, 2, 3, 4, 5]})
-    study = ProcessBehavior(df).formulate(response='Value')
+    study = ProcessBehavior(simple_values).formulate(response='Value')
 
     # Imr is valid for SDS 4
     result = study.why_not('Imr')
     assert 'IS available' in result or 'available' in result.lower()
 
 
-def test_study_why_not_invalid_chart():
+def test_study_why_not_invalid_chart(simple_values):
     """why_not() should explain why a chart is invalid."""
-    df = pd.DataFrame({'Value': [1, 2, 3, 4, 5]})
-    study = ProcessBehavior(df).formulate(response='Value')
+    study = ProcessBehavior(simple_values).formulate(response='Value')
 
     # S chart requires grouping variables (which SDS 4 implicit doesn't have)
     result = study.why_not('S')
@@ -850,10 +797,9 @@ def test_study_why_not_invalid_chart():
     assert len(result) > 0
 
 
-def test_study_why_not_unknown_chart():
+def test_study_why_not_unknown_chart(simple_values):
     """why_not() should handle unknown chart types."""
-    df = pd.DataFrame({'Value': [1, 2, 3, 4, 5]})
-    study = ProcessBehavior(df).formulate(response='Value')
+    study = ProcessBehavior(simple_values).formulate(response='Value')
 
     result = study.why_not('NonExistentChart')
     assert 'not a recognized' in result.lower() or 'valid types' in result.lower()
@@ -863,36 +809,26 @@ def test_study_why_not_unknown_chart():
 # Test: Study.charts accessor - IDE auto-completion
 # ============================================================================
 
-def test_study_charts_accessor_has_valid_charts():
+def test_study_charts_accessor_has_valid_charts(simple_values):
     """Study.charts should have attributes for each valid chart."""
-    df = pd.DataFrame({'Value': [1, 2, 3, 4, 5]})
-    study = ProcessBehavior(df).formulate(response='Value')
+    study = ProcessBehavior(simple_values).formulate(response='Value')
 
-    # For SDS 0, Imr should be available
+    # For SDS 4, Imr should be available
     assert hasattr(study.charts, 'Imr')
     assert study.charts.Imr == 'Imr'
 
 
-def test_study_charts_accessor_dir():
+def test_study_charts_accessor_dir(simple_values):
     """Study.charts should support tab-completion via __dir__."""
-    df = pd.DataFrame({'Value': [1, 2, 3, 4, 5]})
-    study = ProcessBehavior(df).formulate(response='Value')
+    study = ProcessBehavior(simple_values).formulate(response='Value')
 
     chart_attrs = dir(study.charts)
     assert 'Imr' in chart_attrs
 
 
-def test_study_charts_accessor_xbar_for_grouped():
+def test_study_charts_accessor_xbar_for_grouped(grouped_single_factor):
     """Study.charts should have Xbar for grouped data."""
-    np.random.seed(42)
-    data_rows = []
-    for batch in ['A', 'B']:
-        for time in range(1, 6):
-            for _ in range(3):
-                data_rows.append({'Value': np.random.normal(50, 3), 'Batch': batch, 'Time': time})
-
-    df = pd.DataFrame(data_rows)
-    study = ProcessBehavior(df).formulate(
+    study = ProcessBehavior(grouped_single_factor).formulate(
         response='Value',
         factors=['Batch'],
         time='Time'
@@ -902,10 +838,9 @@ def test_study_charts_accessor_xbar_for_grouped():
     assert hasattr(study.charts, 'S')
 
 
-def test_study_charts_accessor_repr():
+def test_study_charts_accessor_repr(simple_values):
     """Study.charts should have informative repr."""
-    df = pd.DataFrame({'Value': [1, 2, 3, 4, 5]})
-    study = ProcessBehavior(df).formulate(response='Value')
+    study = ProcessBehavior(simple_values).formulate(response='Value')
 
     repr_str = repr(study.charts)
     assert 'StudyChartAccessor' in repr_str
@@ -915,20 +850,18 @@ def test_study_charts_accessor_repr():
 # Test: Study.execute() - Error handling
 # ============================================================================
 
-def test_study_analyze_invalid_chart_raises():
+def test_study_analyze_invalid_chart_raises(simple_values):
     """analyze() should raise error for charts requiring grouping variables."""
-    df = pd.DataFrame({'Value': [1, 2, 3, 4, 5]})
-    study = ProcessBehavior(df).formulate(response='Value')
+    study = ProcessBehavior(simple_values).formulate(response='Value')
 
     # S chart requires grouping variables - SDS 4 implicit doesn't have any
     with pytest.raises(ValueError, match="grouping variable is required"):
         study.execute(chart='S')
 
 
-def test_study_analyze_invalid_chart_shows_valid():
+def test_study_analyze_invalid_chart_shows_valid(simple_values):
     """analyze() error should explain what's needed."""
-    df = pd.DataFrame({'Value': [1, 2, 3, 4, 5]})
-    study = ProcessBehavior(df).formulate(response='Value')
+    study = ProcessBehavior(simple_values).formulate(response='Value')
 
     try:
         study.execute(chart='S')
@@ -937,10 +870,9 @@ def test_study_analyze_invalid_chart_shows_valid():
         assert 'grouping' in str(e).lower()
 
 
-def test_study_analyze_with_charts_accessor():
+def test_study_analyze_with_charts_accessor(simple_values_10):
     """analyze() should work with charts accessor."""
-    df = pd.DataFrame({'Value': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]})
-    study = ProcessBehavior(df).formulate(response='Value')
+    study = ProcessBehavior(simple_values_10).formulate(response='Value')
 
     result = study.execute(chart=study.charts.Imr)
     assert result is not None
@@ -950,17 +882,9 @@ def test_study_analyze_with_charts_accessor():
 # Test: Study.execute() - Residual charts
 # ============================================================================
 
-def test_study_analyze_residual_chart():
+def test_study_analyze_residual_chart(grouped_single_factor):
     """analyze() should work with residual chart types."""
-    np.random.seed(42)
-    data_rows = []
-    for batch in ['A', 'B']:
-        for time in range(1, 6):
-            for _ in range(3):
-                data_rows.append({'Value': np.random.normal(50, 3), 'Batch': batch, 'Time': time})
-
-    df = pd.DataFrame(data_rows)
-    study = ProcessBehavior(df).formulate(
+    study = ProcessBehavior(grouped_single_factor).formulate(
         response='Value',
         factors=['Batch'],
         time='Time'
@@ -973,12 +897,11 @@ def test_study_analyze_residual_chart():
         assert result is not None
 
 
-def test_study_analyze_invalid_residual_chart_raises():
+def test_study_analyze_invalid_residual_chart_raises(simple_values):
     """analyze() should raise ChartNotAvailableError for invalid residual chart."""
-    df = pd.DataFrame({'Value': [1, 2, 3, 4, 5]})
-    study = ProcessBehavior(df).formulate(response='Value')
+    study = ProcessBehavior(simple_values).formulate(response='Value')
 
-    # SDS 0 has no residual charts
+    # SDS 4 doesn't have R4_Imr (needs factors)
     with pytest.raises(ChartNotAvailableError, match="not available"):
         study.execute(chart='R4_Imr')
 
@@ -987,10 +910,9 @@ def test_study_analyze_invalid_residual_chart_raises():
 # Test: AnalysisResult integration
 # ============================================================================
 
-def test_study_analyze_returns_analysis_result():
+def test_study_analyze_returns_analysis_result(simple_values_10):
     """analyze() should return an AnalysisResult object."""
-    df = pd.DataFrame({'Value': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]})
-    study = ProcessBehavior(df).formulate(response='Value')
+    study = ProcessBehavior(simple_values_10).formulate(response='Value')
 
     result = study.execute()
 
@@ -999,10 +921,9 @@ def test_study_analyze_returns_analysis_result():
     assert hasattr(result, 'summary')
 
 
-def test_study_analyze_result_has_charts():
+def test_study_analyze_result_has_charts(simple_values_10):
     """AnalysisResult should contain chart data."""
-    df = pd.DataFrame({'Value': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]})
-    study = ProcessBehavior(df).formulate(response='Value')
+    study = ProcessBehavior(simple_values_10).formulate(response='Value')
 
     result = study.execute()
 
@@ -1010,10 +931,9 @@ def test_study_analyze_result_has_charts():
     assert len(result.charts) > 0
 
 
-def test_study_analyze_result_has_plot():
+def test_study_analyze_result_has_plot(simple_values_10):
     """AnalysisResult should have plot() method."""
-    df = pd.DataFrame({'Value': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]})
-    study = ProcessBehavior(df).formulate(response='Value')
+    study = ProcessBehavior(simple_values_10).formulate(response='Value')
 
     result = study.execute()
 
@@ -1021,10 +941,9 @@ def test_study_analyze_result_has_plot():
     assert callable(result.plot)
 
 
-def test_study_analyze_result_has_detect_signals():
+def test_study_analyze_result_has_detect_signals(simple_values_10):
     """AnalysisResult should have detect_signals() method."""
-    df = pd.DataFrame({'Value': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]})
-    study = ProcessBehavior(df).formulate(response='Value')
+    study = ProcessBehavior(simple_values_10).formulate(response='Value')
 
     result = study.execute()
 
@@ -1085,22 +1004,9 @@ def test_formulate_with_nan_values():
 # Test: R4/R5 Xbar/S Charts (GitHub Issues #51 & #52)
 # ============================================================================
 
-def test_r4_xbar_chart_calculation():
+def test_r4_xbar_chart_calculation(grouped_for_residuals):
     """R4_Xbar should use time-based subgrouping."""
-    np.random.seed(42)
-    data_rows = []
-    # Create SDS 1 data: 3 factors × 5 time points × 2 replicates
-    for factor in ['A', 'B', 'C']:
-        for time in range(1, 6):
-            for _ in range(2):
-                data_rows.append({
-                    'Value': np.random.normal(50, 3),
-                    'Factor': factor,
-                    'Time': time
-                })
-
-    df = pd.DataFrame(data_rows)
-    study = ProcessBehavior(df).formulate(
+    study = ProcessBehavior(grouped_for_residuals).formulate(
         response='Value',
         factors=['Factor'],
         time='Time'
@@ -1124,22 +1030,9 @@ def test_r4_xbar_chart_calculation():
     assert len(data_df) == 5
 
 
-def test_r4_s_chart_calculation():
+def test_r4_s_chart_calculation(grouped_for_residuals):
     """R4_S should use time-based subgrouping."""
-    np.random.seed(42)
-    data_rows = []
-    # Create SDS 1 data: 3 factors × 5 time points × 2 replicates
-    for factor in ['A', 'B', 'C']:
-        for time in range(1, 6):
-            for _ in range(2):
-                data_rows.append({
-                    'Value': np.random.normal(50, 3),
-                    'Factor': factor,
-                    'Time': time
-                })
-
-    df = pd.DataFrame(data_rows)
-    study = ProcessBehavior(df).formulate(
+    study = ProcessBehavior(grouped_for_residuals).formulate(
         response='Value',
         factors=['Factor'],
         time='Time'
@@ -1161,22 +1054,9 @@ def test_r4_s_chart_calculation():
     assert len(data_df) == 5
 
 
-def test_r5_xbar_chart_calculation():
+def test_r5_xbar_chart_calculation(grouped_for_residuals):
     """R5_Xbar should use factor-based subgrouping."""
-    np.random.seed(42)
-    data_rows = []
-    # Create SDS 1 data: 3 factors × 5 time points × 2 replicates
-    for factor in ['A', 'B', 'C']:
-        for time in range(1, 6):
-            for _ in range(2):
-                data_rows.append({
-                    'Value': np.random.normal(50, 3),
-                    'Factor': factor,
-                    'Time': time
-                })
-
-    df = pd.DataFrame(data_rows)
-    study = ProcessBehavior(df).formulate(
+    study = ProcessBehavior(grouped_for_residuals).formulate(
         response='Value',
         factors=['Factor'],
         time='Time'
@@ -1198,22 +1078,9 @@ def test_r5_xbar_chart_calculation():
     assert len(data_df) == 3
 
 
-def test_r5_s_chart_calculation():
+def test_r5_s_chart_calculation(grouped_for_residuals):
     """R5_S should use factor-based subgrouping."""
-    np.random.seed(42)
-    data_rows = []
-    # Create SDS 1 data: 3 factors × 5 time points × 2 replicates
-    for factor in ['A', 'B', 'C']:
-        for time in range(1, 6):
-            for _ in range(2):
-                data_rows.append({
-                    'Value': np.random.normal(50, 3),
-                    'Factor': factor,
-                    'Time': time
-                })
-
-    df = pd.DataFrame(data_rows)
-    study = ProcessBehavior(df).formulate(
+    study = ProcessBehavior(grouped_for_residuals).formulate(
         response='Value',
         factors=['Factor'],
         time='Time'
@@ -1235,22 +1102,9 @@ def test_r5_s_chart_calculation():
     assert len(data_df) == 3
 
 
-def test_r4_xbar_subgrouping_different_from_r5():
+def test_r4_xbar_subgrouping_different_from_r5(grouped_four_factors):
     """R4 and R5 should have different subgroup counts."""
-    np.random.seed(42)
-    data_rows = []
-    # Create SDS 1 data: 4 factors × 6 time points × 2 replicates
-    for factor in ['A', 'B', 'C', 'D']:
-        for time in range(1, 7):
-            for _ in range(2):
-                data_rows.append({
-                    'Value': np.random.normal(50, 3),
-                    'Factor': factor,
-                    'Time': time
-                })
-
-    df = pd.DataFrame(data_rows)
-    study = ProcessBehavior(df).formulate(
+    study = ProcessBehavior(grouped_four_factors).formulate(
         response='Value',
         factors=['Factor'],
         time='Time'
@@ -1269,21 +1123,9 @@ def test_r4_xbar_subgrouping_different_from_r5():
     assert len(r5_data) == 4, f"R5 should have 4 subgroups (factor), got {len(r5_data)}"
 
 
-def test_r4_r5_xbar_s_control_limits_structure():
+def test_r4_r5_xbar_s_control_limits_structure(grouped_for_residuals):
     """R4 and R5 Xbar/S charts should have proper control limit structure."""
-    np.random.seed(42)
-    data_rows = []
-    for factor in ['A', 'B', 'C']:
-        for time in range(1, 6):
-            for _ in range(2):
-                data_rows.append({
-                    'Value': np.random.normal(50, 3),
-                    'Factor': factor,
-                    'Time': time
-                })
-
-    df = pd.DataFrame(data_rows)
-    study = ProcessBehavior(df).formulate(
+    study = ProcessBehavior(grouped_for_residuals).formulate(
         response='Value',
         factors=['Factor'],
         time='Time'
@@ -1313,22 +1155,9 @@ def test_r4_r5_xbar_s_control_limits_structure():
 # Test: R3 Xbar/S Charts (GitHub Issue #50)
 # ============================================================================
 
-def test_r3_xbar_chart_calculation():
+def test_r3_xbar_chart_calculation(grouped_for_residuals):
     """R3_Xbar should use factor-based subgrouping (same as R2)."""
-    np.random.seed(42)
-    data_rows = []
-    # Create SDS 1 data: 3 factors × 5 time points × 2 replicates
-    for factor in ['A', 'B', 'C']:
-        for time in range(1, 6):
-            for _ in range(2):
-                data_rows.append({
-                    'Value': np.random.normal(50, 3),
-                    'Factor': factor,
-                    'Time': time
-                })
-
-    df = pd.DataFrame(data_rows)
-    study = ProcessBehavior(df).formulate(
+    study = ProcessBehavior(grouped_for_residuals).formulate(
         response='Value',
         factors=['Factor'],
         time='Time'
@@ -1352,22 +1181,9 @@ def test_r3_xbar_chart_calculation():
     assert len(data_df) == 3
 
 
-def test_r3_s_chart_calculation():
+def test_r3_s_chart_calculation(grouped_for_residuals):
     """R3_S should use factor-based subgrouping (same as R2)."""
-    np.random.seed(42)
-    data_rows = []
-    # Create SDS 1 data: 3 factors × 5 time points × 2 replicates
-    for factor in ['A', 'B', 'C']:
-        for time in range(1, 6):
-            for _ in range(2):
-                data_rows.append({
-                    'Value': np.random.normal(50, 3),
-                    'Factor': factor,
-                    'Time': time
-                })
-
-    df = pd.DataFrame(data_rows)
-    study = ProcessBehavior(df).formulate(
+    study = ProcessBehavior(grouped_for_residuals).formulate(
         response='Value',
         factors=['Factor'],
         time='Time'
@@ -1389,21 +1205,9 @@ def test_r3_s_chart_calculation():
     assert len(data_df) == 3
 
 
-def test_r3_xbar_s_control_limits_structure():
+def test_r3_xbar_s_control_limits_structure(grouped_for_residuals):
     """R3 Xbar/S charts should have proper control limit structure."""
-    np.random.seed(42)
-    data_rows = []
-    for factor in ['A', 'B', 'C']:
-        for time in range(1, 6):
-            for _ in range(2):
-                data_rows.append({
-                    'Value': np.random.normal(50, 3),
-                    'Factor': factor,
-                    'Time': time
-                })
-
-    df = pd.DataFrame(data_rows)
-    study = ProcessBehavior(df).formulate(
+    study = ProcessBehavior(grouped_for_residuals).formulate(
         response='Value',
         factors=['Factor'],
         time='Time'
