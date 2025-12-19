@@ -541,13 +541,18 @@ class Analysis:
             else:
                 cols_to_keep.insert(0, self.spec.time_var)
         else:
+            # No explicit time variable specified - use implicit ordering
             if self.spec.has_grouping:
+                # Per-group sequence number for grouped data
                 result['x'] = result.groupby(self.spec.rsg_var_name, observed=True).cumcount() + 1
                 cols_to_keep.insert(0, self.spec.rsg_var_name)
                 cols_to_keep.insert(0, 'x')
             else:
-                result['x'] = result.index + 1
-                cols_to_keep.insert(0, 'x')
+                # Use obs_id as implicit time for single condition over time (SDS 4)
+                # Rationale: Wheeler's IMR assumes temporal ordering, and obs_id
+                # provides that ordering from the original data sequence.
+                # See: ProcessBehavior.formulate() docstring for full explanation.
+                cols_to_keep.insert(0, 'obs_id')
 
         # Always include obs_id for traceability (if available)
         # This enables linking violations back to original data

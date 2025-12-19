@@ -26,11 +26,11 @@ import pandas as pd
 
 # Formal vocabulary for SDS classification reasons
 SDSReasonType = Literal[
-    "no_structure",
     "full_replication",
     "no_replication",
     "partial_replication",
     "single_condition",
+    "implicit_single_condition",  # Response-only data: obs order = implicit time
     "nested",
     "incomplete_with_replication",
     "incomplete_no_replication",
@@ -273,11 +273,11 @@ class SDSResult:
         can be "nested" or "incomplete_with_replication").
 
         Possible values (defined in SDSReasonType):
-        - "no_structure": SDS 0
         - "full_replication": SDS 1
         - "no_replication": SDS 2
         - "partial_replication": SDS 3
-        - "single_condition": SDS 4
+        - "single_condition": SDS 4 (explicit single factor level)
+        - "implicit_single_condition": SDS 4 (response-only, obs order = time)
         - "nested": SDS 5 (hierarchical factor structure)
         - "incomplete_with_replication": SDS 5 (incomplete grid, some n≥2)
         - "incomplete_no_replication": SDS 6
@@ -289,7 +289,7 @@ class SDSResult:
 
 class SDSRegistry:
     """
-    Registry of Sampling Design State (SDS 0-6) definitions and rules.
+    Registry of Sampling Design State (SDS 1-6) definitions and rules.
 
     Provides:
     - SDS detection from data structure
@@ -298,10 +298,6 @@ class SDSRegistry:
     - VAS residual calculation rules
 
     The SDS classification system describes the structure of your data:
-
-    **SDS 0**: No structure
-        - No grouping or time variables
-        - Limited analysis capabilities
 
     **SDS 1**: Full replication
         - Every (factor × time) cell has n ≥ 2
@@ -319,9 +315,9 @@ class SDSRegistry:
         - Requires hybrid variance estimation
 
     **SDS 4**: Single condition over time
-        - One factor level, multiple time points
-        - Time series structure
-        - Appropriate for IMR charts
+        - One factor level (explicit or implicit), tracked over time
+        - Includes "response-only" data where observation order = implicit time
+        - Time series structure, appropriate for IMR charts
 
     **SDS 5**: Nested design
         - Hierarchical factor structure
@@ -366,7 +362,7 @@ class SDSRegistry:
         Detect Sampling Design State from data structure.
 
         Examines the (factor × time) grid structure to determine which
-        of the 7 SDS categories (0-6) best describes the data.
+        of the 6 SDS categories (1-6) best describes the data.
 
         Parameters
         ----------
@@ -380,17 +376,26 @@ class SDSRegistry:
             SDS 4-6 detection by comparing observed structure to planned
             structure (e.g., detecting missing factor levels).
 
-            Mode 1 (plan=None): Infer structure from observed data → SDS 0-3
-            Mode 2 (plan={...}): Compare to plan → enables SDS 4-6
+            Mode 1 (plan=None): Infer structure from observed data → SDS 1-4
+            Mode 2 (plan={...}): Compare to plan → enables SDS 5-6
 
             Time handling: The plan specifies factor levels only, not time.
             Observed unique time values are used as the "planned" time set.
             This detects missing factor combos within observed time blocks.
 
+        Notes
+        -----
+        **SDS 4 for Response-Only Data**
+
+        When no grouping factors are specified, the data is classified as
+        SDS 4 (Single Condition Over Time) with implicit single condition.
+        This is intentional: observation order (``obs_id``) provides implicit
+        temporal structure, and Wheeler's IMR chart assumes temporal ordering.
+
         Returns
         -------
         SDSResult
-            Result containing sds (0-6), min_cell_size, and reason.
+            Result containing sds (1-6), min_cell_size, and reason.
 
         Examples
         --------
@@ -412,10 +417,16 @@ class SDSRegistry:
         """
         # Store plan for coverage ratio calculation (enables SDS 5/6 detection)
         self._plan = plan
-        # SDS 0: No structure (no grouping factors defined)
+
+        # No grouping factors defined → treat as SDS 4 (single condition over time)
+        # Rationale: observation order provides implicit temporal structure.
+        # Wheeler's IMR chart assumes temporal ordering - moving ranges between
+        # consecutive observations only make sense in sequence. Even "response-only"
+        # data is analyzed as a time series where obs_id serves as implicit time.
+        # See: formulate() docstring for full explanation.
         if not spec.has_grouping:
-            logger.debug("SDS 0: No grouping factors defined")
-            return SDSResult(sds=0, min_cell_size=0, reason="no_structure")
+            logger.debug("SDS 4: No grouping factors - implicit single condition over time")
+            return SDSResult(sds=4, min_cell_size=1, reason="implicit_single_condition")
 
         # From here: have grouping factors
         #
@@ -629,24 +640,16 @@ class SDSRegistry:
 
         Examples
         --------
-        >>> # SDS 0 with Xbar - fatal error
-        >>> detector.validate_sds_for_analysis(sds=0, analysis_type='Xbar')
-        Traceback (most recent call last):
-            ...
-        ValueError: Cannot perform Xbar analysis without grouping structure...
+        >>> # SDS 4 with Xbar - warning (should use Imr)
+        >>> detector.validate_sds_for_analysis(sds=4, analysis_type='Xbar')
+        # Logs warning recommending Imr for single condition
+        True
 
         >>> # SDS 2 with Xbar - warning but allowed
         >>> detector.validate_sds_for_analysis(sds=2, analysis_type='Xbar')
         # Logs warning about no replication
         True
         """
-        # SDS 0: Very limited capabilities
-        if sds == 0 and analysis_type in ['Xbar', 'S']:
-            raise ValueError(
-                f"Cannot perform {analysis_type} analysis without grouping structure.\n"
-                f"Detected SDS 0 (no grouping or time variables).\n"
-                f"Fix: Use 'Imr' analysis or specify grouping variables"
-            )
 
         # SDS 2: No within-cell variance
         if sds == 2 and analysis_type in ['Xbar', 'S']:
@@ -704,7 +707,7 @@ class SDSRegistry:
         Parameters
         ----------
         sds : int
-            Detected SDS (0-6)
+            Detected SDS (1-6)
         analysis_type : str
             Analysis type ('Xbar', 'S', 'Imr', 'R')
 
@@ -891,12 +894,12 @@ class SDSRegistry:
             )
             return (3, "partial_replication")
 
-        # Fallback (shouldn't reach here)
+        # Fallback (shouldn't reach here - all replication patterns should be covered above)
         logger.warning(
-            f"SDS Detection: Unexpected replication pattern - defaulting to SDS 0. "
+            f"SDS Detection: Unexpected replication pattern - defaulting to SDS 3 (partial). "
             f"min_n={min_n}, max_n={max_n}"
         )
-        return (0, "no_structure")
+        return (3, "partial_replication")
 
     def _calculate_coverage_ratio(
         self,
@@ -1050,37 +1053,10 @@ class SDSRegistry:
         >>> plan = detector.get_analysis_plan(sds, min_cell_size=min_n)
         >>> print(f"Your data supports: {', '.join(plan.valid_charts)}")
         """
+        # Note: SDS 0 was consolidated into SDS 4. Response-only data (no factors,
+        # no time) is now treated as SDS 4 with implicit time ordering via obs_id.
+        # See detect_sds() for rationale.
         plans = {
-            0: SDSAnalysisPlan(
-                sds=0,
-                name="Simple Series",
-                description="Individual measurements with no rational subgrouping or time structure",
-                has_factors=False,
-                has_time=False,
-                has_replication='none',
-                valid_charts=['Imr', 'R'],
-                recommended_chart='Imr',
-                invalid_charts=['Xbar (requires rational subgroups)', 'S (requires rational subgroups)'],
-                vas_residuals_supported=False,
-                residuals_available=[],
-                residual_calculation_method='none',
-                main_effects_supported=False,
-                interaction_effects_supported=False,
-                supports_stratification=False,
-                typical_use_cases=[
-                    'Simple process monitoring (temperature, pH, daily output)',
-                    'Individual measurements over time',
-                    'Quality characteristic tracking with no grouping'
-                ],
-                limitations=[
-                    'Cannot decompose variance (no factors or time structure)',
-                    'Cannot detect interaction effects',
-                    'Limited to individuals control chart (IMR)',
-                    'No rational subgrouping available'
-                ],
-                bishop_reference="Wheeler 'Understanding Variation' Chapter 3: Individuals Charts"
-            ),
-
             1: SDSAnalysisPlan(
                 sds=1,
                 name="Full Factorial with Complete Replication",
@@ -1261,7 +1237,8 @@ class SDSRegistry:
 
         if sds not in plans:
             raise ValueError(
-                f"Invalid SDS: {sds}. Must be 0-6. "
+                f"Invalid SDS: {sds}. Must be 1-6. "
+                f"(Note: SDS 0 was consolidated into SDS 4) "
                 f"Available: {list(plans.keys())}"
             )
 
@@ -1272,7 +1249,7 @@ class SDSRegistry:
     @staticmethod
     def print_all_analysis_plans() -> None:
         """
-        Print comprehensive analysis plans for all SDS (0-6).
+        Print comprehensive analysis plans for all SDS (1-6).
 
         This generates a complete reference guide showing what the system
         will do for each Sampling Design State. Useful for:
@@ -1292,7 +1269,7 @@ class SDSRegistry:
         print("=" * 70)
         print()
 
-        for sds in range(7):
+        for sds in range(1, 7):  # SDS 1-6 (SDS 0 was consolidated into SDS 4)
             plan = SDSRegistry.get_analysis_plan(sds)
             print(plan)
             print()
@@ -1318,7 +1295,7 @@ class SDSRegistry:
         >>> matrix.to_excel('sds_capabilities.xlsx')
         """
         data = []
-        for sds in range(7):
+        for sds in range(1, 7):  # SDS 1-6 (SDS 0 was consolidated into SDS 4)
             plan = SDSRegistry.get_analysis_plan(sds)
             data.append({
                 'SDS': sds,

@@ -316,5 +316,9 @@ class AnalysisSpecification(DataPrepConfig):
         # Address time var in output
         if self.has_time:
             self.analysis_output_cols.insert(0, self.time_var)
-        else:
+        elif self.has_grouping:
+            # For grouped data without explicit time, use 'x' (per-group sequence)
             self.analysis_output_cols.insert(0, "x")
+        else:
+            # For response-only data (SDS 4), use obs_id as implicit time
+            self.analysis_output_cols.insert(0, "obs_id")

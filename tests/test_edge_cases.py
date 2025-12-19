@@ -101,7 +101,8 @@ class TestDegenerateCases:
         pb = ProcessBehavior(df)
 
         study = pb.formulate(response='Value')
-        assert study.sds == 0  # SDS 0 for minimal data
+        # SDS 4: single condition over time (implicit via obs_id)
+        assert study.sds == 4
 
     def test_two_observations(self):
         """Two observations - minimum for moving range calculation."""

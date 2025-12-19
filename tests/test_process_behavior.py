@@ -166,14 +166,18 @@ def test_formulate_simple_series():
         time=pdata.cols.Time
     )
 
-    # Should have detected SDS 0 and recommend IMR
-    assert study.sds == 0
+    # Should have detected SDS 4 (single condition over time) and recommend IMR
+    assert study.sds == 4
     assert study.recommended_chart == 'Imr'
     assert 'Imr' in study.valid_charts
 
 
 def test_formulate_simple_series_no_time():
-    """Simple series without time variable should still work."""
+    """Simple series without time variable should still work.
+
+    When no time variable is specified, observation order (obs_id) serves
+    as implicit time. This is treated as SDS 4 (single condition over time).
+    """
     df = pd.DataFrame({
         'Value': [10, 12, 11, 13, 12, 14, 13, 15]
     })
@@ -182,7 +186,8 @@ def test_formulate_simple_series_no_time():
 
     study = pdata.formulate(response=pdata.cols.Value)
 
-    assert study.sds == 0
+    # SDS 4: implicit single condition over time (obs_id as time)
+    assert study.sds == 4
     assert study.recommended_chart == 'Imr'
 
 
@@ -447,8 +452,8 @@ def test_full_workflow_simple_series():
         time=data.cols.Time
     )
 
-    # Check study properties
-    assert study.sds == 0
+    # Check study properties - SDS 4 for single condition over time
+    assert study.sds == 4
     assert study.recommended_chart == 'Imr'
 
     # Analyze
@@ -808,13 +813,16 @@ def test_study_residual_charts_sds1_has_all():
     assert any('R5' in r for r in residual_charts)
 
 
-def test_study_residual_charts_empty_for_sds0():
-    """SDS 0 should have no residual charts (no factors)."""
+def test_study_residual_charts_for_sds4():
+    """SDS 4 (implicit single condition) should have residual charts available."""
     df = pd.DataFrame({'Value': [1, 2, 3, 4, 5]})
     study = ProcessBehavior(df).formulate(response='Value')
 
-    # SDS 0 has no residual charts
-    assert study.residual_charts == [] or len(study.residual_charts) == 0
+    # SDS 4 supports VAS residuals - should have residual charts available
+    assert study.sds == 4
+    assert len(study.residual_charts) > 0
+    # Should include at least some R2/R3 charts for IMR
+    assert any('R2' in r or 'R3' in r for r in study.residual_charts)
 
 
 # ============================================================================
@@ -826,7 +834,7 @@ def test_study_why_not_valid_chart():
     df = pd.DataFrame({'Value': [1, 2, 3, 4, 5]})
     study = ProcessBehavior(df).formulate(response='Value')
 
-    # Imr is valid for SDS 0
+    # Imr is valid for SDS 4
     result = study.why_not('Imr')
     assert 'IS available' in result or 'available' in result.lower()
 
@@ -836,7 +844,7 @@ def test_study_why_not_invalid_chart():
     df = pd.DataFrame({'Value': [1, 2, 3, 4, 5]})
     study = ProcessBehavior(df).formulate(response='Value')
 
-    # S chart requires n≥2, not valid for SDS 0
+    # S chart requires grouping variables (which SDS 4 implicit doesn't have)
     result = study.why_not('S')
     assert isinstance(result, str)
     assert len(result) > 0
@@ -908,23 +916,25 @@ def test_study_charts_accessor_repr():
 # ============================================================================
 
 def test_study_analyze_invalid_chart_raises():
-    """analyze() should raise ChartNotAvailableError for invalid chart type."""
+    """analyze() should raise error for charts requiring grouping variables."""
     df = pd.DataFrame({'Value': [1, 2, 3, 4, 5]})
     study = ProcessBehavior(df).formulate(response='Value')
 
-    with pytest.raises(ChartNotAvailableError, match="not valid"):
-        study.execute(chart='S')  # S not valid for SDS 0
+    # S chart requires grouping variables - SDS 4 implicit doesn't have any
+    with pytest.raises(ValueError, match="grouping variable is required"):
+        study.execute(chart='S')
 
 
 def test_study_analyze_invalid_chart_shows_valid():
-    """analyze() error should show valid chart options."""
+    """analyze() error should explain what's needed."""
     df = pd.DataFrame({'Value': [1, 2, 3, 4, 5]})
     study = ProcessBehavior(df).formulate(response='Value')
 
     try:
         study.execute(chart='S')
-    except ChartNotAvailableError as e:
-        assert 'Imr' in str(e)  # Should mention valid charts
+    except ValueError as e:
+        # Should mention that grouping is required
+        assert 'grouping' in str(e).lower()
 
 
 def test_study_analyze_with_charts_accessor():
@@ -1053,9 +1063,9 @@ def test_formulate_single_observation():
     df = pd.DataFrame({'Value': [100.0]})
     pdata = ProcessBehavior(df)
 
-    # Should not crash
+    # Should not crash - SDS 4 for implicit single condition
     study = pdata.formulate(response='Value')
-    assert study.sds == 0
+    assert study.sds == 4
 
 
 def test_formulate_with_nan_values():

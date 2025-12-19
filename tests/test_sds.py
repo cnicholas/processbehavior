@@ -42,12 +42,12 @@ class TestSDSDetection:
 
     def test_sds1_full_replication(self):
         """Test SDS 1: Multiple observations per cell (k,t)."""
-        df = synthetic.make_sds1(K=3, T=6, n_min=2, n_max=4, seed=42)
+        df = synthetic.make_sds(1, K1=3, K2=2, T=6, n_min=2, n_max=4, seed=42)
 
         pdf = ProcessBehavior(df)
         study = pdf.formulate(
             response=pdf.cols.y,
-            factors=[pdf.cols.factor_1],
+            factors=[pdf.cols.factor_1, pdf.cols.factor_2],
             time=pdf.cols.time
         )
 
@@ -57,7 +57,8 @@ class TestSDSDetection:
 
     def test_sds2_no_replication_time_as_factor(self):
         """Test SDS 2: Single observation per cell when time is a factor."""
-        df = synthetic.make_sds2(K=3, T=10, seed=42)
+        # Use K2=1 to have exactly n=1 per (factor 1, time) cell
+        df = synthetic.make_sds(2, K1=3, K2=1, T=10, seed=42)
 
         # With time as factor: 30 factor×time cells with n=1 each = SDS 2
         spec = {
@@ -76,13 +77,14 @@ class TestSDSDetection:
         """Test that SDS 2 data is correctly detected as SDS 2 per Wheeler/Bishop.
 
         Per Wheeler/Bishop methodology, SDS is based on N_kt (factor × time cells):
-        - make_sds2() generates data with all N_kt = 1 (no replication)
+        - make_sds(2) generates data with all N_kt = 1 (no replication)
         - This correctly classifies as SDS 2 (Semi-Complete, no replication)
 
         Note: Analysis subgrouping uses factor-only (n=10 per factor), but
         SDS classification uses N_kt.
         """
-        df = synthetic.make_sds2(K=3, T=10, seed=42)
+        # Use K2=1 to ensure n=1 per (factor 1, time) cell for proper SDS 2 detection
+        df = synthetic.make_sds(2, K1=3, K2=1, T=10, seed=42)
 
         spec = {
             'analysis_type': 'Xbar',
@@ -98,7 +100,7 @@ class TestSDSDetection:
 
     def test_sds4_single_condition(self):
         """Test SDS 4: Single condition over time (no grouping)."""
-        df = synthetic.make_sds4(T=40, seed=42)
+        df = synthetic.make_sds(4, T=40, seed=42)
 
         pdf = ProcessBehavior(df)
         study = pdf.formulate(
@@ -112,7 +114,7 @@ class TestSDSDetection:
 
     def test_sds5_nesting_structure(self):
         """Verify that SDS5 properly implements nested structure."""
-        df = synthetic.make_sds5(L=3, H_per_L=4, T=6, seed=42)
+        df = synthetic.make_sds(5, L=3, H_per_L=4, T=6, seed=42)
 
         # Test 1: Each head should appear with exactly one line
         head_line_map = df.groupby('factor 2')['factor 1'].unique()
@@ -137,12 +139,12 @@ class TestSDSDetection:
 
     def test_sds6_stratified_imr(self):
         """Test that stratified IMR works with irregular SDS6 data."""
-        df = synthetic.make_sds6(T=80, K=3, p_sampled=0.6, seed=42)
+        df = synthetic.make_sds(6, T=80, K1=3, K2=2, p_sampled=0.6, seed=42)
 
         pdf = ProcessBehavior(df)
         study = pdf.formulate(
             response=pdf.cols.y,
-            factors=[pdf.cols.factor_1],
+            factors=[pdf.cols.factor_1, pdf.cols.factor_2],
             time=pdf.cols.time
         )
 
@@ -158,7 +160,7 @@ class TestVASCalculationDecisions:
 
     def test_sds1_xbar_calculates_vas(self):
         """SDS 1 + Xbar should calculate VAS residuals."""
-        df = synthetic.make_sds1(K=2, T=3, n_min=2, n_max=4, seed=42)
+        df = synthetic.make_sds(1, K1=2, K2=2, T=3, n_min=2, n_max=4, seed=42)
 
         spec = {
             'analysis_type': 'Xbar',
@@ -177,7 +179,7 @@ class TestVASCalculationDecisions:
 
     def test_sds1_imr_skips_vas(self):
         """SDS 1 + IMR should NOT calculate VAS residuals (stratified analysis)."""
-        df = synthetic.make_sds1(K=2, T=3, n_min=2, n_max=4, seed=42)
+        df = synthetic.make_sds(1, K1=2, K2=2, T=3, n_min=2, n_max=4, seed=42)
 
         spec = {
             'analysis_type': 'Imr',
@@ -196,7 +198,7 @@ class TestVASCalculationDecisions:
 
     def test_sds4_never_calculates_vas(self):
         """SDS 4 (single stream) should never calculate VAS."""
-        df = synthetic.make_sds4(T=20, seed=42)
+        df = synthetic.make_sds(4, T=20, seed=42)
 
         spec = {
             'analysis_type': 'Imr',
@@ -231,9 +233,9 @@ class TestVASCalculationDecisions:
         }
 
         generators = {
-            1: lambda: synthetic.make_sds1(K=2, T=3, n_min=2, n_max=4, seed=42),
-            2: lambda: synthetic.make_sds2(K=2, T=3, seed=42),
-            4: lambda: synthetic.make_sds4(T=20, seed=42),
+            1: lambda: synthetic.make_sds(1, K1=2, K2=2, T=3, n_min=2, n_max=4, seed=42),
+            2: lambda: synthetic.make_sds(2, K1=2, K2=2, T=3, seed=42),
+            4: lambda: synthetic.make_sds(4, T=20, seed=42),
         }
 
         for (sds_expected, analysis_type), expected_vas in decision_matrix.items():
@@ -262,7 +264,7 @@ class TestResidualCalculations:
 
     def test_r2_within_cell_residual_sds1(self):
         """Test R2 is within-cell residual for SDS1."""
-        df = synthetic.make_sds1(K=3, T=6, n_min=2, n_max=4, seed=42)
+        df = synthetic.make_sds(1, K1=3, K2=2, T=6, n_min=2, n_max=4, seed=42)
 
         spec = {
             'analysis_type': 'Xbar',
@@ -288,7 +290,7 @@ class TestResidualCalculations:
 
     def test_residual_identities(self):
         """Test that residual relationships hold: R3 = (Ybar_kt - Ybar_k - Ybar_t + Ybar) + R2."""
-        df = synthetic.make_sds1(K=3, T=6, n_min=2, n_max=4, seed=42)
+        df = synthetic.make_sds(1, K1=3, K2=2, T=6, n_min=2, n_max=4, seed=42)
 
         spec = {
             'analysis_type': 'Xbar',
@@ -319,7 +321,7 @@ class TestResidualCalculations:
 
     def test_rcr_centered_residuals(self):
         """Test that RCR formulas are correct for each residual type."""
-        df = synthetic.make_sds1(K=3, T=6, n_min=2, n_max=4, seed=42)
+        df = synthetic.make_sds(1, K1=3, K2=2, T=6, n_min=2, n_max=4, seed=42)
 
         spec = {
             'analysis_type': 'Xbar',

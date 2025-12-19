@@ -15,9 +15,9 @@ Purpose:
 Quick Start:
 -----------
     >>> from processbehavior.datasets import synthetic
-    >>> 
+    >>>
     >>> # Generate SDS1 data (full replication)
-    >>> df = synthetic.make_sds1(K=3, T=8, n_min=2, n_max=4)
+    >>> df = synthetic.make_sds1(K1=3, K2=2, T=8, n_min=2, n_max=4)
     >>> 
     >>> # Use with analysis
     >>> from processbehavior import Analysis
@@ -54,7 +54,6 @@ from ..analysis_dataset import AnalysisSpecification
 logger = logging.getLogger(__name__)
 
 __all__ = [
-    'make_sds0',
     'make_sds1',
     'make_sds2',
     'make_sds3',
@@ -68,126 +67,41 @@ __all__ = [
 
 
 # ============================================================================
-# SDS 0: Response Only - Individual Measurements
-# ============================================================================
-
-def make_sds0(
-    n: int = 20,
-    mu: float = 50.0,
-    sigma: float = 2.0,
-    seed: Optional[int] = None,
-    include_truth: bool = False
-) -> pd.DataFrame:
-    """
-    Generate Sampling Design State 0 data (response only).
-
-    SDS0 is the simplest case - just individual measurements with no
-    grouping factors and no time structure. This represents a single
-    stream of measurements with no additional context.
-
-    Characteristics:
-    ---------------
-    - Response variable only
-    - No grouping factors (no factor 1 or factor 2)
-    - No time variable
-    - Appropriate for basic IMR (Individual-Moving Range) analysis
-
-    Use Cases:
-    ---------
-    - Simplest control chart scenario
-    - Data without any structure
-    - Legacy data with only measurements
-    - Quick process check
-
-    Args:
-        n: Number of observations
-        mu: Process mean
-        sigma: Process standard deviation
-        seed: Random seed for reproducibility
-        include_truth: Include true components as columns
-
-    Returns:
-        DataFrame with single column 'y' (response variable)
-
-    Mathematical Model:
-        Y_i = μ + ε_i
-
-        where:
-            μ: Process mean
-            ε_i: Random error ~ N(0, σ²)
-
-    Examples:
-        >>> # Basic usage
-        >>> df = make_sds0(n=20, seed=42)
-        >>> len(df)
-        20
-        >>> list(df.columns)
-        ['y']
-
-        >>> # With ground truth
-        >>> df = make_sds0(n=15, include_truth=True, seed=42)
-        >>> df[['y', 'true_error']].head()
-
-    See Also:
-        make_sds4: For time series (with time ordering)
-    """
-    rng = np.random.default_rng(seed)
-
-    rows = []
-    for _i in range(n):
-        epsilon = rng.normal(0, sigma)
-        y = mu + epsilon
-
-        row = {'y': y}
-
-        if include_truth:
-            row.update({
-                'true_mean': mu,
-                'true_error': epsilon
-            })
-
-        rows.append(row)
-
-    df = pd.DataFrame(rows)
-
-    logger.debug(f"Generated SDS0 data: {n} observations")
-
-    return df
-
-
-# ============================================================================
 # SDS 1: Full Replication - Most Statistically Powerful
 # ============================================================================
 
 def make_sds1(
-    K: int = 3,
+    K1: int = 3,
+    K2: int = 2,
     T: int = 8,
     n_min: int = 2,
     n_max: int = 5,
     mu: float = 50.0,
     sigma: float = 0.4,
-    factor_effect_size: float = 2.0,
+    factor1_effect_size: float = 2.0,
+    factor2_effect_size: float = 1.5,
     time_effect_size: float = 1.0,
     interaction_effect_size: float = 0.5,
     seed: Optional[int] = None,
     include_truth: bool = False,
-    factor_names: Optional[list[str]] = None
+    factor1_names: Optional[list[str]] = None,
+    factor2_names: Optional[list[str]] = None
 ) -> pd.DataFrame:
     """
     Generate Sampling Design State 1 data (full replication).
-    
+
     SDS1 is the gold standard for process studies - every combination of
-    factor and time has multiple observations, allowing true estimation of
+    factors and time has multiple observations, allowing true estimation of
     within-cell variance. This is what designed experiments strive for.
-    
+
     Characteristics:
     ---------------
-    - Every (factor, time) cell has n ≥ 2 observations
+    - Every (factor1, factor2, time) cell has n ≥ 2 observations
     - True within-cell variance can be estimated directly
     - Supports full interaction analysis (R3 calculations)
     - Most statistically powerful design
     - Enables calculation of all residuals (R1-R5) with precision
-    
+
     Use Cases:
     ---------
     - Testing Xbar-S chart algorithms
@@ -195,160 +109,149 @@ def make_sds1(
     - Demonstrating interaction effects
     - Teaching full-factorial designs
     - Baseline for comparing other SDS types
-    
+
     Args:
-        K: Number of factor levels (e.g., machines, lanes, operators)
+        K1: Number of factor 1 levels (e.g., machines, lanes)
+        K2: Number of factor 2 levels (e.g., operators, shifts)
         T: Number of time periods (e.g., days, shifts, batches)
-        n_min: Minimum observations per (factor, time) cell
-        n_max: Maximum observations per (factor, time) cell
+        n_min: Minimum observations per cell
+        n_max: Maximum observations per cell
         mu: Grand mean (process center)
         sigma: Within-cell standard deviation (pure error)
-        factor_effect_size: Standard deviation of factor main effects
-        time_effect_size: Standard deviation of time main effects  
-        interaction_effect_size: Standard deviation of (factor × time) interactions
+        factor1_effect_size: Standard deviation of factor 1 main effects
+        factor2_effect_size: Standard deviation of factor 2 main effects
+        time_effect_size: Standard deviation of time main effects
+        interaction_effect_size: Standard deviation of interactions
         seed: Random seed for reproducibility (None = random)
         include_truth: If True, include true effects as columns for validation
-        factor_names: Custom factor level names (default: K1, K2, ...)
-        
+        factor1_names: Custom factor 1 level names (default: F1_1, F1_2, ...)
+        factor2_names: Custom factor 2 level names (default: F2_1, F2_2, ...)
+
     Returns:
         DataFrame with columns:
             - time: Time period (1 to T)
-            - factor 1: Factor level (K1, K2, ... or custom names)
-            - factor 2: 'NA' (placeholder for future two-factor designs)
+            - factor 1: Factor 1 level
+            - factor 2: Factor 2 level
             - y: Response variable
-            
+
         Optional columns (if include_truth=True):
-            - true_factor_effect: The ρ_i component
-            - true_time_effect: The τ_j component
-            - true_interaction: The (ρτ)_ij component
-            - true_error: The ε_ijr component (pure error)
-    
+            - true_factor1_effect: The ρ_i component
+            - true_factor2_effect: The φ_j component
+            - true_time_effect: The τ_t component
+            - true_interaction: The combined interaction component
+            - true_error: The ε component (pure error)
+
     Mathematical Model:
-        Y_ijr = μ + ρ_i + τ_j + (ρτ)_ij + ε_ijr
-        
+        Y_ijtr = μ + ρ_i + φ_j + τ_t + (ρφ)_ij + (ρτ)_it + (φτ)_jt + ε_ijtr
+
         where:
             μ: Grand mean (mu parameter)
-            ρ_i: Factor i main effect ~ N(0, factor_effect_size²)
-            τ_j: Time j main effect ~ N(0, time_effect_size²)
-            (ρτ)_ij: Factor-Time interaction ~ N(0, interaction_effect_size²)
-            ε_ijr: Pure error for replicate r ~ N(0, σ²)
-            
-        This additive model with interaction is the foundation of VAS.
-    
+            ρ_i: Factor 1 main effect ~ N(0, factor1_effect_size²)
+            φ_j: Factor 2 main effect ~ N(0, factor2_effect_size²)
+            τ_t: Time main effect ~ N(0, time_effect_size²)
+            interactions: Combined effect ~ N(0, interaction_effect_size²)
+            ε_ijtr: Pure error for replicate r ~ N(0, σ²)
+
     Examples:
-        >>> # Basic usage - 3 factors, 8 time periods
-        >>> df = make_sds1(K=3, T=8, seed=42)
+        >>> # Basic usage - 3 factor1 levels × 2 factor2 levels × 8 time periods
+        >>> df = make_sds1(K1=3, K2=2, T=8, seed=42)
         >>> print(f"Generated {len(df)} observations")
-        >>> df.groupby(['factor 1', 'time']).size().min()
+        >>> df.groupby(['factor 1', 'factor 2', 'time']).size().min()
         2  # All cells have at least 2 observations
-        
+
         >>> # With ground truth for validation testing
-        >>> df = make_sds1(K=2, T=4, include_truth=True, seed=42)
-        >>> # Now can validate that analysis recovers true effects
-        >>> print(df[['y', 'true_factor_effect', 'true_time_effect']].head())
-        
+        >>> df = make_sds1(K1=2, K2=2, T=4, include_truth=True, seed=42)
+
         >>> # Custom factor names
-        >>> df = make_sds1(K=3, T=6, 
-        ...                factor_names=['Machine_A', 'Machine_B', 'Machine_C'],
+        >>> df = make_sds1(K1=3, K2=2, T=6,
+        ...                factor1_names=['Machine_A', 'Machine_B', 'Machine_C'],
+        ...                factor2_names=['Operator_1', 'Operator_2'],
         ...                seed=42)
-        
-        >>> # Large effects, low noise (easy to detect)
-        >>> df = make_sds1(K=5, T=10, 
-        ...                factor_effect_size=5.0,  # Large differences
-        ...                time_effect_size=3.0,
-        ...                sigma=0.1,                # Low noise
-        ...                seed=42)
-        
-        >>> # Realistic manufacturing scenario
-        >>> df = make_sds1(K=4, T=12,           # 4 lanes, 12 hours
-        ...                n_min=3, n_max=5,     # 3-5 samples per hour
-        ...                mu=237.5,              # Target fill weight
-        ...                sigma=0.8,             # Within-cell variability
-        ...                factor_effect_size=1.5, # Lane differences
-        ...                time_effect_size=0.5,   # Hour-to-hour drift
-        ...                seed=42)
-    
+
     Validation:
         The function automatically validates that generated data meets SDS1 criteria:
-        - All (K,T) cells present (no missing combinations)
+        - All (K1 × K2 × T) cells present (no missing combinations)
         - All cells have n_min ≤ n ≤ n_max observations
         - Response variable is numeric
         - No missing values in critical columns
-    
-    Notes:
-        - Increasing n_min/n_max provides more precision but more data collection cost
-        - Higher sigma makes effects harder to detect (more realistic)
-        - Set interaction_effect_size=0 for additive model (no interaction)
-        - Use include_truth=True when validating algorithm correctness
-    
+
     See Also:
         make_sds2: For unreplicated designs (n=1 per cell)
         make_sds3: For partial replication (mixed n=1 and n≥2)
         make_sds4: For time series (single factor over time)
     """
     rng = np.random.default_rng(seed)
-    
+
     # Generate true effects from the model
-    rho = rng.normal(0, factor_effect_size, K)      # Factor main effects
-    tau = rng.normal(0, time_effect_size, T)        # Time main effects
-    inter = rng.normal(0, interaction_effect_size, (K, T))  # Interactions
-    
+    rho = rng.normal(0, factor1_effect_size, K1)      # Factor 1 main effects
+    phi = rng.normal(0, factor2_effect_size, K2)      # Factor 2 main effects
+    tau = rng.normal(0, time_effect_size, T)          # Time main effects
+    inter = rng.normal(0, interaction_effect_size, (K1, K2, T))  # Interactions
+
     # Use custom factor names if provided
-    if factor_names is None:
-        factor_names = [f"K{k+1}" for k in range(K)]
-    elif len(factor_names) != K:
-        raise ValueError(f"Length of factor_names ({len(factor_names)}) must equal K ({K})")
-    
+    if factor1_names is None:
+        factor1_names = [f"F1_{k+1}" for k in range(K1)]
+    elif len(factor1_names) != K1:
+        raise ValueError(f"Length of factor1_names ({len(factor1_names)}) must equal K1 ({K1})")
+
+    if factor2_names is None:
+        factor2_names = [f"F2_{k+1}" for k in range(K2)]
+    elif len(factor2_names) != K2:
+        raise ValueError(f"Length of factor2_names ({len(factor2_names)}) must equal K2 ({K2})")
+
     rows = []
-    for k in range(K):
-        for t in range(T):
-            # Random number of observations per cell (uniform distribution)
-            n = rng.integers(n_min, n_max + 1)
-            
-            for _i in range(n):
-                # Generate observation from true model: Y = μ + ρ + τ + ρτ + ε
-                epsilon = rng.normal(0, sigma)  # Pure error
-                y = mu + rho[k] + tau[t] + inter[k, t] + epsilon
-                
-                row = {
-                    'time': t + 1,
-                    'factor 1': factor_names[k],
-                    'factor 2': "NA",
-                    'y': y
-                }
-                
-                # Optionally include ground truth for validation
-                if include_truth:
-                    row.update({
-                        'true_factor_effect': rho[k],
-                        'true_time_effect': tau[t],
-                        'true_interaction': inter[k, t],
-                        'true_error': epsilon,
-                        'true_mean': mu + rho[k] + tau[t] + inter[k, t]
-                    })
-                
-                rows.append(row)
-    
+    for k1 in range(K1):
+        for k2 in range(K2):
+            for t in range(T):
+                # Random number of observations per cell (uniform distribution)
+                n = rng.integers(n_min, n_max + 1)
+
+                for _i in range(n):
+                    # Generate observation from true model
+                    epsilon = rng.normal(0, sigma)  # Pure error
+                    y = mu + rho[k1] + phi[k2] + tau[t] + inter[k1, k2, t] + epsilon
+
+                    row = {
+                        'time': t + 1,
+                        'factor 1': factor1_names[k1],
+                        'factor 2': factor2_names[k2],
+                        'y': y
+                    }
+
+                    # Optionally include ground truth for validation
+                    if include_truth:
+                        row.update({
+                            'true_factor1_effect': rho[k1],
+                            'true_factor2_effect': phi[k2],
+                            'true_time_effect': tau[t],
+                            'true_interaction': inter[k1, k2, t],
+                            'true_error': epsilon,
+                            'true_mean': mu + rho[k1] + phi[k2] + tau[t] + inter[k1, k2, t]
+                        })
+
+                    rows.append(row)
+
     df = pd.DataFrame(rows)
-    
+
     # Validation - ensure SDS1 criteria met
-    cell_counts = df.groupby(['factor 1', 'time']).size()
-    
+    cell_counts = df.groupby(['factor 1', 'factor 2', 'time']).size()
+
     if cell_counts.min() < n_min:
         raise AssertionError(f"SDS1 validation failed: min n={cell_counts.min()} < {n_min}")
     if cell_counts.max() > n_max:
         raise AssertionError(f"SDS1 validation failed: max n={cell_counts.max()} > {n_max}")
-    if len(cell_counts) != K * T:
+    expected_cells = K1 * K2 * T
+    if len(cell_counts) != expected_cells:
         raise AssertionError(
-            f"SDS1 validation failed: expected {K*T} cells, got {len(cell_counts)} "
+            f"SDS1 validation failed: expected {expected_cells} cells, got {len(cell_counts)} "
             "(some factor-time combinations missing)"
         )
-    
+
     logger.debug(
-        f"Generated SDS1 data: {K} factors × {T} times × ~{(n_min+n_max)/2:.1f} reps/cell "
+        f"Generated SDS1 data: {K1} × {K2} factors × {T} times × ~{(n_min+n_max)/2:.1f} reps/cell "
         f"= {len(df)} observations"
     )
-    
+
     return df
 
 
@@ -357,156 +260,137 @@ def make_sds1(
 # ============================================================================
 
 def make_sds2(
-    K: int = 3,
+    K1: int = 3,
+    K2: int = 2,
     T: int = 10,
     mu: float = 50.0,
     sigma: float = 0.4,
-    factor_effect_size: float = 2.0,
+    factor1_effect_size: float = 2.0,
+    factor2_effect_size: float = 1.5,
     time_effect_size: float = 1.2,
     interaction_effect_size: float = 0.6,
     seed: Optional[int] = None,
     include_truth: bool = False,
-    factor_names: Optional[list[str]] = None
+    factor1_names: Optional[list[str]] = None,
+    factor2_names: Optional[list[str]] = None
 ) -> pd.DataFrame:
     """
     Generate Sampling Design State 2 data (no replication).
-    
+
     SDS2 is the classic unreplicated factorial design - exactly one observation
-    per (factor, time) combination. Common in designed experiments where
-    resources are limited and you want to cover more factor combinations.
-    
+    per cell. Common in designed experiments where resources are limited.
+
     Characteristics:
     ---------------
-    - Exactly one observation per (factor, time) cell
+    - Exactly one observation per (factor1, factor2, time) cell
     - Within-cell variance must be estimated indirectly (moving average)
     - Cannot separate pure error from interaction effects
     - More efficient data collection, less statistical power
-    - Ybar_kt = Y (since only one observation per cell)
-    
+
     Use Cases:
     ---------
     - Testing moving average R2 calculation algorithms
     - Validating SDS detection logic
     - Demonstrating unreplicated factorial designs
     - Cost-constrained or time-constrained data collection
-    - Initial screening experiments
-    
+
     Args:
-        K: Number of factor levels
+        K1: Number of factor 1 levels
+        K2: Number of factor 2 levels
         T: Number of time periods
         mu: Grand mean
         sigma: Process standard deviation (confounded with interaction)
-        factor_effect_size: Std dev of factor effects
+        factor1_effect_size: Std dev of factor 1 effects
+        factor2_effect_size: Std dev of factor 2 effects
         time_effect_size: Std dev of time effects
         interaction_effect_size: Std dev of interactions
         seed: Random seed for reproducibility
         include_truth: Include true effects as columns
-        factor_names: Custom factor level names
-        
+        factor1_names: Custom factor 1 level names
+        factor2_names: Custom factor 2 level names
+
     Returns:
-        DataFrame with exactly K×T observations
-        
-    Mathematical Model:
-        Y_ij = μ + ρ_i + τ_j + (ρτ)_ij + ε_ij
-        
-        Note: In SDS2, the (ρτ)_ij and ε_ij are completely confounded.
-        The moving average method attempts to separate them by assuming
-        smooth time trends, but this is an approximation.
-    
+        DataFrame with exactly K1 × K2 × T observations
+
     Examples:
         >>> # Basic usage
-        >>> df = make_sds2(K=3, T=8, seed=42)
-        >>> df.groupby(['factor 1', 'time']).size().max()
+        >>> df = make_sds2(K1=3, K2=2, T=8, seed=42)
+        >>> df.groupby(['factor 1', 'factor 2', 'time']).size().max()
         1  # All cells have exactly 1 observation
         >>> len(df)
-        24  # K × T = 3 × 8
-        
-        >>> # Compare data efficiency with SDS1
-        >>> df1 = make_sds1(K=3, T=8, n_min=3, n_max=3, seed=42)
-        >>> df2 = make_sds2(K=3, T=8, seed=42)
-        >>> print(f"SDS1: {len(df1)} obs, SDS2: {len(df2)} obs")
-        >>> # SDS1 requires 3× more data collection
-        
-        >>> # With ground truth to see what's confounded
-        >>> df = make_sds2(K=4, T=6, include_truth=True, seed=42)
-        >>> # Can verify that R2 estimation via moving average
-        >>> # approximates true_interaction + true_error
-        
-        >>> # Large designed experiment
-        >>> df = make_sds2(K=8, T=16, seed=42)
-        >>> # 128 observations covers 8×16 = 128 combinations
-    
-    Important Limitation:
-        In SDS2, you cannot definitively separate:
-        - True interaction effects (ρτ)_ij
-        - Pure random error ε_ij
-        
-        The moving average R2 calculation assumes that interactions are
-        relatively smooth over time within each factor level. Violations
-        of this assumption can lead to biased estimates.
-    
+        48  # K1 × K2 × T = 3 × 2 × 8
+
     Validation:
         - Exactly n=1 per cell (all cells)
-        - Total observations = K × T
+        - Total observations = K1 × K2 × T
         - No missing factor-time combinations
-    
+
     See Also:
         make_sds1: For replicated designs
         make_sds3: For mixed replication (most realistic)
     """
     rng = np.random.default_rng(seed)
-    
-    rho = rng.normal(0, factor_effect_size, K)
+
+    rho = rng.normal(0, factor1_effect_size, K1)
+    phi = rng.normal(0, factor2_effect_size, K2)
     tau = rng.normal(0, time_effect_size, T)
-    inter = rng.normal(0, interaction_effect_size, (K, T))
-    
-    if factor_names is None:
-        factor_names = [f"K{k+1}" for k in range(K)]
-    elif len(factor_names) != K:
-        raise ValueError("Length of factor_names must equal K")
-    
+    inter = rng.normal(0, interaction_effect_size, (K1, K2, T))
+
+    if factor1_names is None:
+        factor1_names = [f"F1_{k+1}" for k in range(K1)]
+    elif len(factor1_names) != K1:
+        raise ValueError("Length of factor1_names must equal K1")
+
+    if factor2_names is None:
+        factor2_names = [f"F2_{k+1}" for k in range(K2)]
+    elif len(factor2_names) != K2:
+        raise ValueError("Length of factor2_names must equal K2")
+
     rows = []
-    for k in range(K):
-        for t in range(T):
-            # Single observation per cell - this is the defining characteristic
-            y = mu + rho[k] + tau[t] + inter[k, t] + rng.normal(0, sigma)
-            
-            row = {
-                'time': t + 1,
-                'factor 1': factor_names[k],
-                'factor 2': "NA",
-                'y': y
-            }
-            
-            if include_truth:
-                row.update({
-                    'true_factor_effect': rho[k],
-                    'true_time_effect': tau[t],
-                    'true_interaction': inter[k, t],
-                    'true_confounded': inter[k, t] + (y - mu - rho[k] - tau[t] - inter[k, t])
-                })
-            
-            rows.append(row)
-    
+    for k1 in range(K1):
+        for k2 in range(K2):
+            for t in range(T):
+                # Single observation per cell - this is the defining characteristic
+                epsilon = rng.normal(0, sigma)
+                y = mu + rho[k1] + phi[k2] + tau[t] + inter[k1, k2, t] + epsilon
+
+                row = {
+                    'time': t + 1,
+                    'factor 1': factor1_names[k1],
+                    'factor 2': factor2_names[k2],
+                    'y': y
+                }
+
+                if include_truth:
+                    row.update({
+                        'true_factor1_effect': rho[k1],
+                        'true_factor2_effect': phi[k2],
+                        'true_time_effect': tau[t],
+                        'true_interaction': inter[k1, k2, t],
+                        'true_confounded': inter[k1, k2, t] + epsilon
+                    })
+
+                rows.append(row)
+
     df = pd.DataFrame(rows)
-    
+
     # Validation
-    cell_counts = df.groupby(['factor 1', 'time']).size()
-    
+    cell_counts = df.groupby(['factor 1', 'factor 2', 'time']).size()
+
     if not (cell_counts == 1).all():
         raise AssertionError(
             f"SDS2 validation failed: expected all n=1, "
             f"got min={cell_counts.min()}, max={cell_counts.max()}"
         )
-    
-    expected_n = K * T
+
+    expected_n = K1 * K2 * T
     if len(df) != expected_n:
         raise AssertionError(
             f"SDS2 validation failed: expected {expected_n} obs, got {len(df)}"
         )
-    
-    logger.debug(f"Generated SDS2 data: {K} factors × {T} times = {len(df)} observations")
-    
+
+    logger.debug(f"Generated SDS2 data: {K1} × {K2} factors × {T} times = {len(df)} observations")
+
     return df
 
 
@@ -515,60 +399,53 @@ def make_sds2(
 # ============================================================================
 
 def make_sds3(  # noqa: C901
-    K: int = 3,
+    K1: int = 3,
+    K2: int = 2,
     T: int = 8,
     p_replicated: float = 0.5,
     n_when_replicated: int = 3,
     mu: float = 50.0,
     sigma: float = 0.5,
-    factor_effect_size: float = 2.0,
+    factor1_effect_size: float = 2.0,
+    factor2_effect_size: float = 1.5,
     time_effect_size: float = 1.0,
     interaction_effect_size: float = 0.5,
     seed: Optional[int] = None,
     replication_pattern: str = 'random',
     include_truth: bool = False,
-    factor_names: Optional[list[str]] = None
+    factor1_names: Optional[list[str]] = None,
+    factor2_names: Optional[list[str]] = None
 ) -> pd.DataFrame:
     """
     Generate Sampling Design State 3 data (partial replication).
-    
-    ⭐ THIS IS THE MOST COMMON REAL-WORLD SCENARIO ⭐
-    
+
     SDS3 represents reality: some cells have replication, others don't.
-    This happens due to:
-    - Unplanned sampling (operators take extra samples when concerned)
-    - Missing data (some planned replicates not collected)
-    - Cost constraints (replicate only critical combinations)
-    - Phased studies (early phase replicated, later phase not)
-    
-    This is the HARDEST case to analyze correctly, and most software
-    handles it poorly or not at all!
-    
+    This is the MOST COMMON real-world scenario and the HARDEST to analyze.
+
     Characteristics:
     ---------------
-    - Some (factor, time) cells have n=1, others have n≥2
-    - Requires hybrid R2 estimation:
-        * Within-cell variance for replicated cells
-        * Moving average for unreplicated cells
+    - Some cells have n=1, others have n≥2
+    - Requires hybrid R2 estimation
     - Reflects real-world data collection reality
     - Most challenging to analyze correctly
-    
+
     Use Cases:
     ---------
-    - Testing hybrid variance estimation algorithms (CRITICAL)
+    - Testing hybrid variance estimation algorithms
     - Demonstrating real-world data structures
     - Validating robustness to missing data
-    - Teaching about practical SPC challenges
     - Development of SDS detection logic
-    
+
     Args:
-        K: Number of factor levels
+        K1: Number of factor 1 levels
+        K2: Number of factor 2 levels
         T: Number of time periods
         p_replicated: Proportion of cells with replication (0 to 1)
         n_when_replicated: Number of observations in replicated cells
         mu: Grand mean
         sigma: Within-cell standard deviation
-        factor_effect_size: Std dev of factor effects
+        factor1_effect_size: Std dev of factor 1 effects
+        factor2_effect_size: Std dev of factor 2 effects
         time_effect_size: Std dev of time effects
         interaction_effect_size: Std dev of interactions
         seed: Random seed
@@ -576,182 +453,143 @@ def make_sds3(  # noqa: C901
             - 'random': Random cells replicated (default)
             - 'early_times': First p_replicated fraction of time periods
             - 'late_times': Last p_replicated fraction of time periods
-            - 'specific_factors': First p_replicated fraction of factors
-            - 'checkerboard': Alternating pattern (k+t even/odd)
+            - 'checkerboard': Alternating pattern
             - 'corners': Extreme combinations get replication
         include_truth: Include true effects as columns
-        factor_names: Custom factor level names
-        
+        factor1_names: Custom factor 1 level names
+        factor2_names: Custom factor 2 level names
+
     Returns:
         DataFrame with mixed replication structure, including 'cell_type' column
-        
+
     Examples:
         >>> # 50% of cells replicated (balanced)
-        >>> df = make_sds3(K=3, T=8, p_replicated=0.5, seed=42)
-        >>> cell_sizes = df.groupby(['factor 1', 'time']).size()
+        >>> df = make_sds3(K1=3, K2=2, T=8, p_replicated=0.5, seed=42)
+        >>> cell_sizes = df.groupby(['factor 1', 'factor 2', 'time']).size()
         >>> print(f"Singles: {(cell_sizes == 1).sum()}, "
         ...       f"Replicated: {(cell_sizes > 1).sum()}")
-        
-        >>> # Realistic scenario: early data collection had replication
-        >>> df = make_sds3(K=4, T=12, 
-        ...                replication_pattern='early_times',
-        ...                p_replicated=0.4,  # First 40% of time
-        ...                seed=42)
-        >>> # Models situation where process was validated early,
-        >>> # then moved to reduced sampling
-        
-        >>> # Sparse replication (only 20% of cells)
-        >>> df = make_sds3(K=5, T=10, 
-        ...                p_replicated=0.2,
-        ...                n_when_replicated=5,  # Heavy replication when done
-        ...                seed=42)
-        
-        >>> # Checkerboard pattern (common in some experimental designs)
-        >>> df = make_sds3(K=4, T=8, 
-        ...                replication_pattern='checkerboard',
-        ...                seed=42)
-        
-        >>> # With ground truth to validate hybrid R2 calculation
-        >>> df = make_sds3(K=3, T=6, 
-        ...                include_truth=True,
-        ...                seed=42)
-        >>> # Can verify that system correctly handles mixed replication
-    
-    Replication Patterns:
-        Different patterns model different real-world scenarios:
-        
-        - 'random': Unplanned sampling (operator discretion)
-        - 'early_times': Process validation phase
-        - 'late_times': Special investigation at end
-        - 'specific_factors': Some factors monitored more closely
-        - 'checkerboard': Planned incomplete block design
-        - 'corners': Focus on extreme operating conditions
-    
-    Implementation Note:
-        This generator is CRITICAL for testing SDS3 detection and hybrid
-        R2 calculation. The system must handle this correctly or it will
-        fail on most real-world data!
-        
-        Current system status:
-        - SDS3 detection: Partially implemented
-        - Hybrid R2 calculation: Needs completion
-        
+
     Validation:
         - At least one cell with n=1
         - At least one cell with n≥2
-        - Actual replication proportion within ±20% of target
+        - Actual replication proportion within ±25% of target
         - All factor-time combinations present
-    
+
     See Also:
         make_sds1: For fully replicated designs
         make_sds2: For unreplicated designs
     """
     rng = np.random.default_rng(seed)
-    
+
     # Generate true effects
-    rho = rng.normal(0, factor_effect_size, K)
+    rho = rng.normal(0, factor1_effect_size, K1)
+    phi = rng.normal(0, factor2_effect_size, K2)
     tau = rng.normal(0, time_effect_size, T)
-    inter = rng.normal(0, interaction_effect_size, (K, T))
-    
-    if factor_names is None:
-        factor_names = [f"K{k+1}" for k in range(K)]
-    elif len(factor_names) != K:
-        raise ValueError("Length of factor_names must equal K")
-    
+    inter = rng.normal(0, interaction_effect_size, (K1, K2, T))
+
+    if factor1_names is None:
+        factor1_names = [f"F1_{k+1}" for k in range(K1)]
+    elif len(factor1_names) != K1:
+        raise ValueError("Length of factor1_names must equal K1")
+
+    if factor2_names is None:
+        factor2_names = [f"F2_{k+1}" for k in range(K2)]
+    elif len(factor2_names) != K2:
+        raise ValueError("Length of factor2_names must equal K2")
+
     rows = []
     replicated_cells = []
     unreplicated_cells = []
-    
-    for k in range(K):
-        for t in range(T):
-            # Determine replication based on pattern
-            if replication_pattern == 'random':
-                is_replicated = rng.random() < p_replicated
-                
-            elif replication_pattern == 'early_times':
-                is_replicated = t < int(T * p_replicated)
-                
-            elif replication_pattern == 'late_times':
-                is_replicated = t >= int(T * (1 - p_replicated))
-                
-            elif replication_pattern == 'specific_factors':
-                is_replicated = k < int(K * p_replicated)
-                
-            elif replication_pattern == 'checkerboard':
-                is_replicated = (k + t) % 2 == 0
-                
-            elif replication_pattern == 'corners':
-                # Replicate when factor or time is at extremes
-                is_corner = (k == 0 or k == K-1) or (t == 0 or t == T-1)
-                is_replicated = is_corner or (rng.random() < p_replicated/2)
-                
-            else:
-                raise ValueError(
-                    f"Unknown replication pattern: {replication_pattern}. "
-                    f"Valid: 'random', 'early_times', 'late_times', 'specific_factors', "
-                    f"'checkerboard', 'corners'"
-                )
-            
-            # Determine n for this cell
-            n = n_when_replicated if is_replicated else 1
-            
-            # Track cell types for validation
-            if is_replicated:
-                replicated_cells.append((k, t))
-            else:
-                unreplicated_cells.append((k, t))
-            
-            # Generate observations
-            for _i in range(n):
-                epsilon = rng.normal(0, sigma)
-                y = mu + rho[k] + tau[t] + inter[k, t] + epsilon
-                
-                row = {
-                    'time': t + 1,
-                    'factor 1': factor_names[k],
-                    'factor 2': "NA",
-                    'y': y,
-                    'cell_type': 'replicated' if is_replicated else 'unreplicated'
-                }
-                
-                if include_truth:
-                    row.update({
-                        'true_factor_effect': rho[k],
-                        'true_time_effect': tau[t],
-                        'true_interaction': inter[k, t],
-                        'true_error': epsilon
-                    })
-                
-                rows.append(row)
-    
+    total_cells = K1 * K2 * T
+
+    for k1 in range(K1):
+        for k2 in range(K2):
+            for t in range(T):
+                # Determine replication based on pattern
+                if replication_pattern == 'random':
+                    is_replicated = rng.random() < p_replicated
+
+                elif replication_pattern == 'early_times':
+                    is_replicated = t < int(T * p_replicated)
+
+                elif replication_pattern == 'late_times':
+                    is_replicated = t >= int(T * (1 - p_replicated))
+
+                elif replication_pattern == 'checkerboard':
+                    is_replicated = (k1 + k2 + t) % 2 == 0
+
+                elif replication_pattern == 'corners':
+                    is_corner = (k1 == 0 or k1 == K1-1) or (t == 0 or t == T-1)
+                    is_replicated = is_corner or (rng.random() < p_replicated/2)
+
+                else:
+                    raise ValueError(
+                        f"Unknown replication pattern: {replication_pattern}. "
+                        f"Valid: 'random', 'early_times', 'late_times', "
+                        f"'checkerboard', 'corners'"
+                    )
+
+                # Determine n for this cell
+                n = n_when_replicated if is_replicated else 1
+
+                # Track cell types for validation
+                if is_replicated:
+                    replicated_cells.append((k1, k2, t))
+                else:
+                    unreplicated_cells.append((k1, k2, t))
+
+                # Generate observations
+                for _i in range(n):
+                    epsilon = rng.normal(0, sigma)
+                    y = mu + rho[k1] + phi[k2] + tau[t] + inter[k1, k2, t] + epsilon
+
+                    row = {
+                        'time': t + 1,
+                        'factor 1': factor1_names[k1],
+                        'factor 2': factor2_names[k2],
+                        'y': y,
+                        'cell_type': 'replicated' if is_replicated else 'unreplicated'
+                    }
+
+                    if include_truth:
+                        row.update({
+                            'true_factor1_effect': rho[k1],
+                            'true_factor2_effect': phi[k2],
+                            'true_time_effect': tau[t],
+                            'true_interaction': inter[k1, k2, t],
+                            'true_error': epsilon
+                        })
+
+                    rows.append(row)
+
     df = pd.DataFrame(rows)
-    
+
     # Validation - ensure true SDS3 (mixed replication)
-    cell_counts = df.groupby(['factor 1', 'time']).size()
+    cell_counts = df.groupby(['factor 1', 'factor 2', 'time']).size()
     has_singles = (cell_counts == 1).any()
     has_multiples = (cell_counts >= 2).any()
-    
+
     if not (has_singles and has_multiples):
         raise AssertionError(
             f"SDS3 validation failed: must have both single and multiple observations. "
             f"Got singles={has_singles}, multiples={has_multiples}. "
             f"Try adjusting p_replicated or replication_pattern."
         )
-    
+
     # Check replication proportion
-    actual_p = len(replicated_cells) / (K * T)
+    actual_p = len(replicated_cells) / total_cells
     if abs(actual_p - p_replicated) > 0.25:  # Allow 25% tolerance
         logger.warning(
             f"SDS3: target replication {p_replicated:.1%}, "
             f"actual {actual_p:.1%} (outside 25% tolerance)"
         )
-    
+
     logger.debug(
         f"Generated SDS3 data: {len(df)} obs, "
         f"{len(replicated_cells)} replicated cells ({actual_p:.1%}), "
         f"{len(unreplicated_cells)} unreplicated cells"
     )
-    
+
     return df
 
 
@@ -1139,202 +977,177 @@ def make_sds5(
 # SDS 6: Unstructured / Regime Changes
 # ============================================================================
 
-def make_sds6(
+def make_sds6(  # noqa: C901
     T: int = 80,
-    K: int = 3,
+    K1: int = 3,
+    K2: int = 2,
     mu: float = 50.0,
     sigma: float = 0.5,
     regime_lengths: Optional[list[int]] = None,
     regime_shifts: Optional[list[float]] = None,
-    factor_effect_size: float = 1.8,
+    factor1_effect_size: float = 1.8,
+    factor2_effect_size: float = 1.2,
     p_sampled: float = 0.7,
     seed: Optional[int] = None,
-    include_truth: bool = False
+    include_truth: bool = False,
+    factor1_names: Optional[list[str]] = None,
+    factor2_names: Optional[list[str]] = None
 ) -> pd.DataFrame:
     """
     Generate Sampling Design State 6 data (unstructured with regime changes).
-    
+
     SDS6 represents complex, irregular patterns common in real processes:
     - Regime changes (process mean shifts over time)
     - Irregular sampling (not all factors sampled at all times)
-    - Cannot form regular (factor, time) grid
+    - Cannot form regular grid
     - Mix of time-based patterns and factor effects
-    
-    This models situations like:
-    - Process adjustments (mean shifts between regimes)
-    - Equipment changes (new settings, maintenance)
-    - Raw material changes (different suppliers)
-    - Irregular production schedules
-    
+
     Characteristics:
     ---------------
-    - May lack clear (factor × time) structure
+    - Incomplete (factor × time) grid
     - Regime changes or process shifts over time
     - Irregular, sparse sampling patterns
-    - May have only time OR only factors (not both in regular grid)
     - Difficult to separate regime effects from factor/time effects
-    
+
     Use Cases:
     ---------
     - Testing regime detection algorithms
     - Demonstrating non-standard data patterns
-    - Teaching about process changes
     - Irregular production schedules
     - Long-term process studies with adjustments
-    
+
     Args:
         T: Total number of time periods
-        K: Number of factor levels (machines, operators, etc.)
+        K1: Number of factor 1 levels
+        K2: Number of factor 2 levels
         mu: Baseline process mean
         sigma: Random variation
-        regime_lengths: Duration of each regime (list). 
-                       If None, uses [20, 20, 20, 20] for T=80
-        regime_shifts: Mean shift for each regime (list).
-                      If None, uses [-1.0, 0.0, 1.2, 0.0]
-        factor_effect_size: Std dev of factor effects
-        p_sampled: Probability that each (factor, time) is sampled (0 to 1)
+        regime_lengths: Duration of each regime (list)
+        regime_shifts: Mean shift for each regime (list)
+        factor1_effect_size: Std dev of factor 1 effects
+        factor2_effect_size: Std dev of factor 2 effects
+        p_sampled: Probability that each cell is sampled (0 to 1)
         seed: Random seed
         include_truth: Include regime info and true effects
-        
+        factor1_names: Custom factor 1 level names
+        factor2_names: Custom factor 2 level names
+
     Returns:
         DataFrame with irregular structure and regime information
-        
-    Mathematical Model:
-        Y_ijt = μ + δ_r(t) + ρ_i + ε_ijt
-        
-        where:
-            μ: Baseline mean
-            δ_r(t): Regime shift for regime r active at time t
-            ρ_i: Factor i effect ~ N(0, factor_effect_size²)
-            ε_ijt: Error ~ N(0, σ²)
-            
-        Regime changes create step functions in the mean over time.
-    
+
     Examples:
         >>> # Basic regime change pattern
-        >>> df = make_sds6(T=80, K=3, seed=42)
-        >>> # Check regime distribution
+        >>> df = make_sds6(T=80, K1=3, K2=2, seed=42)
         >>> df.groupby('regime')['y'].mean()
-        
-        >>> # Custom regime pattern (process adjustment history)
-        >>> df = make_sds6(T=100, K=4,
-        ...                regime_lengths=[30, 20, 30, 20],
-        ...                regime_shifts=[-2.0, 0.0, 1.5, -1.0],
-        ...                seed=42)
-        >>> # Models: low period, adjustment to target, 
-        >>> #         high period, correction
-        
+
         >>> # Sparse sampling (irregular production)
-        >>> df = make_sds6(T=60, K=3, 
+        >>> df = make_sds6(T=60, K1=3, K2=2,
         ...                p_sampled=0.4,  # Only 40% of slots sampled
         ...                seed=42)
-        
-        >>> # Single regime (no changes) - degenerates toward SDS 1/2/3
-        >>> df = make_sds6(T=50, K=3,
-        ...                regime_lengths=[50],
-        ...                regime_shifts=[0.0],
-        ...                p_sampled=1.0,  # Full sampling
-        ...                seed=42)
-        
-        >>> # With ground truth for regime detection validation
-        >>> df = make_sds6(T=80, K=3, include_truth=True, seed=42)
-        >>> # Can test change-point detection algorithms
-    
+
     Validation:
-        - Incomplete (factor, time) grid (sparse sampling)
+        - Incomplete grid (sparse sampling)
         - Regime changes present (if multiple regimes)
         - Some observations in each regime
-        - All factors appear at least once
-    
-    Notes:
-        - High p_sampled (near 1.0) makes this more like SDS 1/2/3
-        - Low p_sampled (near 0.3) creates very irregular patterns
-        - Regime shifts should be large enough to be detectable
-          relative to sigma (typically > 2*sigma)
-    
+
     See Also:
         make_sds4: For single condition with time patterns
         make_sds5: For nested structures
     """
     rng = np.random.default_rng(seed)
-    
+
     # Default regime pattern if not specified
     if regime_lengths is None:
         n_regimes = 4
         regime_lengths = [T // n_regimes] * n_regimes
         # Adjust last regime to account for rounding
         regime_lengths[-1] = T - sum(regime_lengths[:-1])
-    
+
     if regime_shifts is None:
         regime_shifts = [-1.0, 0.0, 1.2, 0.0]
-    
+
     if len(regime_shifts) != len(regime_lengths):
         raise ValueError(
             f"regime_shifts length ({len(regime_shifts)}) must equal "
             f"regime_lengths length ({len(regime_lengths)})"
         )
-    
+
     if sum(regime_lengths) != T:
         raise ValueError(
             f"Sum of regime_lengths ({sum(regime_lengths)}) must equal T ({T})"
         )
-    
+
     # Create regime mapping
     regimes = np.repeat(range(len(regime_lengths)), regime_lengths)
-    
+
     # Generate factor effects
-    mach_eff = rng.normal(0, factor_effect_size, K)
-    
+    factor1_eff = rng.normal(0, factor1_effect_size, K1)
+    factor2_eff = rng.normal(0, factor2_effect_size, K2)
+
+    if factor1_names is None:
+        factor1_names = [f"Machine{k+1}" for k in range(K1)]
+    elif len(factor1_names) != K1:
+        raise ValueError("Length of factor1_names must equal K1")
+
+    if factor2_names is None:
+        factor2_names = [f"F2_{k+1}" for k in range(K2)]
+    elif len(factor2_names) != K2:
+        raise ValueError("Length of factor2_names must equal K2")
+
     rows = []
     regime_obs_count = {i: 0 for i in range(len(regime_lengths))}
-    
+
     for t in range(T):
         regime = regimes[min(t, len(regimes) - 1)]
         shift = regime_shifts[regime]
-        
-        # Irregular sampling: not all factors sampled at each time
-        active_factors = [k for k in range(K) if rng.random() < p_sampled]
-        
-        # Ensure at least one factor sampled
-        if len(active_factors) == 0:
-            active_factors = [rng.integers(0, K)]
-        
-        for k in active_factors:
-            epsilon = rng.normal(0, sigma)
-            y = mu + shift + mach_eff[k] + epsilon
-            
-            row = {
-                'time': t + 1,
-                'factor 1': f"Machine{k+1}",
-                'factor 2': "NA",
-                'y': y,
-                'regime': regime
-            }
-            
-            if include_truth:
-                row.update({
-                    'regime_shift': shift,
-                    'true_machine_effect': mach_eff[k],
-                    'true_error': epsilon,
-                    'true_mean': mu + shift + mach_eff[k]
-                })
-            
-            rows.append(row)
-            regime_obs_count[regime] += 1
-    
+
+        # Irregular sampling: not all factor combinations sampled at each time
+        for k1 in range(K1):
+            for k2 in range(K2):
+                if rng.random() < p_sampled:
+                    epsilon = rng.normal(0, sigma)
+                    y = mu + shift + factor1_eff[k1] + factor2_eff[k2] + epsilon
+
+                    row = {
+                        'time': t + 1,
+                        'factor 1': factor1_names[k1],
+                        'factor 2': factor2_names[k2],
+                        'y': y,
+                        'regime': regime
+                    }
+
+                    if include_truth:
+                        row.update({
+                            'regime_shift': shift,
+                            'true_factor1_effect': factor1_eff[k1],
+                            'true_factor2_effect': factor2_eff[k2],
+                            'true_error': epsilon,
+                            'true_mean': mu + shift + factor1_eff[k1] + factor2_eff[k2]
+                        })
+
+                    rows.append(row)
+                    regime_obs_count[regime] += 1
+
     df = pd.DataFrame(rows)
-    
+
+    # Ensure we have at least some data
+    if len(df) == 0:
+        raise AssertionError(
+            f"SDS6 validation failed: no observations generated. "
+            f"Increase p_sampled (currently {p_sampled})."
+        )
+
     # Validation
     # Check that we have irregular grid (some factor-time combinations missing)
-    full_grid_size = K * T
-    actual_combinations = df.groupby(['factor 1', 'time']).size().shape[0]
-    
+    full_grid_size = K1 * K2 * T
+    actual_combinations = df.groupby(['factor 1', 'factor 2', 'time']).size().shape[0]
+
     if actual_combinations >= full_grid_size * 0.95:
         logger.warning(
             f"SDS6: Nearly complete grid ({actual_combinations}/{full_grid_size}). "
             f"Consider reducing p_sampled for more irregular pattern."
         )
-    
+
     # Check that all regimes have data
     empty_regimes = [r for r, count in regime_obs_count.items() if count == 0]
     if empty_regimes:
@@ -1342,20 +1155,20 @@ def make_sds6(
             f"SDS6 validation failed: regimes {empty_regimes} have no observations. "
             f"Increase p_sampled or adjust regime_lengths."
         )
-    
-    # Check that all factors appear
+
+    # Check that all factor 1 levels appear
     factors_present = df['factor 1'].nunique()
-    if factors_present < K:
+    if factors_present < K1:
         logger.warning(
-            f"SDS6: Only {factors_present}/{K} factors have observations. "
+            f"SDS6: Only {factors_present}/{K1} factor 1 levels have observations. "
             f"Consider increasing p_sampled."
         )
-    
+
     logger.debug(
         f"Generated SDS6 data: {len(df)} observations across {len(regime_lengths)} regimes, "
         f"{actual_combinations}/{full_grid_size} cells filled ({actual_combinations/full_grid_size:.1%})"
     )
-    
+
     return df
 
 
@@ -1365,7 +1178,8 @@ def make_sds6(
 
 def make_sds(
     sds: int,
-    K: int = 3,
+    K1: int = 3,
+    K2: int = 2,
     T: int = 8,
     n: int = 20,
     seed: Optional[int] = None,
@@ -1378,38 +1192,43 @@ def make_sds(
     generator. Useful for loops and parameterized testing.
 
     Args:
-        sds: Sampling Design State (0, 1, 2, 3, 4, 5, or 6)
-        K: Number of factor levels (not used for SDS 0, 4)
-        T: Number of time periods (not used for SDS 0)
-        n: Number of observations (used for SDS 0)
+        sds: Sampling Design State (1, 2, 3, 4, 5, or 6)
+        K1: Number of factor 1 levels (not used for SDS 4)
+        K2: Number of factor 2 levels (not used for SDS 4, 5)
+        T: Number of time periods
+        n: Number of observations (deprecated, use T instead)
         seed: Random seed for reproducibility
         **kwargs: Additional arguments passed to specific generator
 
     Returns:
         DataFrame appropriate for specified SDS
 
+    Note:
+        SDS 0 was consolidated into SDS 4. Response-only data (no factors,
+        no time) is now treated as SDS 4 with implicit time ordering via
+        obs_id. Use make_sds4() for simple time series data.
+
     Examples:
         >>> # Generate data for each SDS type
-        >>> for sds in [0, 1, 2, 3, 4, 5, 6]:
-        ...     df = make_sds(sds, K=3, T=8, seed=42)
+        >>> for sds in [1, 2, 3, 4, 5, 6]:
+        ...     df = make_sds(sds, K1=3, K2=2, T=8, seed=42)
         ...     print(f"SDS {sds}: {len(df)} observations")
 
         >>> # Useful for parameterized testing
-        >>> @pytest.mark.parametrize('sds', [0, 1, 2, 3, 4, 5, 6])
+        >>> @pytest.mark.parametrize('sds', [1, 2, 3, 4, 5, 6])
         >>> def test_all_sds(sds):
         ...     df = make_sds(sds, seed=42)
         ...     assert len(df) > 0
 
         >>> # Pass through kwargs to specific generator
-        >>> df = make_sds(3, K=4, T=10,
+        >>> df = make_sds(3, K1=4, K2=2, T=10,
         ...               p_replicated=0.3,  # SDS3-specific arg
         ...               seed=42)
 
     Raises:
-        ValueError: If SDS type not in [0, 1, 2, 3, 4, 5, 6]
+        ValueError: If SDS type not in [1, 2, 3, 4, 5, 6]
     """
     generators = {
-        0: make_sds0,
         1: make_sds1,
         2: make_sds2,
         3: make_sds3,
@@ -1424,19 +1243,16 @@ def make_sds(
             f"Available SDS types: {sorted(generators.keys())}"
         )
 
-    # SDS 0 uses only n parameter
-    if sds == 0:
-        return generators[sds](n=n, seed=seed, **kwargs)
-    # SDS 4 doesn't use K parameter
-    elif sds == 4:
+    # SDS 4 doesn't use K1/K2 parameters
+    if sds == 4:
         return generators[sds](T=T, seed=seed, **kwargs)
-    # SDS 5 uses L and H_per_L instead of K
+    # SDS 5 uses L and H_per_L instead of K1/K2
     elif sds == 5:
-        L = kwargs.pop('L', max(2, K // 2))
+        L = kwargs.pop('L', max(2, K1 // 2))
         H_per_L = kwargs.pop('H_per_L', 3)
         return generators[sds](L=L, H_per_L=H_per_L, T=T, seed=seed, **kwargs)
     else:
-        return generators[sds](K=K, T=T, seed=seed, **kwargs)
+        return generators[sds](K1=K1, K2=K2, T=T, seed=seed, **kwargs)
 
 
 # ============================================================================
@@ -1562,43 +1378,45 @@ def make_edge_cases() -> dict[str, pd.DataFrame]:
 
 def compare_sds_characteristics(
     sds_list: Optional[list[int]] = None,
-    K: int = 3,
+    K1: int = 3,
+    K2: int = 2,
     T: int = 8,
     seed: int = 42
 ) -> pd.DataFrame:
     """
     Generate comparison table of SDS characteristics.
-    
+
     Creates a summary table comparing key features of each SDS type,
     useful for documentation and teaching.
-    
+
     Args:
         sds_list: List of SDS to compare (default: all)
-        K: Factor levels for comparison
+        K1: Factor 1 levels for comparison
+        K2: Factor 2 levels for comparison
         T: Time periods for comparison
         seed: Random seed
-        
+
     Returns:
         DataFrame with SDS comparison metrics
-        
+
     Example:
         >>> summary = compare_sds_characteristics()
         >>> print(summary)
-        
+
         sds  n_obs  n_cells  min_n  max_n  has_replication  complete_grid
-        1    72     24       2      4      True             True
-        2    24     24       1      1      False            True
-        3    48     24       1      3      Mixed            True
+        1    144    48       2      4      True             True
+        2    48     48       1      1      False            True
+        3    96     48       1      3      Mixed            True
         4    40     40       1      1      False            False
         5    38     38       1      1      False            False
-        6    42     42       1      1      False            False
+        6    84     84       1      1      False            False
     """
     if sds_list is None:
         sds_list = [1, 2, 3, 4, 5, 6]
-    
+
     rows = []
     for sds in sds_list:
-        df = make_sds(sds, K=K, T=T, seed=seed)
+        df = make_sds(sds, K1=K1, K2=K2, T=T, seed=seed)
         
         if 'factor 1' in df.columns and 'time' in df.columns:
             cell_counts = df.groupby(['factor 1', 'time']).size()
@@ -1650,7 +1468,7 @@ def validate_sds_detection(
         True if detected SDS matches expected
         
     Example:
-        >>> df = make_sds1(K=3, T=8, seed=42)
+        >>> df = make_sds1(K1=3, K2=2, T=8, seed=42)
         >>> spec = AnalysisSpecification('Xbar', {...})
         >>> ads = AnalysisDataSet(df, spec)
         >>> validate_sds_detection(df, expected_sds=1, spec)
@@ -1730,37 +1548,37 @@ def generate_test_suite(
     
     # SDS 1 variations
     files['sds1_basic'] = os.path.join(output_dir, 'sds1_basic.csv')
-    df = make_sds1(K=3, T=8, seed=seed)
+    df = make_sds1(K1=3, K2=2, T=8, seed=seed)
     df.to_csv(files['sds1_basic'], index=False)
-    
+
     files['sds1_large'] = os.path.join(output_dir, 'sds1_large.csv')
-    df = make_sds1(K=5, T=12, n_min=3, n_max=5, seed=seed)
+    df = make_sds1(K1=5, K2=2, T=12, n_min=3, n_max=5, seed=seed)
     df.to_csv(files['sds1_large'], index=False)
-    
+
     files['sds1_with_truth'] = os.path.join(output_dir, 'sds1_with_truth.csv')
-    df = make_sds1(K=3, T=6, include_truth=True, seed=seed)
+    df = make_sds1(K1=3, K2=2, T=6, include_truth=True, seed=seed)
     df.to_csv(files['sds1_with_truth'], index=False)
-    
+
     # SDS 2 variations
     files['sds2_basic'] = os.path.join(output_dir, 'sds2_basic.csv')
-    df = make_sds2(K=3, T=10, seed=seed)
+    df = make_sds2(K1=3, K2=2, T=10, seed=seed)
     df.to_csv(files['sds2_basic'], index=False)
-    
+
     files['sds2_large'] = os.path.join(output_dir, 'sds2_large.csv')
-    df = make_sds2(K=6, T=16, seed=seed)
+    df = make_sds2(K1=6, K2=2, T=16, seed=seed)
     df.to_csv(files['sds2_large'], index=False)
-    
+
     # SDS 3 variations (critical!)
     files['sds3_balanced'] = os.path.join(output_dir, 'sds3_balanced.csv')
-    df = make_sds3(K=3, T=8, p_replicated=0.5, seed=seed)
+    df = make_sds3(K1=3, K2=2, T=8, p_replicated=0.5, seed=seed)
     df.to_csv(files['sds3_balanced'], index=False)
-    
+
     files['sds3_sparse'] = os.path.join(output_dir, 'sds3_sparse.csv')
-    df = make_sds3(K=4, T=10, p_replicated=0.2, seed=seed)
+    df = make_sds3(K1=4, K2=2, T=10, p_replicated=0.2, seed=seed)
     df.to_csv(files['sds3_sparse'], index=False)
-    
+
     files['sds3_early_times'] = os.path.join(output_dir, 'sds3_early_times.csv')
-    df = make_sds3(K=3, T=12, replication_pattern='early_times', seed=seed)
+    df = make_sds3(K1=3, K2=2, T=12, replication_pattern='early_times', seed=seed)
     df.to_csv(files['sds3_early_times'], index=False)
     
     # SDS 4 variations
@@ -2031,8 +1849,8 @@ def make_large_dataset(
         >>> df = make_large_dataset(n_rows=500_000, sds=2)
 
     Notes:
-        - SDS 1: Uses K factors × T times × n replicates = n_rows
-        - SDS 2: Uses K factors × T times = n_rows (no replication)
+        - SDS 1: Uses K1 × K2 factors × T times × n replicates = n_rows
+        - SDS 2: Uses K1 × K2 factors × T times = n_rows (no replication)
         - SDS 4: Uses T time points = n_rows (single factor)
         - Extra columns are randomly typed (60% float, 20% int, 20% string)
           to simulate realistic mixed-type data exports.
@@ -2040,20 +1858,23 @@ def make_large_dataset(
     rng = np.random.default_rng(seed)
 
     if sds == 1:
-        # Calculate K, T, n to hit target rows
-        # K × T × n = n_rows
+        # Calculate K1, K2, T, n to hit target rows
+        # K1 × K2 × T × n = n_rows
         n = 10  # Fixed replication
-        cells = n_rows // n
-        K = int(np.sqrt(cells))
-        T = cells // K
+        K2 = 2  # Fixed K2
+        cells = n_rows // (n * K2)
+        K1 = int(np.sqrt(cells))
+        T = cells // K1
 
-        df = make_sds1(K=K, T=T, n_min=n, n_max=n, seed=seed)
+        df = make_sds1(K1=K1, K2=K2, T=T, n_min=n, n_max=n, seed=seed)
 
     elif sds == 2:
-        # K × T = n_rows (no replication)
-        K = int(np.sqrt(n_rows))
-        T = n_rows // K
-        df = make_sds2(K=K, T=T, seed=seed)
+        # K1 × K2 × T = n_rows (no replication)
+        K2 = 2  # Fixed K2
+        remaining = n_rows // K2
+        K1 = int(np.sqrt(remaining))
+        T = remaining // K1
+        df = make_sds2(K1=K1, K2=K2, T=T, seed=seed)
 
     elif sds == 4:
         # Single factor, T time points
@@ -2084,9 +1905,10 @@ def make_large_dataset(
 # Module-level convenience
 # ============================================================================
 
-# Quick access to all generators
+# Quick access to all generators (SDS 1-6)
+# Note: SDS 0 was consolidated into SDS 4. Response-only data is now
+# treated as SDS 4 with implicit time ordering via obs_id.
 GENERATORS = {
-    0: make_sds0,
     1: make_sds1,
     2: make_sds2,
     3: make_sds3,
@@ -2102,7 +1924,7 @@ if __name__ == '__main__':
     
     for sds in range(1, 7):
         print(f"SDS {sds}: {get_sds_info(sds)['name']}")
-        df = make_sds(sds, K=3, T=6, seed=42)
+        df = make_sds(sds, K1=3, K2=2, T=6, seed=42)
         print(f"  Generated {len(df)} observations")
         print(f"  Columns: {df.columns.tolist()}")
         print(f"  Preview:\n{df.head(3)}")

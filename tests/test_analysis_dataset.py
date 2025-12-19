@@ -405,7 +405,8 @@ class TestAnalysisDataSet:
         a_spec = ad.AnalysisSpecification(spec)
         dataset = ad.AnalysisDataSet(df=df, analysis_specification=a_spec, sds=sds)
 
-        assert dataset.sampling_design_state == 0
+        # SDS 4: No grouping = implicit single condition over time (obs_id as time)
+        assert dataset.sampling_design_state == 4
         assert dataset.analysis_dataset.columns.tolist() == ['c', 'obs_id', 'rsg_key', 'cell_key']
 
     def test_no_grouping_with_time(self, df):
@@ -421,7 +422,8 @@ class TestAnalysisDataSet:
         a_spec = ad.AnalysisSpecification(spec)
         dataset = ad.AnalysisDataSet(df=df, analysis_specification=a_spec, sds=sds)
 
-        assert dataset.sampling_design_state == 0
+        # SDS 4: No grouping = implicit single condition over time
+        assert dataset.sampling_design_state == 4
         assert dataset.analysis_dataset.columns.tolist() == ['d', 'c', 'obs_id', 'rsg_key', 'cell_key']
 
 

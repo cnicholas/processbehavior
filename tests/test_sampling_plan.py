@@ -840,7 +840,8 @@ class TestDocsAlignment:
         """get_sds_characteristics and get_analysis_plan should agree on key properties."""
         from processbehavior.sds_detector import SDSRegistry
 
-        for sds in range(7):
+        # SDS 1-6 (SDS 0 was consolidated into SDS 4)
+        for sds in range(1, 7):
             chars = SDSRegistry().get_sds_characteristics(sds)
             plan = SDSRegistry.get_analysis_plan(sds, min_cell_size=2)
 

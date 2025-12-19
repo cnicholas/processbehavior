@@ -143,8 +143,10 @@ def test_detect_sds0_no_structure(detector, sds0_data):
 
     result = detector.detect_sds(sds0_data, spec)
 
-    assert result.sds == 0
-    assert result.min_cell_size == 0  # No grouping means no cell size
+    # SDS 4: No grouping = implicit single condition over time (obs_id as time)
+    assert result.sds == 4
+    assert result.min_cell_size == 1
+    assert result.reason == 'implicit_single_condition'
 
 
 def test_detect_sds1_grouping_only(detector, spec_no_time):
@@ -165,8 +167,8 @@ def test_detect_sds1_grouping_only(detector, spec_no_time):
     assert result.min_cell_size == 2
 
 
-def test_detect_sds0_only_time(detector, spec_no_grouping):
-    """Should detect SDS 0 when only time (no grouping)."""
+def test_detect_sds4_only_time(detector, spec_no_grouping):
+    """Should detect SDS 4 when only time (no grouping) - implicit single condition."""
     df = pd.DataFrame({
         'pull': [1, 2, 3],
         'weight': [10.1, 10.2, 10.3]
@@ -174,8 +176,9 @@ def test_detect_sds0_only_time(detector, spec_no_grouping):
 
     result = detector.detect_sds(df, spec_no_grouping)
 
-    assert result.sds == 0
-    assert result.min_cell_size == 0
+    # SDS 4: No grouping = implicit single condition over time
+    assert result.sds == 4
+    assert result.min_cell_size == 1
 
 
 def test_detect_sds1_full_replication(detector, sds1_data, spec_with_grouping_and_time):
@@ -348,22 +351,10 @@ def test_get_sds_characteristics_unknown_defaults_to_sds0(detector):
 # Test: validate_sds_for_analysis
 # ============================================================================
 
-def test_validate_sds_for_analysis_sds0_with_xbar_raises(detector):
-    """Should raise error for SDS 0 with Xbar (needs grouping)."""
-    with pytest.raises(ValueError, match="Cannot perform Xbar analysis"):
-        detector.validate_sds_for_analysis(sds=0, analysis_type='Xbar')
-
-
-def test_validate_sds_for_analysis_sds0_with_s_raises(detector):
-    """Should raise error for SDS 0 with S chart (needs grouping)."""
-    with pytest.raises(ValueError, match="Cannot perform S analysis"):
-        detector.validate_sds_for_analysis(sds=0, analysis_type='S')
-
-
-def test_validate_sds_for_analysis_sds0_with_imr_passes(detector):
-    """Should allow SDS 0 with IMR analysis."""
-    # Should not raise
-    result = detector.validate_sds_for_analysis(sds=0, analysis_type='Imr')
+def test_validate_sds_for_analysis_sds4_with_imr_passes(detector):
+    """Should allow SDS 4 with IMR analysis."""
+    # SDS 4 supports IMR for single condition over time (including response-only data)
+    result = detector.validate_sds_for_analysis(sds=4, analysis_type='Imr')
     assert result is True
 
 
@@ -773,13 +764,6 @@ class TestR2ChartAvailability:
         assert 'R2_Imr' in plan.residual_charts
         assert 'R2_S' not in plan.residual_charts
 
-    def test_sds0_no_residual_charts(self):
-        """SDS 0 (no structure) has no residual charts."""
-        plan = SDSRegistry.get_analysis_plan(sds=0, min_cell_size=0)
-
-        assert plan.vas_residuals_supported is False
-        assert plan.residual_charts == []
-
     def test_all_r2_supporting_sds_have_other_residuals(self):
         """All SDS types with R2 should also have R3, R4, R5 charts."""
         for sds in [1, 2, 3, 4, 5]:
@@ -841,10 +825,8 @@ class TestR4R5XbarSAvailability:
 
     def test_r5_imr_when_no_time(self):
         """R5_Imr fallback when has_time=False."""
-        # Need to find an SDS without time
-        # SDS 0 doesn't support VAS at all
-        # Let's check SDS configurations
-        for sds in range(7):
+        # Check SDS configurations - SDS 1-6 only (SDS 0 consolidated into SDS 4)
+        for sds in range(1, 7):
             plan = SDSRegistry.get_analysis_plan(sds=sds, min_cell_size=2)
             if plan.vas_residuals_supported and not plan.has_time:
                 assert 'R5_Imr' in plan.residual_charts
