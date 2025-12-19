@@ -471,7 +471,7 @@ class ProcessBehavior:
         >>> study = pb.formulate(response='weight')
         >>> print(study)  # Shows SDS, valid charts, next steps
 
-        With factors (SDS 0-3):
+        With factors (SDS 1-3):
 
         >>> study = pb.formulate(
         ...     response='fill_weight',
@@ -491,6 +491,28 @@ class ProcessBehavior:
         ... )
         >>> study.design()  # Shows planned vs observed structure
 
+        Notes
+        -----
+        **Implicit Time Ordering**
+
+        When no ``time`` parameter is specified, the system treats observation
+        order as implicit time. This design decision is intentional:
+
+        1. Wheeler's IMR chart fundamentally assumes temporal ordering - moving
+           ranges between consecutive observations only make sense in sequence.
+
+        2. The ``obs_id`` column (assigned during data preparation) serves as
+           the implicit time dimension, preserving the order in which data was
+           provided.
+
+        3. This enables "response-only" analysis where users can analyze a
+           simple series without explicitly defining time structure. Such data
+           is classified as SDS 4 (Single Condition Over Time) with implicit
+           single condition.
+
+        If your observations are NOT in temporal order, you MUST specify the
+        ``time`` parameter to ensure correct analysis.
+
         See Also
         --------
         Study : The returned Study object
@@ -502,8 +524,8 @@ class ProcessBehavior:
         if factors is not None and plan is not None:
             raise ValidationError(
                 "Cannot specify both 'factors' and 'plan'. Use either:\n"
-                "  • factors=[...] to infer structure from observed data (SDS 0-3)\n"
-                "  • plan={col: [levels], ...} to specify expected structure (SDS 0-6)"
+                "  • factors=[...] to infer structure from observed data (SDS 1-3)\n"
+                "  • plan={col: [levels], ...} to specify expected structure (SDS 1-6)"
             )
 
         # Normalize column names from ColumnRef to str
