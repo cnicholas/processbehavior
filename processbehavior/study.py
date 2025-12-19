@@ -64,6 +64,12 @@ class DesignReport:
         Observed unique time points
     T_missing : int | None
         T - T_observed if T specified
+    R : int | None
+        Total cells: K × T (planned) or R_observed if no plan
+    R_observed : int | None
+        Actual unique (rsg, time) cells in data
+    R_missing : int | None
+        R - R_observed if R specified
     N : int | None
         Planned N (observations per cell) if specified
     N_observed : tuple[int, float, int] | None
@@ -89,6 +95,7 @@ class DesignReport:
       SDS reason: incomplete_with_replication
       K: planned=12, observed=8, missing=4
       T: planned=10, observed=8, missing=2
+      R: planned=120, observed=64, missing=56
       N: planned=2, observed=(min=1, median=2.0, max=3)
 
       Factors:
@@ -124,6 +131,7 @@ class DesignReport:
     _observed_rsg_values: list[str] | None = None  # Actual rsg strings from analysis dataset
     _sds_reason: str | None = None  # From SDSResult.reason
     _unit_of_analysis: str | None = None  # Fundamental entity being measured
+    _R_observed: int | None = None  # Count of unique (rsg, time) cells
 
     @property
     def factors(self) -> pd.DataFrame:
@@ -279,6 +287,42 @@ class DesignReport:
         return max(0, self._T - self._T_observed)
 
     @property
+    def R(self) -> int | None:
+        """
+        Total cells in design: K × T.
+
+        With a plan: Returns K × T (planned total cells).
+        Without a plan: Returns R_observed.
+        Returns None if no time variable specified.
+        """
+        if not self._sampling_plan:
+            return self.R_observed
+        if self._T is None:
+            return None
+        return self.K * self._T
+
+    @property
+    def R_observed(self) -> int | None:
+        """
+        Actual unique (rsg, time) cells observed in data.
+
+        This is the count of filled cells, not K_observed × T_observed
+        (which would overstate sparse designs).
+        """
+        return self._R_observed
+
+    @property
+    def R_missing(self) -> int | None:
+        """
+        Missing cells: R - R_observed.
+
+        Returns None if R is not specified (no time variable).
+        """
+        if self.R is None or self.R_observed is None:
+            return None
+        return max(0, self.R - self.R_observed)
+
+    @property
     def N(self) -> int | None:
         """Planned observations per cell (if specified in the plan)."""
         return self._N
@@ -425,6 +469,13 @@ class DesignReport:
             lines.append(f"  T: planned={self._T}, observed={self._T_observed}, missing={self.T_missing}")
         elif self._T_observed is not None:
             lines.append(f"  T: observed={self._T_observed}")
+
+        # R = K × T (total cells)
+        if self.R is not None:
+            if self.has_plan and self._T is not None:
+                lines.append(f"  R: planned={self.R}, observed={self.R_observed}, missing={self.R_missing}")
+            elif self.R_observed is not None:
+                lines.append(f"  R: observed={self.R_observed}")
 
         if self._N is not None and self._N_observed is not None:
             min_n, med_n, max_n = self._N_observed
@@ -990,8 +1041,9 @@ class Study:
         if self._spec.time_var and self._spec.time_var in ads_df.columns:
             T_observed = int(ads_df[self._spec.time_var].nunique())
 
-        # Compute observed RSG values and N_observed
+        # Compute observed RSG values, N_observed, and R_observed
         N_observed = None
+        R_observed = None
         observed_rsg_values: list[str] = []
         rsg_col = self._spec.rsg_var_name
 
@@ -1004,6 +1056,8 @@ class Study:
                 cell_sizes = ads_df.groupby(
                     [rsg_col, self._spec.time_var], observed=True
                 ).size()
+                # R_observed = count of unique (rsg, time) cells
+                R_observed = len(cell_sizes)
             else:
                 cell_sizes = ads_df.groupby([rsg_col], observed=True).size()
 
@@ -1027,6 +1081,7 @@ class Study:
             _observed_rsg_values=observed_rsg_values,
             _sds_reason=self._sds_result.reason if self._sds_result else None,
             _unit_of_analysis=self._spec.unit_of_analysis,
+            _R_observed=R_observed,
         )
 
     def execute(
