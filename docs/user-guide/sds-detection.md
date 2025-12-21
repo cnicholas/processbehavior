@@ -2,6 +2,22 @@
 
 ProcessBehavior automatically detects your data's **Sampling Design State (SDS)**, which determines the appropriate analysis approach. Understanding SDS helps you interpret results correctly and choose the right charts.
 
+## Expected vs Observed: The Core Model
+
+ProcessBehavior understands every analytic study through the lens of **expected structure** versus **observed structure**:
+
+- **Observed structure** comes from your data—the actual factor levels, time points, and cell sizes present
+- **Expected structure** comes from your sampling plan—what the experimental design intended
+
+The system operates effectively with or without a plan:
+
+| Approach | What ProcessBehavior Knows | Capabilities |
+|----------|---------------------------|--------------|
+| **Without plan** | Observed structure only | SDS 1-4 detection, charts, basic design reports |
+| **With plan** | Expected + observed structure | All SDS detection, coverage analysis, rich design reports |
+
+With a plan, ProcessBehavior can compare what *was* collected against what *should have been* collected—enabling detection of nested designs (SDS 5) and incomplete grids (SDS 6), plus detailed reports showing exactly what's missing.
+
 ## The Six Sampling Design States
 
 | SDS | Name | Structure | Recommended Chart |
