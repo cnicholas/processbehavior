@@ -187,6 +187,28 @@ def package_analysis(analysis_output: dict, summary_statistics_output: dict):
     return out
 
 
+def _limits_to_pair(x):
+    """
+    Extract (lpl, upl) pair from various limit representations.
+
+    Handles different return types from calculate_limits:
+    - dict with 'lpl'/'upl' keys
+    - object with lpl/upl attributes
+    - list/tuple with positional values
+    """
+    if isinstance(x, dict):
+        return x.get('lpl', np.nan), x.get('upl', np.nan)
+    try:
+        return x['lpl'], x['upl']
+    except Exception:
+        pass
+    if hasattr(x, 'lpl') and hasattr(x, 'upl'):
+        return getattr(x, 'lpl', np.nan), getattr(x, 'upl', np.nan)
+    if isinstance(x, (list, tuple)) and len(x) >= 2:
+        return x[0], x[1]
+    return np.nan, np.nan
+
+
 class Analysis:
     """
     Unified analysis class handling all chart types via strategy pattern.
@@ -982,20 +1004,7 @@ class Analysis:
             if isinstance(lims, pd.DataFrame):
                 grouped = grouped.join(lims[['lpl','upl']])
             else:
-                def _to_pair(x):
-                    if isinstance(x, dict):
-                        return x.get('lpl', np.nan), x.get('upl', np.nan)
-                    try:
-                        return x['lpl'], x['upl']
-                    except Exception:
-                        pass
-                    if hasattr(x, 'lpl') and hasattr(x, 'upl'):
-                        return getattr(x, 'lpl', np.nan), getattr(x, 'upl', np.nan)
-                    if isinstance(x, (list, tuple)) and len(x) >= 2:
-                        return x[0], x[1]
-                    return np.nan, np.nan
-
-                lims_df = pd.DataFrame(lims.map(_to_pair).tolist(),
+                lims_df = pd.DataFrame(lims.map(_limits_to_pair).tolist(),
                                     index=grouped.index,
                                     columns=['lpl','upl'])
                 grouped = grouped.join(lims_df)
@@ -1063,7 +1072,7 @@ class Analysis:
             if isinstance(r_lims, pd.DataFrame):
                 r_grouped = r_grouped.join(r_lims[['lpl', 'upl']], rsuffix='_r')
             else:
-                r_lims_df = pd.DataFrame(r_lims.map(_to_pair).tolist(),
+                r_lims_df = pd.DataFrame(r_lims.map(_limits_to_pair).tolist(),
                                          index=r_grouped.index,
                                          columns=['lpl', 'upl'])
                 r_grouped = r_grouped.join(r_lims_df, rsuffix='_r')
@@ -1080,7 +1089,6 @@ class Analysis:
             # Drop IMR limits columns
             r_out = r_out.drop(columns=['center', 'lpl', 'upl', 'beyond_limits'], errors='ignore')
             # Merge R limits
-            r_merge_cols = [spec.rsg_var_name, 'center', r_lpl_col, r_upl_col]
             r_merge_data = r_grouped[[spec.rsg_var_name, 'center', r_lpl_col, r_upl_col]].rename(
                 columns={r_lpl_col: 'lpl', r_upl_col: 'upl'}
             )
