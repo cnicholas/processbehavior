@@ -33,6 +33,8 @@ project:
           title: Stratified Analysis
         - file: tutorials/signal-detection.ipynb
           title: Signal Detection
+        - file: tutorials/sds-validation.ipynb
+          title: SDS Validation Guide
     - title: User Guide
       children:
         - file: user-guide/formulation.md
