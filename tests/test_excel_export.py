@@ -132,19 +132,19 @@ def test_excel_export_stratified_imr(temp_excel_file):
     # Verify file exists
     assert os.path.exists(temp_excel_file)
 
-    # Read back and verify stratified charts are combined into single tab
+    # Read back and verify stratified charts are present
     excel_file = pd.ExcelFile(temp_excel_file, engine='openpyxl')
     chart_tabs = [name for name in excel_file.sheet_names if 'Chart_' in name]
 
-    # Stratified IMR creates one combined chart tab with all groups
-    assert len(chart_tabs) == 1, f"Expected 1 combined chart tab, got {len(chart_tabs)}: {chart_tabs}"
-    assert 'Chart_Imr_by_factor 1' in excel_file.sheet_names or 'Chart_Imr_Stratified' in excel_file.sheet_names
+    # Stratified IMR/R creates two combined chart tabs (Imr + R bundled)
+    assert len(chart_tabs) == 2, f"Expected 2 chart tabs (Imr+R bundled), got {len(chart_tabs)}: {chart_tabs}"
+    assert 'Chart_Imr' in chart_tabs, f"Expected Chart_Imr tab, got: {chart_tabs}"
+    assert 'Chart_R' in chart_tabs, f"Expected Chart_R tab, got: {chart_tabs}"
 
-    # Verify the combined tab has data
-    combined_tab_name = [n for n in excel_file.sheet_names if 'Chart_Imr' in n][0]
-    combined_data = pd.read_excel(temp_excel_file, sheet_name=combined_tab_name)
-    assert len(combined_data) > 0, "Combined chart tab should have data"
-    assert 'rsg' in combined_data.columns, "Combined data should have 'rsg' column for stratification"
+    # Verify the Imr tab has data
+    imr_data = pd.read_excel(temp_excel_file, sheet_name='Chart_Imr')
+    assert len(imr_data) > 0, "Imr chart tab should have data"
+    assert 'rsg' in imr_data.columns, "Imr data should have 'rsg' column for stratification"
 
 
 def test_excel_export_with_residuals(temp_excel_file):

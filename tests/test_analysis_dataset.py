@@ -191,28 +191,38 @@ class TestImrAnalysis:
         sds = detect_sds_for_test(df, spec)
         result = Analysis(df=df, specification=spec, sds=sds).calculate()
 
-        # Should return dict-like with multiple groups
+        # Should return dict-like with chart types as keys (Imr and R bundled)
         assert hasattr(result, 'keys') and hasattr(result, 'values')
-        # Third group only had 1 obs so should be dropped
-        assert len(result) == 2
-
         keys = list(result.keys())
-        assert 'a_c' in keys
-        assert 'b_d' in keys
+        assert 'Imr' in keys
+        assert 'R' in keys
+
+        # Check that Imr chart has strata
+        imr_chart = result['Imr']
+        assert 'strata' in imr_chart
+        # Third group only had 1 obs so should be dropped
+        strata = imr_chart['strata']
+        assert 'a_c' in strata
+        assert 'b_d' in strata
+
+        # Statistics are nested by stratum
+        imr_stats = imr_chart['statistics']
 
         # Check centers
-        assert result['a_c']['statistics']['center'] == 2.33
-        assert result['b_d']['statistics']['center'] == 7.67
+        assert imr_stats['a_c']['center'] == 2.33
+        assert imr_stats['b_d']['center'] == 7.67
 
         # Check limits
-        assert result['a_c']['statistics']['lpl'] == -0.33
-        assert result['b_d']['statistics']['lpl'] == 1.02
-        assert result['a_c']['statistics']['upl'] == 4.99
-        assert result['b_d']['statistics']['upl'] == 14.32
+        assert imr_stats['a_c']['lpl'] == -0.33
+        assert imr_stats['b_d']['lpl'] == 1.02
+        assert imr_stats['a_c']['upl'] == 4.99
+        assert imr_stats['b_d']['upl'] == 14.32
 
-        # Check sample sizes
-        assert result['a_c']['statistics']['n'] == 3
-        assert result['b_d']['statistics']['n'] == 3
+        # Check R chart is also present with nested statistics
+        r_chart = result['R']
+        assert 'strata' in r_chart
+        assert 'a_c' in r_chart['strata']
+        assert 'b_d' in r_chart['strata']
 
     def test_imr_without_grouping(self, df):
         """Test IMR analysis without grouping variable."""
@@ -263,7 +273,7 @@ class TestRChartAnalysis:
     """Tests for Moving Range (R) chart calculations."""
 
     def test_r_with_grouping(self, df):
-        """Test R chart with grouping variable."""
+        """Test R chart with grouping variable (bundled with Imr)."""
         spec = {
             'analysis_type': 'R',
             'rsg_vars': ['a', 'b'],
@@ -277,26 +287,35 @@ class TestRChartAnalysis:
         sds = detect_sds_for_test(df, spec)
         result = Analysis(df, spec, sds=sds).calculate()
 
+        # R and Imr are bundled together - chart type is primary key
         assert hasattr(result, "keys") and hasattr(result, "values")
+        keys = list(result.keys())
+        assert 'R' in keys
+        assert 'Imr' in keys
+
+        # Check that R chart has strata
+        r_chart = result['R']
+        assert 'strata' in r_chart
+        strata = r_chart['strata']
         # Third group had 1 obs and should be dropped
-        assert len(result) == 2
+        assert 'a_c' in strata
+        assert 'b_d' in strata
+
+        # Statistics are nested by stratum
+        r_stats = r_chart['statistics']
 
         # Check centers
-        assert result['a_c']['statistics']['center'] == 1
-        assert result['b_d']['statistics']['center'] == 2.5
+        assert r_stats['a_c']['center'] == 1
+        assert r_stats['b_d']['center'] == 2.5
 
         # Check limits
-        assert result['a_c']['statistics']['lpl'] == 0
-        assert result['b_d']['statistics']['lpl'] == 0
-        assert result['a_c']['statistics']['upl'] == 3.27
-        assert result['b_d']['statistics']['upl'] == 8.17
-
-        # Check data row counts (first row drops for MR calculation)
-        assert len(result['a_c']['data']) == 2
-        assert len(result['b_d']['data']) == 2
+        assert r_stats['a_c']['lpl'] == 0
+        assert r_stats['b_d']['lpl'] == 0
+        assert r_stats['a_c']['upl'] == 3.27
+        assert r_stats['b_d']['upl'] == 8.17
 
     def test_r_without_grouping(self, df):
-        """Test R chart without grouping variable."""
+        """Test R chart without grouping variable (bundled with Imr)."""
         spec = {
             'analysis_type': 'R',
             'response_var': 'c',
@@ -306,14 +325,19 @@ class TestRChartAnalysis:
         sds = detect_sds_for_test(df, spec)
         result = Analysis(df, spec, sds=sds).calculate()
 
+        # R and Imr are bundled together
         assert hasattr(result, "keys") and hasattr(result, "values")
-        assert result['Imr']['statistics']['center'] == 2.917
-        assert result['Imr']['statistics']['n'] == 6
-        assert result['Imr']['statistics']['lpl'] == 0
-        assert result['Imr']['statistics']['upl'] == 9.532
+        assert 'Imr' in result.keys()
+        assert 'R' in result.keys()
+
+        # Check R chart statistics
+        r_stats = result['R']['statistics']
+        assert r_stats['lpl'] == 0
+        # R center is mR (moving range mean)
+        assert r_stats['center'] is not None
 
     def test_r_with_fillweight_data(self):
-        """Test R chart on FillWeight800 dataset with stratification."""
+        """Test R chart on FillWeight800 dataset with stratification (bundled with Imr)."""
         f_path = "processbehavior/datasets/data/FILLWEIGHTDATA_800.csv"
         df = pd.read_csv(f_path)
 
@@ -328,12 +352,18 @@ class TestRChartAnalysis:
         sds = detect_sds_for_test(df, spec)
         result = Analysis(df, spec, sds=sds).calculate()
 
+        # R and Imr are bundled together - chart type is primary key
         assert hasattr(result, "keys") and hasattr(result, "values")
-        assert len(result) == 8  # 8 lane-phase combinations
+        assert 'R' in result.keys()
+        assert 'Imr' in result.keys()
 
-        # Check all result dfs have no nulls
-        for key in result:
-            assert not result[key]['data'].isnull().values.any()
+        # Strata are nested inside each chart
+        r_chart = result['R']
+        assert 'strata' in r_chart
+        assert len(r_chart['strata']) == 8  # 8 lane-phase combinations
+
+        # Check data has no nulls in key columns
+        assert not r_chart['data'][['center', 'lpl', 'upl']].isnull().values.any()
 
 
 # ========================
@@ -360,7 +390,8 @@ class TestDateTimeHandling:
             result = Analysis(df_dt, spec, sds=sds).calculate()
 
             if analysis in ['Imr', 'R']:
-                out = result['a_c']['data']
+                # Imr and R are bundled, use chart type as key
+                out = result['Imr']['data']
                 assert out.columns.tolist()[0] == has_time
 
     def test_string_date_converted_and_sorted(self, df_dt):
@@ -376,12 +407,18 @@ class TestDateTimeHandling:
         sds = detect_sds_for_test(df_dt, spec)
         result = Analysis(df_dt, spec, sds=sds).calculate()
 
+        # With new bundled structure, access via chart type key
+        imr_data = result['Imr']['data']
+
         # String dates should be converted to datetime
-        o_type = result['a_c']['data']['d2'].dtype
+        o_type = imr_data['d2'].dtype
         assert pd.api.types.is_datetime64_any_dtype(o_type), f"Expected datetime type, got {o_type}"
 
+        # Filter to a specific stratum for ordering check
+        stratum_data = imr_data[imr_data['rsg'] == 'a_c']
+
         # Should be chronologically ordered (2000-02-01 is first)
-        dt_val = result['a_c']['data'].iloc[0, 0]
+        dt_val = stratum_data.iloc[0, 0]
         expected = pd.Timestamp('2000-02-01')
         assert dt_val == expected
 

@@ -288,11 +288,13 @@ class Analysis:
             )
         else:
             # Standard chart analysis
+            # Note: Imr and R are bundled together (both call _calculate_imr)
+            # just like Xbar and S are bundled together
             strategies = {
                 'Xbar': self._calculate_xbar,
                 'S': self._calculate_s,
                 'Imr': self._calculate_imr,
-                'R': self._calculate_r
+                'R': self._calculate_imr  # Bundled with Imr
             }
 
             if self.analysis_type not in strategies:
@@ -903,15 +905,30 @@ class Analysis:
 
         return out
 
-    def _calculate_imr(self) -> pd.DataFrame:
+    def _calculate_imr(self) -> dict:
         """
-        Calculate IMR (Individual Moving Range) chart statistics.
+        Calculate IMR (Individual Moving Range) and R (Range) chart statistics.
 
-        Logic moved from calculate_statistics_Imr()
+        These charts are bundled together following Wheeler's convention of
+        always analyzing individuals and moving range charts as a pair.
+
+        Returns
+        -------
+        dict
+            Chart data with chart type as key:
+            - For ungrouped: {'Imr': {...}, 'R': {...}}
+            - For stratified: {'Imr': {..., 'strata': [...]}, 'R': {..., 'strata': [...]}}
+
+        Notes
+        -----
+        Imr and R are bundled together, similar to how Xbar and S are bundled.
+        For stratified data, the DataFrame is kept combined (with rsg column)
+        and statistics are nested by stratum.
         """
         y = self.spec.response_var
         spec = self.spec
         out = self.ads.analysis_dataset.copy()
+        result = {}
 
         # Apply zero-centering if requested
         out = self._apply_zero_centering(out)
@@ -949,8 +966,7 @@ class Analysis:
                 .reset_index()
             )
 
-            # Compute limits per group
-            # grouped has columns: [spec.rsg_var_name, 'mean', 'mR']
+            # Compute IMR limits per group
             lims = grouped.apply(
                 lambda row: calculate_limits(
                     mean=row['mean'],
@@ -964,15 +980,13 @@ class Analysis:
 
             # --- Normalize/join lpl/upl regardless of return type ---
             if isinstance(lims, pd.DataFrame):
-                # Your case: lims already has columns ['lpl','upl'], index aligned to grouped
                 grouped = grouped.join(lims[['lpl','upl']])
             else:
-                # lims is a Series; each element could be dict/Series/tuple
                 def _to_pair(x):
                     if isinstance(x, dict):
                         return x.get('lpl', np.nan), x.get('upl', np.nan)
                     try:
-                        return x['lpl'], x['upl']         # pandas Series-like
+                        return x['lpl'], x['upl']
                     except Exception:
                         pass
                     if hasattr(x, 'lpl') and hasattr(x, 'upl'):
@@ -986,47 +1000,211 @@ class Analysis:
                                     columns=['lpl','upl'])
                 grouped = grouped.join(lims_df)
 
-
             # Rename mean to center for consistency
             grouped = grouped.rename(columns={'mean': 'center'})
 
-            # Attach back to rows
+            # Attach IMR limits back to rows
             out = out.merge(
                 grouped[[spec.rsg_var_name, 'center', 'mR', 'lpl', 'upl']],
                 on=spec.rsg_var_name, how='left', validate='many_to_one'
             )
+
+            # Detect beyond limits signals for IMR
+            out = self._add_beyond_limits_flag(out, value_col=spec.response_var)
+
+            # Get strata list
+            strata = grouped[spec.rsg_var_name].tolist()
+
+            # Build IMR statistics nested by stratum
+            imr_statistics = {}
+            for stratum in strata:
+                row = grouped[grouped[spec.rsg_var_name] == stratum].iloc[0]
+                imr_statistics[stratum] = {
+                    'center': round(row['center'], spec.round_to),
+                    'lpl': round(row['lpl'], spec.round_to),
+                    'upl': round(row['upl'], spec.round_to)
+                }
+
+            # Format IMR output with appropriate columns
+            imr_out = self._build_output_columns(
+                df=out,
+                value_cols=[spec.response_var, 'center', 'lpl', 'upl', 'beyond_limits']
+            )
+
+            result['Imr'] = {
+                'data': imr_out,
+                'statistics': imr_statistics,
+                'metadata': {
+                    'chart_type': 'Imr',
+                    'value_col': spec.response_var,
+                    'center_col': 'center',
+                    'stratified': True
+                },
+                'strata': strata
+            }
+
+            # CALCULATE R CHART (bundled with IMR)
+            # Compute R limits per group
+            r_grouped = grouped.copy()
+            r_grouped = r_grouped.rename(columns={'center': 'imr_center', 'mR': 'center'})
+
+            r_lims = r_grouped.apply(
+                lambda row: calculate_limits(
+                    mean=0,
+                    sd=0,
+                    N=0,
+                    mR=row['center'],
+                    limits_type="R",
+                    round_to=spec.round_to
+                ),
+                axis=1
+            )
+
+            if isinstance(r_lims, pd.DataFrame):
+                r_grouped = r_grouped.join(r_lims[['lpl', 'upl']], rsuffix='_r')
+            else:
+                r_lims_df = pd.DataFrame(r_lims.map(_to_pair).tolist(),
+                                         index=r_grouped.index,
+                                         columns=['lpl', 'upl'])
+                r_grouped = r_grouped.join(r_lims_df, rsuffix='_r')
+
+            # Ensure lpl/upl columns for R chart
+            if 'lpl_r' in r_grouped.columns:
+                r_grouped = r_grouped.rename(columns={'lpl_r': 'r_lpl', 'upl_r': 'r_upl'})
+                r_lpl_col, r_upl_col = 'r_lpl', 'r_upl'
+            else:
+                r_lpl_col, r_upl_col = 'lpl', 'upl'
+
+            # Merge R limits to the data
+            r_out = out.copy()
+            # Drop IMR limits columns
+            r_out = r_out.drop(columns=['center', 'lpl', 'upl', 'beyond_limits'], errors='ignore')
+            # Merge R limits
+            r_merge_cols = [spec.rsg_var_name, 'center', r_lpl_col, r_upl_col]
+            r_merge_data = r_grouped[[spec.rsg_var_name, 'center', r_lpl_col, r_upl_col]].rename(
+                columns={r_lpl_col: 'lpl', r_upl_col: 'upl'}
+            )
+            r_out = r_out.merge(r_merge_data, on=spec.rsg_var_name, how='left', validate='many_to_one')
+
+            # Drop NA rows (first observation in each group has no moving range)
+            r_out = r_out.dropna(subset=['mr'])
+
+            # Detect beyond limits signals for R
+            r_out = self._add_beyond_limits_flag(r_out, value_col='mr')
+
+            # Build R statistics nested by stratum
+            r_statistics = {}
+            for stratum in strata:
+                row = r_grouped[r_grouped[spec.rsg_var_name] == stratum].iloc[0]
+                r_statistics[stratum] = {
+                    'center': round(row['center'], spec.round_to),
+                    'lpl': round(row[r_lpl_col], spec.round_to),
+                    'upl': round(row[r_upl_col], spec.round_to)
+                }
+
+            # Format R output with appropriate columns
+            r_out = self._build_output_columns(
+                df=r_out,
+                value_cols=['mr', 'center', 'lpl', 'upl', 'beyond_limits']
+            )
+
+            result['R'] = {
+                'data': r_out,
+                'statistics': r_statistics,
+                'metadata': {
+                    'chart_type': 'R',
+                    'value_col': 'mr',
+                    'center_col': 'center',
+                    'stratified': True
+                },
+                'strata': strata
+            }
+
         else:
-            # (unchanged single-stream path, but keep same style)
+            # Ungrouped path - single stream
             if spec.has_time:
                 out = out.sort_values([spec.time_var], kind='stable')
             out['mr'] = out[y].diff().abs()
             mR = out['mr'].mean()
             mean_ = out[y].mean()
-            lims = calculate_limits(
+
+            # Calculate IMR limits
+            imr_lims = calculate_limits(
                 mean=mean_, sd=0, N=0, mR=mR,
                 limits_type="Imr", round_to=spec.round_to
             )
-            out['center'] = mean_  # Renamed from 'mean' to 'center'
-            out['mR']   = mR
-            out['lpl']  = lims['lpl']
-            out['upl']  = lims['upl']
+            out['center'] = mean_
+            out['mR'] = mR
+            out['lpl'] = imr_lims['lpl']
+            out['upl'] = imr_lims['upl']
 
-        # Detect beyond limits signals
-        out = self._add_beyond_limits_flag(out, value_col=spec.response_var)
+            # Detect beyond limits signals for IMR
+            out = self._add_beyond_limits_flag(out, value_col=spec.response_var)
 
-        # Format output with appropriate columns
-        out = self._build_output_columns(
-            df=out,
-            value_cols=[spec.response_var, 'center', 'lpl', 'upl', 'beyond_limits']
-        )
+            # Format IMR output
+            imr_out = self._build_output_columns(
+                df=out,
+                value_cols=[spec.response_var, 'center', 'lpl', 'upl', 'beyond_limits']
+            )
 
-        # Package results with statistics and metadata
-        return self._package_stratified_results(
-            df=out,
-            statistics_cols=['center', 'lpl', 'upl'],
-            chart_type='Imr',
-            value_col=spec.response_var
-        )
+            imr_statistics = {
+                'center': round(mean_, spec.round_to),
+                'lpl': round(imr_lims['lpl'], spec.round_to),
+                'upl': round(imr_lims['upl'], spec.round_to)
+            }
+
+            result['Imr'] = {
+                'data': imr_out,
+                'statistics': imr_statistics,
+                'metadata': {
+                    'chart_type': 'Imr',
+                    'value_col': spec.response_var,
+                    'center_col': 'center'
+                }
+            }
+
+            # CALCULATE R CHART (bundled with IMR)
+            r_out = out.copy()
+            # Drop NA rows (first observation has no moving range)
+            r_out = r_out.dropna(subset=['mr'])
+
+            # Calculate R limits
+            r_lims = calculate_limits(
+                mean=0, sd=0, N=0, mR=mR,
+                limits_type="R", round_to=spec.round_to
+            )
+            r_out['center'] = mR
+            r_out['lpl'] = r_lims['lpl']
+            r_out['upl'] = r_lims['upl']
+
+            # Detect beyond limits signals for R (using 'mr' as value column)
+            # Need to reset beyond_limits since we're checking a different value
+            r_out = r_out.drop(columns=['beyond_limits'], errors='ignore')
+            r_out = self._add_beyond_limits_flag(r_out, value_col='mr')
+
+            # Format R output
+            r_out = self._build_output_columns(
+                df=r_out,
+                value_cols=['mr', 'center', 'lpl', 'upl', 'beyond_limits']
+            )
+
+            r_statistics = {
+                'center': round(mR, spec.round_to),
+                'lpl': round(r_lims['lpl'], spec.round_to),
+                'upl': round(r_lims['upl'], spec.round_to)
+            }
+
+            result['R'] = {
+                'data': r_out,
+                'statistics': r_statistics,
+                'metadata': {
+                    'chart_type': 'R',
+                    'value_col': 'mr',
+                    'center_col': 'center'
+                }
+            }
+
+        return result
 
     def _calculate_residual_chart(
         self,

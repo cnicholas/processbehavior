@@ -3,28 +3,44 @@ AnalysisResult - Unified container for all analysis outputs.
 
 This module provides a comprehensive result object that makes all analysis data
 easily accessible in one place:
-- Chart data (Xbar, S, IMR, stratified charts)
+- Chart data (Xbar, S, Imr, R) with chart type as primary key
+- Stratified chart support with strata property and focus() for drill-down
 - Residuals (R1-R5)
 - Effects (main effects, interactions)
 - Summary metadata (SDS, statistics, capabilities)
 
-Usage:
-    analysis = Analysis(df, spec)
-    result = analysis.calculate()  # Returns AnalysisResult
+Chart Structure
+---------------
+Charts are always keyed by chart type (e.g., 'Xbar', 'S', 'Imr', 'R').
+Imr and R charts are bundled together, similar to Xbar and S.
 
-    # Access charts
+For stratified Imr/R charts, the structure includes:
+- Combined DataFrame with all strata (rsg column identifies them)
+- Statistics nested by stratum: {'Machine1': {...}, 'Machine2': {...}}
+- 'strata' list for discovering available subgroups
+
+Usage
+-----
+Basic access::
+
+    result = study.execute()
     xbar_data = result.get_chart('Xbar')
     stats = result.get_statistics('Xbar')
 
-    # Access residuals
-    residuals = result.residuals  # DataFrame with R1-R5
+Stratified chart drill-down::
 
-    # Access effects
+    result.strata           # ['Machine1_F2_1', 'Machine2_F2_2', ...]
+    result.is_stratified    # True
+
+    focused = result.focus('Machine1_F2_1')
+    focused.plot()
+    focused.to_excel('machine1.xlsx')
+
+Access residuals and effects::
+
+    residuals = result.residuals      # DataFrame with R1-R5
     main_effects = result.effects
     interactions = result.interactions
-
-    # Get summary
-    print(result.summary)
 """
 
 from __future__ import annotations
@@ -53,39 +69,62 @@ class AnalysisResult:
 
     This class unifies all analysis outputs into a single, easily accessible object.
     It provides:
-    - Chart data and statistics (Xbar, S, IMR, stratified)
+    - Chart data and statistics (Xbar, S, Imr, R)
     - VAS residuals (R1-R5)
     - Main effects and interactions
     - Sampling Design State (SDS) information
     - Summary metadata
+    - Stratified chart support with focus() for drill-down
+
+    Chart Structure
+    ---------------
+    Charts are keyed by chart type (e.g., 'Xbar', 'S', 'Imr', 'R'):
+
+    - For standard charts:
+      ``{'Xbar': {'data': DataFrame, 'statistics': dict, 'metadata': dict}}``
+
+    - For stratified Imr/R charts (multiple subgroups):
+      ``{'Imr': {'data': DataFrame, 'statistics': {stratum: dict}, 'strata': list}}``
+
+    Imr and R charts are always bundled together, similar to Xbar and S.
 
     Attributes
     ----------
     charts : dict
-        Dictionary of chart data in format:
-        {'chart_name': {'data': DataFrame, 'statistics': dict}}
+        Dictionary of chart data keyed by chart type.
     dataset : pd.DataFrame
-        Full analysis dataset with all calculations
+        Full analysis dataset with all calculations.
     residuals : pd.DataFrame or None
-        VAS residuals (R1-R5) if calculated
+        VAS residuals (R1-R5) if calculated.
     effects : dict or None
-        Main effects if calculated
+        Main effects if calculated.
     interactions : dict or None
-        Interaction effects if calculated
+        Interaction effects if calculated.
     summary : dict
-        Comprehensive metadata about the analysis
+        Comprehensive metadata about the analysis.
     sds : int
-        Sampling Design State (0-6)
+        Sampling Design State (0-6).
     sds_info : dict
-        Detailed SDS characteristics
+        Detailed SDS characteristics.
+    strata : list[str]
+        List of subgroup names for stratified charts (empty if not stratified).
+    is_stratified : bool
+        True if result contains stratified charts with multiple subgroups.
 
     Examples
     --------
-    >>> result = analysis.calculate()
+    Basic usage:
+
+    >>> result = study.execute()
     >>> xbar = result.get_chart('Xbar')
     >>> print(result.summary)
-    >>> if result.has_residuals:
-    ...     residuals = result.residuals
+
+    Stratified chart access:
+
+    >>> result.strata  # ['Machine1_F2_1', 'Machine2_F2_2', ...]
+    >>> focused = result.focus('Machine1_F2_1')
+    >>> focused.plot()
+    >>> focused.to_excel('machine1.xlsx')
     """
 
     def __init__(
@@ -199,15 +238,16 @@ class AnalysisResult:
         Returns
         -------
         bool
-            True if multiple charts exist and none are named 'Xbar', 'S', 'R', 'all'
+            True if any chart has a non-empty 'strata' key
         """
-        standard_chart_names = STANDARD_CHART_NAMES
-        chart_names = set(self.charts.keys())
+        # Handle case where charts might not be a dict
+        if not isinstance(self.charts, dict):
+            return False
 
-        # If we have charts that aren't standard names, it's stratified
-        non_standard = chart_names - standard_chart_names
-
-        return len(non_standard) > 0 and len(self.charts) > 1
+        for chart_info in self.charts.values():
+            if isinstance(chart_info, dict) and 'strata' in chart_info and chart_info['strata']:
+                return True
+        return False
 
     # =========================================================================
     # Properties for easy access
@@ -307,6 +347,150 @@ class AnalysisResult:
     def all_charts(self) -> list[str]:
         """Get list of all available chart names."""
         return list(self.charts.keys())
+
+    @property
+    def strata(self) -> list[str]:
+        """
+        Get list of available subgroups for stratified charts.
+
+        For stratified IMR/R analysis, returns the list of subgroups
+        (e.g., ['Machine1_F2_1', 'Machine2_F2_2', ...]).
+
+        Returns
+        -------
+        list[str]
+            List of stratum names if stratified, empty list otherwise.
+
+        Examples
+        --------
+        >>> result.strata
+        ['Machine1_F2_1', 'Machine1_F2_2', 'Machine2_F2_1', ...]
+
+        >>> if result.strata:
+        ...     for stratum in result.strata:
+        ...         focused = result.focus(stratum)
+        ...         focused.plot()
+        """
+        # Check each chart for 'strata' key
+        for chart_info in self.charts.values():
+            if 'strata' in chart_info and chart_info['strata']:
+                return list(chart_info['strata'])
+        return []
+
+    @property
+    def is_stratified(self) -> bool:
+        """
+        Check if this result contains stratified charts.
+
+        Returns
+        -------
+        bool
+            True if charts have multiple strata, False otherwise.
+        """
+        return len(self.strata) > 0
+
+    def focus(self, stratum: str) -> 'AnalysisResult':
+        """
+        Return new AnalysisResult focused on a single stratum.
+
+        For stratified IMR/R analysis, this allows drilling down to
+        a specific subgroup. The returned result is immutable - the
+        original result is unchanged.
+
+        Parameters
+        ----------
+        stratum : str
+            Name of the stratum to focus on (from result.strata)
+
+        Returns
+        -------
+        AnalysisResult
+            New AnalysisResult containing only data for the specified stratum
+
+        Raises
+        ------
+        ValueError
+            If stratum is not in result.strata
+
+        Examples
+        --------
+        >>> result = study.execute()
+        >>> result.strata
+        ['Machine1_F2_1', 'Machine1_F2_2', 'Machine2_F2_1', ...]
+
+        >>> # Drill down to specific subgroup
+        >>> focused = result.focus('Machine1_F2_1')
+        >>> focused.plot()
+        >>> focused.to_excel('machine1_f2_1.xlsx')
+
+        >>> # Chaining works
+        >>> result.focus('Machine1_F2_1').plot()
+        """
+        if not self.strata:
+            raise ValueError(
+                "Cannot focus: this result is not stratified. "
+                "Use result.strata to check available subgroups."
+            )
+
+        if stratum not in self.strata:
+            raise ValueError(
+                f"Stratum '{stratum}' not found. "
+                f"Available strata: {self.strata}"
+            )
+
+        # Build focused charts dict
+        focused_charts = {}
+
+        for chart_name, chart_info in self.charts.items():
+            if 'strata' not in chart_info or not chart_info['strata']:
+                # Non-stratified chart - include as-is
+                focused_charts[chart_name] = chart_info.copy()
+                continue
+
+            # Filter data to this stratum
+            data = chart_info['data']
+            rsg_col = None
+
+            # Find the RSG column
+            for col in data.columns:
+                if col in ['rsg', 'RSG'] or 'rsg' in col.lower():
+                    rsg_col = col
+                    break
+
+            if rsg_col is None:
+                # Can't filter - include as-is
+                focused_charts[chart_name] = chart_info.copy()
+                continue
+
+            # Filter data
+            mask = data[rsg_col].astype(str) == str(stratum)
+            focused_data = data[mask].copy()
+
+            # Extract stratum-specific statistics
+            nested_stats = chart_info.get('statistics', {})
+            if isinstance(nested_stats, dict) and stratum in nested_stats:
+                focused_stats = nested_stats[stratum]
+            else:
+                focused_stats = nested_stats
+
+            # Build focused chart info
+            focused_charts[chart_name] = {
+                'data': focused_data,
+                'statistics': focused_stats,
+                'metadata': {
+                    **chart_info.get('metadata', {}),
+                    'stratified': False,  # No longer stratified after focus
+                    'focused_stratum': stratum
+                }
+            }
+
+        # Create new AnalysisResult with focused data
+        # We need to create a minimal AnalysisDataSet-like object
+        return FocusedAnalysisResult(
+            charts=focused_charts,
+            original_result=self,
+            focused_stratum=stratum
+        )
 
     # =========================================================================
     # Convenience methods for accessing data
@@ -1142,4 +1326,128 @@ class AnalysisResult:
             height=height,
             title=title,
             **kwargs
+        )
+
+
+class FocusedAnalysisResult(AnalysisResult):
+    """
+    Lightweight AnalysisResult for focused (single-stratum) analysis.
+
+    This class is returned by AnalysisResult.focus() and provides
+    the same interface as AnalysisResult but without requiring a
+    full AnalysisDataSet.
+
+    Parameters
+    ----------
+    charts : dict
+        Chart data in standard format
+    original_result : AnalysisResult
+        The parent result this was focused from
+    focused_stratum : str
+        The stratum this result is focused on
+    """
+
+    def __init__(
+        self,
+        charts: dict[str, dict[str, Any]],
+        original_result: AnalysisResult,
+        focused_stratum: str
+    ):
+        # Store chart data
+        self.charts = charts
+
+        # Store reference to original result for metadata
+        self._original = original_result
+        self._focused_stratum = focused_stratum
+
+        # Copy dataset reference (filtered)
+        rsg_col = None
+        for col in original_result.dataset.columns:
+            if col in ['rsg', 'RSG'] or 'rsg' in col.lower():
+                rsg_col = col
+                break
+
+        if rsg_col:
+            mask = original_result.dataset[rsg_col].astype(str) == str(focused_stratum)
+            self.dataset = original_result.dataset[mask].copy()
+        else:
+            self.dataset = original_result.dataset.copy()
+
+        # Copy SDS information
+        self.sds = original_result.sds
+        self.sds_info = original_result.sds_info.copy()
+
+        # Copy residuals/effects (filtered if possible)
+        self._residuals = None
+        if original_result._residuals is not None:
+            if rsg_col and rsg_col in original_result._residuals.columns:
+                mask = original_result._residuals[rsg_col].astype(str) == str(focused_stratum)
+                self._residuals = original_result._residuals[mask].copy()
+            else:
+                # Can't filter - take subset based on index
+                self._residuals = original_result._residuals.loc[self.dataset.index].copy()
+
+        self._effects = original_result._effects
+        self._interactions = original_result._interactions
+
+        # Store original's spec info for summary
+        self._original_summary = original_result._summary.copy()
+
+        # Build summary
+        self._summary = self._build_focused_summary()
+
+    def _build_focused_summary(self) -> dict:
+        """Build summary for focused result."""
+        # Count signals in focused charts
+        n_signals = 0
+        for chart_info in self.charts.values():
+            if 'data' in chart_info and 'beyond_limits' in chart_info['data'].columns:
+                n_signals += (chart_info['data']['beyond_limits'] != 0).sum()
+
+        # Copy from original and update
+        summary = self._original_summary.copy()
+        summary.update({
+            'n_observations': len(self.dataset),
+            'n_charts': len(self.charts),
+            'chart_types': list(self.charts.keys()),
+            'is_stratified': False,
+            'focused_stratum': self._focused_stratum,
+            'n_signals_total': int(n_signals),
+        })
+        return summary
+
+    @property
+    def strata(self) -> list[str]:
+        """Focused result has no strata (single stratum)."""
+        return []
+
+    @property
+    def is_stratified(self) -> bool:
+        """Focused result is not stratified."""
+        return False
+
+    @property
+    def focused_stratum(self) -> str:
+        """Get the stratum this result is focused on."""
+        return self._focused_stratum
+
+    def focus(self, stratum: str) -> 'AnalysisResult':
+        """Cannot focus further - already focused on single stratum."""
+        raise ValueError(
+            f"Cannot focus: this result is already focused on '{self._focused_stratum}'. "
+            "Use the original result to focus on a different stratum."
+        )
+
+    def __repr__(self) -> str:
+        """String representation."""
+        charts_str = ', '.join(self.all_charts)
+        return (
+            f"FocusedAnalysisResult(\n"
+            f"  stratum='{self._focused_stratum}',\n"
+            f"  sds={self.sds} ({self.sds_info['description']}),\n"
+            f"  charts=[{charts_str}],\n"
+            f"  n_obs={len(self.dataset)},\n"
+            f"  has_residuals={self.has_residuals},\n"
+            f"  has_effects={self.has_effects}\n"
+            f")"
         )

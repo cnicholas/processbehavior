@@ -151,9 +151,10 @@ def test_imr_chart_column_contract():
     sds = detect_sds_for_test(df, spec)
     result = Analysis(df, spec, sds=sds).calculate()
 
-    # Get the chart (not standard chart names like 'Imr', but the actual group chart)
-    chart_name = [k for k in result.charts if k not in {'Xbar', 'S', 'Imr', 'R'}][0]
-    imr_data = result.charts[chart_name]['data']
+    # Imr and R are bundled - use 'Imr' as the chart key
+    chart_name = 'Imr'
+    imr_chart = result.charts[chart_name]
+    imr_data = imr_chart['data']
 
     # Test column structure
     assert 'weight' in imr_data.columns, "IMR data must have response_var column"
@@ -174,8 +175,7 @@ def test_imr_chart_column_contract():
 
     # Test plotter uses correct column (via metadata)
     plotter = Plotter(result)
-    imr_chart_info = result.charts[chart_name]
-    value_col = plotter._get_value_column(imr_chart_info, chart_name)
+    value_col = plotter._get_value_column(imr_chart, chart_name)
     assert value_col == 'weight', (
         f"Plotter must use 'weight' (response_var) column for IMR chart, got '{value_col}'. "
         "This is a BUG - IMR should plot individual values, not the center!"
