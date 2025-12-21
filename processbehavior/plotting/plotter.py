@@ -315,7 +315,18 @@ class Plotter:
 
         # Determine what to plot
         if chart:
-            charts_to_plot = {chart: self.charts[chart]}
+            chart_info = self.charts[chart]
+            # Check if this is a stratified chart that needs expansion
+            if 'strata' in chart_info and chart_info['strata']:
+                # Expand stratified chart into per-stratum charts
+                charts_to_plot = self._get_stratified_charts()
+                # Filter to only the requested chart's strata
+                charts_to_plot = {
+                    k: v for k, v in charts_to_plot.items()
+                    if v.get('metadata', {}).get('original_chart') == chart
+                }
+            else:
+                charts_to_plot = {chart: chart_info}
         elif facet or facet_by or self.summary.get('is_stratified', False):
             # Auto-detect stratified charts
             charts_to_plot = self._get_stratified_charts()
@@ -339,9 +350,15 @@ class Plotter:
                 height = int(width / aspect_ratio)
             else:
                 # Auto-calculate based on number of charts
+                # Use more height per row for faceted plots to accommodate titles + labels
                 n_charts = len(charts_to_plot)
                 nrows = (n_charts + ncols - 1) // ncols
-                height = nrows * 400
+                if n_charts == 1:
+                    height = 400
+                else:
+                    # Faceted plots need more height per row for titles and spacing
+                    height_per_row = 450 if nrows <= 3 else 400
+                    height = nrows * height_per_row
 
         # Create figure
         if len(charts_to_plot) == 1:
@@ -583,19 +600,22 @@ class Plotter:
             self._generate_subplot_title(name) for name in charts
         ]
 
-        # Calculate spacing dynamically to avoid Plotly errors
+        # Calculate spacing dynamically to avoid Plotly errors and overlaps
         # Constraint: spacing <= 1 / (n - 1) where n is rows or cols
+        # Use more vertical spacing to accommodate subplot titles + x-axis labels
         if nrows > 1:
             max_v_spacing = 1.0 / (nrows - 1) - 0.01  # Small buffer
-            v_spacing = min(vertical_spacing, max_v_spacing)
+            # Use more spacing for fewer rows (more room per subplot)
+            desired_v_spacing = 0.20 if nrows <= 3 else 0.18
+            v_spacing = min(max(vertical_spacing, desired_v_spacing), max_v_spacing)
         else:
             v_spacing = vertical_spacing
 
         if ncols > 1:
             max_h_spacing = 1.0 / (ncols - 1) - 0.01
-            h_spacing = min(0.08, max_h_spacing)
+            h_spacing = min(0.10, max_h_spacing)
         else:
-            h_spacing = 0.08
+            h_spacing = 0.10
 
         # Create subplot grid
         fig = make_subplots(
@@ -653,7 +673,7 @@ class Plotter:
                 col=col
             )
 
-            # Control limits as shapes (more efficient for facets)
+            # Control limits as shapes with annotations
             if show_limits:
                 x_range = [x_data.min(), x_data.max()]
 
@@ -670,6 +690,17 @@ class Plotter:
                         ),
                         row=row, col=col
                     )
+                    # Add UPL label annotation
+                    upl_label = self._format_limit_label('UPL', stats['upl'], show_limit_values)
+                    fig.add_annotation(
+                        x=x_range[1],
+                        y=stats['upl'],
+                        text=upl_label,
+                        showarrow=False,
+                        xanchor='left',
+                        font=dict(size=theme.annotation_font_size, color=theme.ucl_color),
+                        row=row, col=col
+                    )
 
                 # LPL
                 if 'lpl' in stats and stats['lpl'] != 'Varies':
@@ -684,6 +715,17 @@ class Plotter:
                         ),
                         row=row, col=col
                     )
+                    # Add LPL label annotation
+                    lpl_label = self._format_limit_label('LPL', stats['lpl'], show_limit_values)
+                    fig.add_annotation(
+                        x=x_range[1],
+                        y=stats['lpl'],
+                        text=lpl_label,
+                        showarrow=False,
+                        xanchor='left',
+                        font=dict(size=theme.annotation_font_size, color=theme.lcl_color),
+                        row=row, col=col
+                    )
 
                 # Centerline
                 center_key = self._get_center_key(stats)
@@ -693,6 +735,17 @@ class Plotter:
                         x0=x_range[0], x1=x_range[1],
                         y0=stats[center_key], y1=stats[center_key],
                         line=dict(color=theme.center_color, width=theme.center_line_width),
+                        row=row, col=col
+                    )
+                    # Add CL label annotation
+                    cl_label = self._format_limit_label('CL', stats[center_key], show_limit_values)
+                    fig.add_annotation(
+                        x=x_range[1],
+                        y=stats[center_key],
+                        text=cl_label,
+                        showarrow=False,
+                        xanchor='left',
+                        font=dict(size=theme.annotation_font_size, color=theme.center_color),
                         row=row, col=col
                     )
 
@@ -840,14 +893,80 @@ class Plotter:
         return None
 
     def _get_stratified_charts(self) -> dict:
-        """Get stratified charts if available."""
-        # Try to detect stratified charts by looking for charts with stratification markers
+        """Get stratified charts expanded for faceted plotting.
+
+        For charts with nested structure (strata list and nested statistics),
+        this expands them into per-stratum charts suitable for faceted plotting.
+
+        The expansion process:
+        1. Detects charts with 'strata' key (stratified Imr/R charts)
+        2. Splits combined DataFrame by RSG column
+        3. Extracts per-stratum statistics from nested structure
+        4. Creates expanded chart names as '{chart_type}_{stratum}'
+
+        Returns
+        -------
+        dict
+            Expanded charts with per-stratum data:
+            - Keys: '{chart_type}_{stratum}' (e.g., 'Imr_Machine1_F2_1')
+            - Values: {'data': DataFrame, 'statistics': dict, 'metadata': dict}
+            - metadata includes 'original_chart' and 'stratum' for filtering
+        """
         stratified = {}
+
         for name, chart_info in self.charts.items():
-            # Check if this looks like a stratified chart
-            # Convert name to string to check for underscore
-            name_str = str(name)
-            if '_' in name_str or any(
+            # Check if this is a stratified chart with nested structure
+            # New structure: 'strata' list and nested statistics by stratum
+            if 'strata' in chart_info and chart_info['strata']:
+                strata = chart_info['strata']
+                combined_data = chart_info['data']
+                nested_stats = chart_info['statistics']
+                metadata = chart_info.get('metadata', {})
+
+                # Detect the grouping column (rsg) from the data
+                rsg_col = None
+                for col in combined_data.columns:
+                    if col in ['rsg', 'RSG'] or 'rsg' in col.lower():
+                        rsg_col = col
+                        break
+
+                if rsg_col is None:
+                    # Fallback: use first non-numeric column that matches strata
+                    for col in combined_data.columns:
+                        if combined_data[col].dtype == 'object' or str(combined_data[col].dtype).startswith('category'):
+                            unique_vals = set(combined_data[col].astype(str).unique())
+                            if unique_vals == set(str(s) for s in strata):
+                                rsg_col = col
+                                break
+
+                if rsg_col is not None:
+                    # Expand into per-stratum charts
+                    for stratum in strata:
+                        # Filter data for this stratum
+                        stratum_mask = combined_data[rsg_col].astype(str) == str(stratum)
+                        stratum_data = combined_data[stratum_mask].copy()
+
+                        # Get stratum-specific statistics
+                        stratum_stats = nested_stats.get(stratum, {})
+
+                        # Create expanded chart name (include chart type to avoid collision)
+                        expanded_name = f"{name}_{stratum}"
+
+                        stratified[expanded_name] = {
+                            'data': stratum_data,
+                            'statistics': stratum_stats,
+                            'metadata': {
+                                **metadata,
+                                'original_chart': name,
+                                'stratum': stratum
+                            }
+                        }
+                else:
+                    # Can't split - use as-is
+                    stratified[name] = chart_info
+
+            # Check for legacy stratified structure (underscore in name)
+            elif '_' in str(name) or any(
                 key in chart_info.get('metadata', {})
                 for key in ['stratum', 'level', 'group']
             ):

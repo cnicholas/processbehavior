@@ -512,51 +512,95 @@ class DesignReport:
 
 class StudyChartAccessor:
     """
-    Provides IDE auto-completion for valid chart types in a Study.
+    Provides IDE auto-completion for primary chart types in a Study.
 
-    This class dynamically creates attributes for each valid chart type,
+    This class dynamically creates attributes for each valid primary chart type,
     enabling IDE auto-completion and preventing invalid chart selections.
+
+    For residual charts (VAS analysis), use study.residuals instead.
 
     Usage:
         study = pb.formulate(response='weight', factors=['lane'])
 
-        # IDE auto-completes valid charts
+        # IDE auto-completes valid primary charts
         result = study.execute(chart=study.charts.Xbar)
 
     Attributes are set dynamically based on SDS-specific valid charts.
     """
 
-    def __init__(self, valid_charts: list[str], residual_charts: list[str] | None = None):
+    def __init__(self, valid_charts: list[str]):
         """
-        Initialize accessor with valid chart types.
+        Initialize accessor with valid primary chart types.
 
         Parameters
         ----------
         valid_charts : list of str
-            Primary chart types (Xbar, S, Imr, etc.)
-        residual_charts : list of str, optional
-            Residual chart types (R2_S, R3_Imr, etc.)
+            Primary chart types (Xbar, S, Imr, R)
         """
         self._valid_charts = valid_charts
-        self._residual_charts = residual_charts or []
-        self._all_charts = valid_charts + self._residual_charts
 
         # Dynamically add each valid chart as an attribute
-        for chart in self._all_charts:
+        for chart in self._valid_charts:
             # Convert chart names to valid Python identifiers
             attr_name = chart.replace(':', '_').replace('-', '_')
             setattr(self, attr_name, chart)
 
     def __repr__(self) -> str:
-        """Display available chart types."""
-        parts = [f"Primary: {', '.join(self._valid_charts)}"]
-        if self._residual_charts:
-            parts.append(f"Residual: {', '.join(self._residual_charts)}")
-        return f"StudyChartAccessor({'; '.join(parts)})"
+        """Display available primary chart types."""
+        return f"StudyChartAccessor({', '.join(self._valid_charts)})"
 
     def __dir__(self) -> list[str]:
         """Support for tab-completion in IPython/Jupyter."""
-        return [c.replace(':', '_').replace('-', '_') for c in self._all_charts]
+        return [c.replace(':', '_').replace('-', '_') for c in self._valid_charts]
+
+
+class StudyResidualAccessor:
+    """
+    Provides IDE auto-completion for residual chart types in a Study.
+
+    Residual charts are used for Variance Analysis Study (VAS) to decompose
+    sources of variation:
+
+    - R2: Within-subgroup variation (measurement noise)
+    - R3: Interaction effects (factor × time)
+    - R4: Time effects (trends, shifts over time)
+    - R5: Factor effects (differences between levels)
+
+    Usage:
+        study = pb.formulate(response='weight', factors=['lane'], time='pull')
+
+        # IDE auto-completes valid residual charts
+        result = study.execute(chart=study.residuals.R4_Imr)
+
+    Attributes are set dynamically based on SDS-specific available residuals.
+    """
+
+    def __init__(self, residual_charts: list[str]):
+        """
+        Initialize accessor with available residual chart types.
+
+        Parameters
+        ----------
+        residual_charts : list of str
+            Residual chart types (R2_S, R2_Imr, R3_Imr, R4_Imr, R5_Imr, etc.)
+        """
+        self._residual_charts = residual_charts
+
+        # Dynamically add each residual chart as an attribute
+        for chart in self._residual_charts:
+            # Convert chart names to valid Python identifiers
+            attr_name = chart.replace(':', '_').replace('-', '_')
+            setattr(self, attr_name, chart)
+
+    def __repr__(self) -> str:
+        """Display available residual chart types."""
+        if not self._residual_charts:
+            return "StudyResidualAccessor(none available)"
+        return f"StudyResidualAccessor({', '.join(self._residual_charts)})"
+
+    def __dir__(self) -> list[str]:
+        """Support for tab-completion in IPython/Jupyter."""
+        return [c.replace(':', '_').replace('-', '_') for c in self._residual_charts]
 
 
 @dataclass(frozen=True)
@@ -804,19 +848,52 @@ class Study:
     @property
     def charts(self) -> StudyChartAccessor:
         """
-        Accessor for IDE auto-completion of valid chart types.
+        Accessor for IDE auto-completion of primary chart types.
 
-        Use this for IDE-assisted chart selection:
+        Primary charts are the standard process behavior charts:
+        Xbar, S, Imr, R
 
-            study.charts.Xbar  # Auto-completes valid charts
-            study.charts.R2_S  # Residual charts too
+        For residual charts (VAS analysis), use study.residuals instead.
+
+        Usage:
+            study.charts.Xbar  # Auto-completes valid primary charts
+            study.charts.Imr
 
         Returns
         -------
         StudyChartAccessor
-            Object with chart types as attributes
+            Object with primary chart types as attributes
         """
-        return StudyChartAccessor(self.valid_charts, self.residual_charts)
+        return StudyChartAccessor(self.valid_charts)
+
+    @property
+    def residuals(self) -> StudyResidualAccessor:
+        """
+        Accessor for IDE auto-completion of residual chart types.
+
+        Residual charts are used for Variance Analysis Study (VAS) to
+        decompose sources of variation:
+
+        - R2: Within-subgroup variation (measurement noise)
+        - R3: Interaction effects (factor × time)
+        - R4: Time effects (trends, shifts over time)
+        - R5: Factor effects (differences between levels)
+
+        Usage:
+            study.residuals.R4_Imr  # Time effects on an IMR chart
+            study.residuals.R5_Imr  # Factor effects
+
+        Returns
+        -------
+        StudyResidualAccessor
+            Object with residual chart types as attributes
+
+        See Also
+        --------
+        charts : Primary chart accessor (Xbar, S, Imr, R)
+        residual_charts : List of available residual chart names
+        """
+        return StudyResidualAccessor(self.residual_charts)
 
     @property
     def support(self) -> pd.DataFrame:
