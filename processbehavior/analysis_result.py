@@ -389,7 +389,7 @@ class AnalysisResult:
         """
         return len(self.strata) > 0
 
-    def focus(self, stratum: str) -> 'AnalysisResult':
+    def focus(self, stratum: str) -> AnalysisResult:
         """
         Return new AnalysisResult focused on a single stratum.
 
@@ -1431,7 +1431,7 @@ class FocusedAnalysisResult(AnalysisResult):
         """Get the stratum this result is focused on."""
         return self._focused_stratum
 
-    def focus(self, stratum: str) -> 'AnalysisResult':
+    def focus(self, stratum: str) -> AnalysisResult:
         """Cannot focus further - already focused on single stratum."""
         raise ValueError(
             f"Cannot focus: this result is already focused on '{self._focused_stratum}'. "

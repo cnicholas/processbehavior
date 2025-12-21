@@ -327,8 +327,8 @@ class TestRChartAnalysis:
 
         # R and Imr are bundled together
         assert hasattr(result, "keys") and hasattr(result, "values")
-        assert 'Imr' in result.keys()
-        assert 'R' in result.keys()
+        assert 'Imr' in result
+        assert 'R' in result
 
         # Check R chart statistics
         r_stats = result['R']['statistics']
@@ -354,8 +354,8 @@ class TestRChartAnalysis:
 
         # R and Imr are bundled together - chart type is primary key
         assert hasattr(result, "keys") and hasattr(result, "values")
-        assert 'R' in result.keys()
-        assert 'Imr' in result.keys()
+        assert 'R' in result
+        assert 'Imr' in result
 
         # Strata are nested inside each chart
         r_chart = result['R']
