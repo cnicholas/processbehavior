@@ -22,18 +22,163 @@ When you call `formulate()`, ProcessBehavior examines:
 2. **Presence of time** - Do you have a time/sequence variable?
 3. **Replication** - How many observations per (factor, time) cell?
 4. **Structure** - Is the design balanced or irregular?
+5. **Grid coverage** - What proportion of expected cells are observed?
 
 ```python
-study = pdf.formulate(
-    response=pdf.cols.weight,
-    factors=[pdf.cols.lane],
-    time=pdf.cols.batch
+study = pb.formulate(
+    response='weight',
+    factors=['lane'],
+    time='batch'
 )
 
 print(f"SDS: {study.sds}")
 print(f"Name: {study.sds_name}")
 print(f"Description: {study.sds_description}")
 ```
+
+## The VAS Problem Formulation
+
+Following Wheeler's Variance Analysis System (VAS) methodology, a rigorous problem formulation includes:
+
+- **Unit of Analysis**: The fundamental entity being measured (e.g., "filled cup", "loan contract")
+- **Response**: The measurement variable
+- **Factors**: Grouping variables that define rational subgroups
+- **Time**: The sequencing variable
+
+```python
+from processbehavior import ProcessBehavior
+
+pb = ProcessBehavior(df)
+
+# Basic formulation - factors inferred from observed data
+study = pb.formulate(
+    response='weight',
+    factors=['lane', 'shift'],
+    time='batch'
+)
+
+print(f"SDS: {study.sds}")
+print(f"Charts: {study.valid_charts}")
+```
+
+This works well for SDS 1-4, where the sampling design state is determined by properties of the observed data itself (replication levels, cell sizes, factor structure).
+
+## Extending Formulation with a Sampling Plan
+
+A **sampling plan** extends the formulation by explicitly defining what was *expected* in the experimental design:
+
+```python
+plan = {
+    'factors': {
+        'Machine': ['Machine1', 'Machine2', 'Machine3'],
+        'Shift': ['Day', 'Night']
+    },
+    'T': 80,   # Expected time points
+    'N': 2     # Expected observations per cell
+}
+
+study = pb.formulate(response='weight', time='time', plan=plan)
+```
+
+**The plan provides three key benefits:**
+
+1. **Unlocks SDS 5 and 6 detection** - These states require comparing expected vs observed structure
+2. **Design reports** - See exactly what's missing from your data
+3. **Documentation** - Captures the intended experimental design for reproducibility
+
+### Why Plans are Required for SDS 5 and 6
+
+SDS 5 (nested) and SDS 6 (incomplete) cannot be detected from observed data alone:
+
+| SDS | Detection Requirement |
+|-----|----------------------|
+| 5 - Nested | Must know which factor levels are nested within others |
+| 6 - Incomplete | Must know expected grid size to calculate coverage (<75%) |
+
+Without a plan, ProcessBehavior only sees what exists. With a plan, it can identify what's *missing*:
+
+```python
+# Without plan: ProcessBehavior sees 34 observations
+# With plan: ProcessBehavior knows 480 cells were expected
+#            → 34/480 = 7% coverage → SDS 6 detected
+```
+
+### Expected vs Observed: How It Works
+
+When you provide a plan, ProcessBehavior compares:
+
+| Metric | Expected (from plan) | Observed (from data) |
+|--------|---------------------|---------------------|
+| **K** | Product of factor levels | Unique factor combinations |
+| **T** | Specified time points | Unique time values |
+| **R** | K × T (total cells) | Actual (factor, time) cells |
+| **N** | Observations per cell | Cell size distribution |
+
+```python
+design = study.design()
+print(f"K: planned={design.K}, observed={design.K_observed}, missing={design.K_missing}")
+print(f"T: planned={design.T}, observed={design.T_observed}, missing={design.T_missing}")
+print(f"R: planned={design.R}, observed={design.R_observed}, missing={design.R_missing}")
+```
+
+### Plan Parameter Structure
+
+```python
+plan = {
+    'factors': {
+        'factor_name': [list of expected levels],
+        ...
+    },
+    'T': expected_time_points,      # optional
+    'N': expected_obs_per_cell      # optional
+}
+```
+
+**Notes:**
+- Factor levels should include ALL expected levels, even if some are missing from data
+- `T` enables detection of missing time points
+- `N` documents expected replication (useful for design reports)
+
+### Viewing the Design Report
+
+After formulation, inspect how your data compares to the plan:
+
+```python
+design = study.design()
+print(design)
+
+# DesignReport(2 factors, with plan)
+#   SDS reason: incomplete_grid
+#   K: planned=6, observed=6, missing=0
+#   T: planned=80, observed=8, missing=72
+#   R: planned=480, observed=34, missing=446
+#
+#   Factors:
+#     Machine: planned=['Machine1','Machine2','Machine3'], observed=[...]
+#     Shift: planned=['Day','Night'], observed=[...]
+#
+#   Structure: Incomplete: 72 time points missing
+```
+
+The design report shows:
+- **K, T, R**: Planned vs observed counts with missing tallies
+- **N**: Planned vs observed (min, median, max) cell sizes
+- **missing_combos**: Which factor combinations are missing
+- **sds_reason**: Why this SDS was detected
+- **structure_summary**: Overall assessment
+
+### Summary: When Plans Add Value
+
+| SDS | Plan Required? | Plan Value |
+|-----|---------------|------------|
+| 1 - Full Replication | No | Design report shows coverage |
+| 2 - No Replication | No | Design report shows structure |
+| 3 - Partial Replication | No | Design report identifies sparse cells |
+| 4 - Single Stream | No | Minimal value (no factors) |
+| 5 - Nested | **Yes** | Required for detection |
+| 6 - Incomplete | **Yes** | Required for detection |
+
+**Best practice:** Always use a plan for rigorous VAS analysis. Even when not required for SDS detection, plans document your experimental design and enable rich design reports.
 
 ## SDS 1: Full Replication
 
