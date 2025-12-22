@@ -349,6 +349,86 @@ class DesignReport:
         return self._sds_reason
 
     @property
+    def sds_reason_detail(self) -> str | None:
+        """
+        Human-readable SDS classification with explanation.
+
+        Adds context about why this SDS was assigned based on observed
+        data structure. This describes what analysis approaches are valid.
+
+        Examples:
+            'full_replication (min n >= 2)'
+            'no_replication (all cells n = 1)'
+            'partial_replication (mixed cell sizes)'
+        """
+        if not self._sds_reason:
+            return None
+
+        if not self._N_observed:
+            return self._sds_reason
+
+        min_n, _, max_n = self._N_observed
+
+        explanations = {
+            'full_replication': f'min n = {min_n} >= 2',
+            'no_replication': 'all cells n = 1',
+            'partial_replication': f'cell sizes range {min_n} to {max_n}',
+            'single_condition': 'single factor level over time',
+            'implicit_single_condition': 'no factors defined',
+            'nested': 'hierarchical factor structure',
+            'incomplete_with_replication': f'coverage < 95%, has replication (min n = {min_n})',
+            'incomplete_no_replication': 'coverage < 95%, all cells n = 1',
+        }
+
+        explanation = explanations.get(self._sds_reason, '')
+        if explanation:
+            return f"{self._sds_reason} ({explanation})"
+        return self._sds_reason
+
+    @property
+    def plan_adherence(self) -> str | None:
+        """
+        Describes how well data collection matched the sampling plan.
+
+        This is separate from SDS classification (which determines valid
+        analysis approaches). Plan adherence answers: "Did data collection
+        go as planned?"
+
+        Returns None if no plan was provided.
+
+        Examples:
+            'complete'
+            'underreplicated (min n = 2 < planned N = 4)'
+            'incomplete_time (observed 8 of 10 time points)'
+            'incomplete_factors (observed 5 of 6 factor combinations)'
+        """
+        if not self._sampling_plan:
+            return None
+
+        issues = []
+
+        # Check replication adherence
+        if self._N is not None and self._N_observed is not None:
+            min_n, _, _ = self._N_observed
+            if min_n < self._N:
+                issues.append(f"underreplicated (min n = {min_n} < planned N = {self._N})")
+
+        # Check time completeness
+        if self._T is not None and self._T_observed is not None and self._T_observed < self._T:
+            issues.append(f"incomplete_time (observed {self._T_observed} of {self._T} time points)")
+
+        # Check factor completeness
+        k_observed = self.K_observed
+        k_planned = self.K
+        if k_observed < k_planned:
+            issues.append(f"incomplete_factors (observed {k_observed} of {k_planned} factor combinations)")
+
+        if not issues:
+            return "complete"
+
+        return "; ".join(issues)
+
+    @property
     def unit_of_analysis(self) -> str | None:
         """
         The fundamental entity being measured.
@@ -446,25 +526,17 @@ class DesignReport:
             return "Complete structure"
         return "Incomplete: " + "; ".join(issues)
 
-    def __repr__(self) -> str:
-        """Nice summary showing plan vs observed per factor with K/T/N."""
-        plan_status = "with plan" if self.has_plan else "observed only"
-        lines = [f"DesignReport({len(self._factors)} factors, {plan_status})"]
+    def _repr_ktrn_lines(self) -> list[str]:
+        """Build K/T/R/N summary lines for __repr__."""
+        lines = []
 
-        # Unit of analysis (if specified)
-        if self._unit_of_analysis:
-            lines.append(f"  Unit of analysis: {self._unit_of_analysis}")
-
-        # SDS classification reason (from detector)
-        if self._sds_reason:
-            lines.append(f"  SDS reason: {self._sds_reason}")
-
-        # K/T/N summary
+        # K summary
         if self.has_plan:
             lines.append(f"  K: planned={self.K}, observed={self.K_observed}, missing={self.K_missing}")
         else:
             lines.append(f"  K: observed={self.K_observed}")
 
+        # T summary
         if self._T is not None:
             lines.append(f"  T: planned={self._T}, observed={self._T_observed}, missing={self.T_missing}")
         elif self._T_observed is not None:
@@ -477,12 +549,37 @@ class DesignReport:
             elif self.R_observed is not None:
                 lines.append(f"  R: observed={self.R_observed}")
 
+        # N summary
         if self._N is not None and self._N_observed is not None:
             min_n, med_n, max_n = self._N_observed
             lines.append(f"  N: planned={self._N}, observed=(min={min_n}, median={med_n}, max={max_n})")
         elif self._N_observed is not None:
             min_n, med_n, max_n = self._N_observed
             lines.append(f"  N: observed=(min={min_n}, median={med_n}, max={max_n})")
+
+        return lines
+
+    def __repr__(self) -> str:
+        """Nice summary showing plan vs observed per factor with K/T/N."""
+        plan_status = "with plan" if self.has_plan else "observed only"
+        lines = [f"DesignReport({len(self._factors)} factors, {plan_status})"]
+
+        # Unit of analysis (if specified)
+        if self._unit_of_analysis:
+            lines.append(f"  Unit of analysis: {self._unit_of_analysis}")
+
+        # SDS classification reason with detail
+        if self.sds_reason_detail:
+            lines.append(f"  SDS reason: {self.sds_reason_detail}")
+        elif self._sds_reason:
+            lines.append(f"  SDS reason: {self._sds_reason}")
+
+        # Plan adherence (only shown when plan is provided)
+        if self.plan_adherence:
+            lines.append(f"  Plan adherence: {self.plan_adherence}")
+
+        # K/T/R/N summary
+        lines.extend(self._repr_ktrn_lines())
 
         # Factor details
         lines.append("")
