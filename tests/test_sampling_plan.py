@@ -953,6 +953,40 @@ class TestDesignReportKTN:
         design = study.design()
         assert design.K_missing == len(design.missing_combos)
 
+    def test_K_missing_with_delimiter_in_values(self):
+        """K_missing should be 0 when all planned RSGs are observed.
+
+        Regression test: Factor values containing the RSG delimiter ('_')
+        should not cause false positives. Previously, _rsg_in_plan() would
+        fail because 'F1_1_F2_1'.split('_') = ['F1', '1', 'F2', '1'] has
+        4 parts but only 2 factors exist.
+        """
+        df = pd.DataFrame({
+            'factor 1': ['F1_1', 'F1_1', 'F1_2', 'F1_2'] * 2,
+            'factor 2': ['F2_1', 'F2_2', 'F2_1', 'F2_2'] * 2,
+            'time': [1, 1, 1, 1, 2, 2, 2, 2],
+            'y': [10.0] * 8
+        })
+        pb = ProcessBehavior(df)
+
+        # Plan exactly matches observed factor levels
+        study = pb.formulate(
+            response='y',
+            time='time',
+            plan={'factors': {
+                'factor 1': ['F1_1', 'F1_2'],
+                'factor 2': ['F2_1', 'F2_2']
+            }}
+        )
+
+        design = study.design()
+        # K = 2 × 2 = 4, all observed → K_missing should be 0
+        assert design.K == 4
+        assert design.K_observed == 4
+        assert design.K_missing == 0, (
+            f"K_missing should be 0 when all RSGs observed, got {design.K_missing}"
+        )
+
     def test_T_planned_vs_observed(self):
         """T should show planned vs observed time points."""
         df = pd.DataFrame({
@@ -1172,3 +1206,87 @@ class TestDesignReportKTN:
         assert design.K_missing == 0  # No missing when no plan
         assert len(design.missing_combos) == 0
         assert len(design.extra_combos) == 0
+
+    def test_R_from_K_and_T(self):
+        """R should be K × T when both are specified in plan."""
+        df = pd.DataFrame({
+            'Lane': [1, 1, 2, 2] * 4,
+            'Phase': [1, 2, 1, 2] * 4,
+            'Pull': [1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4],
+            'Weight': [10.0] * 16
+        })
+        pb = ProcessBehavior(df)
+
+        # K = 2 × 2 = 4, T = 4 → R = 16
+        study = pb.formulate(
+            response='Weight',
+            time='Pull',
+            plan={'factors': {'Lane': [1, 2], 'Phase': [1, 2]}, 'T': 4}
+        )
+
+        design = study.design()
+        assert design.K == 4
+        assert design.T == 4
+        assert design.R == 16  # K × T
+
+    def test_R_observed_counts_unique_cells(self):
+        """R_observed should count unique (rsg, time) cells."""
+        df = pd.DataFrame({
+            'Lane': [1, 1, 2, 2] * 2,  # 2 lanes × 2 times = 4 cells
+            'Pull': [1, 1, 1, 1, 2, 2, 2, 2],
+            'Weight': [10.0] * 8
+        })
+        pb = ProcessBehavior(df)
+
+        study = pb.formulate(
+            response='Weight',
+            time='Pull',
+            plan={'factors': {'Lane': [1, 2]}, 'T': 2}
+        )
+
+        design = study.design()
+        # 2 lanes × 2 time points = 4 unique cells
+        assert design.R_observed == 4
+
+    def test_R_missing_when_cells_incomplete(self):
+        """R_missing should show expected - observed cells."""
+        df = pd.DataFrame({
+            'Lane': [1, 1] * 2,  # Only Lane 1, missing Lane 2
+            'Pull': [1, 1, 2, 2],
+            'Weight': [10.0] * 4
+        })
+        pb = ProcessBehavior(df)
+
+        # Plan expects 2 lanes × 2 times = 4 cells
+        # Data only has 1 lane × 2 times = 2 cells
+        study = pb.formulate(
+            response='Weight',
+            time='Pull',
+            plan={'factors': {'Lane': [1, 2]}, 'T': 2}
+        )
+
+        design = study.design()
+        assert design.R == 4  # Expected: 2 lanes × 2 times
+        assert design.R_observed == 2  # Observed: 1 lane × 2 times
+        assert design.R_missing == 2  # Missing: 2 cells
+
+    def test_R_none_without_T(self):
+        """R should be None when T is not specified in plan."""
+        df = pd.DataFrame({
+            'Lane': [1, 1, 2, 2] * 2,
+            'Pull': [1, 1, 1, 1, 2, 2, 2, 2],
+            'Weight': [10.0] * 8
+        })
+        pb = ProcessBehavior(df)
+
+        # No T specified → R cannot be computed
+        study = pb.formulate(
+            response='Weight',
+            time='Pull',
+            plan={'factors': {'Lane': [1, 2]}}
+        )
+
+        design = study.design()
+        assert design.R is None
+        assert design.R_observed is not None  # Still computed from data
+        assert design.R_missing is None  # Cannot compute without R
