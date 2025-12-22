@@ -16,6 +16,7 @@ Design Philosophy (Pythonic Hadley):
 
 from __future__ import annotations
 
+import functools
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
@@ -201,24 +202,33 @@ class DesignReport:
         except TypeError:
             return list(items)
 
+    @functools.cached_property
+    def _expected_rsgs(self) -> set[str]:
+        """
+        Generate expected RSG strings from sampling plan.
+
+        Uses encode_rsg() to safely generate strings from factor level tuples,
+        avoiding the need to parse RSG strings back (which fails when factor
+        values contain the delimiter).
+        """
+        if not self._sampling_plan:
+            return set()
+        from itertools import product
+
+        from processbehavior.data_preparation import encode_rsg
+
+        factor_levels = [self._sampling_plan[f] for f in self._factors]
+        return {encode_rsg(combo, self._delim) for combo in product(*factor_levels)}
+
     def _rsg_in_plan(self, rsg: str) -> bool:
         """
         Check if an rsg string matches the sampling plan.
 
-        Parses the rsg back to factor values and checks each against
-        the plan levels. Avoids generating full cartesian product.
+        Uses set membership against expected RSGs (O(1) lookup).
+        This avoids parsing RSG strings, which fails when factor values
+        contain the delimiter.
         """
-        if not self._sampling_plan:
-            return False
-        parts = rsg.split(self._delim)
-        if len(parts) != len(self._factors):
-            return False
-        for factor, value_str in zip(self._factors, parts):
-            plan_levels = self._sampling_plan.get(factor, [])
-            # Check if value matches any plan level (with string coercion)
-            if not any(str(level) == value_str for level in plan_levels):
-                return False
-        return True
+        return rsg in self._expected_rsgs
 
     # =========================================================================
     # K, T, N Properties
