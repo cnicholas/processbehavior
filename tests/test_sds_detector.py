@@ -74,6 +74,7 @@ def sds0_data():
 def sds1_data():
     """SDS 1: Full replication - all cells have n≥2."""
     return pd.DataFrame({
+        'lane': ['A', 'A', 'B', 'B'] * 2,
         'rsg': ['A', 'A', 'B', 'B'] * 2,
         'pull': [1, 1, 1, 1, 2, 2, 2, 2],
         'weight': [10.0, 10.1, 9.9, 10.0, 10.2, 10.3, 9.8, 9.9]
@@ -92,7 +93,8 @@ def sds2_data():
     Complete grid: 4 groups × 1 time = 4 cells, all present.
     """
     return pd.DataFrame({
-        'rsg': ['A', 'B', 'C', 'D'],  # 4 subgroups, each appears once
+        'lane': ['A', 'B', 'C', 'D'],  # 4 subgroups, each appears once
+        'rsg': ['A', 'B', 'C', 'D'],
         'pull': [1, 1, 1, 1],          # All at same time point
         'weight': [10.1, 10.3, 9.9, 10.0]
     })
@@ -102,7 +104,8 @@ def sds2_data():
 def sds3_data():
     """SDS 3: Partial replication - mix of n=1 and n≥2."""
     return pd.DataFrame({
-        'rsg': ['A', 'A', 'A', 'B'],  # A×1 has n=3, B×1 has n=1
+        'lane': ['A', 'A', 'A', 'B'],  # A×1 has n=3, B×1 has n=1
+        'rsg': ['A', 'A', 'A', 'B'],
         'pull': [1, 1, 1, 1],
         'weight': [10.0, 10.1, 10.2, 9.9]
     })
@@ -112,7 +115,8 @@ def sds3_data():
 def sds4_data():
     """SDS 4: Single condition over time."""
     return pd.DataFrame({
-        'rsg': ['A', 'A', 'A'],  # Only one group
+        'lane': ['A', 'A', 'A'],  # Only one group
+        'rsg': ['A', 'A', 'A'],
         'pull': [1, 2, 3],       # Multiple time points
         'weight': [10.1, 10.2, 10.3]
     })
@@ -124,6 +128,7 @@ def sds6_data():
     # 2 groups × 20 time points = 40 possible cells
     # Only 10 cells present = 25% coverage (well below 75%)
     return pd.DataFrame({
+        'lane': ['A'] * 5 + ['B'] * 5,
         'rsg': ['A'] * 5 + ['B'] * 5,
         'pull': [1, 2, 3, 4, 5, 11, 12, 13, 14, 15],  # Sparse coverage
         'weight': [10.0] * 10
@@ -156,6 +161,7 @@ def test_detect_sds1_grouping_only(detector, spec_no_time):
     Cells are defined by factors only. This data has 2 groups with n=2 each.
     """
     df = pd.DataFrame({
+        'lane': ['A', 'A', 'B', 'B'],
         'rsg': ['A', 'A', 'B', 'B'],
         'weight': [10.1, 10.2, 9.9, 10.0]
     })
@@ -464,6 +470,7 @@ def test_detect_sds_boundary_75_percent_coverage(detector, spec_with_grouping_an
     # 2 groups × 4 time points = 8 possible cells
     # 6 cells present = 75% exactly
     df = pd.DataFrame({
+        'lane': ['A'] * 3 + ['B'] * 3,
         'rsg': ['A'] * 3 + ['B'] * 3,
         'pull': [1, 2, 3, 1, 2, 3],
         'weight': [10.0] * 6
@@ -486,6 +493,7 @@ def test_detect_sds2_sparse_time_coverage(detector, spec_with_grouping_and_time)
     min_cell_size uses factor-only (A:7, B:7) for chart selection.
     """
     df = pd.DataFrame({
+        'lane': ['A'] * 7 + ['B'] * 7,
         'rsg': ['A'] * 7 + ['B'] * 7,
         'pull': [1, 2, 3, 4, 5, 6, 7, 1, 2, 3, 4, 8, 9, 10],
         'weight': [10.0] * 14
@@ -503,6 +511,7 @@ def test_detect_sds_with_large_n_values(detector, spec_with_grouping_and_time):
     """Should handle cells with very large n correctly (SDS 1)."""
     # Each cell has n=100
     df = pd.DataFrame({
+        'lane': ['A'] * 200 + ['B'] * 200,
         'rsg': ['A'] * 200 + ['B'] * 200,
         'pull': [1] * 100 + [2] * 100 + [1] * 100 + [2] * 100,
         'weight': list(range(400))
@@ -522,9 +531,12 @@ def test_detect_sds_with_varying_cell_sizes(detector, spec_with_grouping_and_tim
     - Mix of subgroup sizes: some n=1, others n≥2
     """
     df = pd.DataFrame({
-        'rsg': ['A', 'A', 'A', 'A', 'A',  # Group A: 5 observations (times 1,1,1,2,2)
-                'B',                       # Group B: 1 observation (time 1)
-                'C', 'C'],                 # Group C: 2 observations (times 1,2)
+        'lane': ['A', 'A', 'A', 'A', 'A',  # Group A: 5 observations (times 1,1,1,2,2)
+                 'B',                       # Group B: 1 observation (time 1)
+                 'C', 'C'],                 # Group C: 2 observations (times 1,2)
+        'rsg': ['A', 'A', 'A', 'A', 'A',
+                'B',
+                'C', 'C'],
         'pull': [1, 1, 1, 2, 2,            # A appears at times 1,2
                  1,                         # B appears at time 1
                  1, 2],                     # C appears at times 1,2
@@ -586,6 +598,7 @@ def test_realistic_scenario_manufacturing_4_lanes_hourly(detector):
         for hour in range(1, 9):
             for sample in range(5):
                 rows.append({
+                    'lane': lane,
                     'rsg': lane,
                     'hour': hour,
                     'weight': 10.0 + 0.1 * sample
@@ -594,7 +607,7 @@ def test_realistic_scenario_manufacturing_4_lanes_hourly(detector):
 
     spec = AnalysisSpecification({
         'analysis_type': 'Xbar',
-        'rsg_vars': ['rsg'],
+        'rsg_vars': ['lane'],
         'rsg_var_name': 'rsg',
         'time_var': 'hour',
         'response_var': 'weight'
@@ -877,3 +890,104 @@ class TestR4R5XbarSAvailability:
         assert 'R3_Imr' in plan.residual_charts
         assert 'R3_Xbar' not in plan.residual_charts
         assert 'R3_S' not in plan.residual_charts
+
+
+# ============================================================================
+# Test: T_planned Coverage Calculation
+# ============================================================================
+
+class TestTPlannedCoverage:
+    """Tests for T_planned in coverage ratio calculation."""
+
+    def test_T_planned_affects_coverage_ratio(self, detector):
+        """Coverage should be lower when T_planned > observed T."""
+        # Data has 2 groups × 4 time points, all present
+        df = pd.DataFrame({
+            'factor': ['A', 'A', 'A', 'A', 'B', 'B', 'B', 'B'],
+            'time': [1, 2, 3, 4, 1, 2, 3, 4],
+            'rsg': ['A'] * 4 + ['B'] * 4,
+            'weight': [10.0] * 8
+        })
+        spec = AnalysisSpecification({
+            'analysis_type': 'Xbar',
+            'rsg_vars': ['factor'],
+            'rsg_var_name': 'rsg',
+            'time_var': 'time',
+            'response_var': 'weight'
+        })
+        plan = {'factor': ['A', 'B']}
+
+        # Without T_planned: coverage = 8/8 = 100%
+        result_no_T = detector.detect_sds(df, spec, plan=plan, T_planned=None)
+
+        # With T_planned=8: coverage = 8/16 = 50% → should trigger SDS 5 or 6
+        result_with_T = detector.detect_sds(df, spec, plan=plan, T_planned=8)
+
+        # Without T_planned, should be SDS 2 (no replication, complete)
+        assert result_no_T.sds == 2
+
+        # With T_planned=8, coverage drops to 50% → SDS 6 (incomplete, no replication)
+        assert result_with_T.sds == 6
+
+    def test_T_planned_none_uses_observed(self, detector):
+        """When T_planned is None, should use observed time count."""
+        df = pd.DataFrame({
+            'factor': ['A', 'A', 'B', 'B'],
+            'time': [1, 2, 1, 2],
+            'rsg': ['A', 'A', 'B', 'B'],
+            'weight': [10.0] * 4
+        })
+        spec = AnalysisSpecification({
+            'analysis_type': 'Xbar',
+            'rsg_vars': ['factor'],
+            'rsg_var_name': 'rsg',
+            'time_var': 'time',
+            'response_var': 'weight'
+        })
+        plan = {'factor': ['A', 'B']}
+
+        # T_planned=None should behave same as not providing it
+        result = detector.detect_sds(df, spec, plan=plan, T_planned=None)
+
+        # 2 groups × 2 times = 4 cells, all present → SDS 2 (complete, no replication)
+        assert result.sds == 2
+
+    def test_coverage_no_cartesian_explosion(self, detector):
+        """Coverage calculation should not explode for large K."""
+        # This should NOT cause memory issues with large factor spaces
+
+        # Create data with 2 groups (required to avoid SDS 4) across many factors
+        n_factors = 5
+        n_levels = 10
+        # Two rows: one for group A, one for group B
+        df_data = {
+            'weight': [10.0, 10.0],
+            'time': [1, 1]
+        }
+        for i in range(n_factors):
+            df_data[f'f{i}'] = [f'L{i}_0', f'L{i}_1']  # Two levels observed
+
+        df = pd.DataFrame(df_data)
+        # Build rsg from factor values
+        rsg_parts = [df[f'f{i}'] for i in range(n_factors)]
+        df['rsg'] = rsg_parts[0]
+        for part in rsg_parts[1:]:
+            df['rsg'] = df['rsg'] + '_' + part
+
+        spec = AnalysisSpecification({
+            'analysis_type': 'Xbar',
+            'rsg_vars': [f'f{i}' for i in range(n_factors)],
+            'rsg_var_name': 'rsg',
+            'time_var': 'time',
+            'response_var': 'weight'
+        })
+
+        # Plan with 10 levels per factor = 10^5 = 100,000 combinations
+        plan = {f'f{i}': [f'L{i}_{j}' for j in range(n_levels)] for i in range(n_factors)}
+
+        # This should complete quickly without memory explosion
+        result = detector.detect_sds(df, spec, plan=plan, T_planned=10)
+
+        # Only 2 observed cells out of 100,000 × 10 = 1M expected
+        # Coverage ~0.0002% → SDS 6 (severely incomplete, no replication)
+        assert result.sds == 6

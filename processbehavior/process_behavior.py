@@ -368,6 +368,13 @@ class ProcessBehavior:
             )
 
         plan_factors = plan['factors']
+
+        # Require at least one factor
+        if not plan_factors:
+            raise ValidationError(
+                "Sampling plan 'factors' must contain at least one factor.\n"
+                "Example: plan={'factors': {'Lane': [1,2,3,4]}, 'T': 10}"
+            )
         T_planned = plan.get('T')
         N_planned = plan.get('N')
 
@@ -385,6 +392,13 @@ class ProcessBehavior:
                     f"Available: {available}",
                     column=col_name,
                     available=available
+                )
+
+            # Validate levels is non-empty
+            if not levels:
+                raise ValidationError(
+                    f"Factor '{col_name}' has empty level list in plan.\n"
+                    f"Each factor must have at least one planned level."
                 )
 
             normalized[col_name] = list(levels)
@@ -570,10 +584,10 @@ class ProcessBehavior:
         prepared_df = prep.prepare_dataset(self.data, config)
 
         # Detect SDS on prepared data
-        # Pass sampling_plan to enable SDS 4-6 detection
+        # Pass sampling_plan and T_planned to enable SDS 4-6 detection
         detector = SDSRegistry()
         sds_result = detector.detect_sds(
-            prepared_df, config, plan=sampling_plan
+            prepared_df, config, plan=sampling_plan, T_planned=T_planned
         )
 
         # Get SDS analysis plan with all metadata

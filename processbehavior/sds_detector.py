@@ -356,7 +356,8 @@ class SDSRegistry:
         self,
         df: pd.DataFrame,
         spec: DataPrepConfig,
-        plan: dict[str, list] | None = None
+        plan: dict[str, list] | None = None,
+        T_planned: int | None = None
     ) -> SDSResult:
         """
         Detect Sampling Design State from data structure.
@@ -378,10 +379,10 @@ class SDSRegistry:
 
             Mode 1 (plan=None): Infer structure from observed data → SDS 1-4
             Mode 2 (plan={...}): Compare to plan → enables SDS 5-6
-
-            Time handling: The plan specifies factor levels only, not time.
-            Observed unique time values are used as the "planned" time set.
-            This detects missing factor combos within observed time blocks.
+        T_planned : int, optional
+            Expected number of time points from sampling plan. When provided,
+            coverage calculation uses this instead of observed time count.
+            This enables detection of incomplete temporal coverage.
 
         Notes
         -----
@@ -447,9 +448,11 @@ class SDSRegistry:
         #    - min_cell_size used for chart selection (R2_S vs R2_Imr)
 
         # --- SDS Classification: Group by (factor × time) for N_kt ---
+        # Use actual factor columns (rsg_vars) rather than derived rsg string
+        factor_cols = list(spec.rsg_vars)
         if spec.has_time:
             nkt_counts = (
-                df.groupby([spec.rsg_var_name, spec.time_var], dropna=False, observed=True)
+                df.groupby(factor_cols + [spec.time_var], dropna=False, observed=True)
                 .size()
             )
             min_nkt = nkt_counts.min()
@@ -457,7 +460,7 @@ class SDSRegistry:
         else:
             # No time variable - N_kt reduces to N_k
             nkt_counts = (
-                df.groupby([spec.rsg_var_name], dropna=False, observed=True)
+                df.groupby(factor_cols, dropna=False, observed=True)
                 .size()
             )
             min_nkt = nkt_counts.min()
@@ -465,12 +468,12 @@ class SDSRegistry:
 
         # --- Analysis Subgrouping: Group by factor only for chart selection ---
         subgroup_sizes = (
-            df.groupby([spec.rsg_var_name], dropna=False, observed=True)
+            df.groupby(factor_cols, dropna=False, observed=True)
             .size()
         )
         min_cell_size = subgroup_sizes.min()  # For R2_S vs R2_Imr decision
 
-        n_groups = df[spec.rsg_var_name].nunique()
+        n_groups = len(subgroup_sizes)  # Number of unique factor combinations
 
         logger.debug(
             f"SDS Detection: N_kt range [{min_nkt}, {max_nkt}], "
@@ -503,7 +506,7 @@ class SDSRegistry:
 
         # Calculate coverage_ratio based on plan (if provided)
         if plan is not None:
-            coverage_ratio = self._calculate_coverage_ratio(df, spec, plan)
+            coverage_ratio = self._calculate_coverage_ratio(df, spec, plan, T_planned)
             logger.debug(f"Plan coverage ratio: {coverage_ratio:.2%}")
         else:
             coverage_ratio = 1.0  # No plan = assume observed is complete
@@ -905,7 +908,8 @@ class SDSRegistry:
         self,
         df: pd.DataFrame,
         spec: DataPrepConfig,
-        plan: dict[str, list]
+        plan: dict[str, list],
+        T_planned: int | None = None
     ) -> float:
         """
         Calculate coverage ratio: observed cells / expected cells.
@@ -913,32 +917,8 @@ class SDSRegistry:
         When a plan is provided, we can determine how complete the observed
         data grid is compared to what was intended.
 
-        Expected cells = Cartesian product of all plan levels × time points (if any)
+        Expected cells = K (factor combinations) × T (time points)
         Observed cells = Unique (factor, time) combinations in data
-
-        Time Handling
-        -------------
-        The plan only specifies factor levels, not time levels. For time
-        expectation, we use observed unique time values as the "planned" set.
-        This means:
-        - Coverage detects missing factor combos within observed time blocks
-        - A factor combo missing at time=3 but present at time=1,2 counts as missing
-        - Time points not in the data are not considered "missing"
-
-        Example: If plan={'Lane': [1,2,3], 'Phase': [A,B]} and data has time=[1,2]:
-        - Expected cells = 6 factor combos × 2 time points = 12
-        - If Lane=3 is missing entirely: observed = 4 combos × 2 = 8, coverage = 67%
-
-        Note: This method compares COUNTS for efficiency. For identifying
-        specific missing/extra combinations (e.g., DesignReport.missing_combos),
-        use encode_rsg() from data_preparation to generate expected keys:
-
-            from processbehavior.data_preparation import encode_rsg
-            factor_levels = [plan[var] for var in spec.rsg_vars]
-            expected_keys = {encode_rsg(combo, spec.rsg_var_delim)
-                            for combo in product(*factor_levels)}
-            observed_keys = set(df[spec.rsg_var_name].unique())
-            missing = expected_keys - observed_keys
 
         Parameters
         ----------
@@ -948,7 +928,9 @@ class SDSRegistry:
             Analysis specification
         plan : dict
             Sampling plan with {column: [levels]} structure.
-            Specifies factor levels only; time is inferred from observed data.
+        T_planned : int, optional
+            Expected number of time points. If provided, used instead of
+            observed time count for expected cell calculation.
 
         Returns
         -------
@@ -956,50 +938,45 @@ class SDSRegistry:
             Ratio of observed cells to expected cells (0.0 to 1.0).
             Only counts observed cells that match planned factor combinations,
             so extra levels in data don't inflate coverage.
+
+        Notes
+        -----
+        This implementation avoids cartesian product enumeration for scalability:
+        - expected_K computed via math.prod (no enumeration)
+        - Filtering uses per-column isin (not rsg string matching)
         """
-        from itertools import product
+        import math
 
-        from .data_preparation import encode_rsg
+        import numpy as np
 
-        # Get expected factor combinations from plan
-        # Use spec.rsg_vars order to match how rsg is encoded in data
-        factor_levels = [plan[var] for var in spec.rsg_vars]
-        expected_factor_combos = set(product(*factor_levels))
+        # Expected K without enumeration (scalable for large factor spaces)
+        expected_K = math.prod(len(plan[var]) for var in spec.rsg_vars)
 
-        # Generate planned rsg keys to filter observed data
-        planned_rsg_keys = {
-            encode_rsg(combo, spec.rsg_var_delim)
-            for combo in expected_factor_combos
-        }
+        # Filter to planned rows using per-column isin (no cartesian product)
+        mask = np.ones(len(df), dtype=bool)
+        for var in spec.rsg_vars:
+            mask &= df[var].isin(plan[var]).to_numpy()
+        df_planned = df.loc[mask]
 
-        # Filter to only rows with planned rsg values (ignore extras)
-        df_planned = df[df[spec.rsg_var_name].isin(planned_rsg_keys)]
-
+        # Group by actual factor columns (not derived rsg string)
+        # This is more explicit and avoids any encoding issues
+        group_cols = list(spec.rsg_vars)
         if spec.has_time:
-            # Time expectation: use observed unique time values as planned time set.
-            # This detects missing factor combos within observed time blocks.
-            # (Plan only specifies factor levels, not time levels.)
-            # Use dropna() consistently: NaN time values are excluded from both
-            # expected and observed counts.
-            time_values = df[spec.time_var].dropna().unique()
-            expected_cells = len(expected_factor_combos) * len(time_values)
-
-            # Observed cells = unique (rsg, time) combos from planned rsg only
-            observed_cells = df_planned.groupby(
-                [spec.rsg_var_name, spec.time_var], dropna=True, observed=True
-            ).ngroups
+            group_cols.append(spec.time_var)
+            observed_T = df[spec.time_var].nunique(dropna=True)
+            expected_T = T_planned if T_planned is not None else observed_T
+            expected_R = expected_K * expected_T
         else:
-            # No time: expected = factor combos, observed = unique planned rsg values
-            expected_cells = len(expected_factor_combos)
-            observed_cells = df_planned[spec.rsg_var_name].nunique(dropna=True)
+            expected_R = expected_K
 
-        if expected_cells == 0:
-            return 1.0  # Avoid division by zero
+        observed_R = df_planned.groupby(group_cols, dropna=True, observed=True).ngroups
 
-        ratio = observed_cells / expected_cells
-        logger.debug(
-            f"Coverage: {observed_cells} observed (in plan) / {expected_cells} expected = {ratio:.1%}"
-        )
+        # Safe edge case handling
+        if expected_R == 0:
+            return 1.0 if observed_R == 0 else 0.0
+
+        ratio = observed_R / expected_R
+        logger.debug(f"Coverage: {observed_R}/{expected_R} = {ratio:.1%}")
         return ratio
 
     # =========================================================================
