@@ -1290,3 +1290,90 @@ def test_column_accessor_getitem_keyerror_message():
     # Error message should mention available columns
     assert 'Alpha' in str(exc_info.value)
     assert 'Beta' in str(exc_info.value)
+
+
+# ============================================================================
+# Test: Factory Methods (read_csv, read_excel, read_parquet, read_clipboard)
+# ============================================================================
+
+def test_read_csv(tmp_path):
+    """read_csv should load data and create ProcessBehavior."""
+    # Create test CSV
+    csv_path = tmp_path / "test_data.csv"
+    df = pd.DataFrame({
+        'time': [1, 2, 3, 4, 5],
+        'value': [10.1, 10.2, 10.0, 10.3, 10.1]
+    })
+    df.to_csv(csv_path, index=False)
+
+    # Load via factory method
+    pb = ProcessBehavior.read_csv(csv_path)
+
+    assert len(pb) == 5
+    assert 'time' in pb.data.columns
+    assert 'value' in pb.data.columns
+    assert pb.cols.time == 'time'
+    assert pb.cols.value == 'value'
+
+
+def test_read_csv_with_na_values(tmp_path):
+    """read_csv should handle na_values parameter."""
+    csv_path = tmp_path / "test_data.csv"
+    df = pd.DataFrame({
+        'time': [1, 2, 3],
+        'value': ['10.1', 'MISSING', '10.3']
+    })
+    df.to_csv(csv_path, index=False)
+
+    # Load with custom NA value
+    pb = ProcessBehavior.read_csv(csv_path, na_values=['MISSING'])
+
+    assert len(pb) == 3
+    assert pd.isna(pb.data['value'].iloc[1])
+
+
+def test_read_csv_with_kwargs(tmp_path):
+    """read_csv should pass kwargs to pandas."""
+    csv_path = tmp_path / "test_data.csv"
+    with open(csv_path, 'w') as f:
+        f.write("a;b;c\n1;2;3\n4;5;6\n")
+
+    # Use sep kwarg
+    pb = ProcessBehavior.read_csv(csv_path, sep=';')
+
+    assert len(pb) == 2
+    assert list(pb.data.columns) == ['a', 'b', 'c']
+
+
+def test_read_excel(tmp_path):
+    """read_excel should load data and create ProcessBehavior."""
+    excel_path = tmp_path / "test_data.xlsx"
+    df = pd.DataFrame({
+        'time': [1, 2, 3],
+        'value': [10.1, 10.2, 10.3]
+    })
+    df.to_excel(excel_path, index=False)
+
+    pb = ProcessBehavior.read_excel(excel_path)
+
+    assert len(pb) == 3
+    assert pb.cols.time == 'time'
+    assert pb.cols.value == 'value'
+
+
+def test_read_parquet(tmp_path):
+    """read_parquet should load data and create ProcessBehavior."""
+    pytest.importorskip("pyarrow")
+
+    parquet_path = tmp_path / "test_data.parquet"
+    df = pd.DataFrame({
+        'time': [1, 2, 3],
+        'value': [10.1, 10.2, 10.3]
+    })
+    df.to_parquet(parquet_path, index=False)
+
+    pb = ProcessBehavior.read_parquet(parquet_path)
+
+    assert len(pb) == 3
+    assert pb.cols.time == 'time'
+    assert pb.cols.value == 'value'
