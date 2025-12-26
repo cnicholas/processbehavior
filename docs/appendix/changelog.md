@@ -115,10 +115,9 @@ The following features were developed during the pre-release phase:
 ## Roadmap
 
 ### Planned for v0.2.0
-- Changepoint detection (requires ruptures)
-- Enhanced effects analysis (requires statsmodels)
 - Additional chart types
 - Performance optimizations for large datasets
+- Enhanced effects analysis
 
 ### Planned for v0.3.0
 - Real-time monitoring mode
