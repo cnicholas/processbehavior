@@ -402,7 +402,7 @@ df_with_residuals = calc.calculate(df, factors, time, response)
 
 ### EffectsCalculator
 
-Calculates main effects (requires statsmodels).
+Calculates main effects for factorial designs.
 
 ```python
 from processbehavior import EffectsCalculator

@@ -11,8 +11,7 @@ ProcessBehavior requires Python 3.9 or later.
 ### Optional Dependencies
 - **plotly** >= 5.18 - Interactive visualization
 - **openpyxl** >= 3.1 - Excel export
-- **statsmodels** >= 0.14 - Effects analysis
-- **ruptures** >= 1.1 - Changepoint detection
+- **kaleido** >= 0.2 - Static image export
 
 ## Installation Methods
 
@@ -31,13 +30,7 @@ pip install processbehavior[plotting]
 ### With All Optional Features
 
 ```bash
-pip install processbehavior[plotting,excel,effects,changepoints]
-```
-
-Or install everything:
-
-```bash
-pip install processbehavior[all]
+pip install processbehavior[images]
 ```
 
 ### From Source (Development)
