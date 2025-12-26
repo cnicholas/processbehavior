@@ -330,6 +330,140 @@ class ProcessBehavior:
 
         logger.info(f"ProcessBehavior: {len(df)} rows, {len(df.columns)} columns")
 
+    # =========================================================================
+    # Factory Methods: Read from files
+    # =========================================================================
+
+    @classmethod
+    def read_csv(
+        cls,
+        path: str,
+        na_values: list[str] | None = None,
+        **kwargs
+    ) -> ProcessBehavior:
+        """
+        Read data from a CSV file.
+
+        Parameters
+        ----------
+        path : str
+            Path to the CSV file.
+        na_values : list of str, optional
+            Additional values to treat as NA/missing.
+        **kwargs
+            Additional arguments passed to pandas.read_csv().
+
+        Returns
+        -------
+        ProcessBehavior
+            ProcessBehavior instance with loaded data.
+
+        Examples
+        --------
+        >>> pb = ProcessBehavior.read_csv('fillweight_data.csv')
+        >>> pb = ProcessBehavior.read_csv('data.csv', encoding='latin-1')
+        """
+        df = pd.read_csv(path, **kwargs)
+        return cls(df, na_values=na_values)
+
+    @classmethod
+    def read_excel(
+        cls,
+        path: str,
+        sheet_name: str | int = 0,
+        na_values: list[str] | None = None,
+        **kwargs
+    ) -> ProcessBehavior:
+        """
+        Read data from an Excel file.
+
+        Parameters
+        ----------
+        path : str
+            Path to the Excel file (.xlsx, .xls).
+        sheet_name : str or int, default 0
+            Sheet name or index to read.
+        na_values : list of str, optional
+            Additional values to treat as NA/missing.
+        **kwargs
+            Additional arguments passed to pandas.read_excel().
+
+        Returns
+        -------
+        ProcessBehavior
+            ProcessBehavior instance with loaded data.
+
+        Examples
+        --------
+        >>> pb = ProcessBehavior.read_excel('data.xlsx')
+        >>> pb = ProcessBehavior.read_excel('data.xlsx', sheet_name='Sheet2')
+        """
+        df = pd.read_excel(path, sheet_name=sheet_name, **kwargs)
+        return cls(df, na_values=na_values)
+
+    @classmethod
+    def read_parquet(
+        cls,
+        path: str,
+        na_values: list[str] | None = None,
+        **kwargs
+    ) -> ProcessBehavior:
+        """
+        Read data from a Parquet file.
+
+        Parameters
+        ----------
+        path : str
+            Path to the Parquet file.
+        na_values : list of str, optional
+            Additional values to treat as NA/missing.
+        **kwargs
+            Additional arguments passed to pandas.read_parquet().
+
+        Returns
+        -------
+        ProcessBehavior
+            ProcessBehavior instance with loaded data.
+
+        Examples
+        --------
+        >>> pb = ProcessBehavior.read_parquet('data.parquet')
+        """
+        df = pd.read_parquet(path, **kwargs)
+        return cls(df, na_values=na_values)
+
+    @classmethod
+    def read_clipboard(
+        cls,
+        na_values: list[str] | None = None,
+        **kwargs
+    ) -> ProcessBehavior:
+        """
+        Read data from the system clipboard.
+
+        Useful for quickly pasting data from Excel or Google Sheets.
+
+        Parameters
+        ----------
+        na_values : list of str, optional
+            Additional values to treat as NA/missing.
+        **kwargs
+            Additional arguments passed to pandas.read_clipboard().
+
+        Returns
+        -------
+        ProcessBehavior
+            ProcessBehavior instance with clipboard data.
+
+        Examples
+        --------
+        Copy data from Excel, then:
+
+        >>> pb = ProcessBehavior.read_clipboard()
+        """
+        df = pd.read_clipboard(**kwargs)
+        return cls(df, na_values=na_values)
+
     @staticmethod
     def _to_column_name(col: str | ColumnRef) -> str:
         """Extract column name from str or ColumnRef."""
