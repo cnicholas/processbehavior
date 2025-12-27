@@ -377,6 +377,16 @@ class Plotter:
                 yaxis_title=yaxis_title
             )
         else:
+            # Auto-detect if charts are different types (e.g., Xbar+S)
+            # Different chart types have fundamentally different scales
+            # and should not share y-axis
+            effective_shared_yaxis = shared_yaxis
+            if shared_yaxis:
+                base_types = set(self._get_base_chart_type(name) for name in charts_to_plot)
+                if len(base_types) > 1:
+                    # Different chart types - disable y-axis sharing
+                    effective_shared_yaxis = False
+
             fig = self._plot_faceted(
                 charts_to_plot,
                 ncols=ncols,
@@ -390,7 +400,7 @@ class Plotter:
                 height=height,
                 xaxis_title=xaxis_title,
                 yaxis_title=yaxis_title,
-                shared_yaxis=shared_yaxis,
+                shared_yaxis=effective_shared_yaxis,
                 yaxis_padding=yaxis_padding,
                 vertical_spacing=vertical_spacing
             )
@@ -701,6 +711,13 @@ class Plotter:
                         font=dict(size=theme.annotation_font_size, color=theme.ucl_color),
                         row=row, col=col
                     )
+                elif 'upl' in data.columns:
+                    # Varying limit - draw stepped line
+                    self._add_stepped_limit_line_facet(
+                        fig, data, x_col, 'upl',
+                        theme.ucl_color, theme.limit_line_dash, theme.limit_line_width,
+                        row, col
+                    )
 
                 # LPL
                 if 'lpl' in stats and stats['lpl'] != 'Varies':
@@ -725,6 +742,13 @@ class Plotter:
                         xanchor='left',
                         font=dict(size=theme.annotation_font_size, color=theme.lcl_color),
                         row=row, col=col
+                    )
+                elif 'lpl' in data.columns:
+                    # Varying limit - draw stepped line
+                    self._add_stepped_limit_line_facet(
+                        fig, data, x_col, 'lpl',
+                        theme.lcl_color, theme.limit_line_dash, theme.limit_line_width,
+                        row, col
                     )
 
                 # Centerline
@@ -857,6 +881,27 @@ class Plotter:
             )
 
         return chart_info['metadata']['value_col']
+
+    def _get_base_chart_type(self, chart_name: str) -> str:
+        """
+        Extract base chart type from a chart name.
+
+        Chart names may include suffixes (e.g., 'Xbar_Lane1', 'Imr_Group2').
+        This extracts just the base type for scale comparison.
+
+        Parameters
+        ----------
+        chart_name : str
+            Full chart name (e.g., 'Xbar', 'Xbar_Lane1', 'S_Line2')
+
+        Returns
+        -------
+        str
+            Base chart type: 'Xbar', 'S', 'Imr', or 'R'
+        """
+        # Split on underscore and take first part
+        base = chart_name.split('_')[0]
+        return base
 
     def _get_x_column(self, data: pd.DataFrame) -> str:
         """
@@ -1341,6 +1386,78 @@ class Plotter:
             hovertemplate=f'{limit_name}: %{{y:.3f}}<extra></extra>',
             showlegend=False
         ))
+
+    def _add_stepped_limit_line_facet(
+        self,
+        fig: go.Figure,
+        data: pd.DataFrame,
+        x_col: str,
+        limit_col: str,
+        line_color: str,
+        line_dash: str,
+        line_width: float,
+        row: int,
+        col: int
+    ) -> None:
+        """
+        Add a stepped limit line for faceted subplots with varying limits.
+
+        Similar to _add_stepped_limit_line but positions the trace in a
+        specific subplot using row/col parameters.
+
+        Parameters
+        ----------
+        fig : go.Figure
+            Plotly figure with subplots
+        data : pd.DataFrame
+            Chart data with limit column
+        x_col : str
+            Name of x-axis column
+        limit_col : str
+            Name of limit column ('upl' or 'lpl')
+        line_color : str
+            Color for the limit line
+        line_dash : str
+            Dash pattern for the line
+        line_width : float
+            Width of the line
+        row : int
+            Subplot row (1-indexed)
+        col : int
+            Subplot column (1-indexed)
+        """
+        if limit_col not in data.columns:
+            return
+
+        # Get x values and limit values
+        x_vals = data[x_col].tolist() if x_col in data.columns else data.index.tolist()
+        limit_vals = data[limit_col].tolist()
+
+        # Build stepped line coordinates
+        x_stepped = []
+        y_stepped = []
+
+        for i in range(len(x_vals)):
+            x_stepped.append(x_vals[i])
+            y_stepped.append(limit_vals[i])
+
+            # Add horizontal segment to next point's x position (if not last point)
+            if i < len(x_vals) - 1:
+                x_stepped.append(x_vals[i + 1])
+                y_stepped.append(limit_vals[i])
+
+        fig.add_trace(
+            go.Scatter(
+                x=x_stepped,
+                y=y_stepped,
+                mode='lines',
+                line=dict(color=line_color, dash=line_dash, width=line_width),
+                hovertemplate=f'{limit_col.upper()}: %{{y:.3f}}<extra></extra>',
+                showlegend=False
+            ),
+            row=row,
+            col=col
+        )
 
     # =========================================================================
     # Zone Shading
