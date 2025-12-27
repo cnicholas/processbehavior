@@ -36,6 +36,37 @@ SDSReasonType = Literal[
     "incomplete_no_replication",
 ]
 
+# R2 calculation method - structure-driven, not SDS-driven
+R2Method = Literal["exact", "ma2", "hybrid"]
+
+
+@dataclass(frozen=True)
+class StructureStats:
+    """
+    Observed structure of the data - drives R2 method selection and availability checks.
+
+    This is computed once in AnalysisDataSet and threaded through to avoid
+    recomputing structure statistics in multiple places.
+
+    Attributes
+    ----------
+    has_grouping : bool
+        Whether factor variables (rsg_vars) are present
+    has_order : bool
+        Whether ordering key (obs_id) exists
+    n_cell_min : int
+        Minimum observations per (rsg_key, time) cell
+    n_cell_max : int
+        Maximum observations per (rsg_key, time) cell
+    K_obs : int
+        Number of unique rsg_key values (for R5 availability check)
+    """
+    has_grouping: bool
+    has_order: bool
+    n_cell_min: int
+    n_cell_max: int
+    K_obs: int
+
 if TYPE_CHECKING:
     from .analysis_specification import DataPrepConfig
 
@@ -613,6 +644,43 @@ class SDSRegistry:
 
         return result
 
+    def get_r2_method(self, stats: StructureStats) -> R2Method:
+        """
+        Determine R2 calculation method from observed structure.
+
+        This is the ONLY place where structure determines R2 method.
+        Do NOT use SDS labels here - use observed counts directly.
+
+        The R2 residual (within-cell variation) is the only VAS residual
+        whose calculation varies by structure. All other residuals (R1, R3,
+        R4, R5) are pure algebraic transformations once means are defined.
+
+        Parameters
+        ----------
+        stats : StructureStats
+            Observed structure statistics computed from data
+
+        Returns
+        -------
+        R2Method
+            'exact' if all cells have replication (n_cell_min >= 2)
+            'ma2' if all cells are singletons (n_cell_max == 1)
+            'hybrid' for mixed replication (exact where n >= 2, MA2 where n = 1)
+
+        Notes
+        -----
+        Deterministic rule based on Wheeler/Bishop methodology:
+        - Eq 59 (exact): R2 = Y - Ȳ_kt, requires replication
+        - Eq 66 (MA2): R2 = (Y_j - Y_{j-1}) / 2, for singletons
+        - Hybrid: exact where replicated, MA2 where singleton
+        """
+        if stats.n_cell_min >= 2:
+            return "exact"
+        elif stats.n_cell_max == 1:
+            return "ma2"
+        else:
+            return "hybrid"
+
     def validate_sds_for_analysis(
         self,
         sds: int,
@@ -648,19 +716,10 @@ class SDSRegistry:
         # Logs warning recommending Imr for single condition
         True
 
-        >>> # SDS 2 with Xbar - warning but allowed
+        >>> # SDS 2 with Xbar - valid (uses factor subgroups for variance)
         >>> detector.validate_sds_for_analysis(sds=2, analysis_type='Xbar')
-        # Logs warning about no replication
         True
         """
-
-        # SDS 2: No within-cell variance
-        if sds == 2 and analysis_type in ['Xbar', 'S']:
-            logger.warning(
-                f"SDS 2 detected: No replication (all cells n=1).\n"
-                f"{analysis_type} analysis will use moving average for variance estimation.\n"
-                f"Consider using 'Imr' analysis instead for better performance."
-            )
 
         # SDS 4: Single stream
         if sds == 4 and analysis_type not in ['Imr', 'R']:
@@ -1067,9 +1126,9 @@ class SDSRegistry:
                 has_factors=True,
                 has_time=True,
                 has_replication='none',
-                valid_charts=['Xbar', 'Imr', 'R'],
+                valid_charts=['Xbar', 'S', 'Imr', 'R'],
                 recommended_chart='Xbar',
-                invalid_charts=['S (requires n≥2 per subgroup)'],
+                invalid_charts=[],
                 vas_residuals_supported=True,
                 residuals_available=['R1', 'R2', 'R3', 'R4', 'R5'],
                 residual_calculation_method='moving_average',
@@ -1084,7 +1143,6 @@ class SDSRegistry:
                 ],
                 limitations=[
                     'R2 estimated via moving average (approximate, not exact)',
-                    'Cannot use S or R charts (require n≥2)',
                     'Interaction confounded with pure error'
                 ],
                 bishop_reference="Wheeler/Bishop Methodology: No Replication (SDS 2)"

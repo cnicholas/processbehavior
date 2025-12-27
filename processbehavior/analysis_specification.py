@@ -209,17 +209,19 @@ class DataPrepConfig:
 
 class AnalysisSpecification(DataPrepConfig):
     """
-    Extended configuration with analysis_type validation (inherits from DataPrepConfig).
+    Extended configuration with optional analysis_type (inherits from DataPrepConfig).
 
     This class extends DataPrepConfig with analysis_type-specific validation
-    and output column configuration.
+    and output column configuration. The analysis_type is optional - when not
+    provided, the spec can be used for chart-agnostic operations like data
+    preparation and residual calculation.
 
     Parameters
     ----------
     specification : dict
         Dictionary containing analysis parameters, including:
 
-        - **analysis_type** (str, required): Type of analysis ('Xbar', 'S', 'Imr', 'R')
+        - **analysis_type** (str, optional): Type of analysis ('Xbar', 'S', 'Imr', 'R')
         - **response_var** (str, required): Response variable
         - **rsg_vars** (list, optional): Rational subgrouping variables
         - **time_var** (str, optional): Time/sequence variable
@@ -228,8 +230,8 @@ class AnalysisSpecification(DataPrepConfig):
 
     Attributes
     ----------
-    analysis_type : str
-        Type of analysis being performed
+    analysis_type : str or None
+        Type of analysis being performed (None if chart-agnostic)
     analysis_output_cols : list
         Columns to include in analysis output
 
@@ -240,7 +242,7 @@ class AnalysisSpecification(DataPrepConfig):
     Raises
     ------
     ValueError
-        If analysis_type is not provided or not supported
+        If analysis_type is provided but not supported
         If Xbar/S analysis is requested without grouping variables
 
     Examples
@@ -264,21 +266,19 @@ class AnalysisSpecification(DataPrepConfig):
         Parameters
         ----------
         specification : dict
-            Configuration parameters including 'analysis_type'
+            Configuration parameters. 'analysis_type' is optional - when not
+            provided, the spec can be used for chart-agnostic operations like
+            data preparation and residual calculation. The analysis_type is
+            set at execute() time.
         """
         SUPPORTED_ANALYSIS_TYPES = ['Xbar', 'S', 'Imr', 'R']
         GROUPED_ANALYSES = ['Xbar', 'S']
 
-        # Extract and validate analysis_type from specification dict
+        # Extract analysis_type - may be None for chart-agnostic ADS
         self.analysis_type = specification.get('analysis_type')
 
-        if self.analysis_type is None:
-            raise ValueError(
-                "specification must include 'analysis_type'. "
-                f"Valid types: {SUPPORTED_ANALYSIS_TYPES}"
-            )
-
-        if self.analysis_type not in SUPPORTED_ANALYSIS_TYPES:
+        # Validate analysis_type if provided
+        if self.analysis_type is not None and self.analysis_type not in SUPPORTED_ANALYSIS_TYPES:
             raise ValueError(
                 f'Analysis type: {self.analysis_type} is not supported, '
                 f'specify one of: {SUPPORTED_ANALYSIS_TYPES}!'
@@ -287,7 +287,7 @@ class AnalysisSpecification(DataPrepConfig):
         # Initialize base class (DataPrepConfig)
         super().__init__(specification)
 
-        # Validate grouped analyses have grouping variables
+        # Validate grouped analyses have grouping variables (only if analysis_type set)
         if self.analysis_type in GROUPED_ANALYSES and self.rsg_vars is None:
             raise ValueError(
                 f'A grouping variable is required to produce a {self.analysis_type} analysis!'

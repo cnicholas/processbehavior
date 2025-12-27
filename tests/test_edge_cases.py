@@ -146,7 +146,7 @@ class TestDegenerateCases:
         assert study.sds >= 0
 
     def test_single_time_point(self):
-        """Only one time point with multiple factors - requires replication."""
+        """Only one time point with multiple factors - requires replication for Xbar."""
         df = pd.DataFrame({
             'Value': [1.0, 2.0, 3.0],
             'Factor': ['A', 'B', 'C'],
@@ -154,10 +154,14 @@ class TestDegenerateCases:
         })
         pb = ProcessBehavior(df)
 
-        # Single observation per factor/time cell raises ValueError
-        # (can't calculate within-group variance)
-        with pytest.raises(ValueError, match="All subgroups have 1 or fewer"):
-            pb.formulate(response='Value', factors=['Factor'], time='Time')
+        # formulate() succeeds (chart-agnostic)
+        study = pb.formulate(response='Value', factors=['Factor'], time='Time')
+        assert study is not None
+
+        # execute(chart='Xbar') fails because can't calculate within-group variance
+        # when all subgroups have n=1
+        with pytest.raises(ValueError, match="Subgroup size must be >= 2"):
+            study.execute(chart='Xbar')
 
     def test_constant_response(self):
         """All response values identical (zero variance)."""

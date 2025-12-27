@@ -9,7 +9,7 @@ from .analysis_specification import AnalysisSpecification
 from .data_preparation import DataPreparation
 from .effects_calculator import EffectsCalculator
 from .residual_calculator import ResidualCalculator
-from .sds_detector import SDSRegistry
+from .sds_detector import SDSRegistry, StructureStats
 
 # Configure module logger
 logger = logging.getLogger(__name__)
@@ -63,6 +63,10 @@ class AnalysisDataSet:
         self.effects = {}
         self.Rbar = 0
 
+        # Structure stats (computed once in _initialize)
+        self._structure_stats: StructureStats | None = None
+        self._n_per_cell: pd.Series | None = None
+
         # Composition - each component has one job (Single Responsibility Principle)
         self.prep = DataPreparation()
         self.sds_detector = SDSRegistry()
@@ -102,25 +106,13 @@ class AnalysisDataSet:
             f"{self.sds_characteristics['description']}"
         )
 
-        # Step 4: Validate compatibility (fail fast if incompatible)
-        self.sds_detector.validate_sds_for_analysis(
-            self.sampling_design_state, self.spec.analysis_type
-        )
+        # Step 4: Compute structure stats once (single source of truth)
+        # This enables R2 method selection and availability checks
+        self._compute_structure_stats()
 
-        # Step 5: Calculate VAS residuals only when appropriate
-        # Force VAS calculation if residual charting is requested
-        needs_residuals = self.sds_detector.should_calculate_vas_residuals(
-            self.sampling_design_state, self.spec.analysis_type
-        )
-
-        # VAS residuals also require both grouping AND time
+        # Step 5: Calculate VAS residuals when we have both grouping AND time
         # (need Ybar_k for factor effects and Ybar_t for time effects)
-        if needs_residuals and not (self.spec.has_grouping and self.spec.has_time):
-            logger.debug(
-                "Skipping VAS residuals: requires both grouping and time variables. "
-                f"has_grouping={self.spec.has_grouping}, has_time={self.spec.has_time}"
-            )
-            needs_residuals = False
+        needs_residuals = self.spec.has_grouping and self.spec.has_time
 
         # Also calculate residuals if a residual chart is requested
         residual_requested = getattr(self.spec, 'residual', None) is not None
@@ -130,8 +122,14 @@ class AnalysisDataSet:
 
         if needs_residuals:
             logger.debug("Calculating VAS residuals (R1-R5)")
-            self.analysis_dataset = self.residual_calc.calculate_residuals(
-                self.analysis_dataset, self.spec, self.sampling_design_state
+
+            # Get R2 method based on observed structure (not SDS)
+            r2_method = self.sds_detector.get_r2_method(self._structure_stats)
+            logger.debug(f"Using R2 method: {r2_method}")
+
+            self.analysis_dataset = self.residual_calc.calculate_vas_residuals(
+                self.analysis_dataset, self.spec, r2_method,
+                n_per_cell=self._n_per_cell
             )
 
             # Calculate centered residuals (legacy support)
@@ -147,8 +145,8 @@ class AnalysisDataSet:
             )
         else:
             logger.debug(
-                f"Skipping VAS residuals for analysis_type={self.spec.analysis_type}, "
-                f"SDS={self.sampling_design_state}"
+                f"Skipping VAS residuals: requires both grouping and time. "
+                f"has_grouping={self.spec.has_grouping}, has_time={self.spec.has_time}"
             )
 
     # =========================================================================
@@ -159,6 +157,55 @@ class AnalysisDataSet:
     def has_vas_residuals(self) -> bool:
         """Check if VAS residuals were calculated."""
         return 'R1' in self.analysis_dataset.columns
+
+    @property
+    def structure_stats(self) -> StructureStats | None:
+        """Get structure statistics (computed once during initialization)."""
+        return self._structure_stats
+
+    @property
+    def n_per_cell(self) -> pd.Series | None:
+        """Get observation counts per cell_key (computed once during initialization)."""
+        return self._n_per_cell
+
+    def _compute_structure_stats(self) -> None:
+        """
+        Compute and cache structure statistics once.
+
+        This is the single source of truth for:
+        - n_per_cell: observation counts per cell_key
+        - structure_stats: StructureStats with min/max cell sizes
+
+        These drive R2 method selection and availability checks.
+        """
+        df = self.analysis_dataset
+        y = self.spec.response_var
+
+        # Compute n_per_cell once
+        self._n_per_cell = df.groupby("cell_key", observed=True)[y].transform("size")
+
+        # Handle edge case: empty data or all NaN
+        if len(self._n_per_cell) == 0 or self._n_per_cell.isna().all():
+            n_cell_min = 0
+            n_cell_max = 0
+        else:
+            n_cell_min = int(self._n_per_cell.min())
+            n_cell_max = int(self._n_per_cell.max())
+
+        # Compute structure stats
+        self._structure_stats = StructureStats(
+            has_grouping=bool(self.spec.rsg_vars),
+            has_order="obs_id" in df.columns,
+            n_cell_min=n_cell_min,
+            n_cell_max=n_cell_max,
+            K_obs=df["rsg_key"].nunique() if "rsg_key" in df.columns else 0
+        )
+
+        logger.debug(
+            f"Structure stats: n_cell_min={self._structure_stats.n_cell_min}, "
+            f"n_cell_max={self._structure_stats.n_cell_max}, "
+            f"K_obs={self._structure_stats.K_obs}"
+        )
 
     @property
     def analysis_summary(self) -> dict:

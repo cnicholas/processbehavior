@@ -329,9 +329,11 @@ class Analysis:
             chart_data = strategies[self.spec.analysis_type]()
 
         # Wrap in AnalysisResult for unified access
+        # Pass analysis_type so result.summary reports the executed chart type, not the recommended one
         return AnalysisResult(
             charts=chart_data,
-            analysis_dataset_obj=self.ads
+            analysis_dataset_obj=self.ads,
+            analysis_type=self.analysis_type
         )
 
     # =========================================================================

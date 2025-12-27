@@ -364,12 +364,13 @@ def test_validate_sds_for_analysis_sds4_with_imr_passes(detector):
     assert result is True
 
 
-def test_validate_sds_for_analysis_sds2_with_xbar_warns(detector, caplog):
-    """Should warn for SDS 2 with Xbar (no replication)."""
+def test_validate_sds_for_analysis_sds2_with_xbar_no_warning(detector, caplog):
+    """SDS 2 with Xbar should be valid without warnings (uses factor subgroups)."""
     with caplog.at_level('WARNING'):
-        detector.validate_sds_for_analysis(sds=2, analysis_type='Xbar')
+        result = detector.validate_sds_for_analysis(sds=2, analysis_type='Xbar')
 
-    assert 'No replication' in caplog.text
+    assert result is True
+    assert 'No replication' not in caplog.text
 
 
 def test_validate_sds_for_analysis_sds4_with_xbar_warns(detector, caplog):

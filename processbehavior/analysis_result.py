@@ -130,7 +130,8 @@ class AnalysisResult:
     def __init__(
         self,
         charts: dict[str, dict[str, Any]],
-        analysis_dataset_obj: AnalysisDataSet
+        analysis_dataset_obj: AnalysisDataSet,
+        analysis_type: str | None = None
     ):
         """
         Initialize AnalysisResult from chart data and AnalysisDataSet.
@@ -141,6 +142,10 @@ class AnalysisResult:
             Chart data in nested dict format
         analysis_dataset_obj : AnalysisDataSet
             The underlying AnalysisDataSet with all calculations
+        analysis_type : str, optional
+            The executed chart type ('Xbar', 'S', 'Imr', 'R').
+            Passed from Analysis at execute() time so result.summary
+            reports the executed chart, not the recommended one.
         """
         # Store chart data (backward compatible)
         self.charts = charts
@@ -148,6 +153,9 @@ class AnalysisResult:
         # Store reference to full dataset
         self._ads = analysis_dataset_obj
         self.dataset = analysis_dataset_obj.analysis_dataset
+
+        # Store the executed analysis type (passed from Analysis)
+        self._analysis_type = analysis_type
 
         # Extract SDS information
         self.sds = analysis_dataset_obj.sampling_design_state
@@ -205,7 +213,7 @@ class AnalysisResult:
             'replication_type': self.sds_info.get('replication_type', 'unknown'),
 
             # Analysis configuration
-            'analysis_type': self._ads.spec.analysis_type,
+            'analysis_type': self._analysis_type,
             'response_var': self._ads.spec.response_var,
             'grouping_vars': self._ads.spec.rsg_vars,
             'time_var': self._ads.spec.time_var,

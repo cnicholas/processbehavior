@@ -735,11 +735,8 @@ class ProcessBehavior:
         from .analysis_dataset import AnalysisDataSet
         from .analysis_specification import AnalysisSpecification
 
-        full_spec_dict = {
-            **spec_dict,
-            'analysis_type': analysis_plan.recommended_chart
-        }
-        full_spec = AnalysisSpecification(full_spec_dict)
+        # ADS is chart-agnostic - analysis_type is set at execute() time
+        full_spec = AnalysisSpecification(spec_dict)
         ads = AnalysisDataSet(self.data, full_spec, sds=sds_result.sds)
 
         # Create and return Study object with pre-calculated AnalysisDataSet
