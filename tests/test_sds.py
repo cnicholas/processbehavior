@@ -177,8 +177,12 @@ class TestVASCalculationDecisions:
         assert 'R1' in ads.analysis_dataset.columns, "SDS1 + Xbar should have VAS residuals"
         assert 'R2' in ads.analysis_dataset.columns
 
-    def test_sds1_imr_skips_vas(self):
-        """SDS 1 + IMR should NOT calculate VAS residuals (stratified analysis)."""
+    def test_sds1_imr_has_vas(self):
+        """SDS 1 + IMR should have VAS residuals (ADS is chart-agnostic).
+
+        Note: VAS residuals are always computed when we have grouping AND time.
+        The analysis_type no longer gates VAS calculation - ADS is chart-agnostic.
+        """
         df = synthetic.make_sds(1, K1=2, K2=2, T=3, n_min=2, n_max=4, seed=42)
 
         spec = {
@@ -193,8 +197,9 @@ class TestVASCalculationDecisions:
         aspec = ad.AnalysisSpecification(spec)
         ads = ad.AnalysisDataSet(df, aspec, sds=sds)
 
-        assert 'R1' not in ads.analysis_dataset.columns, \
-            "SDS1 + IMR should NOT have VAS residuals"
+        # VAS is computed for any SDS with grouping and time
+        assert 'R1' in ads.analysis_dataset.columns, \
+            "SDS1 with grouping+time should have VAS residuals"
 
     def test_sds4_never_calculates_vas(self):
         """SDS 4 (single stream) should never calculate VAS."""
@@ -214,21 +219,26 @@ class TestVASCalculationDecisions:
         assert 'R1' not in ads.analysis_dataset.columns, \
             "SDS4 should NOT have VAS residuals"
 
-    def test_vas_decision_matrix_comprehensive(self):
-        """Test all SDS + analysis type combinations for VAS calculation."""
-        # Decision matrix: (SDS, analysis_type) → should_calculate_vas
+    def test_vas_decision_matrix_chart_agnostic(self):
+        """Test VAS calculation is now chart-agnostic.
+
+        VAS residuals are computed based on data structure (grouping + time),
+        NOT based on analysis_type. This test verifies the new behavior.
+        """
+        # New decision matrix: VAS is computed when we have grouping AND time
+        # analysis_type no longer matters for VAS calculation
         decision_matrix = {
-            # SDS 1: Xbar/S yes, IMR/R no
+            # SDS 1: Has grouping + time → always VAS
             (1, 'Xbar'): True,
             (1, 'S'): True,
-            (1, 'Imr'): False,
-            (1, 'R'): False,
+            (1, 'Imr'): True,  # Changed from False
+            (1, 'R'): True,    # Changed from False
 
-            # SDS 2: Same as SDS 1
+            # SDS 2: Has grouping + time → always VAS
             (2, 'Xbar'): True,
-            (2, 'Imr'): False,
+            (2, 'Imr'): True,  # Changed from False
 
-            # SDS 4: Never (single stream)
+            # SDS 4: No grouping → never VAS
             (4, 'Imr'): False,
         }
 
