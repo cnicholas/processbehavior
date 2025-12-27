@@ -145,8 +145,8 @@ class TestXbarSAnalysis:
         sds = detect_sds_for_test(df_differing_Ns, spec)
         result = Analysis(df_differing_Ns, spec, sds=sds).calculate()
 
-        # Center should be calculated
-        assert result['Xbar']['statistics']['center'] == 4.17
+        # Center should be grand mean of all observations
+        assert result['Xbar']['statistics']['center'] == 4.43
         # Limits should vary when group sizes differ
         assert result['Xbar']['statistics']['lpl'] == 'Varies'
         assert result['Xbar']['statistics']['upl'] == 'Varies'
