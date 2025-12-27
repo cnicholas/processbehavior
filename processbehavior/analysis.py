@@ -611,6 +611,10 @@ class Analysis:
         # Apply zero-centering if requested
         out = self._apply_zero_centering(out)
 
+        # Calculate grand mean BEFORE grouping (Ybar - weighted by observation count)
+        # This must be done before aggregation to get the true grand mean
+        _Ybar = out[spec.response_var].mean()
+
         out = out.groupby(spec.rsg_var_name, as_index=False, observed=True).agg(
             s=pd.NamedAgg(column=spec.response_var, aggfunc="std"),
             mean=pd.NamedAgg(column=spec.response_var, aggfunc="mean"),
@@ -624,7 +628,8 @@ class Analysis:
         # Rename columns for consistency: mean→xbar (values)
         out = out.rename(columns={'mean': 'xbar'})
 
-        _Xbar = out["xbar"].mean()
+        # Use grand mean as center line (not mean of subgroup means)
+        _Xbar = _Ybar
         _S = out["s"].mean()
         _N = out['n'].max()
         out['N'] = _N
@@ -778,6 +783,9 @@ class Analysis:
         result = {}
         out = self.ads.analysis_dataset.copy()
 
+        # Calculate grand mean BEFORE grouping (Ybar - weighted by observation count)
+        _Ybar = out[spec.response_var].mean()
+
         # Group by TIME instead of factor (rsg_var_name)
         out = out.groupby(spec.time_var, as_index=False, observed=True).agg(
             s=pd.NamedAgg(column=spec.response_var, aggfunc="std"),
@@ -791,7 +799,8 @@ class Analysis:
         # Rename for consistency: time_var→rsg (to match chart column naming)
         out = out.rename(columns={spec.time_var: 'rsg', 'mean': 'xbar'})
 
-        _Xbar = out["xbar"].mean()
+        # Use grand mean as center line (not mean of subgroup means)
+        _Xbar = _Ybar
         _S = out["s"].mean()
         _N = out['n'].max()
         out['N'] = _N
