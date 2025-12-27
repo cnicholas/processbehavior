@@ -82,15 +82,19 @@ def test_c4_raises_on_invalid_n():
 # Test: b3 (S chart lower limit constant)
 # ============================================================================
 
-def test_b3_zero_for_small_n():
-    """b3 should be 0 for small subgroup sizes (n < 6)."""
-    assert b3(2) == 0
-    assert b3(3) == 0
-    assert b3(4) == 0
-    assert b3(5) == 0
+def test_b3_negative_for_small_n():
+    """b3 should be negative for small subgroup sizes (n < 5).
+
+    This matches Wheeler's PDCxPT reference implementation which shows
+    raw 3-sigma limits without clamping to 0.
+    """
+    assert b3(2) < 0  # b3(2) ≈ -1.27
+    assert b3(3) < 0  # b3(3) ≈ -0.44
+    assert b3(4) < 0  # b3(4) ≈ -0.09
+    assert b3(5) < 0  # b3(5) ≈ -0.09
 
 
-def test_b3_nonzero_for_larger_n():
+def test_b3_positive_for_larger_n():
     """b3 should be > 0 for n >= 6."""
     assert b3(6) > 0
     assert b3(10) > 0
@@ -214,9 +218,10 @@ def test_calculate_limits_s():
     assert 'lpl' in result
     assert 'upl' in result
 
-    # LPL = 0.5 * b3(5) = 0.5 * 0 = 0
+    # LPL = 0.5 * b3(5) ≈ 0.5 * (-0.089) ≈ -0.044
     # UPL = 0.5 * b4(5) = 0.5 * 2.089 = 1.044
-    assert result['lpl'] == 0.0
+    assert result['lpl'] < 0  # b3(5) is negative, so LPL is negative
+    assert abs(result['lpl'] - (-0.044)) < 0.01
     assert abs(result['upl'] - 1.044) < 0.01
 
 
@@ -229,11 +234,26 @@ def test_calculate_limits_s_missing_params():
         calculate_limits(limits_type='S', N=5)
 
 
-def test_calculate_limits_s_lcl_always_nonnegative():
-    """S chart LPL should never be negative."""
-    for n in [2, 3, 4, 5, 10, 25]:
-        result = calculate_limits(limits_type='S', sd=1.0, N=n)
-        assert result['lpl'] >= 0
+def test_calculate_limits_s_lcl_can_be_negative():
+    """S chart LPL can be negative for small subgroup sizes.
+
+    This matches Wheeler's PDCxPT reference implementation which shows
+    raw 3-sigma limits. While standard deviations cannot be negative,
+    the statistical limit can be.
+
+    Note: Range (R) chart limits remain clamped to 0 because ranges
+    (absolute differences) cannot be negative by definition.
+    """
+    # Small n: LPL should be negative
+    result_n2 = calculate_limits(limits_type='S', sd=1.0, N=2)
+    assert result_n2['lpl'] < 0  # b3(2) ≈ -1.27, so LPL ≈ -1.27
+
+    result_n3 = calculate_limits(limits_type='S', sd=1.0, N=3)
+    assert result_n3['lpl'] < 0  # b3(3) ≈ -0.44
+
+    # Large n: LPL should be positive
+    result_n10 = calculate_limits(limits_type='S', sd=1.0, N=10)
+    assert result_n10['lpl'] > 0  # b3(10) ≈ 0.28
 
 
 # ============================================================================

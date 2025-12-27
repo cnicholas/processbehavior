@@ -547,7 +547,7 @@ class Plotter:
                     x=signals[x_col] if x_col in data.columns else signals.index,
                     y=signals[value_col],
                     mode='markers',
-                    name='Out of Control',
+                    name='Beyond Limits',
                     marker=dict(
                         size=theme.data_marker_size,  # Same size as data
                         color=theme.signal_color,
@@ -557,7 +557,7 @@ class Plotter:
                             color=theme.signal_marker_line_color
                         )
                     ),
-                    hovertemplate='Out of Control<br>%{x}<br>%{y:.3f}<extra></extra>',
+                    hovertemplate='Beyond Limits<br>%{x}<br>%{y:.3f}<extra></extra>',
                     showlegend=False  # Color is enough, no legend clutter
                 ))
 
