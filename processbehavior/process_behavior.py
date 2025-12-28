@@ -704,7 +704,6 @@ class ProcessBehavior:
             'round_to': precision,          # precision → round_to
             'rsg_var_name': 'rsg',          # Auto-generated (hidden from user)
             'rsg_var_delim': '_',           # Auto-generated (hidden from user)
-            'zero_center': False,           # Default
             'unit_of_analysis': unit_of_analysis
         }
 

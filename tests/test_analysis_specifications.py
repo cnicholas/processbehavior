@@ -85,24 +85,6 @@ def test_data_prep_config_sort_cols():
     assert not config.requires_sort
 
 
-def test_data_prep_config_zero_center():
-    """Test zero_center validation."""
-    # Default (False)
-    spec = {'response_var': 'y'}
-    config = DataPrepConfig(spec)
-    assert not config.zero_center
-
-    # Explicit True
-    spec = {'response_var': 'y', 'zero-center': True}
-    config = DataPrepConfig(spec)
-    assert config.zero_center
-
-    # Invalid (not boolean)
-    spec = {'response_var': 'y', 'zero-center': 'invalid'}
-    with pytest.raises(ValueError, match='zero_center needs to be True or False'):
-        DataPrepConfig(spec)
-
-
 def test_data_prep_config_rsg_delim():
     """Test rsg_var_delim configuration."""
     # Default delimiter
@@ -302,51 +284,3 @@ def test_analysis_specification_rsg_delim():
 
     logger.info('\nTesting rsg_var_delim is set properly to: "|" specified in spec:...')
     assert aspec.rsg_var_delim == "|"
-
-
-def test_analysis_specification_zero_center():
-    zero_center_spec_false = {
-        'analysis_type': 'Imr',
-        'rsg_vars': ['a', 'b'],
-        'time_var': 'd',
-        'response_var': 'c',
-        'rsg_var_name': 'rsg',
-        'time_unit': 'Month'
-    }
-
-    logger.info('\nTesting: Value of zero_center is False when not set in spec....')
-    aspec = ad.AnalysisSpecification(zero_center_spec_false)
-    assert not aspec.zero_center
-
-    zero_center_spec_true = {
-        'analysis_type': 'Imr',
-        'rsg_vars': ['a', 'b'],
-        'time_var': 'd',
-        'response_var': 'c',
-        'rsg_var_name': 'rsg',
-        'time_unit': 'Month',
-        'zero_center': True
-    }
-
-    logger.info('\nTesting: Value of zero_center is True when set in spec....')
-    aspec = ad.AnalysisSpecification(zero_center_spec_true)
-    assert aspec.zero_center
-
-    zero_center_spec_invalid = {
-        'analysis_type': 'Imr',
-        'rsg_vars': ['a', 'b'],
-        'time_var': 'd',
-        'response_var': 'c',
-        'rsg_var_name': 'rsg',
-        'time_unit': 'Month',
-        'zero_center': 1234
-    }
-
-    logger.info(
-        '\nTesting: ValueError raised when zero_center is set to '
-        'non-boolean value in spec....'
-    )
-    with pytest.raises(ValueError):
-        ad.AnalysisSpecification(zero_center_spec_invalid)
-        
-       

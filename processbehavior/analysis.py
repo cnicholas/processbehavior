@@ -340,33 +340,6 @@ class Analysis:
     # Helper Methods (DRY principle)
     # =========================================================================
 
-    def _apply_zero_centering(self, df: pd.DataFrame) -> pd.DataFrame:
-        """
-        Zero-center response variable if specified.
-
-        Pure function approach: doesn't modify input, returns new DataFrame.
-
-        Parameters
-        ----------
-        df : pd.DataFrame
-            Input data with response variable
-
-        Returns
-        -------
-        pd.DataFrame
-            Data with zero-centered response variable (if spec.zero_center is True)
-        """
-        if not self.spec.zero_center:
-            return df
-
-        logger.debug('Zero-centering data')
-        result = df.copy()
-        zero_mean = result[self.spec.response_var].mean()
-        logger.debug('Zero-mean: %s', zero_mean)
-        result[self.spec.response_var] = result[self.spec.response_var] - zero_mean
-
-        return result
-
     def _add_beyond_limits_flag(
         self,
         df: pd.DataFrame,
@@ -607,9 +580,6 @@ class Analysis:
         logger.debug('Dataframe has columns: %s', out.columns.to_list())
         logger.debug('Dataframe head:\n%s', out.head(10))
         logger.debug('n.max=%s', out["n"].max())
-
-        # Apply zero-centering if requested
-        out = self._apply_zero_centering(out)
 
         # Calculate grand mean BEFORE grouping (Ybar - weighted by observation count)
         # This must be done before aggregation to get the true grand mean
@@ -962,9 +932,6 @@ class Analysis:
         spec = self.spec
         out = self.ads.analysis_dataset.copy()
         result = {}
-
-        # Apply zero-centering if requested
-        out = self._apply_zero_centering(out)
 
         logger.debug('In calculate statistics IMR')
         logger.debug('Dataframe has columns: %s', out.columns.to_list())
@@ -1411,9 +1378,6 @@ class Analysis:
         """
         spec = self.spec
         out = self.ads.analysis_dataset.copy()
-
-        # Apply zero-centering if requested
-        out = self._apply_zero_centering(out)
 
         logger.debug('In calculate statistics R')
         logger.debug('Dataframe has columns: %s', out.columns.to_list())

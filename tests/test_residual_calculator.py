@@ -562,3 +562,42 @@ def test_r2_sds2_tom_bishop_example():
     # Verify that R2 values are generally smaller than original variation
     # (trend has been removed by the moving average)
     assert result[1:].abs().max() < df['weight'].std()
+
+
+# ============================================================================
+# Test: R1/RCR1 VAS Invariants (replaces zero_center functionality)
+# ============================================================================
+
+def test_r1_rcr1_invariants():
+    """
+    R1 and RCR1 replace zero_center functionality.
+
+    VAS semantics guarantee:
+    - R1 = Y - Ȳ (zero-centered, mean ≈ 0)
+    - RCR1 = R1 + Ȳ = Y (original scale)
+    - RCR1 - R1 = Ȳ (constant difference)
+    """
+    from processbehavior import ProcessBehavior
+    from processbehavior.datasets.synthetic import make_sds
+    import numpy as np
+
+    df = make_sds(1, seed=42)
+    pb = ProcessBehavior(df)
+    study = pb.formulate(response='y', time='time', factors=['factor 1', 'factor 2'])
+    result = study.execute()
+
+    ds = result.dataset
+    y_mean = np.mean(ds['y'].values)
+
+    # R1 = Y - Ȳ, so mean(R1) ≈ 0 (tight tolerance for mean)
+    assert np.isclose(np.mean(ds['R1'].values), 0.0, atol=1e-10)
+
+    # RCR1 = R1 + Ȳ = Y, so mean(RCR1) ≈ mean(Y) (tight tolerance)
+    assert np.isclose(np.mean(ds['RCR1'].values), y_mean, atol=1e-10)
+
+    # RCR1 - R1 = Ȳ (constant for all rows, looser tolerance for row-wise)
+    diff = ds['RCR1'].values - ds['R1'].values
+    assert np.allclose(diff, y_mean, atol=1e-8)
+
+    # RCR1 should equal Y (looser tolerance if computed via R1 + y_mean)
+    assert np.allclose(ds['RCR1'].values, ds['y'].values, atol=1e-8)
