@@ -58,8 +58,6 @@ class DataPrepConfig:
         - **rsg_var_delim** (str, optional): Delimiter for multi-variable grouping.
           Default is '_'.
         - **round_to** (int, optional): Decimal places for rounding. Defaults to 3.
-        - **zero-center** (bool, optional): Whether to center data at zero.
-          Defaults to False.
         - **unit_of_analysis** (str, optional): The fundamental entity being
           measured (e.g., 'filled cup', 'loan contract'). Informational only.
 
@@ -77,8 +75,6 @@ class DataPrepConfig:
         Response variable name
     round_to : int
         Decimal places for rounding
-    zero_center : bool
-        Whether to center data at zero
     unit_of_analysis : str or None
         The fundamental entity being measured
     has_grouping : bool
@@ -92,7 +88,6 @@ class DataPrepConfig:
     ------
     ValueError
         If response_var is not provided
-        If zero-center is not boolean
 
     Examples
     --------
@@ -128,8 +123,6 @@ class DataPrepConfig:
         self.time_var = self.spec.get('time_var')
         self.response_var = self.spec.get('response_var')
         self.round_to = self.spec.get('round_to', 3)
-        # Support both 'zero_center' (preferred) and 'zero-center' (legacy) for migration
-        self.zero_center = self.spec.get('zero_center', self.spec.get('zero-center', False))
         self.unit_of_analysis = self.spec.get('unit_of_analysis')
 
         # Initialize lists
@@ -142,10 +135,6 @@ class DataPrepConfig:
         # Validate response variable (always required)
         if self.response_var is None:
             raise ValueError('A response variable is required!')
-
-        # Validate zero_center parameter
-        if self.zero_center not in [True, False]:
-            raise ValueError('Supplied value for zero_center needs to be True or False')
 
         # Set derived properties
         self.has_time = self.time_var is not None
@@ -225,7 +214,6 @@ class AnalysisSpecification(DataPrepConfig):
         - **response_var** (str, required): Response variable
         - **rsg_vars** (list, optional): Rational subgrouping variables
         - **time_var** (str, optional): Time/sequence variable
-        - **zero_center** (bool, optional): Center data at zero (default: False)
         - **round_to** (int, optional): Decimal places (default: 3)
 
     Attributes
@@ -237,7 +225,7 @@ class AnalysisSpecification(DataPrepConfig):
 
     Inherits all attributes from DataPrepConfig:
         rsg_vars, rsg_var_name, rsg_var_delim, time_var, response_var,
-        round_to, zero_center, has_grouping, has_time, requires_sort
+        round_to, has_grouping, has_time, requires_sort
 
     Raises
     ------

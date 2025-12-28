@@ -155,22 +155,6 @@ class TestXbarSAnalysis:
         assert result['S']['statistics']['lpl'] == 'Varies'
         assert result['S']['statistics']['upl'] == 'Varies'
 
-    def test_xbar_zero_center(self, df):
-        """Test Xbar analysis with zero-centered option."""
-        spec = {
-            'analysis_type': 'Xbar',
-            'rsg_vars': ['a', 'b'],
-            'time_var': 'd',
-            'response_var': 'c',
-            'rsg_var_name': 'rsg',
-            'zero-center': True
-        }
-
-        sds = detect_sds_for_test(df, spec)
-        result = Analysis(df, spec, sds=sds).calculate()
-
-        assert result['Xbar']['statistics']['center'] == 0
-
 
 # ========================
 # IMR Chart Tests

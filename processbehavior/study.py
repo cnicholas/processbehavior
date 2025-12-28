@@ -1359,7 +1359,6 @@ class Study:
                 'rsg_var_name': self._spec.rsg_var_name,
                 'rsg_var_delim': self._spec.rsg_var_delim,
                 'round_to': self._spec.round_to,
-                'zero_center': self._spec.zero_center,
                 # Residual-specific parameters
                 'residual': residual,  # e.g., 'R4'
                 'residual_chart_type': base_chart,  # e.g., 'Imr'
@@ -1386,8 +1385,7 @@ class Study:
                 'rsg_vars': self._spec.rsg_vars,
                 'rsg_var_name': self._spec.rsg_var_name,
                 'rsg_var_delim': self._spec.rsg_var_delim,
-                'round_to': self._spec.round_to,
-                'zero_center': self._spec.zero_center
+                'round_to': self._spec.round_to
             }
 
         # Create and run analysis using pre-calculated AnalysisDataSet
