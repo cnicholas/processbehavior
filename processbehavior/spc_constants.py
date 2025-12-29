@@ -383,3 +383,44 @@ def detect_beyond_limits(x: float, lpl: float, upl: float) -> int:
         return 1
     else:
         return 0
+
+
+# ============================================================================
+# Chart Name Constants
+# ============================================================================
+
+# Valid base chart types for syntactic validation
+VALID_BASE_CHARTS = {"Xbar", "S", "Imr", "R"}
+
+# Human-readable residual aliases
+# Maps alias -> {id, label, description}
+RESIDUAL_ALIASES = {
+    "mean_removed": {
+        "id": "R1",
+        "label": "Mean Removed",
+        "description": "Residual after removing grand mean"
+    },
+    "within_cell": {
+        "id": "R2",
+        "label": "Within Cell",
+        "description": "Within-cell variation (per VAS definition)"
+    },
+    "structure_removed": {
+        "id": "R3",
+        "label": "Structure Removed",
+        "description": "Residual after removing factor structure"
+    },
+    "time_structure_removed": {
+        "id": "R4",
+        "label": "Time Structure Removed",
+        "description": "Residual after removing time structure"
+    },
+    "noise": {
+        "id": "R5",
+        "label": "Noise",
+        "description": "Unexplained variation"
+    },
+}
+
+# Reverse lookup: "R5" -> "noise"
+RESIDUAL_ID_TO_ALIAS = {v["id"]: k for k, v in RESIDUAL_ALIASES.items()}
