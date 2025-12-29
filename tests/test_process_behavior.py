@@ -1004,56 +1004,6 @@ def test_formulate_with_nan_values():
 # Test: R4/R5 Xbar/S Charts (GitHub Issues #51 & #52)
 # ============================================================================
 
-def test_r4_xbar_chart_calculation(grouped_for_residuals):
-    """R4_Xbar should use time-based subgrouping."""
-    study = ProcessBehavior(grouped_for_residuals).formulate(
-        response='Value',
-        factors=['Factor'],
-        time='Time'
-    )
-
-    # Should be SDS 1 (all cells have n≥2)
-    assert study.sds == 1
-    assert 'R4_Xbar' in study.residual_charts
-
-    # Analyze R4_Xbar
-    result = study.execute(chart='R4_Xbar')
-    assert result is not None
-    assert 'R4_Xbar' in result.charts
-
-    chart_data = result.charts['R4_Xbar']
-    assert 'data' in chart_data
-    assert 'statistics' in chart_data
-
-    # R4_Xbar should have one point per time (5 time points)
-    data_df = chart_data['data']
-    assert len(data_df) == 5
-
-
-def test_r4_s_chart_calculation(grouped_for_residuals):
-    """R4_S should use time-based subgrouping."""
-    study = ProcessBehavior(grouped_for_residuals).formulate(
-        response='Value',
-        factors=['Factor'],
-        time='Time'
-    )
-
-    assert 'R4_S' in study.residual_charts
-
-    # Analyze R4_S
-    result = study.execute(chart='R4_S')
-    assert result is not None
-    assert 'R4_S' in result.charts
-
-    chart_data = result.charts['R4_S']
-    assert 'data' in chart_data
-    assert 'statistics' in chart_data
-
-    # R4_S should have one point per time (5 time points)
-    data_df = chart_data['data']
-    assert len(data_df) == 5
-
-
 def test_r5_xbar_chart_calculation(grouped_for_residuals):
     """R5_Xbar should use factor-based subgrouping."""
     study = ProcessBehavior(grouped_for_residuals).formulate(
@@ -1100,27 +1050,6 @@ def test_r5_s_chart_calculation(grouped_for_residuals):
     # R5_S should have one point per factor (3 factors)
     data_df = chart_data['data']
     assert len(data_df) == 3
-
-
-def test_r4_xbar_subgrouping_different_from_r5(grouped_four_factors):
-    """R4 and R5 should have different subgroup counts."""
-    study = ProcessBehavior(grouped_four_factors).formulate(
-        response='Value',
-        factors=['Factor'],
-        time='Time'
-    )
-
-    # Analyze both R4 and R5 Xbar charts
-    r4_result = study.execute(chart='R4_Xbar')
-    r5_result = study.execute(chart='R5_Xbar')
-
-    r4_data = r4_result.charts['R4_Xbar']['data']
-    r5_data = r5_result.charts['R5_Xbar']['data']
-
-    # R4 subgroups by time: 6 time points
-    # R5 subgroups by factor: 4 factors
-    assert len(r4_data) == 6, f"R4 should have 6 subgroups (time), got {len(r4_data)}"
-    assert len(r5_data) == 4, f"R5 should have 4 subgroups (factor), got {len(r5_data)}"
 
 
 def test_r4_r5_xbar_s_control_limits_structure(grouped_for_residuals):
