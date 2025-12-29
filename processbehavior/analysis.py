@@ -299,15 +299,111 @@ class Analysis:
         # Check if this is a residual chart request
         residual = getattr(self.spec, 'residual', None)
         if residual:
-            # Residual chart analysis
+            # Residual chart analysis - inline logic (was _calculate_residual_chart)
             chart_type = getattr(self.spec, 'residual_chart_type', 'Imr')
             recentered = getattr(self.spec, 'recentered', False)
 
-            chart_data = self._calculate_residual_chart(
-                residual=residual,
-                chart_type=chart_type,
-                recentered=recentered
-            )
+            # Determine column name
+            col_prefix = 'RCR' if recentered else 'R'
+            residual_num = residual[1:]  # Extract number from 'R2', 'R3', 'R10', etc.
+            col_name = f'{col_prefix}{residual_num}'
+
+            # Validate column exists
+            if col_name not in self.ads.analysis_dataset.columns:
+                available = [c for c in self.ads.analysis_dataset.columns
+                            if c.startswith('R') or c == self.spec.response_var]
+                raise ValueError(
+                    f"Residual column '{col_name}' not found.\n"
+                    f"Available columns: {available}\n"
+                    f"This may indicate the SDS doesn't support this residual type."
+                )
+
+            # Validate chart type
+            valid_chart_types = {'Xbar', 'S', 'Imr'}
+            if chart_type not in valid_chart_types:
+                raise ValueError(
+                    f"Chart type '{chart_type}' not supported for residual charts.\n"
+                    f"Valid types: {', '.join(sorted(valid_chart_types))}"
+                )
+
+            # Question answered by each residual
+            questions = {
+                'R2': 'Is within-subgroup variation stable?',
+                'R3': 'Is there interaction between factors and time?',
+                'R4': 'Does time have a significant effect?',
+                'R5': 'Do factors have a significant effect?'
+            }
+
+            # Calculate using base method with value_col
+            if chart_type == 'S':
+                s_result = self._calculate_s(value_col=col_name)
+                chart_name = f'{residual}_S'
+
+                # Check if limits vary
+                lpl_varies = s_result['lpl'].nunique() > 1 if 'lpl' in s_result.columns else False
+                upl_varies = s_result['upl'].nunique() > 1 if 'upl' in s_result.columns else False
+
+                if lpl_varies or upl_varies:
+                    statistics = {
+                        'center': s_result['center'].iloc[0] if 'center' in s_result.columns else None,
+                        'lpl': 'Varies',
+                        'upl': 'Varies',
+                    }
+                else:
+                    statistics = {
+                        'center': s_result['center'].iloc[0] if 'center' in s_result.columns else None,
+                        'lpl': s_result['lpl'].iloc[0] if 'lpl' in s_result.columns else None,
+                        'upl': s_result['upl'].iloc[0] if 'upl' in s_result.columns else None,
+                    }
+
+                chart_data = {
+                    chart_name: {
+                        'data': s_result,
+                        'statistics': statistics,
+                        'metadata': {
+                            'chart_type': 'S',
+                            'value_col': 's',
+                            'center_col': 'center',
+                            'residual_type': residual,
+                            'recentered': recentered,
+                            'question_answered': questions.get(residual, '')
+                        }
+                    }
+                }
+
+            elif chart_type == 'Xbar':
+                xbar_result = self._calculate_xbar(value_col=col_name)
+                chart_name = f'{residual}_Xbar'
+                xbar_data = xbar_result['Xbar']
+
+                chart_data = {
+                    chart_name: {
+                        'data': xbar_data['data'],
+                        'statistics': xbar_data['statistics'],
+                        'metadata': {
+                            **xbar_data.get('metadata', {}),
+                            'residual_type': residual,
+                            'recentered': recentered,
+                            'question_answered': questions.get(residual, '')
+                        }
+                    }
+                }
+
+            else:  # Imr
+                chart_data = self._calculate_imr(value_col=col_name)
+
+                # Add residual metadata and rename keys
+                renamed_result = {}
+                for chart_key, data in chart_data.items():
+                    if 'metadata' not in data:
+                        data['metadata'] = {}
+                    data['metadata']['residual_type'] = residual
+                    data['metadata']['recentered'] = recentered
+                    data['metadata']['question_answered'] = questions.get(residual, '')
+                    renamed_result[f'{residual}_{chart_key}'] = data
+
+                chart_data = renamed_result
+
         else:
             # Standard chart analysis
             # Note: Imr and R are bundled together (both call _calculate_imr)
@@ -759,193 +855,6 @@ class Analysis:
 
         return out
 
-    def _calculate_xbar_by_time(self, value_col: str = None) -> dict:
-        """
-        Calculate Xbar/S charts with TIME as the rational subgroup.
-
-        Used for R4 residuals per Wheeler/Bishop Section 20.6.3.
-        Subgroups are time points, aggregating across all factor levels.
-        Sample size per subgroup: N_.t = Σ_k N_kt
-
-        Parameters
-        ----------
-        value_col : str, optional
-            Column to use for calculations. Defaults to spec.response_var.
-
-        Returns dict with 'Xbar' and 'S' chart data.
-        """
-        spec = self.spec
-        if value_col is None:
-            value_col = spec.response_var
-
-        result = {}
-        out = self.ads.analysis_dataset.copy()
-
-        # Calculate grand mean BEFORE grouping (Ybar - weighted by observation count)
-        _Ybar = out[value_col].mean()
-
-        # Group by TIME instead of factor (rsg_var_name)
-        out = out.groupby(spec.time_var, as_index=False, observed=True).agg(
-            s=pd.NamedAgg(column=value_col, aggfunc="std"),
-            mean=pd.NamedAgg(column=value_col, aggfunc="mean"),
-            # Count on response_var (not value_col) to avoid NaN issues with residuals
-            n=pd.NamedAgg(column=spec.response_var, aggfunc="count")
-        )
-
-        if out.shape[0] == 0:
-            raise ValueError("No time subgroups with observations!")
-
-        # Rename for consistency: time_var→rsg (to match chart column naming)
-        out = out.rename(columns={spec.time_var: 'rsg', 'mean': 'xbar'})
-
-        # Use grand mean as center line (not mean of subgroup means)
-        _Xbar = _Ybar
-        _S = out["s"].mean()
-        _N = out['n'].max()
-        out['N'] = _N
-
-        # Determine if subgroup sizes are constant or variable
-        n_to_use, n_max = self._determine_n_to_use(out)
-
-        # CALCULATE XBAR
-        statistics = {}
-        xbar = out.copy()
-        xbar['center'] = _Xbar
-        xbar[['lpl', 'upl']] = xbar.apply(
-            lambda row: calculate_limits(
-                mean=row['center'],
-                sd=_S,
-                N=row[n_to_use],
-                limits_type='Xbar',
-                round_to=spec.round_to
-            ), axis=1
-        )
-
-        xbar = self._add_beyond_limits_flag(xbar, value_col='xbar')
-        xbar = xbar.round(spec.round_to)
-
-        statistics['center'] = round(_Xbar, spec.round_to)
-        if n_to_use == "N":
-            statistics['N'] = _N
-            statistics['upl'] = xbar['upl'].max()
-            statistics['lpl'] = xbar['lpl'].max()
-        else:
-            statistics['N'] = 'Varies'
-            statistics['lpl'] = 'Varies'
-            statistics['upl'] = 'Varies'
-
-        cols_to_keep = ['rsg', 'xbar', 'center', 'lpl', 'upl', 'beyond_limits']
-        xbar = xbar[cols_to_keep]
-        result['Xbar'] = {
-            'data': xbar,
-            'statistics': statistics,
-            'metadata': {
-                'chart_type': 'Xbar',
-                'value_col': 'xbar',
-                'center_col': 'center',
-                'subgroup_type': 'time'
-            }
-        }
-
-        # CALCULATE S
-        statistics = {}
-        statistics['center'] = round(_S, spec.round_to)
-
-        sbar = out.copy()
-        sbar['center'] = _S
-        sbar[['lpl', 'upl']] = sbar.apply(
-            lambda row: calculate_limits(
-                mean=0,
-                sd=row['center'],
-                N=row[n_to_use],
-                limits_type="S",
-                round_to=spec.round_to
-            ), axis=1
-        )
-
-        sbar = self._add_beyond_limits_flag(sbar, value_col='s')
-        sbar = sbar.round(spec.round_to)
-
-        if n_to_use == "N":
-            statistics['N'] = _N
-            statistics['upl'] = sbar['upl'].max()
-            statistics['lpl'] = sbar['lpl'].max()
-        else:
-            statistics['N'] = 'Varies'
-            statistics['lpl'] = 'Varies'
-            statistics['upl'] = 'Varies'
-
-        cols_to_keep = ['rsg', 's', 'center', 'lpl', 'upl', 'beyond_limits']
-        sbar = sbar[cols_to_keep]
-        result['S'] = {
-            'data': sbar,
-            'statistics': statistics,
-            'metadata': {
-                'chart_type': 'S',
-                'value_col': 's',
-                'center_col': 'center',
-                'subgroup_type': 'time'
-            }
-        }
-
-        return result
-
-    def _calculate_s_by_time(self, value_col: str = None) -> pd.DataFrame:
-        """
-        Calculate S chart with TIME as the rational subgroup.
-
-        Used for R4 residuals per Wheeler/Bishop Section 20.6.3.
-        Subgroups are time points, aggregating across all factor levels.
-
-        Parameters
-        ----------
-        value_col : str, optional
-            Column to use for calculations. Defaults to spec.response_var.
-        """
-        spec = self.spec
-        if value_col is None:
-            value_col = spec.response_var
-
-        out = self.ads.analysis_dataset.copy()
-
-        # Group by TIME instead of factor
-        out = out.groupby(spec.time_var, as_index=False, observed=True).agg(
-            s=pd.NamedAgg(column=value_col, aggfunc="std"),
-            # Count on response_var (not value_col) to avoid NaN issues with residuals
-            n=pd.NamedAgg(column=spec.response_var, aggfunc="count"),
-        )
-
-        # Rename time_var to rsg for consistency
-        out = out.rename(columns={spec.time_var: 'rsg'})
-
-        # Remove subgroups with single observation (can't calculate std)
-        mask = out['n'].eq(1)
-        out = out[~mask]
-
-        out['center'] = out["s"].mean()
-        out['groups'] = out["n"].count()
-        out['N'] = out['n'].max()
-
-        n_to_use, n_max = self._determine_n_to_use(out)
-
-        out[['lpl', 'upl']] = out.apply(
-            lambda row: calculate_limits(
-                mean=0,
-                sd=row['center'],
-                N=row[n_to_use],
-                limits_type="S",
-                round_to=spec.round_to
-            ), axis=1
-        )
-
-        out = self._add_beyond_limits_flag(out, value_col='s')
-
-        cols_to_keep = ['rsg', 's', 'center', 'lpl', 'upl', 'beyond_limits']
-        out = out[cols_to_keep]
-        out = out.round(spec.round_to)
-
-        return out
-
     def _calculate_imr(self, value_col: str = None) -> dict:
         """
         Calculate IMR (Individual Moving Range) and R (Range) chart statistics.
@@ -1238,190 +1147,28 @@ class Analysis:
 
         return result
 
-    def _calculate_residual_chart(
-        self,
-        residual: str,
-        chart_type: str,
-        recentered: bool = False
-    ) -> dict:
+    def _calculate_r(self, value_col: str = None) -> pd.DataFrame:
         """
-        Calculate control chart from residual column.
-
-        This method creates control charts from VAS residuals (R2-R5) to answer
-        specific questions about variance sources:
-
-        - R2_S or R2_Imr: Is unexplained within-cell variation stable?
-        - R3_Imr: Is there significant interaction between factors and time?
-        - R4_Xbar/R4_S/R4_Imr: Does time have a significant effect?
-        - R5_Xbar/R5_S/R5_Imr: Does the factor have a significant effect?
-
-        R4 and R5 use different rational subgrouping per Wheeler/Bishop:
-        - R4: Subgroups by TIME (aggregate across factors), N_.t = Σ_k N_kt
-        - R5: Subgroups by FACTOR (aggregate across time), N_k. = Σ_t N_kt
+        Calculate R (Range) chart statistics.
 
         Parameters
         ----------
-        residual : str
-            Residual type ('R2', 'R3', 'R4', 'R5')
-        chart_type : str
-            Base chart type ('S', 'Xbar', or 'Imr')
-        recentered : bool, default False
-            If True, use re-centered residuals (RCR2, RCR3, etc.)
-            Re-centered residuals add back the appropriate mean for interpretation.
-
-        Returns
-        -------
-        dict
-            Chart data in standard format:
-            {'ChartName': {'data': DataFrame, 'statistics': dict, 'metadata': dict}}
-
-        Raises
-        ------
-        ValueError
-            If residual column not found in dataset
-            If chart_type is not supported for the residual
-
-        Notes
-        -----
-        Re-centered residuals (Tom Bishop Equation 80):
-            RCR = R + Ȳ (appropriate mean for each residual type)
-
-        The question each residual answers:
-            R2: Within-subgroup variation (measurement noise)
-            R3: Interaction effects (factor × time)
-            R4: Time effects (trends, shifts over time)
-            R5: Factor effects (differences between levels)
-        """
-        # Determine column name
-        col_prefix = 'RCR' if recentered else 'R'
-        residual_num = residual[1:]  # Extract number from 'R2', 'R3', 'R10', etc.
-        col_name = f'{col_prefix}{residual_num}'
-
-        # Check column exists
-        if col_name not in self.ads.analysis_dataset.columns:
-            available = [c for c in self.ads.analysis_dataset.columns
-                        if c.startswith('R') or c == self.spec.response_var]
-            raise ValueError(
-                f"Residual column '{col_name}' not found.\n"
-                f"Available columns: {available}\n"
-                f"This may indicate the SDS doesn't support this residual type."
-            )
-
-        # Question answered by each residual
-        questions = {
-            'R2': 'Is within-subgroup variation stable?',
-            'R3': 'Is there interaction between factors and time?',
-            'R4': 'Does time have a significant effect?',
-            'R5': 'Do factors have a significant effect?'
-        }
-
-        # Pass value_col to calculation methods instead of swapping spec.response_var
-        if chart_type == 'S':
-            # S chart - R4 uses time-based subgrouping, others use factor-based
-            s_result = self._calculate_s_by_time(value_col=col_name) if residual == 'R4' else self._calculate_s(value_col=col_name)
-
-            # Wrap in dict format if needed
-            if isinstance(s_result, pd.DataFrame):
-                chart_name = f'{residual}_S'
-
-                # Check if limits vary (different values across rows)
-                lpl_varies = s_result['lpl'].nunique() > 1 if 'lpl' in s_result.columns else False
-                upl_varies = s_result['upl'].nunique() > 1 if 'upl' in s_result.columns else False
-                limits_vary = lpl_varies or upl_varies
-
-                if limits_vary:
-                    statistics = {
-                        'center': s_result['center'].iloc[0] if 'center' in s_result.columns else None,
-                        'lpl': 'Varies',
-                        'upl': 'Varies',
-                    }
-                else:
-                    statistics = {
-                        'center': s_result['center'].iloc[0] if 'center' in s_result.columns else None,
-                        'lpl': s_result['lpl'].iloc[0] if 'lpl' in s_result.columns else None,
-                        'upl': s_result['upl'].iloc[0] if 'upl' in s_result.columns else None,
-                    }
-
-                result = {
-                    chart_name: {
-                        'data': s_result,
-                        'statistics': statistics,
-                        'metadata': {
-                            'chart_type': 'S',
-                            'value_col': 's',
-                            'center_col': 'center',
-                            'residual_type': residual,
-                            'recentered': recentered,
-                            'question_answered': questions.get(residual, '')
-                        }
-                    }
-                }
-
-        elif chart_type == 'Xbar':
-            # Xbar chart for R3/R4/R5 with different subgrouping
-            # R4: subgroups by TIME (aggregate across factors)
-            # R3/R5: subgroups by FACTOR (aggregate across time) - uses standard _calculate_xbar
-            xbar_result = self._calculate_xbar_by_time(value_col=col_name) if residual == 'R4' else self._calculate_xbar(value_col=col_name)
-
-            # Extract just the Xbar portion (not S)
-            chart_name = f'{residual}_Xbar'
-            xbar_data = xbar_result['Xbar']
-
-            result = {
-                chart_name: {
-                    'data': xbar_data['data'],
-                    'statistics': xbar_data['statistics'],
-                    'metadata': {
-                        **xbar_data.get('metadata', {}),
-                        'residual_type': residual,
-                        'recentered': recentered,
-                        'question_answered': questions.get(residual, '')
-                    }
-                }
-            }
-
-        elif chart_type == 'Imr':
-            # IMR chart for R3, R4, R5 (and R2 when no replication)
-            result = self._calculate_imr(value_col=col_name)
-
-            # Add residual metadata to each chart
-            for chart_key in result:
-                if 'metadata' not in result[chart_key]:
-                    result[chart_key]['metadata'] = {}
-                result[chart_key]['metadata']['residual_type'] = residual
-                result[chart_key]['metadata']['recentered'] = recentered
-                result[chart_key]['metadata']['question_answered'] = questions.get(residual, '')
-
-            # Rename chart keys to include residual prefix
-            renamed_result = {}
-            for chart_key, chart_data in result.items():
-                new_key = f'{residual}_{chart_key}'
-                renamed_result[new_key] = chart_data
-
-            result = renamed_result
-
-        else:
-            raise ValueError(
-                f"Chart type '{chart_type}' not supported for residual charts.\n"
-                f"Valid types: 'S', 'Xbar' (for R4/R5), 'Imr' (for R2-R5)"
-            )
-
-        return result
-
-    def _calculate_r(self) -> pd.DataFrame:
-        """
-        Calculate R (Range) chart statistics.
+        value_col : str, optional
+            Column to use for calculations. Defaults to spec.response_var.
 
         Logic moved from calculate_statistics_R()
         """
         spec = self.spec
+        if value_col is None:
+            value_col = spec.response_var
+
         out = self.ads.analysis_dataset.copy()
 
         logger.debug('In calculate statistics R')
         logger.debug('Dataframe has columns: %s', out.columns.to_list())
 
         if spec.has_grouping:
-            out['mr'] = abs(out.groupby(spec.rsg_var_name, observed=True)[spec.response_var].diff())
+            out['mr'] = abs(out.groupby(spec.rsg_var_name, observed=True)[value_col].diff())
             grouped = out.groupby(spec.rsg_var_name, as_index=False, observed=True)
             # Rename 'mR' to 'center' for consistency
             grouped = grouped.agg(center=pd.NamedAgg('mr', 'mean'))
@@ -1440,7 +1187,7 @@ class Analysis:
             grouped = pd.merge(grouped, limits, left_index=True, right_index=True)
             out = pd.merge(out, grouped, how='left', on=spec.rsg_var_name)
         else:
-            out['mr'] = abs(out[spec.response_var].diff())
+            out['mr'] = abs(out[value_col].diff())
             # Rename 'mR' to 'center' for consistency
             out['center'] = out['mr'].mean()
             center_val = out['center'].max()
