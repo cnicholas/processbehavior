@@ -17,10 +17,12 @@ Design Philosophy (Pythonic Hadley):
 from __future__ import annotations
 
 import functools
+import re
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from .exceptions import ChartNotAvailableError
+from .spc_constants import RESIDUAL_ALIASES, VALID_BASE_CHARTS
 
 if TYPE_CHECKING:
     import pandas as pd
@@ -1331,55 +1333,55 @@ class Study:
         # Determine chart type
         chart_request = chart or self.recommended_chart
 
-        # Check if this is a residual chart request
-        is_residual_chart = self._is_residual_chart(chart_request)
+        # Parse chart request into normalized components
+        residual_id, base_chart, recentered = self._parse_chart_request(
+            chart_request,
+            recentered_kwarg=recentered
+        )
 
-        if is_residual_chart:
-            # Parse residual chart name: 'R4_Imr' → residual='R4', base_chart='Imr'
-            residual, base_chart = self._parse_residual_chart(chart_request)
-
-            # Validate residual chart is available for this SDS
-            if chart_request not in self.residual_charts:
+        if residual_id is not None:
+            # Residual chart - validate availability using canonical name
+            canonical_name = f"{residual_id}_{base_chart}"
+            if canonical_name not in self.residual_charts:
                 available_list = list(self.residual_charts) if self.residual_charts else []
                 available_str = ', '.join(available_list) if available_list else 'None'
                 raise ChartNotAvailableError(
-                    f"Residual chart '{chart_request}' is not available for SDS {self.sds}.\n"
+                    f"Residual chart '{canonical_name}' is not available for SDS {self.sds}.\n"
                     f"Available residual charts: {available_str}\n"
                     f"Use study.residual_charts to see available options.",
-                    chart=chart_request,
+                    chart=canonical_name,
                     available=available_list
                 )
 
             # Build spec dict for residual chart
             spec_dict = {
-                'analysis_type': base_chart,  # The underlying chart type (S or Imr)
+                'analysis_type': base_chart,
                 'response_var': self._spec.response_var,
                 'time_var': self._spec.time_var,
                 'rsg_vars': self._spec.rsg_vars,
                 'rsg_var_name': self._spec.rsg_var_name,
                 'rsg_var_delim': self._spec.rsg_var_delim,
                 'round_to': self._spec.round_to,
-                # Residual-specific parameters
-                'residual': residual,  # e.g., 'R4'
-                'residual_chart_type': base_chart,  # e.g., 'Imr'
+                'residual': residual_id,
+                'residual_chart_type': base_chart,
                 'recentered': recentered
             }
         else:
             # Primary chart validation
-            if chart_request not in self.valid_charts:
+            if base_chart not in self.valid_charts:
                 available_list = list(self.valid_charts)
                 raise ChartNotAvailableError(
-                    f"Chart type '{chart_request}' is not valid for SDS {self.sds}.\n"
+                    f"Chart type '{base_chart}' is not valid for SDS {self.sds}.\n"
                     f"Valid charts: {', '.join(available_list)}\n"
                     f"Recommended: {self.recommended_chart}\n"
-                    f"Use study.why_not('{chart_request}') for explanation.",
-                    chart=chart_request,
+                    f"Use study.why_not('{base_chart}') for explanation.",
+                    chart=base_chart,
                     available=available_list
                 )
 
             # Build spec dict for primary chart
             spec_dict = {
-                'analysis_type': chart_request,
+                'analysis_type': base_chart,
                 'response_var': self._spec.response_var,
                 'time_var': self._spec.time_var,
                 'rsg_vars': self._spec.rsg_vars,
@@ -1393,36 +1395,124 @@ class Study:
         analysis = Analysis(self._pdf.data, spec_dict, analysis_dataset=self._ads)
         return analysis.calculate()
 
-    def _is_residual_chart(self, chart: str) -> bool:
-        """Check if chart name is a residual chart (e.g., 'R4_Imr')."""
-        if not chart:
-            return False
-        # Residual charts start with R followed by digit and underscore
-        return (
-            len(chart) >= 4 and
-            chart[0] == 'R' and
-            chart[1].isdigit() and
-            '_' in chart
-        )
-
-    def _parse_residual_chart(self, chart: str) -> tuple[str, str]:
+    def _parse_chart_request(
+        self,
+        chart: str,
+        recentered_kwarg: bool = False
+    ) -> tuple[str | None, str, bool]:
         """
-        Parse residual chart name into components.
+        Parse chart string into normalized components.
 
         Parameters
         ----------
         chart : str
-            Residual chart name (e.g., 'R4_Imr', 'R2_S')
+            Chart request string. Accepts:
+            - Base charts: 'Xbar', 'S', 'Imr', 'R'
+            - Numeric residuals: 'R5_Xbar', 'RCR5_Xbar'
+            - Alias residuals: 'noise_Xbar', 'rc_noise_Xbar'
+        recentered_kwarg : bool
+            Recentered flag from execute() kwarg
 
         Returns
         -------
-        tuple[str, str]
-            (residual, base_chart) e.g., ('R4', 'Imr')
+        tuple[str | None, str, bool]
+            (residual_id, base_chart, recentered)
+            - residual_id: None for base charts, "R<digits>" for residual charts
+            - base_chart: One of VALID_BASE_CHARTS
+            - recentered: True if requested via rc_/RCR in string OR via kwarg
+
+        Raises
+        ------
+        ValueError
+            For malformed inputs or unknown chart types
         """
-        parts = chart.split('_', 1)
-        residual = parts[0]  # e.g., 'R4'
-        base_chart = parts[1] if len(parts) > 1 else 'Imr'  # e.g., 'Imr'
-        return residual, base_chart
+        if not chart or not isinstance(chart, str):
+            raise ValueError("Chart name must be a non-empty string")
+
+        # Case 1: Base chart (no underscore)
+        if "_" not in chart:
+            if chart in VALID_BASE_CHARTS:
+                return (None, chart, False)
+            if chart in RESIDUAL_ALIASES or re.match(r'^R\d+$', chart) or re.match(r'^RCR\d+$', chart):
+                raise ValueError(
+                    f"Missing base chart type. Expected '{chart}_Xbar', '{chart}_S', or '{chart}_Imr'"
+                )
+            raise ValueError(
+                f"Unknown chart '{chart}'. "
+                f"Valid base charts: {', '.join(sorted(VALID_BASE_CHARTS))}"
+            )
+
+        # Case 2: Has underscore - parse components
+        # Detect and strip rc_ prefix
+        recentered_from_string = False
+        working = chart
+        if working.startswith("rc_"):
+            recentered_from_string = True
+            working = working[3:]  # Remove 'rc_' prefix
+            if not working or working.startswith("_"):
+                raise ValueError(
+                    f"Invalid chart name '{chart}': missing residual identifier after 'rc_'"
+                )
+
+        # Check for double recenter: rc_RCR5_Xbar
+        if recentered_from_string and working.startswith("RCR"):
+            raise ValueError(
+                f"Double recenter specification in '{chart}'. "
+                f"Use either 'rc_' prefix OR 'RCR' notation, not both."
+            )
+
+        # Split from right to get base_chart and residual_part
+        if "_" not in working:
+            raise ValueError(
+                f"Invalid chart name '{chart}': expected format 'residual_ChartType'"
+            )
+
+        residual_part, base_chart = working.rsplit("_", 1)
+
+        # Validate non-empty residual part
+        if not residual_part:
+            raise ValueError(
+                f"Invalid chart name '{chart}': missing residual identifier before underscore"
+            )
+
+        # Validate base chart
+        if base_chart not in VALID_BASE_CHARTS:
+            raise ValueError(
+                f"Unknown chart type '{base_chart}' in '{chart}'. "
+                f"Valid types: {', '.join(sorted(VALID_BASE_CHARTS))}"
+            )
+
+        # Parse residual part
+        residual_id = None
+
+        # Pattern: RCR<digits> (recentered numeric)
+        rcr_match = re.match(r'^RCR(\d+)$', residual_part)
+        if rcr_match:
+            residual_id = f"R{rcr_match.group(1)}"
+            recentered_from_string = True
+
+        # Pattern: R<digits> (numeric)
+        if not residual_id:
+            r_match = re.match(r'^R(\d+)$', residual_part)
+            if r_match:
+                residual_id = residual_part
+
+        # Pattern: alias (e.g., 'noise', 'within_cell', 'time_structure_removed')
+        if not residual_id:
+            if residual_part in RESIDUAL_ALIASES:
+                residual_id = RESIDUAL_ALIASES[residual_part]["id"]
+            else:
+                valid_aliases = sorted(RESIDUAL_ALIASES.keys())
+                raise ValueError(
+                    f"Unknown residual '{residual_part}' in '{chart}'. "
+                    f"Valid aliases: {', '.join(valid_aliases)}. "
+                    f"Or use numeric form: R1, R2, R3, R4, R5"
+                )
+
+        # Resolve recentered: string OR kwarg
+        recentered = recentered_from_string or recentered_kwarg
+
+        return (residual_id, base_chart, recentered)
 
     # =========================================================================
     # Display Methods
