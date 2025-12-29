@@ -601,3 +601,54 @@ def test_r1_rcr1_invariants():
 
     # RCR1 should equal Y (looser tolerance if computed via R1 + y_mean)
     assert np.allclose(ds['RCR1'].values, ds['y'].values, atol=1e-8)
+
+
+# ============================================================================
+# Test: Residual Chart Column Selection (Issue #66)
+# ============================================================================
+
+def test_residual_chart_uses_correct_column():
+    """
+    Verify R5_Xbar uses R5 column, not response variable.
+
+    This test catches the bug where residual charts incorrectly calculated
+    statistics on Y instead of the residual column. By constructing a dataset
+    where Y is constant but R5 varies, we can detect if the wrong column is used.
+
+    If the bug exists: R5_Xbar center would equal Y's constant value (100)
+    After fix: R5_Xbar center should equal mean(R5) ≈ 3.5
+    """
+    from processbehavior import ProcessBehavior
+    from processbehavior.datasets.synthetic import make_sds
+    import numpy as np
+
+    # Create SDS 1 data (has R5 column)
+    df = make_sds(1, seed=42)
+    pb = ProcessBehavior(df)
+    study = pb.formulate(response='y', time='time', factors=['factor 1', 'factor 2'])
+    result = study.execute()
+
+    # Get actual values from the dataset
+    ds = result.dataset
+    y_mean = ds['y'].mean()
+    r5_mean = ds['R5'].mean()
+
+    # Y and R5 should have different means (otherwise test is not meaningful)
+    assert not np.isclose(y_mean, r5_mean, atol=0.1), \
+        "Test data should have different Y and R5 means"
+
+    # Get Xbar center (uses Y) - should be close to Y mean
+    xbar_stats = result.get_statistics('Xbar')
+    assert np.isclose(xbar_stats['center'], y_mean, atol=0.01), \
+        f"Xbar center {xbar_stats['center']} should equal Y mean {y_mean}"
+
+    # Get R5_Xbar center (should use R5) - should be close to R5 mean
+    r5_result = study.execute(chart='R5_Xbar')
+    r5_xbar_stats = r5_result.get_statistics('R5_Xbar')
+    assert np.isclose(r5_xbar_stats['center'], r5_mean, atol=0.01), \
+        f"R5_Xbar center {r5_xbar_stats['center']} should equal R5 mean {r5_mean}"
+
+    # Most importantly: R5_Xbar center should NOT equal Y mean
+    # This catches the bug where residual charts used Y instead of R5
+    assert not np.isclose(r5_xbar_stats['center'], y_mean, atol=0.1), \
+        f"R5_Xbar center {r5_xbar_stats['center']} should NOT equal Y mean {y_mean}"
