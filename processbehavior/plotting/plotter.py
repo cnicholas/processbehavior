@@ -337,6 +337,10 @@ class Plotter:
                 if k in ['Xbar', 'S', 'Imr', 'R']
             }
 
+            # If no standard charts found but only one chart exists, use it
+            if not charts_to_plot and len(self.charts) == 1:
+                charts_to_plot = dict(self.charts)
+
         if not charts_to_plot:
             raise ValueError(
                 "No charts available to plot.\n"
