@@ -48,6 +48,7 @@ coverage.xml
 *.ipynb
 !docs/**/*.ipynb  # Keep Jupyter Book notebooks
 !*_tutorial.ipynb  # Keep tutorial notebooks in repo
+!validation/*.ipynb  # Keep validation notebooks
 
 # Temporary files
 *.tmp
