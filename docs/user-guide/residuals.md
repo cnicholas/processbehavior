@@ -47,11 +47,11 @@ print(result.residuals.head())
 - **SDS 2 (No Replication)**: R2 = (Y<sub>j</sub> - Y<sub>j-1</sub>) / 2 (backward 2-point moving average)
 - **SDS 3 (Partial)**: Hybrid approach
 
-**Chart**: R2_S (for replicated data) or R2_Imr
+**Chart**: S chart with `value='R2'` (for replicated data) or IMR
 
 ```python
 # Chart the within-cell variation
-result = study.execute(study.charts.R2_S)
+result = study.execute(chart='S', value='R2')
 fig = result.plot(show_zones=True, title='Within-Cell Variation')
 ```
 
@@ -68,10 +68,10 @@ fig = result.plot(show_zones=True, title='Within-Cell Variation')
 
 This removes both main effects, leaving only the interaction.
 
-**Chart**: R3_Imr
+**Chart**: IMR with `value='R3'`
 
 ```python
-result = study.execute(study.charts.R3_Imr)
+result = study.execute(chart='Imr', by=['lane'], value='R3')
 fig = result.plot(show_zones=True, title='Factor × Time Interactions')
 ```
 
@@ -88,10 +88,10 @@ fig = result.plot(show_zones=True, title='Factor × Time Interactions')
 
 This combines the time effect with within-cell variation.
 
-**Chart**: R4_Imr
+**Chart**: IMR with `value='R4'`
 
 ```python
-result = study.execute(study.charts.R4_Imr)
+result = study.execute(chart='Imr', by=['lane'], value='R4')
 fig = result.plot(show_zones=True, show_rules=True, title='Time Effects')
 ```
 
@@ -109,10 +109,10 @@ fig = result.plot(show_zones=True, show_rules=True, title='Time Effects')
 
 This combines the factor effect with within-cell variation.
 
-**Chart**: R5_Imr
+**Chart**: IMR with `value='R5'`
 
 ```python
-result = study.execute(study.charts.R5_Imr)
+result = study.execute(chart='Imr', by=['lane'], value='R5')
 fig = result.plot(show_zones=True, title='Factor Effects')
 ```
 
@@ -127,11 +127,11 @@ By default, residual charts are centered at zero. Use `recentered=True` to show 
 
 ```python
 # Zero-centered (default)
-result = study.execute(study.charts.R4_Imr)
+result = study.execute(chart='Imr', by=['lane'], value='R4')
 # Centerline at 0, values show deviation from time mean
 
 # Re-centered on original scale
-result = study.execute(study.charts.R4_Imr, recentered=True)
+result = study.execute(chart='Imr', by=['lane'], value='R4', recentered=True)
 # Centerline at grand mean, values on original measurement scale
 ```
 
@@ -160,8 +160,8 @@ Re-centering formulas:
 ### Step 1: Check R2 (Measurement Stability)
 
 ```python
-result = study.execute(study.charts.R2_S)
-signals = result.detect_signals(chart='R2_S')
+result = study.execute(chart='S', value='R2')
+signals = result.detect_signals(chart='S')
 
 if signals.has_signals:
     print("Within-cell variation is unstable!")
@@ -171,8 +171,8 @@ if signals.has_signals:
 ### Step 2: Check R3 (Interactions)
 
 ```python
-result = study.execute(study.charts.R3_Imr)
-signals = result.detect_signals(chart='R3_Imr')
+result = study.execute(chart='Imr', by=['lane'], value='R3')
+signals = result.detect_signals(chart='Imr')
 
 if signals.has_signals:
     print("Significant factor × time interactions detected.")
@@ -182,14 +182,14 @@ if signals.has_signals:
 ### Step 3: Check R4 (Time Effects)
 
 ```python
-result = study.execute(study.charts.R4_Imr)
+result = study.execute(chart='Imr', by=['lane'], value='R4')
 fig = result.plot(show_zones=True, show_rules=True)
 ```
 
 ### Step 4: Check R5 (Factor Effects)
 
 ```python
-result = study.execute(study.charts.R5_Imr)
+result = study.execute(chart='Imr', by=['lane'], value='R5')
 fig = result.plot(show_zones=True, show_signals=True)
 ```
 
@@ -215,15 +215,19 @@ study = pdf.formulate(
     time=pdf.cols.batch
 )
 
-# Check available residual charts
-print(f"Residual charts: {study.residual_charts}")
+# Check available residuals
+print(f"Available residuals: {study.available_residuals}")
 
-# Analyze each component
-for chart in ['R2_S', 'R3_Imr', 'R4_Imr', 'R5_Imr']:
-    if chart in study.residual_charts:
-        result = study.execute(chart)
-        signals = result.detect_signals()
-        print(f"{chart}: {signals.count} signals")
+# Analyze R2 on S chart
+result_r2 = study.execute(chart='S', value='R2')
+signals_r2 = result_r2.detect_signals(chart='S')
+print(f"R2 on S: {signals_r2.count} signals")
+
+# Analyze R3-R5 on stratified IMR charts
+for residual in ['R3', 'R4', 'R5']:
+    result = study.execute(chart='Imr', by=['lane'], value=residual)
+    signals = result.detect_signals(chart='Imr')
+    print(f"{residual} on IMR: {signals.count} signals")
 ```
 
 ## Best Practices

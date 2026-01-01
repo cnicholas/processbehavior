@@ -31,6 +31,8 @@ project:
           title: Xbar-S Analysis
         - file: tutorials/stratified-analysis.ipynb
           title: Stratified Analysis
+        - file: tutorials/sds1-complete-analysis.ipynb
+          title: Complete SDS1 Analysis
         - file: tutorials/signal-detection.ipynb
           title: Signal Detection
         - file: tutorials/sds-validation.ipynb

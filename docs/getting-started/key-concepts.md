@@ -72,8 +72,8 @@ For replicated designs (SDS 1-3), ProcessBehavior computes five residual decompo
 # Access residuals after formulation
 print(study.dataset[['R1', 'R2', 'R3', 'R4', 'R5']].head())
 
-# Chart residuals
-result = study.execute(chart='R4_Imr')
+# Chart residuals using the value parameter
+result = study.execute(chart='Imr', by=['lane'], value='R4')
 result.plot()
 ```
 
@@ -90,13 +90,42 @@ result.plot()
 
 ### Residual Charts
 
-| Chart | Based On | Purpose |
-|-------|----------|---------|
-| **R2_S** | S chart | Within-group variation stability |
-| **R2_Imr** | IMR | Within variation (no replication) |
-| **R3_Imr** | IMR | Detect factor-time interactions |
-| **R4_Imr** | IMR | Detect time effects |
-| **R5_Imr** | IMR | Detect factor effects |
+Use the `value` parameter to chart residuals instead of the response variable:
+
+```python
+# Chart R5 residuals (factor effects) on an Xbar chart
+result = study.execute(chart='Xbar', value='R5')
+
+# Chart R4 residuals (time effects) on a stratified IMR chart
+result = study.execute(chart='Imr', by=['lane'], value='R4')
+```
+
+| Residual | Chart Type | Purpose |
+|----------|------------|---------|
+| **R2** | S or IMR | Within-group variation stability |
+| **R3** | IMR | Detect factor-time interactions |
+| **R4** | IMR | Detect time effects |
+| **R5** | Xbar or IMR | Detect factor effects |
+
+## The `by` Parameter
+
+The `by` parameter controls how data is grouped or stratified:
+
+```python
+# Xbar chart aggregated by all factors (default)
+result = study.execute(chart='Xbar')
+
+# Xbar chart aggregated by single factor
+result = study.execute(chart='Xbar', by=['factor 1'])
+
+# Xbar chart collapsed to grand mean
+result = study.execute(chart='Xbar', by=[])
+
+# IMR chart stratified by factor (separate chart per level)
+result = study.execute(chart='Imr', by=['lane'])
+```
+
+**Key concept**: The `by` parameter creates *views* over the same underlying data. Residuals are computed once during formulation and never change regardless of how you view them.
 
 ## Western Electric Rules
 
