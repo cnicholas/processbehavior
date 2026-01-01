@@ -63,10 +63,9 @@ study = pdf.formulate(...)
 - `.sds_description`: Detailed SDS explanation
 
 **Properties - Charts:**
-- `.valid_charts`: List of valid chart types
+- `.valid_charts`: List of valid chart types ('Xbar', 'S', 'Imr', 'R')
 - `.recommended_chart`: Best chart for this SDS
-- `.residual_charts`: Available VAS residual charts
-- `.charts`: Accessor for chart type auto-completion
+- `.available_residuals`: List of available residuals ('R1'-'R5')
 
 **Properties - Data:**
 - `.dataset`: Full prepared DataFrame with residuals
@@ -77,9 +76,43 @@ study = pdf.formulate(...)
 
 ```python
 result = study.execute(
-    chart: str = None,        # Chart type (default: recommended)
-    recentered: bool = False  # Re-center residuals on original scale
+    chart: str = None,           # Chart type: 'Xbar', 'S', 'Imr', 'R'
+    by: list[str] = None,        # Grouping/stratification (subset of factors)
+    value: str = None,           # What to chart: None (response) or 'R1'-'R5'
+    recentered: bool = False     # Re-center residuals on original scale
 ) -> AnalysisResult
+```
+
+**Parameters:**
+
+- `chart`: Base chart type. One of `'Xbar'`, `'S'`, `'Imr'`, `'R'`.
+- `by`: Controls grouping/stratification:
+  - `None`: Default for chart type (full factors for Xbar/S, required for IMR with factors)
+  - `[]`: Collapse all factors
+  - `['factor']`: Aggregate/stratify by single factor
+  - `['f1', 'f2']`: Aggregate/stratify by multiple factors
+- `value`: What to plot:
+  - `None`: Chart response variable (default)
+  - `'R1'` to `'R5'`: Chart the specified VAS residual
+- `recentered`: If True and using residuals, re-center on original scale
+
+**Examples:**
+
+```python
+# Xbar chart aggregated by all factors (default)
+result = study.execute(chart='Xbar')
+
+# Xbar chart aggregated by single factor
+result = study.execute(chart='Xbar', by=['factor 1'])
+
+# IMR chart stratified by factor (one chart per level)
+result = study.execute(chart='Imr', by=['lane'])
+
+# Chart R5 residuals on Xbar
+result = study.execute(chart='Xbar', value='R5')
+
+# Recentered R4 residuals on stratified IMR
+result = study.execute(chart='Imr', by=['lane'], value='R4', recentered=True)
 ```
 
 #### why_not()
@@ -444,12 +477,24 @@ Valid chart type strings:
 ```python
 # Standard charts
 'Xbar', 'S', 'Imr', 'R'
+```
 
-# Residual charts
-'R2_S', 'R2_Imr', 'R3_Imr', 'R4_Imr', 'R5_Imr'
+To chart residuals, use the `value` parameter:
 
-# Stratified charts (dynamically named)
-'Imr_Lane_A', 'Imr_Lane_B', ...
+```python
+# Chart R5 residuals on Xbar
+study.execute(chart='Xbar', value='R5')
+
+# Chart R4 residuals on stratified IMR
+study.execute(chart='Imr', by=['lane'], value='R4')
+```
+
+For stratified charts, use the `by` parameter:
+
+```python
+# Stratify by single factor
+result = study.execute(chart='Imr', by=['lane'])
+# Access strata: result.charts['Imr']['strata']  # ['A', 'B', 'C', 'D']
 ```
 
 ### Rule Types

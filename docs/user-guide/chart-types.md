@@ -15,17 +15,26 @@ ProcessBehavior supports multiple chart types, each suited for different data st
 
 ### VAS Residual Charts
 
-| Chart | Residual | Purpose |
-|-------|----------|---------|
-| **R2_S** | R2 (within-cell) | Check within-group variation stability |
-| **R2_Imr** | R2 (within-cell) | Check within variation (no replication) |
-| **R3_Imr** | R3 (interaction) | Detect factor × time interactions |
-| **R4_Imr** | R4 (time) | Detect time effects |
-| **R5_Imr** | R5 (factor) | Detect factor effects |
+Use the `value` parameter to chart residuals instead of the response:
 
-## Using Chart Auto-Completion
+| Residual | Chart | Purpose |
+|----------|-------|---------|
+| **R2** | S or IMR | Check within-group variation stability |
+| **R3** | IMR | Detect factor × time interactions |
+| **R4** | IMR | Detect time effects |
+| **R5** | Xbar or IMR | Detect factor effects |
 
-After formulation, use the `study.charts` accessor for IDE auto-completion:
+```python
+# Chart R5 residuals on Xbar
+result = study.execute(chart='Xbar', value='R5')
+
+# Chart R4 residuals on stratified IMR
+result = study.execute(chart='Imr', by=['lane'], value='R4')
+```
+
+## The `by` Parameter
+
+The `by` parameter controls grouping and stratification:
 
 ```python
 study = pdf.formulate(
@@ -34,13 +43,16 @@ study = pdf.formulate(
     time=pdf.cols.batch
 )
 
-# Type study.charts. and your IDE shows only valid charts
-result = study.execute(study.charts.Xbar)    # Xbar-S analysis
-result = study.execute(study.charts.Imr)     # Stratified IMR
-result = study.execute(study.charts.R4_Imr)  # Time effects chart
+# Xbar/S - aggregate by different levels
+result = study.execute(chart='Xbar')                  # By all factors (default)
+result = study.execute(chart='Xbar', by=['lane'])     # By single factor
+result = study.execute(chart='Xbar', by=[])           # Collapse to grand mean
+
+# IMR - stratify by factor(s)
+result = study.execute(chart='Imr', by=['lane'])      # One chart per lane
 ```
 
-This prevents errors from using invalid chart types.
+Use `study.valid_charts` and `study.available_residuals` to see options.
 
 ## Chart Selection Guide
 
@@ -49,7 +61,7 @@ This prevents errors from using invalid chart types.
 **Use: Xbar Chart**
 
 ```python
-result = study.execute(study.charts.Xbar)
+result = study.execute(chart='Xbar')
 fig = result.plot(chart='Xbar', show_zones=True, show_signals=True)
 ```
 
@@ -60,7 +72,7 @@ Points beyond limits indicate subgroups that differ from the overall average.
 **Use: S Chart**
 
 ```python
-result = study.execute(study.charts.Xbar)  # Creates both Xbar and S
+result = study.execute(chart='S')
 fig = result.plot(chart='S', show_zones=True)
 ```
 
@@ -71,7 +83,7 @@ Points beyond limits indicate subgroups with unusual variation.
 **Use: IMR Chart**
 
 ```python
-result = study.execute(study.charts.Imr)
+result = study.execute(chart='Imr', by=['lane'])
 fig = result.plot(show_zones=True, show_rules=True)
 ```
 
@@ -79,10 +91,10 @@ For stratified data, this creates one IMR per factor level.
 
 ### Question: "Do factor effects change over time?"
 
-**Use: R3_Imr Chart (Interactions)**
+**Use: IMR with `value='R3'` (Interactions)**
 
 ```python
-result = study.execute(study.charts.R3_Imr)
+result = study.execute(chart='Imr', by=['lane'], value='R3')
 fig = result.plot(title='Factor × Time Interactions')
 ```
 
@@ -90,10 +102,10 @@ Signals indicate that factor effects are not consistent over time.
 
 ### Question: "Are there time trends after removing factor effects?"
 
-**Use: R4_Imr Chart**
+**Use: IMR with `value='R4'`**
 
 ```python
-result = study.execute(study.charts.R4_Imr)
+result = study.execute(chart='Imr', by=['lane'], value='R4')
 fig = result.plot(title='Time Effects')
 ```
 
@@ -101,10 +113,10 @@ Signals indicate process drift or shifts over time.
 
 ### Question: "Are there factor differences after removing time effects?"
 
-**Use: R5_Imr Chart**
+**Use: IMR with `value='R5'`**
 
 ```python
-result = study.execute(study.charts.R5_Imr)
+result = study.execute(chart='Imr', by=['lane'], value='R5')
 fig = result.plot(title='Factor Effects')
 ```
 
@@ -120,22 +132,15 @@ Not all charts are valid for all Sampling Design States:
 | S | ✅ | ✅ | ✅ | ❌ | ❌ |
 | Imr | ✅ | ✅ | ✅ | ✅ | ✅ |
 | R | ✅ | ✅ | ✅ | ✅ | ✅ |
-| R2_S | ✅ | ❌ | ⚠️ | ⚠️ | ⚠️* |
-| R2_Imr | ✅ | ✅ | ✅ | ✅ | ✅ |
-| R3_Imr | ✅ | ✅ | ✅ | ✅ | ✅ |
-| R4_Imr | ✅ | ✅ | ✅ | ✅ | ✅ |
-| R5_Imr | ✅ | ✅ | ✅ | ✅ | ✅ |
 
-*For SDS 5-6: R2_S available for SDS 5 when cells have n≥2; SDS 6 uses MR chart only.
-
-**Note on R2**: SDS 2 and 6 use the moving average method; SDS 1, 3, 4, 5 use within-cell deviation (R2 = Y - Ȳ_kt). See [VAS Residuals](residuals.md) for details.
-
-Use `study.valid_charts` to see what's available:
+**Residual availability** depends on SDS. Use `study.available_residuals` to check:
 
 ```python
 print(f"Valid charts: {study.valid_charts}")
-print(f"Residual charts: {study.residual_charts}")
+print(f"Available residuals: {study.available_residuals}")
 ```
+
+**Note on R2**: SDS 2 and 6 use the moving average method; SDS 1, 3, 4, 5 use within-cell deviation (R2 = Y - Ȳ_kt). See [VAS Residuals](residuals.md) for details.
 
 ## Understanding Xbar-S Charts
 
@@ -182,24 +187,31 @@ Plots the absolute difference between consecutive observations.
 
 ## Stratified IMR Charts
 
-When you have factors and time, IMR creates **one chart per factor level**:
+When you have factors and time, use the `by` parameter to stratify IMR charts:
 
 ```python
-result = study.execute(study.charts.Imr)
+# Stratify by lane - creates one chart per lane
+result = study.execute(chart='Imr', by=['lane'])
 
-# Creates: Imr_Lane_A, Imr_Lane_B, Imr_Lane_C, Imr_Lane_D
-print(result.all_charts)
-print(result.list_strata())  # ['Lane_A', 'Lane_B', 'Lane_C', 'Lane_D']
+# Check the strata
+print(result.charts['Imr']['strata'])  # ['A', 'B', 'C', 'D']
 ```
 
 Each stratum has its own control limits based on its internal variation:
 
 ```python
-# View individual lane
-fig = result.plot(chart='Imr_Lane_A', show_zones=True)
+# View faceted plot with all lanes
+fig = result.plot(chart='Imr', show_zones=True)
+```
 
-# View all lanes in faceted plot
-fig = result.plot(facet=True, ncols=2, show_zones=True)
+### Lane Boundaries
+
+When you collapse factors (use fewer factors in `by` than exist in the study), **lane boundaries** show where the collapsed factors change:
+
+```python
+# Single IMR with lane boundaries
+result = study.execute(chart='Imr', by=[])  # Collapse all factors
+fig = result.plot(chart='Imr')  # Vertical lines show factor transitions
 ```
 
 ## Re-centered Residual Charts
@@ -208,10 +220,10 @@ By default, residual charts are centered at zero. Use `recentered=True` to show 
 
 ```python
 # Zero-centered (default)
-result = study.execute(study.charts.R4_Imr)
+result = study.execute(chart='Imr', by=['lane'], value='R4')
 
 # Re-centered on original scale
-result = study.execute(study.charts.R4_Imr, recentered=True)
+result = study.execute(chart='Imr', by=['lane'], value='R4', recentered=True)
 ```
 
 Re-centering uses:
@@ -237,12 +249,12 @@ Do you have factors?
 
 | Question | Chart | Signal Meaning |
 |----------|-------|----------------|
-| Are groups different? | Xbar | Group deviates from average |
-| Is variation stable? | S | Group has unusual variation |
-| Process over time? | Imr | Special cause detected |
-| Interactions? | R3_Imr | Factor effect changes over time |
-| Time trends? | R4_Imr | Process drift/shift |
-| Factor effects? | R5_Imr | True factor differences |
+| Are groups different? | `chart='Xbar'` | Group deviates from average |
+| Is variation stable? | `chart='S'` | Group has unusual variation |
+| Process over time? | `chart='Imr', by=[...]` | Special cause detected |
+| Interactions? | `chart='Imr', value='R3'` | Factor effect changes over time |
+| Time trends? | `chart='Imr', value='R4'` | Process drift/shift |
+| Factor effects? | `chart='Xbar', value='R5'` | True factor differences |
 
 ## Next Steps
 
