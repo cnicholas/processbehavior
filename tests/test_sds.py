@@ -148,7 +148,8 @@ class TestSDSDetection:
             time=pdf.cols.time
         )
 
-        result = study.execute(chart='Imr')
+        # IMR with factors requires explicit 'by' parameter
+        result = study.execute(chart='Imr', by=['factor 1', 'factor 2'])
 
         assert result is not None
         # Should have separate charts per group

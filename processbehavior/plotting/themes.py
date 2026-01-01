@@ -176,6 +176,12 @@ class ChartTheme:
     facet_marker_size: int = 6
     facet_line_width: float = 1.5
 
+    # Lane boundaries (vertical separators for collapsed factors)
+    lane_boundary_color: str = '#888888'  # Medium gray
+    lane_boundary_dash: str = 'dot'
+    lane_boundary_width: float = 1.0
+    lane_boundary_annotation_size: int = 8
+
     # Stats box
     stats_box_bgcolor: str = 'rgba(255, 255, 255, 0.9)'
     stats_box_bordercolor: str = '#CCCCCC'

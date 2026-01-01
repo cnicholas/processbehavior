@@ -1,4 +1,9 @@
-"""Tests for chart name parsing in Study._parse_chart_request()."""
+"""Tests for chart name parsing in Study._parse_chart_request().
+
+The parser now only accepts base chart types (Xbar, S, Imr, R).
+Residual charts are specified via the `value` parameter:
+  study.execute(chart='Xbar', value='R5')  # instead of chart='R5_Xbar'
+"""
 
 import pytest
 import pandas as pd
@@ -25,190 +30,111 @@ class TestBaseCharts:
     """Test parsing of base chart types."""
 
     def test_xbar(self, study):
-        residual_id, base_chart, recentered = study._parse_chart_request("Xbar")
-        assert residual_id is None
+        base_chart = study._parse_chart_request("Xbar")
         assert base_chart == "Xbar"
-        assert recentered is False
 
     def test_s(self, study):
-        residual_id, base_chart, recentered = study._parse_chart_request("S")
-        assert residual_id is None
+        base_chart = study._parse_chart_request("S")
         assert base_chart == "S"
-        assert recentered is False
 
     def test_imr(self, study):
-        residual_id, base_chart, recentered = study._parse_chart_request("Imr")
-        assert residual_id is None
+        base_chart = study._parse_chart_request("Imr")
         assert base_chart == "Imr"
-        assert recentered is False
 
     def test_r(self, study):
-        residual_id, base_chart, recentered = study._parse_chart_request("R")
-        assert residual_id is None
+        base_chart = study._parse_chart_request("R")
         assert base_chart == "R"
-        assert recentered is False
 
 
-class TestNumericResidualCharts:
-    """Test parsing of numeric residual chart names (R5_Xbar, RCR5_Xbar)."""
+class TestOldSyntaxRaisesError:
+    """Test that old residual chart syntax raises helpful errors."""
 
-    def test_r5_xbar(self, study):
-        residual_id, base_chart, recentered = study._parse_chart_request("R5_Xbar")
-        assert residual_id == "R5"
-        assert base_chart == "Xbar"
-        assert recentered is False
+    def test_r5_xbar_old_syntax(self, study):
+        """Old R5_Xbar syntax should error with migration guidance."""
+        with pytest.raises(ValueError, match="no longer supported"):
+            study._parse_chart_request("R5_Xbar")
 
-    def test_r2_s(self, study):
-        residual_id, base_chart, recentered = study._parse_chart_request("R2_S")
-        assert residual_id == "R2"
-        assert base_chart == "S"
-        assert recentered is False
+    def test_r2_s_old_syntax(self, study):
+        """Old R2_S syntax should error with migration guidance."""
+        with pytest.raises(ValueError, match="no longer supported"):
+            study._parse_chart_request("R2_S")
 
-    def test_r4_imr(self, study):
-        residual_id, base_chart, recentered = study._parse_chart_request("R4_Imr")
-        assert residual_id == "R4"
-        assert base_chart == "Imr"
-        assert recentered is False
+    def test_r4_imr_old_syntax(self, study):
+        """Old R4_Imr syntax should error with migration guidance."""
+        with pytest.raises(ValueError, match="no longer supported"):
+            study._parse_chart_request("R4_Imr")
 
-    def test_rcr5_xbar_recentered_from_string(self, study):
-        """RCR prefix sets recentered=True."""
-        residual_id, base_chart, recentered = study._parse_chart_request("RCR5_Xbar")
-        assert residual_id == "R5"
-        assert base_chart == "Xbar"
-        assert recentered is True
+    def test_rcr5_xbar_old_syntax(self, study):
+        """Old RCR5_Xbar syntax should error with migration guidance."""
+        with pytest.raises(ValueError, match="no longer supported"):
+            study._parse_chart_request("RCR5_Xbar")
 
-    def test_rcr2_s_recentered_from_string(self, study):
-        residual_id, base_chart, recentered = study._parse_chart_request("RCR2_S")
-        assert residual_id == "R2"
-        assert base_chart == "S"
-        assert recentered is True
+    def test_noise_xbar_old_syntax(self, study):
+        """Old alias syntax should error with migration guidance."""
+        with pytest.raises(ValueError, match="no longer supported"):
+            study._parse_chart_request("noise_Xbar")
 
-    def test_multi_digit_residual(self, study):
-        """Multi-digit residual IDs should parse correctly."""
-        residual_id, base_chart, recentered = study._parse_chart_request("R10_Xbar")
-        assert residual_id == "R10"
-        assert base_chart == "Xbar"
-        assert recentered is False
+    def test_rc_noise_xbar_old_syntax(self, study):
+        """Old rc_ prefix syntax should error with migration guidance."""
+        with pytest.raises(ValueError, match="no longer supported"):
+            study._parse_chart_request("rc_noise_Xbar")
 
-    def test_recentered_kwarg(self, study):
-        """Recentered kwarg sets recentered=True."""
-        residual_id, base_chart, recentered = study._parse_chart_request(
-            "R5_Xbar", recentered_kwarg=True
-        )
-        assert residual_id == "R5"
-        assert base_chart == "Xbar"
-        assert recentered is True
+    def test_error_message_includes_new_syntax(self, study):
+        """Error message should show the new syntax to use."""
+        with pytest.raises(ValueError) as exc_info:
+            study._parse_chart_request("R5_Xbar")
+        assert "chart='Xbar'" in str(exc_info.value)
+        assert "value='R5'" in str(exc_info.value)
+
+    def test_error_message_includes_recentered_hint(self, study):
+        """Error message should include recentered=True for RCR charts."""
+        with pytest.raises(ValueError) as exc_info:
+            study._parse_chart_request("RCR5_Xbar")
+        assert "recentered=True" in str(exc_info.value)
 
 
-class TestAliasResidualCharts:
-    """Test parsing of human-readable alias chart names."""
+class TestResidualIdWithoutChart:
+    """Test that bare residual identifiers raise helpful errors."""
 
-    def test_noise_xbar(self, study):
-        residual_id, base_chart, recentered = study._parse_chart_request("noise_Xbar")
-        assert residual_id == "R5"
-        assert base_chart == "Xbar"
-        assert recentered is False
+    def test_r5_without_chart(self, study):
+        """Bare R5 should error with guidance to use value parameter."""
+        with pytest.raises(ValueError, match="residual identifier"):
+            study._parse_chart_request("R5")
 
-    def test_within_cell_s(self, study):
-        residual_id, base_chart, recentered = study._parse_chart_request("within_cell_S")
-        assert residual_id == "R2"
-        assert base_chart == "S"
-        assert recentered is False
+    def test_rcr5_without_chart(self, study):
+        """Bare RCR5 should error with guidance."""
+        with pytest.raises(ValueError, match="residual identifier"):
+            study._parse_chart_request("RCR5")
 
-    def test_structure_removed_imr(self, study):
-        residual_id, base_chart, recentered = study._parse_chart_request("structure_removed_Imr")
-        assert residual_id == "R3"
-        assert base_chart == "Imr"
-        assert recentered is False
+    def test_r5_error_shows_value_syntax(self, study):
+        """Error should show the new value= syntax."""
+        with pytest.raises(ValueError) as exc_info:
+            study._parse_chart_request("R5")
+        assert "value='R5'" in str(exc_info.value)
 
-    def test_time_structure_removed_xbar(self, study):
-        """Multi-underscore alias should parse correctly."""
-        residual_id, base_chart, recentered = study._parse_chart_request("time_structure_removed_Xbar")
-        assert residual_id == "R4"
-        assert base_chart == "Xbar"
-        assert recentered is False
 
-    def test_mean_removed_s(self, study):
-        residual_id, base_chart, recentered = study._parse_chart_request("mean_removed_S")
-        assert residual_id == "R1"
-        assert base_chart == "S"
-        assert recentered is False
+class TestAliasWithoutChart:
+    """Test that bare aliases raise helpful errors."""
 
-    def test_rc_noise_xbar(self, study):
-        """rc_ prefix sets recentered=True."""
-        residual_id, base_chart, recentered = study._parse_chart_request("rc_noise_Xbar")
-        assert residual_id == "R5"
-        assert base_chart == "Xbar"
-        assert recentered is True
+    def test_noise_without_chart(self, study):
+        """Bare 'noise' alias should error with guidance."""
+        with pytest.raises(ValueError, match="residual alias"):
+            study._parse_chart_request("noise")
 
-    def test_rc_time_structure_removed_imr(self, study):
-        """rc_ prefix with multi-underscore alias."""
-        residual_id, base_chart, recentered = study._parse_chart_request("rc_time_structure_removed_Imr")
-        assert residual_id == "R4"
-        assert base_chart == "Imr"
-        assert recentered is True
-
-    def test_alias_with_recentered_kwarg(self, study):
-        residual_id, base_chart, recentered = study._parse_chart_request(
-            "noise_Xbar", recentered_kwarg=True
-        )
-        assert residual_id == "R5"
-        assert base_chart == "Xbar"
-        assert recentered is True
+    def test_within_cell_without_chart(self, study):
+        """Bare 'within_cell' has underscore so triggers old syntax error path."""
+        # within_cell has an underscore, so it looks like old syntax
+        with pytest.raises(ValueError, match="no longer supported|Invalid chart"):
+            study._parse_chart_request("within_cell")
 
 
 class TestInvalidInputs:
-    """Test that invalid inputs raise ValueError with helpful messages."""
-
-    def test_missing_base_chart_alias(self, study):
-        """Bare alias should error with helpful message."""
-        with pytest.raises(ValueError, match="Missing base chart type"):
-            study._parse_chart_request("noise")
-
-    def test_missing_base_chart_numeric(self, study):
-        """Bare R5 should error with helpful message."""
-        with pytest.raises(ValueError, match="Missing base chart type"):
-            study._parse_chart_request("R5")
-
-    def test_missing_base_chart_rcr(self, study):
-        """Bare RCR5 should error with helpful message."""
-        with pytest.raises(ValueError, match="Missing base chart type"):
-            study._parse_chart_request("RCR5")
+    """Test that invalid inputs raise ValueError."""
 
     def test_unknown_base_chart(self, study):
         """Unknown base chart should error."""
         with pytest.raises(ValueError, match="Unknown chart 'Foo'"):
             study._parse_chart_request("Foo")
-
-    def test_unknown_chart_type_in_residual(self, study):
-        """Unknown chart type after underscore should error."""
-        with pytest.raises(ValueError, match="Unknown chart type 'Blah'"):
-            study._parse_chart_request("R5_Blah")
-
-    def test_unknown_residual_alias(self, study):
-        """Unknown alias should error with list of valid aliases."""
-        with pytest.raises(ValueError, match="Unknown residual 'unknown'"):
-            study._parse_chart_request("unknown_Xbar")
-
-    def test_double_recenter_rc_rcr(self, study):
-        """Double recenter (rc_ + RCR) should error."""
-        with pytest.raises(ValueError, match="Double recenter specification"):
-            study._parse_chart_request("rc_RCR5_Xbar")
-
-    def test_malformed_leading_underscore(self, study):
-        """Leading underscore should error."""
-        with pytest.raises(ValueError, match="missing residual identifier"):
-            study._parse_chart_request("_Xbar")
-
-    def test_malformed_rc_double_underscore(self, study):
-        """rc__ should error."""
-        with pytest.raises(ValueError, match="missing residual identifier"):
-            study._parse_chart_request("rc__Xbar")
-
-    def test_trailing_underscore(self, study):
-        """Trailing underscore should error (empty base chart)."""
-        with pytest.raises(ValueError, match="Unknown chart type ''"):
-            study._parse_chart_request("Xbar_")
 
     def test_empty_string(self, study):
         """Empty string should error."""
@@ -220,41 +146,25 @@ class TestInvalidInputs:
         with pytest.raises(ValueError, match="non-empty string"):
             study._parse_chart_request(None)
 
-    def test_rc_alone(self, study):
-        """Just 'rc_' should error."""
-        with pytest.raises(ValueError, match="missing residual identifier"):
-            study._parse_chart_request("rc_")
 
+class TestNewSyntaxWorks:
+    """Test that the new value= syntax works correctly."""
 
-class TestRecenteredSemantics:
-    """Test recentered flag behavior."""
+    def test_xbar_with_r5_value(self, study):
+        """chart='Xbar', value='R5' should work."""
+        result = study.execute(chart='Xbar', value='R5')
+        assert result is not None
+        # Chart key matches the chart parameter, not the combined format
+        assert 'Xbar' in result.charts
 
-    def test_string_true_kwarg_false_uses_string(self, study):
-        """String recentered wins (OR semantics)."""
-        # RCR5_Xbar implies recentered=True, kwarg=False
-        # Result should be True (string OR kwarg)
-        residual_id, base_chart, recentered = study._parse_chart_request(
-            "RCR5_Xbar", recentered_kwarg=False
-        )
-        assert recentered is True
+    def test_s_with_r2_value(self, study):
+        """chart='S', value='R2' should work."""
+        result = study.execute(chart='S', value='R2')
+        assert result is not None
+        assert 'S' in result.charts
 
-    def test_string_false_kwarg_true_uses_kwarg(self, study):
-        """Kwarg can set recentered when string doesn't."""
-        residual_id, base_chart, recentered = study._parse_chart_request(
-            "R5_Xbar", recentered_kwarg=True
-        )
-        assert recentered is True
-
-    def test_both_true(self, study):
-        """Both true results in true."""
-        residual_id, base_chart, recentered = study._parse_chart_request(
-            "RCR5_Xbar", recentered_kwarg=True
-        )
-        assert recentered is True
-
-    def test_both_false(self, study):
-        """Both false results in false."""
-        residual_id, base_chart, recentered = study._parse_chart_request(
-            "R5_Xbar", recentered_kwarg=False
-        )
-        assert recentered is False
+    def test_xbar_with_r5_recentered(self, study):
+        """chart='Xbar', value='R5', recentered=True should work."""
+        result = study.execute(chart='Xbar', value='R5', recentered=True)
+        assert result is not None
+        assert 'Xbar' in result.charts

@@ -211,7 +211,8 @@ class TestAnalyzePerformance:
     def test_analyze_imr_100k(self, study_100k):
         """analyze() Imr chart with 100K rows."""
         start = time.perf_counter()
-        result = study_100k.execute(chart='Imr')
+        # IMR with factors now requires explicit 'by' parameter
+        result = study_100k.execute(chart='Imr', by=['factor 1'])
         elapsed = time.perf_counter() - start
 
         assert result is not None

@@ -287,6 +287,12 @@ class AnalysisSpecification(DataPrepConfig):
         self.residual_chart_type = specification.get('residual_chart_type')  # e.g., 'S', 'Imr'
         self.recentered = specification.get('recentered', False)  # Use RCR columns
 
+        # View parameters (for Study.execute())
+        # by: Controls stratification/grouping - subset of factors (not time)
+        # value_col: Explicit column to chart (response_var or residual column)
+        self.by = specification.get('by')  # list[str] | None
+        self.value_col = specification.get('value_col')  # str | None
+
         # Initialize analysis output columns
         self.analysis_output_cols = [self.response_var, 'mean', 'lpl', 'upl', 'beyond_limits']
         self._build_output_cols()
