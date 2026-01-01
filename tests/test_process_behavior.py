@@ -562,7 +562,8 @@ def test_formulate_with_chart_selection():
     result_xbar = study.execute(chart='Xbar')
     assert result_xbar is not None
 
-    result_imr = study.execute(chart='Imr')
+    # IMR with factors requires explicit 'by' parameter
+    result_imr = study.execute(chart='Imr', by=['Batch'])
     assert result_imr is not None
 
 
@@ -883,27 +884,30 @@ def test_study_analyze_with_charts_accessor(simple_values_10):
 # ============================================================================
 
 def test_study_analyze_residual_chart(grouped_single_factor):
-    """analyze() should work with residual chart types."""
+    """analyze() should work with residual chart types using value parameter."""
     study = ProcessBehavior(grouped_single_factor).formulate(
         response='Value',
         factors=['Batch'],
         time='Time'
     )
 
-    # Get first available residual chart
+    # Get first available residual chart and parse it
     if study.residual_charts:
+        # residual_charts returns ['R2_S', 'R3_Xbar', ...] format
         residual_chart = study.residual_charts[0]
-        result = study.execute(chart=residual_chart)
+        residual_id, chart_type = residual_chart.split('_')
+        result = study.execute(chart=chart_type, value=residual_id)
         assert result is not None
 
 
 def test_study_analyze_invalid_residual_chart_raises(simple_values):
-    """analyze() should raise ChartNotAvailableError for invalid residual chart."""
+    """analyze() should raise error for invalid residual chart."""
     study = ProcessBehavior(simple_values).formulate(response='Value')
 
-    # SDS 4 doesn't have R4_Imr (needs factors)
-    with pytest.raises(ChartNotAvailableError, match="not available"):
-        study.execute(chart='R4_Imr')
+    # SDS 4 doesn't have any residuals (needs factors)
+    # Raises ValueError because residual column doesn't exist
+    with pytest.raises((ChartNotAvailableError, ValueError), match="not available|Available"):
+        study.execute(chart='Imr', value='R4')
 
 
 # ============================================================================
@@ -1005,49 +1009,49 @@ def test_formulate_with_nan_values():
 # ============================================================================
 
 def test_r5_xbar_chart_calculation(grouped_for_residuals):
-    """R5_Xbar should use factor-based subgrouping."""
+    """R5 Xbar should use factor-based subgrouping."""
     study = ProcessBehavior(grouped_for_residuals).formulate(
         response='Value',
         factors=['Factor'],
         time='Time'
     )
 
-    assert 'R5_Xbar' in study.residual_charts
+    assert 'R5' in study.available_residuals
 
-    # Analyze R5_Xbar
-    result = study.execute(chart='R5_Xbar')
+    # Analyze R5 on Xbar chart
+    result = study.execute(chart='Xbar', value='R5')
     assert result is not None
-    assert 'R5_Xbar' in result.charts
+    assert 'Xbar' in result.charts
 
-    chart_data = result.charts['R5_Xbar']
+    chart_data = result.charts['Xbar']
     assert 'data' in chart_data
     assert 'statistics' in chart_data
 
-    # R5_Xbar should have one point per factor (3 factors)
+    # R5 Xbar should have one point per factor (3 factors)
     data_df = chart_data['data']
     assert len(data_df) == 3
 
 
 def test_r5_s_chart_calculation(grouped_for_residuals):
-    """R5_S should use factor-based subgrouping."""
+    """R5 S chart should use factor-based subgrouping."""
     study = ProcessBehavior(grouped_for_residuals).formulate(
         response='Value',
         factors=['Factor'],
         time='Time'
     )
 
-    assert 'R5_S' in study.residual_charts
+    assert 'R5' in study.available_residuals
 
-    # Analyze R5_S
-    result = study.execute(chart='R5_S')
+    # Analyze R5 on S chart
+    result = study.execute(chart='S', value='R5')
     assert result is not None
-    assert 'R5_S' in result.charts
+    assert 'S' in result.charts
 
-    chart_data = result.charts['R5_S']
+    chart_data = result.charts['S']
     assert 'data' in chart_data
     assert 'statistics' in chart_data
 
-    # R5_S should have one point per factor (3 factors)
+    # R5 S should have one point per factor (3 factors)
     data_df = chart_data['data']
     assert len(data_df) == 3
 
@@ -1060,24 +1064,26 @@ def test_r4_r5_xbar_s_control_limits_structure(grouped_for_residuals):
         time='Time'
     )
 
-    for chart_type in ['R4_Xbar', 'R4_S', 'R5_Xbar', 'R5_S']:
-        result = study.execute(chart=chart_type)
-        chart_data = result.charts[chart_type]
+    # Test R4 and R5 residuals on Xbar and S charts
+    for residual in ['R4', 'R5']:
+        for chart in ['Xbar', 'S']:
+            result = study.execute(chart=chart, value=residual)
+            chart_data = result.charts[chart]
 
-        # Should have statistics with control limits
-        stats = chart_data['statistics']
-        assert 'center' in stats, f"{chart_type} missing center"
-        assert 'upl' in stats, f"{chart_type} missing upl"
-        assert 'lpl' in stats, f"{chart_type} missing lpl"
+            # Should have statistics with control limits
+            stats = chart_data['statistics']
+            assert 'center' in stats, f"{chart} missing center"
+            assert 'upl' in stats, f"{chart} missing upl"
+            assert 'lpl' in stats, f"{chart} missing lpl"
 
-        # Control limits should be numeric
-        assert isinstance(stats['center'], (int, float, np.number))
-        assert isinstance(stats['upl'], (int, float, np.number))
-        assert isinstance(stats['lpl'], (int, float, np.number))
+            # Control limits should be numeric
+            assert isinstance(stats['center'], (int, float, np.number))
+            assert isinstance(stats['upl'], (int, float, np.number))
+            assert isinstance(stats['lpl'], (int, float, np.number))
 
-        # UPL > center > LPL (for properly behaved data)
-        assert stats['upl'] >= stats['center'], f"{chart_type}: UPL should be >= center"
-        assert stats['center'] >= stats['lpl'], f"{chart_type}: center should be >= LPL"
+            # UPL > center > LPL (for properly behaved data)
+            assert stats['upl'] >= stats['center'], f"{chart}: UPL should be >= center"
+            assert stats['center'] >= stats['lpl'], f"{chart}: center should be >= LPL"
 
 
 # ============================================================================
@@ -1085,7 +1091,7 @@ def test_r4_r5_xbar_s_control_limits_structure(grouped_for_residuals):
 # ============================================================================
 
 def test_r3_xbar_chart_calculation(grouped_for_residuals):
-    """R3_Xbar should use factor-based subgrouping (same as R2)."""
+    """R3 Xbar should use factor-based subgrouping (same as R2)."""
     study = ProcessBehavior(grouped_for_residuals).formulate(
         response='Value',
         factors=['Factor'],
@@ -1094,42 +1100,42 @@ def test_r3_xbar_chart_calculation(grouped_for_residuals):
 
     # Should be SDS 1 (all cells have n≥2)
     assert study.sds == 1
-    assert 'R3_Xbar' in study.residual_charts
+    assert 'R3' in study.available_residuals
 
-    # Analyze R3_Xbar
-    result = study.execute(chart='R3_Xbar')
+    # Analyze R3 on Xbar chart
+    result = study.execute(chart='Xbar', value='R3')
     assert result is not None
-    assert 'R3_Xbar' in result.charts
+    assert 'Xbar' in result.charts
 
-    chart_data = result.charts['R3_Xbar']
+    chart_data = result.charts['Xbar']
     assert 'data' in chart_data
     assert 'statistics' in chart_data
 
-    # R3_Xbar uses factor-based subgrouping (same as R5), so 3 factors
+    # R3 Xbar uses factor-based subgrouping (same as R5), so 3 factors
     data_df = chart_data['data']
     assert len(data_df) == 3
 
 
 def test_r3_s_chart_calculation(grouped_for_residuals):
-    """R3_S should use factor-based subgrouping (same as R2)."""
+    """R3 S chart should use factor-based subgrouping (same as R2)."""
     study = ProcessBehavior(grouped_for_residuals).formulate(
         response='Value',
         factors=['Factor'],
         time='Time'
     )
 
-    assert 'R3_S' in study.residual_charts
+    assert 'R3' in study.available_residuals
 
-    # Analyze R3_S
-    result = study.execute(chart='R3_S')
+    # Analyze R3 on S chart
+    result = study.execute(chart='S', value='R3')
     assert result is not None
-    assert 'R3_S' in result.charts
+    assert 'S' in result.charts
 
-    chart_data = result.charts['R3_S']
+    chart_data = result.charts['S']
     assert 'data' in chart_data
     assert 'statistics' in chart_data
 
-    # R3_S uses factor-based subgrouping, so 3 factors
+    # R3 S uses factor-based subgrouping, so 3 factors
     data_df = chart_data['data']
     assert len(data_df) == 3
 
@@ -1142,15 +1148,15 @@ def test_r3_xbar_s_control_limits_structure(grouped_for_residuals):
         time='Time'
     )
 
-    for chart_type in ['R3_Xbar', 'R3_S']:
-        result = study.execute(chart=chart_type)
-        chart_data = result.charts[chart_type]
+    for chart in ['Xbar', 'S']:
+        result = study.execute(chart=chart, value='R3')
+        chart_data = result.charts[chart]
 
         # Should have statistics with control limits
         stats = chart_data['statistics']
-        assert 'center' in stats, f"{chart_type} missing center"
-        assert 'upl' in stats, f"{chart_type} missing upl"
-        assert 'lpl' in stats, f"{chart_type} missing lpl"
+        assert 'center' in stats, f"{chart} missing center"
+        assert 'upl' in stats, f"{chart} missing upl"
+        assert 'lpl' in stats, f"{chart} missing lpl"
 
         # Control limits should be numeric
         assert isinstance(stats['center'], (int, float, np.number))

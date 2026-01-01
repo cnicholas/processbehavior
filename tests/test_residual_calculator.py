@@ -642,13 +642,13 @@ def test_residual_chart_uses_correct_column():
     assert np.isclose(xbar_stats['center'], y_mean, atol=0.01), \
         f"Xbar center {xbar_stats['center']} should equal Y mean {y_mean}"
 
-    # Get R5_Xbar center (should use R5) - should be close to R5 mean
-    r5_result = study.execute(chart='R5_Xbar')
-    r5_xbar_stats = r5_result.get_statistics('R5_Xbar')
+    # Get R5 Xbar center (should use R5) - should be close to R5 mean
+    r5_result = study.execute(chart='Xbar', value='R5')
+    r5_xbar_stats = r5_result.get_statistics('Xbar')
     assert np.isclose(r5_xbar_stats['center'], r5_mean, atol=0.01), \
-        f"R5_Xbar center {r5_xbar_stats['center']} should equal R5 mean {r5_mean}"
+        f"R5 Xbar center {r5_xbar_stats['center']} should equal R5 mean {r5_mean}"
 
-    # Most importantly: R5_Xbar center should NOT equal Y mean
+    # Most importantly: R5 Xbar center should NOT equal Y mean
     # This catches the bug where residual charts used Y instead of R5
     assert not np.isclose(r5_xbar_stats['center'], y_mean, atol=0.1), \
-        f"R5_Xbar center {r5_xbar_stats['center']} should NOT equal Y mean {y_mean}"
+        f"R5 Xbar center {r5_xbar_stats['center']} should NOT equal Y mean {y_mean}"

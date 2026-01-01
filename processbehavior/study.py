@@ -626,13 +626,14 @@ class StudyChartAccessor:
     This class dynamically creates attributes for each valid primary chart type,
     enabling IDE auto-completion and preventing invalid chart selections.
 
-    For residual charts (VAS analysis), use study.residuals instead.
-
     Usage:
         study = pb.formulate(response='weight', factors=['lane'])
 
         # IDE auto-completes valid primary charts
         result = study.execute(chart=study.charts.Xbar)
+
+        # Chart residuals using value parameter
+        result = study.execute(chart=study.charts.Xbar, value='R5')
 
     Attributes are set dynamically based on SDS-specific valid charts.
     """
@@ -661,55 +662,6 @@ class StudyChartAccessor:
     def __dir__(self) -> list[str]:
         """Support for tab-completion in IPython/Jupyter."""
         return [c.replace(':', '_').replace('-', '_') for c in self._valid_charts]
-
-
-class StudyResidualAccessor:
-    """
-    Provides IDE auto-completion for residual chart types in a Study.
-
-    Residual charts are used for Variance Analysis Study (VAS) to decompose
-    sources of variation:
-
-    - R2: Within-subgroup variation (measurement noise)
-    - R3: Interaction effects (factor × time)
-    - R4: Time effects (trends, shifts over time)
-    - R5: Factor effects (differences between levels)
-
-    Usage:
-        study = pb.formulate(response='weight', factors=['lane'], time='pull')
-
-        # IDE auto-completes valid residual charts
-        result = study.execute(chart=study.residuals.R4_Imr)
-
-    Attributes are set dynamically based on SDS-specific available residuals.
-    """
-
-    def __init__(self, residual_charts: list[str]):
-        """
-        Initialize accessor with available residual chart types.
-
-        Parameters
-        ----------
-        residual_charts : list of str
-            Residual chart types (R2_S, R2_Imr, R3_Imr, R4_Imr, R5_Imr, etc.)
-        """
-        self._residual_charts = residual_charts
-
-        # Dynamically add each residual chart as an attribute
-        for chart in self._residual_charts:
-            # Convert chart names to valid Python identifiers
-            attr_name = chart.replace(':', '_').replace('-', '_')
-            setattr(self, attr_name, chart)
-
-    def __repr__(self) -> str:
-        """Display available residual chart types."""
-        if not self._residual_charts:
-            return "StudyResidualAccessor(none available)"
-        return f"StudyResidualAccessor({', '.join(self._residual_charts)})"
-
-    def __dir__(self) -> list[str]:
-        """Support for tab-completion in IPython/Jupyter."""
-        return [c.replace(':', '_').replace('-', '_') for c in self._residual_charts]
 
 
 @dataclass(frozen=True)
@@ -976,33 +928,37 @@ class Study:
         return StudyChartAccessor(self.valid_charts)
 
     @property
-    def residuals(self) -> StudyResidualAccessor:
+    def available_residuals(self) -> list[str]:
         """
-        Accessor for IDE auto-completion of residual chart types.
+        Available residual types (R1-R5) for this study.
 
-        Residual charts are used for Variance Analysis Study (VAS) to
-        decompose sources of variation:
+        Returns unique residual identifiers that can be used with the `value`
+        parameter in execute(). Residuals decompose sources of variation:
 
+        - R1: Total residual (y - grand mean)
         - R2: Within-subgroup variation (measurement noise)
         - R3: Interaction effects (factor × time)
         - R4: Time effects (trends, shifts over time)
         - R5: Factor effects (differences between levels)
 
         Usage:
-            study.residuals.R4_Imr  # Time effects on an IMR chart
-            study.residuals.R5_Imr  # Factor effects
+            study.execute(chart='Xbar', value='R5')  # Factor effects
+            study.execute(chart='Imr', value='R4')   # Time effects
 
         Returns
         -------
-        StudyResidualAccessor
-            Object with residual chart types as attributes
+        list[str]
+            Available residual identifiers (e.g., ['R1', 'R2', 'R3', 'R4', 'R5'])
 
         See Also
         --------
-        charts : Primary chart accessor (Xbar, S, Imr, R)
-        residual_charts : List of available residual chart names
+        residual_charts : Full list of residual+chart combinations
         """
-        return StudyResidualAccessor(self.residual_charts)
+        # Extract unique residual IDs from residual_charts (e.g., R2_S -> R2)
+        residual_ids = sorted(set(
+            chart.split('_')[0] for chart in self.residual_charts
+        ))
+        return residual_ids
 
     @property
     def support(self) -> pd.DataFrame:
@@ -1273,13 +1229,21 @@ class Study:
     def execute(
         self,
         chart: str | None = None,
+        by: list[str] | None = None,
+        value: str | None = None,
         recentered: bool = False
     ) -> AnalysisResult:
         """
         Run the analysis and return results.
 
         This executes the formulated study using the specified chart type
-        (or the recommended chart if none specified).
+        (or the recommended chart if none specified). The `by` parameter
+        controls how data is grouped/stratified, and `value` specifies
+        what to chart (response or residuals).
+
+        IMPORTANT: `by` creates a VIEW over the immutable analytic dataset.
+        It does NOT recompute residuals or change the decomposition of variation.
+        Residual values are identical regardless of `by`.
 
         Parameters
         ----------
@@ -1287,8 +1251,25 @@ class Study:
             Chart type to use. If None, uses recommended_chart.
             Can use study.charts.Xbar for IDE auto-completion.
 
-            Primary charts: 'Xbar', 'S', 'Imr', 'R'
-            Residual charts: 'R2_S', 'R2_Imr', 'R3_Imr', 'R4_Imr', 'R5_Imr'
+            Valid charts: 'Xbar', 'S', 'Imr', 'R'
+
+        by : list[str], optional
+            Factors to group/stratify by. Controls view granularity.
+
+            - by=None: Default for chart type (full rsg_key for Xbar/S,
+              ERROR for Imr/R with factors - must be explicit)
+            - by=[]: Collapse all factors (single overall chart/group)
+            - by=['factor']: Stratify/aggregate by single factor
+            - by=['f1', 'f2']: Stratify/aggregate by factor combination
+
+            For Xbar/S: by controls aggregation (groups on x-axis)
+            For Imr/R: by controls stratification (separate charts)
+
+        value : str, optional
+            What to chart. Options:
+
+            - None or 'response': Chart the response variable (default)
+            - 'R1' through 'R5': Chart the specified residual
 
         recentered : bool, default False
             For residual charts only. If True, uses re-centered residuals
@@ -1305,6 +1286,8 @@ class Study:
         ------
         ValueError
             If specified chart is not valid for this SDS
+            If by contains invalid factors
+            If Imr/R with factors but by not specified
 
         Examples
         --------
@@ -1317,11 +1300,21 @@ class Study:
         >>> result = study.execute(chart='Xbar')
         >>> result = study.execute(chart=study.charts.Xbar)
 
-        Analyze residual charts (VAS):
+        Use by parameter for views:
 
-        >>> result = study.execute(chart='R4_Imr')  # Time effects
-        >>> result = study.execute(chart='R5_Imr')  # Factor effects
-        >>> result = study.execute(chart='R4_Imr', recentered=True)  # Re-centered
+        >>> # Xbar aggregated by factor 1
+        >>> result = study.execute(chart='Xbar', by=['factor 1'])
+
+        >>> # IMR stratified by all factors (separate chart per combo)
+        >>> result = study.execute(chart='Imr', by=['factor 1', 'factor 2'])
+
+        >>> # IMR single overall chart
+        >>> result = study.execute(chart='Imr', by=[])
+
+        Chart residuals:
+
+        >>> result = study.execute(chart='Xbar', value='R5')  # Factor effects
+        >>> result = study.execute(chart='Imr', value='R4', recentered=True)
 
         Chain to visualization:
 
@@ -1333,14 +1326,35 @@ class Study:
         # Determine chart type
         chart_request = chart or self.recommended_chart
 
-        # Parse chart request into normalized components
-        residual_id, base_chart, recentered = self._parse_chart_request(
-            chart_request,
-            recentered_kwarg=recentered
-        )
+        # Parse and validate chart request (returns base chart type only)
+        base_chart = self._parse_chart_request(chart_request)
 
-        if residual_id is not None:
-            # Residual chart - validate availability using canonical name
+        # Validate by parameter (may raise ValueError)
+        by_validated = self._validate_by_parameter(by, base_chart)
+
+        # Primary chart validation
+        if base_chart not in self.valid_charts:
+            available_list = list(self.valid_charts)
+            raise ChartNotAvailableError(
+                f"Chart type '{base_chart}' is not valid for SDS {self.sds}.\n"
+                f"Valid charts: {', '.join(available_list)}\n"
+                f"Recommended: {self.recommended_chart}\n"
+                f"Use study.why_not('{base_chart}') for explanation.",
+                chart=base_chart,
+                available=available_list
+            )
+
+        # Resolve value column (response or residual)
+        value_col = self._resolve_value_column(value, recentered)
+
+        # Validate residual availability if charting a residual
+        if value is not None and value.upper().startswith('R'):
+            # Extract residual identifier (R1-R5, RCR1-RCR5)
+            residual_id = value.upper()
+            if residual_id.startswith('RCR'):
+                residual_id = f"R{residual_id[3:]}"
+
+            # Check availability using canonical name
             canonical_name = f"{residual_id}_{base_chart}"
             if canonical_name not in self.residual_charts:
                 available_list = list(self.residual_charts) if self.residual_charts else []
@@ -1353,166 +1367,265 @@ class Study:
                     available=available_list
                 )
 
-            # Build spec dict for residual chart
-            spec_dict = {
-                'analysis_type': base_chart,
-                'response_var': self._spec.response_var,
-                'time_var': self._spec.time_var,
-                'rsg_vars': self._spec.rsg_vars,
-                'rsg_var_name': self._spec.rsg_var_name,
-                'rsg_var_delim': self._spec.rsg_var_delim,
-                'round_to': self._spec.round_to,
-                'residual': residual_id,
-                'residual_chart_type': base_chart,
-                'recentered': recentered
-            }
-        else:
-            # Primary chart validation
-            if base_chart not in self.valid_charts:
-                available_list = list(self.valid_charts)
-                raise ChartNotAvailableError(
-                    f"Chart type '{base_chart}' is not valid for SDS {self.sds}.\n"
-                    f"Valid charts: {', '.join(available_list)}\n"
-                    f"Recommended: {self.recommended_chart}\n"
-                    f"Use study.why_not('{base_chart}') for explanation.",
-                    chart=base_chart,
-                    available=available_list
-                )
+        # Determine if this is a residual chart
+        is_residual = value is not None and value.upper().startswith('R')
 
-            # Build spec dict for primary chart
-            spec_dict = {
-                'analysis_type': base_chart,
-                'response_var': self._spec.response_var,
-                'time_var': self._spec.time_var,
-                'rsg_vars': self._spec.rsg_vars,
-                'rsg_var_name': self._spec.rsg_var_name,
-                'rsg_var_delim': self._spec.rsg_var_delim,
-                'round_to': self._spec.round_to
-            }
+        # Build spec dict
+        spec_dict = {
+            'analysis_type': base_chart,
+            'response_var': self._spec.response_var,
+            'time_var': self._spec.time_var,
+            'rsg_vars': self._spec.rsg_vars,
+            'rsg_var_name': self._spec.rsg_var_name,
+            'rsg_var_delim': self._spec.rsg_var_delim,
+            'round_to': self._spec.round_to,
+            'by': by_validated,
+            'value_col': value_col,
+            'residual': value.upper() if is_residual else None,
+            'residual_chart_type': base_chart if is_residual else None,
+            'recentered': recentered,
+        }
 
         # Create and run analysis using pre-calculated AnalysisDataSet
         # This makes execute() cheap - the expensive residual calculation was done in formulate()
         analysis = Analysis(self._pdf.data, spec_dict, analysis_dataset=self._ads)
         return analysis.calculate()
 
-    def _parse_chart_request(
-        self,
-        chart: str,
-        recentered_kwarg: bool = False
-    ) -> tuple[str | None, str, bool]:
+    def _parse_chart_request(self, chart: str) -> str:
         """
-        Parse chart string into normalized components.
+        Parse chart string to validate base chart type.
 
         Parameters
         ----------
         chart : str
-            Chart request string. Accepts:
-            - Base charts: 'Xbar', 'S', 'Imr', 'R'
-            - Numeric residuals: 'R5_Xbar', 'RCR5_Xbar'
-            - Alias residuals: 'noise_Xbar', 'rc_noise_Xbar'
-        recentered_kwarg : bool
-            Recentered flag from execute() kwarg
+            Chart request string. Only accepts base charts: 'Xbar', 'S', 'Imr', 'R'
 
         Returns
         -------
-        tuple[str | None, str, bool]
-            (residual_id, base_chart, recentered)
-            - residual_id: None for base charts, "R<digits>" for residual charts
-            - base_chart: One of VALID_BASE_CHARTS
-            - recentered: True if requested via rc_/RCR in string OR via kwarg
+        str
+            Validated base chart type
 
         Raises
         ------
         ValueError
-            For malformed inputs or unknown chart types
+            For invalid chart types or old residual chart syntax
         """
         if not chart or not isinstance(chart, str):
             raise ValueError("Chart name must be a non-empty string")
 
-        # Case 1: Base chart (no underscore)
-        if "_" not in chart:
-            if chart in VALID_BASE_CHARTS:
-                return (None, chart, False)
-            if chart in RESIDUAL_ALIASES or re.match(r'^R\d+$', chart) or re.match(r'^RCR\d+$', chart):
-                raise ValueError(
-                    f"Missing base chart type. Expected '{chart}_Xbar', '{chart}_S', or '{chart}_Imr'"
-                )
+        # Base chart - valid
+        if chart in VALID_BASE_CHARTS:
+            return chart
+
+        # Detect old residual chart syntax and provide migration guidance
+        if "_" in chart:
+            # Old syntax: R5_Xbar, noise_Xbar, rc_R5_Xbar, RCR5_Xbar
+            self._raise_old_syntax_error(chart)
+
+        # R1-R5 without base chart
+        if re.match(r'^R\d+$', chart) or re.match(r'^RCR\d+$', chart):
             raise ValueError(
-                f"Unknown chart '{chart}'. "
-                f"Valid base charts: {', '.join(sorted(VALID_BASE_CHARTS))}"
+                f"'{chart}' is a residual identifier, not a chart type.\n"
+                f"Use: study.execute(chart='Xbar', value='{chart}')\n"
+                f"Or: study.execute(chart='Imr', value='{chart}')"
             )
 
-        # Case 2: Has underscore - parse components
-        # Detect and strip rc_ prefix
-        recentered_from_string = False
+        # Alias without base chart
+        if chart in RESIDUAL_ALIASES:
+            residual_id = RESIDUAL_ALIASES[chart]["id"]
+            raise ValueError(
+                f"'{chart}' is a residual alias for {residual_id}, not a chart type.\n"
+                f"Use: study.execute(chart='Xbar', value='{residual_id}')\n"
+                f"Or: study.execute(chart='Imr', value='{residual_id}')"
+            )
+
+        raise ValueError(
+            f"Unknown chart '{chart}'. "
+            f"Valid chart types: {', '.join(sorted(VALID_BASE_CHARTS))}"
+        )
+
+    def _raise_old_syntax_error(self, chart: str) -> None:
+        """Raise helpful error for old residual chart syntax."""
+        # Strip rc_ prefix if present
         working = chart
+        recentered = False
         if working.startswith("rc_"):
-            recentered_from_string = True
-            working = working[3:]  # Remove 'rc_' prefix
-            if not working or working.startswith("_"):
-                raise ValueError(
-                    f"Invalid chart name '{chart}': missing residual identifier after 'rc_'"
-                )
+            recentered = True
+            working = working[3:]
 
-        # Check for double recenter: rc_RCR5_Xbar
-        if recentered_from_string and working.startswith("RCR"):
-            raise ValueError(
-                f"Double recenter specification in '{chart}'. "
-                f"Use either 'rc_' prefix OR 'RCR' notation, not both."
-            )
+        # Try to parse residual and base chart
+        if "_" in working:
+            residual_part, base_chart = working.rsplit("_", 1)
 
-        # Split from right to get base_chart and residual_part
-        if "_" not in working:
-            raise ValueError(
-                f"Invalid chart name '{chart}': expected format 'residual_ChartType'"
-            )
-
-        residual_part, base_chart = working.rsplit("_", 1)
-
-        # Validate non-empty residual part
-        if not residual_part:
-            raise ValueError(
-                f"Invalid chart name '{chart}': missing residual identifier before underscore"
-            )
-
-        # Validate base chart
-        if base_chart not in VALID_BASE_CHARTS:
-            raise ValueError(
-                f"Unknown chart type '{base_chart}' in '{chart}'. "
-                f"Valid types: {', '.join(sorted(VALID_BASE_CHARTS))}"
-            )
-
-        # Parse residual part
-        residual_id = None
-
-        # Pattern: RCR<digits> (recentered numeric)
-        rcr_match = re.match(r'^RCR(\d+)$', residual_part)
-        if rcr_match:
-            residual_id = f"R{rcr_match.group(1)}"
-            recentered_from_string = True
-
-        # Pattern: R<digits> (numeric)
-        if not residual_id:
-            r_match = re.match(r'^R(\d+)$', residual_part)
-            if r_match:
+            # Check for RCR prefix
+            if residual_part.startswith("RCR"):
+                residual_id = f"R{residual_part[3:]}"
+                recentered = True
+            elif residual_part.startswith("R") and residual_part[1:].isdigit():
                 residual_id = residual_part
-
-        # Pattern: alias (e.g., 'noise', 'within_cell', 'time_structure_removed')
-        if not residual_id:
-            if residual_part in RESIDUAL_ALIASES:
+            elif residual_part in RESIDUAL_ALIASES:
                 residual_id = RESIDUAL_ALIASES[residual_part]["id"]
             else:
-                valid_aliases = sorted(RESIDUAL_ALIASES.keys())
+                residual_id = residual_part
+
+            if base_chart in VALID_BASE_CHARTS:
+                recentered_hint = ", recentered=True" if recentered else ""
                 raise ValueError(
-                    f"Unknown residual '{residual_part}' in '{chart}'. "
-                    f"Valid aliases: {', '.join(valid_aliases)}. "
-                    f"Or use numeric form: R1, R2, R3, R4, R5"
+                    f"Old residual chart syntax '{chart}' is no longer supported.\n"
+                    f"Use: study.execute(chart='{base_chart}', value='{residual_id}'{recentered_hint})"
                 )
 
-        # Resolve recentered: string OR kwarg
-        recentered = recentered_from_string or recentered_kwarg
+        raise ValueError(
+            f"Invalid chart name '{chart}'. "
+            f"Valid chart types: {', '.join(sorted(VALID_BASE_CHARTS))}"
+        )
 
-        return (residual_id, base_chart, recentered)
+    def _validate_by_parameter(
+        self,
+        by: list[str] | None,
+        base_chart: str
+    ) -> list[str] | None:
+        """
+        Validate and normalize the `by` parameter.
+
+        Parameters
+        ----------
+        by : list[str] | None
+            User-specified by parameter
+        base_chart : str
+            Base chart type being requested (Xbar, S, Imr, R)
+
+        Returns
+        -------
+        list[str] | None
+            Normalized by parameter
+
+        Raises
+        ------
+        ValueError
+            If by contains factors not in rsg_vars
+            If by=None for IMR/R with factors (must be explicit)
+            If by contains time variable for IMR/R charts
+        """
+        factors = self._spec.rsg_vars or []
+        time_var = self._spec.time_var
+        is_time_series_chart = base_chart in ('Imr', 'R')
+
+        # No factors case: by=None is fine, by=[] is also fine
+        if not factors:
+            if by is not None and by != []:
+                raise ValueError(
+                    f"Invalid by={by}. No factors defined in this study. "
+                    f"Use by=None or by=[] for single stream."
+                )
+            return []  # Normalize to empty list for no-factor case
+
+        # Has factors case
+        if by is None:
+            if is_time_series_chart:
+                # IMR/R with factors requires explicit by
+                factor_str = ', '.join(f"'{f}'" for f in factors)
+                raise ValueError(
+                    f"IMR/R charts with factors require explicit 'by' parameter.\n"
+                    f"Specify how to stratify:\n"
+                    f"  by=[{factor_str}] for {self._get_factor_combinations()} charts (one per factor combination)\n"
+                    f"  by=['{factors[0]}'] for fewer charts (stratify by single factor)\n"
+                    f"  by=[] for single overall chart"
+                )
+            # Xbar/S: by=None means full rsg_key (current behavior)
+            return None
+
+        # Normalize string to list
+        if isinstance(by, str):
+            by = [by]
+
+        # Validate by is subset of factors (not time)
+        by_set = set(by)
+        factor_set = set(factors)
+        invalid = by_set - factor_set
+
+        if invalid:
+            # Check if user tried to use time
+            if time_var and time_var in invalid:
+                if is_time_series_chart:
+                    raise ValueError(
+                        f"Cannot use time variable '{time_var}' in by for {base_chart} charts. "
+                        f"Time is the x-axis for {base_chart} charts, not a stratification dimension. "
+                        f"Valid by dimensions: {sorted(factors)}"
+                    )
+                # For Xbar/S, time in by means group by time (one point per time)
+                # This is valid - remove from invalid set
+                invalid = invalid - {time_var}
+
+        if invalid:
+            raise ValueError(
+                f"Invalid by dimensions: {sorted(invalid)}. "
+                f"Valid dimensions (factors): {sorted(factors)}. "
+                f"Hint: by must be a subset of the study's factors."
+            )
+
+        return list(by)
+
+    def _get_factor_combinations(self) -> int:
+        """Get count of unique factor combinations in the dataset."""
+        if not self._spec.rsg_vars:
+            return 1
+        return self._ads.analysis_dataset[self._spec.rsg_var_name].nunique()
+
+    def _resolve_value_column(
+        self,
+        value: str | None,
+        recentered: bool
+    ) -> str:
+        """
+        Resolve the value parameter to a column name.
+
+        Parameters
+        ----------
+        value : str | None
+            User-specified value ('response', 'R1', 'R2', etc.) or None
+        recentered : bool
+            Whether to use recentered residuals (RCR columns)
+
+        Returns
+        -------
+        str
+            Column name to chart (response_var, R1-R5, or RCR1-RCR5)
+
+        Raises
+        ------
+        ValueError
+            If value specifies unavailable residual
+        """
+        if value is None or value.lower() == 'response':
+            return self._spec.response_var
+
+        # Parse residual specification
+        value_upper = value.upper()
+        if value_upper.startswith('RCR'):
+            # Already recentered format
+            col_name = value_upper
+        elif value_upper.startswith('R') and len(value_upper) >= 2 and value_upper[1:].isdigit():
+            residual_num = value_upper[1:]
+            prefix = 'RCR' if recentered else 'R'
+            col_name = f'{prefix}{residual_num}'
+        else:
+            raise ValueError(
+                f"Invalid value '{value}'. "
+                f"Valid options: 'response', 'R1', 'R2', 'R3', 'R4', 'R5' "
+                f"(or 'RCR1'-'RCR5' for recentered)."
+            )
+
+        # Validate column exists in analysis dataset
+        if col_name not in self._ads.analysis_dataset.columns:
+            available = [c for c in self._ads.analysis_dataset.columns
+                        if c.startswith('R') and len(c) == 2 and c[1].isdigit()]
+            raise ValueError(
+                f"Residual column '{col_name}' not available for SDS {self.sds}. "
+                f"Available: {available}"
+            )
+
+        return col_name
 
     # =========================================================================
     # Display Methods
@@ -1529,19 +1642,14 @@ class Study:
         factors_str = ', '.join(self.factors) if self.factors else 'None'
         time_str = self.time or 'None'
 
-        # Get available charts from support DataFrame
-        avail = self.support[self.support['available']]
-        primary = avail[avail['category'] == 'primary']['chart'].tolist()
-        residual = avail[avail['category'] == 'residual']['chart'].tolist()
-
         lines = [
             f"Study(response='{self.response}', factors=[{factors_str}], time='{time_str}', sds={self.sds})",
         ]
         if self.unit_of_analysis:
             lines.append(f"  Unit of analysis: {self.unit_of_analysis}")
-        lines.append(f"  Valid: {', '.join(primary)} | Recommended: {self.recommended_chart}")
-        if residual:
-            lines.append(f"  Residuals: {', '.join(residual)}")
+        lines.append(f"  Valid: {', '.join(self.valid_charts)} | Recommended: {self.recommended_chart}")
+        if self.available_residuals:
+            lines.append(f"  Residuals: {', '.join(self.available_residuals)}")
         lines.append("  → study.execute() or study.support for details")
 
         return '\n'.join(lines)
@@ -1551,12 +1659,8 @@ class Study:
         factors_str = ', '.join(self.factors) if self.factors else 'None'
         time_str = self.time or 'None'
 
-        # Get available charts from support DataFrame
-        avail = self.support[self.support['available']]
-        primary = avail[avail['category'] == 'primary']['chart'].tolist()
-        residual = avail[avail['category'] == 'residual']['chart'].tolist()
-
-        residual_html = f"<br><strong>Residuals:</strong> {', '.join(residual)}" if residual else ""
+        residuals = self.available_residuals
+        residual_html = f"<br><strong>Residuals:</strong> {', '.join(residuals)}" if residuals else ""
         uoa_html = f"<br><strong>Unit of analysis:</strong> {self.unit_of_analysis}" if self.unit_of_analysis else ""
 
         style = "font-family: monospace; padding: 8px; border: 1px solid #ccc; background: #f9f9f9"
@@ -1564,7 +1668,7 @@ class Study:
         <div style="{style}">
             <code>Study(response='{self.response}', factors=[{factors_str}], time='{time_str}', sds={self.sds})</code>
             {uoa_html}
-            <br><strong>Valid:</strong> {', '.join(primary)} | <strong>Recommended:</strong> {self.recommended_chart}
+            <br><strong>Valid:</strong> {', '.join(self.valid_charts)} | <strong>Recommended:</strong> {self.recommended_chart}
             {residual_html}
             <br><em>→ study.execute() or study.support for details</em>
         </div>

@@ -337,33 +337,15 @@ class Analysis:
             # Calculate using base method with value_col
             if chart_type == 'S':
                 s_result = self._calculate_s(value_col=col_name)
-                chart_name = f'{residual}_S'
-
-                # Check if limits vary
-                lpl_varies = s_result['lpl'].nunique() > 1 if 'lpl' in s_result.columns else False
-                upl_varies = s_result['upl'].nunique() > 1 if 'upl' in s_result.columns else False
-
-                if lpl_varies or upl_varies:
-                    statistics = {
-                        'center': s_result['center'].iloc[0] if 'center' in s_result.columns else None,
-                        'lpl': 'Varies',
-                        'upl': 'Varies',
-                    }
-                else:
-                    statistics = {
-                        'center': s_result['center'].iloc[0] if 'center' in s_result.columns else None,
-                        'lpl': s_result['lpl'].iloc[0] if 'lpl' in s_result.columns else None,
-                        'upl': s_result['upl'].iloc[0] if 'upl' in s_result.columns else None,
-                    }
+                chart_name = 'S'
+                s_data = s_result['S']
 
                 chart_data = {
                     chart_name: {
-                        'data': s_result,
-                        'statistics': statistics,
+                        'data': s_data['data'],
+                        'statistics': s_data['statistics'],
                         'metadata': {
-                            'chart_type': 'S',
-                            'value_col': 's',
-                            'center_col': 'center',
+                            **s_data.get('metadata', {}),
                             'residual_type': residual,
                             'recentered': recentered,
                             'question_answered': questions.get(residual, '')
@@ -373,7 +355,7 @@ class Analysis:
 
             elif chart_type == 'Xbar':
                 xbar_result = self._calculate_xbar(value_col=col_name)
-                chart_name = f'{residual}_Xbar'
+                chart_name = 'Xbar'
                 xbar_data = xbar_result['Xbar']
 
                 chart_data = {
@@ -400,7 +382,7 @@ class Analysis:
                     data['metadata']['residual_type'] = residual
                     data['metadata']['recentered'] = recentered
                     data['metadata']['question_answered'] = questions.get(residual, '')
-                    renamed_result[f'{residual}_{chart_key}'] = data
+                    renamed_result[chart_key] = data
 
                 chart_data = renamed_result
 
@@ -512,6 +494,142 @@ class Analysis:
         )
 
         return n_to_use, n_max
+
+    def _resolve_by_grouping(
+        self,
+        value_col: str
+    ) -> tuple[list[str], str | None]:
+        """
+        Resolve groupby columns and pre-calculated Ybar column based on `by` parameter.
+
+        The `by` parameter controls aggregation level for Xbar/S charts.
+        When possible, we use pre-calculated Ybar columns from the analytic dataset.
+
+        Parameters
+        ----------
+        value_col : str
+            Column being charted (response_var or residual column)
+
+        Returns
+        -------
+        tuple[list[str], str | None]
+            (groupby_cols, ybar_col) where:
+            - groupby_cols: columns to group by (empty list for collapse all)
+            - ybar_col: pre-calculated Ybar column to use, or None if must aggregate
+
+        Examples
+        --------
+        >>> groupby_cols, ybar_col = self._resolve_by_grouping('y')
+        >>> # by=[] -> ([], 'Ybar') - collapse all, use grand mean
+        >>> # by=['factor1','factor2'] -> (['rsg'], 'Ybar_k') - use factor means
+        """
+        spec = self.spec
+        by = spec.by
+        rsg_vars = spec.rsg_vars or []
+        time_var = spec.time_var
+
+        # Determine if we're charting response (can use pre-calculated) or residual
+        is_response = value_col == spec.response_var
+
+        # Default: by=None means use full factor grouping (current behavior)
+        if by is None:
+            groupby_cols = [spec.rsg_var_name] if rsg_vars else []
+            ybar_col = 'Ybar_k' if is_response and rsg_vars else None
+            return groupby_cols, ybar_col
+
+        # by=[] means collapse all (single point)
+        if by == []:
+            return [], 'Ybar' if is_response else None
+
+        # Check if by matches known aggregation levels for Ybar optimization
+        by_set = set(by)
+        rsg_set = set(rsg_vars)
+
+        # by == all factors (rsg_key level) -> use Ybar_k
+        if by_set == rsg_set:
+            groupby_cols = [spec.rsg_var_name]
+            ybar_col = 'Ybar_k' if is_response else None
+            return groupby_cols, ybar_col
+
+        # by == [time_var] only -> use Ybar_t
+        if by_set == {time_var}:
+            groupby_cols = [time_var]
+            ybar_col = 'Ybar_t' if is_response else None
+            return groupby_cols, ybar_col
+
+        # by == all factors + time (cell_key level) -> use Ybar_kt
+        cell_key_vars = rsg_set | ({time_var} if time_var else set())
+        if by_set == cell_key_vars:
+            # Group by all factors + time
+            groupby_cols = rsg_vars + [time_var] if time_var else rsg_vars
+            ybar_col = 'Ybar_kt' if is_response else None
+            return groupby_cols, ybar_col
+
+        # Partial subset - must aggregate at runtime
+        # Use the by columns directly
+        groupby_cols = list(by)
+        return groupby_cols, None
+
+    def _calculate_lane_boundaries(
+        self,
+        df: pd.DataFrame,
+        collapsed_vars: list[str]
+    ) -> list[dict]:
+        """
+        Calculate lane boundaries where collapsed factors change.
+
+        Lane boundaries are positions in the data where a factor that was
+        "collapsed" (not in `by`) changes value. These are rendered as
+        vertical dashed lines on IMR charts.
+
+        Parameters
+        ----------
+        df : pd.DataFrame
+            Data in display order (already sorted)
+        collapsed_vars : list[str]
+            Variables that were collapsed (not in `by`)
+
+        Returns
+        -------
+        list[dict]
+            List of boundary dicts with 'position' (x index) and 'label' (factor value)
+
+        Examples
+        --------
+        >>> # If by=['factor1'] and data has factor1='A' with factor2 changing X→Y
+        >>> boundaries = self._calculate_lane_boundaries(df, ['factor2'])
+        >>> # Returns: [{'position': 5, 'label': 'Y', 'variable': 'factor2'}]
+        """
+        if not collapsed_vars:
+            return []
+
+        boundaries = []
+
+        # Create a combined key for all collapsed variables
+        if len(collapsed_vars) == 1:
+            combined = df[collapsed_vars[0]].astype(str)
+        else:
+            combined = df[collapsed_vars].astype(str).agg('_'.join, axis=1)
+
+        # Find where the combined key changes
+        changes = combined != combined.shift(1)
+
+        # Get positions (skip first row - it's always a "change" from NaN)
+        change_positions = df.index[changes].tolist()
+        if change_positions and change_positions[0] == df.index[0]:
+            change_positions = change_positions[1:]
+
+        # Build boundary info
+        for pos in change_positions:
+            idx = df.index.get_loc(pos)
+            label = combined.loc[pos]
+            boundaries.append({
+                'position': idx,  # 0-based position in the sorted data
+                'label': label,
+                'variables': collapsed_vars
+            })
+
+        return boundaries
 
     def _package_stratified_results(
         self,
@@ -672,43 +790,72 @@ class Analysis:
 
         Logic moved from Xbar.calculate_statistics()
         """
-        #df = self.ads.analysis_dataset
         spec = self.spec
         if value_col is None:
             value_col = spec.response_var
 
         result = {}
         statistics = {}
-        out = self.ads.analysis_dataset.copy()
+        df = self.ads.analysis_dataset.copy()
 
         logger.debug('In calculate statistics XbarS')
-        logger.debug('Dataframe has columns: %s', out.columns.to_list())
-        logger.debug('Dataframe head:\n%s', out.head(10))
-        logger.debug('n.max=%s', out["n"].max())
+        logger.debug('Dataframe has columns: %s', df.columns.to_list())
+        logger.debug('Dataframe head:\n%s', df.head(10))
 
-        # Calculate grand mean BEFORE grouping (Ybar - weighted by observation count)
-        # This must be done before aggregation to get the true grand mean
-        _Ybar = out[value_col].mean()
+        # Resolve grouping based on `by` parameter
+        groupby_cols, ybar_col = self._resolve_by_grouping(value_col)
 
-        out = out.groupby(spec.rsg_var_name, as_index=False, observed=True).agg(
-            s=pd.NamedAgg(column=value_col, aggfunc="std"),
-            mean=pd.NamedAgg(column=value_col, aggfunc="mean"),
-            # Count on response_var (not value_col) to avoid NaN issues with residuals
-            n=pd.NamedAgg(column=spec.response_var, aggfunc="count")
-        )
+        # Calculate grand mean (center line) - use pre-calculated if available
+        if ybar_col == 'Ybar' and 'Ybar' in df.columns:
+            _Ybar = df['Ybar'].iloc[0]  # Constant across all rows
+        else:
+            _Ybar = df[value_col].mean()
+
+        # Handle by=[] (collapse all) - single point chart
+        if groupby_cols == []:
+            # Single aggregation across all data
+            _S = df[value_col].std()
+            _N = len(df)
+            out = pd.DataFrame({
+                'group': ['All'],
+                'xbar': [_Ybar],
+                's': [_S],
+                'n': [_N],
+                'N': [_N]
+            })
+        else:
+            # Group by specified columns
+            out = df.groupby(groupby_cols, as_index=False, observed=True).agg(
+                s=pd.NamedAgg(column=value_col, aggfunc="std"),
+                mean=pd.NamedAgg(column=value_col, aggfunc="mean"),
+                # Count on response_var (not value_col) to avoid NaN issues with residuals
+                n=pd.NamedAgg(column=spec.response_var, aggfunc="count")
+            )
+
+            # If we have pre-calculated Ybar, use it for xbar values
+            if ybar_col and ybar_col in df.columns:
+                # Get unique Ybar values per group
+                ybar_by_group = df.groupby(groupby_cols, observed=True)[ybar_col].first().reset_index()
+                out = out.merge(ybar_by_group, on=groupby_cols, how='left')
+                out['xbar'] = out[ybar_col]
+                out = out.drop(columns=[ybar_col, 'mean'], errors='ignore')
+            else:
+                # Rename columns for consistency: mean→xbar (values)
+                out = out.rename(columns={'mean': 'xbar'})
+
+            _N = out['n'].max()
+            out['N'] = _N
 
         # Handle case where no subgroups have >1 observation
         if out.shape[0] == 0:
             raise ValueError("All subgroups have 1 or less observations!")
 
-        # Rename columns for consistency: mean→xbar (values)
-        out = out.rename(columns={'mean': 'xbar'})
-
         # Use grand mean as center line (not mean of subgroup means)
         _Xbar = _Ybar
         _S = out["s"].mean()
         _N = out['n'].max()
-        out['N'] = _N
+        if 'N' not in out.columns:
+            out['N'] = _N
 
         # Determine if subgroup sizes are constant or variable
         n_to_use, n_max = self._determine_n_to_use(out)
@@ -741,7 +888,21 @@ class Analysis:
             statistics['lpl'] = variable_stats
             statistics['upl'] = variable_stats
 
-        cols_to_keep = ['rsg', 'xbar', 'center', 'lpl', 'upl', 'beyond_limits']
+        # Determine the grouping column for output
+        # For by=[], we use 'group'; for by=factors, we use 'rsg'; otherwise use first groupby col
+        if groupby_cols == []:
+            group_col = 'group'
+        elif groupby_cols == [spec.rsg_var_name]:
+            group_col = 'rsg'
+        else:
+            group_col = groupby_cols[0] if len(groupby_cols) == 1 else 'group'
+            # Create combined group column if multiple groupby columns
+            if len(groupby_cols) > 1:
+                xbar['group'] = xbar[groupby_cols].astype(str).agg('_'.join, axis=1)
+                group_col = 'group'
+
+        cols_to_keep = [group_col, 'xbar', 'center', 'lpl', 'upl', 'beyond_limits']
+        cols_to_keep = [c for c in cols_to_keep if c in xbar.columns]
         xbar = xbar[cols_to_keep]
         result['Xbar'] = {
             'data': xbar,
@@ -784,7 +945,12 @@ class Analysis:
             statistics['lpl'] = variable_stats
             statistics['upl'] = variable_stats
 
-        cols_to_keep = ['rsg', 's', 'center', 'lpl', 'upl', 'beyond_limits']
+        # Apply same grouping transformation as xbar
+        if len(groupby_cols) > 1 and group_col == 'group':
+            sbar['group'] = sbar[groupby_cols].astype(str).agg('_'.join, axis=1)
+
+        cols_to_keep = [group_col, 's', 'center', 'lpl', 'upl', 'beyond_limits']
+        cols_to_keep = [c for c in cols_to_keep if c in sbar.columns]
         sbar = sbar[cols_to_keep]
         result['S'] = {
             'data': sbar,
@@ -814,22 +980,37 @@ class Analysis:
         if value_col is None:
             value_col = spec.response_var
 
-        out = self.ads.analysis_dataset.copy()
+        df = self.ads.analysis_dataset.copy()
 
-        out = out.groupby(spec.rsg_var_name, as_index=False, observed=True).agg(
-            s=pd.NamedAgg(column=value_col, aggfunc="std"),
-            # Count on response_var (not value_col) to avoid NaN issues with residuals
-            n=pd.NamedAgg(column=spec.response_var, aggfunc="count"),
-        )
+        # Resolve grouping based on `by` parameter
+        groupby_cols, _ = self._resolve_by_grouping(value_col)
 
-        # remove RSGs with a single observation
-        mask = out['n'].eq(1)
-        out = out[~mask]
+        # Handle by=[] (collapse all) - single point chart
+        if groupby_cols == []:
+            _S = df[value_col].std()
+            _N = len(df)
+            out = pd.DataFrame({
+                'group': ['All'],
+                's': [_S],
+                'n': [_N],
+                'N': [_N]
+            })
+        else:
+            out = df.groupby(groupby_cols, as_index=False, observed=True).agg(
+                s=pd.NamedAgg(column=value_col, aggfunc="std"),
+                # Count on response_var (not value_col) to avoid NaN issues with residuals
+                n=pd.NamedAgg(column=spec.response_var, aggfunc="count"),
+            )
 
-        # Rename 'S' to 'center' for consistency
+            # remove groups with a single observation
+            mask = out['n'].eq(1)
+            out = out[~mask]
+
+            out['N'] = out['n'].max()
+
+        # Calculate center line (mean of subgroup std devs)
         out['center'] = out["s"].mean()
         out['groups'] = out["n"].count()
-        out['N'] = out['n'].max()
 
         # Determine if subgroup sizes are constant or variable
         n_to_use, n_max = self._determine_n_to_use(out)
@@ -849,11 +1030,48 @@ class Analysis:
         # FIX: Should use 's' (varying values) not 'center' (constant)
         out = self._add_beyond_limits_flag(out, value_col='s')
 
-        cols_to_keep = ['rsg', 's', 'center', 'lpl', 'upl', 'beyond_limits']
+        # Determine the grouping column for output
+        if groupby_cols == []:
+            group_col = 'group'
+        elif groupby_cols == [spec.rsg_var_name]:
+            group_col = 'rsg'
+        else:
+            group_col = groupby_cols[0] if len(groupby_cols) == 1 else 'group'
+            if len(groupby_cols) > 1:
+                out['group'] = out[groupby_cols].astype(str).agg('_'.join, axis=1)
+                group_col = 'group'
+
+        cols_to_keep = [group_col, 's', 'center', 'lpl', 'upl', 'beyond_limits']
+        cols_to_keep = [c for c in cols_to_keep if c in out.columns]
         out = out[cols_to_keep]
         out = out.round(spec.round_to)
 
-        return out
+        # Build statistics
+        _S = out['center'].iloc[0] if len(out) > 0 else None
+        _N = n_max
+
+        statistics = {'center': round(_S, spec.round_to) if _S else None}
+        if n_to_use == "N":
+            statistics['N'] = _N
+            statistics['upl'] = out['upl'].max()
+            statistics['lpl'] = out['lpl'].max()
+        else:
+            variable_stats = 'Varies'
+            statistics['N'] = variable_stats
+            statistics['lpl'] = variable_stats
+            statistics['upl'] = variable_stats
+
+        return {
+            'S': {
+                'data': out,
+                'statistics': statistics,
+                'metadata': {
+                    'chart_type': 'S',
+                    'value_col': 's',
+                    'center_col': 'center'
+                }
+            }
+        }
 
     def _calculate_imr(self, value_col: str = None) -> dict:
         """
@@ -880,6 +1098,11 @@ class Analysis:
         Imr and R are bundled together, similar to how Xbar and S are bundled.
         For stratified data, the DataFrame is kept combined (with rsg column)
         and statistics are nested by stratum.
+
+        The `by` parameter controls stratification:
+        - by=[] → single chart with all observations, lane boundaries for all factors
+        - by=['factor1'] → one chart per factor1, lane boundaries for remaining factors
+        - by=['factor1','factor2'] or by=None → one chart per factor combo (current)
         """
         spec = self.spec
         if value_col is None:
@@ -891,16 +1114,55 @@ class Analysis:
         logger.debug('In calculate statistics IMR')
         logger.debug('Dataframe has columns: %s', out.columns.to_list())
 
-        if spec.has_grouping:
-            # Stable order before diff
-            sort_cols = [spec.rsg_var_name]
-            if spec.has_time:
-                sort_cols.append(spec.time_var)
+        # Determine stratification based on `by` parameter
+        by = spec.by
+        rsg_vars = spec.rsg_vars or []
+        time_var = spec.time_var
+
+        # Determine stratify_by and collapsed_factors
+        # collapsed_factors = factor variables not in `by` (for lane boundaries)
+        # Note: time is NOT included in collapsed_factors - it's expected to change
+        if by is None:
+            # Default: stratify by all factors (current behavior)
+            stratify_by = [spec.rsg_var_name] if rsg_vars else []
+            collapsed_factors = []  # No collapsed factors when stratifying by all
+        elif by == []:
+            # Collapse all: single chart with all observations
+            stratify_by = []
+            # All factors are collapsed (for lane boundaries)
+            collapsed_factors = list(rsg_vars)
+        else:
+            # Partial: stratify by specified factors
+            # Use the by columns directly for stratification
+            stratify_by = list(by)
+            # Collapsed factors = rsg_vars not in by (time is NOT included)
+            collapsed_factors = [v for v in rsg_vars if v not in by]
+
+        # Determine if we're doing stratified or single-stream analysis
+        is_stratified = len(stratify_by) > 0
+
+        if is_stratified:
+            # Determine the stratification column
+            # If stratifying by rsg_var_name equivalent, use it directly
+            # Otherwise create/use the specified columns
+            if stratify_by == [spec.rsg_var_name]:
+                stratify_col = spec.rsg_var_name
+            elif len(stratify_by) == 1:
+                stratify_col = stratify_by[0]
+            else:
+                # Multiple stratify columns - create combined key
+                out['_stratify_key'] = out[stratify_by].astype(str).agg('_'.join, axis=1)
+                stratify_col = '_stratify_key'
+
+            # Sort order: stratify columns first, then collapsed factors, then time
+            sort_cols = list(stratify_by) + collapsed_factors
+            if time_var and time_var not in sort_cols:
+                sort_cols.append(time_var)
             if sort_cols:
                 out = out.sort_values(sort_cols, kind='stable')
 
-            # Moving range per subgroup (must exist BEFORE agg)
-            out['mr'] = out.groupby(spec.rsg_var_name, sort=False, observed=True)[value_col].diff().abs()
+            # Moving range per stratum (must exist BEFORE agg)
+            out['mr'] = out.groupby(stratify_col, sort=False, observed=True)[value_col].diff().abs()
 
             # Build a SAFE aggregation spec (only include existing cols)
             agg = {}
@@ -916,7 +1178,7 @@ class Analysis:
                 )
 
             grouped = (
-                out.groupby(spec.rsg_var_name, sort=False, observed=True)
+                out.groupby(stratify_col, sort=False, observed=True)
                 .agg(**agg)
                 .reset_index()
             )
@@ -947,20 +1209,29 @@ class Analysis:
 
             # Attach IMR limits back to rows
             out = out.merge(
-                grouped[[spec.rsg_var_name, 'center', 'mR', 'lpl', 'upl']],
-                on=spec.rsg_var_name, how='left', validate='many_to_one'
+                grouped[[stratify_col, 'center', 'mR', 'lpl', 'upl']],
+                on=stratify_col, how='left', validate='many_to_one'
             )
 
             # Detect beyond limits signals for IMR
             out = self._add_beyond_limits_flag(out, value_col=value_col)
 
             # Get strata list
-            strata = grouped[spec.rsg_var_name].tolist()
+            strata = grouped[stratify_col].tolist()
+
+            # Calculate lane boundaries for each stratum (where collapsed factors change)
+            lane_boundaries = {}
+            if collapsed_factors:
+                for stratum in strata:
+                    stratum_data = out[out[stratify_col] == stratum].reset_index(drop=True)
+                    boundaries = self._calculate_lane_boundaries(stratum_data, collapsed_factors)
+                    if boundaries:
+                        lane_boundaries[stratum] = boundaries
 
             # Build IMR statistics nested by stratum
             imr_statistics = {}
             for stratum in strata:
-                row = grouped[grouped[spec.rsg_var_name] == stratum].iloc[0]
+                row = grouped[grouped[stratify_col] == stratum].iloc[0]
                 imr_statistics[stratum] = {
                     'center': round(row['center'], spec.round_to),
                     'lpl': round(row['lpl'], spec.round_to),
@@ -980,7 +1251,8 @@ class Analysis:
                     'chart_type': 'Imr',
                     'value_col': value_col,
                     'center_col': 'center',
-                    'stratified': True
+                    'stratified': True,
+                    'lane_boundaries': lane_boundaries if lane_boundaries else None
                 },
                 'strata': strata
             }
@@ -1022,10 +1294,10 @@ class Analysis:
             # Drop IMR limits columns
             r_out = r_out.drop(columns=['center', 'lpl', 'upl', 'beyond_limits'], errors='ignore')
             # Merge R limits
-            r_merge_data = r_grouped[[spec.rsg_var_name, 'center', r_lpl_col, r_upl_col]].rename(
+            r_merge_data = r_grouped[[stratify_col, 'center', r_lpl_col, r_upl_col]].rename(
                 columns={r_lpl_col: 'lpl', r_upl_col: 'upl'}
             )
-            r_out = r_out.merge(r_merge_data, on=spec.rsg_var_name, how='left', validate='many_to_one')
+            r_out = r_out.merge(r_merge_data, on=stratify_col, how='left', validate='many_to_one')
 
             # Drop NA rows (first observation in each group has no moving range)
             r_out = r_out.dropna(subset=['mr'])
@@ -1036,7 +1308,7 @@ class Analysis:
             # Build R statistics nested by stratum
             r_statistics = {}
             for stratum in strata:
-                row = r_grouped[r_grouped[spec.rsg_var_name] == stratum].iloc[0]
+                row = r_grouped[r_grouped[stratify_col] == stratum].iloc[0]
                 r_statistics[stratum] = {
                     'center': round(row['center'], spec.round_to),
                     'lpl': round(row[r_lpl_col], spec.round_to),
@@ -1049,6 +1321,19 @@ class Analysis:
                 value_cols=['mr', 'center', 'lpl', 'upl', 'beyond_limits']
             )
 
+            # Calculate R lane boundaries (adjust for dropped first row per stratum)
+            r_lane_boundaries = {}
+            if lane_boundaries:
+                for stratum, boundaries in lane_boundaries.items():
+                    adjusted = []
+                    for b in boundaries:
+                        # Adjust position since row 0 of each stratum is removed
+                        new_pos = b['position'] - 1
+                        if new_pos >= 0:
+                            adjusted.append({**b, 'position': new_pos})
+                    if adjusted:
+                        r_lane_boundaries[stratum] = adjusted
+
             result['R'] = {
                 'data': r_out,
                 'statistics': r_statistics,
@@ -1056,15 +1341,27 @@ class Analysis:
                     'chart_type': 'R',
                     'value_col': 'mr',
                     'center_col': 'center',
-                    'stratified': True
+                    'stratified': True,
+                    'lane_boundaries': r_lane_boundaries if r_lane_boundaries else None
                 },
                 'strata': strata
             }
 
         else:
             # Ungrouped path - single stream
+            # Sort by collapsed factors (for lane boundaries) then time
+            sort_cols = list(collapsed_factors)
             if spec.has_time:
-                out = out.sort_values([spec.time_var], kind='stable')
+                sort_cols.append(spec.time_var)
+            if sort_cols:
+                out = out.sort_values(sort_cols, kind='stable')
+            out = out.reset_index(drop=True)
+
+            # Calculate lane boundaries before any calculations
+            lane_boundaries = None
+            if collapsed_factors:
+                lane_boundaries = self._calculate_lane_boundaries(out, collapsed_factors)
+
             out['mr'] = out[value_col].diff().abs()
             mR = out['mr'].mean()
             mean_ = out[value_col].mean()
@@ -1100,7 +1397,8 @@ class Analysis:
                 'metadata': {
                     'chart_type': 'Imr',
                     'value_col': value_col,
-                    'center_col': 'center'
+                    'center_col': 'center',
+                    'lane_boundaries': lane_boundaries
                 }
             }
 
@@ -1135,13 +1433,29 @@ class Analysis:
                 'upl': round(r_lims['upl'], spec.round_to)
             }
 
+            # Adjust lane boundaries for R chart (first row dropped)
+            r_lane_boundaries = None
+            if lane_boundaries:
+                r_lane_boundaries = []
+                for b in lane_boundaries:
+                    # Adjust position since row 0 is removed
+                    new_pos = b['position'] - 1
+                    if new_pos >= 0:
+                        r_lane_boundaries.append({
+                            **b,
+                            'position': new_pos
+                        })
+                if not r_lane_boundaries:
+                    r_lane_boundaries = None
+
             result['R'] = {
                 'data': r_out,
                 'statistics': r_statistics,
                 'metadata': {
                     'chart_type': 'R',
                     'value_col': 'mr',
-                    'center_col': 'center'
+                    'center_col': 'center',
+                    'lane_boundaries': r_lane_boundaries
                 }
             }
 

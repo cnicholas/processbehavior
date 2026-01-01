@@ -575,6 +575,17 @@ class Plotter:
         if show_stats:
             self._add_stats_box(fig, stats, data, theme)
 
+        # Lane boundaries (vertical separators for collapsed factors)
+        metadata = chart_info.get('metadata', {})
+        lane_boundaries = metadata.get('lane_boundaries')
+        if lane_boundaries:
+            # Calculate y-range for vertical lines
+            y_min = data[value_col].min()
+            y_max = data[value_col].max()
+            y_padding = (y_max - y_min) * 0.05
+            y_range = (y_min - y_padding, y_max + y_padding)
+            self._add_lane_boundaries(fig, lane_boundaries, y_range, theme)
+
         # Layout
         fig.update_layout(
             width=width,
@@ -808,6 +819,26 @@ class Plotter:
             # Stats box for faceted charts
             if show_stats:
                 self._add_stats_box_facet(fig, stats, data, theme, row, col, nrows, ncols)
+
+            # Lane boundaries for this facet
+            metadata = chart_info.get('metadata', {})
+            all_lane_boundaries = metadata.get('lane_boundaries')
+            if all_lane_boundaries:
+                # Lane boundaries are stored as dict keyed by stratum name
+                if isinstance(all_lane_boundaries, dict):
+                    lane_boundaries = all_lane_boundaries.get(chart_name)
+                else:
+                    lane_boundaries = all_lane_boundaries  # list for single chart
+
+                if lane_boundaries:
+                    # Calculate y-range for this facet
+                    y_min = data[value_col].min()
+                    y_max = data[value_col].max()
+                    y_padding = (y_max - y_min) * 0.05
+                    y_range = (y_min - y_padding, y_max + y_padding)
+                    self._add_lane_boundaries_facet(
+                        fig, lane_boundaries, y_range, theme, row, col
+                    )
 
         # Update layout with axis labels
         fig.update_layout(
@@ -1523,6 +1554,135 @@ class Plotter:
             # Zone A: ±2σ to ±3σ (lower)
             (lcl, center - 2 * sigma, theme.zone_a_color),
         ]
+
+    def _add_lane_boundaries(
+        self,
+        fig: go.Figure,
+        lane_boundaries: list[dict] | None,
+        y_range: tuple[float, float],
+        theme: ChartTheme,
+        show_labels: bool = True
+    ) -> None:
+        """
+        Add vertical lane boundary lines to a single chart figure.
+
+        Lane boundaries show where collapsed factors change within the chart,
+        helping distinguish groups of observations from different factor levels.
+
+        Parameters
+        ----------
+        fig : go.Figure
+            Plotly figure to add shapes to
+        lane_boundaries : list[dict] or None
+            List of boundary dicts with 'position' and 'label' keys
+        y_range : tuple[float, float]
+            (y_min, y_max) for vertical line extent
+        theme : ChartTheme
+            Theme with lane boundary styling
+        show_labels : bool, default True
+            Whether to show factor labels at boundary positions
+        """
+        if not lane_boundaries:
+            return
+
+        y_min, y_max = y_range
+
+        for boundary in lane_boundaries:
+            x_pos = boundary['position']
+            label = boundary.get('label', '')
+
+            # Add vertical line
+            fig.add_shape(
+                type='line',
+                x0=x_pos, x1=x_pos,
+                y0=y_min, y1=y_max,
+                line=dict(
+                    color=theme.lane_boundary_color,
+                    dash=theme.lane_boundary_dash,
+                    width=theme.lane_boundary_width
+                )
+            )
+
+            # Add label annotation at top of line
+            if show_labels and label:
+                fig.add_annotation(
+                    x=x_pos,
+                    y=y_max,
+                    text=label,
+                    showarrow=False,
+                    yanchor='bottom',
+                    font=dict(
+                        size=theme.lane_boundary_annotation_size,
+                        color=theme.lane_boundary_color
+                    )
+                )
+
+    def _add_lane_boundaries_facet(
+        self,
+        fig: go.Figure,
+        lane_boundaries: list[dict] | None,
+        y_range: tuple[float, float],
+        theme: ChartTheme,
+        row: int,
+        col: int,
+        show_labels: bool = True
+    ) -> None:
+        """
+        Add vertical lane boundary lines to a faceted chart subplot.
+
+        Parameters
+        ----------
+        fig : go.Figure
+            Plotly figure with subplots
+        lane_boundaries : list[dict] or None
+            List of boundary dicts with 'position' and 'label' keys
+        y_range : tuple[float, float]
+            (y_min, y_max) for vertical line extent
+        theme : ChartTheme
+            Theme with lane boundary styling
+        row : int
+            Subplot row (1-indexed)
+        col : int
+            Subplot column (1-indexed)
+        show_labels : bool, default True
+            Whether to show factor labels at boundary positions
+        """
+        if not lane_boundaries:
+            return
+
+        y_min, y_max = y_range
+
+        for boundary in lane_boundaries:
+            x_pos = boundary['position']
+            label = boundary.get('label', '')
+
+            # Add vertical line
+            fig.add_shape(
+                type='line',
+                x0=x_pos, x1=x_pos,
+                y0=y_min, y1=y_max,
+                line=dict(
+                    color=theme.lane_boundary_color,
+                    dash=theme.lane_boundary_dash,
+                    width=theme.lane_boundary_width
+                ),
+                row=row, col=col
+            )
+
+            # Add label annotation at top of line
+            if show_labels and label:
+                fig.add_annotation(
+                    x=x_pos,
+                    y=y_max,
+                    text=label,
+                    showarrow=False,
+                    yanchor='bottom',
+                    font=dict(
+                        size=theme.lane_boundary_annotation_size,
+                        color=theme.lane_boundary_color
+                    ),
+                    row=row, col=col
+                )
 
     def _add_zone_shading(
         self,
