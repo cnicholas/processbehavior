@@ -938,32 +938,35 @@ class Plotter:
         base = chart_name.split('_')[0]
         return base
 
-    def _get_x_column(self, data: pd.DataFrame) -> str:
+    def _get_x_column(self, data: pd.DataFrame) -> str | None:
         """
         Determine the x-axis column for plotting.
 
         Checks in order:
-        1. time_var if specified AND present in data
+        1. time_var if unique AND present in data
         2. 'rsg' column (subgroup identifier for Xbar/S charts)
-        3. 'x' column (auto-generated)
-        4. Falls back to index if none found
+        3. None (signals caller to use DataFrame index)
 
         Returns
         -------
-        str
-            Column name to use for x-axis
+        str | None
+            Column name to use for x-axis, or None to use DataFrame index
         """
-        # Use time variable if specified and present in data
         time_var = self.summary.get('time_var')
+
         if time_var and time_var in data.columns:
+            # If time values repeat (collapsed chart), use index for positions
+            # This aligns with lane boundary positions which use 0-based indices
+            if not data[time_var].is_unique:
+                return None
             return time_var
 
         # Use subgroup identifier for Xbar/S charts
         if 'rsg' in data.columns:
             return 'rsg'
 
-        # Otherwise use auto-generated 'x' column
-        return 'x'
+        # Use index for positioning
+        return None
 
     def _get_center_key(self, stats: dict) -> str | None:
         """Get the centerline statistic key."""
