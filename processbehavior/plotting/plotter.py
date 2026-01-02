@@ -1014,28 +1014,26 @@ class Plotter:
                 nested_stats = chart_info['statistics']
                 metadata = chart_info.get('metadata', {})
 
-                # Detect the grouping column (rsg) from the data
-                rsg_col = None
-                for col in combined_data.columns:
-                    if col in ['rsg', 'RSG'] or 'rsg' in col.lower():
-                        rsg_col = col
-                        break
+                # Get stratify column from metadata
+                stratify_by = metadata.get('stratify_by', [])
 
-                if rsg_col is None:
-                    # Fallback: use first non-numeric column that matches strata
-                    for col in combined_data.columns:
-                        if combined_data[col].dtype == 'object' or str(combined_data[col].dtype).startswith('category'):
-                            unique_vals = set(combined_data[col].astype(str).unique())
-                            if unique_vals == set(str(s) for s in strata):
-                                rsg_col = col
-                                break
+                if len(stratify_by) == 1:
+                    stratify_col = stratify_by[0]
+                elif len(stratify_by) > 1:
+                    # Multiple columns - create combined key for filtering
+                    combined_data = combined_data.copy()
+                    combined_data['_stratify_key'] = combined_data[stratify_by].astype(str).agg('_'.join, axis=1)
+                    stratify_col = '_stratify_key'
+                else:
+                    stratify_col = None
 
-                if rsg_col is not None:
+                if stratify_col is not None and stratify_col in combined_data.columns:
                     # Expand into per-stratum charts
                     for stratum in strata:
                         # Filter data for this stratum
-                        stratum_mask = combined_data[rsg_col].astype(str) == str(stratum)
+                        stratum_mask = combined_data[stratify_col].astype(str) == str(stratum)
                         stratum_data = combined_data[stratum_mask].copy()
+                        stratum_data = stratum_data.reset_index(drop=True)
 
                         # Get stratum-specific statistics
                         stratum_stats = nested_stats.get(stratum, {})
@@ -1043,13 +1041,20 @@ class Plotter:
                         # Create expanded chart name (include chart type to avoid collision)
                         expanded_name = f"{name}_{stratum}"
 
+                        # Extract lane boundaries for this specific stratum
+                        all_lane_boundaries = metadata.get('lane_boundaries')
+                        stratum_lane_boundaries = None
+                        if isinstance(all_lane_boundaries, dict):
+                            stratum_lane_boundaries = all_lane_boundaries.get(stratum)
+
                         stratified[expanded_name] = {
                             'data': stratum_data,
                             'statistics': stratum_stats,
                             'metadata': {
                                 **metadata,
                                 'original_chart': name,
-                                'stratum': stratum
+                                'stratum': stratum,
+                                'lane_boundaries': stratum_lane_boundaries
                             }
                         }
                 else:

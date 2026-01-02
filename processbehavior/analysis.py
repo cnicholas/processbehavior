@@ -1249,9 +1249,13 @@ class Analysis:
                 }
 
             # Format IMR output with appropriate columns
+            # Include stratify_by columns so plotter can split data correctly
+            # Filter out columns already handled by _build_output_columns (rsg_var_name, time_var)
+            extra_cols = [c for c in stratify_by
+                          if c != spec.rsg_var_name and c != spec.time_var]
             imr_out = self._build_output_columns(
                 df=out,
-                value_cols=[value_col, 'center', 'lpl', 'upl', 'beyond_limits']
+                value_cols=extra_cols + [value_col, 'center', 'lpl', 'upl', 'beyond_limits']
             )
 
             result['Imr'] = {
@@ -1262,7 +1266,8 @@ class Analysis:
                     'value_col': value_col,
                     'center_col': 'center',
                     'stratified': True,
-                    'lane_boundaries': lane_boundaries if lane_boundaries else None
+                    'lane_boundaries': lane_boundaries if lane_boundaries else None,
+                    'stratify_by': list(stratify_by)
                 },
                 'strata': strata
             }
@@ -1326,9 +1331,11 @@ class Analysis:
                 }
 
             # Format R output with appropriate columns
+            # Include stratify_by columns so plotter can split data correctly
+            # Filter out columns already handled by _build_output_columns
             r_out = self._build_output_columns(
                 df=r_out,
-                value_cols=['mr', 'center', 'lpl', 'upl', 'beyond_limits']
+                value_cols=extra_cols + ['mr', 'center', 'lpl', 'upl', 'beyond_limits']
             )
 
             # Calculate R lane boundaries (adjust for dropped first row per stratum)
@@ -1352,7 +1359,8 @@ class Analysis:
                     'value_col': 'mr',
                     'center_col': 'center',
                     'stratified': True,
-                    'lane_boundaries': r_lane_boundaries if r_lane_boundaries else None
+                    'lane_boundaries': r_lane_boundaries if r_lane_boundaries else None,
+                    'stratify_by': list(stratify_by)
                 },
                 'strata': strata
             }
