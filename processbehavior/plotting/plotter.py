@@ -964,6 +964,14 @@ class Plotter:
         # Use subgroup identifier for Xbar/S charts
         if 'rsg' in data.columns:
             return 'rsg'
+        if 'group' in data.columns:
+            return 'group'
+
+        # Check for factor columns from grouping_vars
+        grouping_vars = self.summary.get('grouping_vars') or []
+        for var in grouping_vars:
+            if var in data.columns:
+                return var
 
         # Use index for positioning
         return None

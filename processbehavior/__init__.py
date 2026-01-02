@@ -54,6 +54,7 @@ from processbehavior.effects_calculator import EffectsCalculator
 from processbehavior.exceptions import (
     ChartNotAvailableError,
     ColumnNotFoundError,
+    FactorNotFoundError,
     ProcessBehaviorError,
     ValidationError,
 )
@@ -81,6 +82,7 @@ __all__ = [
     'ProcessBehaviorError',
     'ValidationError',
     'ColumnNotFoundError',
+    'FactorNotFoundError',
     'ChartNotAvailableError',
 
     # Core classes

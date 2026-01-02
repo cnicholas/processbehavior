@@ -8,7 +8,8 @@ Exception Hierarchy
 -------------------
 ProcessBehaviorError (base)
 ├── ValidationError - Invalid input data, parameters, or configuration
-│   └── ColumnNotFoundError - Required column missing from DataFrame
+│   ├── ColumnNotFoundError - Required column missing from DataFrame
+│   └── FactorNotFoundError - Invalid factor/variable name specified
 └── ChartNotAvailableError - Chart type invalid or unavailable for this SDS
 
 Examples
@@ -83,6 +84,35 @@ class ColumnNotFoundError(ValidationError):
                  available: list[str] | None = None):
         super().__init__(message)
         self.column = column
+        self.available = available
+
+
+class FactorNotFoundError(ValidationError):
+    """
+    Invalid factor/variable name specified.
+
+    Raised when a factor or variable name doesn't match any known factors
+    in the study. Common causes include typos and case mismatches.
+
+    Attributes
+    ----------
+    factor : str | None
+        The factor name that was not found
+    suggestion : str | None
+        A suggested correction (e.g., case-corrected name)
+    available : list[str] | None
+        List of valid factor/variable names
+
+    Suggested actions:
+    - Check spelling and case (names are case-sensitive)
+    - Use `study.factors` to see available factor names
+    """
+
+    def __init__(self, message: str, factor: str | None = None,
+                 suggestion: str | None = None, available: list[str] | None = None):
+        super().__init__(message)
+        self.factor = factor
+        self.suggestion = suggestion
         self.available = available
 
 

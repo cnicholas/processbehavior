@@ -22,7 +22,7 @@ import re
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-from .exceptions import ChartNotAvailableError
+from .exceptions import ChartNotAvailableError, FactorNotFoundError
 from .spc_constants import RESIDUAL_ALIASES, VALID_BASE_CHARTS
 
 if TYPE_CHECKING:
@@ -1568,6 +1568,9 @@ class Study:
 
             # Build helpful error message with suggestions
             suggestions = []
+            first_invalid = None
+            first_suggestion = None
+
             for inv in sorted(invalid):
                 # Check for case-insensitive match first
                 case_match = next(
@@ -1579,6 +1582,9 @@ class Study:
                         f"'{inv}' is not a valid by variable.\n"
                         f"Did you mean '{case_match}'? (names are case-sensitive)"
                     )
+                    if first_invalid is None:
+                        first_invalid = inv
+                        first_suggestion = case_match
                 else:
                     # Try fuzzy matching
                     close = difflib.get_close_matches(inv, valid_dims, n=1, cutoff=0.6)
@@ -1587,12 +1593,22 @@ class Study:
                             f"'{inv}' is not a valid by variable.\n"
                             f"Did you mean '{close[0]}'?"
                         )
+                        if first_invalid is None:
+                            first_invalid = inv
+                            first_suggestion = close[0]
                     else:
                         suggestions.append(f"'{inv}' is not a valid by variable.")
+                        if first_invalid is None:
+                            first_invalid = inv
 
             msg = "\n".join(suggestions)
             msg += f"\nValid: {', '.join(valid_dims)}"
-            raise ValueError(msg)
+            raise FactorNotFoundError(
+                msg,
+                factor=first_invalid,
+                suggestion=first_suggestion,
+                available=valid_dims
+            )
 
         return list(by)
 
