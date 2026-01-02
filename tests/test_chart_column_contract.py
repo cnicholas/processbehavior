@@ -49,7 +49,8 @@ def test_xbar_chart_column_contract():
         'analysis_type': 'Xbar',
         'response_var': 'c',
         'rsg_vars': ['a', 'b'],
-        'time_var': 'd'
+        'time_var': 'd',
+        'by': ['a', 'b']  # Aggregate by factors (test data has n=1 per cell)
     }
 
     sds = detect_sds_for_test(df, spec)
@@ -99,7 +100,8 @@ def test_s_chart_column_contract():
         'analysis_type': 'Xbar',
         'response_var': 'c',
         'rsg_vars': ['a', 'b'],
-        'time_var': 'd'
+        'time_var': 'd',
+        'by': ['a', 'b']  # Aggregate by factors (test data has n=1 per cell)
     }
 
     sds = detect_sds_for_test(df, spec)

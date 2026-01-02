@@ -381,7 +381,8 @@ class TestUnbalancedData:
         pb = ProcessBehavior(df)
 
         study = pb.formulate(response='Value', factors=['Factor'], time='Time')
-        result = study.execute()
+        # Use factor-level aggregation since most cells have n=1
+        result = study.execute(chart='Xbar', by=['Factor'])
 
         assert result is not None
 

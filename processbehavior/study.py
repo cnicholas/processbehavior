@@ -1539,7 +1539,9 @@ class Study:
         if isinstance(by, str):
             by = [by]
 
-        # Validate by is subset of factors (not time)
+        # Validate by is subset of valid dimensions
+        # - IMR/R: factors only (time is x-axis)
+        # - Xbar/S: factors + time (cell_key dimensions)
         by_set = set(by)
         factor_set = set(factors)
         invalid = by_set - factor_set
@@ -1558,10 +1560,14 @@ class Study:
                 invalid = invalid - {time_var}
 
         if invalid:
+            # Build valid dimensions list based on chart type
+            valid_dims = sorted(factors)
+            if time_var and not is_time_series_chart:
+                valid_dims = sorted(factors + [time_var])
             raise ValueError(
                 f"Invalid by dimensions: {sorted(invalid)}. "
-                f"Valid dimensions (factors): {sorted(factors)}. "
-                f"Hint: by must be a subset of the study's factors."
+                f"Valid dimensions: {valid_dims}. "
+                f"Hint: by must be a subset of {'factors' if is_time_series_chart else 'factors + time'}."
             )
 
         return list(by)

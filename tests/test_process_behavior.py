@@ -128,8 +128,9 @@ def test_input_dataframe_never_modified():
     original = df.copy()
 
     # Run full pipeline: formulate → execute → plot
+    # Use factor-level aggregation since cells have n=1
     study = ProcessBehavior(df).formulate(response='Value', time='Time', factors=['Factor'])
-    result = study.execute()
+    result = study.execute(chart='Xbar', by=['Factor'])
     _ = result.plot()
 
     # Original DataFrame should be identical
@@ -1018,8 +1019,8 @@ def test_r5_xbar_chart_calculation(grouped_for_residuals):
 
     assert 'R5' in study.available_residuals
 
-    # Analyze R5 on Xbar chart
-    result = study.execute(chart='Xbar', value='R5')
+    # Analyze R5 on Xbar chart - aggregate by factor to get factor effects
+    result = study.execute(chart='Xbar', value='R5', by=['Factor'])
     assert result is not None
     assert 'Xbar' in result.charts
 
@@ -1042,8 +1043,8 @@ def test_r5_s_chart_calculation(grouped_for_residuals):
 
     assert 'R5' in study.available_residuals
 
-    # Analyze R5 on S chart
-    result = study.execute(chart='S', value='R5')
+    # Analyze R5 on S chart - aggregate by factor to get factor effects
+    result = study.execute(chart='S', value='R5', by=['Factor'])
     assert result is not None
     assert 'S' in result.charts
 
@@ -1102,8 +1103,8 @@ def test_r3_xbar_chart_calculation(grouped_for_residuals):
     assert study.sds == 1
     assert 'R3' in study.available_residuals
 
-    # Analyze R3 on Xbar chart
-    result = study.execute(chart='Xbar', value='R3')
+    # Analyze R3 on Xbar chart - aggregate by factor
+    result = study.execute(chart='Xbar', value='R3', by=['Factor'])
     assert result is not None
     assert 'Xbar' in result.charts
 
@@ -1126,8 +1127,8 @@ def test_r3_s_chart_calculation(grouped_for_residuals):
 
     assert 'R3' in study.available_residuals
 
-    # Analyze R3 on S chart
-    result = study.execute(chart='S', value='R3')
+    # Analyze R3 on S chart - aggregate by factor
+    result = study.execute(chart='S', value='R3', by=['Factor'])
     assert result is not None
     assert 'S' in result.charts
 
