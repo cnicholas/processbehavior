@@ -440,8 +440,8 @@ def calculate_r2_hybrid(
     # Exact: Y - Ybar_kt
     r2_exact = df[y] - df["Ybar_kt"]
 
-    # MA2 on full ordered series (sort by rsg_key, obs_id - NOT time_var)
-    df_sorted = df.sort_values(["rsg_key", "obs_id"])
+    # MA2 on full ordered series (use canonical sort_key)
+    df_sorted = df.sort_values("sort_key")
     r2_ma2 = df_sorted.groupby("rsg_key", observed=True)[y].transform(
         lambda s: (s - s.shift(1)) / 2
     )
@@ -787,7 +787,7 @@ class ResidualCalculator:
 
         elif r2_method == "ma2":
             logger.debug("R2 method: ma2 (moving average)")
-            df_sorted = df.sort_values(["rsg_key", "obs_id"])
+            df_sorted = df.sort_values("sort_key")
             r2 = df_sorted.groupby("rsg_key", observed=True)[y].transform(
                 lambda s: (s - s.shift(1)) / 2
             )

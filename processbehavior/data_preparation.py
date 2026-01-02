@@ -345,10 +345,13 @@ class DataPreparation:
         """
         Add stable key columns for reproducible analysis.
 
-        Creates three types of keys:
-        - obs_id: Unique ID per observation (for stable sorting)
+        Creates four types of keys:
+        - obs_id: Row identity (assigned BEFORE canonical sort, for merges/joins)
         - rsg_key: Tuple key for factor combinations
         - cell_key: Tuple key for (factor × time) cells
+        - sort_key: Canonical ordering (assigned AFTER canonical sort)
+
+        Canonical sort order: (cell_key ascending, obs_id ascending as tie-breaker)
 
         Dual-column strategy:
         - **rsg_key (tuple)**: Available for internal operations (fast lookups, hierarchical ops)
@@ -356,10 +359,8 @@ class DataPreparation:
         - **rsg (string)**: Used for display (chart labels, user output)
           Created separately in _add_grouping_column() as categorical with natural sort
 
-        Note: As of the type conversion implementation, tuple keys are created but
-        not used for primary sorting. Type conversion + categorical RSG handles
-        correct ordering. Tuple keys remain available for future enhancements
-        (fast lookups, hierarchical operations, etc.).
+        Note: sort_key is study-instance specific and must never be persisted/compared
+        across different Studies unless paired with formulation context.
 
         Parameters
         ----------
@@ -371,7 +372,7 @@ class DataPreparation:
         Returns
         -------
         DataFrame
-            Input data with added key columns
+            Input data with added key columns, sorted by canonical order
 
         Examples
         --------
@@ -389,17 +390,19 @@ class DataPreparation:
         >>> result = prep.build_keys(df, spec)
         >>> 'obs_id' in result.columns
         True
-        >>> 'rsg_key' in result.columns
+        >>> 'sort_key' in result.columns
         True
         """
         out = df.copy()
 
-        # Stable row ID for reproducible merges
+        # 1. Assign obs_id FIRST (row identity, before any sorting)
+        # This captures the row order as it enters build_keys() (post-cleaning/filtering)
         out['obs_id'] = np.arange(len(out), dtype=np.int64)
 
         k_vars = spec.rsg_vars or []
         t = spec.time_var
 
+        # 2. Build tuple keys
         # RSG key: tuple of factor values
         if k_vars:
             out['rsg_key'] = list(map(tuple, out[k_vars].astype(object).values))
@@ -413,6 +416,12 @@ class DataPreparation:
             out['cell_key'] = out[t].astype(object).apply(lambda x: (x,))
         else:
             out['cell_key'] = out['rsg_key']
+
+        # 3. Sort by canonical order: (cell_key, obs_id)
+        out = out.sort_values(['cell_key', 'obs_id'], kind='stable')
+
+        # 4. Assign sort_key AFTER sorting (canonical ordering 0..N-1)
+        out['sort_key'] = np.arange(len(out), dtype=np.int64)
 
         return out
 
