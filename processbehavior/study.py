@@ -16,6 +16,7 @@ Design Philosophy (Pythonic Hadley):
 
 from __future__ import annotations
 
+import difflib
 import functools
 import re
 from dataclasses import dataclass
@@ -1564,11 +1565,34 @@ class Study:
             valid_dims = sorted(factors)
             if time_var and not is_time_series_chart:
                 valid_dims = sorted(factors + [time_var])
-            raise ValueError(
-                f"Invalid by dimensions: {sorted(invalid)}. "
-                f"Valid dimensions: {valid_dims}. "
-                f"Hint: by must be a subset of {'factors' if is_time_series_chart else 'factors + time'}."
-            )
+
+            # Build helpful error message with suggestions
+            suggestions = []
+            for inv in sorted(invalid):
+                # Check for case-insensitive match first
+                case_match = next(
+                    (v for v in valid_dims if v.lower() == inv.lower()),
+                    None
+                )
+                if case_match:
+                    suggestions.append(
+                        f"'{inv}' is not a valid by variable.\n"
+                        f"Did you mean '{case_match}'? (names are case-sensitive)"
+                    )
+                else:
+                    # Try fuzzy matching
+                    close = difflib.get_close_matches(inv, valid_dims, n=1, cutoff=0.6)
+                    if close:
+                        suggestions.append(
+                            f"'{inv}' is not a valid by variable.\n"
+                            f"Did you mean '{close[0]}'?"
+                        )
+                    else:
+                        suggestions.append(f"'{inv}' is not a valid by variable.")
+
+            msg = "\n".join(suggestions)
+            msg += f"\nValid: {', '.join(valid_dims)}"
+            raise ValueError(msg)
 
         return list(by)
 

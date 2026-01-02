@@ -322,10 +322,16 @@ class TestPlotter:
     def test_helper_get_x_column(self, simple_result):
         """Test x-axis column detection."""
         plotter = Plotter(simple_result)
-        data = pd.DataFrame({'x': [1, 2, 3]})
 
+        # No time_var or rsg column → None (use index)
+        data = pd.DataFrame({'value': [1, 2, 3]})
         x_col = plotter._get_x_column(data)
-        assert x_col == 'x'
+        assert x_col is None
+
+        # With rsg column → 'rsg'
+        data_rsg = pd.DataFrame({'rsg': ['A', 'B', 'C'], 'value': [1, 2, 3]})
+        x_col = plotter._get_x_column(data_rsg)
+        assert x_col == 'rsg'
 
     def test_helper_get_center_key(self, simple_result):
         """Test centerline key detection."""
