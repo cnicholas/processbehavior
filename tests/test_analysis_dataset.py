@@ -106,7 +106,8 @@ class TestXbarSAnalysis:
             'response_var': 'c',
             'rsg_var_name': 'rsg',
             'time_var': 'd',
-            'round_to': 2
+            'round_to': 2,
+            'by': ['a', 'b']  # Aggregate by factors (not cell level)
         }
 
         sds = detect_sds_for_test(df, spec)
@@ -139,7 +140,8 @@ class TestXbarSAnalysis:
             'response_var': 'c',
             'rsg_var_name': 'rsg',
             'time_var': 'd',
-            'round_to': 2
+            'round_to': 2,
+            'by': ['a', 'b']  # Aggregate by factors (not cell level)
         }
 
         sds = detect_sds_for_test(df_differing_Ns, spec)
@@ -372,6 +374,11 @@ class TestDateTimeHandling:
         has_time = 'd'
         for analysis in analysis_types:
             spec['analysis_type'] = analysis
+            # Xbar/S need explicit by for factor aggregation (test data has n=1 per cell)
+            if analysis in ['Xbar', 'S']:
+                spec['by'] = ['a', 'b']
+            else:
+                spec['by'] = ['a', 'b']  # IMR/R also needs explicit by with factors
             sds = detect_sds_for_test(df_dt, spec)
             result = Analysis(df_dt, spec, sds=sds).calculate()
 

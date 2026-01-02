@@ -301,7 +301,8 @@ class TestIntegrationWithAnalysis:
             factors=[pdf.cols.FACTOR],
             time=pdf.cols.TIME
         )
-        result = study.execute()
+        # Use factor-level aggregation since cells have n=1
+        result = study.execute(chart='Xbar', by=['FACTOR'])
 
         # Should complete successfully
         assert result is not None

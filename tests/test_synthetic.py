@@ -160,7 +160,8 @@ class TestFullPipeline:
             factors=[pdf.cols.factor_1, pdf.cols.factor_2],
             time=pdf.cols.time
         )
-        result = study.execute()
+        # SDS2 has n=1 per cell, so use factor-level aggregation for Xbar
+        result = study.execute(chart='Xbar', by=['factor 1', 'factor 2'])
         assert result is not None, "Analysis result should not be None"
 
     def test_sds4_imr_analysis(self):

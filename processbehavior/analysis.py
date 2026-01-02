@@ -531,10 +531,24 @@ class Analysis:
         # Determine if we're charting response (can use pre-calculated) or residual
         is_response = value_col == spec.response_var
 
-        # Default: by=None means use full factor grouping (current behavior)
+        # Default: by=None means use cell_key level (factors + time)
         if by is None:
-            groupby_cols = [spec.rsg_var_name] if rsg_vars else []
-            ybar_col = 'Ybar_k' if is_response and rsg_vars else None
+            if time_var and rsg_vars:
+                # Factors + time (Kt level) - matches cell_key
+                groupby_cols = rsg_vars + [time_var]
+                ybar_col = 'Ybar_kt' if is_response else None
+            elif rsg_vars:
+                # Factors only (no time)
+                groupby_cols = [spec.rsg_var_name]
+                ybar_col = 'Ybar_k' if is_response else None
+            elif time_var:
+                # Time only (no factors)
+                groupby_cols = [time_var]
+                ybar_col = 'Ybar_t' if is_response else None
+            else:
+                # No grouping
+                groupby_cols = []
+                ybar_col = None
             return groupby_cols, ybar_col
 
         # by=[] means collapse all (single point)
