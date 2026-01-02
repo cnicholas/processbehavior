@@ -9,7 +9,7 @@ Key invariant: Residuals are NEVER recomputed - `by` creates views, not recomput
 import pytest
 import pandas as pd
 
-from processbehavior import ProcessBehavior
+from processbehavior import ProcessBehavior, FactorNotFoundError
 from processbehavior.datasets import synthetic
 
 
@@ -108,7 +108,7 @@ class TestByParameterValidation:
 
     def test_by_must_be_subset_of_factors(self, sds1_study):
         """by parameter must only contain factor variables."""
-        with pytest.raises(ValueError, match="subset|valid"):
+        with pytest.raises(FactorNotFoundError, match="not a valid by variable"):
             sds1_study.execute(chart='Imr', by=['invalid_factor'])
 
     def test_by_empty_list_allowed(self, sds1_study):
