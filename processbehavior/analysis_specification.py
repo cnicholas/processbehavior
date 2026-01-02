@@ -132,6 +132,10 @@ class DataPrepConfig:
         self.time_grouping_cols = {}
         self.grouping_cols = []
 
+        # Canonical sort specification (used by build_keys for sort_key)
+        # sort_key is computed by sorting (cell_key asc, obs_id asc)
+        self.sort_spec = ('cell_key', 'obs_id')
+
         # Validate response variable (always required)
         if self.response_var is None:
             raise ValueError('A response variable is required!')

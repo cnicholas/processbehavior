@@ -1168,12 +1168,8 @@ class Analysis:
                 out['_stratify_key'] = out[stratify_by].astype(str).agg('_'.join, axis=1)
                 stratify_col = '_stratify_key'
 
-            # Sort order: stratify columns first, then collapsed factors, then time
-            sort_cols = list(stratify_by) + collapsed_factors
-            if time_var and time_var not in sort_cols:
-                sort_cols.append(time_var)
-            if sort_cols:
-                out = out.sort_values(sort_cols, kind='stable')
+            # Use canonical sort_key for consistent ordering
+            out = out.sort_values('sort_key', kind='stable')
 
             # Moving range per stratum (must exist BEFORE agg)
             out['mr'] = out.groupby(stratify_col, sort=False, observed=True)[value_col].diff().abs()
@@ -1363,12 +1359,8 @@ class Analysis:
 
         else:
             # Ungrouped path - single stream
-            # Sort by collapsed factors (for lane boundaries) then time
-            sort_cols = list(collapsed_factors)
-            if spec.has_time:
-                sort_cols.append(spec.time_var)
-            if sort_cols:
-                out = out.sort_values(sort_cols, kind='stable')
+            # Use canonical sort_key for consistent ordering
+            out = out.sort_values('sort_key', kind='stable')
             out = out.reset_index(drop=True)
 
             # Calculate lane boundaries before any calculations

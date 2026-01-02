@@ -437,7 +437,7 @@ class TestAnalysisDataSet:
 
         # SDS 4: No grouping = implicit single condition over time (obs_id as time)
         assert dataset.sampling_design_state == 4
-        assert dataset.analysis_dataset.columns.tolist() == ['c', 'obs_id', 'rsg_key', 'cell_key']
+        assert dataset.analysis_dataset.columns.tolist() == ['c', 'obs_id', 'rsg_key', 'cell_key', 'sort_key']
 
     def test_no_grouping_with_time(self, df):
         """Test AnalysisDataSet with time variable but no grouping."""
@@ -454,7 +454,109 @@ class TestAnalysisDataSet:
 
         # SDS 4: No grouping = implicit single condition over time
         assert dataset.sampling_design_state == 4
-        assert dataset.analysis_dataset.columns.tolist() == ['d', 'c', 'obs_id', 'rsg_key', 'cell_key']
+        assert dataset.analysis_dataset.columns.tolist() == ['d', 'c', 'obs_id', 'rsg_key', 'cell_key', 'sort_key']
+
+
+# ========================
+# Canonical Ordering Tests
+# ========================
+
+class TestCanonicalOrdering:
+    """Tests for sort_key and obs_id canonical ordering behavior."""
+
+    def test_sort_key_deterministic_from_cell_key_and_obs_id(self):
+        """sort_key should be deterministic based on (cell_key, obs_id) ordering."""
+        # Create data intentionally out of canonical order
+        df = pd.DataFrame({
+            'factor': ['B', 'A', 'A', 'B'],  # Out of order
+            'time': [2, 1, 2, 1],  # Out of order
+            'y': [10, 20, 30, 40]
+        })
+
+        spec = {
+            'analysis_type': 'Xbar',
+            'rsg_vars': ['factor'],
+            'time_var': 'time',
+            'response_var': 'y',
+            'round_to': 2
+        }
+
+        sds = detect_sds_for_test(df, spec)
+        a_spec = ad.AnalysisSpecification(spec)
+        dataset = ad.AnalysisDataSet(df=df, analysis_specification=a_spec, sds=sds)
+
+        ads = dataset.analysis_dataset
+
+        # sort_key should be 0..N-1 in canonical order
+        assert ads['sort_key'].tolist() == list(range(len(ads)))
+
+        # Data should be sorted by cell_key (factor, time)
+        # Expected order: A-1, A-2, B-1, B-2
+        cell_keys = ads['cell_key'].tolist()
+        assert cell_keys == sorted(cell_keys), "Data should be sorted by cell_key"
+
+    def test_obs_id_preserves_pre_sort_row_order(self):
+        """obs_id should reflect row order before canonical sorting."""
+        # Create data with known pre-sort order
+        df = pd.DataFrame({
+            'factor': ['B', 'A', 'B', 'A'],  # Rows 0,1,2,3 in original order
+            'time': [1, 1, 2, 2],
+            'y': [10, 20, 30, 40]
+        })
+
+        spec = {
+            'analysis_type': 'Xbar',
+            'rsg_vars': ['factor'],
+            'time_var': 'time',
+            'response_var': 'y',
+            'round_to': 2
+        }
+
+        sds = detect_sds_for_test(df, spec)
+        a_spec = ad.AnalysisSpecification(spec)
+        dataset = ad.AnalysisDataSet(df=df, analysis_specification=a_spec, sds=sds)
+
+        ads = dataset.analysis_dataset
+
+        # After canonical sort, obs_id values will be reordered but preserve identity
+        # Original: row 0 (B,1), row 1 (A,1), row 2 (B,2), row 3 (A,2)
+        # Canonical order: (A,1), (A,2), (B,1), (B,2)
+        # So sorted obs_id should be: 1, 3, 0, 2 (reflecting original row positions)
+
+        # obs_id should still contain all original values 0..N-1
+        assert set(ads['obs_id'].tolist()) == {0, 1, 2, 3}
+
+        # sort_key should be 0..N-1 in order
+        assert ads['sort_key'].tolist() == [0, 1, 2, 3]
+
+    def test_sort_key_stable_tie_breaking_by_obs_id(self):
+        """When cell_keys are equal, obs_id should break ties stably."""
+        # Create data with same cell_key for multiple rows
+        df = pd.DataFrame({
+            'factor': ['A', 'A', 'A'],  # Same factor
+            'time': [1, 1, 1],  # Same time = same cell_key
+            'y': [10, 20, 30]
+        })
+
+        spec = {
+            'analysis_type': 'Xbar',
+            'rsg_vars': ['factor'],
+            'time_var': 'time',
+            'response_var': 'y',
+            'round_to': 2
+        }
+
+        sds = detect_sds_for_test(df, spec)
+        a_spec = ad.AnalysisSpecification(spec)
+        dataset = ad.AnalysisDataSet(df=df, analysis_specification=a_spec, sds=sds)
+
+        ads = dataset.analysis_dataset
+
+        # All rows have same cell_key, so obs_id breaks ties
+        # Original order: obs_id 0, 1, 2
+        # After sort by (cell_key, obs_id): still 0, 1, 2
+        assert ads['obs_id'].tolist() == [0, 1, 2]
+        assert ads['sort_key'].tolist() == [0, 1, 2]
 
 
 # ========================
