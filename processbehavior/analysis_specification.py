@@ -263,7 +263,7 @@ class AnalysisSpecification(DataPrepConfig):
             data preparation and residual calculation. The analysis_type is
             set at execute() time.
         """
-        SUPPORTED_ANALYSIS_TYPES = ['Xbar', 'S', 'Imr', 'R']
+        SUPPORTED_ANALYSIS_TYPES = ['Xbar', 'S', 'Imr', 'R', 'Histogram']
         GROUPED_ANALYSES = ['Xbar', 'S']
 
         # Extract analysis_type - may be None for chart-agnostic ADS
@@ -296,6 +296,9 @@ class AnalysisSpecification(DataPrepConfig):
         # value_col: Explicit column to chart (response_var or residual column)
         self.by = specification.get('by')  # list[str] | None
         self.value_col = specification.get('value_col')  # str | None
+
+        # Histogram parameters
+        self.bins = specification.get('bins', 10)  # Default 10 bins
 
         # Initialize analysis output columns
         self.analysis_output_cols = [self.response_var, 'mean', 'lpl', 'upl', 'beyond_limits']

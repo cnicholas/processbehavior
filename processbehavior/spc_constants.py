@@ -390,7 +390,7 @@ def detect_beyond_limits(x: float, lpl: float, upl: float) -> int:
 # ============================================================================
 
 # Valid base chart types for syntactic validation
-VALID_BASE_CHARTS = {"Xbar", "S", "Imr", "R"}
+VALID_BASE_CHARTS = {"Xbar", "S", "Imr", "R", "Histogram"}
 
 # Human-readable residual aliases
 # Maps alias -> {id, label, description}
