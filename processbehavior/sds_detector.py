@@ -1100,7 +1100,7 @@ class SDSRegistry:
                 has_factors=True,
                 has_time=True,
                 has_replication='full',
-                valid_charts=['Xbar', 'S', 'R', 'Imr'],
+                valid_charts=['Xbar', 'S', 'R', 'Imr', 'Histogram'],
                 recommended_chart='Xbar',
                 invalid_charts=[],
                 vas_residuals_supported=True,
@@ -1126,7 +1126,7 @@ class SDSRegistry:
                 has_factors=True,
                 has_time=True,
                 has_replication='none',
-                valid_charts=['Xbar', 'S', 'Imr', 'R'],
+                valid_charts=['Xbar', 'S', 'Imr', 'R', 'Histogram'],
                 recommended_chart='Xbar',
                 invalid_charts=[],
                 vas_residuals_supported=True,
@@ -1155,7 +1155,7 @@ class SDSRegistry:
                 has_factors=True,
                 has_time=True,
                 has_replication='partial',
-                valid_charts=['Xbar', 'S', 'R', 'Imr'],
+                valid_charts=['Xbar', 'S', 'R', 'Imr', 'Histogram'],
                 recommended_chart='Xbar',
                 invalid_charts=[],
                 vas_residuals_supported=True,
@@ -1185,7 +1185,7 @@ class SDSRegistry:
                 has_factors=True,  # One factor level
                 has_time=True,     # Time series structure
                 has_replication='varies',  # Depends on subgroup size
-                valid_charts=['Imr', 'Xbar', 'S', 'R'],
+                valid_charts=['Imr', 'Xbar', 'S', 'R', 'Histogram'],
                 recommended_chart='Imr',
                 invalid_charts=[],
                 vas_residuals_supported=True,  # VAS works via time-based analysis
@@ -1215,7 +1215,7 @@ class SDSRegistry:
                 has_factors=True,
                 has_time=True,
                 has_replication='partial',  # Has some n≥2 cells (can estimate variance)
-                valid_charts=['Xbar', 'S', 'R', 'Imr'],
+                valid_charts=['Xbar', 'S', 'R', 'Imr', 'Histogram'],
                 recommended_chart='Xbar',
                 invalid_charts=[],
                 vas_residuals_supported=True,
@@ -1245,7 +1245,7 @@ class SDSRegistry:
                 has_factors=True,
                 has_time=True,
                 has_replication='none',  # Cannot estimate within-cell variance
-                valid_charts=['Imr', 'R'],
+                valid_charts=['Imr', 'R', 'Histogram'],
                 recommended_chart='Imr',
                 invalid_charts=['Xbar (no within-cell variance)', 'S (no within-cell variance)'],
                 vas_residuals_supported=True,  # VAS works via moving average (like SDS 2)

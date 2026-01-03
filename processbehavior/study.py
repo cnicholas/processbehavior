@@ -1232,7 +1232,8 @@ class Study:
         chart: str | None = None,
         by: list[str] | None = None,
         value: str | None = None,
-        recentered: bool = False
+        recentered: bool = False,
+        bins: int | None = None
     ) -> AnalysisResult:
         """
         Run the analysis and return results.
@@ -1333,6 +1334,24 @@ class Study:
         # Validate by parameter (may raise ValueError)
         by_validated = self._validate_by_parameter(by, base_chart)
 
+        # Recentered validation - only R1-R5 allowed with recentered=True
+        if recentered:
+            RECENTERABLE_VALUES = {'R1', 'R2', 'R3', 'R4', 'R5'}
+            if value is None:
+                from .exceptions import ValidationError
+                raise ValidationError(
+                    "recentered=True requires a residual value (R1-R5), got value=None"
+                )
+            if value.upper() not in RECENTERABLE_VALUES:
+                from .exceptions import ValidationError
+                raise ValidationError(
+                    f"recentered=True requires a residual value (R1-R5), got '{value}'"
+                )
+
+        # For Histogram chart, default by=[] if not specified (full distribution)
+        if base_chart == 'Histogram' and by is None:
+            by_validated = []
+
         # Primary chart validation
         if base_chart not in self.valid_charts:
             available_list = list(self.valid_charts)
@@ -1349,7 +1368,8 @@ class Study:
         value_col = self._resolve_value_column(value, recentered)
 
         # Validate residual availability if charting a residual
-        if value is not None and value.upper().startswith('R'):
+        # Skip validation for Histogram - histograms can plot any available numeric column
+        if value is not None and value.upper().startswith('R') and base_chart != 'Histogram':
             # Extract residual identifier (R1-R5, RCR1-RCR5)
             residual_id = value.upper()
             if residual_id.startswith('RCR'):
@@ -1385,6 +1405,7 @@ class Study:
             'residual': value.upper() if is_residual else None,
             'residual_chart_type': base_chart if is_residual else None,
             'recentered': recentered,
+            'bins': bins if bins is not None else 10,  # Default 10 bins for Histogram
         }
 
         # Create and run analysis using pre-calculated AnalysisDataSet

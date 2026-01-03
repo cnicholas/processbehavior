@@ -334,7 +334,7 @@ class Plotter:
             # Plot all standard charts
             charts_to_plot = {
                 k: v for k, v in self.charts.items()
-                if k in ['Xbar', 'S', 'Imr', 'R']
+                if k in ['Xbar', 'S', 'Imr', 'R', 'Histogram']
             }
 
             # If no standard charts found but only one chart exists, use it
@@ -439,6 +439,19 @@ class Plotter:
         yaxis_title: str | None = None
     ) -> go.Figure:
         """Create a single control chart."""
+        # Check if this is a histogram - route to histogram-specific rendering
+        metadata = chart_info.get('metadata', {})
+        if metadata.get('chart_type') == 'Histogram':
+            return self._plot_histogram(
+                chart_info,
+                chart_name,
+                show_stats=show_stats,
+                width=width,
+                height=height,
+                xaxis_title=xaxis_title,
+                yaxis_title=yaxis_title
+            )
+
         data = chart_info['data']
         stats = chart_info['statistics']
 
@@ -673,6 +686,65 @@ class Plotter:
 
             data = chart_info['data']
             stats = chart_info['statistics']
+            metadata = chart_info.get('metadata', {})
+
+            # Check if this is a histogram
+            is_histogram = metadata.get('chart_type') == 'Histogram'
+
+            if is_histogram:
+                # Histogram-specific rendering
+                import numpy as np
+
+                value_col = metadata.get('value_col')
+                bins = metadata.get('bins', 10)
+
+                fig.add_trace(
+                    go.Histogram(
+                        x=data[value_col],
+                        nbinsx=bins,
+                        name=chart_name,
+                        marker_color=theme.data_color,
+                        opacity=0.75,
+                        showlegend=False
+                    ),
+                    row=row,
+                    col=col
+                )
+
+                # Add stats lines for histogram (use per-stratum stats)
+                if show_stats:
+                    mean = stats.get('mean')
+                    std = stats.get('std')
+                    n = stats.get('n', 0)
+
+                    # Mean line - only if finite
+                    if mean is not None and np.isfinite(mean):
+                        fig.add_vline(
+                            x=mean,
+                            line_dash="solid",
+                            line_color=theme.center_color,
+                            line_width=2,
+                            row=row, col=col
+                        )
+
+                        # Std deviation lines (±1, ±2, ±3) - only if n >= 2 and std is finite and > 0
+                        if std is not None and n >= 2 and np.isfinite(std) and std > 0:
+                            for mult in [1, 2, 3]:
+                                fig.add_vline(
+                                    x=mean + mult * std,
+                                    line_dash="dash",
+                                    line_color="orange",
+                                    line_width=1,
+                                    row=row, col=col
+                                )
+                                fig.add_vline(
+                                    x=mean - mult * std,
+                                    line_dash="dash",
+                                    line_color="orange",
+                                    line_width=1,
+                                    row=row, col=col
+                                )
+                continue  # Skip control chart rendering for histograms
 
             # Zone shading for this subplot (add first so it's behind data)
             if show_zones and theme.zone_opacity > 0:
@@ -872,6 +944,117 @@ class Plotter:
         """Get list of available charts."""
         return list(self.charts.keys())
 
+    def _plot_histogram(
+        self,
+        chart_info: dict,
+        chart_name: str,
+        show_stats: bool = True,
+        width: int = 1000,
+        height: int = 400,
+        xaxis_title: str | None = None,
+        yaxis_title: str | None = None
+    ) -> go.Figure:
+        """
+        Render histogram with optional mean/std deviation lines.
+
+        Parameters
+        ----------
+        chart_info : dict
+            Chart info with 'data', 'statistics', and 'metadata'
+        chart_name : str
+            Chart display name
+        show_stats : bool, default True
+            Whether to show mean and std deviation lines
+        width : int, default 1000
+            Figure width in pixels
+        height : int, default 400
+            Figure height in pixels
+        xaxis_title : str, optional
+            Custom x-axis label
+        yaxis_title : str, optional
+            Custom y-axis label
+
+        Returns
+        -------
+        go.Figure
+            Plotly figure with histogram
+        """
+        import numpy as np
+
+        data = chart_info['data']
+        metadata = chart_info.get('metadata', {})
+        stats = chart_info.get('statistics', {})
+
+        value_col = metadata.get('value_col')
+        bins = metadata.get('bins', 10)
+
+        theme = self._theme
+
+        fig = go.Figure()
+
+        # Add histogram trace
+        fig.add_trace(go.Histogram(
+            x=data[value_col],
+            nbinsx=bins,
+            name=value_col,
+            marker_color=theme.data_color,
+            opacity=0.75
+        ))
+
+        if show_stats:
+            mean = stats.get('mean')
+            std = stats.get('std')
+            n = stats.get('n', 0)
+
+            # Mean line - only if finite
+            if mean is not None and np.isfinite(mean):
+                fig.add_vline(
+                    x=mean,
+                    line_dash="solid",
+                    line_color=theme.center_color,
+                    line_width=2,
+                    annotation_text=f"Mean: {mean:.3f}",
+                    annotation_position="top",
+                    annotation_font_size=theme.annotation_font_size
+                )
+
+                # Std deviation lines (±1, ±2, ±3) - only if n >= 2 and std is finite and > 0
+                if std is not None and n >= 2 and np.isfinite(std) and std > 0:
+                    for mult in [1, 2, 3]:
+                        fig.add_vline(
+                            x=mean + mult * std,
+                            line_dash="dash",
+                            line_color="orange",
+                            line_width=1,
+                            annotation_text=f"+{mult}σ" if mult == 3 else None,
+                            annotation_position="top" if mult == 3 else None,
+                            annotation_font_size=theme.annotation_font_size if mult == 3 else None
+                        )
+                        fig.add_vline(
+                            x=mean - mult * std,
+                            line_dash="dash",
+                            line_color="orange",
+                            line_width=1,
+                            annotation_text=f"-{mult}σ" if mult == 3 else None,
+                            annotation_position="top" if mult == 3 else None,
+                            annotation_font_size=theme.annotation_font_size if mult == 3 else None
+                        )
+
+        # Axis labels
+        x_label = xaxis_title or value_col
+        y_label = yaxis_title or "Count"
+
+        fig.update_layout(
+            width=width,
+            height=height,
+            xaxis_title=x_label,
+            yaxis_title=y_label,
+            showlegend=False,
+            bargap=0.05
+        )
+
+        return fig
+
     # Helper methods
     def _get_value_column(self, chart_info: dict, chart_name: str) -> str:
         """
@@ -1020,9 +1203,10 @@ class Plotter:
                 if len(stratify_by) == 1:
                     stratify_col = stratify_by[0]
                 elif len(stratify_by) > 1:
-                    # Multiple columns - create combined key for filtering
+                    # Multiple columns - create combined key using tuples
+                    # Tuples avoid collision risk: ('A_B', 'C') != ('A', 'B_C')
                     combined_data = combined_data.copy()
-                    combined_data['_stratify_key'] = combined_data[stratify_by].astype(str).agg('_'.join, axis=1)
+                    combined_data['_stratify_key'] = combined_data[stratify_by].apply(tuple, axis=1)
                     stratify_col = '_stratify_key'
                 else:
                     stratify_col = None
@@ -1031,7 +1215,8 @@ class Plotter:
                     # Expand into per-stratum charts
                     for stratum in strata:
                         # Filter data for this stratum
-                        stratum_mask = combined_data[stratify_col].astype(str) == str(stratum)
+                        # Direct comparison works for both scalar and tuple strata
+                        stratum_mask = combined_data[stratify_col] == stratum
                         stratum_data = combined_data[stratum_mask].copy()
                         stratum_data = stratum_data.reset_index(drop=True)
 

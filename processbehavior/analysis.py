@@ -319,7 +319,7 @@ class Analysis:
                 )
 
             # Validate chart type
-            valid_chart_types = {'Xbar', 'S', 'Imr'}
+            valid_chart_types = {'Xbar', 'S', 'Imr', 'Histogram'}
             if chart_type not in valid_chart_types:
                 raise ValueError(
                     f"Chart type '{chart_type}' not supported for residual charts.\n"
@@ -335,7 +335,17 @@ class Analysis:
             }
 
             # Calculate using base method with value_col
-            if chart_type == 'S':
+            if chart_type == 'Histogram':
+                # Histogram of residual values
+                chart_data = self._calculate_histogram(value_col=col_name)
+
+                # Add residual metadata
+                hist_data = chart_data['Histogram']
+                hist_data['metadata']['residual_type'] = residual
+                hist_data['metadata']['recentered'] = recentered
+                hist_data['metadata']['question_answered'] = questions.get(residual, '')
+
+            elif chart_type == 'S':
                 s_result = self._calculate_s(value_col=col_name)
                 chart_name = 'S'
                 s_data = s_result['S']
@@ -394,7 +404,8 @@ class Analysis:
                 'Xbar': self._calculate_xbar,
                 'S': self._calculate_s,
                 'Imr': self._calculate_imr,
-                'R': self._calculate_imr  # Bundled with Imr
+                'R': self._calculate_imr,  # Bundled with Imr
+                'Histogram': self._calculate_histogram
             }
 
             if self.analysis_type not in strategies:
@@ -1164,8 +1175,9 @@ class Analysis:
             elif len(stratify_by) == 1:
                 stratify_col = stratify_by[0]
             else:
-                # Multiple stratify columns - create combined key
-                out['_stratify_key'] = out[stratify_by].astype(str).agg('_'.join, axis=1)
+                # Multiple stratify columns - create combined key using tuples
+                # Tuples avoid collision risk: ('A_B', 'C') != ('A', 'B_C')
+                out['_stratify_key'] = out[stratify_by].apply(tuple, axis=1)
                 stratify_col = '_stratify_key'
 
             # Use canonical sort_key for consistent ordering
@@ -1549,3 +1561,104 @@ class Analysis:
             chart_type='R',
             value_col='mr'
         )
+
+    def _calculate_histogram(self, value_col: str = None) -> dict:
+        """
+        Calculate histogram data with mean/std statistics.
+
+        Parameters
+        ----------
+        value_col : str, optional
+            Column to use for histogram. Defaults to spec.response_var.
+            Pass a residual column (R2, R5, etc.) for residual histograms.
+
+        Returns
+        -------
+        dict
+            Histogram data:
+            - For unstratified: {'Histogram': {'data': df, 'statistics': {...}, 'metadata': {...}}}
+            - For stratified: {'Histogram': {'data': df, 'statistics': {stratum: {...}}, 'strata': [...]}}
+
+        Notes
+        -----
+        - by=[] → single histogram of all observations (default for Histogram chart)
+        - by=['factor1'] → one histogram per factor1 level
+        - Multi-column `by` uses tuple keys to avoid collision from string joining
+        """
+        spec = self.spec
+        if value_col is None:
+            value_col = spec.value_col if spec.value_col else spec.response_var
+
+        data = self.ads.analysis_dataset.copy()
+        values = data[value_col].dropna()
+
+        # Calculate global statistics
+        n = len(values)
+        mean = values.mean() if n > 0 else float('nan')
+        std = values.std() if n >= 2 else float('nan')
+
+        # Handle stratification via `by` parameter
+        by = spec.by if spec.by is not None else []
+
+        if len(by) > 0:
+            # Stratified histogram - one per stratum
+            # Use pandas groupby with list of columns (no collision risk)
+            grouped = data.groupby(by, observed=True)
+
+            # Build strata list - tuples for multi-key, values for single-key
+            if len(by) == 1:
+                strata = data[by[0]].unique().tolist()
+            else:
+                # Use tuple keys to avoid collision (('A_B','C') != ('A','B_C'))
+                strata = list(grouped.groups.keys())
+
+            # Calculate per-stratum statistics
+            per_stratum_stats = {}
+            for stratum, group_df in grouped:
+                stratum_vals = group_df[value_col].dropna()
+                stratum_n = len(stratum_vals)
+                stratum_mean = stratum_vals.mean() if stratum_n > 0 else float('nan')
+                stratum_std = stratum_vals.std() if stratum_n >= 2 else float('nan')
+                per_stratum_stats[stratum] = {
+                    'mean': round(stratum_mean, spec.round_to) if pd.notna(stratum_mean) else None,
+                    'std': round(stratum_std, spec.round_to) if pd.notna(stratum_std) else None,
+                    'n': stratum_n
+                }
+
+            # Keep value column and by columns for plotting
+            output_cols = [value_col] + list(by)
+            output_data = data[output_cols].copy()
+
+            return {
+                'Histogram': {
+                    'data': output_data,
+                    'statistics': per_stratum_stats,
+                    'metadata': {
+                        'chart_type': 'Histogram',
+                        'value_col': value_col,
+                        'bins': spec.bins,
+                        'stratified': True,
+                        'stratify_by': list(by)
+                    },
+                    'strata': strata
+                }
+            }
+
+        # Unstratified (by=[]) - full distribution
+        output_data = data[[value_col]].copy()
+
+        return {
+            'Histogram': {
+                'data': output_data,
+                'statistics': {
+                    'mean': round(mean, spec.round_to) if pd.notna(mean) else None,
+                    'std': round(std, spec.round_to) if n >= 2 and pd.notna(std) else None,
+                    'n': n
+                },
+                'metadata': {
+                    'chart_type': 'Histogram',
+                    'value_col': value_col,
+                    'bins': spec.bins
+                }
+            }
+        }
