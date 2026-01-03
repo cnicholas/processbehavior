@@ -1615,11 +1615,14 @@ class Analysis:
             # Calculate per-stratum statistics
             per_stratum_stats = {}
             for stratum, group_df in grouped:
+                # Unwrap single-element tuple for single-column groupby
+                # groupby(['col']) returns ('value',) tuples, but strata uses scalar values
+                key = stratum[0] if len(by) == 1 else stratum
                 stratum_vals = group_df[value_col].dropna()
                 stratum_n = len(stratum_vals)
                 stratum_mean = stratum_vals.mean() if stratum_n > 0 else float('nan')
                 stratum_std = stratum_vals.std() if stratum_n >= 2 else float('nan')
-                per_stratum_stats[stratum] = {
+                per_stratum_stats[key] = {
                     'mean': round(stratum_mean, spec.round_to) if pd.notna(stratum_mean) else None,
                     'std': round(stratum_std, spec.round_to) if pd.notna(stratum_std) else None,
                     'n': stratum_n

@@ -672,9 +672,23 @@ class Plotter:
         y_label = yaxis_title or self._get_yaxis_label(None)
 
         # Calculate global y-range for shared axis
+        # Histograms need count-based y-range, control charts need value-based
         global_y_range = None
+        histogram_y_range = None
+
+        # Check if all charts are histograms
+        all_histograms = all(
+            chart_info.get('metadata', {}).get('chart_type') == 'Histogram'
+            for chart_info in charts.values()
+        )
+
         if shared_yaxis:
-            global_y_range = self._calculate_global_yrange(charts, yaxis_padding)
+            if all_histograms:
+                # For histograms, calculate y-range based on bin counts
+                histogram_y_range = self._calculate_histogram_yrange(charts, yaxis_padding)
+            else:
+                # For control charts (or mixed), use data value range
+                global_y_range = self._calculate_global_yrange(charts, yaxis_padding)
 
         # Get theme
         theme = self._theme
@@ -935,7 +949,10 @@ class Plotter:
         )
 
         # Apply shared y-axis range if calculated
-        if global_y_range is not None:
+        # Use histogram-specific range for histogram facets, otherwise use global range
+        if histogram_y_range is not None:
+            fig.update_yaxes(range=histogram_y_range)
+        elif global_y_range is not None:
             fig.update_yaxes(range=global_y_range)
 
         return fig
@@ -1313,6 +1330,61 @@ class Plotter:
         y_max = global_max + padding_amount
 
         return [y_min, y_max]
+
+    def _calculate_histogram_yrange(
+        self,
+        charts: dict,
+        padding: float = 0.05
+    ) -> list[float]:
+        """
+        Calculate y-axis range for histogram facets based on bin counts.
+
+        Unlike control charts which use data values on the y-axis, histograms
+        display bin counts. This method calculates a shared y-range based on
+        the maximum count across all histogram bins.
+
+        Parameters
+        ----------
+        charts : dict
+            Dictionary of chart_name -> chart_info dicts
+        padding : float, default 0.05
+            Padding as fraction above max count (0.05 = 5% above max)
+
+        Returns
+        -------
+        list[float]
+            [0, max_count * (1 + padding)] range for y-axis
+        """
+        import numpy as np
+
+        max_count = 0
+
+        for chart_info in charts.values():
+            metadata = chart_info.get('metadata', {})
+            if metadata.get('chart_type') != 'Histogram':
+                continue
+
+            data = chart_info['data']
+            value_col = metadata.get('value_col')
+            bins = metadata.get('bins', 10)
+
+            if value_col is None or value_col not in data.columns:
+                continue
+
+            # Calculate histogram to get counts
+            values = data[value_col].dropna()
+            if len(values) == 0:
+                continue
+
+            counts, _ = np.histogram(values, bins=bins)
+            max_count = max(max_count, counts.max())
+
+        # Add padding above max count
+        if max_count == 0:
+            return [0, 1]  # Fallback for empty data
+
+        upper = max_count * (1 + padding)
+        return [0, upper]
 
     # =========================================================================
     # Title and Label Generation (Smart Defaults)
