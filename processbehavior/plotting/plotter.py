@@ -1026,18 +1026,18 @@ class Plotter:
                             line_dash="dash",
                             line_color="orange",
                             line_width=1,
-                            annotation_text=f"+{mult}σ" if mult == 3 else None,
-                            annotation_position="top" if mult == 3 else None,
-                            annotation_font_size=theme.annotation_font_size if mult == 3 else None
+                            annotation_text=f"+{mult}σ",
+                            annotation_position="top",
+                            annotation_font_size=theme.annotation_font_size
                         )
                         fig.add_vline(
                             x=mean - mult * std,
                             line_dash="dash",
                             line_color="orange",
                             line_width=1,
-                            annotation_text=f"-{mult}σ" if mult == 3 else None,
-                            annotation_position="top" if mult == 3 else None,
-                            annotation_font_size=theme.annotation_font_size if mult == 3 else None
+                            annotation_text=f"-{mult}σ",
+                            annotation_position="top",
+                            annotation_font_size=theme.annotation_font_size
                         )
 
         # Axis labels
