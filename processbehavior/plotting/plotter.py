@@ -664,28 +664,43 @@ class Plotter:
             horizontal_spacing=h_spacing
         )
 
-        # Determine axis labels (same for all subplots)
-        # Get x_col from first chart to determine appropriate label
-        first_chart_data = next(iter(charts.values()))['data']
-        x_col = self._get_x_column(first_chart_data)
-        x_label = xaxis_title or self._get_xaxis_label(x_col)
-        y_label = yaxis_title or self._get_yaxis_label(None)
-
-        # Calculate global y-range for shared axis
-        # Histograms need count-based y-range, control charts need value-based
-        global_y_range = None
-        histogram_y_range = None
-
-        # Check if all charts are histograms
+        # Check if all charts are histograms (needed for axis labels and binning)
         all_histograms = all(
             chart_info.get('metadata', {}).get('chart_type') == 'Histogram'
             for chart_info in charts.values()
         )
 
+        # Determine axis labels (same for all subplots)
+        first_chart_info = next(iter(charts.values()))
+        first_chart_data = first_chart_info['data']
+
+        if all_histograms:
+            # For histograms, x-axis is the value column, y-axis is count
+            value_col = first_chart_info.get('metadata', {}).get('value_col')
+            x_label = xaxis_title or value_col
+            y_label = yaxis_title or 'Count'
+        else:
+            # For control charts, use standard x-axis label
+            x_col = self._get_x_column(first_chart_data)
+            x_label = xaxis_title or self._get_xaxis_label(x_col)
+            y_label = yaxis_title or self._get_yaxis_label(None)
+
+        # Calculate global y-range for shared axis
+        # Histograms need count-based y-range, control charts need value-based
+        global_y_range = None
+        histogram_y_range = None
+        histogram_bin_edges = None
+
+        if all_histograms:
+            # Calculate shared bin edges for consistent binning across facets
+            histogram_bin_edges, _ = self._calculate_histogram_bin_edges(charts)
+
         if shared_yaxis:
             if all_histograms:
-                # For histograms, calculate y-range based on bin counts
-                histogram_y_range = self._calculate_histogram_yrange(charts, yaxis_padding)
+                # For histograms, calculate y-range based on bin counts with shared edges
+                histogram_y_range = self._calculate_histogram_yrange(
+                    charts, histogram_bin_edges
+                )
             else:
                 # For control charts (or mixed), use data value range
                 global_y_range = self._calculate_global_yrange(charts, yaxis_padding)
@@ -712,18 +727,38 @@ class Plotter:
                 value_col = metadata.get('value_col')
                 bins = metadata.get('bins', 10)
 
-                fig.add_trace(
-                    go.Histogram(
-                        x=data[value_col],
-                        nbinsx=bins,
-                        name=chart_name,
-                        marker_color=theme.data_color,
-                        opacity=0.75,
-                        showlegend=False
-                    ),
-                    row=row,
-                    col=col
-                )
+                # Use shared bin edges for consistent binning across facets
+                if histogram_bin_edges is not None:
+                    bin_width = histogram_bin_edges[1] - histogram_bin_edges[0]
+                    fig.add_trace(
+                        go.Histogram(
+                            x=data[value_col],
+                            xbins=dict(
+                                start=histogram_bin_edges[0],
+                                end=histogram_bin_edges[-1],
+                                size=bin_width
+                            ),
+                            name=chart_name,
+                            marker_color=theme.data_color,
+                            opacity=0.75,
+                            showlegend=False
+                        ),
+                        row=row,
+                        col=col
+                    )
+                else:
+                    fig.add_trace(
+                        go.Histogram(
+                            x=data[value_col],
+                            nbinsx=bins,
+                            name=chart_name,
+                            marker_color=theme.data_color,
+                            opacity=0.75,
+                            showlegend=False
+                        ),
+                        row=row,
+                        col=col
+                    )
 
                 # Add stats lines for histogram (use per-stratum stats)
                 if show_stats:
@@ -1331,24 +1366,80 @@ class Plotter:
 
         return [y_min, y_max]
 
+    def _calculate_histogram_bin_edges(
+        self,
+        charts: dict
+    ) -> tuple[np.ndarray, int]:
+        """
+        Calculate shared bin edges across all histogram facets.
+
+        This ensures consistent binning across all faceted histograms so that
+        numpy's histogram calculation matches Plotly's rendering.
+
+        Parameters
+        ----------
+        charts : dict
+            Dictionary of chart_name -> chart_info dicts
+
+        Returns
+        -------
+        tuple[np.ndarray, int]
+            (bin_edges, n_bins) - shared bin edges and number of bins
+        """
+        import numpy as np
+
+        global_min = float('inf')
+        global_max = float('-inf')
+        n_bins = 10  # default
+
+        for chart_info in charts.values():
+            metadata = chart_info.get('metadata', {})
+            if metadata.get('chart_type') != 'Histogram':
+                continue
+
+            data = chart_info['data']
+            value_col = metadata.get('value_col')
+            n_bins = metadata.get('bins', 10)
+
+            if value_col is None or value_col not in data.columns:
+                continue
+
+            values = data[value_col].dropna()
+            if len(values) == 0:
+                continue
+
+            global_min = min(global_min, values.min())
+            global_max = max(global_max, values.max())
+
+        # Fallback for empty data
+        if global_min == float('inf') or global_max == float('-inf'):
+            return np.linspace(0, 1, n_bins + 1), n_bins
+
+        # Create shared bin edges
+        bin_edges = np.linspace(global_min, global_max, n_bins + 1)
+        return bin_edges, n_bins
+
     def _calculate_histogram_yrange(
         self,
         charts: dict,
-        padding: float = 0.05
+        bin_edges: np.ndarray,
+        padding: float = 0.20
     ) -> list[float]:
         """
         Calculate y-axis range for histogram facets based on bin counts.
 
         Unlike control charts which use data values on the y-axis, histograms
         display bin counts. This method calculates a shared y-range based on
-        the maximum count across all histogram bins.
+        the maximum count across all histogram bins using shared bin edges.
 
         Parameters
         ----------
         charts : dict
             Dictionary of chart_name -> chart_info dicts
-        padding : float, default 0.05
-            Padding as fraction above max count (0.05 = 5% above max)
+        bin_edges : np.ndarray
+            Shared bin edges calculated by _calculate_histogram_bin_edges
+        padding : float, default 0.20
+            Padding as fraction above max count (0.20 = 20% above max)
 
         Returns
         -------
@@ -1366,17 +1457,16 @@ class Plotter:
 
             data = chart_info['data']
             value_col = metadata.get('value_col')
-            bins = metadata.get('bins', 10)
 
             if value_col is None or value_col not in data.columns:
                 continue
 
-            # Calculate histogram to get counts
+            # Calculate histogram to get counts using shared bin edges
             values = data[value_col].dropna()
             if len(values) == 0:
                 continue
 
-            counts, _ = np.histogram(values, bins=bins)
+            counts, _ = np.histogram(values, bins=bin_edges)
             max_count = max(max_count, counts.max())
 
         # Add padding above max count
