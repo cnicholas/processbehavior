@@ -1586,12 +1586,13 @@ class Plotter:
             Display-friendly name (e.g., "Xbar" -> "X̄", "Imr" -> "I-MR")
         """
         # Map technical names to display names
+        # Valid chart types: Xbar, S, R, Imr, Histogram
         display_names = {
             'Xbar': 'X̄',
             'S': 'S',
             'Imr': 'I-MR',
             'R': 'R',
-            'Mr': 'MR'
+            'Histogram': 'Histogram'
         }
 
         # Check for exact match first
@@ -1603,8 +1604,8 @@ class Plotter:
             if chart_name.startswith(key + '_'):
                 return display
 
-        # Fallback to original name
-        return chart_name
+        # No fallback - unknown chart types should raise an error
+        raise ValueError(f"Unknown chart type: {chart_name}")
 
     def _extract_stratum_name(self, chart_name: str) -> str | None:
         """
@@ -1621,7 +1622,8 @@ class Plotter:
             Cleaned stratum name like "Operator A" or "Lane 1"
         """
         # Known chart type prefixes to strip
-        prefixes = ['Xbar_', 'S_', 'Imr_', 'R_', 'Mr_']
+        # Valid chart types: Xbar, S, R, Imr, Histogram
+        prefixes = ['Xbar_', 'S_', 'Imr_', 'R_', 'Histogram_']
 
         result = chart_name
         for prefix in prefixes:
