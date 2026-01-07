@@ -635,7 +635,7 @@ class Plotter:
 
         # Generate descriptive subplot titles
         subplot_titles = [
-            self._generate_subplot_title(name) for name in charts
+            self._generate_subplot_title(name, charts[name]) for name in charts
         ]
 
         # Calculate spacing dynamically to avoid Plotly errors and overlaps
@@ -1276,7 +1276,15 @@ class Plotter:
                         stratum_stats = nested_stats.get(stratum, {})
 
                         # Create expanded chart name (include chart type to avoid collision)
-                        expanded_name = f"{name}_{stratum}"
+                        # Convert tuple strata to underscore-joined string for clean names
+                        if isinstance(stratum, tuple):
+                            stratum_str = '_'.join(stratum)
+                            # Display name uses space separator to preserve underscores in values
+                            stratum_display = ' '.join(stratum)
+                        else:
+                            stratum_str = stratum
+                            stratum_display = stratum
+                        expanded_name = f"{name}_{stratum_str}"
 
                         # Extract lane boundaries for this specific stratum
                         all_lane_boundaries = metadata.get('lane_boundaries')
@@ -1291,6 +1299,7 @@ class Plotter:
                                 **metadata,
                                 'original_chart': name,
                                 'stratum': stratum,
+                                'stratum_display': stratum_display,
                                 'lane_boundaries': stratum_lane_boundaries
                             }
                         }
@@ -1525,30 +1534,42 @@ class Plotter:
 
         return ' '.join(title_parts)
 
-    def _generate_subplot_title(self, chart_name: str) -> str:
+    def _generate_subplot_title(self, chart_name: str, chart_info: dict | None = None) -> str:
         """
         Generate a title for a subplot in faceted layout.
 
         Keeps subplot titles concise while still informative.
+        Includes chart type and stratum name (e.g., "I-MR F1_1 F2_1").
 
         Parameters
         ----------
         chart_name : str
             Name of the chart/stratum
+        chart_info : dict, optional
+            Chart info dict with metadata containing stratum_display
 
         Returns
         -------
         str
             Concise subplot title
         """
-        # For stratified charts, extract and clean up the stratum name
+        # Get chart type display name
+        chart_type = self._get_chart_type_display(chart_name)
+
+        # Check for stratum_display in metadata (preserves underscores in factor values)
+        if chart_info is not None:
+            stratum_display = chart_info.get('metadata', {}).get('stratum_display')
+            if stratum_display:
+                return f"{chart_type} {stratum_display}"
+
+        # Fallback: For stratified charts, extract stratum from name
         if '_' in chart_name:
             stratum = self._extract_stratum_name(chart_name)
             if stratum:
-                return stratum
+                return f"{chart_type} {stratum}"
 
         # For standard charts, just use the chart type
-        return self._get_chart_type_display(chart_name)
+        return chart_type
 
     def _get_chart_type_display(self, chart_name: str) -> str:
         """
