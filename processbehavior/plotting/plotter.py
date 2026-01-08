@@ -1197,16 +1197,12 @@ class Plotter:
             return time_var
 
         # Use subgroup identifier for Xbar/S charts
+        if 'subgroup' in data.columns:
+            return 'subgroup'
         if 'rsg' in data.columns:
             return 'rsg'
         if 'group' in data.columns:
             return 'group'
-
-        # Check for factor columns from grouping_vars
-        grouping_vars = self.summary.get('grouping_vars') or []
-        for var in grouping_vars:
-            if var in data.columns:
-                return var
 
         # Use index for positioning
         return None
@@ -1650,8 +1646,8 @@ class Plotter:
         str
             X-axis label
         """
-        # Subgroup charts (Xbar, S) use 'rsg' column
-        if x_col == 'rsg':
+        # Subgroup charts (Xbar, S) use 'subgroup', 'rsg', or 'group' column
+        if x_col in ('subgroup', 'rsg', 'group'):
             return 'Subgroup'
 
         # Time series charts use time variable
@@ -1659,7 +1655,11 @@ class Plotter:
         if time_var and (x_col is None or x_col == time_var):
             return time_var.replace('_', ' ').title()
 
-        return 'Observation'
+        # Time series charts (Imr, R) without explicit time variable
+        if x_col is None:
+            return 'Time'
+
+        raise ValueError(f"Unknown x_col: {x_col}")
 
     def _get_yaxis_label(self, value_col: str | None) -> str:
         """

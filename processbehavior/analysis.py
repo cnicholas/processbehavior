@@ -542,6 +542,10 @@ class Analysis:
         # Determine if we're charting response (can use pre-calculated) or residual
         is_response = value_col == spec.response_var
 
+        # by=[] is equivalent to by=None (both mean Kt level)
+        if by == []:
+            by = None
+
         # Default: by=None means use cell_key level (factors + time)
         if by is None:
             if time_var and rsg_vars:
@@ -562,16 +566,13 @@ class Analysis:
                 ybar_col = None
             return groupby_cols, ybar_col
 
-        # by=[] means collapse all (single point)
-        if by == []:
-            return [], 'Ybar' if is_response else None
-
         # Check if by matches known aggregation levels for Ybar optimization
         by_set = set(by)
         rsg_set = set(rsg_vars)
 
-        # by == all factors (rsg_key level) -> use Ybar_k
-        if by_set == rsg_set:
+        # by == all factors (rsg_key level) -> use Ybar_k optimization
+        # Only if order matches rsg_vars; otherwise preserve user's order
+        if by_set == rsg_set and list(by) == rsg_vars:
             groupby_cols = [spec.rsg_var_name]
             ybar_col = 'Ybar_k' if is_response else None
             return groupby_cols, ybar_col
@@ -914,17 +915,22 @@ class Analysis:
             statistics['upl'] = variable_stats
 
         # Determine the grouping column for output
-        # For by=[], we use 'group'; for by=factors, we use 'rsg'; otherwise use first groupby col
-        if groupby_cols == []:
+        if spec.by is not None and spec.by != []:
+            # Explicit by list - create 'subgroup' column (THE BUG FIX)
+            if len(groupby_cols) == 1:
+                xbar['subgroup'] = xbar[groupby_cols[0]].astype(str)
+            else:
+                xbar['subgroup'] = xbar[groupby_cols].astype(str).agg('_'.join, axis=1)
+            group_col = 'subgroup'
+        elif len(groupby_cols) > 1:
+            # by=None - create 'group' from multiple columns (original behavior)
+            xbar['group'] = xbar[groupby_cols].astype(str).agg('_'.join, axis=1)
             group_col = 'group'
-        elif groupby_cols == [spec.rsg_var_name]:
-            group_col = 'rsg'
+        elif groupby_cols:
+            # Single groupby column
+            group_col = groupby_cols[0]
         else:
-            group_col = groupby_cols[0] if len(groupby_cols) == 1 else 'group'
-            # Create combined group column if multiple groupby columns
-            if len(groupby_cols) > 1:
-                xbar['group'] = xbar[groupby_cols].astype(str).agg('_'.join, axis=1)
-                group_col = 'group'
+            group_col = None
 
         cols_to_keep = [group_col, 'xbar', 'center', 'lpl', 'upl', 'beyond_limits']
         cols_to_keep = [c for c in cols_to_keep if c in xbar.columns]
@@ -1056,15 +1062,22 @@ class Analysis:
         out = self._add_beyond_limits_flag(out, value_col='s')
 
         # Determine the grouping column for output
-        if groupby_cols == []:
+        if spec.by is not None and spec.by != []:
+            # Explicit by list - create 'subgroup' column (THE BUG FIX)
+            if len(groupby_cols) == 1:
+                out['subgroup'] = out[groupby_cols[0]].astype(str)
+            else:
+                out['subgroup'] = out[groupby_cols].astype(str).agg('_'.join, axis=1)
+            group_col = 'subgroup'
+        elif len(groupby_cols) > 1:
+            # by=None - create 'group' from multiple columns (original behavior)
+            out['group'] = out[groupby_cols].astype(str).agg('_'.join, axis=1)
             group_col = 'group'
-        elif groupby_cols == [spec.rsg_var_name]:
-            group_col = 'rsg'
+        elif groupby_cols:
+            # Single groupby column
+            group_col = groupby_cols[0]
         else:
-            group_col = groupby_cols[0] if len(groupby_cols) == 1 else 'group'
-            if len(groupby_cols) > 1:
-                out['group'] = out[groupby_cols].astype(str).agg('_'.join, axis=1)
-                group_col = 'group'
+            group_col = None
 
         cols_to_keep = [group_col, 's', 'center', 'lpl', 'upl', 'beyond_limits']
         cols_to_keep = [c for c in cols_to_keep if c in out.columns]
