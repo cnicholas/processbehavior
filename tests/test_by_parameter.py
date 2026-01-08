@@ -150,12 +150,12 @@ class TestXbarAggregation:
         # Should have 3 rows (K1=3 levels of factor 1)
         assert len(xbar_data) == 3
 
-    def test_xbar_by_empty_collapses_all(self, sds1_study):
-        """Xbar with by=[] should collapse to single point."""
-        result = sds1_study.execute(chart='Xbar', by=[])
-        xbar_data = result.charts['Xbar']['data']
-        # Should have 1 row (grand mean)
-        assert len(xbar_data) == 1
+    def test_xbar_by_empty_equals_by_none(self, sds1_study):
+        """Xbar with by=[] should behave identically to by=None (Kt level)."""
+        result_empty = sds1_study.execute(chart='Xbar', by=[])
+        result_none = sds1_study.execute(chart='Xbar')
+        # Both should have same number of rows (Kt level)
+        assert len(result_empty.charts['Xbar']['data']) == len(result_none.charts['Xbar']['data'])
 
 
 class TestSAggregation:
@@ -173,11 +173,47 @@ class TestSAggregation:
         s_data = result.charts['S']['data']
         assert len(s_data) == 3
 
-    def test_s_by_empty_collapses_all(self, sds1_study):
-        """S with by=[] should collapse to single point."""
-        result = sds1_study.execute(chart='S', by=[])
-        s_data = result.charts['S']['data']
-        assert len(s_data) == 1
+    def test_s_by_empty_equals_by_none(self, sds1_study):
+        """S with by=[] should behave identically to by=None (Kt level)."""
+        result_empty = sds1_study.execute(chart='S', by=[])
+        result_none = sds1_study.execute(chart='S')
+        # Both should have same number of rows (Kt level)
+        assert len(result_empty.charts['S']['data']) == len(result_none.charts['S']['data'])
+
+
+# =============================================================================
+# ORDER PRESERVATION TESTS
+# =============================================================================
+
+class TestOrderPreservation:
+    """Test that user-specified by order is preserved in subgroup labels."""
+
+    def test_by_order_preserved_in_subgroup_labels(self, sds1_study):
+        """by=['f2','f1'] should produce different labels than by=['f1','f2']."""
+        result_f1f2 = sds1_study.execute(chart='Xbar', by=['factor 1', 'factor 2'])
+        result_f2f1 = sds1_study.execute(chart='Xbar', by=['factor 2', 'factor 1'])
+
+        labels_f1f2 = result_f1f2.charts['Xbar']['data']['subgroup'].tolist()
+        labels_f2f1 = result_f2f1.charts['Xbar']['data']['subgroup'].tolist()
+
+        # Labels should differ
+        assert labels_f1f2 != labels_f2f1
+
+        # First label should reflect the order
+        assert labels_f1f2[0].startswith('F1_')
+        assert labels_f2f1[0].startswith('F2_')
+
+    def test_s_chart_order_preservation(self, sds1_study):
+        """S chart should also preserve user's by order."""
+        result_f1f2 = sds1_study.execute(chart='S', by=['factor 1', 'factor 2'])
+        result_f2f1 = sds1_study.execute(chart='S', by=['factor 2', 'factor 1'])
+
+        labels_f1f2 = result_f1f2.charts['S']['data']['subgroup'].tolist()
+        labels_f2f1 = result_f2f1.charts['S']['data']['subgroup'].tolist()
+
+        assert labels_f1f2 != labels_f2f1
+        assert labels_f1f2[0].startswith('F1_')
+        assert labels_f2f1[0].startswith('F2_')
 
 
 # =============================================================================
