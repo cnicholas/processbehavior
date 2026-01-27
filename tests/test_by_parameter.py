@@ -29,16 +29,6 @@ def sds1_study():
 
 
 @pytest.fixture
-def sds4_study():
-    """SDS4 study without factors - single condition over time."""
-    df = synthetic.make_sds(4, T=20, seed=42)
-    return ProcessBehavior(df).formulate(
-        response='y',
-        time='time'
-    )
-
-
-@pytest.fixture
 def sds1_single_factor_study():
     """SDS1 study with single factor."""
     df = synthetic.make_sds(1, K1=3, K2=1, T=6, n_min=2, n_max=4, seed=42)
@@ -100,11 +90,6 @@ class TestByParameterValidation:
         """IMR charts with factors should require explicit `by` parameter."""
         with pytest.raises(ValueError, match="require.*by"):
             sds1_study.execute(chart='Imr')
-
-    def test_imr_without_factors_allows_by_none(self, sds4_study):
-        """IMR charts without factors should allow by=None."""
-        result = sds4_study.execute(chart='Imr')
-        assert 'Imr' in result.charts
 
     def test_by_must_be_subset_of_factors(self, sds1_study):
         """by parameter must only contain factor variables."""

@@ -149,74 +149,6 @@ def test_process_dataframe_rejects_non_dataframe():
 
 
 # ============================================================================
-# Test: ProcessBehavior.formulate() - Simple series (SDS 0)
-# ============================================================================
-
-def test_formulate_simple_series():
-    """Simple series should detect SDS 0 and recommend IMR chart."""
-    # Create simple series
-    np.random.seed(42)
-    df = pd.DataFrame({
-        'Measurement': np.random.normal(100, 5, 30),
-        'Time': range(1, 31)
-    })
-
-    pdata = ProcessBehavior(df)
-
-    # Formulate without factors → should get SDS 0
-    study = pdata.formulate(
-        response=pdata.cols.Measurement,
-        time=pdata.cols.Time
-    )
-
-    # Should have detected SDS 4 (single condition over time) and recommend IMR
-    assert study.sds == 4
-    assert study.recommended_chart == 'Imr'
-    assert 'Imr' in study.valid_charts
-
-
-def test_formulate_simple_series_no_time():
-    """Simple series without time variable should still work.
-
-    When no time variable is specified, observation order (obs_id) serves
-    as implicit time. This is treated as SDS 4 (single condition over time).
-    """
-    df = pd.DataFrame({
-        'Value': [10, 12, 11, 13, 12, 14, 13, 15]
-    })
-
-    pdata = ProcessBehavior(df)
-
-    study = pdata.formulate(response=pdata.cols.Value)
-
-    # SDS 4: implicit single condition over time (obs_id as time)
-    assert study.sds == 4
-    assert study.recommended_chart == 'Imr'
-
-
-def test_formulate_and_analyze_simple_series():
-    """formulate() followed by analyze() should produce valid Analysis."""
-    np.random.seed(42)
-    df = pd.DataFrame({
-        'Measurement': np.random.normal(100, 5, 30),
-        'Time': range(1, 31)
-    })
-
-    pdata = ProcessBehavior(df)
-
-    study = pdata.formulate(
-        response=pdata.cols.Measurement,
-        time=pdata.cols.Time
-    )
-
-    # Analyze using recommended chart
-    result = study.execute()
-
-    assert result is not None
-    assert 'Imr' in result.charts
-
-
-# ============================================================================
 # Test: ProcessBehavior.formulate() - Grouped data
 # ============================================================================
 
@@ -337,11 +269,11 @@ def test_formulate_requires_response():
 
 def test_formulate_validates_response_column():
     """formulate() should validate that response column exists."""
-    df = pd.DataFrame({'X': [1, 2, 3]})
+    df = pd.DataFrame({'X': [1, 2, 3], 'Factor': ['A', 'A', 'B']})
     pdata = ProcessBehavior(df)
 
     with pytest.raises(ValueError, match="not found"):
-        pdata.formulate(response='NonExistent')
+        pdata.formulate(response='NonExistent', factors=['Factor'])
 
 
 # ============================================================================
@@ -352,7 +284,7 @@ def test_study_has_sds(simple_values):
     """Study should expose detected SDS."""
     pdata = ProcessBehavior(simple_values)
 
-    study = pdata.formulate(response='Value')
+    study = pdata.formulate(response='Value', factors=['Factor'], time='Time')
 
     assert hasattr(study, 'sds')
     assert isinstance(study.sds, int)
@@ -362,7 +294,7 @@ def test_study_has_valid_charts(simple_values):
     """Study should expose valid chart types."""
     pdata = ProcessBehavior(simple_values)
 
-    study = pdata.formulate(response='Value')
+    study = pdata.formulate(response='Value', factors=['Factor'], time='Time')
 
     assert hasattr(study, 'valid_charts')
     assert isinstance(study.valid_charts, list)
@@ -372,7 +304,7 @@ def test_study_has_recommended_chart(simple_values):
     """Study should expose recommended chart type."""
     pdata = ProcessBehavior(simple_values)
 
-    study = pdata.formulate(response='Value')
+    study = pdata.formulate(response='Value', factors=['Factor'], time='Time')
 
     assert hasattr(study, 'recommended_chart')
     assert study.recommended_chart in study.valid_charts
@@ -382,7 +314,7 @@ def test_study_has_charts_accessor(simple_values):
     """Study should have charts accessor for IDE auto-completion."""
     pdata = ProcessBehavior(simple_values)
 
-    study = pdata.formulate(response='Value')
+    study = pdata.formulate(response='Value', factors=['Factor'], time='Time')
 
     assert hasattr(study, 'charts')
     # Should be able to access valid chart types as attributes
@@ -421,7 +353,7 @@ def test_study_repr(simple_values):
     """Study should have informative repr/str."""
     pdata = ProcessBehavior(simple_values)
 
-    study = pdata.formulate(response='Value')
+    study = pdata.formulate(response='Value', factors=['Factor'], time='Time')
     study_str = str(study)
 
     # Should contain useful information
@@ -431,35 +363,6 @@ def test_study_repr(simple_values):
 # ============================================================================
 # Test: Integration - End-to-end workflow
 # ============================================================================
-
-def test_full_workflow_simple_series():
-    """Test complete workflow from DataFrame to Analysis (simple series)."""
-    # Create data
-    np.random.seed(42)
-    df = pd.DataFrame({
-        'Measurement': np.random.normal(100, 2, 20),
-        'Time': range(1, 21)
-    })
-
-    # Wrap in ProcessBehavior
-    data = ProcessBehavior(df)
-
-    # Formulate study
-    study = data.formulate(
-        response=data.cols.Measurement,
-        time=data.cols.Time
-    )
-
-    # Check study properties - SDS 4 for single condition over time
-    assert study.sds == 4
-    assert study.recommended_chart == 'Imr'
-
-    # Analyze
-    result = study.execute()
-
-    assert result is not None
-    assert 'Imr' in result.charts
-
 
 def test_full_workflow_grouped_data():
     """Test complete workflow with grouped data."""
@@ -505,14 +408,16 @@ def test_full_workflow_grouped_data():
 def test_formulate_with_precision():
     """Should pass precision parameter through."""
     df = pd.DataFrame({
-        'Value': [100.123456, 102.654321, 101.111111, 103.999999],
-        'Time': [1, 2, 3, 4]
+        'Value': [100.123456, 102.654321, 101.111111, 103.999999, 100.5, 102.2],
+        'Factor': ['A', 'A', 'A', 'B', 'B', 'B'],
+        'Time': [1, 2, 3, 1, 2, 3]
     })
 
     pdata = ProcessBehavior(df)
 
     study = pdata.formulate(
         response=pdata.cols.Value,
+        factors=[pdata.cols.Factor],
         time=pdata.cols.Time,
         precision=5
     )
@@ -576,9 +481,12 @@ def test_study_sds_name():
     """Study should expose human-readable SDS name."""
     np.random.seed(42)
 
-    # SDS 0 - Simple series
-    df = pd.DataFrame({'Value': np.random.normal(100, 5, 30)})
-    study = ProcessBehavior(df).formulate(response='Value')
+    df = pd.DataFrame({
+        'Value': np.random.normal(100, 5, 30),
+        'Factor': np.repeat(['A', 'B', 'C'], 10),
+        'Time': np.tile(range(1, 11), 3)
+    })
+    study = ProcessBehavior(df).formulate(response='Value', factors=['Factor'], time='Time')
 
     assert hasattr(study, 'sds_name')
     assert isinstance(study.sds_name, str)
@@ -588,8 +496,12 @@ def test_study_sds_name():
 def test_study_sds_description():
     """Study should expose SDS description explaining the data structure."""
     np.random.seed(42)
-    df = pd.DataFrame({'Value': np.random.normal(100, 5, 30)})
-    study = ProcessBehavior(df).formulate(response='Value')
+    df = pd.DataFrame({
+        'Value': np.random.normal(100, 5, 30),
+        'Factor': np.repeat(['A', 'B', 'C'], 10),
+        'Time': np.tile(range(1, 11), 3)
+    })
+    study = ProcessBehavior(df).formulate(response='Value', factors=['Factor'], time='Time')
 
     assert hasattr(study, 'sds_description')
     assert isinstance(study.sds_description, str)
@@ -598,8 +510,12 @@ def test_study_sds_description():
 
 def test_study_response_property():
     """Study should expose the response variable name."""
-    df = pd.DataFrame({'Measurement': [1, 2, 3, 4, 5]})
-    study = ProcessBehavior(df).formulate(response='Measurement')
+    df = pd.DataFrame({
+        'Measurement': [1, 2, 3, 4, 5, 6],
+        'Factor': ['A', 'A', 'A', 'B', 'B', 'B'],
+        'Time': [1, 2, 3, 1, 2, 3]
+    })
+    study = ProcessBehavior(df).formulate(response='Measurement', factors=['Factor'], time='Time')
 
     assert study.response == 'Measurement'
 
@@ -623,41 +539,28 @@ def test_study_factors_property():
     assert study.factors == ['Batch']
 
 
-def test_study_factors_none_when_no_grouping(simple_values):
-    """Study.factors should be None when no grouping specified."""
-    study = ProcessBehavior(simple_values).formulate(response='Value')
-
-    assert study.factors is None
-
-
 def test_study_time_property():
     """Study should expose the time variable name."""
     df = pd.DataFrame({
-        'Value': [1, 2, 3, 4, 5],
-        'Sequence': [1, 2, 3, 4, 5]
+        'Value': [1, 2, 3, 4, 5, 6],
+        'Factor': ['A', 'A', 'A', 'B', 'B', 'B'],
+        'Sequence': [1, 2, 3, 1, 2, 3]
     })
-    study = ProcessBehavior(df).formulate(response='Value', time='Sequence')
+    study = ProcessBehavior(df).formulate(response='Value', factors=['Factor'], time='Sequence')
 
     assert study.time == 'Sequence'
 
 
-def test_study_time_none_when_not_specified(simple_values):
-    """Study.time should be None when no time specified."""
-    study = ProcessBehavior(simple_values).formulate(response='Value')
-
-    assert study.time is None
-
-
 def test_study_precision_property(simple_values):
     """Study should expose precision setting."""
-    study = ProcessBehavior(simple_values).formulate(response='Value', precision=5)
+    study = ProcessBehavior(simple_values).formulate(response='Value', factors=['Factor'], time='Time', precision=5)
 
     assert study.precision == 5
 
 
 def test_study_precision_default(simple_values):
     """Study precision should default to 3."""
-    study = ProcessBehavior(simple_values).formulate(response='Value')
+    study = ProcessBehavior(simple_values).formulate(response='Value', factors=['Factor'], time='Time')
 
     assert study.precision == 3
 
@@ -668,7 +571,7 @@ def test_study_precision_default(simple_values):
 
 def test_study_dataset_exists(simple_values):
     """Study should expose the analysis dataset."""
-    study = ProcessBehavior(simple_values).formulate(response='Value')
+    study = ProcessBehavior(simple_values).formulate(response='Value', factors=['Factor'], time='Time')
 
     assert hasattr(study, 'dataset')
     assert study.dataset is not None
@@ -676,14 +579,14 @@ def test_study_dataset_exists(simple_values):
 
 def test_study_dataset_is_dataframe(simple_values):
     """Study.dataset should be a pandas DataFrame."""
-    study = ProcessBehavior(simple_values).formulate(response='Value')
+    study = ProcessBehavior(simple_values).formulate(response='Value', factors=['Factor'], time='Time')
 
     assert isinstance(study.dataset, pd.DataFrame)
 
 
 def test_study_dataset_returns_copy(simple_values):
     """Study.dataset should return a copy (immutability)."""
-    study = ProcessBehavior(simple_values).formulate(response='Value')
+    study = ProcessBehavior(simple_values).formulate(response='Value', factors=['Factor'], time='Time')
 
     dataset1 = study.dataset
     dataset2 = study.dataset
@@ -765,24 +668,13 @@ def test_study_residual_charts_sds1_has_all(grouped_single_factor):
     assert any('R5' in r for r in residual_charts)
 
 
-def test_study_residual_charts_for_sds4(simple_values):
-    """SDS 4 (implicit single condition) should have residual charts available."""
-    study = ProcessBehavior(simple_values).formulate(response='Value')
-
-    # SDS 4 supports VAS residuals - should have residual charts available
-    assert study.sds == 4
-    assert len(study.residual_charts) > 0
-    # Should include at least some R2/R3 charts for IMR
-    assert any('R2' in r or 'R3' in r for r in study.residual_charts)
-
-
 # ============================================================================
 # Test: Study.why_not() - Teaching method
 # ============================================================================
 
 def test_study_why_not_valid_chart(simple_values):
     """why_not() should confirm valid charts."""
-    study = ProcessBehavior(simple_values).formulate(response='Value')
+    study = ProcessBehavior(simple_values).formulate(response='Value', factors=['Factor'], time='Time')
 
     # Imr is valid for SDS 4
     result = study.why_not('Imr')
@@ -791,7 +683,7 @@ def test_study_why_not_valid_chart(simple_values):
 
 def test_study_why_not_invalid_chart(simple_values):
     """why_not() should explain why a chart is invalid."""
-    study = ProcessBehavior(simple_values).formulate(response='Value')
+    study = ProcessBehavior(simple_values).formulate(response='Value', factors=['Factor'], time='Time')
 
     # S chart requires grouping variables (which SDS 4 implicit doesn't have)
     result = study.why_not('S')
@@ -801,7 +693,7 @@ def test_study_why_not_invalid_chart(simple_values):
 
 def test_study_why_not_unknown_chart(simple_values):
     """why_not() should handle unknown chart types."""
-    study = ProcessBehavior(simple_values).formulate(response='Value')
+    study = ProcessBehavior(simple_values).formulate(response='Value', factors=['Factor'], time='Time')
 
     result = study.why_not('NonExistentChart')
     assert 'not a recognized' in result.lower() or 'valid types' in result.lower()
@@ -813,7 +705,7 @@ def test_study_why_not_unknown_chart(simple_values):
 
 def test_study_charts_accessor_has_valid_charts(simple_values):
     """Study.charts should have attributes for each valid chart."""
-    study = ProcessBehavior(simple_values).formulate(response='Value')
+    study = ProcessBehavior(simple_values).formulate(response='Value', factors=['Factor'], time='Time')
 
     # For SDS 4, Imr should be available
     assert hasattr(study.charts, 'Imr')
@@ -822,7 +714,7 @@ def test_study_charts_accessor_has_valid_charts(simple_values):
 
 def test_study_charts_accessor_dir(simple_values):
     """Study.charts should support tab-completion via __dir__."""
-    study = ProcessBehavior(simple_values).formulate(response='Value')
+    study = ProcessBehavior(simple_values).formulate(response='Value', factors=['Factor'], time='Time')
 
     chart_attrs = dir(study.charts)
     assert 'Imr' in chart_attrs
@@ -842,7 +734,7 @@ def test_study_charts_accessor_xbar_for_grouped(grouped_single_factor):
 
 def test_study_charts_accessor_repr(simple_values):
     """Study.charts should have informative repr."""
-    study = ProcessBehavior(simple_values).formulate(response='Value')
+    study = ProcessBehavior(simple_values).formulate(response='Value', factors=['Factor'], time='Time')
 
     repr_str = repr(study.charts)
     assert 'StudyChartAccessor' in repr_str
@@ -851,34 +743,6 @@ def test_study_charts_accessor_repr(simple_values):
 # ============================================================================
 # Test: Study.execute() - Error handling
 # ============================================================================
-
-def test_study_analyze_invalid_chart_raises(simple_values):
-    """analyze() should raise error for charts requiring grouping variables."""
-    study = ProcessBehavior(simple_values).formulate(response='Value')
-
-    # S chart requires grouping variables - SDS 4 implicit doesn't have any
-    with pytest.raises(ValueError, match="grouping variable is required"):
-        study.execute(chart='S')
-
-
-def test_study_analyze_invalid_chart_shows_valid(simple_values):
-    """analyze() error should explain what's needed."""
-    study = ProcessBehavior(simple_values).formulate(response='Value')
-
-    try:
-        study.execute(chart='S')
-    except ValueError as e:
-        # Should mention that grouping is required
-        assert 'grouping' in str(e).lower()
-
-
-def test_study_analyze_with_charts_accessor(simple_values_10):
-    """analyze() should work with charts accessor."""
-    study = ProcessBehavior(simple_values_10).formulate(response='Value')
-
-    result = study.execute(chart=study.charts.Imr)
-    assert result is not None
-
 
 # ============================================================================
 # Test: Study.execute() - Residual charts
@@ -901,61 +765,6 @@ def test_study_analyze_residual_chart(grouped_single_factor):
         assert result is not None
 
 
-def test_study_analyze_invalid_residual_chart_raises(simple_values):
-    """analyze() should raise error for invalid residual chart."""
-    study = ProcessBehavior(simple_values).formulate(response='Value')
-
-    # SDS 4 doesn't have any residuals (needs factors)
-    # Raises ValueError because residual column doesn't exist
-    with pytest.raises((ChartNotAvailableError, ValueError), match="not available|Available"):
-        study.execute(chart='Imr', value='R4')
-
-
-# ============================================================================
-# Test: AnalysisResult integration
-# ============================================================================
-
-def test_study_analyze_returns_analysis_result(simple_values_10):
-    """analyze() should return an AnalysisResult object."""
-    study = ProcessBehavior(simple_values_10).formulate(response='Value')
-
-    result = study.execute()
-
-    # Should have expected attributes
-    assert hasattr(result, 'charts')
-    assert hasattr(result, 'summary')
-
-
-def test_study_analyze_result_has_charts(simple_values_10):
-    """AnalysisResult should contain chart data."""
-    study = ProcessBehavior(simple_values_10).formulate(response='Value')
-
-    result = study.execute()
-
-    assert isinstance(result.charts, dict)
-    assert len(result.charts) > 0
-
-
-def test_study_analyze_result_has_plot(simple_values_10):
-    """AnalysisResult should have plot() method."""
-    study = ProcessBehavior(simple_values_10).formulate(response='Value')
-
-    result = study.execute()
-
-    assert hasattr(result, 'plot')
-    assert callable(result.plot)
-
-
-def test_study_analyze_result_has_detect_signals(simple_values_10):
-    """AnalysisResult should have detect_signals() method."""
-    study = ProcessBehavior(simple_values_10).formulate(response='Value')
-
-    result = study.execute()
-
-    assert hasattr(result, 'detect_signals')
-    assert callable(result.detect_signals)
-
-
 # ============================================================================
 # Test: formulate() validation
 # ============================================================================
@@ -967,42 +776,6 @@ def test_formulate_invalid_factor_column():
 
     with pytest.raises(ValueError, match="not found"):
         pdata.formulate(response='Value', factors=['NonExistent'])
-
-
-def test_formulate_invalid_time_column():
-    """formulate() should raise for non-existent time column."""
-    df = pd.DataFrame({'Value': [1, 2, 3]})
-    pdata = ProcessBehavior(df)
-
-    with pytest.raises(ValueError, match="not found"):
-        pdata.formulate(response='Value', time='NonExistent')
-
-
-# ============================================================================
-# Test: Edge cases
-# ============================================================================
-
-def test_formulate_single_observation():
-    """formulate() should handle single observation gracefully."""
-    df = pd.DataFrame({'Value': [100.0]})
-    pdata = ProcessBehavior(df)
-
-    # Should not crash - SDS 4 for implicit single condition
-    study = pdata.formulate(response='Value')
-    assert study.sds == 4
-
-
-def test_formulate_with_nan_values():
-    """formulate() should handle NaN values in response."""
-    df = pd.DataFrame({
-        'Value': [1.0, 2.0, np.nan, 4.0, 5.0],
-        'Time': [1, 2, 3, 4, 5]
-    })
-    pdata = ProcessBehavior(df)
-
-    # Should handle NaN gracefully
-    study = pdata.formulate(response='Value', time='Time')
-    assert study is not None
 
 
 # ============================================================================

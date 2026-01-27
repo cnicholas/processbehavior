@@ -24,16 +24,16 @@ from typing import TYPE_CHECKING, ClassVar, Literal
 
 import pandas as pd
 
-# Formal vocabulary for SDS classification reasons
+# Formal vocabulary for SDS classification reasons (per Wheeler/Bishop Table 1)
 SDSReasonType = Literal[
-    "full_replication",
-    "no_replication",
-    "partial_replication",
-    "single_condition",
-    "implicit_single_condition",  # Response-only data: obs order = implicit time
-    "nested",
-    "incomplete_with_replication",
-    "incomplete_no_replication",
+    # Complete/Semi-Complete (SDS 1, 2, 3) - no empty cells
+    "full_replication",            # SDS 1: all N_kt >= 2
+    "no_replication",              # SDS 2: all N_kt = 1
+    "partial_replication",         # SDS 3: mixed N_kt (some 1, some >=2)
+    # Incomplete (SDS 4, 5, 6) - has empty cells (N_kt = 0)
+    "incomplete_with_singletons",  # SDS 4: has 0s, has 1s, has >=2s
+    "incomplete_no_singletons",    # SDS 5: has 0s, no 1s, has >=2s
+    "incomplete_no_replication",   # SDS 6: has 0s, max = 1
 ]
 
 # R2 calculation method - structure-driven, not SDS-driven
@@ -295,23 +295,21 @@ class SDSResult:
     Attributes
     ----------
     sds : int
-        Sampling Design State (0-6)
+        Sampling Design State (1-6) per Wheeler/Bishop Table 1
     min_cell_size : int
         Minimum observations per cell (for chart selection)
     reason : SDSReasonType | None
-        Why this SDS was detected. Useful for disambiguation when
-        multiple conditions can lead to the same SDS (e.g., SDS 5
-        can be "nested" or "incomplete_with_replication").
+        Why this SDS was detected, based on N_kt distribution.
 
-        Possible values (defined in SDSReasonType):
-        - "full_replication": SDS 1
-        - "no_replication": SDS 2
-        - "partial_replication": SDS 3
-        - "single_condition": SDS 4 (explicit single factor level)
-        - "implicit_single_condition": SDS 4 (response-only, obs order = time)
-        - "nested": SDS 5 (hierarchical factor structure)
-        - "incomplete_with_replication": SDS 5 (incomplete grid, some n≥2)
-        - "incomplete_no_replication": SDS 6
+        Complete/Semi-Complete (no empty cells):
+        - "full_replication": SDS 1 (all N_kt >= 2)
+        - "no_replication": SDS 2 (all N_kt = 1)
+        - "partial_replication": SDS 3 (mixed N_kt)
+
+        Incomplete (has empty cells, requires plan):
+        - "incomplete_with_singletons": SDS 4 (has 0s, 1s, and >=2s)
+        - "incomplete_no_singletons": SDS 5 (has 0s and >=2s, no 1s)
+        - "incomplete_no_replication": SDS 6 (has 0s, max = 1)
     """
     sds: int
     min_cell_size: int
@@ -322,65 +320,57 @@ class SDSRegistry:
     """
     Registry of Sampling Design State (SDS 1-6) definitions and rules.
 
+    Implements Wheeler/Bishop Table 1 classification based on N_kt distribution.
+
     Provides:
     - SDS detection from data structure
     - Analysis plans and capabilities for each SDS
     - Validation of SDS/analysis compatibility
     - VAS residual calculation rules
 
-    The SDS classification system describes the structure of your data:
+    The SDS classification system (per Wheeler/Bishop Table 1):
 
-    **SDS 1**: Full replication
-        - Every (factor × time) cell has n ≥ 2
+    **Complete/Semi-Complete** (no empty cells in grid):
+
+    **SDS 1**: Complete - Full replication
+        - Min N_kt ≥ 2 (all cells have multiple observations)
         - Best for variance estimation
-        - Supports full interaction analysis
 
-    **SDS 2**: No replication
-        - Every (factor × time) cell has n = 1
-        - Requires moving average for variance
-        - Limited interaction analysis
+    **SDS 2**: Semi-Complete - No replication
+        - Min N_kt = 1 and Max N_kt = 1 (all cells are singletons)
+        - Requires moving average for R2
 
-    **SDS 3**: Partial replication
-        - Mix of n=1 and n≥2 cells
-        - Most common in practice
-        - Requires hybrid variance estimation
+    **SDS 3**: Semi-Complete - Partial replication
+        - Min N_kt = 1 and Max N_kt ≥ 2 (mixed)
+        - Hybrid variance estimation
 
-    **SDS 4**: Single condition over time
-        - One factor level (explicit or implicit), tracked over time
-        - Includes "response-only" data where observation order = implicit time
-        - Time series structure, appropriate for IMR charts
+    **Incomplete** (has empty cells, requires sampling plan to detect):
 
-    **SDS 5**: Nested design
-        - Hierarchical factor structure
-        - Incomplete temporal coverage
-        - Requires variance components
+    **SDS 4**: Incomplete with singletons
+        - Has empty cells (N_kt = 0), singletons (N_kt = 1), and replicated (N_kt ≥ 2)
+        - Mixed everything
 
-    **SDS 6**: Unstructured/irregular
-        - Cannot form regular grid
-        - May have regime changes
-        - Complex structure
+    **SDS 5**: Incomplete without singletons
+        - Has empty cells (N_kt = 0) and replicated (N_kt ≥ 2), but NO singletons
+        - Can estimate variance from replicated cells
+
+    **SDS 6**: Incomplete without replication
+        - Has empty cells (N_kt = 0) and Max N_kt = 1
+        - Cannot estimate within-cell variance
 
     Examples
     --------
     Detect SDS from prepared data:
 
     >>> registry = SDSRegistry()
-    >>> sds = registry.detect_sds(df, spec)
-    >>> print(f"Detected SDS {sds}")
+    >>> result = registry.detect_sds(df, spec)
+    >>> print(f"Detected SDS {result.sds}")
     Detected SDS 1
 
-    Get detailed characteristics:
+    With sampling plan (enables SDS 4-6 detection):
 
-    >>> info = registry.get_sds_characteristics(sds)
-    >>> print(info['description'])
-    'Full replication (all cells n≥2)'
-    >>> print(info['r2_method'])
-    'within_cell'
-
-    Validate SDS for analysis:
-
-    >>> registry.validate_sds_for_analysis(sds=2, analysis_type='Xbar')
-    # Logs warning about no replication
+    >>> plan = {'Lane': [1, 2, 3, 4], 'Phase': [1, 2, 3]}
+    >>> result = registry.detect_sds(df, spec, plan=plan)
     """
 
     def detect_sds(
@@ -393,8 +383,8 @@ class SDSRegistry:
         """
         Detect Sampling Design State from data structure.
 
-        Examines the (factor × time) grid structure to determine which
-        of the 6 SDS categories (1-6) best describes the data.
+        Implements Wheeler/Bishop Table 1 classification based on N_kt
+        (observations per factor × time cell) distribution.
 
         Parameters
         ----------
@@ -406,28 +396,33 @@ class SDSRegistry:
             Sampling plan specifying expected factor levels. Keys are column
             names, values are lists of expected levels. When provided, enables
             SDS 4-6 detection by comparing observed structure to planned
-            structure (e.g., detecting missing factor levels).
+            structure (detecting empty cells where N_kt = 0).
 
-            Mode 1 (plan=None): Infer structure from observed data → SDS 1-4
-            Mode 2 (plan={...}): Compare to plan → enables SDS 5-6
+            Mode 1 (plan=None): Classify based on observed data → SDS 1-3
+            Mode 2 (plan={...}): Compare to plan → enables SDS 4-6
         T_planned : int, optional
             Expected number of time points from sampling plan. When provided,
             coverage calculation uses this instead of observed time count.
             This enables detection of incomplete temporal coverage.
 
-        Notes
-        -----
-        **SDS 4 for Response-Only Data**
-
-        When no grouping factors are specified, the data is classified as
-        SDS 4 (Single Condition Over Time) with implicit single condition.
-        This is intentional: observation order (``obs_id``) provides implicit
-        temporal structure, and Wheeler's IMR chart assumes temporal ordering.
-
         Returns
         -------
         SDSResult
             Result containing sds (1-6), min_cell_size, and reason.
+
+        Notes
+        -----
+        **Classification Logic (per Wheeler/Bishop Table 1)**
+
+        Complete/Semi-Complete (no empty cells):
+        - SDS 1: Min N_kt ≥ 2 (all cells replicated)
+        - SDS 2: Min = Max = 1 (all cells singleton)
+        - SDS 3: Min = 1, Max ≥ 2 (mixed)
+
+        Incomplete (has empty cells, requires plan):
+        - SDS 4: Has 0s, has 1s, has ≥2s (mixed everything)
+        - SDS 5: Has 0s, NO 1s, has ≥2s (no singletons)
+        - SDS 6: Has 0s, Max = 1 (no replication)
 
         Examples
         --------
@@ -447,106 +442,38 @@ class SDSRegistry:
         >>> plan = {'Lane': [1, 2, 3, 4], 'Phase': [1, 2, 3]}
         >>> result = detector.detect_sds(df, spec, plan=plan)
         """
-        # Store plan for coverage ratio calculation (enables SDS 5/6 detection)
+        # Store plan for potential use in helpers
         self._plan = plan
 
-        # No grouping factors defined → treat as SDS 4 (single condition over time)
-        # Rationale: observation order provides implicit temporal structure.
-        # Wheeler's IMR chart assumes temporal ordering - moving ranges between
-        # consecutive observations only make sense in sequence. Even "response-only"
-        # data is analyzed as a time series where obs_id serves as implicit time.
-        # See: formulate() docstring for full explanation.
-        if not spec.has_grouping:
-            logger.debug("SDS 4: No grouping factors - implicit single condition over time")
-            return SDSResult(sds=4, min_cell_size=1, reason="implicit_single_condition")
-
-        # From here: have grouping factors
-        #
-        # DESIGN DECISION (Issue #60):
-        # SDS classification and analysis subgrouping serve different purposes:
-        #
-        # 1. SDS CLASSIFICATION (Wheeler/Bishop methodology):
-        #    - Based on N_kt = observations per (factor k × time t) cell
-        #    - Describes the DATA STRUCTURE
-        #    - SDS 1: All N_kt >= 2 (Complete)
-        #    - SDS 2: All N_kt = 1 (Semi-Complete)
-        #    - SDS 3: Mixed N_kt (Semi-Complete)
-        #
-        # 2. ANALYSIS SUBGROUPING (practical charts):
-        #    - Based on factor-only grouping
-        #    - Determines rational subgroups for Xbar-S charts
-        #    - Enables stratified Imr/R charts per subgroup
-        #    - min_cell_size used for chart selection (R2_S vs R2_Imr)
-
-        # --- SDS Classification: Group by (factor × time) for N_kt ---
-        # Use actual factor columns (rsg_vars) rather than derived rsg string
+        # --- Compute N_kt for (factor × time) cells ---
         factor_cols = list(spec.rsg_vars)
         if spec.has_time:
-            nkt_counts = (
-                df.groupby(factor_cols + [spec.time_var], dropna=False, observed=True)
-                .size()
-            )
-            min_nkt = nkt_counts.min()
-            max_nkt = nkt_counts.max()
+            group_cols = factor_cols + [spec.time_var]
         else:
-            # No time variable - N_kt reduces to N_k
-            nkt_counts = (
-                df.groupby(factor_cols, dropna=False, observed=True)
-                .size()
-            )
-            min_nkt = nkt_counts.min()
-            max_nkt = nkt_counts.max()
+            group_cols = factor_cols
 
-        # --- Analysis Subgrouping: Group by factor only for chart selection ---
-        subgroup_sizes = (
-            df.groupby(factor_cols, dropna=False, observed=True)
-            .size()
-        )
-        min_cell_size = subgroup_sizes.min()  # For R2_S vs R2_Imr decision
+        nkt_counts = df.groupby(group_cols, dropna=False, observed=True).size()
 
-        n_groups = len(subgroup_sizes)  # Number of unique factor combinations
+        # --- Compute min_cell_size for chart selection (factor-only) ---
+        subgroup_sizes = df.groupby(factor_cols, dropna=False, observed=True).size()
+        min_cell_size = subgroup_sizes.min()
 
         logger.debug(
-            f"SDS Detection: N_kt range [{min_nkt}, {max_nkt}], "
-            f"subgroup size range [{min_cell_size}, {subgroup_sizes.max()}], "
-            f"{n_groups} factor groups"
+            f"SDS Detection: N_kt range [{nkt_counts.min()}, {nkt_counts.max()}], "
+            f"{len(subgroup_sizes)} factor groups, "
+            f"subgroup size range [{min_cell_size}, {subgroup_sizes.max()}]"
         )
 
-        # Use N_kt values for SDS classification
-        min_n = min_nkt
-        max_n = max_nkt
-        cell_sizes = nkt_counts  # For downstream classification logic
-
-        # Check for nested design (SDS 5) - only if multiple factor variables
-        if len(spec.rsg_vars) >= 2:
-            # For nested design check, compute proper full grid size
-            n_cells = len(cell_sizes)
-            if spec.has_time:
-                T_obs = df[spec.time_var].nunique()
-                full_grid_size = n_groups * T_obs
-            else:
-                full_grid_size = n_groups
-            is_nested = self._check_nested_design(df, spec, n_cells, full_grid_size)
-            if is_nested:
-                return SDSResult(sds=5, min_cell_size=min_cell_size, reason="nested")
-
-        # SDS 4: Single group (only one factor level)
-        if n_groups == 1:
-            logger.debug(f"SDS 4: Single group ({n_groups} factor level)")
-            return SDSResult(sds=4, min_cell_size=min_cell_size, reason="single_condition")
-
-        # Calculate coverage_ratio based on plan (if provided)
+        # --- Determine if empty cells exist (requires plan) ---
+        has_empty_cells = False
         if plan is not None:
             coverage_ratio = self._calculate_coverage_ratio(df, spec, plan, T_planned)
-            logger.debug(f"Plan coverage ratio: {coverage_ratio:.2%}")
-        else:
-            coverage_ratio = 1.0  # No plan = assume observed is complete
+            has_empty_cells = coverage_ratio < 1.0
+            logger.debug(f"Plan coverage: {coverage_ratio:.1%}, has_empty_cells={has_empty_cells}")
 
-        # SDS 1, 2, 3, 5, or 6: Based on N_kt replication pattern (Wheeler/Bishop)
-        # Note: min_cell_size (factor-only) returned for chart selection
-        sds, reason = self._classify_by_replication(
-            cell_sizes, min_n, max_n, coverage_ratio=coverage_ratio
-        )
+        # --- Classify by N_kt distribution (Table 1) ---
+        sds, reason = self._classify_by_nkt(nkt_counts, has_empty_cells)
+
         return SDSResult(sds=sds, min_cell_size=min_cell_size, reason=reason)
 
     def get_sds_characteristics(self, sds: int) -> dict:
@@ -614,20 +541,20 @@ class SDSRegistry:
                 'variance_decomposition': True
             },
             4: {
-                'description': 'Single condition over time (K=1)',
-                'replication_type': 'single_stream',
-                'r2_method': 'moving_range',
-                'capabilities': ['time_series', 'imr_chart', 'trend_analysis'],
+                'description': 'Incomplete grid with singletons (has 0s, 1s, and ≥2s)',
+                'replication_type': 'partial',
+                'r2_method': 'hybrid',
+                'capabilities': ['partial_vas', 'main_effects', 'stratification'],
                 'interaction_analysis': False,
-                'variance_decomposition': True  # VAS supported via time-based analysis
+                'variance_decomposition': True
             },
             5: {
-                'description': 'Nested design with asynchronous coverage',
-                'replication_type': 'nested',
-                'r2_method': 'nested_variance_components',
-                'capabilities': ['variance_components', 'nested_effects', 'hierarchical_analysis'],
-                'interaction_analysis': 'hierarchical',
-                'variance_decomposition': True  # VAS supported (hierarchical)
+                'description': 'Incomplete grid without singletons (has 0s and ≥2s, no 1s)',
+                'replication_type': 'partial',
+                'r2_method': 'exact',  # All observed cells have replication
+                'capabilities': ['full_vas', 'main_effects', 'stratification'],
+                'interaction_analysis': False,  # Incomplete grid limits this
+                'variance_decomposition': True
             },
             6: {
                 'description': 'Unstructured/irregular grid',
@@ -695,7 +622,7 @@ class SDSRegistry:
         Parameters
         ----------
         sds : int
-            Detected SDS (0-6)
+            Detected SDS (1-6)
         analysis_type : str
             Requested analysis type ('Xbar', 'S', 'Imr', 'R')
 
@@ -711,30 +638,28 @@ class SDSRegistry:
 
         Examples
         --------
-        >>> # SDS 4 with Xbar - warning (should use Imr)
+        >>> # SDS 4 with Xbar - valid (incomplete grid with mixed replication)
         >>> detector.validate_sds_for_analysis(sds=4, analysis_type='Xbar')
-        # Logs warning recommending Imr for single condition
         True
 
-        >>> # SDS 2 with Xbar - valid (uses factor subgroups for variance)
-        >>> detector.validate_sds_for_analysis(sds=2, analysis_type='Xbar')
+        >>> # SDS 6 with Xbar - warning (no replication)
+        >>> detector.validate_sds_for_analysis(sds=6, analysis_type='Xbar')
+        # Logs warning about incomplete grid
         True
         """
-
-        # SDS 4: Single stream
-        if sds == 4 and analysis_type not in ['Imr', 'R']:
-            logger.warning(
-                f"SDS 4 detected: Single condition over time.\n"
-                f"{analysis_type} analysis may not be appropriate.\n"
-                f"Consider using 'Imr' analysis."
+        # SDS 4 or 5: Incomplete grid
+        if sds in [4, 5]:
+            logger.info(
+                f"SDS {sds} detected: Incomplete grid.\n"
+                f"Some factor×time combinations are missing from the data."
             )
 
-        # SDS 6: Irregular
+        # SDS 6: Incomplete without replication
         if sds == 6:
             logger.warning(
-                "SDS 6 detected: Unstructured/irregular grid.\n"
-                "Analysis results may be unreliable due to incomplete data coverage.\n"
-                "Check for missing data or irregular sampling patterns."
+                "SDS 6 detected: Incomplete grid without replication.\n"
+                "Analysis results may be limited - no within-cell variance estimation.\n"
+                "Consider using 'Imr' analysis for this data structure."
             )
 
         return True
@@ -756,15 +681,11 @@ class SDSRegistry:
 
         **Calculate VAS when:**
         1. User requests Xbar or S chart (cell-level analysis)
-        2. AND we have proper (k,t) factorial structure (SDS 1, 2, 3)
+        2. AND we have factorial structure (SDS 1-5)
 
         **Don't calculate VAS when:**
         1. User requests IMR or R chart (individual-level analysis)
-        2. OR no proper structure (SDS 0, 4, 6)
-
-        **Key Insight:**
-        For Xbar-S: Grouping defines CELLS for variance decomposition
-        For IMR/R: Grouping defines STRATA for separate charts (stratification)
+        2. OR SDS 6 (incomplete without replication - very limited structure)
 
         Parameters
         ----------
@@ -788,9 +709,9 @@ class SDSRegistry:
         >>> detector.should_calculate_vas_residuals(sds=1, analysis_type='Imr')
         False
         """
-        # Quick rejections - clearly don't need VAS
-        if sds in [0, 4, 6]:
-            logger.debug(f"No VAS: SDS {sds} (no proper factorial structure)")
+        # SDS 6: Incomplete without replication - very limited analysis possible
+        if sds == 6:
+            logger.debug(f"No VAS: SDS 6 (incomplete without replication)")
             return False
 
         # IMR/R use moving ranges, not factorial decomposition
@@ -803,20 +724,11 @@ class SDSRegistry:
             )
             return False
 
-        # Xbar/S with proper structure (SDS 1, 2, 3)
-        if sds in [1, 2, 3]:
+        # Xbar/S with factorial structure (SDS 1-5)
+        if sds in [1, 2, 3, 4, 5]:
             logger.debug(
                 f"Calculate VAS: SDS {sds} with {analysis_type} analysis "
-                f"supports full decomposition"
-            )
-            return True
-
-        # SDS 5 (nested) - special case
-        if sds == 5:
-            logger.warning(
-                "SDS 5 (nested design) detected with Xbar-S analysis.\n"
-                "VAS decomposition for nested structures requires special handling.\n"
-                "Proceeding with standard VAS - results may need interpretation."
+                f"supports decomposition"
             )
             return True
 
@@ -828,140 +740,88 @@ class SDSRegistry:
     # Private Helper Methods
     # ========================================================================
 
-    def _check_nested_design(
+    def _classify_by_nkt(
         self,
-        df: pd.DataFrame,
-        spec: DataPrepConfig,
-        n_cells: int,
-        full_grid_size: int
-    ) -> bool:
+        nkt_counts: pd.Series,
+        has_empty_cells: bool
+    ) -> tuple[int, SDSReasonType]:
         """
-        Check if data has nested design structure (SDS 5).
+        Classify SDS directly from N_kt distribution per Wheeler/Bishop Table 1.
 
-        In nested designs, one factor is nested within another.
-        Example: heads nested within lanes (each head belongs to one lane only)
+        This is the core classification logic - pure and simple.
 
-        Returns True if nested with incomplete coverage, False otherwise.
-        """
-        factor1 = spec.rsg_vars[0]
-        factor2 = spec.rsg_vars[1]
-
-        # Count how many levels of factor1 each level of factor2 appears with
-        nesting_check = (
-            df.groupby(factor2, observed=True)[factor1]
-            .nunique()
-        )
-
-        is_nested = (nesting_check == 1).all()
-
-        if is_nested:
-            # Check for incomplete temporal coverage
-            coverage_ratio = n_cells / full_grid_size
-
-            if coverage_ratio < 0.90:  # Less than 90% coverage
-                logger.debug(
-                    f"SDS 5: Nested design detected - {factor2} nested in {factor1}, "
-                    f"{coverage_ratio:.1%} grid coverage"
-                )
-                return True
-            else:
-                logger.debug(
-                    f"Nested structure detected but high coverage ({coverage_ratio:.1%}) - "
-                    f"treating as crossed design"
-                )
-
-        return False
-
-    def _classify_by_replication(
-        self,
-        cell_sizes: pd.Series,
-        min_n: int,
-        max_n: int,
-        coverage_ratio: float
-    ) -> tuple[int, str]:
-        """
-        Classify as SDS 1, 2, 3, 5, or 6 based on cell replication and coverage.
-
-        Incomplete grid detection (coverage < 95%):
-        - With replication (any n≥2) → SDS 5
-        - No replication (all n=1) → SDS 6
-
-        Complete grid detection (coverage ≥ 95%):
-        - All n≥2 → SDS 1 (full replication)
-        - All n=1 → SDS 2 (no replication)
-        - Mixed → SDS 3 (partial replication)
+        Parameters
+        ----------
+        nkt_counts : pd.Series
+            Observation counts for each (factor × time) cell that EXISTS in data
+        has_empty_cells : bool
+            Whether any expected cells are missing (N_kt = 0), determined by
+            comparing to sampling plan
 
         Returns
         -------
-        tuple[int, str]
+        tuple[int, SDSReasonType]
             (sds, reason) - SDS number and reason string
+
+        Notes
+        -----
+        Table 1 Classification:
+
+        Complete/Semi-Complete (no empty cells):
+        - SDS 1: Min N_kt ≥ 2 (all replicated)
+        - SDS 2: Min = Max = 1 (all singletons)
+        - SDS 3: Min = 1, Max ≥ 2 (mixed)
+
+        Incomplete (has empty cells):
+        - SDS 4: Has 1s AND has ≥2s (mixed with singletons)
+        - SDS 5: NO 1s, has ≥2s (no singletons)
+        - SDS 6: Max = 1 (no replication)
         """
-        n_cells = len(cell_sizes)
-        cells_with_n1 = (cell_sizes == 1).sum()
-        cells_with_n2_plus = (cell_sizes >= 2).sum()
+        min_n = nkt_counts.min()
+        max_n = nkt_counts.max()
+        has_singletons = (nkt_counts == 1).any()
+        has_replicated = (nkt_counts >= 2).any()
+
+        n_cells = len(nkt_counts)
+        cells_with_n1 = (nkt_counts == 1).sum()
+        cells_with_n2_plus = (nkt_counts >= 2).sum()
 
         logger.debug(
-            f"SDS Detection: {cells_with_n1} cells with n=1, "
-            f"{cells_with_n2_plus} cells with n≥2"
+            f"N_kt classification: {cells_with_n1} singletons, "
+            f"{cells_with_n2_plus} replicated, has_empty_cells={has_empty_cells}"
         )
 
-        # Incomplete grid detection (coverage < 95%)
-        # Key insight: SDS 5 vs 6 is about variance estimation capability
-        if coverage_ratio < 0.95:
+        if not has_empty_cells:
+            # Complete or Semi-Complete (SDS 1, 2, 3)
             if min_n >= 2:
-                # Full replication + incomplete → SDS 5
-                logger.debug(
-                    f"SDS 5: Incomplete grid with full replication "
-                    f"({coverage_ratio:.1%} coverage, all cells n≥2)"
-                )
-                return (5, "incomplete_with_replication")
+                logger.debug(f"SDS 1: Complete - all cells replicated (min={min_n})")
+                return (1, "full_replication")
             elif max_n == 1:
-                # No replication + incomplete → SDS 6
-                logger.debug(
-                    f"SDS 6: Incomplete grid without replication "
-                    f"({coverage_ratio:.1%} coverage, all n=1)"
-                )
-                return (6, "incomplete_no_replication")
+                logger.debug("SDS 2: Semi-Complete - all cells singleton")
+                return (2, "no_replication")
             else:
-                # Mixed replication + incomplete → SDS 5
-                # Rationale: Can estimate variance from replicated cells
+                pct_replicated = 100 * cells_with_n2_plus / n_cells
                 logger.debug(
-                    f"SDS 5: Incomplete grid with mixed replication "
-                    f"({coverage_ratio:.1%} coverage, {cells_with_n2_plus}/{n_cells} cells with n≥2)"
+                    f"SDS 3: Semi-Complete - mixed ({pct_replicated:.0f}% replicated)"
                 )
-                return (5, "incomplete_with_replication")
-
-        # SDS 1: Full replication
-        if min_n >= 2:
-            logger.debug(
-                f"SDS 1: Full replication "
-                f"(all cells have n≥2, range: [{min_n}, {max_n}])"
-            )
-            return (1, "full_replication")
-
-        # SDS 2: No replication (coverage already checked above)
-        if max_n == 1:
-            logger.debug(
-                "SDS 2: No replication (all cells have n=1)"
-            )
-            return (2, "no_replication")
-
-        # SDS 3: Partial replication
-        if cells_with_n1 > 0 and cells_with_n2_plus > 0:
-            pct_replicated = 100 * cells_with_n2_plus / n_cells
-            logger.debug(
-                f"SDS 3: Partial replication - "
-                f"{cells_with_n2_plus}/{n_cells} cells replicated ({pct_replicated:.1f}%), "
-                f"n range: [{min_n}, {max_n}]"
-            )
-            return (3, "partial_replication")
-
-        # Fallback (shouldn't reach here - all replication patterns should be covered above)
-        logger.warning(
-            f"SDS Detection: Unexpected replication pattern - defaulting to SDS 3 (partial). "
-            f"min_n={min_n}, max_n={max_n}"
-        )
-        return (3, "partial_replication")
+                return (3, "partial_replication")
+        else:
+            # Incomplete (SDS 4, 5, 6) - has empty cells
+            if max_n == 1:
+                logger.debug("SDS 6: Incomplete - no replication (max=1)")
+                return (6, "incomplete_no_replication")
+            elif has_singletons:
+                logger.debug(
+                    f"SDS 4: Incomplete with singletons "
+                    f"({cells_with_n1} singletons, {cells_with_n2_plus} replicated)"
+                )
+                return (4, "incomplete_with_singletons")
+            else:
+                logger.debug(
+                    f"SDS 5: Incomplete without singletons "
+                    f"({cells_with_n2_plus} replicated cells)"
+                )
+                return (5, "incomplete_no_singletons")
 
     def _calculate_coverage_ratio(
         self,
@@ -1180,62 +1040,62 @@ class SDSRegistry:
 
             4: SDSAnalysisPlan(
                 sds=4,
-                name="Single Condition Over Time",
-                description="Single factor level (K=1) tracked over time",
-                has_factors=True,  # One factor level
-                has_time=True,     # Time series structure
-                has_replication='varies',  # Depends on subgroup size
-                valid_charts=['Imr', 'Xbar', 'S', 'R', 'Histogram'],
-                recommended_chart='Imr',
-                invalid_charts=[],
-                vas_residuals_supported=True,  # VAS works via time-based analysis
-                residuals_available=['R1', 'R2', 'R3', 'R4', 'R5'],
-                residual_calculation_method='varies',  # 'standard' if n≥2, 'moving_range' if n=1
-                main_effects_supported=False,  # Only one factor level
-                interaction_effects_supported=False,
-                supports_stratification=False,  # Single stream
-                typical_use_cases=[
-                    'Single process stream over time',
-                    'One machine/operator monitored continuously',
-                    'Baseline process monitoring',
-                    'Individual measurements over time (IMR)'
-                ],
-                limitations=[
-                    'Cannot compare factor levels (only one exists)',
-                    'Cannot analyze factor effects',
-                    'Limited to time-based trend analysis'
-                ],
-                bishop_reference="Wheeler/Bishop Methodology: Single Condition (SDS 4)"
-            ),
-
-            5: SDSAnalysisPlan(
-                sds=5,
-                name="Nested/Incomplete with Replication",
-                description="Nested factor structure OR incomplete grid with replication",
+                name="Incomplete Grid with Singletons",
+                description="Incomplete factor × time grid with mixed replication (has empty cells, singletons, and replicated cells)",
                 has_factors=True,
                 has_time=True,
-                has_replication='partial',  # Has some n≥2 cells (can estimate variance)
+                has_replication='partial',  # Mixed: some n=1, some n≥2
                 valid_charts=['Xbar', 'S', 'R', 'Imr', 'Histogram'],
                 recommended_chart='Xbar',
                 invalid_charts=[],
                 vas_residuals_supported=True,
-                residuals_available=['R2_S', 'R3_Xbar', 'R3_S', 'R4_Xbar', 'R4_S', 'R5_Xbar', 'R5_S'],
-                residual_calculation_method='hybrid',
+                residuals_available=['R1', 'R2', 'R3', 'R4', 'R5'],
+                residual_calculation_method='hybrid',  # Exact where n≥2, MA where n=1
                 main_effects_supported=True,
                 interaction_effects_supported=False,  # Incomplete grid limits this
                 supports_stratification=True,
                 typical_use_cases=[
-                    'Hierarchical/nested factor structures',
-                    'Incomplete sampling with some replication',
-                    'Heads nested within lanes',
-                    'Operators nested within shifts'
+                    'Incomplete sampling with mixed replication',
+                    'Production data with gaps and variable sample sizes',
+                    'Opportunistic data collection',
+                    'Partial factorial experiments'
                 ],
                 limitations=[
-                    'Incomplete grid may limit effect estimation',
-                    'Cannot analyze all interactions',
-                    'Variance components may be confounded'
+                    'Incomplete grid - some factor×time combinations missing',
+                    'Mixed variance estimation (hybrid R2)',
+                    'Cannot analyze all interactions due to missing cells'
                 ],
-                bishop_reference="Wheeler/Bishop Methodology: Nested/Incomplete (SDS 5)"
+                bishop_reference="Wheeler/Bishop Methodology: Incomplete with Singletons (SDS 4)"
+            ),
+
+            5: SDSAnalysisPlan(
+                sds=5,
+                name="Incomplete Grid without Singletons",
+                description="Incomplete factor × time grid with full replication in observed cells (has empty cells and replicated cells, no singletons)",
+                has_factors=True,
+                has_time=True,
+                has_replication='full',  # All observed cells have n≥2
+                valid_charts=['Xbar', 'S', 'R', 'Imr', 'Histogram'],
+                recommended_chart='Xbar',
+                invalid_charts=[],
+                vas_residuals_supported=True,
+                residuals_available=['R1', 'R2', 'R3', 'R4', 'R5'],
+                residual_calculation_method='exact',  # All observed cells are replicated
+                main_effects_supported=True,
+                interaction_effects_supported=False,  # Incomplete grid limits this
+                supports_stratification=True,
+                typical_use_cases=[
+                    'Incomplete sampling with consistent replication',
+                    'Designed experiments with missing runs',
+                    'Production data with gaps but replicated measurements',
+                    'Partial factorial with replication'
+                ],
+                limitations=[
+                    'Incomplete grid - some factor×time combinations missing',
+                    'Cannot analyze all interactions due to missing cells',
+                    'Effect estimates may be biased by missing data pattern'
+                ],
+                bishop_reference="Wheeler/Bishop Methodology: Incomplete without Singletons (SDS 5)"
             ),
 
             6: SDSAnalysisPlan(

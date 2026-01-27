@@ -216,7 +216,7 @@ class TestFormulateAcceptsStrings:
     def test_formulate_accepts_plain_string_response(self, simple_df):
         """formulate() should accept plain string for response."""
         pb = ProcessBehavior(simple_df)
-        study = pb.formulate(response='Weight')
+        study = pb.formulate(response='Weight', factors=['Lane'])
 
         assert study.response == 'Weight'
 
@@ -553,16 +553,15 @@ class TestSDSIntegration:
 
         assert study.sds == 6  # Incomplete grid with NO replication
 
-    def test_sds_5_detected_with_incomplete_plan_mixed_replication(self):
-        """Incomplete grid with MIXED replication should detect SDS 5."""
+    def test_sds_4_detected_with_incomplete_plan_mixed_replication(self):
+        """Incomplete grid with MIXED replication should detect SDS 4 (per Table 1)."""
         # Data has Lane=[1,2] and Phase=[1,2] (4 factor combinations)
-        # Some cells have n=2 (replication), some have n=1 (no replication)
+        # Some cells have n=2 (replication), some have n=1 (singleton)
         # Plan says Lane=[1,2,3,4] and Phase=[1,2,3] (12 combinations)
-        # → Coverage < 95%, mixed replication → SDS 5
-        # → Can estimate variance from replicated cells
+        # → Incomplete (has empty cells) + has singletons + has replicated → SDS 4
         df = pd.DataFrame({
             # (Lane=1, Phase=1): n=2 at Pull=1, n=2 at Pull=2 (replicated)
-            # (Lane=2, Phase=2): n=1 at Pull=1, n=1 at Pull=2 (not replicated)
+            # (Lane=2, Phase=2): n=1 at Pull=1, n=1 at Pull=2 (singletons)
             'Weight': [1.0, 1.1,   # Lane=1, Phase=1, Pull=1 (n=2)
                        2.0, 2.1,   # Lane=1, Phase=1, Pull=2 (n=2)
                        3.0,        # Lane=2, Phase=2, Pull=1 (n=1)
@@ -582,8 +581,8 @@ class TestSDSIntegration:
                 plan={'factors': {'Lane': [1, 2, 3, 4], 'Phase': [1, 2, 3]}}
             )
 
-        # Mixed replication + incomplete → SDS 5 (can estimate variance)
-        assert study.sds == 5
+        # Per Table 1: Incomplete + has singletons + has replicated → SDS 4
+        assert study.sds == 4
 
 
 # =============================================================================
@@ -792,7 +791,8 @@ class TestSDSResultReason:
         )
 
         assert result.sds == 5
-        assert result.reason == 'incomplete_with_replication'
+        # SDS 5: Incomplete grid without singletons (all observed cells replicated)
+        assert result.reason == 'incomplete_no_singletons'
 
     def test_sds_6_reason_incomplete_no_replication(self):
         """Incomplete grid without replication should return reason='incomplete_no_replication'."""
@@ -851,28 +851,30 @@ class TestDocsAlignment:
             # Both should agree on VAS support
             assert chars['variance_decomposition'] == plan.vas_residuals_supported
 
-    def test_sds_4_is_single_condition_over_time(self):
-        """SDS 4 should be 'Single Condition Over Time' everywhere."""
+    def test_sds_4_is_incomplete_with_singletons(self):
+        """SDS 4 should be 'Incomplete Grid with Singletons' per Table 1."""
         from processbehavior.sds_detector import SDSRegistry
 
         chars = SDSRegistry().get_sds_characteristics(4)
         plan = SDSRegistry.get_analysis_plan(4)
 
-        assert 'Single condition over time' in chars['description']
-        assert plan.name == 'Single Condition Over Time'
+        # SDS 4 per Table 1: Incomplete grid with mixed replication (has 0s, 1s, and ≥2s)
+        assert 'Incomplete' in chars['description'] and 'singletons' in chars['description'].lower()
+        assert plan.name == 'Incomplete Grid with Singletons'
         assert plan.has_time is True
         assert plan.has_factors is True
 
-    def test_sds_5_is_nested_or_incomplete_with_replication(self):
-        """SDS 5 should be 'Nested/Incomplete with Replication' everywhere."""
+    def test_sds_5_is_incomplete_without_singletons(self):
+        """SDS 5 should be 'Incomplete Grid without Singletons' per Table 1."""
         from processbehavior.sds_detector import SDSRegistry
 
         chars = SDSRegistry().get_sds_characteristics(5)
         plan = SDSRegistry.get_analysis_plan(5)
 
-        assert 'Nested' in chars['description'] or 'nested' in chars['description'].lower()
-        assert 'Nested' in plan.name
-        assert plan.has_replication == 'partial'
+        # SDS 5 per Table 1: Incomplete grid with full replication (has 0s and ≥2s, no 1s)
+        assert 'Incomplete' in chars['description'] and 'without singletons' in chars['description'].lower()
+        assert plan.name == 'Incomplete Grid without Singletons'
+        assert plan.has_replication == 'full'  # All observed cells are replicated
 
     def test_sds_6_is_incomplete_without_replication(self):
         """SDS 6 should be 'Incomplete Without Replication' everywhere."""

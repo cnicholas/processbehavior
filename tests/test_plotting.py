@@ -147,15 +147,16 @@ class TestControlChartFigure:
 
     @pytest.fixture
     def sample_result(self):
-        """Create sample analysis result."""
+        """Create sample analysis result with factors."""
         np.random.seed(42)
         df = pd.DataFrame({
             'value': np.random.normal(100, 5, 30),
-            'time': range(30)
+            'group': ['A'] * 15 + ['B'] * 15,
+            'time': list(range(15)) * 2
         })
         pdf = ProcessBehavior(df)
-        study = pdf.formulate(response=pdf.cols.value)
-        return study.execute()
+        study = pdf.formulate(response=pdf.cols.value, factors=[pdf.cols.group], time=pdf.cols.time)
+        return study.execute(chart='Imr', by=['group'])
 
     @pytest.fixture
     def sample_figure(self, sample_result):
@@ -204,15 +205,16 @@ class TestPlotter:
 
     @pytest.fixture
     def simple_result(self):
-        """Create simple I-mR analysis result."""
+        """Create simple I-mR analysis result with a factor."""
         np.random.seed(42)
         df = pd.DataFrame({
             'value': np.random.normal(100, 5, 30),
-            'time': range(30)
+            'group': ['A'] * 15 + ['B'] * 15,
+            'time': list(range(15)) * 2
         })
         pdf = ProcessBehavior(df)
-        study = pdf.formulate(response=pdf.cols.value)
-        return study.execute()
+        study = pdf.formulate(response=pdf.cols.value, factors=[pdf.cols.group], time=pdf.cols.time)
+        return study.execute(chart='Imr', by=['group'])
 
     @pytest.fixture
     def xbar_result(self):
@@ -421,15 +423,16 @@ class TestAnalysisResultIntegration:
 
     @pytest.fixture
     def result(self):
-        """Create sample analysis result."""
+        """Create sample analysis result with a factor."""
         np.random.seed(42)
         df = pd.DataFrame({
             'value': np.random.normal(100, 5, 30),
-            'time': range(30)
+            'group': ['A'] * 15 + ['B'] * 15,
+            'time': list(range(15)) * 2
         })
         pdf = ProcessBehavior(df)
-        study = pdf.formulate(response=pdf.cols.value)
-        return study.execute()
+        study = pdf.formulate(response=pdf.cols.value, factors=[pdf.cols.group], time=pdf.cols.time)
+        return study.execute(chart='Imr', by=['group'])
 
     def test_plot_method_exists(self, result):
         """Test that plot() method exists on AnalysisResult."""
@@ -488,15 +491,16 @@ class TestAspectRatio:
 
     @pytest.fixture
     def simple_result(self):
-        """Create simple I-mR analysis result."""
+        """Create simple I-mR analysis result with a factor."""
         np.random.seed(42)
         df = pd.DataFrame({
             'value': np.random.normal(100, 5, 30),
-            'time': range(30)
+            'group': ['A'] * 15 + ['B'] * 15,
+            'time': list(range(15)) * 2
         })
         pdf = ProcessBehavior(df)
-        study = pdf.formulate(response=pdf.cols.value)
-        return study.execute()
+        study = pdf.formulate(response=pdf.cols.value, factors=[pdf.cols.group], time=pdf.cols.time)
+        return study.execute(chart='Imr', by=['group'])
 
     def test_aspect_ratio_calculation(self, simple_result):
         """Test that aspect ratio correctly calculates height."""
@@ -527,15 +531,16 @@ class TestReportGeneration:
 
     @pytest.fixture
     def simple_result(self):
-        """Create simple I-mR analysis result."""
+        """Create simple I-mR analysis result with a factor."""
         np.random.seed(42)
         df = pd.DataFrame({
             'value': np.random.normal(100, 5, 30),
-            'time': range(30)
+            'group': ['A'] * 15 + ['B'] * 15,
+            'time': list(range(15)) * 2
         })
         pdf = ProcessBehavior(df)
-        study = pdf.formulate(response=pdf.cols.value)
-        return study.execute()
+        study = pdf.formulate(response=pdf.cols.value, factors=[pdf.cols.group], time=pdf.cols.time)
+        return study.execute(chart='Imr', by=['group'])
 
     def test_generate_report(self, simple_result):
         """Test basic report generation."""
@@ -625,24 +630,6 @@ class TestResidualPlots:
         fig = plotter.plot_residuals(plot_type='sequence')
         assert isinstance(fig, ControlChartFigure)
 
-    def test_plot_residuals_not_available(self):
-        """Test error when residuals not available."""
-        np.random.seed(42)
-        # Simple time series without replication - no residuals
-        df = pd.DataFrame({
-            'value': np.random.normal(100, 5, 30),
-            'time': range(30)
-        })
-        pdf = ProcessBehavior(df)
-        study = pdf.formulate(response=pdf.cols.value)
-        result = study.execute()
-
-        assert not result.has_residuals, "This fixture should NOT have residuals"
-        plotter = Plotter(result)
-        with pytest.raises(ValueError, match="Residuals not available"):
-            plotter.plot_residuals()
-
-
 class TestEffectsPlots:
     """Test effects visualization functionality."""
 
@@ -666,36 +653,21 @@ class TestEffectsPlots:
             fig = plotter.plot_effects()
             assert isinstance(fig, ControlChartFigure)
 
-    def test_plot_effects_not_available(self):
-        """Test error when effects not available."""
-        np.random.seed(42)
-        df = pd.DataFrame({
-            'value': np.random.normal(100, 5, 30),
-            'time': range(30)
-        })
-        pdf = ProcessBehavior(df)
-        study = pdf.formulate(response=pdf.cols.value)
-        result = study.execute()
-
-        if not result.has_effects:
-            plotter = Plotter(result)
-            with pytest.raises(ValueError, match="Effects not available"):
-                plotter.plot_effects()
-
-
 class TestStatsBox:
     """Test statistical annotations (stats box) functionality."""
 
     @pytest.fixture
     def simple_result(self):
-        """Create simple I-mR analysis result."""
+        """Create simple Xbar analysis result with replication."""
         np.random.seed(42)
+        # Create data with replication within factor levels
         df = pd.DataFrame({
-            'value': np.random.normal(100, 5, 30),
-            'time': range(30)
+            'value': np.random.normal(100, 5, 60),
+            'factor': np.repeat(['A', 'B', 'C'], 20),
+            'time': np.tile(range(1, 11), 6)
         })
         pdf = ProcessBehavior(df)
-        study = pdf.formulate(response=pdf.cols.value)
+        study = pdf.formulate(response=pdf.cols.value, factors=[pdf.cols.factor], time=pdf.cols.time)
         return study.execute()
 
     @pytest.fixture
@@ -714,7 +686,7 @@ class TestStatsBox:
     def test_plot_with_stats_box(self, simple_result):
         """Test plotting with stats box enabled."""
         plotter = Plotter(simple_result)
-        fig = plotter.plot(chart='Imr', show_stats=True)
+        fig = plotter.plot(chart='Xbar', show_stats=True)
 
         assert isinstance(fig, ControlChartFigure)
         # Figure should have annotation (stats box)
@@ -732,7 +704,7 @@ class TestStatsBox:
     def test_stats_box_content(self, simple_result):
         """Test that stats box contains expected statistics."""
         plotter = Plotter(simple_result)
-        fig = plotter.plot(chart='Imr', show_stats=True)
+        fig = plotter.plot(chart='Xbar', show_stats=True)
 
         # Find the stats box annotation
         stats_annotation = None
@@ -753,7 +725,7 @@ class TestStatsBox:
     def test_stats_box_positioning(self, simple_result):
         """Test that stats box is positioned in upper-left corner."""
         plotter = Plotter(simple_result)
-        fig = plotter.plot(chart='Imr', show_stats=True)
+        fig = plotter.plot(chart='Xbar', show_stats=True)
 
         # Find the stats box annotation
         stats_annotation = None
@@ -779,7 +751,7 @@ class TestStatsBox:
         )
 
         plotter = Plotter(simple_result)
-        fig = plotter.plot(chart='Imr', show_stats=True, template=custom_theme)
+        fig = plotter.plot(chart='Xbar', show_stats=True, template=custom_theme)
 
         # Find the stats box annotation
         stats_annotation = None
@@ -807,7 +779,7 @@ class TestStatsBox:
         """Test stats box works with other visualization options."""
         plotter = Plotter(simple_result)
         fig = plotter.plot(
-            chart='Imr',
+            chart='Xbar',
             show_stats=True,
             show_zones=True,
             show_rules=True,

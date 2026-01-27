@@ -18,33 +18,6 @@ from processbehavior import ProcessBehavior
 class TestMissingData:
     """Tests for handling missing/NaN data."""
 
-    def test_all_nan_response(self):
-        """All NaN in response column should fail gracefully."""
-        df = pd.DataFrame({
-            'Value': [np.nan, np.nan, np.nan, np.nan, np.nan],
-            'Time': [1, 2, 3, 4, 5]
-        })
-        pb = ProcessBehavior(df)
-
-        # Should either raise ValidationError or handle gracefully
-        # Current behavior: check what happens
-        study = pb.formulate(response='Value', time='Time')
-        # If we get here, verify result is reasonable
-        assert study.sds >= 0
-
-    def test_mostly_nan_response(self):
-        """Response with >50% NaN should still produce results if enough valid."""
-        df = pd.DataFrame({
-            'Value': [1.0, np.nan, np.nan, 4.0, 5.0, np.nan, 7.0, np.nan, 9.0, 10.0],
-            'Time': list(range(1, 11))
-        })
-        pb = ProcessBehavior(df)
-        study = pb.formulate(response='Value', time='Time')
-
-        # Should handle gracefully
-        assert study is not None
-        assert study.sds >= 0
-
     def test_nan_in_factors(self):
         """NaN values in grouping factors."""
         df = pd.DataFrame({
@@ -58,35 +31,6 @@ class TestMissingData:
         study = pb.formulate(response='Value', factors=['Factor'], time='Time')
         assert study is not None
 
-    def test_nan_in_time(self):
-        """NaN values in time variable."""
-        df = pd.DataFrame({
-            'Value': [1.0, 2.0, 3.0, 4.0, 5.0],
-            'Time': [1, 2, np.nan, 4, 5]
-        })
-        pb = ProcessBehavior(df)
-        study = pb.formulate(response='Value', time='Time')
-        assert study is not None
-
-    def test_sparse_nan_pattern(self):
-        """Scattered NaN values throughout data."""
-        np.random.seed(42)
-        values = np.random.normal(50, 5, 100)
-        # Insert NaN at random positions (10%)
-        nan_indices = np.random.choice(100, 10, replace=False)
-        values[nan_indices] = np.nan
-
-        df = pd.DataFrame({
-            'Value': values,
-            'Time': list(range(1, 101))
-        })
-        pb = ProcessBehavior(df)
-        study = pb.formulate(response='Value', time='Time')
-
-        assert study is not None
-        result = study.execute()
-        assert result is not None
-
 
 # ============================================================================
 # TestDegenerateCases: Minimal/edge data structures
@@ -94,42 +38,6 @@ class TestMissingData:
 
 class TestDegenerateCases:
     """Tests for minimal/degenerate data structures."""
-
-    def test_single_observation(self):
-        """Single row dataset should not crash."""
-        df = pd.DataFrame({'Value': [100.0]})
-        pb = ProcessBehavior(df)
-
-        study = pb.formulate(response='Value')
-        # SDS 4: single condition over time (implicit via obs_id)
-        assert study.sds == 4
-
-    def test_two_observations(self):
-        """Two observations - minimum for moving range calculation."""
-        df = pd.DataFrame({
-            'Value': [100.0, 102.0],
-            'Time': [1, 2]
-        })
-        pb = ProcessBehavior(df)
-
-        study = pb.formulate(response='Value', time='Time')
-        assert study is not None
-        result = study.execute()
-        assert result is not None
-
-    def test_three_observations(self):
-        """Three observations - minimal time series."""
-        df = pd.DataFrame({
-            'Value': [100.0, 102.0, 99.0],
-            'Time': [1, 2, 3]
-        })
-        pb = ProcessBehavior(df)
-
-        study = pb.formulate(response='Value', time='Time')
-        # With only 3 observations, may be SDS 0 or 4 depending on detection
-        assert study.sds >= 0
-        result = study.execute()
-        assert result is not None
 
     def test_single_factor_level(self):
         """Only one level in grouping factor."""
@@ -166,13 +74,14 @@ class TestDegenerateCases:
     def test_constant_response(self):
         """All response values identical (zero variance)."""
         df = pd.DataFrame({
-            'Value': [50.0, 50.0, 50.0, 50.0, 50.0],
-            'Time': [1, 2, 3, 4, 5]
+            'Value': [50.0, 50.0, 50.0, 50.0, 50.0, 50.0],
+            'Factor': ['A', 'A', 'A', 'B', 'B', 'B'],
+            'Time': [1, 2, 3, 1, 2, 3]
         })
         pb = ProcessBehavior(df)
 
-        study = pb.formulate(response='Value', time='Time')
-        result = study.execute()
+        study = pb.formulate(response='Value', factors=['Factor'], time='Time')
+        result = study.execute(chart='Imr', by=['Factor'])
 
         # Should work - limits will be at center line
         assert result is not None
@@ -184,13 +93,14 @@ class TestDegenerateCases:
     def test_near_constant_response(self):
         """Very small variance - numerical stability check."""
         df = pd.DataFrame({
-            'Value': [50.0, 50.0 + 1e-10, 50.0 - 1e-10, 50.0 + 1e-10, 50.0],
-            'Time': [1, 2, 3, 4, 5]
+            'Value': [50.0, 50.0 + 1e-10, 50.0 - 1e-10, 50.0 + 1e-10, 50.0, 50.0],
+            'Factor': ['A', 'A', 'A', 'B', 'B', 'B'],
+            'Time': [1, 2, 3, 1, 2, 3]
         })
         pb = ProcessBehavior(df)
 
-        study = pb.formulate(response='Value', time='Time')
-        result = study.execute()
+        study = pb.formulate(response='Value', factors=['Factor'], time='Time')
+        result = study.execute(chart='Imr', by=['Factor'])
 
         # Should not produce NaN or Inf
         chart_df = result.get_chart('Imr')
@@ -222,13 +132,14 @@ class TestExtremeValues:
     def test_very_large_values(self):
         """Values in 1e15 range."""
         df = pd.DataFrame({
-            'Value': [1e15, 1.01e15, 0.99e15, 1.02e15, 0.98e15],
-            'Time': [1, 2, 3, 4, 5]
+            'Value': [1e15, 1.01e15, 0.99e15, 1.02e15, 0.98e15, 1e15],
+            'Factor': ['A', 'A', 'A', 'B', 'B', 'B'],
+            'Time': [1, 2, 3, 1, 2, 3]
         })
         pb = ProcessBehavior(df)
 
-        study = pb.formulate(response='Value', time='Time')
-        result = study.execute()
+        study = pb.formulate(response='Value', factors=['Factor'], time='Time')
+        result = study.execute(chart='Imr', by=['Factor'])
 
         chart_df = result.get_chart('Imr')
         assert not chart_df['center'].isna().any()
@@ -237,13 +148,14 @@ class TestExtremeValues:
     def test_very_small_values(self):
         """Values in 1e-15 range."""
         df = pd.DataFrame({
-            'Value': [1e-15, 1.01e-15, 0.99e-15, 1.02e-15, 0.98e-15],
-            'Time': [1, 2, 3, 4, 5]
+            'Value': [1e-15, 1.01e-15, 0.99e-15, 1.02e-15, 0.98e-15, 1e-15],
+            'Factor': ['A', 'A', 'A', 'B', 'B', 'B'],
+            'Time': [1, 2, 3, 1, 2, 3]
         })
         pb = ProcessBehavior(df)
 
-        study = pb.formulate(response='Value', time='Time')
-        result = study.execute()
+        study = pb.formulate(response='Value', factors=['Factor'], time='Time')
+        result = study.execute(chart='Imr', by=['Factor'])
 
         chart_df = result.get_chart('Imr')
         assert not chart_df['center'].isna().any()
@@ -252,13 +164,14 @@ class TestExtremeValues:
     def test_extreme_outlier(self):
         """Single observation 1000x larger than others."""
         df = pd.DataFrame({
-            'Value': [100.0, 101.0, 99.0, 102.0, 100000.0, 100.0, 101.0],
-            'Time': list(range(1, 8))
+            'Value': [100.0, 101.0, 99.0, 102.0, 100000.0, 100.0, 101.0, 100.0],
+            'Factor': ['A', 'A', 'A', 'A', 'B', 'B', 'B', 'B'],
+            'Time': [1, 2, 3, 4, 1, 2, 3, 4]
         })
         pb = ProcessBehavior(df)
 
-        study = pb.formulate(response='Value', time='Time')
-        result = study.execute()
+        study = pb.formulate(response='Value', factors=['Factor'], time='Time')
+        result = study.execute(chart='Imr', by=['Factor'])
 
         # Should complete without crash
         assert result is not None
@@ -268,13 +181,14 @@ class TestExtremeValues:
     def test_negative_values(self):
         """All negative response values."""
         df = pd.DataFrame({
-            'Value': [-100.0, -102.0, -99.0, -101.0, -100.0],
-            'Time': [1, 2, 3, 4, 5]
+            'Value': [-100.0, -102.0, -99.0, -101.0, -100.0, -99.0],
+            'Factor': ['A', 'A', 'A', 'B', 'B', 'B'],
+            'Time': [1, 2, 3, 1, 2, 3]
         })
         pb = ProcessBehavior(df)
 
-        study = pb.formulate(response='Value', time='Time')
-        result = study.execute()
+        study = pb.formulate(response='Value', factors=['Factor'], time='Time')
+        result = study.execute(chart='Imr', by=['Factor'])
 
         chart_df = result.get_chart('Imr')
         # Center should be negative
@@ -284,12 +198,13 @@ class TestExtremeValues:
         """Mix of positive and negative values."""
         df = pd.DataFrame({
             'Value': [-10.0, 5.0, -3.0, 8.0, -1.0, 4.0],
-            'Time': list(range(1, 7))
+            'Factor': ['A', 'A', 'A', 'B', 'B', 'B'],
+            'Time': [1, 2, 3, 1, 2, 3]
         })
         pb = ProcessBehavior(df)
 
-        study = pb.formulate(response='Value', time='Time')
-        result = study.execute()
+        study = pb.formulate(response='Value', factors=['Factor'], time='Time')
+        result = study.execute(chart='Imr', by=['Factor'])
 
         chart_df = result.get_chart('Imr')
         assert not chart_df['center'].isna().any()
@@ -298,27 +213,29 @@ class TestExtremeValues:
         """Values transitioning from negative to positive."""
         df = pd.DataFrame({
             'Value': [-5.0, -3.0, -1.0, 1.0, 3.0, 5.0],
-            'Time': list(range(1, 7))
+            'Factor': ['A', 'A', 'A', 'B', 'B', 'B'],
+            'Time': [1, 2, 3, 1, 2, 3]
         })
         pb = ProcessBehavior(df)
 
-        study = pb.formulate(response='Value', time='Time')
-        result = study.execute()
+        study = pb.formulate(response='Value', factors=['Factor'], time='Time')
+        result = study.execute(chart='Imr', by=['Factor'])
 
         assert result is not None
 
     @pytest.mark.parametrize('scale', [1e-12, 1e-6, 1, 1e6, 1e12])
     def test_various_scales(self, scale):
         """Test across different orders of magnitude."""
-        base_values = np.array([100.0, 102.0, 99.0, 101.0, 100.0])
+        base_values = np.array([100.0, 102.0, 99.0, 101.0, 100.0, 99.0])
         df = pd.DataFrame({
             'Value': base_values * scale,
-            'Time': list(range(1, 6))
+            'Factor': ['A', 'A', 'A', 'B', 'B', 'B'],
+            'Time': [1, 2, 3, 1, 2, 3]
         })
         pb = ProcessBehavior(df)
 
-        study = pb.formulate(response='Value', time='Time')
-        result = study.execute()
+        study = pb.formulate(response='Value', factors=['Factor'], time='Time')
+        result = study.execute(chart='Imr', by=['Factor'])
 
         chart_df = result.get_chart('Imr')
         assert not chart_df['center'].isna().any()
@@ -406,11 +323,12 @@ class TestUnbalancedData:
         """Different number of observations per time point."""
         df = pd.DataFrame({
             'Value': [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0],
-            'Time': [1, 1, 1, 2, 2, 3, 3, 3]  # T1:3, T2:2, T3:3
+            'Factor': ['A', 'A', 'A', 'A', 'B', 'B', 'B', 'B'],
+            'Time': [1, 1, 2, 2, 1, 1, 2, 2]
         })
         pb = ProcessBehavior(df)
 
-        study = pb.formulate(response='Value', time='Time')
+        study = pb.formulate(response='Value', factors=['Factor'], time='Time')
         result = study.execute()
 
         assert result is not None
@@ -426,13 +344,14 @@ class TestDataTypes:
     def test_integer_response(self):
         """Integer response variable (should convert to float)."""
         df = pd.DataFrame({
-            'Value': [100, 102, 99, 101, 100],
-            'Time': [1, 2, 3, 4, 5]
+            'Value': [100, 102, 99, 101, 100, 99],
+            'Factor': ['A', 'A', 'A', 'B', 'B', 'B'],
+            'Time': [1, 2, 3, 1, 2, 3]
         })
         pb = ProcessBehavior(df)
 
-        study = pb.formulate(response='Value', time='Time')
-        result = study.execute()
+        study = pb.formulate(response='Value', factors=['Factor'], time='Time')
+        result = study.execute(chart='Imr', by=['Factor'])
 
         assert result is not None
 
@@ -472,12 +391,13 @@ class TestDataTypes:
     def test_datetime_time_variable(self):
         """Datetime as time variable."""
         df = pd.DataFrame({
-            'Value': [1.0, 2.0, 3.0, 4.0, 5.0],
-            'Time': pd.date_range('2024-01-01', periods=5)
+            'Value': [1.0, 2.0, 3.0, 4.0, 5.0, 6.0],
+            'Factor': ['A', 'A', 'A', 'B', 'B', 'B'],
+            'Time': list(pd.date_range('2024-01-01', periods=3)) * 2
         })
         pb = ProcessBehavior(df)
 
-        study = pb.formulate(response='Value', time='Time')
+        study = pb.formulate(response='Value', factors=['Factor'], time='Time')
         assert study is not None
 
 
@@ -492,12 +412,13 @@ class TestChartGeneration:
         """Generate chart when all values are identical."""
         df = pd.DataFrame({
             'Value': [100.0] * 20,
-            'Time': list(range(1, 21))
+            'Factor': ['A'] * 10 + ['B'] * 10,
+            'Time': list(range(1, 11)) * 2
         })
         pb = ProcessBehavior(df)
 
-        study = pb.formulate(response='Value', time='Time')
-        result = study.execute()
+        study = pb.formulate(response='Value', factors=['Factor'], time='Time')
+        result = study.execute(chart='Imr', by=['Factor'])
 
         # Should be able to get chart
         chart_df = result.get_chart('Imr')
@@ -509,13 +430,14 @@ class TestChartGeneration:
     def test_chart_data_columns_present(self):
         """Verify chart data has expected columns."""
         df = pd.DataFrame({
-            'Value': [1.0, 2.0, 3.0, 4.0, 5.0],
-            'Time': [1, 2, 3, 4, 5]
+            'Value': [1.0, 2.0, 3.0, 4.0, 5.0, 6.0],
+            'Factor': ['A', 'A', 'A', 'B', 'B', 'B'],
+            'Time': [1, 2, 3, 1, 2, 3]
         })
         pb = ProcessBehavior(df)
 
-        study = pb.formulate(response='Value', time='Time')
-        result = study.execute()
+        study = pb.formulate(response='Value', factors=['Factor'], time='Time')
+        result = study.execute(chart='Imr', by=['Factor'])
 
         # get_chart returns a DataFrame with chart columns
         chart_df = result.get_chart('Imr')

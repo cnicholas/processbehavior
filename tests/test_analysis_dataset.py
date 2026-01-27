@@ -212,46 +212,6 @@ class TestImrAnalysis:
         assert 'a_c' in r_chart['strata']
         assert 'b_d' in r_chart['strata']
 
-    def test_imr_without_grouping(self, df):
-        """Test IMR analysis without grouping variable."""
-        spec = {
-            'analysis_type': 'Imr',
-            'response_var': 'c',
-            'round_to': 2
-        }
-
-        ad.AnalysisSpecification(spec)
-        sds = detect_sds_for_test(df, spec)
-        result = Analysis(df, spec, sds=sds).calculate()
-
-        assert hasattr(result, "keys") and hasattr(result, "values")
-        assert 'Imr' in result
-
-    def test_imr_with_fillweight_data(self):
-        """Test IMR without grouping on FillWeight800 dataset."""
-        f_path = "processbehavior/datasets/data/FILLWEIGHTDATA_800.csv"
-        df = pd.read_csv(f_path)
-
-        spec = {
-            'analysis_type': 'Imr',
-            'response_var': 'fill_weight',
-            'round_to': 2
-        }
-
-        ad.AnalysisSpecification(spec)
-        sds = detect_sds_for_test(df, spec)
-        result = Analysis(df, spec, sds=sds).calculate()
-
-        assert hasattr(result, "keys") and hasattr(result, "values")
-        assert list(result)[0] == 'Imr'
-        assert isinstance(result.get("Imr"), dict)
-
-        out = result.get("Imr")
-        # Verify against R (qcc) results
-        assert out['statistics']['center'] == 237.78
-        assert out['statistics']['lpl'] == 232.23
-        assert out['statistics']['upl'] == 243.33
-
 
 # ========================
 # R Chart Tests
@@ -301,28 +261,6 @@ class TestRChartAnalysis:
         assert r_stats['b_d']['lpl'] == 0
         assert r_stats['a_c']['upl'] == 3.27
         assert r_stats['b_d']['upl'] == 8.17
-
-    def test_r_without_grouping(self, df):
-        """Test R chart without grouping variable (bundled with Imr)."""
-        spec = {
-            'analysis_type': 'R',
-            'response_var': 'c',
-            'rsg_var_name': 'rsg'
-        }
-
-        sds = detect_sds_for_test(df, spec)
-        result = Analysis(df, spec, sds=sds).calculate()
-
-        # R and Imr are bundled together
-        assert hasattr(result, "keys") and hasattr(result, "values")
-        assert 'Imr' in result
-        assert 'R' in result
-
-        # Check R chart statistics
-        r_stats = result['R']['statistics']
-        assert r_stats['lpl'] == 0
-        # R center is mR (moving range mean)
-        assert r_stats['center'] is not None
 
     def test_r_with_fillweight_data(self):
         """Test R chart on FillWeight800 dataset with stratification (bundled with Imr)."""
@@ -419,43 +357,6 @@ class TestDateTimeHandling:
 # ========================
 # AnalysisDataSet Tests
 # ========================
-
-class TestAnalysisDataSet:
-    """Tests for AnalysisDataSet functionality."""
-
-    def test_no_grouping_without_time(self, df):
-        """Test AnalysisDataSet with no grouping and no time variable."""
-        spec = {
-            'analysis_type': 'Imr',
-            'response_var': 'c',
-            'round_to': 2
-        }
-
-        sds = detect_sds_for_test(df, spec)
-        a_spec = ad.AnalysisSpecification(spec)
-        dataset = ad.AnalysisDataSet(df=df, analysis_specification=a_spec, sds=sds)
-
-        # SDS 4: No grouping = implicit single condition over time (obs_id as time)
-        assert dataset.sampling_design_state == 4
-        assert dataset.analysis_dataset.columns.tolist() == ['c', 'obs_id', 'rsg_key', 'cell_key', 'sort_key']
-
-    def test_no_grouping_with_time(self, df):
-        """Test AnalysisDataSet with time variable but no grouping."""
-        spec = {
-            'analysis_type': 'Imr',
-            'time_var': 'd',
-            'response_var': 'c',
-            'round_to': 2
-        }
-
-        sds = detect_sds_for_test(df, spec)
-        a_spec = ad.AnalysisSpecification(spec)
-        dataset = ad.AnalysisDataSet(df=df, analysis_specification=a_spec, sds=sds)
-
-        # SDS 4: No grouping = implicit single condition over time
-        assert dataset.sampling_design_state == 4
-        assert dataset.analysis_dataset.columns.tolist() == ['d', 'c', 'obs_id', 'rsg_key', 'cell_key', 'sort_key']
-
 
 # ========================
 # Canonical Ordering Tests
