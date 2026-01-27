@@ -265,12 +265,16 @@ def imr_only_data():
 @pytest.fixture
 def simple_values():
     """
-    Simple 5-value DataFrame for basic API tests.
+    Simple 10-value DataFrame with factor for basic API tests.
 
     Use for: Testing Study properties, basic formulate() behavior
     """
     import pandas as pd
-    return pd.DataFrame({'Value': [1, 2, 3, 4, 5]})
+    return pd.DataFrame({
+        'Value': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+        'Factor': ['A', 'A', 'A', 'A', 'A', 'B', 'B', 'B', 'B', 'B'],
+        'Time': [1, 2, 3, 4, 5, 1, 2, 3, 4, 5]
+    })
 
 
 @pytest.fixture

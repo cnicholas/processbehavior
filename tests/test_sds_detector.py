@@ -48,27 +48,9 @@ def spec_no_time():
     })
 
 
-@pytest.fixture
-def spec_no_grouping():
-    """Specification with time but no grouping."""
-    return AnalysisSpecification({
-        'analysis_type': 'Imr',
-        'time_var': 'pull',
-        'response_var': 'weight'
-    })
-
-
 # ============================================================================
 # Test Fixtures: Data for Each SDS
 # ============================================================================
-
-@pytest.fixture
-def sds0_data():
-    """SDS 0: No grouping or time structure."""
-    return pd.DataFrame({
-        'weight': [10.1, 10.2, 10.3]
-    })
-
 
 @pytest.fixture
 def sds1_data():
@@ -113,11 +95,15 @@ def sds3_data():
 
 @pytest.fixture
 def sds4_data():
-    """SDS 4: Single condition over time."""
+    """Data with single factor level (K=1) - classifies by replication pattern.
+
+    Per Table 1: K=1 is NOT automatically SDS 4. It classifies by N_kt:
+    - This has 1 group × 3 time = 3 cells, each with n=1 → SDS 2
+    """
     return pd.DataFrame({
         'lane': ['A', 'A', 'A'],  # Only one group
         'rsg': ['A', 'A', 'A'],
-        'pull': [1, 2, 3],       # Multiple time points
+        'pull': [1, 2, 3],       # Multiple time points, n=1 each
         'weight': [10.1, 10.2, 10.3]
     })
 
@@ -139,21 +125,6 @@ def sds6_data():
 # Test: detect_sds - All 7 Types
 # ============================================================================
 
-def test_detect_sds0_no_structure(detector, sds0_data):
-    """Should detect SDS 0 when no grouping or time."""
-    spec = AnalysisSpecification({
-        'analysis_type': 'Imr',
-        'response_var': 'weight'
-    })
-
-    result = detector.detect_sds(sds0_data, spec)
-
-    # SDS 4: No grouping = implicit single condition over time (obs_id as time)
-    assert result.sds == 4
-    assert result.min_cell_size == 1
-    assert result.reason == 'implicit_single_condition'
-
-
 def test_detect_sds1_grouping_only(detector, spec_no_time):
     """With factors only (no time), detect SDS based on replication.
 
@@ -171,20 +142,6 @@ def test_detect_sds1_grouping_only(detector, spec_no_time):
     # 2 groups with n=2 each = full replication
     assert result.sds == 1
     assert result.min_cell_size == 2
-
-
-def test_detect_sds4_only_time(detector, spec_no_grouping):
-    """Should detect SDS 4 when only time (no grouping) - implicit single condition."""
-    df = pd.DataFrame({
-        'pull': [1, 2, 3],
-        'weight': [10.1, 10.2, 10.3]
-    })
-
-    result = detector.detect_sds(df, spec_no_grouping)
-
-    # SDS 4: No grouping = implicit single condition over time
-    assert result.sds == 4
-    assert result.min_cell_size == 1
 
 
 def test_detect_sds1_full_replication(detector, sds1_data, spec_with_grouping_and_time):
@@ -211,12 +168,17 @@ def test_detect_sds3_partial_replication(detector, sds3_data, spec_with_grouping
     assert result.min_cell_size == 1  # Minimum is 1 for partial replication
 
 
-def test_detect_sds4_single_condition(detector, sds4_data, spec_with_grouping_and_time):
-    """Should detect SDS 4 when single group over multiple times."""
+def test_detect_sds_single_factor_level_no_replication(detector, sds4_data, spec_with_grouping_and_time):
+    """Single factor level (K=1) classifies by replication pattern.
+
+    Per Table 1: K=1 is NOT a special case. This data has:
+    - 1 group × 3 time points = 3 cells
+    - Each cell has n=1 → all N_kt = 1 → SDS 2 (no replication)
+    """
     result = detector.detect_sds(sds4_data, spec_with_grouping_and_time)
 
-    assert result.sds == 4
-    assert result.min_cell_size >= 1
+    assert result.sds == 2  # No replication (all N_kt = 1)
+    assert result.reason == 'no_replication'
 
 
 def test_detect_sds2_with_nkt_grouping(detector, sds6_data, spec_with_grouping_and_time):
@@ -317,30 +279,31 @@ def test_get_sds_characteristics_sds3(detector):
 
 
 def test_get_sds_characteristics_sds4(detector):
-    """Should return correct characteristics for SDS 4."""
+    """Should return correct characteristics for SDS 4 (incomplete with singletons)."""
     info = detector.get_sds_characteristics(4)
 
     assert info['sds'] == 4
-    assert 'Single condition over time' in info['description']
-    assert info['r2_method'] == 'moving_range'
-    assert 'imr_chart' in info['capabilities']
+    assert 'Incomplete' in info['description'] or 'singletons' in info['description']
+    assert info['r2_method'] == 'hybrid'
+    assert info['replication_type'] == 'partial'
 
 
 def test_get_sds_characteristics_sds5(detector):
-    """Should return correct characteristics for SDS 5."""
+    """Should return correct characteristics for SDS 5 (incomplete without singletons)."""
     info = detector.get_sds_characteristics(5)
 
     assert info['sds'] == 5
-    assert 'Nested' in info['description']
-    assert info['interaction_analysis'] == 'hierarchical'
+    assert 'Incomplete' in info['description'] or 'singletons' in info['description']
+    assert info['r2_method'] == 'exact'  # All observed cells are replicated
+    assert info['interaction_analysis'] is False  # Incomplete grid limits this
 
 
 def test_get_sds_characteristics_sds6(detector):
-    """Should return correct characteristics for SDS 6."""
+    """Should return correct characteristics for SDS 6 (incomplete without replication)."""
     info = detector.get_sds_characteristics(6)
 
     assert info['sds'] == 6
-    assert 'Unstructured' in info['description']
+    assert 'Incomplete' in info['description'] or 'irregular' in info['description']
     assert info['interaction_analysis'] is False
 
 
@@ -373,20 +336,21 @@ def test_validate_sds_for_analysis_sds2_with_xbar_no_warning(detector, caplog):
     assert 'No replication' not in caplog.text
 
 
-def test_validate_sds_for_analysis_sds4_with_xbar_warns(detector, caplog):
-    """Should warn for SDS 4 with Xbar (single condition)."""
-    with caplog.at_level('WARNING'):
-        detector.validate_sds_for_analysis(sds=4, analysis_type='Xbar')
+def test_validate_sds_for_analysis_sds4_with_xbar_logs_info(detector, caplog):
+    """SDS 4 with Xbar logs info about incomplete grid (not a warning)."""
+    with caplog.at_level('INFO'):
+        result = detector.validate_sds_for_analysis(sds=4, analysis_type='Xbar')
 
-    assert 'Single condition' in caplog.text
+    assert result is True
+    assert 'Incomplete' in caplog.text
 
 
 def test_validate_sds_for_analysis_sds6_warns(detector, caplog):
-    """Should warn for SDS 6 (irregular grid)."""
+    """Should warn for SDS 6 (incomplete without replication)."""
     with caplog.at_level('WARNING'):
         detector.validate_sds_for_analysis(sds=6, analysis_type='Xbar')
 
-    assert 'Unstructured' in caplog.text or 'irregular' in caplog.text
+    assert 'Incomplete' in caplog.text or 'replication' in caplog.text
 
 
 def test_validate_sds_for_analysis_sds1_with_xbar_passes(detector):
@@ -399,20 +363,20 @@ def test_validate_sds_for_analysis_sds1_with_xbar_passes(detector):
 # Test: should_calculate_vas_residuals
 # ============================================================================
 
-def test_should_calculate_vas_sds0_returns_false(detector):
-    """SDS 0 has no structure - no VAS."""
-    result = detector.should_calculate_vas_residuals(sds=0, analysis_type='Xbar')
-    assert result is False
-
-
-def test_should_calculate_vas_sds4_returns_false(detector):
-    """SDS 4 is single stream - no VAS."""
+def test_should_calculate_vas_sds4_returns_true(detector):
+    """SDS 4 has factorial structure (incomplete with singletons) - supports VAS."""
     result = detector.should_calculate_vas_residuals(sds=4, analysis_type='Xbar')
-    assert result is False
+    assert result is True
+
+
+def test_should_calculate_vas_sds5_returns_true(detector):
+    """SDS 5 has factorial structure (incomplete without singletons) - supports VAS."""
+    result = detector.should_calculate_vas_residuals(sds=5, analysis_type='Xbar')
+    assert result is True
 
 
 def test_should_calculate_vas_sds6_returns_false(detector):
-    """SDS 6 is irregular - no VAS."""
+    """SDS 6 (incomplete without replication) - no VAS."""
     result = detector.should_calculate_vas_residuals(sds=6, analysis_type='Xbar')
     assert result is False
 
@@ -453,13 +417,15 @@ def test_should_calculate_vas_sds3_with_xbar_returns_true(detector):
     assert result is True
 
 
-def test_should_calculate_vas_sds5_warns_but_returns_true(detector, caplog):
-    """SDS 5 (nested) with Xbar - warns but allows VAS."""
-    with caplog.at_level('WARNING'):
+def test_should_calculate_vas_sds5_with_xbar_returns_true(detector, caplog):
+    """SDS 5 (incomplete without singletons) with Xbar - supports VAS.
+
+    SDS 5 has all observed cells replicated, so exact R2 calculation works.
+    """
+    with caplog.at_level('DEBUG'):
         result = detector.should_calculate_vas_residuals(sds=5, analysis_type='Xbar')
 
     assert result is True
-    assert 'nested' in caplog.text.lower()
 
 
 # ============================================================================

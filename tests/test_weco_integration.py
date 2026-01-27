@@ -73,56 +73,6 @@ class TestWECOIntegration:
         assert hasattr(signals, 'count')
         assert hasattr(signals, 'has_signals')
 
-    def test_detect_signals_imr_chart(self):
-        """Test detect_signals() works with IMR chart (value_col=response_var)."""
-        # Use synthetic SDS4 data (single condition over time)
-        df = synthetic.make_sds(4, T=50, seed=42)
-
-        # Analyze
-        pdf = ProcessBehavior(df)
-        study = pdf.formulate(
-            response=pdf.cols.y,
-            time=pdf.cols.time
-        )
-        result = study.execute()
-
-        # IMR analysis returns results with 'Imr' key
-        assert 'Imr' in result.charts
-        assert 'metadata' in result.charts['Imr']
-        assert result.charts['Imr']['metadata']['value_col'] == 'y'
-        assert result.charts['Imr']['metadata']['chart_type'] == 'Imr'
-
-        # Detect signals - should not crash
-        signals = result.detect_signals(chart='Imr')
-
-        # Verify signal detection worked
-        assert signals is not None
-        assert hasattr(signals, 'count')
-        assert hasattr(signals, 'has_signals')
-
-    def test_detect_signals_r_chart(self):
-        """Test detect_signals() works with R chart (value_col='mr')."""
-        # Use synthetic SDS4 data (single condition over time)
-        df = synthetic.make_sds(4, T=50, seed=42)
-
-        # Analyze - IMR analysis includes moving range calculation
-        pdf = ProcessBehavior(df)
-        study = pdf.formulate(
-            response=pdf.cols.y,
-            time=pdf.cols.time
-        )
-        result = study.execute()
-
-        # IMR analysis returns results with 'Imr' key
-        # The chart includes moving range data with metadata
-        assert 'Imr' in result.charts
-        chart_info = result.charts['Imr']
-
-        # Verify metadata exists (IMR chart includes MR calculations)
-        assert 'metadata' in chart_info
-        # Note: IMR analysis returns Imr chart type, not separate R chart
-        assert chart_info['metadata']['chart_type'] == 'Imr'
-
     def test_detect_signals_all_charts(self):
         """Test detect_signals() without chart parameter detects on all charts."""
         # Use synthetic SDS1 data (full replication)
@@ -259,23 +209,6 @@ class TestMetadataContract:
         assert sbar_meta['chart_type'] == 'S'
         assert sbar_meta['value_col'] == 's'
         assert sbar_meta['center_col'] == 'center'
-
-    def test_imr_metadata(self):
-        """Test IMR chart has complete metadata."""
-        df = synthetic.make_sds(4, T=50, seed=42)
-
-        pdf = ProcessBehavior(df)
-        study = pdf.formulate(
-            response=pdf.cols.y,
-            time=pdf.cols.time
-        )
-        result = study.execute()
-
-        # Check IMR metadata
-        imr_meta = result.charts['Imr']['metadata']
-        assert imr_meta['chart_type'] == 'Imr'
-        assert imr_meta['value_col'] == 'y'
-        assert imr_meta['center_col'] == 'center'
 
     def test_metadata_structure(self):
         """Test metadata has required keys."""

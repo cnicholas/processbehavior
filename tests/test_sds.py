@@ -98,20 +98,6 @@ class TestSDSDetection:
         sds = detect_sds_for_test(df, spec)
         assert sds == 2, f"Wheeler/Bishop: all N_kt=1 → Expected SDS=2, got {sds}"
 
-    def test_sds4_single_condition(self):
-        """Test SDS 4: Single condition over time (no grouping)."""
-        df = synthetic.make_sds(4, T=40, seed=42)
-
-        pdf = ProcessBehavior(df)
-        study = pdf.formulate(
-            response=pdf.cols.y,
-            time=pdf.cols.time
-        )
-
-        # SDS 4 or SDS 0 (depending on implementation)
-        assert study.sds in [0, 4], f"Expected SDS=0 or 4, got {study.sds}"
-        assert 'Imr' in study.valid_charts
-
     def test_sds5_nesting_structure(self):
         """Verify that SDS5 properly implements nested structure."""
         df = synthetic.make_sds(5, L=3, H_per_L=4, T=6, seed=42)
@@ -202,24 +188,6 @@ class TestVASCalculationDecisions:
         assert 'R1' in ads.analysis_dataset.columns, \
             "SDS1 with grouping+time should have VAS residuals"
 
-    def test_sds4_never_calculates_vas(self):
-        """SDS 4 (single stream) should never calculate VAS."""
-        df = synthetic.make_sds(4, T=20, seed=42)
-
-        spec = {
-            'analysis_type': 'Imr',
-            'response_var': 'y',
-            'time_var': 'time',
-            'rsg_var_name': 'rsg'
-        }
-
-        sds = detect_sds_for_test(df, spec)
-        aspec = ad.AnalysisSpecification(spec)
-        ads = ad.AnalysisDataSet(df, aspec, sds=sds)
-
-        assert 'R1' not in ads.analysis_dataset.columns, \
-            "SDS4 should NOT have VAS residuals"
-
     def test_vas_decision_matrix_chart_agnostic(self):
         """Test VAS calculation is now chart-agnostic.
 
@@ -238,15 +206,11 @@ class TestVASCalculationDecisions:
             # SDS 2: Has grouping + time → always VAS
             (2, 'Xbar'): True,
             (2, 'Imr'): True,  # Changed from False
-
-            # SDS 4: No grouping → never VAS
-            (4, 'Imr'): False,
         }
 
         generators = {
             1: lambda: synthetic.make_sds(1, K1=2, K2=2, T=3, n_min=2, n_max=4, seed=42),
             2: lambda: synthetic.make_sds(2, K1=2, K2=2, T=3, seed=42),
-            4: lambda: synthetic.make_sds(4, T=20, seed=42),
         }
 
         for (sds_expected, analysis_type), expected_vas in decision_matrix.items():
@@ -254,7 +218,7 @@ class TestVASCalculationDecisions:
 
             spec = {
                 'analysis_type': analysis_type,
-                'rsg_vars': ['factor 1'] if sds_expected != 4 else None,
+                'rsg_vars': ['factor 1'],
                 'time_var': 'time',
                 'response_var': 'y',
                 'rsg_var_name': 'rsg'

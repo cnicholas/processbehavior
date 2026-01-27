@@ -653,13 +653,13 @@ class ProcessBehavior:
            the implicit time dimension, preserving the order in which data was
            provided.
 
-        3. This enables "response-only" analysis where users can analyze a
-           simple series without explicitly defining time structure. Such data
-           is classified as SDS 4 (Single Condition Over Time) with implicit
-           single condition.
-
         If your observations are NOT in temporal order, you MUST specify the
         ``time`` parameter to ensure correct analysis.
+
+        **Factors Required**
+
+        At least one grouping factor (via ``factors`` or ``plan``) is required.
+        Wheeler's SDS classification assumes a factor × time grid structure.
 
         See Also
         --------
@@ -674,6 +674,17 @@ class ProcessBehavior:
                 "Cannot specify both 'factors' and 'plan'. Use either:\n"
                 "  • factors=[...] to infer structure from observed data (SDS 1-3)\n"
                 "  • plan={col: [levels], ...} to specify expected structure (SDS 1-6)"
+            )
+
+        # Require at least one of factors or plan
+        if factors is None and plan is None:
+            raise ValidationError(
+                "Cannot analyze response-only data without grouping structure.\n\n"
+                "Wheeler's Sampling Design States (SDS 1-6) require a factor × time grid.\n"
+                "Please specify:\n"
+                "  - factors: categorical variables defining subgroups (e.g., Machine, Operator)\n"
+                "  - plan: expected factor levels for detecting incomplete designs\n\n"
+                "See documentation for examples of proper study formulation."
             )
 
         # Normalize column names from ColumnRef to str
