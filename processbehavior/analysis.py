@@ -872,6 +872,15 @@ class Analysis:
             _N = out['n'].max()
             out['N'] = _N
 
+        # Filter out groups with n=1 (can't compute c4 for variance estimation)
+        # Xbar charts require n >= 2 for within-group variance
+        # Note: SDS 2 (all n=1) is already handled upstream - Xbar not in valid_charts
+        mask_n1 = out['n'].eq(1)
+        if mask_n1.any():
+            n_filtered = mask_n1.sum()
+            logger.info(f"Filtered {n_filtered} subgroup(s) with n=1 from Xbar calculation")
+            out = out[~mask_n1].copy()
+
         # Handle case where no subgroups have >1 observation
         if out.shape[0] == 0:
             raise ValueError("All subgroups have 1 or less observations!")
