@@ -821,11 +821,27 @@ class AnalysisResult:
                 value_col = value_cols[0] if value_cols else None
 
         # Try to add n from analysis dataset if available
+        # Note: n is computed per kt (factor × time) cell, so we need to join
+        # by kt columns, not just factor columns
         if 'n' not in chart_data.columns and self._ads is not None:
             ads = self._ads.analysis_dataset
-            if 'n' in ads.columns and 'rsg' in ads.columns and 'rsg' in chart_data.columns:
-                n_per_rsg = ads.groupby('rsg', observed=True)['n'].first()
-                chart_data['n'] = chart_data['rsg'].map(n_per_rsg)
+            spec = self._ads.spec
+            if 'n' in ads.columns:
+                # Build kt join columns (must match columns in chart_data)
+                kt_cols = []
+                if spec.rsg_var_name and spec.rsg_var_name in ads.columns:
+                    # Use rsg if it's in both
+                    rsg_col = 'rsg' if 'rsg' in chart_data.columns else spec.rsg_var_name
+                    if rsg_col in chart_data.columns:
+                        kt_cols.append(spec.rsg_var_name)
+                if spec.has_time and spec.time_var in ads.columns and spec.time_var in chart_data.columns:
+                    kt_cols.append(spec.time_var)
+
+                if kt_cols:
+                    # Get unique n per kt cell
+                    n_per_kt = ads.groupby(kt_cols, observed=True)['n'].first().reset_index()
+                    # Merge to add n
+                    chart_data = chart_data.merge(n_per_kt, on=kt_cols, how='left')
 
         # Build output columns in logical order
         output_cols = []
