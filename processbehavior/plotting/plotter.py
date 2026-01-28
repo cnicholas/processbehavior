@@ -14,6 +14,7 @@ import pandas as pd
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
+from ..data_preparation import encode_rsg
 from .control_chart import ControlChartFigure
 from .themes import ChartTheme, apply_theme, get_theme
 
@@ -1272,14 +1273,15 @@ class Plotter:
                         stratum_stats = nested_stats.get(stratum, {})
 
                         # Create expanded chart name (include chart type to avoid collision)
-                        # Convert tuple strata to underscore-joined string for clean names
-                        if isinstance(stratum, tuple):
-                            stratum_str = '_'.join(stratum)
+                        # Convert tuple/list strata to underscore-joined string for clean names
+                        # Note: stratum identity assumes canonical factor ordering defined upstream
+                        if isinstance(stratum, (tuple, list)):
+                            stratum_str = encode_rsg(stratum)  # Use canonical encoding
                             # Display name uses space separator to preserve underscores in values
-                            stratum_display = ' '.join(stratum)
+                            stratum_display = ' '.join(str(s) for s in stratum)
                         else:
-                            stratum_str = stratum
-                            stratum_display = stratum
+                            stratum_str = encode_rsg(stratum)  # Handle scalar strata
+                            stratum_display = str(stratum)
                         expanded_name = f"{name}_{stratum_str}"
 
                         # Extract lane boundaries for this specific stratum

@@ -129,6 +129,29 @@ class TestEncodeRsg:
         assert '1_A' in observed_rsg
         assert '2_B' in observed_rsg
 
+    def test_encode_rsg_scalar_int(self):
+        """Scalar integer should be converted to string (not TypeError)."""
+        assert encode_rsg(42) == '42'
+        assert encode_rsg(1) == '1'
+
+    def test_encode_rsg_scalar_string(self):
+        """Scalar string should be returned as-is (not iterated character by character)."""
+        # This is critical: 'AB' should NOT become 'A_B' by iterating characters
+        assert encode_rsg('Machine_1') == 'Machine_1'
+        assert encode_rsg('AB') == 'AB'
+        assert encode_rsg('Hello') == 'Hello'
+
+    def test_encode_rsg_list_input(self):
+        """List input should work the same as tuple (joined with delimiter)."""
+        assert encode_rsg([1, 'A']) == '1_A'
+        assert encode_rsg([2, 'B', 3]) == '2_B_3'
+        assert encode_rsg(['X']) == 'X'
+
+    def test_encode_rsg_mixed_types(self):
+        """Mixed types in tuple/list should all be stringified."""
+        assert encode_rsg((1, 'A', 2.5)) == '1_A_2.5'
+        assert encode_rsg([None]) == 'None'  # Edge case: None becomes 'None'
+
 
 # =============================================================================
 # ColumnRef Tests

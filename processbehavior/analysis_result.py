@@ -50,6 +50,7 @@ from typing import TYPE_CHECKING, Any
 
 import pandas as pd
 
+from .data_preparation import encode_rsg
 from .exceptions import ChartNotAvailableError, ProcessBehaviorError
 
 if TYPE_CHECKING:
@@ -471,7 +472,8 @@ class AnalysisResult:
                 continue
 
             # Filter data
-            mask = data[rsg_col].astype(str) == str(stratum)
+            # Note: stratum identity assumes canonical factor ordering defined upstream
+            mask = data[rsg_col].astype(str) == encode_rsg(stratum)
             focused_data = data[mask].copy()
 
             # Extract stratum-specific statistics
@@ -1391,8 +1393,10 @@ class FocusedAnalysisResult(AnalysisResult):
                 rsg_col = col
                 break
 
+        # Note: stratum identity assumes canonical factor ordering defined upstream
+        stratum_id = encode_rsg(focused_stratum)
         if rsg_col:
-            mask = original_result.dataset[rsg_col].astype(str) == str(focused_stratum)
+            mask = original_result.dataset[rsg_col].astype(str) == stratum_id
             self.dataset = original_result.dataset[mask].copy()
         else:
             self.dataset = original_result.dataset.copy()
@@ -1405,7 +1409,7 @@ class FocusedAnalysisResult(AnalysisResult):
         self._residuals = None
         if original_result._residuals is not None:
             if rsg_col and rsg_col in original_result._residuals.columns:
-                mask = original_result._residuals[rsg_col].astype(str) == str(focused_stratum)
+                mask = original_result._residuals[rsg_col].astype(str) == stratum_id
                 self._residuals = original_result._residuals[mask].copy()
             else:
                 # Can't filter - take subset based on index
