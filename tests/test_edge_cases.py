@@ -67,8 +67,8 @@ class TestDegenerateCases:
         assert study is not None
 
         # execute(chart='Xbar') fails because can't calculate within-group variance
-        # when all subgroups have n=1
-        with pytest.raises(ValueError, match="Subgroup size must be >= 2"):
+        # when all subgroups have n=1 (filtered out, leaving no valid groups)
+        with pytest.raises(ValueError, match="All subgroups have 1 or less observations"):
             study.execute(chart='Xbar')
 
     def test_constant_response(self):
@@ -475,3 +475,48 @@ class TestChartGeneration:
         if 'R2_S' in study.residual_charts:
             result = study.execute(chart='S', value='R2')
             assert result is not None
+
+
+# ============================================================================
+# TestPartialReplication: SDS 3 (mixed n=1 and n>=2 cells)
+# ============================================================================
+
+class TestPartialReplication:
+    """Tests for SDS 3 partial replication handling."""
+
+    def test_xbar_with_sds3_partial_replication(self):
+        """Xbar chart works with SDS 3 data (mixed n=1 and n>=2 cells)."""
+        from processbehavior.datasets.synthetic import make_sds
+
+        # SDS 3: partial replication (50% cells have n>=2)
+        df = make_sds(3, K1=3, K2=2, T=8, p_replicated=0.5, n_when_replicated=3, seed=42)
+
+        pb = ProcessBehavior(df)
+        study = pb.formulate(response='y', factors=['factor 1', 'factor 2'], time='time')
+
+        # Verify we have SDS 3
+        assert study.sds == 3
+
+        # Should NOT raise ValueError - n=1 groups are filtered
+        result = study.execute(chart='Xbar')
+
+        # Verify we got valid results
+        assert 'Xbar' in result.charts
+        xbar_data = result.get_chart('Xbar')
+        assert len(xbar_data) > 0
+
+    def test_s_chart_with_sds3_partial_replication(self):
+        """S chart also works with SDS 3 data (filters n=1 groups)."""
+        from processbehavior.datasets.synthetic import make_sds
+
+        df = make_sds(3, K1=3, K2=2, T=8, p_replicated=0.5, n_when_replicated=3, seed=42)
+
+        pb = ProcessBehavior(df)
+        study = pb.formulate(response='y', factors=['factor 1', 'factor 2'], time='time')
+
+        # S chart should also work
+        result = study.execute(chart='S')
+
+        assert 'S' in result.charts
+        s_data = result.get_chart('S')
+        assert len(s_data) > 0
