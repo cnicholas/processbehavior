@@ -221,17 +221,16 @@ class DataPreparation:
                 drop_cols.append(spec.time_var)
             out = out.dropna(subset=drop_cols)
 
-            # Filter small groups for any analysis that uses grouping (require n≥2)
-            # - Xbar/S need n≥2 for within-group variance
-            # - Imr/R need n≥2 to calculate at least one moving range
+            # Filter small groups only for Xbar/S (require n≥2 per kt cell for variance)
+            # IMR/R use moving range, not within-cell variance, so n=1 per cell is OK
             # Use getattr since DataPrepConfig doesn't have analysis_type
             analysis_type = getattr(spec, 'analysis_type', None)
-            if analysis_type is not None:
-                # Known analysis type - filter small groups
+            if analysis_type in ('Xbar', 'S'):
+                # Xbar/S need n≥2 per kt cell for within-cell variance
                 out = self._filter_small_groups(out, spec)
             else:
-                # DataPrepConfig (SDS detection phase) - just add group sizes, don't filter
-                # We need all data to correctly detect SDS
+                # IMR/R analysis or DataPrepConfig (SDS detection phase)
+                # Just add group sizes, don't filter
                 out = self._add_group_sizes(out, spec)
 
             # Make RSG categorical with natural sort order
@@ -479,12 +478,19 @@ class DataPreparation:
         spec: AnalysisSpecification
     ) -> pd.DataFrame:
         """
-        Remove groups with n ≤ 1 (can't calculate variance).
+        Remove groups with n ≤ 1 at the factor level (can't calculate variance).
 
         For grouped analyses (Xbar, S), we need at least 2 observations
-        per group to estimate within-group variance.
+        per factor to calculate within-group variance. Filtering at factor
+        level (not kt level) allows factor-level aggregation when `by` is
+        specified, even if individual kt cells have n=1.
+
+        Note: After filtering, n column is added at kt level for accurate
+        metadata. The analysis-level groupby will re-compute n at whatever
+        level `by` specifies.
         """
-        # Count observations per group
+        # Filter at factor level (original behavior)
+        # This allows factor-level analysis even when kt cells have n=1
         grouped = df.groupby(spec.rsg_var_name, observed=True).size()
         starting_count = grouped.count()
         logger.debug('Starting with %s groups', starting_count)
@@ -501,14 +507,23 @@ class DataPreparation:
             )
 
         grouped = grouped.reset_index()
-        grouped = grouped.rename(columns={0: 'n'})
+        grouped = grouped.rename(columns={0: 'n_factor'})
 
         ending_count = grouped.shape[0]
         logger.debug('Groups remaining: %s', ending_count)
         logger.debug('Removed %s group(s)', starting_count - ending_count)
 
-        # Merge to filter
-        out = pd.merge(df, grouped, how='inner', on=spec.rsg_var_name)
+        # Filter to keep only rows in valid groups
+        out = pd.merge(df, grouped[spec.rsg_var_name], how='inner', on=spec.rsg_var_name)
+
+        # Now add n at kt level for accurate metadata
+        if spec.has_time:
+            kt_cols = [spec.rsg_var_name, spec.time_var]
+        else:
+            kt_cols = [spec.rsg_var_name]
+
+        n_per_kt = df.groupby(kt_cols, observed=True).size().reset_index(name='n')
+        out = pd.merge(out, n_per_kt, how='left', on=kt_cols)
 
         return out
 
@@ -518,15 +533,21 @@ class DataPreparation:
         spec: DataPrepConfig
     ) -> pd.DataFrame:
         """
-        Add 'n' column with group sizes without filtering.
+        Add 'n' column with kt cell sizes without filtering.
 
-        Used for Imr/R analyses where n=1 per group is valid.
+        Groups by kt (factor × time) columns to get true subgroup sizes.
+        Used for IMR/R analyses and SDS detection where n=1 per cell is valid.
         """
-        grouped = df.groupby(spec.rsg_var_name, observed=True).size()
-        grouped = grouped.reset_index()
-        grouped = grouped.rename(columns={0: 'n'})
+        # Build kt grouping columns (factor + time if both present)
+        if spec.has_time:
+            kt_cols = [spec.rsg_var_name, spec.time_var]
+        else:
+            kt_cols = [spec.rsg_var_name]
 
-        out = pd.merge(df, grouped, how='left', on=spec.rsg_var_name)
+        grouped = df.groupby(kt_cols, observed=True).size()
+        grouped = grouped.reset_index(name='n')
+
+        out = pd.merge(df, grouped, how='left', on=kt_cols)
         return out
 
     def _add_column(
