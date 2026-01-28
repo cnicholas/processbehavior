@@ -486,6 +486,58 @@ class TestFacetedPlotting:
         assert isinstance(fig, ControlChartFigure)
 
 
+class TestNumericStrataPlotting:
+    """Test plotting with numeric factor values (strata as integer tuples)."""
+
+    def test_plot_with_numeric_strata(self):
+        """Plotting works when strata are numeric tuples like (1, 1)."""
+        # This is the original bug: strata were (1, 1), (1, 2) etc. which
+        # caused TypeError: sequence item 0: expected str instance, int found
+        df = pd.DataFrame({
+            'value': np.random.normal(100, 5, 40),
+            'factor1': [1, 1, 2, 2] * 10,
+            'factor2': [1, 2, 1, 2] * 10,
+            'time': list(range(10)) * 4
+        })
+        pdf = ProcessBehavior(df)
+        study = pdf.formulate(
+            response=pdf.cols.value,
+            factors=[pdf.cols.factor1, pdf.cols.factor2],
+            time=pdf.cols.time
+        )
+        result = study.execute(chart='Imr', by=['factor1', 'factor2'])
+
+        # Verify strata are tuples with numeric values
+        assert result.is_stratified
+        strata = result.strata
+        assert len(strata) > 0
+
+        # This should NOT raise TypeError
+        plotter = Plotter(result)
+        fig = plotter.plot(chart='Imr', show_zones=True)
+        assert isinstance(fig, ControlChartFigure)
+
+    def test_plot_with_mixed_type_strata(self):
+        """Plotting works with mixed string/int factor values."""
+        df = pd.DataFrame({
+            'value': np.random.normal(100, 5, 20),
+            'machine': ['A', 'A', 'B', 'B'] * 5,
+            'shift': [1, 2, 1, 2] * 5,
+            'time': list(range(5)) * 4
+        })
+        pdf = ProcessBehavior(df)
+        study = pdf.formulate(
+            response=pdf.cols.value,
+            factors=[pdf.cols.machine, pdf.cols.shift],
+            time=pdf.cols.time
+        )
+        result = study.execute(chart='Imr', by=['machine', 'shift'])
+
+        plotter = Plotter(result)
+        fig = plotter.plot(chart='Imr')
+        assert isinstance(fig, ControlChartFigure)
+
+
 class TestAspectRatio:
     """Test aspect ratio functionality."""
 

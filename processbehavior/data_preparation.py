@@ -54,7 +54,7 @@ def natural_sort_key(s: str) -> list:
     return [int(text) if text.isdigit() else text.lower() for text in re.split(r'(\d+)', s)]
 
 
-def encode_rsg(factor_values: tuple | list, delimiter: str = '_') -> str:
+def encode_rsg(factor_values, delimiter: str = '_') -> str:
     """
     Encode factor values into RSG (Rational Subgroup) string.
 
@@ -62,19 +62,27 @@ def encode_rsg(factor_values: tuple | list, delimiter: str = '_') -> str:
     Used by both:
     - DataPreparation._add_composite_column() for observed data
     - Plan expansion for expected data (coverage calculation, missing_combos)
+    - analysis_result.py for stratum comparisons
+    - plotter.py for chart IDs
+
+    Handles both tuple/list (multi-factor) and scalar (single-factor) strata.
+
+    Note: RSG identity assumes canonical factor ordering defined upstream.
+    Factor order in encode_rsg() calls must match order in RSG column creation.
+    The `by` parameter only affects layout/presentation, not stratum identity.
 
     Parameters
     ----------
-    factor_values : tuple or list
+    factor_values : tuple, list, or scalar
         Values for each factor, in factor order.
-        Example: (1, 'A') or [2, 'B']
+        Example: (1, 'A'), [2, 'B'], or just 'A' for single factor
     delimiter : str
         Delimiter between values (default: '_')
 
     Returns
     -------
     str
-        Encoded RSG string (e.g., "1_A", "2_B")
+        Encoded RSG string (e.g., "1_A", "2_B", "A")
 
     Examples
     --------
@@ -84,8 +92,14 @@ def encode_rsg(factor_values: tuple | list, delimiter: str = '_') -> str:
     '2-B'
     >>> encode_rsg((42,))
     '42'
+    >>> encode_rsg('Machine_1')  # Scalar - returned as-is (not iterated!)
+    'Machine_1'
+    >>> encode_rsg(42)  # Numeric scalar
+    '42'
     """
-    return delimiter.join(str(v) for v in factor_values)
+    if isinstance(factor_values, (tuple, list)):
+        return delimiter.join(str(v) for v in factor_values)
+    return str(factor_values)
 
 
 class DataPreparation:
@@ -587,6 +601,16 @@ class DataPreparation:
                 f"Cannot create composite column - some columns missing.\n"
                 f"Missing: {sorted(missing)}\n"
                 f"Available: {df.columns.tolist()}"
+            )
+
+        # Validate no missing values in source columns before encoding
+        # str(None) → "None" and str(np.nan) → "nan" which won't trigger isna()
+        # on the output, so we must check inputs
+        if df[cols_to_combine].isna().any().any():
+            missing_counts = df[cols_to_combine].isna().sum()
+            raise ValueError(
+                f"Cannot build RSG '{col_name}': missing values in factor columns. "
+                f"Missing counts: {missing_counts.to_dict()}"
             )
 
         if len(cols_to_combine) == 1:
