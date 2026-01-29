@@ -986,8 +986,8 @@ def test_prepare_dataset_handles_missing_data_correctly(prep):
 
     # Lanes 2 and 3 should be fully present
     counts_by_lane = result.groupby('rsg', observed=True).size().to_dict()
-    assert counts_by_lane.get('2', 0) == 4, f"Lane 2 should have 4 observations"
-    assert counts_by_lane.get('3', 0) == 4, f"Lane 3 should have 4 observations"
+    assert counts_by_lane.get('2', 0) == 4, "Lane 2 should have 4 observations"
+    assert counts_by_lane.get('3', 0) == 4, "Lane 3 should have 4 observations"
 
 
 def test_full_pipeline_observation_count_integrity(prep):

@@ -6,12 +6,11 @@ The `by` parameter controls stratification/grouping, while `value` controls what
 Key invariant: Residuals are NEVER recomputed - `by` creates views, not recomputations.
 """
 
-import pytest
 import pandas as pd
+import pytest
 
-from processbehavior import ProcessBehavior, FactorNotFoundError
+from processbehavior import FactorNotFoundError, ProcessBehavior
 from processbehavior.datasets import synthetic
-
 
 # =============================================================================
 # Fixtures
@@ -255,9 +254,9 @@ class TestRStratification:
         result = sds1_study.execute(chart='R', by=['factor 1'])
 
         metadata = result.charts['R']['metadata']
-        lane_boundaries = metadata.get('lane_boundaries')
         # R chart may or may not have boundaries depending on implementation
         # At minimum, it should have stratification
+        _ = metadata.get('lane_boundaries')  # Access to ensure metadata is populated
         strata = result.charts['R'].get('strata')
         assert strata is not None
 
