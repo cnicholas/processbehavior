@@ -10,6 +10,7 @@ import logging
 import math
 from typing import TYPE_CHECKING
 
+import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
@@ -187,7 +188,7 @@ class Plotter:
         self.summary = analysis_result.summary
         self._theme: ChartTheme | None = None  # Set during plot()
 
-    def plot(
+    def plot(  # noqa: C901
         self,
         chart: str | None = None,
         facet: bool = False,
@@ -424,7 +425,7 @@ class Plotter:
         # Wrap in our custom figure class
         return ControlChartFigure(fig, self.result)
 
-    def _plot_single_chart(
+    def _plot_single_chart(  # noqa: C901
         self,
         chart_info: dict,
         chart_name: str,
@@ -612,7 +613,7 @@ class Plotter:
 
         return fig
 
-    def _plot_faceted(
+    def _plot_faceted(  # noqa: C901
         self,
         charts: dict,
         ncols: int,

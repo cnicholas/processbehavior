@@ -447,10 +447,7 @@ class SDSRegistry:
 
         # --- Compute N_kt for (factor × time) cells ---
         factor_cols = list(spec.rsg_vars)
-        if spec.has_time:
-            group_cols = factor_cols + [spec.time_var]
-        else:
-            group_cols = factor_cols
+        group_cols = factor_cols + [spec.time_var] if spec.has_time else factor_cols
 
         nkt_counts = df.groupby(group_cols, dropna=False, observed=True).size()
 
@@ -711,7 +708,7 @@ class SDSRegistry:
         """
         # SDS 6: Incomplete without replication - very limited analysis possible
         if sds == 6:
-            logger.debug(f"No VAS: SDS 6 (incomplete without replication)")
+            logger.debug("No VAS: SDS 6 (incomplete without replication)")
             return False
 
         # IMR/R use moving ranges, not factorial decomposition
@@ -780,7 +777,6 @@ class SDSRegistry:
         min_n = nkt_counts.min()
         max_n = nkt_counts.max()
         has_singletons = (nkt_counts == 1).any()
-        has_replicated = (nkt_counts >= 2).any()
 
         n_cells = len(nkt_counts)
         cells_with_n1 = (nkt_counts == 1).sum()
@@ -1041,7 +1037,7 @@ class SDSRegistry:
             4: SDSAnalysisPlan(
                 sds=4,
                 name="Incomplete Grid with Singletons",
-                description="Incomplete factor × time grid with mixed replication (has empty cells, singletons, and replicated cells)",
+                description="Incomplete factor × time grid with mixed replication",
                 has_factors=True,
                 has_time=True,
                 has_replication='partial',  # Mixed: some n=1, some n≥2
@@ -1071,7 +1067,7 @@ class SDSRegistry:
             5: SDSAnalysisPlan(
                 sds=5,
                 name="Incomplete Grid without Singletons",
-                description="Incomplete factor × time grid with full replication in observed cells (has empty cells and replicated cells, no singletons)",
+                description="Incomplete factor × time grid with full replication in observed cells",
                 has_factors=True,
                 has_time=True,
                 has_replication='full',  # All observed cells have n≥2
