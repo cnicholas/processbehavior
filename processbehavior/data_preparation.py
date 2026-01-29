@@ -531,10 +531,7 @@ class DataPreparation:
         out = pd.merge(df, grouped[spec.rsg_var_name], how='inner', on=spec.rsg_var_name)
 
         # Now add n at kt level for accurate metadata
-        if spec.has_time:
-            kt_cols = [spec.rsg_var_name, spec.time_var]
-        else:
-            kt_cols = [spec.rsg_var_name]
+        kt_cols = [spec.rsg_var_name, spec.time_var] if spec.has_time else [spec.rsg_var_name]
 
         n_per_kt = df.groupby(kt_cols, observed=True).size().reset_index(name='n')
         out = pd.merge(out, n_per_kt, how='left', on=kt_cols)
@@ -553,10 +550,7 @@ class DataPreparation:
         Used for IMR/R analyses and SDS detection where n=1 per cell is valid.
         """
         # Build kt grouping columns (factor + time if both present)
-        if spec.has_time:
-            kt_cols = [spec.rsg_var_name, spec.time_var]
-        else:
-            kt_cols = [spec.rsg_var_name]
+        kt_cols = [spec.rsg_var_name, spec.time_var] if spec.has_time else [spec.rsg_var_name]
 
         grouped = df.groupby(kt_cols, observed=True).size()
         grouped = grouped.reset_index(name='n')

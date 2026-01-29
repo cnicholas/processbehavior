@@ -1502,7 +1502,7 @@ class Study:
             f"Valid chart types: {', '.join(sorted(VALID_BASE_CHARTS))}"
         )
 
-    def _validate_by_parameter(
+    def _validate_by_parameter(  # noqa: C901
         self,
         by: list[str] | None,
         base_chart: str
@@ -1568,9 +1568,8 @@ class Study:
         factor_set = set(factors)
         invalid = by_set - factor_set
 
-        if invalid:
+        if invalid and time_var and time_var in invalid:  # noqa: SIM102
             # Check if user tried to use time
-            if time_var and time_var in invalid:
                 if is_time_series_chart:
                     raise ValueError(
                         f"Cannot use time variable '{time_var}' in by for {base_chart} charts. "
@@ -1731,11 +1730,12 @@ class Study:
         uoa_html = f"<br><strong>Unit of analysis:</strong> {self.unit_of_analysis}" if self.unit_of_analysis else ""
 
         style = "font-family: monospace; padding: 8px; border: 1px solid #ccc; background: #f9f9f9"
+        valid_charts_str = ', '.join(self.valid_charts)
         html = f"""
         <div style="{style}">
             <code>Study(response='{self.response}', factors=[{factors_str}], time='{time_str}', sds={self.sds})</code>
             {uoa_html}
-            <br><strong>Valid:</strong> {', '.join(self.valid_charts)} | <strong>Recommended:</strong> {self.recommended_chart}
+            <br><strong>Valid:</strong> {valid_charts_str} | <strong>Recommended:</strong> {self.recommended_chart}
             {residual_html}
             <br><em>→ study.execute() or study.support for details</em>
         </div>

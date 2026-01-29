@@ -832,10 +832,7 @@ class Analysis:
         groupby_cols, ybar_col = self._resolve_by_grouping(value_col)
 
         # Calculate grand mean (center line) - use pre-calculated if available
-        if ybar_col == 'Ybar' and 'Ybar' in df.columns:
-            _Ybar = df['Ybar'].iloc[0]  # Constant across all rows
-        else:
-            _Ybar = df[value_col].mean()
+        _Ybar = df['Ybar'].iloc[0] if ybar_col == 'Ybar' and 'Ybar' in df.columns else df[value_col].mean()
 
         # Handle by=[] (collapse all) - single point chart
         if groupby_cols == []:
@@ -1120,7 +1117,7 @@ class Analysis:
             }
         }
 
-    def _calculate_imr(self, value_col: str = None) -> dict:
+    def _calculate_imr(self, value_col: str = None) -> dict:  # noqa: C901
         """
         Calculate IMR (Individual Moving Range) and R (Range) chart statistics.
 
@@ -1164,7 +1161,6 @@ class Analysis:
         # Determine stratification based on `by` parameter
         by = spec.by
         rsg_vars = spec.rsg_vars or []
-        time_var = spec.time_var
 
         # Determine stratify_by and collapsed_factors
         # collapsed_factors = factor variables not in `by` (for lane boundaries)
@@ -1628,11 +1624,8 @@ class Analysis:
             grouped = data.groupby(by, observed=True)
 
             # Build strata list - tuples for multi-key, values for single-key
-            if len(by) == 1:
-                strata = data[by[0]].unique().tolist()
-            else:
-                # Use tuple keys to avoid collision (('A_B','C') != ('A','B_C'))
-                strata = list(grouped.groups.keys())
+            # Use tuple keys for multi-key to avoid collision (('A_B','C') != ('A','B_C'))
+            strata = data[by[0]].unique().tolist() if len(by) == 1 else list(grouped.groups.keys())
 
             # Calculate per-stratum statistics
             per_stratum_stats = {}
