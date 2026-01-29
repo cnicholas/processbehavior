@@ -5,8 +5,8 @@ Residual charts are specified via the `value` parameter:
   study.execute(chart='Xbar', value='R5')  # instead of chart='R5_Xbar'
 """
 
-import pytest
 import pandas as pd
+import pytest
 
 from processbehavior import ProcessBehavior
 

@@ -17,7 +17,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from processbehavior.exceptions import ChartNotAvailableError, ColumnNotFoundError
+from processbehavior.exceptions import ColumnNotFoundError
 from processbehavior.process_behavior import ColumnAccessor, ProcessBehavior
 
 # ============================================================================

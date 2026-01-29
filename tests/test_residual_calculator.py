@@ -577,9 +577,10 @@ def test_r1_rcr1_invariants():
     - RCR1 = R1 + Ȳ = Y (original scale)
     - RCR1 - R1 = Ȳ (constant difference)
     """
+    import numpy as np
+
     from processbehavior import ProcessBehavior
     from processbehavior.datasets.synthetic import make_sds
-    import numpy as np
 
     df = make_sds(1, seed=42)
     pb = ProcessBehavior(df)
@@ -618,9 +619,10 @@ def test_residual_chart_uses_correct_column():
     If the bug exists: R5_Xbar center would equal Y's constant value (100)
     After fix: R5_Xbar center should equal mean(R5) ≈ 3.5
     """
+    import numpy as np
+
     from processbehavior import ProcessBehavior
     from processbehavior.datasets.synthetic import make_sds
-    import numpy as np
 
     # Create SDS 1 data (has R5 column)
     df = make_sds(1, seed=42)
