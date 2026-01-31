@@ -186,17 +186,17 @@ def test_detect_sds2_with_nkt_grouping(detector, sds6_data, spec_with_grouping_a
 
     DESIGN DECISION (Issue #60):
     - SDS classification: based on N_kt (factor × time cells)
-    - Analysis subgrouping: based on factors only (for charts)
+    - min_cell_size: based on N_kt (for R2 chart selection)
 
     This data has 2 groups × unique time points = all N_kt = 1 → SDS 2
-    The min_cell_size (for chart selection) uses factor-only = 5.
+    Each kt cell has N_kt = 1.
     """
     result = detector.detect_sds(sds6_data, spec_with_grouping_and_time)
 
     # Per Wheeler/Bishop: all N_kt = 1 → SDS 2
     assert result.sds == 2
-    # min_cell_size uses factor-only grouping (A:5, B:5)
-    assert result.min_cell_size >= 2
+    # min_cell_size is now kt-level (each kt cell has n=1)
+    assert result.min_cell_size == 1
 
 
 def test_detect_sds_nested_design(detector):
@@ -454,10 +454,10 @@ def test_detect_sds2_sparse_time_coverage(detector, spec_with_grouping_and_time)
 
     DESIGN DECISION (Issue #60):
     - SDS classification: based on N_kt (factor × time cells)
-    - Analysis subgrouping: based on factors only (for charts)
+    - min_cell_size: based on N_kt (for R2 chart selection)
 
     This data has each (rsg, pull) cell with n=1 → SDS 2
-    min_cell_size uses factor-only (A:7, B:7) for chart selection.
+    min_cell_size is kt-level (each kt cell has n=1).
     """
     df = pd.DataFrame({
         'lane': ['A'] * 7 + ['B'] * 7,
@@ -470,13 +470,13 @@ def test_detect_sds2_sparse_time_coverage(detector, spec_with_grouping_and_time)
 
     # Per Wheeler/Bishop: all N_kt = 1 → SDS 2
     assert result.sds == 2
-    # min_cell_size uses factor-only grouping (A:7, B:7)
-    assert result.min_cell_size == 7
+    # min_cell_size is now kt-level (each kt cell has n=1)
+    assert result.min_cell_size == 1
 
 
 def test_detect_sds_with_large_n_values(detector, spec_with_grouping_and_time):
     """Should handle cells with very large n correctly (SDS 1)."""
-    # Each cell has n=100
+    # 4 kt cells, each with n=100
     df = pd.DataFrame({
         'lane': ['A'] * 200 + ['B'] * 200,
         'rsg': ['A'] * 200 + ['B'] * 200,
@@ -487,7 +487,8 @@ def test_detect_sds_with_large_n_values(detector, spec_with_grouping_and_time):
     result = detector.detect_sds(df, spec_with_grouping_and_time)
 
     assert result.sds == 1  # Full replication
-    assert result.min_cell_size == 200  # 200 per group (A and B)
+    # min_cell_size is kt-level: 4 cells (A,1), (A,2), (B,1), (B,2) each with n=100
+    assert result.min_cell_size == 100
 
 
 def test_detect_sds_with_varying_cell_sizes(detector, spec_with_grouping_and_time):
@@ -523,9 +524,9 @@ def test_detect_sds_logs_debug_info(detector, sds1_data, spec_with_grouping_and_
     with caplog.at_level('DEBUG'):
         detector.detect_sds(sds1_data, spec_with_grouping_and_time)
 
-    # Should log grid dimensions and cell counts
-    assert 'groups' in caplog.text.lower()
-    assert 'cells' in caplog.text.lower()
+    # Should log classification details
+    assert 'sds' in caplog.text.lower()
+    assert 'replicated' in caplog.text.lower() or 'singletons' in caplog.text.lower()
 
 
 def test_detect_sds_with_three_factors(detector):
@@ -559,7 +560,7 @@ def test_detect_sds_with_three_factors(detector):
 
 def test_realistic_scenario_manufacturing_4_lanes_hourly(detector):
     """Realistic: 4 filling lanes monitored hourly over 8 hours."""
-    # 4 lanes × 8 hours = 32 cells, each with ~5 samples
+    # 4 lanes × 8 hours = 32 kt cells, each with 5 samples
     rows = []
     for lane in ['A', 'B', 'C', 'D']:
         for hour in range(1, 9):
@@ -585,7 +586,8 @@ def test_realistic_scenario_manufacturing_4_lanes_hourly(detector):
     should_calc_vas = detector.should_calculate_vas_residuals(result.sds, 'Xbar')
 
     assert result.sds == 1  # Full replication
-    assert result.min_cell_size == 40  # 4 lanes × 8 hours × 5 samples / 4 lanes = 40 per lane
+    # min_cell_size is kt-level: 32 cells (4 lanes × 8 hours), each with n=5
+    assert result.min_cell_size == 5
     assert info['r2_method'] == 'within_cell'
     assert should_calc_vas is True
 
@@ -958,3 +960,286 @@ class TestTPlannedCoverage:
         # Only 2 observed cells out of 100,000 × 10 = 1M expected
         # Coverage ~0.0002% → SDS 6 (severely incomplete, no replication)
         assert result.sds == 6
+
+
+# ============================================================================
+# Test: Structure Detection (All-NA cells, Plan Canonicalization)
+# ============================================================================
+
+class TestStructureDetection:
+    """Tests for SDS detection from raw data structure.
+
+    This class tests the new behavior where SDS detection happens BEFORE
+    response NA rows are dropped, enabling detection of all-NA cells.
+    """
+
+    def test_detect_sds_finds_all_na_cells_without_plan(self, detector):
+        """All-NA cells should still be detected without a plan.
+
+        When groupby is applied to raw data (with response NA preserved),
+        cells where all responses are NA will have N_kt=0 valid responses.
+        """
+        df = pd.DataFrame({
+            'lane': [1, 1, 2, 2],
+            'time': [1, 2, 1, 2],
+            'weight': [10.5, pd.NA, 9.8, 10.0]  # cell (1,2) is all-NA
+        })
+        spec = AnalysisSpecification({
+            'analysis_type': 'Xbar',
+            'rsg_vars': ['lane'],
+            'rsg_var_name': 'rsg',
+            'time_var': 'time',
+            'response_var': 'weight'
+        })
+
+        # Use detect_sds_from_structure to detect on raw data
+        result = detector.detect_sds_from_structure(
+            df, spec, response_col='weight'
+        )
+
+        # Cell (1,2) has no valid responses -> should see n_empty_cells=1
+        # However, without a plan, this cell still appears in groupby (with 0 valid)
+        # The behavior depends on whether groupby includes cells with all-NA responses
+        # In our implementation, these cells should show up with N_kt=0
+        assert result.n_empty_cells == 1  # Cell (1,2) has N_kt=0
+        assert result.sds in [4, 5, 6]  # Incomplete structure detected
+
+    def test_detect_sds_with_plan_finds_all_na_cells(self, detector):
+        """All-NA cells should be detected when comparing to plan."""
+        df = pd.DataFrame({
+            'lane': [1, 1, 2, 2],
+            'time': [1, 2, 1, 2],
+            'weight': [10.5, pd.NA, 9.8, 10.0]  # cell (1,2) is all-NA
+        })
+        spec = AnalysisSpecification({
+            'analysis_type': 'Xbar',
+            'rsg_vars': ['lane'],
+            'rsg_var_name': 'rsg',
+            'time_var': 'time',
+            'response_var': 'weight'
+        })
+        plan = {'lane': [1, 2], 'time': [1, 2]}
+
+        result = detector.detect_sds_from_structure(
+            df, spec, response_col='weight', plan=plan
+        )
+
+        # Plan says 4 cells expected, cell (1,2) has N_kt=0
+        assert result.n_empty_cells == 1
+        assert result.sds in [4, 5, 6]  # Incomplete structure
+
+    def test_plan_values_are_canonicalized(self, detector):
+        """Plan values should be canonicalized to match data types."""
+        df = pd.DataFrame({
+            'lane': [1, 2],  # Numeric
+            'time': [1, 1],
+            'weight': [10.5, 9.8]
+        })
+        spec = AnalysisSpecification({
+            'analysis_type': 'Xbar',
+            'rsg_vars': ['lane'],
+            'rsg_var_name': 'rsg',
+            'time_var': 'time',
+            'response_var': 'weight'
+        })
+        # Plan with string values that should match numeric data
+        plan = {'lane': ['1', '2'], 'time': ['1']}
+
+        result = detector.detect_sds_from_structure(
+            df, spec, response_col='weight', plan=plan
+        )
+
+        # After canonicalization, plan values "1", "2" should match data values 1, 2
+        # Should see 2 cells, both present -> SDS 2 (no replication)
+        assert result.n_empty_cells == 0
+        assert result.sds == 2  # All cells have n=1
+
+    def test_na_in_factor_is_filtered(self, detector):
+        """Rows with NA in factor columns should be filtered out."""
+        df = pd.DataFrame({
+            'lane': [1, pd.NA, 2],
+            'time': [1, 1, 1],
+            'weight': [10.5, 11.0, 9.8]
+        })
+        spec = AnalysisSpecification({
+            'analysis_type': 'Xbar',
+            'rsg_vars': ['lane'],
+            'rsg_var_name': 'rsg',
+            'time_var': 'time',
+            'response_var': 'weight'
+        })
+
+        result = detector.detect_sds_from_structure(
+            df, spec, response_col='weight'
+        )
+
+        # Row with NA lane should be filtered, not create phantom cell
+        # Should see 2 cells: (1,1) with n=1 and (2,1) with n=1
+        assert result.sds == 2  # No replication (all N_kt = 1)
+        assert result.n_empty_cells == 0
+
+    def test_string_factor_levels_not_merged(self, detector):
+        """String factor levels are not whitespace-trimmed (matches data_preparation).
+
+        Note: _detect_and_convert_type does NOT strip whitespace from strings.
+        "A" and "A " are treated as distinct factor levels.
+        """
+        df = pd.DataFrame({
+            'lane': ['A', 'A ', 'A'],  # "A" and "A " are distinct cells
+            'time': [1, 1, 1],
+            'weight': [10.5, 11.0, 10.8]
+        })
+        spec = AnalysisSpecification({
+            'analysis_type': 'Xbar',
+            'rsg_vars': ['lane'],
+            'rsg_var_name': 'rsg',
+            'time_var': 'time',
+            'response_var': 'weight'
+        })
+
+        result = detector.detect_sds_from_structure(
+            df, spec, response_col='weight'
+        )
+
+        # "A" and "A " are treated as distinct cells per data_preparation behavior
+        # Cell (A,1) has N_kt=2, Cell (A ,1) has N_kt=1
+        # This is SDS 3 (partial replication)
+        assert result.sds == 3  # Partial replication
+        assert result.min_cell_size == 1
+
+    def test_missing_tokens_normalized(self, detector):
+        """Common missing tokens should be normalized to NA."""
+        df = pd.DataFrame({
+            'lane': [1, 1, 1, 1],
+            'time': [1, 1, 1, 1],
+            'weight': [10.5, '*', 'NA', 'N/A']  # Various missing tokens
+        })
+        spec = AnalysisSpecification({
+            'analysis_type': 'Xbar',
+            'rsg_vars': ['lane'],
+            'rsg_var_name': 'rsg',
+            'time_var': 'time',
+            'response_var': 'weight'
+        })
+
+        result = detector.detect_sds_from_structure(
+            df, spec, response_col='weight'
+        )
+
+        # Cell (1,1) has 1 valid response out of 4
+        # min_cell_size should be 1
+        assert result.min_cell_size == 1
+        assert result.sds == 2  # No replication (N_kt = 1)
+
+    def test_completely_missing_cell_with_plan(self, detector):
+        """Cell that doesn't appear in data should be detected via plan."""
+        df = pd.DataFrame({
+            'lane': [1, 1, 2, 2],  # No cell (1,2) at all
+            'time': [1, 1, 1, 1],
+            'weight': [10.5, 10.6, 9.8, 9.9]
+        })
+        spec = AnalysisSpecification({
+            'analysis_type': 'Xbar',
+            'rsg_vars': ['lane'],
+            'rsg_var_name': 'rsg',
+            'time_var': 'time',
+            'response_var': 'weight'
+        })
+        # Plan expects 4 cells, but only 2 exist
+        plan = {'lane': [1, 2], 'time': [1, 2]}
+
+        result = detector.detect_sds_from_structure(
+            df, spec, response_col='weight', plan=plan
+        )
+
+        # Cells (1,2) and (2,2) are completely missing
+        assert result.n_empty_cells == 2
+        assert result.sds in [4, 5, 6]  # Incomplete structure
+
+    def test_T_planned_generates_time_values(self, detector):
+        """T_planned should generate time values 1..T when plan doesn't include time."""
+        df = pd.DataFrame({
+            'lane': [1, 2],
+            'time': [1, 1],
+            'weight': [10.5, 9.8]
+        })
+        spec = AnalysisSpecification({
+            'analysis_type': 'Xbar',
+            'rsg_vars': ['lane'],
+            'rsg_var_name': 'rsg',
+            'time_var': 'time',
+            'response_var': 'weight'
+        })
+        # Plan only specifies factors, T_planned specifies time extent
+        plan = {'lane': [1, 2]}  # No time column in plan
+
+        result = detector.detect_sds_from_structure(
+            df, spec, response_col='weight', plan=plan, T_planned=4
+        )
+
+        # Expected: 2 lanes × 4 times = 8 cells
+        # Observed: only 2 cells (1,1) and (2,1)
+        assert result.n_empty_cells == 6  # 8 - 2 = 6 empty cells
+        assert result.sds == 6  # Incomplete, no replication
+
+    def test_canonicalization_matches_data_types(self, detector):
+        """Plan canonicalization should match data canonicalization for numeric types.
+
+        Note: _detect_and_convert_type converts string numbers to actual numbers
+        but does NOT strip whitespace from non-numeric strings.
+        """
+        # Test numeric type combinations (these are canonicalized)
+        test_cases = [
+            # (data_val, plan_val, should_match)
+            (1, '1', True),         # int-like - both become 1
+            (1.5, '1.5', True),     # float-like - both become 1.5
+            ('A', 'A', True),       # identical strings - match
+            # Note: ('A', 'A ') would NOT match - whitespace is not trimmed
+        ]
+
+        for data_val, plan_val, should_match in test_cases:
+            df = pd.DataFrame({
+                'lane': [data_val],
+                'time': [1],
+                'weight': [10.5]
+            })
+            spec = AnalysisSpecification({
+                'analysis_type': 'Xbar',
+                'rsg_vars': ['lane'],
+                'rsg_var_name': 'rsg',
+                'time_var': 'time',
+                'response_var': 'weight'
+            })
+            plan = {'lane': [plan_val], 'time': [1]}
+
+            result = detector.detect_sds_from_structure(
+                df, spec, response_col='weight', plan=plan
+            )
+
+            if should_match:
+                assert result.n_empty_cells == 0, f"Expected match for {data_val} vs {plan_val}"
+            else:
+                assert result.n_empty_cells > 0, f"Expected mismatch for {data_val} vs {plan_val}"
+
+    def test_sds_result_includes_n_empty_cells(self, detector):
+        """SDSResult should include n_empty_cells field."""
+        df = pd.DataFrame({
+            'lane': [1, 2],
+            'time': [1, 1],
+            'weight': [10.5, 9.8]
+        })
+        spec = AnalysisSpecification({
+            'analysis_type': 'Xbar',
+            'rsg_vars': ['lane'],
+            'rsg_var_name': 'rsg',
+            'time_var': 'time',
+            'response_var': 'weight'
+        })
+
+        result = detector.detect_sds_from_structure(
+            df, spec, response_col='weight'
+        )
+
+        # Should have n_empty_cells attribute
+        assert hasattr(result, 'n_empty_cells')
+        assert result.n_empty_cells == 0  # Complete structure

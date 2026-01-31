@@ -310,10 +310,13 @@ class SDSResult:
         - "incomplete_with_singletons": SDS 4 (has 0s, 1s, and >=2s)
         - "incomplete_no_singletons": SDS 5 (has 0s and >=2s, no 1s)
         - "incomplete_no_replication": SDS 6 (has 0s, max = 1)
+    n_empty_cells : int
+        Number of cells with N_kt=0 (for debugging/diagnostics)
     """
     sds: int
     min_cell_size: int
     reason: SDSReasonType | None = None
+    n_empty_cells: int = 0
 
 
 class SDSRegistry:
@@ -373,23 +376,144 @@ class SDSRegistry:
     >>> result = registry.detect_sds(df, spec, plan=plan)
     """
 
+    def detect_sds_from_structure(
+        self,
+        df: pd.DataFrame,
+        spec: DataPrepConfig,
+        response_col: str,
+        plan: dict[str, list] | None = None,
+        T_planned: int | None = None
+    ) -> SDSResult:
+        """
+        Detect SDS from raw data structure (before response NA rows are dropped).
+
+        This matches Tom Bishop's Minitab approach: cells with all-NA responses
+        still count as "attempted" cells, revealing the true intended structure.
+
+        Parameters
+        ----------
+        df : DataFrame
+            Raw data (response NA rows NOT yet dropped)
+        spec : DataPrepConfig
+            Data preparation configuration
+        response_col : str
+            Name of response column
+        plan : dict, optional
+            Sampling plan defining intended structure. Should include time column
+            values if time-based structure is expected.
+        T_planned : int, optional
+            Planned number of time points. Only used when plan is provided but
+            doesn't include the time column. In that case, time values 1..T_planned
+            are crossed with plan factors to create expected cells.
+            If plan includes time column values, this parameter is ignored.
+
+        Returns
+        -------
+        SDSResult
+            SDS classification based on raw structure
+        """
+        # Build minimal structure view
+        structure_view, kt_cols = self._build_structure_view(df, spec, response_col)
+
+        # Compute N_kt = count of VALID responses per cell
+        # groupby naturally yields 0 for cells where ALL responses are NA
+        if kt_cols:
+            nkt_observed = structure_view.groupby(kt_cols, observed=True)[response_col].apply(
+                lambda s: s.notna().sum()
+            )
+        else:
+            # No factors or time - single cell
+            # NOTE: This uses regular Index (not MultiIndex). _classify_by_nkt must tolerate both.
+            nkt_observed = pd.Series([structure_view[response_col].notna().sum()], index=[()])
+
+        # Validate we have some data
+        if nkt_observed.sum() == 0:
+            raise ValueError("No valid response values found after filtering")
+
+        if plan is not None:
+            # WITH PLAN: Compare to canonicalized plan
+            canonicalized_plan = self._canonicalize_plan_values(plan, kt_cols)
+
+            # Handle time column:
+            # 1. If T_planned is given, use 1..T_planned
+            # 2. If plan includes time column, use that
+            # 3. Otherwise, use observed time values from structure_view
+            t = spec.time_var
+            if t and t in kt_cols:
+                if t not in canonicalized_plan or not canonicalized_plan[t]:
+                    if T_planned is not None:
+                        # Use 1..T_planned
+                        canonicalized_plan[t] = list(range(1, T_planned + 1))
+                    else:
+                        # Use observed time values from the data
+                        observed_times = structure_view[t].dropna().unique().tolist()
+                        canonicalized_plan[t] = sorted(observed_times)
+                        logger.debug(
+                            f"Plan doesn't include time column '{t}'; "
+                            f"using observed time values: {canonicalized_plan[t]}"
+                        )
+
+            # Check if we have all factor columns (not including time which we just filled)
+            factor_cols = [c for c in kt_cols if c != t]
+            missing_factor_cols = [c for c in factor_cols if c not in canonicalized_plan or not canonicalized_plan[c]]
+
+            if missing_factor_cols:
+                logger.warning(
+                    f"Plan missing required factor columns or has empty values for {missing_factor_cols}; "
+                    f"falling back to observed structure only."
+                )
+                nkt_counts = nkt_observed
+            elif kt_cols:
+                # Build expected cells using from_product (deterministic, avoids tuple list)
+                planned_index = pd.MultiIndex.from_product(
+                    [canonicalized_plan[c] for c in kt_cols],
+                    names=kt_cols
+                )
+                nkt_counts = nkt_observed.reindex(planned_index, fill_value=0)
+            else:
+                # No kt columns - single cell
+                nkt_counts = nkt_observed
+        else:
+            # WITHOUT PLAN: Use observed structure directly
+            # Zeros naturally appear for cells where all responses are NA
+            nkt_counts = nkt_observed
+
+        # has_empty_cells is derived directly from N_kt distribution
+        n_empty_cells = int((nkt_counts == 0).sum())
+        has_empty_cells = n_empty_cells > 0
+
+        if has_empty_cells:
+            logger.debug(
+                f"Structure detection: {n_empty_cells} cells with N_kt=0"
+            )
+
+        # Calculate min_cell_size for chart selection (only cells with valid data)
+        valid_nkt = nkt_counts[nkt_counts > 0]
+        min_cell_size = int(valid_nkt.min()) if len(valid_nkt) > 0 else 0
+
+        # Classify using standard logic
+        sds, reason = self._classify_by_nkt(nkt_counts, has_empty_cells)
+
+        # Include n_empty_cells in result for debugging/diagnostics
+        return SDSResult(sds=sds, min_cell_size=min_cell_size, reason=reason, n_empty_cells=n_empty_cells)
+
     def detect_sds(
         self,
         df: pd.DataFrame,
         spec: DataPrepConfig,
         plan: dict[str, list] | None = None,
-        T_planned: int | None = None
+        T_planned: int | None = None,
+        response_col: str | None = None
     ) -> SDSResult:
         """
         Detect Sampling Design State from data structure.
 
-        Implements Wheeler/Bishop Table 1 classification based on N_kt
-        (observations per factor × time cell) distribution.
+        This is a convenience wrapper around detect_sds_from_structure().
 
         Parameters
         ----------
         df : DataFrame
-            Prepared analysis dataset
+            Data (ideally raw with response NA rows preserved for accurate detection)
         spec : DataPrepConfig
             Data preparation configuration
         plan : dict, optional
@@ -404,11 +528,13 @@ class SDSRegistry:
             Expected number of time points from sampling plan. When provided,
             coverage calculation uses this instead of observed time count.
             This enables detection of incomplete temporal coverage.
+        response_col : str, optional
+            Response column name. If not provided, uses spec.response_var.
 
         Returns
         -------
         SDSResult
-            Result containing sds (1-6), min_cell_size, and reason.
+            Result containing sds (1-6), min_cell_size, reason, and n_empty_cells.
 
         Notes
         -----
@@ -442,36 +568,20 @@ class SDSRegistry:
         >>> plan = {'Lane': [1, 2, 3, 4], 'Phase': [1, 2, 3]}
         >>> result = detector.detect_sds(df, spec, plan=plan)
         """
-        # Store plan for potential use in helpers
-        self._plan = plan
+        resp = response_col if response_col is not None else spec.response_var
 
-        # --- Compute N_kt for (factor × time) cells ---
-        factor_cols = list(spec.rsg_vars)
-        group_cols = factor_cols + [spec.time_var] if spec.has_time else factor_cols
+        # Warn if data has no NA responses - likely passed prepared data
+        # Use _normalize_missing_tokens to detect NA (consistent with SDS detection)
+        # Guard against KeyError if column missing (will fail later with better error)
+        if resp in df.columns:
+            normalized_resp = self._normalize_missing_tokens(df[resp])
+            if normalized_resp.isna().sum() == 0:
+                logger.debug(
+                    "detect_sds called with data that has no NA responses; "
+                    "if this is prepared data, SDS may miss attempted-but-invalid cells."
+                )
 
-        nkt_counts = df.groupby(group_cols, dropna=False, observed=True).size()
-
-        # --- Compute min_cell_size for chart selection (factor-only) ---
-        subgroup_sizes = df.groupby(factor_cols, dropna=False, observed=True).size()
-        min_cell_size = subgroup_sizes.min()
-
-        logger.debug(
-            f"SDS Detection: N_kt range [{nkt_counts.min()}, {nkt_counts.max()}], "
-            f"{len(subgroup_sizes)} factor groups, "
-            f"subgroup size range [{min_cell_size}, {subgroup_sizes.max()}]"
-        )
-
-        # --- Determine if empty cells exist (requires plan) ---
-        has_empty_cells = False
-        if plan is not None:
-            coverage_ratio = self._calculate_coverage_ratio(df, spec, plan, T_planned)
-            has_empty_cells = coverage_ratio < 1.0
-            logger.debug(f"Plan coverage: {coverage_ratio:.1%}, has_empty_cells={has_empty_cells}")
-
-        # --- Classify by N_kt distribution (Table 1) ---
-        sds, reason = self._classify_by_nkt(nkt_counts, has_empty_cells)
-
-        return SDSResult(sds=sds, min_cell_size=min_cell_size, reason=reason)
+        return self.detect_sds_from_structure(df, spec, resp, plan, T_planned)
 
     def get_sds_characteristics(self, sds: int) -> dict:
         """
@@ -736,6 +846,151 @@ class SDSRegistry:
     # ========================================================================
     # Private Helper Methods
     # ========================================================================
+
+    def _normalize_missing_tokens(self, series: pd.Series) -> pd.Series:
+        """
+        Normalize missing value tokens to pd.NA without full type coercion.
+
+        This only handles:
+        - Standard missing tokens: *, NA, N/A, nan, null, None, empty string
+        - Whitespace-only strings
+
+        It does NOT:
+        - Coerce "10.5" to 10.5 (stays as string)
+        - Strip whitespace from non-missing values
+        - Detect/convert numeric strings
+
+        Use this for structure detection where we only need to identify NA responses,
+        not coerce types (that happens later in prepare_dataset()).
+
+        Parameters
+        ----------
+        series : pd.Series
+            Series to normalize
+
+        Returns
+        -------
+        pd.Series
+            Series with missing tokens converted to pd.NA
+        """
+        # Convert known missing tokens to NA (case-insensitive)
+        missing_tokens = {'*', 'na', 'n/a', 'nan', 'null', 'none'}
+
+        def normalize(x):
+            if pd.isna(x):
+                return pd.NA
+            if isinstance(x, str):
+                stripped = x.strip()
+                if stripped == '':
+                    return pd.NA
+                if stripped.lower() in missing_tokens:
+                    return pd.NA
+            return x
+
+        return series.apply(normalize)
+
+    def _build_structure_view(
+        self,
+        df: pd.DataFrame,
+        spec: DataPrepConfig,
+        response_col: str,
+    ) -> tuple[pd.DataFrame, list[str]]:
+        """
+        Build minimal structure view for SDS detection.
+
+        This creates a lightweight projection of the data with:
+        - Only kt_cols + response_col
+        - Canonicalized kt columns (same type conversion as prepare_dataset)
+        - Normalized response column (missing tokens → NA)
+        - Filtered rows where kt columns have NA (can't determine cell membership)
+        - Response NA rows PRESERVED (reveals all-NA cells)
+
+        Parameters
+        ----------
+        df : DataFrame
+            Raw data (response NA rows NOT yet dropped)
+        spec : DataPrepConfig
+            Data preparation configuration
+        response_col : str
+            Name of response column
+
+        Returns
+        -------
+        tuple of (structure_view, kt_cols)
+            structure_view: Canonicalized, filtered to valid kt rows, response NA preserved
+            kt_cols: List of column names for grouping
+        """
+        from .data_preparation import DataPreparation
+
+        prep = DataPreparation()
+
+        # Determine kt_cols
+        k_vars = list(spec.rsg_vars) if spec.rsg_vars else []
+        t = spec.time_var
+        # Include time_var only if not already in rsg_vars (avoid duplicates)
+        kt_cols = k_vars + [t] if (t and t not in k_vars) else k_vars
+
+        # Project to needed columns only (deduplicate response_col if it's in kt_cols)
+        cols_needed = list(dict.fromkeys(kt_cols + [response_col]))  # preserves order, removes dupes
+        out = df[cols_needed].copy()
+
+        # Canonicalize kt columns (same type conversion as prepare_dataset)
+        for col in kt_cols:
+            out[col], _ = prep._detect_and_convert_type(out[col], col)
+
+        # Normalize response column for consistent NA detection
+        # NOTE: This only normalizes missing tokens (*, NA, etc.) to pd.NA
+        # It does NOT do full type coercion (e.g., "10.5" stays "10.5", not 10.5)
+        # Full coercion happens later in prepare_dataset() for analysis
+        out[response_col] = self._normalize_missing_tokens(out[response_col])
+
+        # Filter rows with NA in any kt column (can't determine cell membership)
+        # Skip if kt_cols is empty (no factors, no time)
+        if kt_cols:
+            out = out[out[kt_cols].notna().all(axis=1)]
+
+        # NOTE: Response NA rows are PRESERVED - this reveals all-NA cells
+
+        return out, kt_cols
+
+    def _canonicalize_plan_values(
+        self,
+        plan: dict[str, list],
+        kt_cols: list[str],
+    ) -> dict[str, list]:
+        """
+        Canonicalize plan values using the same type conversion as data.
+
+        This prevents false "missing cells" when plan has "1" but data became 1,
+        or plan has "A " but data became "A".
+
+        Parameters
+        ----------
+        plan : dict
+            Sampling plan with {column: [levels]} structure
+        kt_cols : list[str]
+            List of kt column names to canonicalize
+
+        Returns
+        -------
+        dict[str, list]
+            Canonicalized plan with same types as data
+        """
+        from .data_preparation import DataPreparation
+
+        prep = DataPreparation()
+        canonicalized = {}
+
+        for col in kt_cols:
+            if col in plan:
+                # Create a temporary Series and canonicalize it
+                temp = pd.Series(plan[col])
+                converted, _ = prep._detect_and_convert_type(temp, col)
+                canonicalized[col] = converted.tolist()
+            else:
+                canonicalized[col] = []
+
+        return canonicalized
 
     def _classify_by_nkt(
         self,
