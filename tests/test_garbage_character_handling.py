@@ -286,7 +286,15 @@ class TestIntegrationWithAnalysis:
     """Test that garbage character handling works end-to-end with analysis."""
 
     def test_analysis_works_with_cleaned_data(self):
-        """Test that analysis runs successfully with cleaned data."""
+        """Test that analysis runs successfully with cleaned data.
+
+        With garbage values ('*', 'ND') converted to NA, some cells become empty:
+        - Cell (TIME=2, FACTOR=A): Y='*' → NA → N_kt=0
+        - Cell (TIME=3, FACTOR=B): Y='ND' → NA → N_kt=0
+
+        This creates an incomplete structure (SDS 6: incomplete, no replication).
+        SDS 6 supports Imr chart, not Xbar.
+        """
         df = pd.DataFrame({
             'TIME': [1, 1, 2, 2, 3, 3, 4, 4],
             'FACTOR': ['A', 'B', 'A', 'B', 'A', 'B', 'A', 'B'],
@@ -301,8 +309,12 @@ class TestIntegrationWithAnalysis:
             factors=[pdf.cols.FACTOR],
             time=pdf.cols.TIME
         )
-        # Use factor-level aggregation since cells have n=1
-        result = study.execute(chart='Xbar', by=['FACTOR'])
+
+        # SDS 6 detected due to empty cells (NA responses)
+        assert study.sds == 6
+
+        # Use Imr chart (valid for SDS 6) with explicit stratification
+        result = study.execute(chart='Imr', by=['FACTOR'])
 
         # Should complete successfully
         assert result is not None

@@ -721,18 +721,27 @@ class ProcessBehavior:
         # Create config for data preparation (no analysis_type needed yet)
         config = DataPrepConfig(spec_dict)
 
-        # Prepare data (adds 'rsg' column if needed)
+        # Validate columns early (fail fast)
         from .data_preparation import DataPreparation
         prep = DataPreparation()
         prep.validate_columns(self.data, config)
-        prepared_df = prep.prepare_dataset(self.data, config)
 
-        # Detect SDS on prepared data
-        # Pass sampling_plan and T_planned to enable SDS 4-6 detection
+        # SDS detection runs FIRST on raw data (response NA rows preserved)
+        # This matches Tom Bishop's Minitab approach: cells with all-NA responses
+        # still count as "attempted" cells, revealing the true intended structure.
         detector = SDSRegistry()
-        sds_result = detector.detect_sds(
-            prepared_df, config, plan=sampling_plan, T_planned=T_planned
+        sds_result = detector.detect_sds_from_structure(
+            self.data,           # Raw data (NA rows still present)
+            config,
+            response_col=response_str,
+            plan=sampling_plan,
+            T_planned=T_planned
         )
+
+        # Prepare data for analysis (drops response NA rows, adds keys)
+        # Note: prepared_df is not used directly here but AnalysisDataSet will
+        # re-prepare from raw data (self.data) using the spec
+        prep.prepare_dataset(self.data, config)
 
         # Get SDS analysis plan with all metadata
         analysis_plan = SDSRegistry.get_analysis_plan(
