@@ -311,7 +311,8 @@ class SDSResult:
         - "incomplete_no_singletons": SDS 5 (has 0s and >=2s, no 1s)
         - "incomplete_no_replication": SDS 6 (has 0s, max = 1)
     n_empty_cells : int
-        Number of cells with N_kt=0 (for debugging/diagnostics)
+        Count of cells with Nₖₜ=0 after plan reindex (if plan provided).
+        For observed-only detection, counts cells where all responses are NA.
     """
     sds: int
     min_cell_size: int

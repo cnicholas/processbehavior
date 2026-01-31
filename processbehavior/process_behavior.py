@@ -661,6 +661,12 @@ class ProcessBehavior:
         At least one grouping factor (via ``factors`` or ``plan``) is required.
         Wheeler's SDS classification assumes a factor × time grid structure.
 
+        **SDS Detection**
+
+        SDS detection runs on raw data (before NA rows are dropped) to preserve
+        attempted-but-invalid cells. This ensures cells with all-NA responses
+        are counted as empty (Nₖₜ=0) rather than vanishing from structure analysis.
+
         See Also
         --------
         Study : The returned Study object
