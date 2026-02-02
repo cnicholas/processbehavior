@@ -97,7 +97,7 @@ def test_s_chart_column_contract():
     })
 
     spec = {
-        'analysis_type': 'Xbar',
+        'analysis_type': 'S',  # Request S chart directly (SRP-compliant)
         'response_var': 'c',
         'rsg_vars': ['a', 'b'],
         'time_var': 'd',

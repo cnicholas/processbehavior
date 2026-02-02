@@ -107,13 +107,14 @@ class TestXbarSAnalysis:
             'rsg_var_name': 'rsg',
             'time_var': 'd',
             'round_to': 2,
-            'by': ['a', 'b']  # Aggregate by factors (not cell level)
+            'by': ['a', 'b'],  # Aggregate by factors (not cell level)
+            'paired': True,  # Request both Xbar and S charts
         }
 
         sds = detect_sds_for_test(df, spec)
         result = Analysis(df, spec, sds=sds).calculate()
 
-        # Should return both Xbar and S charts
+        # Should return both Xbar and S charts (paired=True)
         assert len(result) == 2
         assert 'Xbar' in result
         assert 'S' in result
@@ -141,7 +142,8 @@ class TestXbarSAnalysis:
             'rsg_var_name': 'rsg',
             'time_var': 'd',
             'round_to': 2,
-            'by': ['a', 'b']  # Aggregate by factors (not cell level)
+            'by': ['a', 'b'],  # Aggregate by factors (not cell level)
+            'paired': True,  # Request both Xbar and S charts
         }
 
         sds = detect_sds_for_test(df_differing_Ns, spec)

@@ -1233,7 +1233,8 @@ class Study:
         by: list[str] | None = None,
         value: str | None = None,
         recentered: bool = False,
-        bins: int | None = None
+        bins: int | None = None,
+        paired: bool = False
     ) -> AnalysisResult:
         """
         Run the analysis and return results.
@@ -1277,6 +1278,14 @@ class Study:
             For residual charts only. If True, uses re-centered residuals
             (RCR2, RCR3, etc.) which add back the appropriate mean for
             easier interpretation. See Tom Bishop Equation 80.
+
+        paired : bool, default False
+            When True, returns both Xbar and S charts together (or both Imr
+            and R charts) regardless of which chart is requested. This follows
+            Wheeler's methodology of always analyzing paired charts together.
+
+            - paired=False (default): Returns only the requested chart (SRP-compliant)
+            - paired=True: Returns both paired charts (Xbar+S or Imr+R)
 
         Returns
         -------
@@ -1406,6 +1415,7 @@ class Study:
             'residual_chart_type': base_chart if is_residual else None,
             'recentered': recentered,
             'bins': bins if bins is not None else 10,  # Default 10 bins for Histogram
+            'paired': paired,
         }
 
         # Create and run analysis using pre-calculated AnalysisDataSet
