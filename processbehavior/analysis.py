@@ -398,15 +398,27 @@ class Analysis:
 
         else:
             # Standard chart analysis
-            # Note: Imr and R are bundled together (both call _calculate_imr)
-            # just like Xbar and S are bundled together
-            strategies = {
-                'Xbar': self._calculate_xbar,
-                'S': self._calculate_s,
-                'Imr': self._calculate_imr,
-                'R': self._calculate_imr,  # Bundled with Imr
-                'Histogram': self._calculate_histogram
-            }
+            # Check if paired charts requested (Xbar+S or Imr+R together)
+            paired = getattr(self.spec, 'paired', False)
+
+            if paired:
+                # Paired mode: return both charts regardless of which was requested
+                strategies = {
+                    'Xbar': self._calculate_xbar_s,
+                    'S': self._calculate_xbar_s,
+                    'Imr': self._calculate_imr,  # Imr/R always bundled
+                    'R': self._calculate_imr,
+                    'Histogram': self._calculate_histogram  # No pairing for Histogram
+                }
+            else:
+                # SRP-compliant mode: return only the requested chart
+                strategies = {
+                    'Xbar': self._calculate_xbar,
+                    'S': self._calculate_s,
+                    'Imr': self._calculate_imr,  # Still bundled (legacy behavior)
+                    'R': self._calculate_imr,
+                    'Histogram': self._calculate_histogram
+                }
 
             if self.analysis_type not in strategies:
                 raise ValueError(
@@ -804,7 +816,11 @@ class Analysis:
     # Chart Calculation Methods (Strategy Pattern)
     # =========================================================================
 
-    def _calculate_xbar(self, value_col: str = None) -> pd.DataFrame:
+    def _calculate_xbar(
+        self,
+        value_col: str = None,
+        _return_intermediates: bool = False
+    ) -> dict:
         """
         Calculate Xbar (mean) chart statistics.
 
@@ -813,6 +829,16 @@ class Analysis:
         value_col : str, optional
             Column to use for calculations. Defaults to spec.response_var.
             Pass a residual column (R2, R5, etc.) for residual charts.
+        _return_intermediates : bool, optional
+            If True, includes '_intermediates' key with values needed by
+            _calculate_s() to avoid redundant computation. Used internally
+            by _calculate_xbar_s() for paired chart calculation.
+
+        Returns
+        -------
+        dict
+            Chart data: {'Xbar': {'data': df, 'statistics': dict, 'metadata': dict}}
+            If _return_intermediates=True, also includes '_intermediates' key.
 
         Logic moved from Xbar.calculate_statistics()
         """
@@ -951,57 +977,24 @@ class Analysis:
             }
         }
 
-        # CALCULATE S
-        statistics = {}
-        statistics['center'] = round(_S, spec.round_to)
-
-        sbar = out.copy()
-        sbar['center'] = _S  # Add center column for S chart
-        sbar[['lpl', 'upl']] = sbar.apply(
-            lambda row: calculate_limits(
-                mean=0,
-                sd=row['center'],
-                N=row[n_to_use],
-                limits_type="S",
-                round_to=spec.round_to
-            ), axis=1
-        )
-
-        # Detect beyond limits signals
-        # FIX: Should use 's' (varying values) not 'S'/'center' (constant)
-        sbar = self._add_beyond_limits_flag(sbar, value_col='s')
-        sbar = sbar.round(spec.round_to)
-
-        if n_to_use == "N":
-            statistics['N'] = _N
-            statistics['upl'] = sbar['upl'].max()
-            statistics['lpl'] = sbar['lpl'].max()
-        else:
-            variable_stats = 'Varies'
-            statistics['N'] = variable_stats
-            statistics['lpl'] = variable_stats
-            statistics['upl'] = variable_stats
-
-        # Apply same grouping transformation as xbar
-        if len(groupby_cols) > 1 and group_col == 'group':
-            sbar['group'] = sbar[groupby_cols].astype(str).agg('_'.join, axis=1)
-
-        cols_to_keep = [group_col, 's', 'center', 'lpl', 'upl', 'beyond_limits']
-        cols_to_keep = [c for c in cols_to_keep if c in sbar.columns]
-        sbar = sbar[cols_to_keep]
-        result['S'] = {
-            'data': sbar,
-            'statistics': statistics,
-            'metadata': {
-                'chart_type': 'S',
-                'value_col': 's',
-                'center_col': 'center'
+        # Optionally include intermediates for paired calculation
+        if _return_intermediates:
+            result['_intermediates'] = {
+                '_S': _S,
+                'n_to_use': n_to_use,
+                'n_max': n_max,
+                'groupby_cols': groupby_cols,
+                'group_col': group_col,
+                'out': out,  # Pre-aggregated DataFrame with s, n, mean columns
             }
-        }
 
         return result
 
-    def _calculate_s(self, value_col: str = None) -> pd.DataFrame:
+    def _calculate_s(
+        self,
+        value_col: str = None,
+        _precomputed: dict = None
+    ) -> dict:
         """
         Calculate S (standard deviation) chart statistics.
 
@@ -1010,6 +1003,16 @@ class Analysis:
         value_col : str, optional
             Column to use for calculations. Defaults to spec.response_var.
             Pass a residual column (R2, R5, etc.) for residual charts.
+        _precomputed : dict, optional
+            Pre-computed values from _calculate_xbar() to avoid redundant
+            computation. Used internally by _calculate_xbar_s() for paired
+            chart calculation. Keys: '_S', 'n_to_use', 'n_max', 'groupby_cols',
+            'group_col', 'out'.
+
+        Returns
+        -------
+        dict
+            Chart data: {'S': {'data': df, 'statistics': dict, 'metadata': dict}}
 
         Logic moved from calculate_statistics_S()
         """
@@ -1017,40 +1020,68 @@ class Analysis:
         if value_col is None:
             value_col = spec.response_var
 
-        df = self.ads.analysis_dataset.copy()
-
-        # Resolve grouping based on `by` parameter
-        groupby_cols, _ = self._resolve_by_grouping(value_col)
-
-        # Handle by=[] (collapse all) - single point chart
-        if groupby_cols == []:
-            _S = df[value_col].std()
-            _N = len(df)
-            out = pd.DataFrame({
-                'group': ['All'],
-                's': [_S],
-                'n': [_N],
-                'N': [_N]
-            })
+        # Use precomputed values if available (from _calculate_xbar_s)
+        if _precomputed is not None:
+            _S = _precomputed['_S']
+            n_to_use = _precomputed['n_to_use']
+            n_max = _precomputed['n_max']
+            groupby_cols = _precomputed['groupby_cols']
+            group_col = _precomputed['group_col']
+            out = _precomputed['out'].copy()
         else:
-            out = df.groupby(groupby_cols, as_index=False, observed=True).agg(
-                s=pd.NamedAgg(column=value_col, aggfunc="std"),
-                # Count on response_var (not value_col) to avoid NaN issues with residuals
-                n=pd.NamedAgg(column=spec.response_var, aggfunc="count"),
-            )
+            # Independent calculation (existing logic)
+            df = self.ads.analysis_dataset.copy()
 
-            # remove groups with a single observation
-            mask = out['n'].eq(1)
-            out = out[~mask]
+            # Resolve grouping based on `by` parameter
+            groupby_cols, _ = self._resolve_by_grouping(value_col)
 
-            out['N'] = out['n'].max()
+            # Handle by=[] (collapse all) - single point chart
+            if groupby_cols == []:
+                _S = df[value_col].std()
+                _N = len(df)
+                out = pd.DataFrame({
+                    'group': ['All'],
+                    's': [_S],
+                    'n': [_N],
+                    'N': [_N]
+                })
+            else:
+                out = df.groupby(groupby_cols, as_index=False, observed=True).agg(
+                    s=pd.NamedAgg(column=value_col, aggfunc="std"),
+                    # Count on response_var (not value_col) to avoid NaN issues with residuals
+                    n=pd.NamedAgg(column=spec.response_var, aggfunc="count"),
+                )
 
-        # Calculate center line (mean of subgroup std devs)
-        out['center'] = out["s"].mean()
+                # remove groups with a single observation
+                mask = out['n'].eq(1)
+                out = out[~mask]
+
+                out['N'] = out['n'].max()
+
+            # Calculate center line (mean of subgroup std devs)
+            _S = out["s"].mean()
+
+            # Determine if subgroup sizes are constant or variable
+            n_to_use, n_max = self._determine_n_to_use(out)
+
+            # Determine group_col
+            if spec.by is not None and spec.by != []:
+                if len(groupby_cols) == 1:
+                    out['subgroup'] = out[groupby_cols[0]].astype(str)
+                else:
+                    out['subgroup'] = out[groupby_cols].astype(str).agg('_'.join, axis=1)
+                group_col = 'subgroup'
+            elif len(groupby_cols) > 1:
+                out['group'] = out[groupby_cols].astype(str).agg('_'.join, axis=1)
+                group_col = 'group'
+            elif groupby_cols:
+                group_col = groupby_cols[0]
+            else:
+                group_col = None
+
+        # Calculate S chart (common path for both precomputed and independent)
+        out['center'] = _S
         out['groups'] = out["n"].count()
-
-        # Determine if subgroup sizes are constant or variable
-        n_to_use, n_max = self._determine_n_to_use(out)
 
         # Add limits columns
         out[['lpl', 'upl']] = out.apply(
@@ -1064,26 +1095,21 @@ class Analysis:
         )
 
         # Detect beyond limits signals
-        # FIX: Should use 's' (varying values) not 'center' (constant)
         out = self._add_beyond_limits_flag(out, value_col='s')
 
-        # Determine the grouping column for output
-        if spec.by is not None and spec.by != []:
-            # Explicit by list - create 'subgroup' column (THE BUG FIX)
-            if len(groupby_cols) == 1:
-                out['subgroup'] = out[groupby_cols[0]].astype(str)
-            else:
-                out['subgroup'] = out[groupby_cols].astype(str).agg('_'.join, axis=1)
-            group_col = 'subgroup'
-        elif len(groupby_cols) > 1:
-            # by=None - create 'group' from multiple columns (original behavior)
-            out['group'] = out[groupby_cols].astype(str).agg('_'.join, axis=1)
-            group_col = 'group'
-        elif groupby_cols:
-            # Single groupby column
-            group_col = groupby_cols[0]
+        # Apply grouping column transformation if needed and not already done
+        if _precomputed is None:
+            # Already handled in independent path above
+            pass
         else:
-            group_col = None
+            # For precomputed path, apply group_col transformation
+            if spec.by is not None and spec.by != [] and 'subgroup' not in out.columns:
+                if len(groupby_cols) == 1:
+                    out['subgroup'] = out[groupby_cols[0]].astype(str)
+                else:
+                    out['subgroup'] = out[groupby_cols].astype(str).agg('_'.join, axis=1)
+            elif len(groupby_cols) > 1 and group_col == 'group' and 'group' not in out.columns:
+                out['group'] = out[groupby_cols].astype(str).agg('_'.join, axis=1)
 
         cols_to_keep = [group_col, 's', 'center', 'lpl', 'upl', 'beyond_limits']
         cols_to_keep = [c for c in cols_to_keep if c in out.columns]
@@ -1091,12 +1117,11 @@ class Analysis:
         out = out.round(spec.round_to)
 
         # Build statistics
-        _S = out['center'].iloc[0] if len(out) > 0 else None
-        _N = n_max
+        _S_stat = out['center'].iloc[0] if len(out) > 0 else None
 
-        statistics = {'center': round(_S, spec.round_to) if _S else None}
+        statistics = {'center': round(_S_stat, spec.round_to) if _S_stat else None}
         if n_to_use == "N":
-            statistics['N'] = _N
+            statistics['N'] = n_max
             statistics['upl'] = out['upl'].max()
             statistics['lpl'] = out['lpl'].max()
         else:
@@ -1116,6 +1141,36 @@ class Analysis:
                 }
             }
         }
+
+    def _calculate_xbar_s(self, value_col: str = None) -> dict:
+        """
+        Calculate Xbar and S charts together (Wheeler methodology).
+
+        This method ensures that when paired=True, both charts are calculated
+        efficiently using shared intermediate values. The S chart uses the
+        same aggregated data computed for Xbar, avoiding redundant calculation.
+
+        Parameters
+        ----------
+        value_col : str, optional
+            Column to use for calculations. Defaults to spec.response_var.
+
+        Returns
+        -------
+        dict
+            Combined chart data: {'Xbar': {...}, 'S': {...}}
+        """
+        # Calculate Xbar with intermediates for S reuse
+        xbar_result = self._calculate_xbar(value_col, _return_intermediates=True)
+
+        # Extract intermediates and remove from result
+        intermediates = xbar_result.pop('_intermediates')
+
+        # Calculate S using precomputed values
+        s_result = self._calculate_s(value_col, _precomputed=intermediates)
+
+        # Combine results
+        return {**xbar_result, **s_result}
 
     def _calculate_imr(self, value_col: str = None) -> dict:  # noqa: C901
         """

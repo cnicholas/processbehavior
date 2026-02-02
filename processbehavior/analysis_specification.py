@@ -300,6 +300,9 @@ class AnalysisSpecification(DataPrepConfig):
         # Histogram parameters
         self.bins = specification.get('bins', 10)  # Default 10 bins
 
+        # Paired chart parameter (for SRP-compliant Xbar/S bundling)
+        self.paired = specification.get('paired', False)
+
         # Initialize analysis output columns
         self.analysis_output_cols = [self.response_var, 'mean', 'lpl', 'upl', 'beyond_limits']
         self._build_output_cols()

@@ -56,7 +56,8 @@ class TestWECOIntegration:
             factors=[pdf.cols.factor_1, pdf.cols.factor_2],
             time=pdf.cols.time
         )
-        result = study.execute()
+        # Request S chart explicitly (SRP-compliant)
+        result = study.execute(chart='S')
 
         # Verify S chart has metadata
         assert 'S' in result.charts
@@ -85,7 +86,8 @@ class TestWECOIntegration:
             factors=[pdf.cols.factor_1, pdf.cols.factor_2],
             time=pdf.cols.time
         )
-        result = study.execute()
+        # Use paired=True to get both Xbar and S charts
+        result = study.execute(paired=True)
 
         # Detect signals on all charts
         # Use config with lower min_observations
@@ -196,7 +198,8 @@ class TestMetadataContract:
             factors=[pdf.cols.factor_1, pdf.cols.factor_2],
             time=pdf.cols.time
         )
-        result = study.execute()
+        # Use paired=True to get both Xbar and S charts
+        result = study.execute(paired=True)
 
         # Check Xbar metadata
         xbar_meta = result.charts['Xbar']['metadata']
