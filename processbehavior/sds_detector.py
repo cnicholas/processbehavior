@@ -440,19 +440,18 @@ class SDSRegistry:
             # 2. If plan includes time column, use that
             # 3. Otherwise, use observed time values from structure_view
             t = spec.time_var
-            if t and t in kt_cols:
-                if t not in canonicalized_plan or not canonicalized_plan[t]:
-                    if T_planned is not None:
-                        # Use 1..T_planned
-                        canonicalized_plan[t] = list(range(1, T_planned + 1))
-                    else:
-                        # Use observed time values from the data
-                        observed_times = structure_view[t].dropna().unique().tolist()
-                        canonicalized_plan[t] = sorted(observed_times)
-                        logger.debug(
-                            f"Plan doesn't include time column '{t}'; "
-                            f"using observed time values: {canonicalized_plan[t]}"
-                        )
+            if t and t in kt_cols and (t not in canonicalized_plan or not canonicalized_plan[t]):
+                if T_planned is not None:
+                    # Use 1..T_planned
+                    canonicalized_plan[t] = list(range(1, T_planned + 1))
+                else:
+                    # Use observed time values from the data
+                    observed_times = structure_view[t].dropna().unique().tolist()
+                    canonicalized_plan[t] = sorted(observed_times)
+                    logger.debug(
+                        f"Plan doesn't include time column '{t}'; "
+                        f"using observed time values: {canonicalized_plan[t]}"
+                    )
 
             # Check if we have all factor columns (not including time which we just filled)
             factor_cols = [c for c in kt_cols if c != t]
