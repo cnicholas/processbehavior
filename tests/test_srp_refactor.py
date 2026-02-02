@@ -1,9 +1,10 @@
-"""Tests for SRP refactor of Xbar/S chart calculation.
+"""Tests for SRP refactor of Xbar/S and Imr/R chart calculation.
 
 These tests verify that the `paired` parameter works correctly and that
-the refactored _calculate_xbar() follows Single Responsibility Principle.
+the refactored chart methods follow Single Responsibility Principle.
 
 Issue #69 Phase 1: Xbar/S SRP Refactor
+Issue #69 Phase 2: Imr/R SRP Refactor
 """
 
 import pandas as pd
@@ -43,7 +44,7 @@ def sds3_study():
 # =============================================================================
 
 class TestSRPCompliance:
-    """Test that _calculate_xbar() follows Single Responsibility Principle.
+    """Test that chart methods follow Single Responsibility Principle.
 
     With paired=False (default), each chart method returns only its own chart.
     """
@@ -68,13 +69,33 @@ class TestSRPCompliance:
         # Should NOT have Xbar (SRP compliance)
         assert 'Xbar' not in result.charts
 
+    def test_calculate_imr_returns_only_imr(self, sds1_study):
+        """Imr chart should return only Imr data when paired=False."""
+        result = sds1_study.execute(chart='Imr', by=[])
+
+        # Should have Imr
+        assert 'Imr' in result.charts
+
+        # Should NOT have R (SRP compliance)
+        assert 'R' not in result.charts
+
+    def test_calculate_r_returns_only_r(self, sds1_study):
+        """R chart should return only R data when paired=False."""
+        result = sds1_study.execute(chart='R', by=[])
+
+        # Should have R
+        assert 'R' in result.charts
+
+        # Should NOT have Imr (SRP compliance)
+        assert 'Imr' not in result.charts
+
 
 # =============================================================================
 # PAIRED BEHAVIOR TESTS
 # =============================================================================
 
 class TestPairedBehavior:
-    """Test that paired=True bundles Xbar and S together."""
+    """Test that paired=True bundles chart pairs together."""
 
     def test_paired_xbar_returns_both_charts(self, sds1_study):
         """With paired=True, requesting Xbar should return both Xbar and S."""
@@ -92,19 +113,21 @@ class TestPairedBehavior:
         assert 'Xbar' in result.charts
         assert 'S' in result.charts
 
-    def test_paired_imr_behavior_unchanged(self, sds1_study):
-        """IMR charts already return both Imr and R - paired shouldn't change this."""
-        # With paired=False (default)
-        result_unpaired = sds1_study.execute(chart='Imr', by=[])
+    def test_paired_imr_returns_both_charts(self, sds1_study):
+        """With paired=True, requesting Imr should return both Imr and R."""
+        result = sds1_study.execute(chart='Imr', by=[], paired=True)
 
-        # With paired=True
-        result_paired = sds1_study.execute(chart='Imr', by=[], paired=True)
+        # Should have both charts
+        assert 'Imr' in result.charts
+        assert 'R' in result.charts
 
-        # Both should have Imr and R
-        assert 'Imr' in result_unpaired.charts
-        assert 'R' in result_unpaired.charts
-        assert 'Imr' in result_paired.charts
-        assert 'R' in result_paired.charts
+    def test_paired_r_returns_both_charts(self, sds1_study):
+        """With paired=True, requesting R should return both Imr and R."""
+        result = sds1_study.execute(chart='R', by=[], paired=True)
+
+        # Should have both charts
+        assert 'Imr' in result.charts
+        assert 'R' in result.charts
 
 
 # =============================================================================
@@ -112,7 +135,7 @@ class TestPairedBehavior:
 # =============================================================================
 
 class TestConsistency:
-    """Test that Xbar/S data is identical whether calculated paired or unpaired."""
+    """Test that chart data is identical whether calculated paired or unpaired."""
 
     def test_xbar_data_identical_paired_vs_unpaired(self, sds1_study):
         """Xbar data should be identical whether calculated alone or with S."""
@@ -162,6 +185,54 @@ class TestConsistency:
 
         assert stats_solo == stats_paired
 
+    def test_imr_data_identical_paired_vs_unpaired(self, sds1_study):
+        """Imr data should be identical whether calculated alone or with R."""
+        result_solo = sds1_study.execute(chart='Imr', by=[])
+        result_paired = sds1_study.execute(chart='Imr', by=[], paired=True)
+
+        imr_solo = result_solo.charts['Imr']['data']
+        imr_paired = result_paired.charts['Imr']['data']
+
+        pd.testing.assert_frame_equal(
+            imr_solo.reset_index(drop=True),
+            imr_paired.reset_index(drop=True),
+            check_names=False
+        )
+
+    def test_imr_statistics_identical_paired_vs_unpaired(self, sds1_study):
+        """Imr statistics should be identical whether calculated alone or with R."""
+        result_solo = sds1_study.execute(chart='Imr', by=[])
+        result_paired = sds1_study.execute(chart='Imr', by=[], paired=True)
+
+        stats_solo = result_solo.charts['Imr']['statistics']
+        stats_paired = result_paired.charts['Imr']['statistics']
+
+        assert stats_solo == stats_paired
+
+    def test_r_data_identical_paired_vs_independent(self, sds1_study):
+        """R data should be identical whether calculated via paired or independently."""
+        result_solo = sds1_study.execute(chart='R', by=[])
+        result_paired = sds1_study.execute(chart='R', by=[], paired=True)
+
+        r_solo = result_solo.charts['R']['data']
+        r_paired = result_paired.charts['R']['data']
+
+        pd.testing.assert_frame_equal(
+            r_solo.reset_index(drop=True),
+            r_paired.reset_index(drop=True),
+            check_names=False
+        )
+
+    def test_r_statistics_identical_paired_vs_independent(self, sds1_study):
+        """R statistics should be identical whether calculated via paired or independently."""
+        result_solo = sds1_study.execute(chart='R', by=[])
+        result_paired = sds1_study.execute(chart='R', by=[], paired=True)
+
+        stats_solo = result_solo.charts['R']['statistics']
+        stats_paired = result_paired.charts['R']['statistics']
+
+        assert stats_solo == stats_paired
+
 
 # =============================================================================
 # DEFAULT BEHAVIOR TESTS
@@ -170,14 +241,23 @@ class TestConsistency:
 class TestDefaultBehavior:
     """Test that paired=False is the default (SRP-compliant by default)."""
 
-    def test_paired_false_is_default(self, sds1_study):
-        """Default behavior should be paired=False (SRP-compliant)."""
+    def test_paired_false_is_default_xbar(self, sds1_study):
+        """Default behavior should be paired=False (SRP-compliant) for Xbar."""
         # Execute without specifying paired
         result = sds1_study.execute(chart='Xbar')
 
         # Should only have Xbar (default is paired=False)
         assert 'Xbar' in result.charts
         assert 'S' not in result.charts
+
+    def test_paired_false_is_default_imr(self, sds1_study):
+        """Default behavior should be paired=False (SRP-compliant) for Imr."""
+        # Execute without specifying paired
+        result = sds1_study.execute(chart='Imr', by=[])
+
+        # Should only have Imr (default is paired=False)
+        assert 'Imr' in result.charts
+        assert 'R' not in result.charts
 
     def test_histogram_ignores_paired(self, sds1_study):
         """Histogram should ignore paired parameter (no paired histogram)."""
@@ -227,3 +307,68 @@ class TestEdgeCases:
 
         # Should have same number of rows
         assert len(xbar_data) == len(s_data)
+
+    def test_imr_srp_stratified(self, sds1_study):
+        """Imr SRP should work correctly with stratification (by parameter)."""
+        # Stratify by all factors
+        result = sds1_study.execute(chart='Imr', by=['factor 1', 'factor 2'])
+
+        # Should have Imr only
+        assert 'Imr' in result.charts
+        assert 'R' not in result.charts
+
+        # Should have strata metadata
+        assert 'strata' in result.charts['Imr']
+
+    def test_imr_srp_ungrouped(self, sds1_study):
+        """Imr SRP should work correctly without stratification (by=[])."""
+        result = sds1_study.execute(chart='Imr', by=[])
+
+        # Should have Imr only
+        assert 'Imr' in result.charts
+        assert 'R' not in result.charts
+
+        # Should NOT have strata (ungrouped)
+        assert 'strata' not in result.charts['Imr']
+
+    def test_r_srp_stratified(self, sds1_study):
+        """R SRP should work correctly with stratification."""
+        # Stratify by all factors
+        result = sds1_study.execute(chart='R', by=['factor 1', 'factor 2'])
+
+        # Should have R only
+        assert 'R' in result.charts
+        assert 'Imr' not in result.charts
+
+        # Should have strata metadata
+        assert 'strata' in result.charts['R']
+
+    def test_r_srp_ungrouped(self, sds1_study):
+        """R SRP should work correctly without stratification."""
+        result = sds1_study.execute(chart='R', by=[])
+
+        # Should have R only
+        assert 'R' in result.charts
+        assert 'Imr' not in result.charts
+
+    def test_paired_imr_with_stratification(self, sds1_study):
+        """Paired Imr/R should work with stratification."""
+        result = sds1_study.execute(chart='Imr', by=['factor 1', 'factor 2'], paired=True)
+
+        # Should have both charts
+        assert 'Imr' in result.charts
+        assert 'R' in result.charts
+
+        # Both should have strata
+        assert 'strata' in result.charts['Imr']
+        assert 'strata' in result.charts['R']
+
+    def test_paired_imr_and_r_have_consistent_strata(self, sds1_study):
+        """When paired, Imr and R should have the same strata."""
+        result = sds1_study.execute(chart='Imr', by=['factor 1', 'factor 2'], paired=True)
+
+        imr_strata = result.charts['Imr']['strata']
+        r_strata = result.charts['R']['strata']
+
+        # Should have same strata
+        assert imr_strata == r_strata

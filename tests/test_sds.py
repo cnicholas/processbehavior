@@ -135,11 +135,13 @@ class TestSDSDetection:
         )
 
         # IMR with factors requires explicit 'by' parameter
+        # SRP: Imr only returns Imr (use paired=True for bundled Imr+R)
         result = study.execute(chart='Imr', by=['factor 1', 'factor 2'])
 
         assert result is not None
-        # Should have separate charts per group
-        assert len(result.charts) >= 2
+        # SRP: Should have single Imr chart
+        assert len(result.charts) == 1
+        assert 'Imr' in result.charts
 
 
 class TestVASCalculationDecisions:

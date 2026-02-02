@@ -406,8 +406,8 @@ class Analysis:
                 strategies = {
                     'Xbar': self._calculate_xbar_s,
                     'S': self._calculate_xbar_s,
-                    'Imr': self._calculate_imr,  # Imr/R always bundled
-                    'R': self._calculate_imr,
+                    'Imr': self._calculate_imr_r,  # Bundled Imr+R
+                    'R': self._calculate_imr_r,
                     'Histogram': self._calculate_histogram  # No pairing for Histogram
                 }
             else:
@@ -415,8 +415,8 @@ class Analysis:
                 strategies = {
                     'Xbar': self._calculate_xbar,
                     'S': self._calculate_s,
-                    'Imr': self._calculate_imr,  # Still bundled (legacy behavior)
-                    'R': self._calculate_imr,
+                    'Imr': self._calculate_imr,  # SRP: Imr only
+                    'R': self._calculate_r,  # SRP: R only
                     'Histogram': self._calculate_histogram
                 }
 
@@ -1172,32 +1172,32 @@ class Analysis:
         # Combine results
         return {**xbar_result, **s_result}
 
-    def _calculate_imr(self, value_col: str = None) -> dict:  # noqa: C901
+    def _calculate_imr(  # noqa: C901
+        self,
+        value_col: str = None,
+        _return_intermediates: bool = False
+    ) -> dict:
         """
-        Calculate IMR (Individual Moving Range) and R (Range) chart statistics.
-
-        These charts are bundled together following Wheeler's convention of
-        always analyzing individuals and moving range charts as a pair.
+        Calculate IMR (Individual) chart statistics.
 
         Parameters
         ----------
         value_col : str, optional
             Column to use for calculations. Defaults to spec.response_var.
             Pass a residual column (R2, R5, etc.) for residual charts.
+        _return_intermediates : bool, optional
+            If True, includes '_intermediates' key with values needed by
+            _calculate_r() to avoid redundant computation. Used internally
+            by _calculate_imr_r() for paired chart calculation.
 
         Returns
         -------
         dict
-            Chart data with chart type as key:
-            - For ungrouped: {'Imr': {...}, 'R': {...}}
-            - For stratified: {'Imr': {..., 'strata': [...]}, 'R': {..., 'strata': [...]}}
+            Chart data: {'Imr': {'data': df, 'statistics': dict, 'metadata': dict}}
+            If _return_intermediates=True, also includes '_intermediates' key.
 
         Notes
         -----
-        Imr and R are bundled together, similar to how Xbar and S are bundled.
-        For stratified data, the DataFrame is kept combined (with rsg column)
-        and statistics are nested by stratum.
-
         The `by` parameter controls stratification:
         - by=[] → single chart with all observations, lane boundaries for all factors
         - by=['factor1'] → one chart per factor1, lane boundaries for remaining factors
@@ -1357,98 +1357,19 @@ class Analysis:
                 'strata': strata
             }
 
-            # CALCULATE R CHART (bundled with IMR)
-            # Compute R limits per group
-            r_grouped = grouped.copy()
-            r_grouped = r_grouped.rename(columns={'center': 'imr_center', 'mR': 'center'})
-
-            r_lims = r_grouped.apply(
-                lambda row: calculate_limits(
-                    mean=0,
-                    sd=0,
-                    N=0,
-                    mR=row['center'],
-                    limits_type="R",
-                    round_to=spec.round_to
-                ),
-                axis=1
-            )
-
-            if isinstance(r_lims, pd.DataFrame):
-                r_grouped = r_grouped.join(r_lims[['lpl', 'upl']], rsuffix='_r')
-            else:
-                r_lims_df = pd.DataFrame(r_lims.map(_limits_to_pair).tolist(),
-                                         index=r_grouped.index,
-                                         columns=['lpl', 'upl'])
-                r_grouped = r_grouped.join(r_lims_df, rsuffix='_r')
-
-            # Ensure lpl/upl columns for R chart
-            if 'lpl_r' in r_grouped.columns:
-                r_grouped = r_grouped.rename(columns={'lpl_r': 'r_lpl', 'upl_r': 'r_upl'})
-                r_lpl_col, r_upl_col = 'r_lpl', 'r_upl'
-            else:
-                r_lpl_col, r_upl_col = 'lpl', 'upl'
-
-            # Merge R limits to the data
-            r_out = out.copy()
-            # Drop IMR limits columns
-            r_out = r_out.drop(columns=['center', 'lpl', 'upl', 'beyond_limits'], errors='ignore')
-            # Merge R limits
-            r_merge_data = r_grouped[[stratify_col, 'center', r_lpl_col, r_upl_col]].rename(
-                columns={r_lpl_col: 'lpl', r_upl_col: 'upl'}
-            )
-            r_out = r_out.merge(r_merge_data, on=stratify_col, how='left', validate='many_to_one')
-
-            # Drop NA rows (first observation in each group has no moving range)
-            r_out = r_out.dropna(subset=['mr'])
-
-            # Detect beyond limits signals for R
-            r_out = self._add_beyond_limits_flag(r_out, value_col='mr')
-
-            # Build R statistics nested by stratum
-            r_statistics = {}
-            for stratum in strata:
-                row = r_grouped[r_grouped[stratify_col] == stratum].iloc[0]
-                r_statistics[stratum] = {
-                    'center': round(row['center'], spec.round_to),
-                    'lpl': round(row[r_lpl_col], spec.round_to),
-                    'upl': round(row[r_upl_col], spec.round_to)
+            # Optionally include intermediates for paired calculation
+            if _return_intermediates:
+                result['_intermediates'] = {
+                    'out': out,  # DataFrame with mr column, sorted
+                    'grouped': grouped,  # Aggregated stats per stratum
+                    'stratify_col': stratify_col,
+                    'stratify_by': stratify_by,
+                    'strata': strata,
+                    'lane_boundaries': lane_boundaries,
+                    'collapsed_factors': collapsed_factors,
+                    'extra_cols': extra_cols,
+                    'is_stratified': True
                 }
-
-            # Format R output with appropriate columns
-            # Include stratify_by columns so plotter can split data correctly
-            # Filter out columns already handled by _build_output_columns
-            r_out = self._build_output_columns(
-                df=r_out,
-                value_cols=extra_cols + ['mr', 'center', 'lpl', 'upl', 'beyond_limits']
-            )
-
-            # Calculate R lane boundaries (adjust for dropped first row per stratum)
-            r_lane_boundaries = {}
-            if lane_boundaries:
-                for stratum, boundaries in lane_boundaries.items():
-                    adjusted = []
-                    for b in boundaries:
-                        # Adjust position since row 0 of each stratum is removed
-                        new_pos = b['position'] - 1
-                        if new_pos >= 0:
-                            adjusted.append({**b, 'position': new_pos})
-                    if adjusted:
-                        r_lane_boundaries[stratum] = adjusted
-
-            result['R'] = {
-                'data': r_out,
-                'statistics': r_statistics,
-                'metadata': {
-                    'chart_type': 'R',
-                    'value_col': 'mr',
-                    'center_col': 'center',
-                    'stratified': True,
-                    'lane_boundaries': r_lane_boundaries if r_lane_boundaries else None,
-                    'stratify_by': list(stratify_by)
-                },
-                'strata': strata
-            }
 
         else:
             # Ungrouped path - single stream
@@ -1501,28 +1422,357 @@ class Analysis:
                 }
             }
 
-            # CALCULATE R CHART (bundled with IMR)
-            r_out = out.copy()
-            # Drop NA rows (first observation has no moving range)
-            r_out = r_out.dropna(subset=['mr'])
+            # Optionally include intermediates for paired calculation
+            if _return_intermediates:
+                result['_intermediates'] = {
+                    'out': out,  # DataFrame with mr column, sorted
+                    'mR': mR,
+                    'lane_boundaries': lane_boundaries,
+                    'is_stratified': False
+                }
+
+        return result
+
+    def _calculate_r(  # noqa: C901
+        self,
+        value_col: str = None,
+        _precomputed: dict = None
+    ) -> dict:
+        """
+        Calculate R (Range) chart statistics.
+
+        Parameters
+        ----------
+        value_col : str, optional
+            Column to use for calculations. Defaults to spec.response_var.
+        _precomputed : dict, optional
+            Pre-computed values from _calculate_imr() to avoid redundant
+            computation. Used internally by _calculate_imr_r() for paired
+            chart calculation.
+
+        Returns
+        -------
+        dict
+            Chart data: {'R': {'data': df, 'statistics': dict, 'metadata': dict}}
+        """
+        spec = self.spec
+        if value_col is None:
+            value_col = spec.response_var
+
+        result = {}
+
+        logger.debug('In calculate statistics R')
+
+        # Use precomputed values if available (from _calculate_imr_r)
+        if _precomputed is not None:
+            is_stratified = _precomputed['is_stratified']
+
+            if is_stratified:
+                out = _precomputed['out'].copy()
+                grouped = _precomputed['grouped'].copy()
+                stratify_col = _precomputed['stratify_col']
+                stratify_by = _precomputed['stratify_by']
+                strata = _precomputed['strata']
+                lane_boundaries = _precomputed['lane_boundaries']
+                extra_cols = _precomputed['extra_cols']
+
+                # Compute R limits per group
+                r_grouped = grouped.copy()
+                r_grouped = r_grouped.rename(columns={'center': 'imr_center', 'mR': 'center'})
+
+                r_lims = r_grouped.apply(
+                    lambda row: calculate_limits(
+                        mean=0,
+                        sd=0,
+                        N=0,
+                        mR=row['center'],
+                        limits_type="R",
+                        round_to=spec.round_to
+                    ),
+                    axis=1
+                )
+
+                if isinstance(r_lims, pd.DataFrame):
+                    r_grouped = r_grouped.join(r_lims[['lpl', 'upl']], rsuffix='_r')
+                else:
+                    r_lims_df = pd.DataFrame(r_lims.map(_limits_to_pair).tolist(),
+                                             index=r_grouped.index,
+                                             columns=['lpl', 'upl'])
+                    r_grouped = r_grouped.join(r_lims_df, rsuffix='_r')
+
+                # Ensure lpl/upl columns for R chart
+                if 'lpl_r' in r_grouped.columns:
+                    r_grouped = r_grouped.rename(columns={'lpl_r': 'r_lpl', 'upl_r': 'r_upl'})
+                    r_lpl_col, r_upl_col = 'r_lpl', 'r_upl'
+                else:
+                    r_lpl_col, r_upl_col = 'lpl', 'upl'
+
+                # Merge R limits to the data
+                r_out = out.copy()
+                # Drop IMR limits columns
+                r_out = r_out.drop(columns=['center', 'lpl', 'upl', 'beyond_limits'], errors='ignore')
+                # Merge R limits
+                r_merge_data = r_grouped[[stratify_col, 'center', r_lpl_col, r_upl_col]].rename(
+                    columns={r_lpl_col: 'lpl', r_upl_col: 'upl'}
+                )
+                r_out = r_out.merge(r_merge_data, on=stratify_col, how='left', validate='many_to_one')
+
+                # Drop NA rows (first observation in each group has no moving range)
+                r_out = r_out.dropna(subset=['mr'])
+
+                # Detect beyond limits signals for R
+                r_out = self._add_beyond_limits_flag(r_out, value_col='mr')
+
+                # Build R statistics nested by stratum
+                r_statistics = {}
+                for stratum in strata:
+                    row = r_grouped[r_grouped[stratify_col] == stratum].iloc[0]
+                    r_statistics[stratum] = {
+                        'center': round(row['center'], spec.round_to),
+                        'lpl': round(row[r_lpl_col], spec.round_to),
+                        'upl': round(row[r_upl_col], spec.round_to)
+                    }
+
+                # Format R output with appropriate columns
+                r_out = self._build_output_columns(
+                    df=r_out,
+                    value_cols=extra_cols + ['mr', 'center', 'lpl', 'upl', 'beyond_limits']
+                )
+
+                # Calculate R lane boundaries (adjust for dropped first row per stratum)
+                r_lane_boundaries = {}
+                if lane_boundaries:
+                    for stratum, boundaries in lane_boundaries.items():
+                        adjusted = []
+                        for b in boundaries:
+                            # Adjust position since row 0 of each stratum is removed
+                            new_pos = b['position'] - 1
+                            if new_pos >= 0:
+                                adjusted.append({**b, 'position': new_pos})
+                        if adjusted:
+                            r_lane_boundaries[stratum] = adjusted
+
+                result['R'] = {
+                    'data': r_out,
+                    'statistics': r_statistics,
+                    'metadata': {
+                        'chart_type': 'R',
+                        'value_col': 'mr',
+                        'center_col': 'center',
+                        'stratified': True,
+                        'lane_boundaries': r_lane_boundaries if r_lane_boundaries else None,
+                        'stratify_by': list(stratify_by)
+                    },
+                    'strata': strata
+                }
+
+            else:
+                # Ungrouped path - single stream
+                out = _precomputed['out'].copy()
+                mR = _precomputed['mR']
+                lane_boundaries = _precomputed['lane_boundaries']
+
+                r_out = out.copy()
+                # Drop NA rows (first observation has no moving range)
+                r_out = r_out.dropna(subset=['mr'])
+
+                # Calculate R limits
+                r_lims = calculate_limits(
+                    mean=0, sd=0, N=0, mR=mR,
+                    limits_type="R", round_to=spec.round_to
+                )
+                r_out['center'] = mR
+                r_out['lpl'] = r_lims['lpl']
+                r_out['upl'] = r_lims['upl']
+
+                # Detect beyond limits signals for R (using 'mr' as value column)
+                r_out = r_out.drop(columns=['beyond_limits'], errors='ignore')
+                r_out = self._add_beyond_limits_flag(r_out, value_col='mr')
+
+                # Format R output
+                r_out = self._build_output_columns(
+                    df=r_out,
+                    value_cols=['mr', 'center', 'lpl', 'upl', 'beyond_limits']
+                )
+
+                r_statistics = {
+                    'center': round(mR, spec.round_to),
+                    'lpl': round(r_lims['lpl'], spec.round_to),
+                    'upl': round(r_lims['upl'], spec.round_to)
+                }
+
+                # Adjust lane boundaries for R chart (first row dropped)
+                r_lane_boundaries = None
+                if lane_boundaries:
+                    r_lane_boundaries = []
+                    for b in lane_boundaries:
+                        new_pos = b['position'] - 1
+                        if new_pos >= 0:
+                            r_lane_boundaries.append({**b, 'position': new_pos})
+                    if not r_lane_boundaries:
+                        r_lane_boundaries = None
+
+                result['R'] = {
+                    'data': r_out,
+                    'statistics': r_statistics,
+                    'metadata': {
+                        'chart_type': 'R',
+                        'value_col': 'mr',
+                        'center_col': 'center',
+                        'lane_boundaries': r_lane_boundaries
+                    }
+                }
+
+            return result
+
+        # Independent calculation path (no precomputed values)
+        # This mirrors _calculate_imr logic but only calculates R
+        out = self.ads.analysis_dataset.copy()
+
+        logger.debug('Dataframe has columns: %s', out.columns.to_list())
+
+        # Determine stratification based on `by` parameter
+        by = spec.by
+        rsg_vars = spec.rsg_vars or []
+
+        # Determine stratify_by and collapsed_factors
+        if by is None:
+            stratify_by = [spec.rsg_var_name] if rsg_vars else []
+            collapsed_factors = []
+        elif by == []:
+            stratify_by = []
+            collapsed_factors = list(rsg_vars)
+        else:
+            stratify_by = list(by)
+            collapsed_factors = [v for v in rsg_vars if v not in by]
+
+        is_stratified = len(stratify_by) > 0
+
+        if is_stratified:
+            # Determine stratification column
+            if stratify_by == [spec.rsg_var_name]:
+                stratify_col = spec.rsg_var_name
+            elif len(stratify_by) == 1:
+                stratify_col = stratify_by[0]
+            else:
+                out['_stratify_key'] = out[stratify_by].apply(tuple, axis=1)
+                stratify_col = '_stratify_key'
+
+            out = out.sort_values('sort_key', kind='stable')
+            out['mr'] = out.groupby(stratify_col, sort=False, observed=True)[value_col].diff().abs()
+
+            # Aggregate to get mR per stratum
+            grouped = (
+                out.groupby(stratify_col, sort=False, observed=True)
+                .agg(center=pd.NamedAgg('mr', 'mean'))
+                .reset_index()
+            )
+
+            # Compute R limits per group
+            r_lims = grouped.apply(
+                lambda row: calculate_limits(
+                    mean=0, sd=0, N=0,
+                    mR=row['center'],
+                    limits_type="R",
+                    round_to=spec.round_to
+                ),
+                axis=1
+            )
+
+            if isinstance(r_lims, pd.DataFrame):
+                grouped = grouped.join(r_lims[['lpl', 'upl']])
+            else:
+                r_lims_df = pd.DataFrame(r_lims.map(_limits_to_pair).tolist(),
+                                         index=grouped.index,
+                                         columns=['lpl', 'upl'])
+                grouped = grouped.join(r_lims_df)
+
+            # Merge R limits back to data
+            out = out.merge(
+                grouped[[stratify_col, 'center', 'lpl', 'upl']],
+                on=stratify_col, how='left', validate='many_to_one'
+            )
+
+            # Drop NA rows (first observation per stratum has no mr)
+            out = out.dropna(subset=['mr'])
+
+            # Detect beyond limits
+            out = self._add_beyond_limits_flag(out, value_col='mr')
+
+            strata = grouped[stratify_col].tolist()
+
+            # Calculate lane boundaries
+            lane_boundaries = {}
+            if collapsed_factors:
+                for stratum in strata:
+                    stratum_data = out[out[stratify_col] == stratum].reset_index(drop=True)
+                    boundaries = self._calculate_lane_boundaries(stratum_data, collapsed_factors)
+                    if boundaries:
+                        lane_boundaries[stratum] = boundaries
+
+            # Build statistics
+            r_statistics = {}
+            for stratum in strata:
+                row = grouped[grouped[stratify_col] == stratum].iloc[0]
+                r_statistics[stratum] = {
+                    'center': round(row['center'], spec.round_to),
+                    'lpl': round(row['lpl'], spec.round_to),
+                    'upl': round(row['upl'], spec.round_to)
+                }
+
+            # Format output
+            extra_cols = [c for c in stratify_by
+                          if c != spec.rsg_var_name and c != spec.time_var]
+            r_out = self._build_output_columns(
+                df=out,
+                value_cols=extra_cols + ['mr', 'center', 'lpl', 'upl', 'beyond_limits']
+            )
+
+            result['R'] = {
+                'data': r_out,
+                'statistics': r_statistics,
+                'metadata': {
+                    'chart_type': 'R',
+                    'value_col': 'mr',
+                    'center_col': 'center',
+                    'stratified': True,
+                    'lane_boundaries': lane_boundaries if lane_boundaries else None,
+                    'stratify_by': list(stratify_by)
+                },
+                'strata': strata
+            }
+
+        else:
+            # Ungrouped path
+            out = out.sort_values('sort_key', kind='stable')
+            out = out.reset_index(drop=True)
+
+            # Calculate lane boundaries before dropping rows
+            lane_boundaries = None
+            if collapsed_factors:
+                lane_boundaries = self._calculate_lane_boundaries(out, collapsed_factors)
+
+            out['mr'] = out[value_col].diff().abs()
+            mR = out['mr'].mean()
+
+            # Drop NA rows (first observation)
+            out = out.dropna(subset=['mr'])
 
             # Calculate R limits
             r_lims = calculate_limits(
                 mean=0, sd=0, N=0, mR=mR,
                 limits_type="R", round_to=spec.round_to
             )
-            r_out['center'] = mR
-            r_out['lpl'] = r_lims['lpl']
-            r_out['upl'] = r_lims['upl']
+            out['center'] = mR
+            out['lpl'] = r_lims['lpl']
+            out['upl'] = r_lims['upl']
 
-            # Detect beyond limits signals for R (using 'mr' as value column)
-            # Need to reset beyond_limits since we're checking a different value
-            r_out = r_out.drop(columns=['beyond_limits'], errors='ignore')
-            r_out = self._add_beyond_limits_flag(r_out, value_col='mr')
+            # Detect beyond limits
+            out = self._add_beyond_limits_flag(out, value_col='mr')
 
-            # Format R output
+            # Format output
             r_out = self._build_output_columns(
-                df=r_out,
+                df=out,
                 value_cols=['mr', 'center', 'lpl', 'upl', 'beyond_limits']
             )
 
@@ -1537,13 +1787,9 @@ class Analysis:
             if lane_boundaries:
                 r_lane_boundaries = []
                 for b in lane_boundaries:
-                    # Adjust position since row 0 is removed
                     new_pos = b['position'] - 1
                     if new_pos >= 0:
-                        r_lane_boundaries.append({
-                            **b,
-                            'position': new_pos
-                        })
+                        r_lane_boundaries.append({**b, 'position': new_pos})
                 if not r_lane_boundaries:
                     r_lane_boundaries = None
 
@@ -1560,80 +1806,35 @@ class Analysis:
 
         return result
 
-    def _calculate_r(self, value_col: str = None) -> pd.DataFrame:
+    def _calculate_imr_r(self, value_col: str = None) -> dict:
         """
-        Calculate R (Range) chart statistics.
+        Calculate Imr and R charts together (Wheeler methodology).
+
+        This method ensures that when paired=True, both charts are calculated
+        efficiently using shared intermediate values. The R chart uses the
+        same data computed for Imr, avoiding redundant calculation.
 
         Parameters
         ----------
         value_col : str, optional
             Column to use for calculations. Defaults to spec.response_var.
 
-        Logic moved from calculate_statistics_R()
+        Returns
+        -------
+        dict
+            Combined chart data: {'Imr': {...}, 'R': {...}}
         """
-        spec = self.spec
-        if value_col is None:
-            value_col = spec.response_var
+        # Calculate Imr with intermediates for R reuse
+        imr_result = self._calculate_imr(value_col, _return_intermediates=True)
 
-        out = self.ads.analysis_dataset.copy()
+        # Extract intermediates and remove from result
+        intermediates = imr_result.pop('_intermediates')
 
-        logger.debug('In calculate statistics R')
-        logger.debug('Dataframe has columns: %s', out.columns.to_list())
+        # Calculate R using precomputed values
+        r_result = self._calculate_r(value_col, _precomputed=intermediates)
 
-        if spec.has_grouping:
-            out['mr'] = abs(out.groupby(spec.rsg_var_name, observed=True)[value_col].diff())
-            grouped = out.groupby(spec.rsg_var_name, as_index=False, observed=True)
-            # Rename 'mR' to 'center' for consistency
-            grouped = grouped.agg(center=pd.NamedAgg('mr', 'mean'))
-
-            limits = grouped.apply(
-                lambda row: calculate_limits(
-                    mean=0,
-                    sd=0,
-                    N=0,
-                    mR=row.center,
-                    limits_type="R",
-                    round_to=spec.round_to
-                ), axis=1
-            )
-
-            grouped = pd.merge(grouped, limits, left_index=True, right_index=True)
-            out = pd.merge(out, grouped, how='left', on=spec.rsg_var_name)
-        else:
-            out['mr'] = abs(out[value_col].diff())
-            # Rename 'mR' to 'center' for consistency
-            out['center'] = out['mr'].mean()
-            center_val = out['center'].max()
-            limits = calculate_limits(
-                mean=0,
-                sd=0,
-                N=0,
-                mR=center_val,
-                limits_type="R",
-                round_to=spec.round_to
-            )
-            out['lpl'] = limits['lpl']
-            out['upl'] = limits['upl']
-
-        # Drop NAs
-        out = out.dropna()
-
-        # Detect beyond limits signals
-        out = self._add_beyond_limits_flag(out, value_col='mr')
-
-        # Format output with appropriate columns
-        out = self._build_output_columns(
-            df=out,
-            value_cols=['mr', 'center', 'lpl', 'upl', 'beyond_limits']
-        )
-
-        # Package results with statistics and metadata
-        return self._package_stratified_results(
-            df=out,
-            statistics_cols=['center', 'lpl', 'upl'],
-            chart_type='R',
-            value_col='mr'
-        )
+        # Combine results
+        return {**imr_result, **r_result}
 
     def _calculate_histogram(self, value_col: str = None) -> dict:
         """
