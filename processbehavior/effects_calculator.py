@@ -487,7 +487,7 @@ class EffectsCalculator:
     >>> calc = EffectsCalculator()
     >>> effects_dict = calc.calculate_all_effects(df, spec)
     >>> effects_dict.keys()
-    dict_keys(['main_effect', 'lane', 'head', 'pt_me', 'lane_MEs', ...])
+    dict_keys(['main_effect', 'lane', 'head', 'time', 'lane_MEs', ...])
     """
 
     def calculate_all_effects(
@@ -496,14 +496,16 @@ class EffectsCalculator:
         spec: AnalysisSpecification
     ) -> dict:
         """
-        Calculate all effects and interactions.
+        Calculate all main effects.
 
         Returns a dictionary containing:
-        - 'main_effect': Main effects at RSG level
+        - 'main_effect': Main effects at RSG level (backward compatibility)
         - '{factor}': Main effects for each factor
-        - 'pt_me': Time main effects
+        - 'time': Time main effects (if time variable specified)
         - '{factor}_MEs': Main effect scores for each factor
-        - 'factor_interaction_effects': Factor × factor interactions
+
+        Note: Interactions (factor_time, factor_factor) are calculated
+        separately via calculate_interactions().
 
         Parameters
         ----------
@@ -525,6 +527,10 @@ class EffectsCalculator:
           lane  Main_Effect
         0    A         0.25
         1    B        -0.25
+        >>> effects['time']  # Time main effects
+           pull  PT_ME
+        0     1   0.15
+        1     2  -0.15
         """
         effects = {}
 
@@ -550,7 +556,7 @@ class EffectsCalculator:
         if spec.has_time:
             logger.debug("Calculating time main effects")
             te = calculate_time_main_effects(df, spec.time_var)
-            effects['pt_me'] = te
+            effects['time'] = te
 
         # Calculate main effect scores for each factor
         logger.debug("Calculating main effect scores")
@@ -560,14 +566,12 @@ class EffectsCalculator:
             effects[f"{factor}_MEs"] = mes
 
         # Calculate factor interaction effects (if 2+ factors)
+        # Note: factor × factor interaction is stored in interactions dict, not effects
         if len(spec.rsg_vars) >= 2:
             logger.debug("Calculating factor interaction effects")
             fi = calculate_factor_interaction_effects(df, spec.rsg_vars, effects)
             if not fi.empty:
-                # Store the interaction effect lookup
-                effects['factor_interaction'] = fi
-
-                # Calculate per-row scores
+                # Calculate per-row scores (kept in effects for backward compatibility)
                 fie = calculate_factor_interaction_scores(df, spec.rsg_vars, fi)
                 if not fie.empty:
                     effects['factor_interaction_effects'] = fie
@@ -579,12 +583,15 @@ class EffectsCalculator:
         self,
         df: pd.DataFrame,
         spec: AnalysisSpecification,
-        sds: int
+        sds: int,
+        effects: dict | None = None
     ) -> dict:
         """
-        Calculate interaction effects (process disruption component).
+        Calculate interaction effects.
 
-        PDC (Process Disruption Component) shows factor × time interaction.
+        Calculates two types of interactions:
+        - factor_time: Factor × time interaction (PDC - Process Disruption Component)
+        - factor_factor: Factor × factor interaction (if 2+ factors)
 
         Parameters
         ----------
@@ -594,50 +601,57 @@ class EffectsCalculator:
             Analysis specification
         sds : int
             Sampling Design State
+        effects : dict, optional
+            Effects dict from calculate_all_effects() (needed for factor_factor)
 
         Returns
         -------
         dict
-            Dictionary with 'pdc_by_pt' and possibly 'interaction_cell'
+            Dictionary with:
+            - 'factor_time': Factor × time interaction (PDC)
+            - 'factor_factor': Factor × factor interaction (if 2+ factors)
         """
         interactions = {}
 
-        if not (spec.has_grouping and spec.has_time):
-            logger.debug("No grouping or time - skipping interactions")
-            return interactions
+        # Factor × time interaction (requires grouping + time)
+        if spec.has_grouping and spec.has_time:
+            if 'R3' not in df.columns:
+                logger.warning("R3 not found - cannot calculate factor × time interaction")
+            else:
+                logger.debug("Calculating factor × time interaction (PDC)")
 
-        if 'R3' not in df.columns:
-            logger.warning("R3 not found - cannot calculate interactions")
-            return interactions
+                if sds == 1:
+                    # Full replication: use cell averages of R3
+                    pdc = calculate_interaction_cell_means(
+                        df, spec.rsg_vars, spec.time_var
+                    )
+                    interactions['factor_time'] = pdc
 
-        logger.debug("Calculating process disruption component (PDC)")
+                elif sds == 2:
+                    # No replication: direct calculation
+                    pdc = calculate_pdc_by_time_sds2(
+                        df,
+                        df['Ybar_kt'],
+                        df['Ybar_k'],
+                        df['Ybar_t'],
+                        df['Ybar'].iloc[0]  # Grand mean (constant)
+                    )
+                    interactions['factor_time'] = pdc
 
-        if sds == 1:
-            # Full replication: use cell averages of R3
-            pdc = calculate_interaction_cell_means(
-                df, spec.rsg_vars, spec.time_var
-            )
-            interactions['pdc_by_pt'] = pdc
-            interactions['interaction_cell'] = pdc
+                else:
+                    # SDS 3+: use SDS 1 approach
+                    logger.debug(f"SDS {sds}: Using cell-average approach for PDC")
+                    pdc = calculate_interaction_cell_means(
+                        df, spec.rsg_vars, spec.time_var
+                    )
+                    interactions['factor_time'] = pdc
 
-        elif sds == 2:
-            # No replication: direct calculation
-            pdc = calculate_pdc_by_time_sds2(
-                df,
-                df['Ybar_kt'],
-                df['Ybar_k'],
-                df['Ybar_t'],
-                df['Ybar'].iloc[0]  # Grand mean (constant)
-            )
-            interactions['pdc_by_pt'] = pdc
-
-        else:
-            # SDS 3: use SDS 1 approach
-            logger.debug(f"SDS {sds}: Using cell-average approach for PDC")
-            pdc = calculate_interaction_cell_means(
-                df, spec.rsg_vars, spec.time_var
-            )
-            interactions['pdc_by_pt'] = pdc
+        # Factor × factor interaction (requires 2+ factors)
+        if spec.rsg_vars and len(spec.rsg_vars) >= 2 and effects is not None:
+            logger.debug("Calculating factor × factor interaction")
+            fi = calculate_factor_interaction_effects(df, spec.rsg_vars, effects)
+            if not fi.empty:
+                interactions['factor_factor'] = fi
 
         return interactions
 

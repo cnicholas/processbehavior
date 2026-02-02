@@ -306,6 +306,16 @@ class Plotter:
         else:
             self._theme = template
 
+        # Handle effects charts (special chart types not in self.charts)
+        effects_charts = {'Effects', 'TimeInteraction', 'FactorInteraction'}
+        if chart in effects_charts:
+            return self._plot_effects_chart(
+                chart_type=chart,
+                width=width,
+                height=height,
+                title=title
+            )
+
         # Validate inputs
         if chart and chart not in self.charts:
             available = list(self.charts.keys())
@@ -2768,6 +2778,128 @@ class Plotter:
 
         # Apply theme
         fig = apply_theme(fig, theme)
+
+        return ControlChartFigure(fig, self.result)
+
+    def _plot_effects_chart(
+        self,
+        chart_type: str,
+        width: int = 1000,
+        height: int | None = None,
+        title: str | None = None
+    ) -> ControlChartFigure:
+        """
+        Route to appropriate effects chart based on chart_type.
+
+        Called by plot() when chart is 'Effects', 'TimeInteraction', or 'FactorInteraction'.
+
+        Parameters
+        ----------
+        chart_type : str
+            One of: 'Effects', 'TimeInteraction', 'FactorInteraction'
+        width : int
+            Figure width in pixels
+        height : int, optional
+            Figure height in pixels
+        title : str, optional
+            Custom title
+
+        Returns
+        -------
+        ControlChartFigure
+            Interactive figure
+        """
+        from .effects_charts import (
+            create_factor_interaction_chart,
+            create_main_effects_chart,
+            create_time_interaction_chart,
+        )
+
+        theme = self._theme
+
+        # Get effects and interactions from result
+        effects = self.result.effects
+        interactions = self.result.interactions
+
+        if chart_type == 'Effects':
+            # Main effects chart
+            if not self.result.has_effects:
+                raise ValueError(
+                    "Effects not available for this analysis.\n"
+                    "Effects require factors in the analysis specification."
+                )
+
+            fig = create_main_effects_chart(
+                effects=effects,
+                theme=theme,
+                width=width,
+                height=height
+            )
+
+        elif chart_type == 'TimeInteraction':
+            # Factor × time interaction chart
+            if 'factor_time' not in interactions:
+                raise ValueError(
+                    "Time interaction not available for this analysis.\n"
+                    "This requires both factors and time variable in the analysis."
+                )
+
+            # Get factors and time_var from summary
+            factors = self.summary.get('grouping_vars', [])
+            time_var = self.summary.get('time_var')
+
+            if not factors or not time_var:
+                raise ValueError(
+                    "Cannot create time interaction chart.\n"
+                    "Requires both factors and time variable."
+                )
+
+            fig = create_time_interaction_chart(
+                interactions=interactions,
+                effects=effects,
+                factors=factors,
+                time_var=time_var,
+                dataset=self.result.dataset,
+                theme=theme,
+                width=width,
+                height=height or 500
+            )
+
+        elif chart_type == 'FactorInteraction':
+            # Factor × factor interaction chart
+            if 'factor_factor' not in interactions:
+                raise ValueError(
+                    "Factor interaction not available for this analysis.\n"
+                    "This requires at least 2 factors in the analysis."
+                )
+
+            factors = self.summary.get('grouping_vars', [])
+            if len(factors) < 2:
+                raise ValueError(
+                    f"Factor interaction requires at least 2 factors, "
+                    f"got {len(factors)}."
+                )
+
+            fig = create_factor_interaction_chart(
+                interactions=interactions,
+                factors=factors,
+                theme=theme,
+                width=width,
+                height=height or 600
+            )
+
+        else:
+            raise ValueError(
+                f"Unknown effects chart type: '{chart_type}'.\n"
+                f"Options: 'Effects', 'TimeInteraction', 'FactorInteraction'"
+            )
+
+        # Apply theme
+        fig = apply_theme(fig, theme)
+
+        # Set custom title if provided
+        if title:
+            fig.update_layout(title=title)
 
         return ControlChartFigure(fig, self.result)
 

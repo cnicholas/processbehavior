@@ -368,8 +368,8 @@ def test_calculate_all_effects_single_factor(calc, simple_df_with_residuals, spe
     assert result['lane'].shape[0] == 2  # Two levels
 
     # Should have time main effects
-    assert 'pt_me' in result
-    assert result['pt_me'].shape[0] == 2  # Two time points
+    assert 'time' in result
+    assert result['time'].shape[0] == 2  # Two time points
 
     # Should have main effect scores
     assert 'lane_MEs' in result
@@ -388,7 +388,7 @@ def test_calculate_all_effects_multi_factor(calc, multi_factor_df, spec_multi_fa
     assert 'head_MEs' in result
 
     # Should have factor interaction effects (2+ factors)
-    assert 'factor_interaction' in result
+    # Note: factor_interaction is now in interactions dict, not effects
     assert 'factor_interaction_effects' in result
 
 
@@ -426,27 +426,24 @@ def test_calculate_interactions_sds1(calc, simple_df_with_residuals, spec_single
     """Should calculate PDC using cell means for SDS 1."""
     result = calc.calculate_interactions(simple_df_with_residuals, spec_single_factor, sds=1)
 
-    assert 'pdc_by_pt' in result
-    assert 'interaction_cell' in result
-    assert isinstance(result['pdc_by_pt'], pd.Series)  # Returns Series
+    assert 'factor_time' in result
+    assert isinstance(result['factor_time'], pd.Series)  # Returns Series
 
 
 def test_calculate_interactions_sds2(calc, simple_df_with_residuals, spec_single_factor):
     """Should calculate PDC using direct formula for SDS 2."""
     result = calc.calculate_interactions(simple_df_with_residuals, spec_single_factor, sds=2)
 
-    assert 'pdc_by_pt' in result
-    assert isinstance(result['pdc_by_pt'], pd.Series)  # Returns Series
-    # Should NOT have interaction_cell (SDS 2 specific)
-    assert 'interaction_cell' not in result
+    assert 'factor_time' in result
+    assert isinstance(result['factor_time'], pd.Series)  # Returns Series
 
 
 def test_calculate_interactions_sds3(calc, simple_df_with_residuals, spec_single_factor):
     """Should calculate PDC using cell means for SDS 3."""
     result = calc.calculate_interactions(simple_df_with_residuals, spec_single_factor, sds=3)
 
-    assert 'pdc_by_pt' in result
-    assert isinstance(result['pdc_by_pt'], pd.Series)  # Returns Series
+    assert 'factor_time' in result
+    assert isinstance(result['factor_time'], pd.Series)  # Returns Series
 
 
 def test_calculate_interactions_no_grouping(calc, spec_no_grouping):
@@ -487,19 +484,21 @@ def test_full_effects_pipeline(calc, simple_df_with_residuals, spec_single_facto
     # Step 1: Calculate all effects
     effects = calc.calculate_all_effects(simple_df_with_residuals, spec_single_factor)
 
-    # Step 2: Calculate interactions
-    interactions = calc.calculate_interactions(simple_df_with_residuals, spec_single_factor, sds=1)
+    # Step 2: Calculate interactions (pass effects for factor_factor calculation)
+    interactions = calc.calculate_interactions(
+        simple_df_with_residuals, spec_single_factor, sds=1, effects=effects
+    )
 
     # Verify all expected outputs
     assert 'lane' in effects
-    assert 'pt_me' in effects
+    assert 'time' in effects
     assert 'lane_MEs' in effects
-    assert 'pdc_by_pt' in interactions
+    assert 'factor_time' in interactions
 
     # Verify data structure
     assert isinstance(effects['lane'], pd.DataFrame)
-    assert isinstance(effects['pt_me'], pd.DataFrame)
-    assert isinstance(interactions['pdc_by_pt'], pd.Series)  # Returns Series
+    assert isinstance(effects['time'], pd.DataFrame)
+    assert isinstance(interactions['factor_time'], pd.Series)  # Returns Series
 
 
 def test_multi_factor_effects_pipeline(calc, multi_factor_df, spec_multi_factor):
@@ -510,12 +509,19 @@ def test_multi_factor_effects_pipeline(calc, multi_factor_df, spec_multi_factor)
     assert 'lane' in effects
     assert 'head' in effects
 
-    # Should have interaction between factors
-    assert 'factor_interaction' in effects
+    # Should have factor_interaction_effects scores in effects
     assert 'factor_interaction_effects' in effects
 
+    # Calculate interactions to get factor_factor
+    interactions = calc.calculate_interactions(
+        multi_factor_df, spec_multi_factor, sds=1, effects=effects
+    )
+
+    # Should have factor × factor interaction in interactions dict
+    assert 'factor_factor' in interactions
+
     # Verify interaction has correct structure
-    fi = effects['factor_interaction']
+    fi = interactions['factor_factor']
     assert 'lane' in fi.columns
     assert 'head' in fi.columns
     assert 'Rx' in fi.columns  # Column is called Rx

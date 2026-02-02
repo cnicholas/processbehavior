@@ -141,7 +141,8 @@ class AnalysisDataSet:
                 self.analysis_dataset, self.spec
             )
             self.interactions = self.effects_calc.calculate_interactions(
-                self.analysis_dataset, self.spec, self.sampling_design_state
+                self.analysis_dataset, self.spec, self.sampling_design_state,
+                effects=self.effects
             )
         else:
             logger.debug(
