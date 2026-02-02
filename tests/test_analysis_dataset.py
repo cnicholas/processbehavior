@@ -181,11 +181,10 @@ class TestImrAnalysis:
         sds = detect_sds_for_test(df, spec)
         result = Analysis(df=df, specification=spec, sds=sds).calculate()
 
-        # Should return dict-like with chart types as keys (Imr and R bundled)
+        # SRP: Imr only returns Imr (no longer bundled with R by default)
         assert hasattr(result, 'keys') and hasattr(result, 'values')
         keys = list(result.keys())
         assert 'Imr' in keys
-        assert 'R' in keys
 
         # Check that Imr chart has strata
         imr_chart = result['Imr']
@@ -208,7 +207,28 @@ class TestImrAnalysis:
         assert imr_stats['a_c']['upl'] == 4.99
         assert imr_stats['b_d']['upl'] == 14.32
 
-        # Check R chart is also present with nested statistics
+    def test_imr_with_grouping_paired(self, df):
+        """Test Imr chart with grouping returns both Imr and R when paired=True."""
+        spec = {
+            'analysis_type': 'Imr',
+            'rsg_vars': ['a', 'b'],
+            'time_var': 'd',
+            'response_var': 'c',
+            'rsg_var_name': 'rsg',
+            'round_to': 2,
+            'paired': True  # Request bundled Imr+R
+        }
+        ad.AnalysisSpecification(spec)
+
+        sds = detect_sds_for_test(df, spec)
+        result = Analysis(df=df, specification=spec, sds=sds).calculate()
+
+        # Paired mode: Imr and R are bundled together
+        keys = list(result.keys())
+        assert 'Imr' in keys
+        assert 'R' in keys
+
+        # Check R chart is present with nested statistics
         r_chart = result['R']
         assert 'strata' in r_chart
         assert 'a_c' in r_chart['strata']
@@ -223,7 +243,7 @@ class TestRChartAnalysis:
     """Tests for Moving Range (R) chart calculations."""
 
     def test_r_with_grouping(self, df):
-        """Test R chart with grouping variable (bundled with Imr)."""
+        """Test R chart with grouping variable (SRP: R only)."""
         spec = {
             'analysis_type': 'R',
             'rsg_vars': ['a', 'b'],
@@ -237,11 +257,10 @@ class TestRChartAnalysis:
         sds = detect_sds_for_test(df, spec)
         result = Analysis(df, spec, sds=sds).calculate()
 
-        # R and Imr are bundled together - chart type is primary key
+        # SRP: R only returns R (no longer bundled with Imr by default)
         assert hasattr(result, "keys") and hasattr(result, "values")
         keys = list(result.keys())
         assert 'R' in keys
-        assert 'Imr' in keys
 
         # Check that R chart has strata
         r_chart = result['R']
@@ -265,7 +284,7 @@ class TestRChartAnalysis:
         assert r_stats['b_d']['upl'] == 8.17
 
     def test_r_with_fillweight_data(self):
-        """Test R chart on FillWeight800 dataset with stratification (bundled with Imr)."""
+        """Test R chart on FillWeight800 dataset with stratification (SRP: R only)."""
         f_path = "processbehavior/datasets/data/FILLWEIGHTDATA_800.csv"
         df = pd.read_csv(f_path)
 
@@ -280,10 +299,9 @@ class TestRChartAnalysis:
         sds = detect_sds_for_test(df, spec)
         result = Analysis(df, spec, sds=sds).calculate()
 
-        # R and Imr are bundled together - chart type is primary key
+        # SRP: R only returns R
         assert hasattr(result, "keys") and hasattr(result, "values")
         assert 'R' in result
-        assert 'Imr' in result
 
         # Strata are nested inside each chart
         r_chart = result['R']
@@ -323,8 +341,8 @@ class TestDateTimeHandling:
             result = Analysis(df_dt, spec, sds=sds).calculate()
 
             if analysis in ['Imr', 'R']:
-                # Imr and R are bundled, use chart type as key
-                out = result['Imr']['data']
+                # SRP: Each chart type returns only itself
+                out = result[analysis]['data']
                 assert out.columns.tolist()[0] == has_time
 
     def test_string_date_converted_and_sorted(self, df_dt):

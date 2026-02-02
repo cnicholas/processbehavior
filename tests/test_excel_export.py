@@ -112,7 +112,7 @@ def test_excel_export_with_full_dataset(temp_excel_file):
 
 
 def test_excel_export_stratified_imr(temp_excel_file):
-    """Test Excel export with stratified IMR charts."""
+    """Test Excel export with stratified IMR chart (SRP: Imr only)."""
     df = make_sds(1, K1=3, K2=2, T=5, n_min=2, n_max=3, seed=42)
 
     spec = {
@@ -136,15 +136,46 @@ def test_excel_export_stratified_imr(temp_excel_file):
     excel_file = pd.ExcelFile(temp_excel_file, engine='openpyxl')
     chart_tabs = [name for name in excel_file.sheet_names if 'Chart_' in name]
 
-    # Stratified IMR/R creates two combined chart tabs (Imr + R bundled)
-    assert len(chart_tabs) == 2, f"Expected 2 chart tabs (Imr+R bundled), got {len(chart_tabs)}: {chart_tabs}"
+    # SRP: Imr only returns Imr (no longer bundled with R by default)
+    assert len(chart_tabs) == 1, f"Expected 1 chart tab (SRP: Imr only), got {len(chart_tabs)}: {chart_tabs}"
     assert 'Chart_Imr' in chart_tabs, f"Expected Chart_Imr tab, got: {chart_tabs}"
-    assert 'Chart_R' in chart_tabs, f"Expected Chart_R tab, got: {chart_tabs}"
 
     # Verify the Imr tab has data
     imr_data = pd.read_excel(temp_excel_file, sheet_name='Chart_Imr')
     assert len(imr_data) > 0, "Imr chart tab should have data"
     assert 'rsg' in imr_data.columns, "Imr data should have 'rsg' column for stratification"
+
+
+def test_excel_export_stratified_imr_paired(temp_excel_file):
+    """Test Excel export with stratified IMR charts (paired=True for bundled output)."""
+    df = make_sds(1, K1=3, K2=2, T=5, n_min=2, n_max=3, seed=42)
+
+    spec = {
+        'analysis_type': 'Imr',
+        'rsg_vars': ['factor 1'],
+        'time_var': 'time',
+        'response_var': 'y',
+        'paired': True  # Request bundled Imr+R
+    }
+
+    sds = detect_sds_for_test(df, spec)
+    analysis = Analysis(df, spec, sds=sds)
+    result = analysis.calculate()
+
+    # Export to Excel
+    result.to_excel(temp_excel_file)
+
+    # Verify file exists
+    assert os.path.exists(temp_excel_file)
+
+    # Read back and verify paired charts are present
+    excel_file = pd.ExcelFile(temp_excel_file, engine='openpyxl')
+    chart_tabs = [name for name in excel_file.sheet_names if 'Chart_' in name]
+
+    # Paired mode: Imr+R bundled together
+    assert len(chart_tabs) == 2, f"Expected 2 chart tabs (Imr+R paired), got {len(chart_tabs)}: {chart_tabs}"
+    assert 'Chart_Imr' in chart_tabs, f"Expected Chart_Imr tab, got: {chart_tabs}"
+    assert 'Chart_R' in chart_tabs, f"Expected Chart_R tab, got: {chart_tabs}"
 
 
 def test_excel_export_with_residuals(temp_excel_file):
