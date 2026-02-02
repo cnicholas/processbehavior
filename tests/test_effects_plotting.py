@@ -19,7 +19,6 @@ from processbehavior.plotting.effects_charts import (
 )
 from processbehavior.plotting.themes import get_theme
 
-
 # ============================================================================
 # Fixtures
 # ============================================================================
@@ -159,8 +158,8 @@ class TestCreateMainEffectsChart:
 
         # Should have labels for factor1 and factor2 levels
         labels = list(fig.data[0].y)
-        factor1_labels = [l for l in labels if l.startswith('factor1:')]
-        factor2_labels = [l for l in labels if l.startswith('factor2:')]
+        factor1_labels = [lbl for lbl in labels if lbl.startswith('factor1:')]
+        factor2_labels = [lbl for lbl in labels if lbl.startswith('factor2:')]
 
         assert len(factor1_labels) == 2  # A, B
         assert len(factor2_labels) == 2  # 1, 2

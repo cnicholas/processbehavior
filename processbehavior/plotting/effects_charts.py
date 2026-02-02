@@ -14,7 +14,6 @@ from typing import TYPE_CHECKING
 
 import pandas as pd
 import plotly.graph_objects as go
-from plotly.subplots import make_subplots
 
 if TYPE_CHECKING:
     from .themes import ChartTheme
@@ -415,8 +414,8 @@ def create_factor_interaction_chart(
             subset = fi[mask].set_index(factor1)
 
             fig.add_trace(go.Bar(
-                x=[str(l) for l in levels1],
-                y=[subset.loc[l, 'Rx'] if l in subset.index else 0 for l in levels1],
+                x=[str(lv) for lv in levels1],
+                y=[subset.loc[lv, 'Rx'] if lv in subset.index else 0 for lv in levels1],
                 name=str(level2),
                 marker_color=colors[i % len(colors)],
                 hovertemplate=(
