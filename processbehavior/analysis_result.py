@@ -1386,6 +1386,12 @@ class FocusedAnalysisResult(AnalysisResult):
         self._original = original_result
         self._focused_stratum = focused_stratum
 
+        # Preserve _ads reference from original result (needed by chart_table, plot, to_excel)
+        self._ads = original_result._ads
+
+        # Preserve the executed analysis type
+        self._analysis_type = original_result._analysis_type
+
         # Copy dataset reference (filtered)
         rsg_col = None
         for col in original_result.dataset.columns:

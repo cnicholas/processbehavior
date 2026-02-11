@@ -562,24 +562,23 @@ def calculate_r5_residual(
 
 class ResidualCalculator:
     """
-    Calculates VAS residuals (R1-R5) based on Sampling Design State.
+    Calculates VAS residuals (R1-R5) using structure-driven R2 method.
 
     This class orchestrates the pure residual calculation functions,
-    adapting the R2 calculation based on SDS and adding all necessary
-    mean columns to the dataset.
+    adapting the R2 calculation based on observed cell structure and
+    adding all necessary mean columns to the dataset.
+
+    The primary entry point is :meth:`calculate_vas_residuals`, which
+    accepts an R2Method ('exact', 'ma2', or 'hybrid') determined by
+    SDSRegistry.get_r2_method() based on observed cell sizes.
 
     Examples
     --------
-    Calculate residuals for SDS 1 (full replication):
+    Calculate residuals using structure-driven R2 method:
 
     >>> calc = ResidualCalculator()
-    >>> df_with_residuals = calc.calculate_residuals(df, spec, sds=1)
+    >>> df_with_residuals = calc.calculate_vas_residuals(df, spec, r2_method='exact')
     >>> # df now has: Ybar, Ybar_k, Ybar_t, Ybar_kt, R1, R2, R3, R4, R5
-
-    Calculate for SDS 2 (no replication - uses moving average):
-
-    >>> df_with_residuals = calc.calculate_residuals(df, spec, sds=2)
-    >>> # R2 calculated using moving average approximation
     """
 
     def calculate_residuals(
@@ -591,10 +590,11 @@ class ResidualCalculator:
         """
         Calculate all VAS residuals and add to DataFrame.
 
-        This is the main entry point. It:
-        1. Calculates all means (Ybar, Ybar_k, Ybar_t, Ybar_kt)
-        2. Calculates all residuals (R1, R2, R3, R4, R5)
-        3. Adapts R2 calculation based on SDS
+        .. deprecated::
+            Use :meth:`calculate_vas_residuals` instead, which uses
+            structure-driven R2 method selection (R2Method) rather than
+            SDS-based dispatch. The new method correctly handles hybrid
+            R2 (MA2 for singleton cells instead of zeroing them out).
 
         Parameters
         ----------
@@ -603,7 +603,7 @@ class ResidualCalculator:
         spec : AnalysisSpecification
             Analysis specification
         sds : int
-            Sampling Design State (1, 2, or 3)
+            Sampling Design State (1-6)
 
         Returns
         -------
@@ -615,18 +615,16 @@ class ResidualCalculator:
         Raises
         ------
         ValueError
-            If SDS doesn't support VAS residuals (0, 4, 6)
+            If SDS doesn't support VAS residuals (0)
             If required columns missing
-
-        Examples
-        --------
-        >>> calc = ResidualCalculator()
-        >>> df_out = calc.calculate_residuals(df, spec, sds=1)
-        >>> 'R1' in df_out.columns
-        True
-        >>> 'R5' in df_out.columns
-        True
         """
+        import warnings
+        warnings.warn(
+            "calculate_residuals() is deprecated. Use calculate_vas_residuals() "
+            "with an R2Method parameter instead.",
+            DeprecationWarning,
+            stacklevel=2
+        )
         if not spec.has_grouping:
             raise ValueError(
                 "VAS residuals require grouping structure.\n"
@@ -691,8 +689,9 @@ class ResidualCalculator:
         """
         Calculate R2 using appropriate method for the SDS.
 
-        This is where the strategy pattern happens - different R2
-        calculations for different data structures.
+        .. deprecated::
+            Used only by the deprecated :meth:`calculate_residuals`.
+            Prefer :meth:`_calculate_r2` with R2Method for new code.
         """
         y = spec.response_var
 

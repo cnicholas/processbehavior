@@ -119,7 +119,7 @@ def gather_analysis_statistics(
 
     if is_valid:
         if grouping_var is not None:
-            statistics_to_collect.append("n")
+            statistics_to_collect = list(statistics_to_collect) + ["n"]
             N = out.groupby(grouping_var, as_index=False, observed=True).size()
             N.reset_index()
             N.rename(columns={"size": "n"}, inplace=True)
@@ -554,7 +554,10 @@ class Analysis:
         # Determine if we're charting response (can use pre-calculated) or residual
         is_response = value_col == spec.response_var
 
-        # by=[] is equivalent to by=None (both mean Kt level)
+        # Xbar/S: by=[] normalizes to by=None (Kt-level aggregation).
+        # Imr/R handles by=[] directly in _calculate_imr() as single-stream.
+        # This split is intentional — `by` means "aggregate by" for Xbar/S
+        # and "stratify by" for Imr/R, matching each chart type's semantics.
         if by == []:
             by = None
 
