@@ -103,14 +103,14 @@ def b3(n: int) -> float:
     Returns
     -------
     float
-        b3 constant for given subgroup size. May be negative for small n.
+        b3 constant for given subgroup size. Returns 0 if calculated value < 0.
 
     Examples
     --------
     >>> b3(2)
-    -1.267...
+    0
     >>> b3(5)
-    0.0296...
+    0
     >>> b3(10)
     0.284...
 
@@ -118,19 +118,9 @@ def b3(n: int) -> float:
     -----
     Formula: b3(n) = 1 - 3/c4(n) * sqrt(1 - c4(n)²)
 
-    For small subgroup sizes (n < 6), b3 is typically negative, resulting
-    in negative LPL values. While standard deviations cannot be negative,
-    the 3-sigma statistical limit can be. This matches Wheeler's PDCxPT
-    reference implementation.
-
-    **Historical note:** Prior versions clamped b3 to max(0, b3) based on
-    the reasoning that standard deviations cannot be negative. This was
-    changed to match Wheeler's reference implementation which shows the
-    raw 3-sigma limits.
-
-    **Important:** Range (R) chart limits are different - they use D3/D4
-    constants and the lower limit IS clamped to 0 because ranges (absolute
-    differences) cannot be negative by definition.
+    For small subgroup sizes (n < 6), the raw b3 formula yields negative
+    values. Since standard deviations cannot be negative, these values are
+    clamped to 0.
 
     References
     ----------
@@ -142,7 +132,7 @@ def b3(n: int) -> float:
     c4_n = c4(n)
     out = 1 - (SIGMA_MULTIPLIER / c4_n * math.sqrt(1 - math.pow(c4_n, 2)))
 
-    return out  # No clamping - matches Wheeler's reference implementation
+    return 0 if out < 0 else out
 
 
 def b4(n: int) -> float:

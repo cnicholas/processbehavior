@@ -307,7 +307,7 @@ class Plotter:
             self._theme = template
 
         # Handle effects charts (special chart types not in self.charts)
-        effects_charts = {'Effects', 'TimeInteraction', 'FactorInteraction'}
+        effects_charts = {'Effects', 'MainEffects', 'TimeEffects', 'TimeInteraction', 'FactorInteraction'}
         if chart in effects_charts:
             return self._plot_effects_chart(
                 chart_type=chart,
@@ -2810,8 +2810,10 @@ class Plotter:
             Interactive figure
         """
         from .effects_charts import (
+            create_factor_effects_chart,
             create_factor_interaction_chart,
             create_main_effects_chart,
+            create_time_effects_chart,
             create_time_interaction_chart,
         )
 
@@ -2830,6 +2832,39 @@ class Plotter:
                 )
 
             fig = create_main_effects_chart(
+                effects=effects,
+                theme=theme,
+                width=width,
+                height=height
+            )
+
+        elif chart_type == 'MainEffects':
+            # Factor main effects only (no time effects)
+            if not self.result.has_effects:
+                raise ValueError(
+                    "Effects not available for this analysis.\n"
+                    "Effects require factors in the analysis specification."
+                )
+
+            fig = create_factor_effects_chart(
+                effects=effects,
+                theme=theme,
+                width=width,
+                height=height or 500
+            )
+
+        elif chart_type == 'TimeEffects':
+            # Time effects only (no factor effects)
+            if 'time' not in effects and not any(
+                isinstance(v, pd.DataFrame) and 'PT_ME' in v.columns
+                for v in effects.values()
+            ):
+                raise ValueError(
+                    "Time effects not available for this analysis.\n"
+                    "This requires a time variable in the analysis."
+                )
+
+            fig = create_time_effects_chart(
                 effects=effects,
                 theme=theme,
                 width=width,
@@ -2891,7 +2926,7 @@ class Plotter:
         else:
             raise ValueError(
                 f"Unknown effects chart type: '{chart_type}'.\n"
-                f"Options: 'Effects', 'TimeInteraction', 'FactorInteraction'"
+                f"Options: 'Effects', 'MainEffects', 'TimeEffects', 'TimeInteraction', 'FactorInteraction'"
             )
 
         # Apply theme
