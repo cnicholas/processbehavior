@@ -57,11 +57,8 @@ class AnalysisDataSet:
         self._sds = sds
 
         # Initialize output containers
-        self.statistics = {}
-        self.residuals = {}
         self.interactions = {}
         self.effects = {}
-        self.Rbar = 0
 
         # Structure stats (computed once in _initialize)
         self._structure_stats: StructureStats | None = None
@@ -242,6 +239,14 @@ class AnalysisDataSet:
 
         These are legacy calculations that center residuals by their means.
         Kept for backward compatibility with existing code and tests.
+
+        Note: This method intentionally mutates self.analysis_dataset in-place
+        (adding columns directly to the DataFrame). This differs from
+        ResidualCalculator.calculate_vas_residuals() which returns a new
+        DataFrame. The mutation is safe here because this is called once
+        during __init__ as part of the analysis pipeline, and the columns
+        added (Rbar_kt, Rbar_k, Rbar_t, RCR1-RCR5) are outputs of the
+        analysis that become part of the dataset.
 
         Calculates:
         - Rbar_kt: Mean of R1 per cell (factor × time)
