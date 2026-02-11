@@ -63,8 +63,8 @@ df = pd.DataFrame({
 })
 
 # Run a simple analysis
-pdf = pb.ProcessBehavior(df)
-study = pdf.formulate(response=pdf.cols.value, time=pdf.cols.time)
+pb = pb.ProcessBehavior(df)
+study = pb.formulate(response=pb.cols.value, time=pb.cols.time)
 result = study.execute()
 
 print(f"SDS detected: {study.sds}")

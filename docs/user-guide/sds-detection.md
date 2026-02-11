@@ -13,16 +13,15 @@ The system operates effectively with or without a plan:
 
 | Approach | What ProcessBehavior Knows | Capabilities |
 |----------|---------------------------|--------------|
-| **Without plan** | Observed structure only | SDS 1-4 detection, charts, basic design reports |
-| **With plan** | Expected + observed structure | All SDS detection, coverage analysis, rich design reports |
+| **Without plan** | Observed structure (including all-NA cells) | All SDS detection (1-6), charts, basic design reports |
+| **With plan** | Expected + observed structure | All SDS detection (1-6), coverage analysis, rich design reports |
 
-With a plan, ProcessBehavior can compare what *was* collected against what *should have been* collected—enabling detection of nested designs (SDS 5) and incomplete grids (SDS 6), plus detailed reports showing exactly what's missing.
+SDS detection runs on raw data before NA rows are dropped, so cells where all response values are NA are counted as empty (N_kt=0). This enables SDS 4-6 detection even without a plan. With a plan, ProcessBehavior can additionally compare what *was* collected against what *should have been* collected—catching entirely absent factor levels and providing detailed reports showing exactly what's missing.
 
 ## The Six Sampling Design States
 
 | SDS | Name | Structure | Recommended Chart |
 |-----|------|-----------|-------------------|
-| 0 | No Structure | No factors, no time | Basic statistics |
 | 1 | Full Replication | All cells n >= 2 | Xbar-S |
 | 2 | No Replication | All cells n = 1 | Xbar-S (MR-based) |
 | 3 | Partial Replication | Mixed n=1 and n>=2 | Xbar-S (hybrid) |
@@ -77,7 +76,7 @@ print(f"SDS: {study.sds}")
 print(f"Charts: {study.valid_charts}")
 ```
 
-This works well for SDS 1-4, where the sampling design state is determined by properties of the observed data itself (replication levels, cell sizes, factor structure).
+This works for all SDS types (1-6). SDS detection is determined by properties of the observed data—replication levels, cell sizes, and factor structure—including cells where all response values are NA (counted as empty).
 
 ## Extending Formulation with a Sampling Plan
 
@@ -98,25 +97,24 @@ study = pb.formulate(response='weight', time='time', plan=plan)
 
 **The plan provides three key benefits:**
 
-1. **Unlocks SDS 5 and 6 detection** - These states require comparing expected vs observed structure
-2. **Design reports** - See exactly what's missing from your data
+1. **Catches entirely absent factor levels** - Factor levels or time points not present in data at all are only visible with a plan
+2. **Design reports** - See exactly what's missing from your data (planned vs observed K, T, N, R)
 3. **Documentation** - Captures the intended experimental design for reproducibility
 
-### Why Plans are Required for SDS 5 and 6
+### SDS 4-6 Detection: With and Without a Plan
 
-SDS 5 (nested) and SDS 6 (incomplete) cannot be detected from observed data alone:
+ProcessBehavior can detect SDS 4-6 **with or without a plan**. SDS detection runs on raw data before NA rows are dropped, so cells where all response values are NA (e.g., from garbage values like `*` or `ND`) are counted as empty cells (N_kt=0).
 
-| SDS | Detection Requirement |
-|-----|----------------------|
-| 5 - Nested | Must know which factor levels are nested within others |
-| 6 - Incomplete | Must know expected grid size to calculate coverage (<75%) |
+| Approach | How Empty Cells Are Detected |
+|----------|------------------------------|
+| **`factors`** | Factor/time combinations where every response value is NA or garbage |
+| **`plan`** | Same as above, plus factor levels or time points entirely absent from the data |
 
-Without a plan, ProcessBehavior only sees what exists. With a plan, it can identify what's *missing*:
+A plan adds value by catching gaps that `factors` alone cannot see—for example, if a factor level was planned but never collected at all, no rows exist for that level, so `factors` won't see it. But when the data contains all planned factor levels (even if some cells have all-NA responses), both approaches detect the same SDS.
 
 ```python
-# Without plan: ProcessBehavior sees 34 observations
-# With plan: ProcessBehavior knows 480 cells were expected
-#            → 34/480 = 7% coverage → SDS 6 detected
+# With factors: ProcessBehavior sees all-NA cells as empty → SDS 4-6 detected
+# With plan: additionally catches factor levels entirely absent from data
 ```
 
 ### Expected vs Observed: How It Works
@@ -185,16 +183,16 @@ The design report shows:
 
 ### Summary: When Plans Add Value
 
-| SDS | Plan Required? | Plan Value |
-|-----|---------------|------------|
-| 1 - Full Replication | No | Design report shows coverage |
-| 2 - No Replication | No | Design report shows structure |
-| 3 - Partial Replication | No | Design report identifies sparse cells |
-| 4 - Single Stream | No | Minimal value (no factors) |
-| 5 - Nested | **Yes** | Required for detection |
-| 6 - Incomplete | **Yes** | Required for detection |
+| SDS | Plan Required? | Plan Adds |
+|-----|---------------|-----------|
+| 1 - Full Replication | No | Design comparison, coverage reports |
+| 2 - No Replication | No | Design comparison, coverage reports |
+| 3 - Partial Replication | No | Design comparison, shows sparse cells |
+| 4 - Incomplete with Singletons | No | Catches entirely absent factor levels |
+| 5 - Incomplete without Singletons | No | Catches entirely absent factor levels |
+| 6 - Incomplete without Replication | No | Catches entirely absent factor levels |
 
-**Best practice:** Always use a plan for rigorous VAS analysis. Even when not required for SDS detection, plans document your experimental design and enable rich design reports.
+**Best practice:** Always use a plan for rigorous VAS analysis. While not required for SDS detection, plans document your experimental design, catch entirely absent factor levels, and enable rich design reports.
 
 ## SDS 1: Full Replication
 
@@ -308,10 +306,10 @@ The design report shows:
 After formulation, inspect the SDS information:
 
 ```python
-study = pdf.formulate(
-    response=pdf.cols.weight,
-    factors=[pdf.cols.lane],
-    time=pdf.cols.batch
+study = pb.formulate(
+    response=pb.cols.weight,
+    factors=[pb.cols.lane],
+    time=pb.cols.batch
 )
 
 # Quick check
@@ -421,10 +419,10 @@ import pandas as pd
 from processbehavior import ProcessBehavior
 
 # Check cell sizes to understand your SDS
-study = pdf.formulate(
-    response=pdf.cols.weight,
-    factors=[pdf.cols.lane],
-    time=pdf.cols.batch
+study = pb.formulate(
+    response=pb.cols.weight,
+    factors=[pb.cols.lane],
+    time=pb.cols.batch
 )
 
 # Get cell counts

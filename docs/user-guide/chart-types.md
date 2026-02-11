@@ -37,10 +37,10 @@ result = study.execute(chart='Imr', by=['lane'], value='R4')
 The `by` parameter controls grouping and stratification:
 
 ```python
-study = pdf.formulate(
-    response=pdf.cols.weight,
-    factors=[pdf.cols.lane],
-    time=pdf.cols.batch
+study = pb.formulate(
+    response=pb.cols.weight,
+    factors=[pb.cols.lane],
+    time=pb.cols.batch
 )
 
 # Xbar/S - aggregate by different levels
@@ -142,6 +142,62 @@ print(f"Available residuals: {study.available_residuals}")
 
 **Note on R2**: SDS 2 and 6 use the moving average method; SDS 1, 3, 4, 5 use within-cell deviation (R2 = Y - Ȳ_kt). See [VAS Residuals](residuals.md) for details.
 
+## Paired Charts
+
+Wheeler recommends reading Xbar and S charts together (S first, then Xbar), and similarly for Imr and R. The `paired` parameter returns both charts in one result:
+
+```python
+# Returns both Xbar and S charts
+result = study.execute(chart='Xbar', paired=True)
+result.plot(chart='Xbar')  # Xbar chart
+result.plot(chart='S')     # S chart
+
+# Returns both Imr and R charts, stratified
+result = study.execute(chart='Imr', by=['lane'], paired=True)
+```
+
+Either chart in the pair triggers the pair: `chart='S', paired=True` also returns Xbar+S.
+
+## Effects and Interaction Charts
+
+When your study has factors, ProcessBehavior can visualize main effects and interactions. These charts help answer: *Are the factor and time effects practically significant?*
+
+| Chart | What It Shows | Requirements |
+|-------|---------------|--------------|
+| **Effects** | All main effects (factor + time) combined | Factors and time |
+| **MainEffects** | Factor main effects only | Factors |
+| **TimeEffects** | Time main effects only | Time |
+| **TimeInteraction** | Factor x time interaction | Factors and time |
+| **FactorInteraction** | Factor x factor interaction | 2+ factors |
+
+```python
+result = study.execute(chart='Xbar')
+
+# All main effects combined
+result.plot(chart='Effects')
+
+# Factor effects only
+result.plot(chart='MainEffects')
+
+# Time effects only
+result.plot(chart='TimeEffects')
+
+# Factor x time interaction
+result.plot(chart='TimeInteraction')
+
+# Factor x factor interaction (requires 2+ factors)
+result.plot(chart='FactorInteraction')
+```
+
+Effects charts require `result.has_effects == True` (i.e., the study must have factors). Interaction charts require the corresponding dimensions (factors + time for TimeInteraction, 2+ factors for FactorInteraction).
+
+You can also access the raw effects data:
+
+```python
+result.effects       # Dict with 'k_effects', 't_effects'
+result.interactions  # Dict of interaction terms
+```
+
 ## Understanding Xbar-S Charts
 
 ### The Xbar Chart
@@ -235,7 +291,6 @@ Re-centering uses:
 ```
 Do you have factors?
 ├── No → Do you have time?
-│   ├── No → SDS 0: Basic statistics only
 │   └── Yes → SDS 4: Use IMR
 └── Yes → Do you have time?
     ├── No → Use Xbar to compare factors

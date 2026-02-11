@@ -22,15 +22,6 @@ This document provides the formal definitions of Sampling Design States (SDS) as
 
 ## Detailed Definitions
 
-### SDS 0: No Structure
-
-**Not in original Wheeler/Bishop table** - added for processbehavior library.
-
-- **Condition**: No grouping factors or time variable specified
-- **Grid Status**: N/A
-- **Description**: Individual measurements with no rational subgrouping structure
-- **Analysis**: Limited to IMR (Individual-Moving Range) charts
-
 ### SDS 1: Complete with Full Replication
 
 - **Condition**: Min N_kt ≥ 2
@@ -111,7 +102,6 @@ To determine the SDS for a dataset:
    - has_multiples = whether any cells have N_kt ≥ 2
 
 3. Classification:
-   - If no factors/time defined → SDS 0
    - If NOT has_missing (Complete/Semi-Complete grid):
      - If min_n ≥ 2 → SDS 1
      - If min_n = 1 AND max_n = 1 → SDS 2

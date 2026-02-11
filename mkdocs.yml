@@ -45,6 +45,8 @@ markdown_extensions:
 
 plugins:
   - search
+  - mkdocs-jupyter:
+      include_source: true
   - mkdocstrings:
       handlers:
         python:
@@ -57,37 +59,29 @@ plugins:
             show_signature_annotations: true
 
 nav:
-  - Home: index.md
+  - Home: intro.md
   - Getting Started:
     - Installation: getting-started/installation.md
-    - Quick Start: getting-started/quickstart.md
-    - Basic Concepts: getting-started/concepts.md
+    - Quick Start: getting-started/quickstart.ipynb
+    - Key Concepts: getting-started/key-concepts.md
   - Tutorials:
     - Tutorial Overview: tutorials/index.md
-    - Your First Analysis: tutorials/first-analysis.md
-    - Understanding SDS: tutorials/understanding-sds.md
-    - VAS Residuals: tutorials/vas-residuals.md
-    - Stratified Analysis: tutorials/stratified-analysis.md
-    - Signal Detection: tutorials/signal-detection.md
+    - Your First Analysis: tutorials/basic-imr.ipynb
+    - Signal Detection: tutorials/signal-detection.ipynb
+    - Xbar-S Analysis: tutorials/xbar-s-analysis.ipynb
+    - Stratified Analysis: tutorials/stratified-analysis.ipynb
+    - SDS Validation: tutorials/sds-validation.ipynb
+    - Complete SDS 1 Analysis: tutorials/sds1-complete-analysis.ipynb
   - User Guide:
-    - Data Preparation: guide/data-preparation.md
-    - Chart Types: guide/chart-types.md
-    - Sampling Design States: guide/sampling-design-states.md
-    - Residual Analysis: guide/residual-analysis.md
-    - Excel Export: guide/excel-export.md
-    - Plotting: guide/plotting.md
-  - Architecture:
-    - Overview: architecture/overview.md
-    - Data Flow: architecture/data-flow.md
-    - Components: architecture/components.md
+    - Formulation: user-guide/formulation.md
+    - Chart Types: user-guide/chart-types.md
+    - SDS Detection: user-guide/sds-detection.md
+    - VAS Residuals: user-guide/residuals.md
+    - Excel Export: user-guide/excel-export.md
+    - Plotting: user-guide/plotting.md
   - API Reference:
-    - ProcessBehavior: api/process-behavior.md
-    - AnalysisResult: api/analysis-result.md
-    - Analysis: api/analysis.md
-    - SDS Detector: api/sds-detector.md
-    - Plotting: api/plotting.md
-    - Signals: api/signals.md
-  - Development:
-    - Contributing: development/contributing.md
-    - Testing: development/testing.md
-    - Code Style: development/code-style.md
+    - API Reference: reference/api.md
+    - WECO Rules: reference/weco-rules.md
+  - Appendix:
+    - Wheeler Terminology: appendix/wheeler-terminology.md
+    - Changelog: appendix/changelog.md
