@@ -2,9 +2,11 @@
 Effects visualization charts for ProcessBehavior analysis.
 
 This module provides chart functions for visualizing main effects and interactions:
-- create_main_effects_chart: Horizontal bar chart of all main effects
+- create_main_effects_chart: Horizontal bar chart of all main effects (combined)
+- create_factor_effects_chart: Vertical bar chart of factor main effects only
+- create_time_effects_chart: Horizontal bar chart of time effects only
 - create_time_interaction_chart: Line plot of factor × time interaction
-- create_factor_interaction_chart: Heatmap/grouped bar for factor × factor interaction
+- create_factor_interaction_chart: Line chart for factor × factor interaction
 """
 
 from __future__ import annotations
@@ -71,9 +73,8 @@ def create_main_effects_chart(
         if '_MEs' in name or name in ['main_effect']:
             continue
 
-        if 'Main_Effect' in data.columns:
-            if factors is None or name in factors:
-                factor_effects.append((name, data))
+        if 'Main_Effect' in data.columns and (factors is None or name in factors):
+            factor_effects.append((name, data))
         elif 'PT_ME' in data.columns:
             time_effects = (name, data)
 
@@ -145,6 +146,224 @@ def create_main_effects_chart(
 
     fig.update_layout(
         title='Main Effects',
+        xaxis_title='Effect Magnitude',
+        yaxis_title='',
+        width=width,
+        height=height,
+        yaxis=dict(autorange='reversed'),  # Top-to-bottom order
+        showlegend=False
+    )
+
+    return fig
+
+
+def create_factor_effects_chart(
+    effects: dict,
+    theme: ChartTheme,
+    factors: list[str] | None = None,
+    width: int = 1000,
+    height: int = 500
+) -> go.Figure:
+    """
+    Create vertical bar chart showing factor main effects only.
+
+    Displays main effect magnitudes for each factor level, with factors
+    grouped together. Excludes time effects. Includes a horizontal
+    reference line at 0.
+
+    Parameters
+    ----------
+    effects : dict
+        Effects dictionary from result.effects containing factor main effects.
+        Expected keys: factor names (e.g., 'Lane', 'Phase') mapping to DataFrames
+        with columns [factor_name, 'Main_Effect']
+    theme : ChartTheme
+        Visual theme for styling
+    factors : list of str, optional
+        Specific factors to include. If None, includes all factors.
+    width : int, default 1000
+        Figure width in pixels
+    height : int, default 500
+        Figure height in pixels
+
+    Returns
+    -------
+    go.Figure
+        Plotly figure with vertical bar chart
+
+    Examples
+    --------
+    >>> fig = create_factor_effects_chart(result.effects, theme)
+    >>> fig.show()
+    """
+    # Find factor effects (DataFrames with 'Main_Effect' column)
+    factor_effects = []
+
+    for name, data in effects.items():
+        if not isinstance(data, pd.DataFrame):
+            continue
+
+        # Skip non-effect DataFrames (MEs scores, etc.)
+        if '_MEs' in name or name in ['main_effect']:
+            continue
+
+        if 'Main_Effect' in data.columns and (factors is None or name in factors):
+            factor_effects.append((name, data))
+
+    if not factor_effects:
+        raise ValueError(
+            "No factor main effects found to plot.\n"
+            f"Available effects keys: {list(effects.keys())}"
+        )
+
+    # Build combined data for vertical bar chart
+    all_labels = []
+    all_values = []
+    all_colors = []
+
+    # Color palette for factors
+    factor_colors = [
+        theme.data_color,
+        theme.center_color,
+        '#FF6B6B',  # Coral
+        '#4ECDC4',  # Teal
+        '#45B7D1',  # Sky blue
+        '#96CEB4',  # Sage
+    ]
+
+    for i, (factor_name, data) in enumerate(factor_effects):
+        factor_col = data.columns[0]
+        color = factor_colors[i % len(factor_colors)]
+
+        for _, row in data.iterrows():
+            label = f"{factor_name}: {row[factor_col]}"
+            all_labels.append(label)
+            all_values.append(row['Main_Effect'])
+            all_colors.append(color)
+
+    # Create vertical bar chart
+    fig = go.Figure()
+
+    fig.add_trace(go.Bar(
+        x=all_labels,
+        y=all_values,
+        marker_color=all_colors,
+        text=[f'{v:.3f}' for v in all_values],
+        textposition='outside',
+        hovertemplate='%{x}<br>Effect: %{y:.4f}<extra></extra>'
+    ))
+
+    # Add horizontal line at 0
+    fig.add_hline(
+        y=0,
+        line_dash='dash',
+        line_color='gray',
+        line_width=1
+    )
+
+    fig.update_layout(
+        title='Factor Main Effects',
+        xaxis_title='Factor Level',
+        yaxis_title='Effect Magnitude',
+        width=width,
+        height=height,
+        showlegend=False
+    )
+
+    return fig
+
+
+def create_time_effects_chart(
+    effects: dict,
+    theme: ChartTheme,
+    width: int = 1000,
+    height: int | None = None
+) -> go.Figure:
+    """
+    Create horizontal bar chart showing time effects only.
+
+    Displays time effect magnitudes for each time period. Excludes factor
+    main effects. Includes a vertical reference line at 0.
+
+    Parameters
+    ----------
+    effects : dict
+        Effects dictionary from result.effects containing time effects.
+        Expected key: time variable name mapping to DataFrame with columns
+        [time_var, 'PT_ME']
+    theme : ChartTheme
+        Visual theme for styling
+    width : int, default 1000
+        Figure width in pixels
+    height : int, optional
+        Figure height in pixels. Auto-calculated if None.
+
+    Returns
+    -------
+    go.Figure
+        Plotly figure with horizontal bar chart
+
+    Examples
+    --------
+    >>> fig = create_time_effects_chart(result.effects, theme)
+    >>> fig.show()
+    """
+    # Find time effects (DataFrame with 'PT_ME' column)
+    time_effects = None
+
+    for name, data in effects.items():
+        if not isinstance(data, pd.DataFrame):
+            continue
+
+        if 'PT_ME' in data.columns:
+            time_effects = (name, data)
+            break
+
+    if time_effects is None:
+        raise ValueError(
+            "No time effects found to plot.\n"
+            "This requires a time variable in the analysis.\n"
+            f"Available effects keys: {list(effects.keys())}"
+        )
+
+    # Build data for horizontal bar chart
+    all_labels = []
+    all_values = []
+
+    name, data = time_effects
+    time_col = data.columns[0]
+    for _, row in data.iterrows():
+        label = f"Time: {row[time_col]}"
+        all_labels.append(label)
+        all_values.append(row['PT_ME'])
+
+    # Calculate height if not specified
+    if height is None:
+        height = max(400, 25 * len(all_labels) + 100)
+
+    # Create horizontal bar chart
+    fig = go.Figure()
+
+    fig.add_trace(go.Bar(
+        y=all_labels,
+        x=all_values,
+        orientation='h',
+        marker_color=theme.pattern_signal_color,
+        text=[f'{v:.3f}' for v in all_values],
+        textposition='outside',
+        hovertemplate='%{y}<br>Effect: %{x:.4f}<extra></extra>'
+    ))
+
+    # Add vertical line at 0
+    fig.add_vline(
+        x=0,
+        line_dash='dash',
+        line_color='gray',
+        line_width=1
+    )
+
+    fig.update_layout(
+        title='Time Effects',
         xaxis_title='Effect Magnitude',
         yaxis_title='',
         width=width,
@@ -303,14 +522,15 @@ def create_factor_interaction_chart(
     interactions: dict,
     factors: list[str],
     theme: ChartTheme,
-    chart_type: str = 'heatmap',
     width: int = 800,
     height: int = 600
 ) -> go.Figure:
     """
-    Create visualization for factor × factor interaction.
+    Create line chart for factor × factor interaction.
 
-    Can display as either a heatmap or grouped bar chart.
+    Displays one line per factor2 level, with x-axis as factor1 levels
+    and y-axis as the interaction effect (Rx). Non-parallel lines indicate
+    interaction between the two factors.
 
     Parameters
     ----------
@@ -322,8 +542,6 @@ def create_factor_interaction_chart(
         Factor variable names (at least 2)
     theme : ChartTheme
         Visual theme for styling
-    chart_type : str, default 'heatmap'
-        Visualization type: 'heatmap' or 'bar'
     width : int, default 800
         Figure width in pixels
     height : int, default 600
@@ -332,7 +550,7 @@ def create_factor_interaction_chart(
     Returns
     -------
     go.Figure
-        Plotly figure with heatmap or grouped bar chart
+        Plotly figure with line chart
 
     Examples
     --------
@@ -363,84 +581,57 @@ def create_factor_interaction_chart(
             f"Found: {list(fi.columns)}"
         )
 
-    if chart_type == 'heatmap':
-        # Pivot to matrix form for heatmap
-        pivot = fi.pivot(index=factor1, columns=factor2, values='Rx')
+    fig = go.Figure()
 
-        fig = go.Figure(data=go.Heatmap(
-            z=pivot.values,
-            x=[str(c) for c in pivot.columns],
-            y=[str(r) for r in pivot.index],
-            colorscale='RdBu_r',  # Diverging: red for negative, blue for positive
-            zmid=0,  # Center colorscale at 0
-            text=[[f'{v:.3f}' for v in row] for row in pivot.values],
-            texttemplate='%{text}',
-            textfont={'size': 10},
+    # Get unique levels, sorted for consistent ordering
+    levels1 = sorted(fi[factor1].unique(), key=str)
+    levels2 = sorted(fi[factor2].unique(), key=str)
+
+    # Color palette for factor2 levels
+    colors = [
+        theme.data_color,
+        theme.center_color,
+        '#FF6B6B',
+        '#4ECDC4',
+        '#45B7D1',
+        '#96CEB4',
+        '#FFEAA7',
+        '#DDA0DD',
+    ]
+
+    # Create one line per factor2 level
+    for i, level2 in enumerate(levels2):
+        mask = fi[factor2] == level2
+        subset = fi[mask].set_index(factor1)
+
+        x_values = [str(lv) for lv in levels1]
+        y_values = [subset.loc[lv, 'Rx'] if lv in subset.index else 0 for lv in levels1]
+
+        fig.add_trace(go.Scatter(
+            x=x_values,
+            y=y_values,
+            mode='lines+markers',
+            name=str(level2),
+            line=dict(color=colors[i % len(colors)], width=2),
+            marker=dict(size=8, color=colors[i % len(colors)]),
             hovertemplate=(
-                f'{factor1}: %{{y}}<br>'
-                f'{factor2}: %{{x}}<br>'
-                'Interaction: %{z:.4f}<extra></extra>'
+                f'{factor1}: %{{x}}<br>'
+                f'{factor2}: {level2}<br>'
+                'Interaction: %{y:.4f}<extra></extra>'
             )
         ))
 
-        fig.update_layout(
-            title=f'Factor Interaction: {factor1} × {factor2}',
-            xaxis_title=factor2,
-            yaxis_title=factor1,
-            width=width,
-            height=height
-        )
+    # Add horizontal reference line at 0
+    fig.add_hline(y=0, line_dash='dash', line_color='gray', line_width=1)
 
-    elif chart_type == 'bar':
-        # Grouped bar chart
-        fig = go.Figure()
-
-        # Get unique levels
-        levels1 = fi[factor1].unique()
-        levels2 = fi[factor2].unique()
-
-        # Color palette
-        colors = [
-            theme.data_color,
-            theme.center_color,
-            '#FF6B6B',
-            '#4ECDC4',
-            '#45B7D1',
-            '#96CEB4',
-        ]
-
-        for i, level2 in enumerate(levels2):
-            mask = fi[factor2] == level2
-            subset = fi[mask].set_index(factor1)
-
-            fig.add_trace(go.Bar(
-                x=[str(lv) for lv in levels1],
-                y=[subset.loc[lv, 'Rx'] if lv in subset.index else 0 for lv in levels1],
-                name=str(level2),
-                marker_color=colors[i % len(colors)],
-                hovertemplate=(
-                    f'{factor1}: %{{x}}<br>'
-                    f'{factor2}: {level2}<br>'
-                    'Interaction: %{y:.4f}<extra></extra>'
-                )
-            ))
-
-        fig.add_hline(y=0, line_dash='dash', line_color='gray', line_width=1)
-
-        fig.update_layout(
-            title=f'Factor Interaction: {factor1} × {factor2}',
-            xaxis_title=factor1,
-            yaxis_title='Interaction Effect (Rx)',
-            barmode='group',
-            width=width,
-            height=height,
-            legend_title=factor2
-        )
-
-    else:
-        raise ValueError(
-            f"Invalid chart_type: '{chart_type}'.\n"
-            "Options: 'heatmap', 'bar'"
-        )
+    fig.update_layout(
+        title=f'Factor Interaction: {factor1} × {factor2}',
+        xaxis_title=factor1,
+        yaxis_title='Interaction Effect (Rx)',
+        width=width,
+        height=height,
+        legend_title=factor2,
+        hovermode='closest'
+    )
 
     return fig

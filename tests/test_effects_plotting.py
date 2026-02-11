@@ -13,8 +13,10 @@ import pytest
 from processbehavior import ProcessBehavior
 from processbehavior.plotting import ControlChartFigure
 from processbehavior.plotting.effects_charts import (
+    create_factor_effects_chart,
     create_factor_interaction_chart,
     create_main_effects_chart,
+    create_time_effects_chart,
     create_time_interaction_chart,
 )
 from processbehavior.plotting.themes import get_theme
@@ -180,6 +182,128 @@ class TestCreateMainEffectsChart:
 
 
 # ============================================================================
+# Test: create_factor_effects_chart
+# ============================================================================
+
+class TestCreateFactorEffectsChart:
+    """Test factor effects bar chart creation (MainEffects)."""
+
+    def test_creates_figure(self, result_with_effects, theme):
+        """Should create a valid Plotly figure."""
+        effects = result_with_effects.effects
+        fig = create_factor_effects_chart(effects, theme)
+
+        assert isinstance(fig, go.Figure)
+
+    def test_vertical_bar_orientation(self, result_with_effects, theme):
+        """Should create vertical bars (no orientation specified)."""
+        effects = result_with_effects.effects
+        fig = create_factor_effects_chart(effects, theme)
+
+        # Check trace is vertical bar (no orientation = vertical)
+        assert len(fig.data) > 0
+        assert fig.data[0].orientation is None  # Vertical bars have no orientation
+
+    def test_excludes_time_effects(self, result_with_effects, theme):
+        """Should only show factor effects, not time effects."""
+        effects = result_with_effects.effects
+        fig = create_factor_effects_chart(effects, theme)
+
+        # Should have labels only for factors, not time
+        labels = list(fig.data[0].x)
+        time_labels = [lbl for lbl in labels if lbl.startswith('Time:')]
+
+        assert len(time_labels) == 0
+
+    def test_includes_all_factors(self, result_with_effects, theme):
+        """Should include effects for all factors."""
+        effects = result_with_effects.effects
+        fig = create_factor_effects_chart(effects, theme)
+
+        labels = list(fig.data[0].x)
+        factor1_labels = [lbl for lbl in labels if lbl.startswith('factor1:')]
+        factor2_labels = [lbl for lbl in labels if lbl.startswith('factor2:')]
+
+        assert len(factor1_labels) == 2  # A, B
+        assert len(factor2_labels) == 2  # 1, 2
+
+    def test_custom_dimensions(self, result_with_effects, theme):
+        """Should respect custom width/height."""
+        effects = result_with_effects.effects
+        fig = create_factor_effects_chart(effects, theme, width=800, height=600)
+
+        assert fig.layout.width == 800
+        assert fig.layout.height == 600
+
+    def test_raises_if_no_factor_effects(self, theme, result_with_effects):
+        """Should raise error if no factor effects data found."""
+        # Create effects dict with only time effects
+        time_only_effects = {'time': result_with_effects.effects.get('time')}
+        with pytest.raises(ValueError, match="No factor main effects found"):
+            create_factor_effects_chart(time_only_effects, theme)
+
+
+# ============================================================================
+# Test: create_time_effects_chart
+# ============================================================================
+
+class TestCreateTimeEffectsChart:
+    """Test time effects bar chart creation (TimeEffects)."""
+
+    def test_creates_figure(self, result_with_effects, theme):
+        """Should create a valid Plotly figure."""
+        effects = result_with_effects.effects
+        fig = create_time_effects_chart(effects, theme)
+
+        assert isinstance(fig, go.Figure)
+
+    def test_horizontal_bar_orientation(self, result_with_effects, theme):
+        """Should create horizontal bars."""
+        effects = result_with_effects.effects
+        fig = create_time_effects_chart(effects, theme)
+
+        # Check trace is horizontal bar
+        assert len(fig.data) > 0
+        assert fig.data[0].orientation == 'h'
+
+    def test_only_time_labels(self, result_with_effects, theme):
+        """Should only show time labels, not factor labels."""
+        effects = result_with_effects.effects
+        fig = create_time_effects_chart(effects, theme)
+
+        labels = list(fig.data[0].y)
+
+        # All labels should be time labels
+        for lbl in labels:
+            assert lbl.startswith('Time:')
+
+        # Should have labels for all 5 time points
+        assert len(labels) == 5
+
+    def test_auto_height_calculation(self, result_with_effects, theme):
+        """Should auto-calculate height based on number of bars."""
+        effects = result_with_effects.effects
+        fig = create_time_effects_chart(effects, theme)
+
+        # 5 time points should give height = max(400, 25*5 + 100) = 400
+        assert fig.layout.height == 400
+
+    def test_custom_dimensions(self, result_with_effects, theme):
+        """Should respect custom width/height."""
+        effects = result_with_effects.effects
+        fig = create_time_effects_chart(effects, theme, width=800, height=600)
+
+        assert fig.layout.width == 800
+        assert fig.layout.height == 600
+
+    def test_raises_if_no_time_effects(self, theme, result_no_time):
+        """Should raise error if no time effects data found."""
+        effects = result_no_time.effects
+        with pytest.raises(ValueError, match="No time effects found"):
+            create_time_effects_chart(effects, theme)
+
+
+# ============================================================================
 # Test: create_time_interaction_chart
 # ============================================================================
 
@@ -233,8 +357,8 @@ class TestCreateTimeInteractionChart:
 class TestCreateFactorInteractionChart:
     """Test factor × factor interaction chart creation."""
 
-    def test_creates_heatmap(self, result_with_effects, theme):
-        """Should create a heatmap by default."""
+    def test_creates_line_chart(self, result_with_effects, theme):
+        """Should create a line chart with scatter traces."""
         fig = create_factor_interaction_chart(
             interactions=result_with_effects.interactions,
             factors=['factor1', 'factor2'],
@@ -242,21 +366,10 @@ class TestCreateFactorInteractionChart:
         )
 
         assert isinstance(fig, go.Figure)
-        # Check it's a heatmap
-        assert isinstance(fig.data[0], go.Heatmap)
-
-    def test_creates_bar_chart(self, result_with_effects, theme):
-        """Should create grouped bar chart when requested."""
-        fig = create_factor_interaction_chart(
-            interactions=result_with_effects.interactions,
-            factors=['factor1', 'factor2'],
-            theme=theme,
-            chart_type='bar'
-        )
-
-        assert isinstance(fig, go.Figure)
-        # Check it has bar traces
-        assert isinstance(fig.data[0], go.Bar)
+        # Check it's a scatter (line) trace
+        assert isinstance(fig.data[0], go.Scatter)
+        # Should have one trace per factor2 level (2 levels: 1, 2)
+        assert len(fig.data) == 2
 
     def test_raises_if_no_factor_factor(self, theme):
         """Should raise error if factor_factor not available."""
@@ -291,6 +404,24 @@ class TestPlotEffectsIntegration:
         assert isinstance(fig, ControlChartFigure)
         assert isinstance(fig.figure, go.Figure)
 
+    def test_plot_main_effects(self, result_with_effects):
+        """Should create MainEffects chart via result.plot()."""
+        fig = result_with_effects.plot(chart='MainEffects')
+
+        assert isinstance(fig, ControlChartFigure)
+        assert isinstance(fig.figure, go.Figure)
+        # Should have vertical bars (x-axis labels, y-axis values)
+        assert fig.figure.data[0].orientation is None
+
+    def test_plot_time_effects(self, result_with_effects):
+        """Should create TimeEffects chart via result.plot()."""
+        fig = result_with_effects.plot(chart='TimeEffects')
+
+        assert isinstance(fig, ControlChartFigure)
+        assert isinstance(fig.figure, go.Figure)
+        # Should have horizontal bars
+        assert fig.figure.data[0].orientation == 'h'
+
     def test_plot_time_interaction(self, result_with_effects):
         """Should create TimeInteraction chart via result.plot()."""
         fig = result_with_effects.plot(chart='TimeInteraction')
@@ -317,6 +448,18 @@ class TestPlotEffectsIntegration:
 
         assert fig.figure.layout.width == 1200
 
+    def test_main_effects_with_custom_title(self, result_with_effects):
+        """Should apply custom title to MainEffects chart."""
+        fig = result_with_effects.plot(chart='MainEffects', title='Factor Effects')
+
+        assert fig.figure.layout.title.text == 'Factor Effects'
+
+    def test_time_effects_with_custom_title(self, result_with_effects):
+        """Should apply custom title to TimeEffects chart."""
+        fig = result_with_effects.plot(chart='TimeEffects', title='Time Effects')
+
+        assert fig.figure.layout.title.text == 'Time Effects'
+
 
 # ============================================================================
 # Test: Error Handling
@@ -334,6 +477,17 @@ class TestEffectsPlottingErrors:
         """Should raise error when factor interaction not available."""
         with pytest.raises(ValueError, match="Factor interaction not available"):
             result_single_factor.plot(chart='FactorInteraction')
+
+    def test_time_effects_requires_time_variable(self, result_no_time):
+        """Should raise error when time effects not available."""
+        with pytest.raises(ValueError, match="Time effects not available"):
+            result_no_time.plot(chart='TimeEffects')
+
+    def test_main_effects_requires_effects(self, result_no_time):
+        """MainEffects should raise error when effects not computed."""
+        # result_no_time has factors but has_effects=False (Imr chart with by param)
+        with pytest.raises(ValueError, match="Effects not available"):
+            result_no_time.plot(chart='MainEffects')
 
 
 # ============================================================================
