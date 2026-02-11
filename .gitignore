@@ -117,3 +117,4 @@ dmypy.json
 Thumbs.db
 _build/
 docs/_build/
+site/
