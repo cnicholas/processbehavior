@@ -8,10 +8,10 @@ ProcessBehavior follows a deliberate three-step workflow:
 
 ```python
 # 1. Wrap your data
-pdf = ProcessBehavior(df)
+pb = ProcessBehavior(df)
 
 # 2. Formulate your study (SDS detection happens here)
-study = pdf.formulate(response=..., factors=..., time=...)
+study = pb.formulate(response=..., factors=..., time=...)
 
 # 3. Analyze and visualize
 result = study.execute()
@@ -26,7 +26,6 @@ The **Sampling Design State** describes the structure of your data. ProcessBehav
 
 | SDS | Name | Description | Recommended Chart |
 |-----|------|-------------|-------------------|
-| 0 | No Structure | No factors, no time | Basic statistics only |
 | 1 | Full Replication | All factor-time cells have n >= 2 | Xbar-S |
 | 2 | No Replication | All cells have exactly n = 1 | Xbar-S (MR-based) |
 | 3 | Partial Replication | Mix of n=1 and n>=2 cells | Xbar-S (hybrid) |
@@ -43,7 +42,7 @@ The SDS determines:
 - What conclusions you can draw
 
 ```python
-study = pdf.formulate(response='weight', factors=['lane'], time='batch')
+study = pb.formulate(response='weight', factors=['lane'], time='batch')
 print(f"SDS: {study.sds}")           # e.g., 3
 print(f"Name: {study.sds_name}")     # e.g., "Partial Replication"
 print(f"Valid: {study.valid_charts}") # e.g., ['Xbar', 'S', 'Imr']

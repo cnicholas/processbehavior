@@ -24,10 +24,10 @@ Where:
 Residuals are calculated during formulation and available after analysis:
 
 ```python
-study = pdf.formulate(
-    response=pdf.cols.weight,
-    factors=[pdf.cols.lane],
-    time=pdf.cols.batch
+study = pb.formulate(
+    response=pb.cols.weight,
+    factors=[pb.cols.lane],
+    time=pb.cols.batch
 )
 
 # Access via study.dataset
@@ -208,11 +208,11 @@ fig = result.plot(show_zones=True, show_signals=True)
 ```python
 from processbehavior import ProcessBehavior
 
-pdf = ProcessBehavior(df)
-study = pdf.formulate(
-    response=pdf.cols.weight,
-    factors=[pdf.cols.lane],
-    time=pdf.cols.batch
+pb = ProcessBehavior(df)
+study = pb.formulate(
+    response=pb.cols.weight,
+    factors=[pb.cols.lane],
+    time=pb.cols.batch
 )
 
 # Check available residuals

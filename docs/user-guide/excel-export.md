@@ -85,11 +85,11 @@ If `include_full_dataset=True`:
 from processbehavior import ProcessBehavior
 
 # Setup
-pdf = ProcessBehavior(df)
-study = pdf.formulate(
-    response=pdf.cols.weight,
-    factors=[pdf.cols.lane],
-    time=pdf.cols.batch
+pb = ProcessBehavior(df)
+study = pb.formulate(
+    response=pb.cols.weight,
+    factors=[pb.cols.lane],
+    time=pb.cols.batch
 )
 result = study.execute()
 

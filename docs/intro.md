@@ -52,7 +52,7 @@ flowchart LR
 1. **Load** your process data into a pandas DataFrame
 2. **Wrap** with `ProcessBehavior` for IDE auto-completion
 3. **Formulate** your study — ProcessBehavior detects the Sampling Design State (SDS) and determines:
-   - Design state (SDS 0–6)
+   - Design state (SDS 1–6)
    - Valid and recommended charts
    - Available VAS residuals (R1–R5)
    - Main effects analysis
@@ -72,11 +72,11 @@ from processbehavior import ProcessBehavior
 df = pd.read_csv("process_data.csv")
 
 # Formulate your study
-pdf = ProcessBehavior(df)
-study = pdf.formulate(
-    response=pdf.cols.measurement,
-    factors=[pdf.cols.machine, pdf.cols.operator],
-    time=pdf.cols.timestamp
+pb = ProcessBehavior(df)
+study = pb.formulate(
+    response=pb.cols.measurement,
+    factors=[pb.cols.machine, pb.cols.operator],
+    time=pb.cols.timestamp
 )
 
 # ProcessBehavior automatically detects SDS and recommends charts
@@ -91,11 +91,10 @@ result.plot(show_zones=True, show_signals=True)
 ## Key Features
 
 ### Automatic Sampling Design Detection
-ProcessBehavior identifies six distinct sampling design states (SDS 0-6) and configures the analysis accordingly:
+ProcessBehavior identifies six distinct sampling design states (SDS 1-6) and configures the analysis accordingly:
 
 | SDS | Design | Charts |
 |-----|--------|--------|
-| 0 | No structure | IMR only |
 | 1 | Full replication | Xbar-S with VAS residuals |
 | 2 | No replication | Xbar-S with moving range |
 | 3 | Partial replication | Hybrid approach |

@@ -31,7 +31,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 #### Core Features
 - `ProcessBehavior` class for data wrapping with IDE auto-completion
 - `formulate()` method for study definition
-- Automatic Sampling Design State (SDS 0-6) detection
+- Automatic Sampling Design State (SDS 1-6) detection
 - `Study` class with chart recommendations
 
 #### Analysis
@@ -142,10 +142,10 @@ If you were using a pre-release version, note these changes:
 #### API Changes
 ```python
 # Old (pre-release)
-result = pdf.analyze(response_var='weight', chart_type='Imr').calculate()
+result = pb.analyze(response_var='weight', chart_type='Imr').calculate()
 
 # New (v0.1.0)
-study = pdf.formulate(response=pdf.cols.weight)
+study = pb.formulate(response=pb.cols.weight)
 result = study.execute()
 ```
 

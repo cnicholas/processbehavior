@@ -564,7 +564,7 @@ class ProcessBehavior:
         response: str | ColumnRef,
         factors: list[str | ColumnRef] | None = None,
         time: str | ColumnRef | None = None,
-        plan: dict[str | ColumnRef, list] | None = None,
+        plan: dict | None = None,
         precision: int = 3,
         unit_of_analysis: str | None = None
     ) -> Study:
@@ -587,12 +587,20 @@ class ProcessBehavior:
         time : str or ColumnRef, optional
             Time/sequence variable for ordering observations.
         plan : dict, optional
-            Sampling plan specifying expected factor levels. Keys are column names
-            or ColumnRefs, values are lists of expected levels. Enables SDS 4-6
+            Sampling plan specifying expected factor levels. Must contain a
+            ``'factors'`` key mapping column names (or ColumnRefs) to lists of
+            expected levels. Optionally include ``'T'`` (planned time points)
+            and ``'N'`` (planned observations per cell). Enables SDS 4-6
             detection by comparing observed structure to planned structure.
-            Cannot be used with `factors`.
+            Cannot be used with ``factors``.
 
-            Example: plan={pb.cols.Lane: [1,2,3,4], pb.cols.Phase: [1,2,3]}
+            Example::
+
+                plan={
+                    'factors': {pb.cols.Lane: [1,2,3,4], pb.cols.Phase: [1,2,3]},
+                    'T': 10,
+                    'N': 2
+                }
         precision : int, default 3
             Decimal places for output values.
         unit_of_analysis : str, optional
@@ -633,8 +641,11 @@ class ProcessBehavior:
         ...     response=pb.cols.Weight,
         ...     time=pb.cols.Pull,
         ...     plan={
-        ...         pb.cols.Lane: [1, 2, 3, 4],
-        ...         pb.cols.Phase: [1, 2, 3]  # Even if Phase 3 not in data
+        ...         'factors': {
+        ...             pb.cols.Lane: [1, 2, 3, 4],
+        ...             pb.cols.Phase: [1, 2, 3]  # Even if Phase 3 not in data
+        ...         },
+        ...         'T': 10
         ...     }
         ... )
         >>> study.design()  # Shows planned vs observed structure

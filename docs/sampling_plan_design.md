@@ -17,7 +17,7 @@ Enable SDS 4-6 detection by allowing users to specify expected factor levels (sa
 ## API
 
 ```python
-# Simple case (infer from data) - SDS 0-3
+# Simple case (infer from data) - SDS 1-3
 study = pb.formulate(
     response=pb.cols.Weight,
     time=pb.cols.Pull,
@@ -252,7 +252,7 @@ def detect_sds(
 **Two detection modes:**
 
 ```python
-# Mode 1: Observed structure only (plan=None) → SDS 0-3
+# Mode 1: Observed structure only (plan=None) → SDS 1-3
 # Uses actual data to infer structure
 sds, min_n = detector.detect_sds(df, spec)  # Current behavior
 
@@ -265,7 +265,7 @@ sds, min_n = detector.detect_sds(df, spec, plan={'Lane': [1,2,3,4], 'Phase': [1,
 ```python
 def detect_sds(self, df, spec, plan=None):
     if plan is None:
-        # Mode 1: Infer from observed (SDS 0-3 only)
+        # Mode 1: Infer from observed (SDS 1-3 only)
         return self._classify_from_observed(df, spec)
     else:
         # Mode 2: Compare observed to plan (enables SDS 4-6)
@@ -337,8 +337,8 @@ Column-not-found still uses existing `ColumnNotFoundError`.
 
 **SDS integration tests:**
 
-*Mode 1: Observed only (no plan) → SDS 0-3:*
-- `test_sds_0_no_factors_no_plan`
+*Mode 1: Observed only (no plan) → SDS 1-3:*
+- `test_sds_4_no_factors_no_plan`
 - `test_sds_1_full_replication_no_plan`
 - `test_sds_2_no_replication_no_plan`
 - `test_sds_3_partial_replication_no_plan`

@@ -7,12 +7,12 @@ The `formulate()` method is the heart of ProcessBehavior. It enables the analyst
 ```python
 from processbehavior import ProcessBehavior
 
-pdf = ProcessBehavior(df)
+pb = ProcessBehavior(df)
 
-study = pdf.formulate(
-    response=pdf.cols.weight,        # Required: measurement variable
-    factors=[pdf.cols.lane],         # Optional: grouping variables
-    time=pdf.cols.batch,             # Optional: time/sequence variable
+study = pb.formulate(
+    response=pb.cols.weight,        # Required: measurement variable
+    factors=[pb.cols.lane],         # Optional: grouping variables
+    time=pb.cols.batch,             # Optional: time/sequence variable
     precision=3                         # Optional: decimal places
 )
 ```
@@ -26,12 +26,12 @@ One of ProcessBehavior's key features is **IDE auto-completion** for column name
 After creating a ProcessBehavior, access columns via the `.cols` accessor:
 
 ```python
-pdf = ProcessBehavior(df)
+pb = ProcessBehavior(df)
 
-# Type pdf.cols. and your IDE will show all available columns
-pdf.cols.weight      # Instead of 'weight' string
-pdf.cols.lane        # Instead of 'lane' string
-pdf.cols.batch       # Instead of 'batch' string
+# Type pb.cols. and your IDE will show all available columns
+pb.cols.weight      # Instead of 'weight' string
+pb.cols.lane        # Instead of 'lane' string
+pb.cols.batch       # Instead of 'batch' string
 ```
 
 This works in:
@@ -45,7 +45,7 @@ This works in:
 After formulation, the `study.charts` accessor provides auto-completion for valid chart types:
 
 ```python
-study = pdf.formulate(...)
+study = pb.formulate(...)
 
 # Type study.charts. and see only valid charts for your SDS
 study.charts.Xbar      # Available if SDS supports it
@@ -61,7 +61,7 @@ The measurement variable to analyze.
 
 ```python
 # Using auto-completion (recommended)
-response=pdf.cols.measurement
+response=pb.cols.measurement
 
 # Using string (still works)
 response='measurement'
@@ -73,10 +73,10 @@ A list of categorical variables that define subgroups. These become the "rationa
 
 ```python
 # Single factor
-factors=[pdf.cols.operator]
+factors=[pb.cols.operator]
 
 # Multiple factors (creates combined subgroups)
-factors=[pdf.cols.machine, pdf.cols.shift]
+factors=[pb.cols.machine, pb.cols.shift]
 ```
 
 When multiple factors are specified, they're combined into a single grouping variable (e.g., `Machine_A_Shift_1`).
@@ -86,9 +86,9 @@ When multiple factors are specified, they're combined into a single grouping var
 The variable that defines time ordering. This enables time-series analysis and certain signal detection rules.
 
 ```python
-time=pdf.cols.batch
-time=pdf.cols.timestamp
-time=pdf.cols.sequence
+time=pb.cols.batch
+time=pb.cols.timestamp
+time=pb.cols.sequence
 ```
 
 ### precision (optional, default=3)
@@ -116,10 +116,10 @@ When you call `formulate()`, ProcessBehavior:
 Formulation returns a `Study` object with rich information:
 
 ```python
-study = pdf.formulate(
-    response=pdf.cols.weight,
-    factors=[pdf.cols.lane],
-    time=pdf.cols.batch
+study = pb.formulate(
+    response=pb.cols.weight,
+    factors=[pb.cols.lane],
+    time=pb.cols.batch
 )
 
 # SDS information
@@ -159,9 +159,9 @@ study.why_not('Xbar')
 No factors, just measurements over time:
 
 ```python
-study = pdf.formulate(
-    response=pdf.cols.temperature,
-    time=pdf.cols.day
+study = pb.formulate(
+    response=pb.cols.temperature,
+    time=pb.cols.day
 )
 # Results in SDS 4, recommends IMR
 ```
@@ -171,9 +171,9 @@ study = pdf.formulate(
 Factors but no time dimension:
 
 ```python
-study = pdf.formulate(
-    response=pdf.cols.yield_pct,
-    factors=[pdf.cols.machine, pdf.cols.operator]
+study = pb.formulate(
+    response=pb.cols.yield_pct,
+    factors=[pb.cols.machine, pb.cols.operator]
 )
 # Results in SDS varies, recommends Xbar or IMR
 ```
@@ -183,10 +183,10 @@ study = pdf.formulate(
 Full analysis with factors and time:
 
 ```python
-study = pdf.formulate(
-    response=pdf.cols.fillweight,
-    factors=[pdf.cols.lane],
-    time=pdf.cols.pull
+study = pb.formulate(
+    response=pb.cols.fillweight,
+    factors=[pb.cols.lane],
+    time=pb.cols.pull
 )
 # Results in SDS 1-3, recommends Xbar-S with VAS residuals
 ```
@@ -197,10 +197,10 @@ Multiple observations per factor-time cell:
 
 ```python
 # 4 lanes x 10 batches x 3 replicates = 120 observations
-study = pdf.formulate(
-    response=pdf.cols.weight,
-    factors=[pdf.cols.lane],
-    time=pdf.cols.batch
+study = pb.formulate(
+    response=pb.cols.weight,
+    factors=[pb.cols.lane],
+    time=pb.cols.batch
 )
 # Results in SDS 1 (Full Replication) - most powerful design
 ```
@@ -217,7 +217,7 @@ default_na_values = [
 ]
 
 # Custom NA values
-pdf = ProcessBehavior(df, na_values=['*', 'missing', '<DL'])
+pb = ProcessBehavior(df, na_values=['*', 'missing', '<DL'])
 ```
 
 ## Natural Sorting
@@ -230,6 +230,130 @@ Factor levels are automatically sorted naturally:
 ```
 
 This uses `natsort` for intelligent alphanumeric sorting.
+
+## The `plan` Parameter
+
+The `plan` parameter provides an alternative to `factors` for specifying the study structure. Use `plan` when you know the intended design -- especially when factor levels or time points are entirely absent from the data.
+
+`plan` and `factors` are **mutually exclusive** -- use one or the other.
+
+### Format
+
+The plan is a dictionary with a required `'factors'` key and optional `'T'` and `'N'` keys:
+
+```python
+study = pb.formulate(
+    response=pb.cols.weight,
+    time=pb.cols.batch,
+    plan={
+        'factors': {
+            pb.cols.lane: [1, 2, 3, 4],
+            pb.cols.shift: ['day', 'night']
+        },
+        'T': 20,   # Planned number of time points
+        'N': 3     # Planned observations per cell
+    }
+)
+```
+
+- **`factors`** (required): Dict mapping column names to lists of expected levels
+- **`T`** (optional): Number of planned time points
+- **`N`** (optional): Planned observations per cell
+
+### When to Use `plan` vs `factors`
+
+| Scenario | Use |
+|----------|-----|
+| All factor levels and time points are present in data | Either works |
+| Some factor levels are entirely absent from data | `plan` |
+| Some time points were entirely skipped | `plan` with `'T'` |
+| You want to compare planned vs observed structure | `plan` |
+
+### SDS 4-6 Detection
+
+ProcessBehavior can detect SDS 4-6 **with or without a plan**. SDS detection runs on raw data before NA rows are dropped, so cells where all response values are NA (e.g., from garbage values like `*` or `ND`) are counted as empty cells (N_kt=0). This means:
+
+- **With `factors`**: SDS 4-6 are detected when the data contains factor/time combinations where every response value is NA or garbage. The system sees these as empty cells in the grid.
+- **With `plan`**: SDS 4-6 are also detected when factor levels or time points specified in the plan are entirely absent from the data. This catches gaps that `factors` alone cannot see.
+
+A plan is valuable for documenting experimental intent and catching absent factor levels, but it is not required for SDS 4-6 detection.
+
+After formulating with `plan`, use `study.design()` to see planned vs observed structure. See [SDS Detection](sds-detection.md) for details on SDS 4-6.
+
+## The `paired` Parameter
+
+Wheeler recommends reading certain charts as pairs: Xbar with S, and Imr with R (the variation chart first, then the location chart). The `paired` parameter in `execute()` returns both charts together.
+
+```python
+# Returns both Xbar and S charts together
+result = study.execute(chart='Xbar', paired=True)
+
+# Returns both Imr and R charts together, stratified
+result = study.execute(chart='Imr', by=['lane'], paired=True)
+```
+
+Key details:
+
+- Either chart in the pair triggers the pair: `chart='S', paired=True` also returns Xbar+S
+- Default is `paired=False` (returns a single chart)
+- Paired results can be plotted and exported the same way as single-chart results
+
+## Study Inspection Methods
+
+After formulation, the `Study` object provides several methods for inspecting what analyses are available.
+
+### `study.support`
+
+A DataFrame showing all chart types with their availability, recommendations, and the analytical question each answers:
+
+```python
+study.support
+#   chart  category  available  recommended  reason  question
+# 0  Xbar   primary       True         True    None  Are subgroup means stable over time?
+# 1     S   primary       True        False    None  Is within-subgroup variation stable?
+# ...
+```
+
+Filter to available charts:
+
+```python
+study.support[study.support['available']]
+```
+
+### `study.why_not(chart)`
+
+Explains why a specific chart is unavailable:
+
+```python
+study.why_not('R2_Imr')
+# "Not available for this SDS"
+```
+
+### `study.design()`
+
+Returns a `DesignReport` comparing the sampling plan to observed data:
+
+```python
+report = study.design()
+
+# Structure metrics
+report.K           # Planned number of RSG groups
+report.K_observed  # Observed number of RSG groups
+report.T           # Planned time points
+report.T_observed  # Observed time points
+report.N           # Planned cell size
+report.N_observed  # Observed cell size (min, median, max)
+report.R           # Planned total cells (K × T)
+report.R_observed  # Observed total cells
+
+# Missing/extra structure
+report.missing_levels   # Factor levels in plan but not observed
+report.extra_levels     # Factor levels observed but not in plan
+report.missing_combos   # RSG groups in plan but not observed
+report.plan_adherence   # Summary of how well data matches plan
+```
+
+Works with or without a sampling plan -- without a plan, it reports observed structure only.
 
 ## Best Practices
 
