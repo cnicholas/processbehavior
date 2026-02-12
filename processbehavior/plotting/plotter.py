@@ -17,7 +17,12 @@ from plotly.subplots import make_subplots
 
 from ..data_preparation import encode_rsg
 from .control_chart import ControlChartFigure
+from .lane_boundaries import add_lane_boundaries
+from .limits import add_stepped_limit_line, format_limit_label
+from .run_rules_viz import add_run_rules_visualization
+from .stats_box import add_stats_box
 from .themes import ChartTheme, apply_theme, get_theme
+from .zones import add_zone_shading
 
 if TYPE_CHECKING:
     pass
@@ -481,7 +486,7 @@ class Plotter:
 
         # Zone shading (add first so it's behind other elements)
         if show_zones and theme.zone_opacity > 0:
-            self._add_zone_shading(fig, stats, theme)
+            add_zone_shading(fig, stats, theme)
 
         # Main data trace
         fig.add_trace(go.Scatter(
@@ -502,7 +507,7 @@ class Plotter:
             if 'upl' in stats:
                 if stats['upl'] != 'Varies':
                     # Fixed limit - draw horizontal line
-                    upl_label = self._format_limit_label('UPL', stats['upl'], show_limit_values)
+                    upl_label = format_limit_label('UPL', stats['upl'], show_limit_values)
                     fig.add_hline(
                         y=stats['upl'],
                         line_dash=theme.limit_line_dash,
@@ -514,7 +519,7 @@ class Plotter:
                     )
                 elif 'upl' in data.columns:
                     # Varying limit - draw stepped line
-                    self._add_stepped_limit_line(
+                    add_stepped_limit_line(
                         fig, data, x_col, 'upl',
                         theme.ucl_color, theme.limit_line_dash, theme.limit_line_width,
                         'UPL', theme
@@ -524,7 +529,7 @@ class Plotter:
             if 'lpl' in stats:
                 if stats['lpl'] != 'Varies':
                     # Fixed limit - draw horizontal line
-                    lpl_label = self._format_limit_label('LPL', stats['lpl'], show_limit_values)
+                    lpl_label = format_limit_label('LPL', stats['lpl'], show_limit_values)
                     fig.add_hline(
                         y=stats['lpl'],
                         line_dash=theme.limit_line_dash,
@@ -536,7 +541,7 @@ class Plotter:
                     )
                 elif 'lpl' in data.columns:
                     # Varying limit - draw stepped line
-                    self._add_stepped_limit_line(
+                    add_stepped_limit_line(
                         fig, data, x_col, 'lpl',
                         theme.lcl_color, theme.limit_line_dash, theme.limit_line_width,
                         'LPL', theme
@@ -557,7 +562,7 @@ class Plotter:
             # Centerline
             center_key = self._get_center_key(stats)
             if center_key and center_key in stats:
-                center_label = self._format_limit_label('CL', stats[center_key], show_limit_values)
+                center_label = format_limit_label('CL', stats[center_key], show_limit_values)
                 fig.add_hline(
                     y=stats[center_key],
                     line_color=theme.center_color,
@@ -592,13 +597,14 @@ class Plotter:
 
         # Run rules visualization (Rules 2-8)
         if show_rules:
-            self._add_run_rules_visualization(
-                fig, data, stats, chart_name, value_col, x_col, theme
+            add_run_rules_visualization(
+                fig, data, stats, chart_name, value_col, x_col, theme,
+                result=self.result
             )
 
         # Stats box
         if show_stats:
-            self._add_stats_box(fig, stats, data, theme)
+            add_stats_box(fig, stats, data, theme)
 
         # Lane boundaries (vertical separators for collapsed factors)
         metadata = chart_info.get('metadata', {})
@@ -609,7 +615,7 @@ class Plotter:
             y_max = data[value_col].max()
             y_padding = (y_max - y_min) * 0.05
             y_range = (y_min - y_padding, y_max + y_padding)
-            self._add_lane_boundaries(fig, lane_boundaries, y_range, theme)
+            add_lane_boundaries(fig, lane_boundaries, y_range, theme)
 
         # Layout
         fig.update_layout(
@@ -809,7 +815,7 @@ class Plotter:
 
             # Zone shading for this subplot (add first so it's behind data)
             if show_zones and theme.zone_opacity > 0:
-                self._add_zone_shading_facet(fig, stats, theme, row, col, ncols)
+                add_zone_shading(fig, stats, theme, row=row, col=col, ncols=ncols)
 
             value_col = self._get_value_column(chart_info, chart_name)
             x_col = self._get_x_column(data)
@@ -849,7 +855,7 @@ class Plotter:
                         row=row, col=col
                     )
                     # Add UPL label annotation
-                    upl_label = self._format_limit_label('UPL', stats['upl'], show_limit_values)
+                    upl_label = format_limit_label('UPL', stats['upl'], show_limit_values)
                     fig.add_annotation(
                         x=x_range[1],
                         y=stats['upl'],
@@ -861,10 +867,10 @@ class Plotter:
                     )
                 elif 'upl' in data.columns:
                     # Varying limit - draw stepped line
-                    self._add_stepped_limit_line_facet(
+                    add_stepped_limit_line(
                         fig, data, x_col, 'upl',
                         theme.ucl_color, theme.limit_line_dash, theme.limit_line_width,
-                        row, col
+                        'UPL', theme, row=row, col=col
                     )
 
                 # LPL
@@ -881,7 +887,7 @@ class Plotter:
                         row=row, col=col
                     )
                     # Add LPL label annotation
-                    lpl_label = self._format_limit_label('LPL', stats['lpl'], show_limit_values)
+                    lpl_label = format_limit_label('LPL', stats['lpl'], show_limit_values)
                     fig.add_annotation(
                         x=x_range[1],
                         y=stats['lpl'],
@@ -893,10 +899,10 @@ class Plotter:
                     )
                 elif 'lpl' in data.columns:
                     # Varying limit - draw stepped line
-                    self._add_stepped_limit_line_facet(
+                    add_stepped_limit_line(
                         fig, data, x_col, 'lpl',
                         theme.lcl_color, theme.limit_line_dash, theme.limit_line_width,
-                        row, col
+                        'LPL', theme, row=row, col=col
                     )
 
                 # Centerline
@@ -910,7 +916,7 @@ class Plotter:
                         row=row, col=col
                     )
                     # Add CL label annotation
-                    cl_label = self._format_limit_label('CL', stats[center_key], show_limit_values)
+                    cl_label = format_limit_label('CL', stats[center_key], show_limit_values)
                     fig.add_annotation(
                         x=x_range[1],
                         y=stats[center_key],
@@ -944,14 +950,14 @@ class Plotter:
 
             # Run rules visualization (Rules 2-8)
             if show_rules:
-                self._add_run_rules_visualization(
+                add_run_rules_visualization(
                     fig, data, stats, chart_name, value_col, x_col, theme,
-                    row=row, col=col
+                    result=self.result, row=row, col=col
                 )
 
             # Stats box for faceted charts
             if show_stats:
-                self._add_stats_box_facet(fig, stats, data, theme, row, col, nrows, ncols)
+                add_stats_box(fig, stats, data, theme, row=row, col=col, nrows=nrows, ncols=ncols)
 
             # Lane boundaries for this facet
             metadata = chart_info.get('metadata', {})
@@ -969,8 +975,8 @@ class Plotter:
                     y_max = data[value_col].max()
                     y_padding = (y_max - y_min) * 0.05
                     y_range = (y_min - y_padding, y_max + y_padding)
-                    self._add_lane_boundaries_facet(
-                        fig, lane_boundaries, y_range, theme, row, col
+                    add_lane_boundaries(
+                        fig, lane_boundaries, y_range, theme, row=row, col=col
                     )
 
         # Update layout with axis labels
@@ -1715,804 +1721,6 @@ class Plotter:
         if response_var:
             return response_var.replace('_', ' ').title()
         return 'Data'
-
-    def _format_limit_label(
-        self,
-        limit_name: str,
-        value: float,
-        show_value: bool
-    ) -> str:
-        """
-        Format control limit annotation label.
-
-        Parameters
-        ----------
-        limit_name : str
-            Name of the limit ('UPL', 'LPL', 'CL')
-        value : float
-            Numeric value of the limit
-        show_value : bool
-            Whether to include the numeric value
-
-        Returns
-        -------
-        str
-            Formatted label like "UPL = 52.34" or just "UPL"
-        """
-        if show_value:
-            # Determine appropriate decimal places based on magnitude
-            if abs(value) >= 100:
-                return f"{limit_name} = {value:.1f}"
-            elif abs(value) >= 10:
-                return f"{limit_name} = {value:.2f}"
-            else:
-                return f"{limit_name} = {value:.3f}"
-        return limit_name
-
-    def _add_stepped_limit_line(
-        self,
-        fig: go.Figure,
-        data: pd.DataFrame,
-        x_col: str,
-        limit_col: str,
-        line_color: str,
-        line_dash: str,
-        line_width: float,
-        limit_name: str,
-        theme: ChartTheme
-    ) -> None:
-        """
-        Add a stepped limit line that follows varying per-row limits.
-
-        Creates a step pattern connecting limit values, stepping vertically
-        at each point where the limit changes.
-
-        Parameters
-        ----------
-        fig : go.Figure
-            Plotly figure to add the line to
-        data : pd.DataFrame
-            Chart data with limit column
-        x_col : str
-            Name of x-axis column
-        limit_col : str
-            Name of limit column ('upl' or 'lpl')
-        line_color : str
-            Color for the limit line
-        line_dash : str
-            Dash pattern for the line
-        line_width : float
-            Width of the line
-        limit_name : str
-            Name for legend ('UPL' or 'LPL')
-        theme : ChartTheme
-            Chart theme for styling
-        """
-        if limit_col not in data.columns:
-            return
-
-        # Get x values and limit values
-        x_vals = data[x_col].tolist() if x_col in data.columns else data.index.tolist()
-
-        limit_vals = data[limit_col].tolist()
-
-        # Build stepped line coordinates
-        # For each point, we draw a horizontal line to the next point's x,
-        # then step up/down to the next point's limit value
-        x_stepped = []
-        y_stepped = []
-
-        for i in range(len(x_vals)):
-            x_stepped.append(x_vals[i])
-            y_stepped.append(limit_vals[i])
-
-            # Add horizontal segment to next point's x position (if not last point)
-            if i < len(x_vals) - 1:
-                x_stepped.append(x_vals[i + 1])
-                y_stepped.append(limit_vals[i])
-
-        fig.add_trace(go.Scatter(
-            x=x_stepped,
-            y=y_stepped,
-            mode='lines',
-            name=f'{limit_name} (varies)',
-            line=dict(color=line_color, dash=line_dash, width=line_width),
-            hovertemplate=f'{limit_name}: %{{y:.3f}}<extra></extra>',
-            showlegend=False
-        ))
-
-    def _add_stepped_limit_line_facet(
-        self,
-        fig: go.Figure,
-        data: pd.DataFrame,
-        x_col: str,
-        limit_col: str,
-        line_color: str,
-        line_dash: str,
-        line_width: float,
-        row: int,
-        col: int
-    ) -> None:
-        """
-        Add a stepped limit line for faceted subplots with varying limits.
-
-        Similar to _add_stepped_limit_line but positions the trace in a
-        specific subplot using row/col parameters.
-
-        Parameters
-        ----------
-        fig : go.Figure
-            Plotly figure with subplots
-        data : pd.DataFrame
-            Chart data with limit column
-        x_col : str
-            Name of x-axis column
-        limit_col : str
-            Name of limit column ('upl' or 'lpl')
-        line_color : str
-            Color for the limit line
-        line_dash : str
-            Dash pattern for the line
-        line_width : float
-            Width of the line
-        row : int
-            Subplot row (1-indexed)
-        col : int
-            Subplot column (1-indexed)
-        """
-        if limit_col not in data.columns:
-            return
-
-        # Get x values and limit values
-        x_vals = data[x_col].tolist() if x_col in data.columns else data.index.tolist()
-        limit_vals = data[limit_col].tolist()
-
-        # Build stepped line coordinates
-        x_stepped = []
-        y_stepped = []
-
-        for i in range(len(x_vals)):
-            x_stepped.append(x_vals[i])
-            y_stepped.append(limit_vals[i])
-
-            # Add horizontal segment to next point's x position (if not last point)
-            if i < len(x_vals) - 1:
-                x_stepped.append(x_vals[i + 1])
-                y_stepped.append(limit_vals[i])
-
-        fig.add_trace(
-            go.Scatter(
-                x=x_stepped,
-                y=y_stepped,
-                mode='lines',
-                line=dict(color=line_color, dash=line_dash, width=line_width),
-                hovertemplate=f'{limit_col.upper()}: %{{y:.3f}}<extra></extra>',
-                showlegend=False
-            ),
-            row=row,
-            col=col
-        )
-
-    # =========================================================================
-    # Zone Shading
-    # =========================================================================
-
-    def _calculate_zone_boundaries(
-        self,
-        stats: dict,
-        theme: ChartTheme
-    ) -> list[tuple[float, float, str]] | None:
-        """
-        Calculate zone boundaries for Western Electric rules visualization.
-
-        Returns zone definitions as (y0, y1, color) tuples, or None if
-        zones cannot be calculated (e.g., limits vary or are missing).
-
-        Zones are:
-        - Zone C: 0σ to ±1σ (green - normal variation)
-        - Zone B: ±1σ to ±2σ (yellow - watch)
-        - Zone A: ±2σ to ±3σ (red - warning)
-
-        Parameters
-        ----------
-        stats : dict
-            Chart statistics with 'center', 'upl', 'lpl' keys
-        theme : ChartTheme
-            Theme with zone colors
-
-        Returns
-        -------
-        list of tuple or None
-            List of (y0, y1, color) tuples defining zone rectangles,
-            or None if zones cannot be calculated
-        """
-        # Skip if limits vary (can't calculate consistent zones)
-        if stats.get('upl') == 'Varies' or stats.get('lpl') == 'Varies':
-            return None
-
-        center = stats.get('center')
-        ucl = stats.get('upl')
-        lcl = stats.get('lpl')
-
-        if center is None or ucl is None or lcl is None:
-            return None
-
-        # Calculate sigma from control limits (UPL = center + 3σ)
-        sigma = (ucl - center) / 3
-
-        # Zone boundaries
-        return [
-            # Zone C (closest to center): 0σ to ±1σ
-            (center - sigma, center + sigma, theme.zone_c_color),
-            # Zone B: ±1σ to ±2σ (upper)
-            (center + sigma, center + 2 * sigma, theme.zone_b_color),
-            # Zone B: ±1σ to ±2σ (lower)
-            (center - 2 * sigma, center - sigma, theme.zone_b_color),
-            # Zone A: ±2σ to ±3σ (upper)
-            (center + 2 * sigma, ucl, theme.zone_a_color),
-            # Zone A: ±2σ to ±3σ (lower)
-            (lcl, center - 2 * sigma, theme.zone_a_color),
-        ]
-
-    def _add_lane_boundaries(
-        self,
-        fig: go.Figure,
-        lane_boundaries: list[dict] | None,
-        y_range: tuple[float, float],
-        theme: ChartTheme,
-        show_labels: bool = True
-    ) -> None:
-        """
-        Add vertical lane boundary lines to a single chart figure.
-
-        Lane boundaries show where collapsed factors change within the chart,
-        helping distinguish groups of observations from different factor levels.
-
-        Parameters
-        ----------
-        fig : go.Figure
-            Plotly figure to add shapes to
-        lane_boundaries : list[dict] or None
-            List of boundary dicts with 'position' and 'label' keys
-        y_range : tuple[float, float]
-            (y_min, y_max) for vertical line extent
-        theme : ChartTheme
-            Theme with lane boundary styling
-        show_labels : bool, default True
-            Whether to show factor labels at boundary positions
-        """
-        if not lane_boundaries:
-            return
-
-        y_min, y_max = y_range
-
-        for boundary in lane_boundaries:
-            x_pos = boundary['position']
-            label = boundary.get('label', '')
-
-            # Add vertical line
-            fig.add_shape(
-                type='line',
-                x0=x_pos, x1=x_pos,
-                y0=y_min, y1=y_max,
-                line=dict(
-                    color=theme.lane_boundary_color,
-                    dash=theme.lane_boundary_dash,
-                    width=theme.lane_boundary_width
-                )
-            )
-
-            # Add label annotation at top of line
-            if show_labels and label:
-                fig.add_annotation(
-                    x=x_pos,
-                    y=y_max,
-                    text=label,
-                    showarrow=False,
-                    yanchor='bottom',
-                    font=dict(
-                        size=theme.lane_boundary_annotation_size,
-                        color=theme.lane_boundary_color
-                    )
-                )
-
-    def _add_lane_boundaries_facet(
-        self,
-        fig: go.Figure,
-        lane_boundaries: list[dict] | None,
-        y_range: tuple[float, float],
-        theme: ChartTheme,
-        row: int,
-        col: int,
-        show_labels: bool = True
-    ) -> None:
-        """
-        Add vertical lane boundary lines to a faceted chart subplot.
-
-        Parameters
-        ----------
-        fig : go.Figure
-            Plotly figure with subplots
-        lane_boundaries : list[dict] or None
-            List of boundary dicts with 'position' and 'label' keys
-        y_range : tuple[float, float]
-            (y_min, y_max) for vertical line extent
-        theme : ChartTheme
-            Theme with lane boundary styling
-        row : int
-            Subplot row (1-indexed)
-        col : int
-            Subplot column (1-indexed)
-        show_labels : bool, default True
-            Whether to show factor labels at boundary positions
-        """
-        if not lane_boundaries:
-            return
-
-        y_min, y_max = y_range
-
-        for boundary in lane_boundaries:
-            x_pos = boundary['position']
-            label = boundary.get('label', '')
-
-            # Add vertical line
-            fig.add_shape(
-                type='line',
-                x0=x_pos, x1=x_pos,
-                y0=y_min, y1=y_max,
-                line=dict(
-                    color=theme.lane_boundary_color,
-                    dash=theme.lane_boundary_dash,
-                    width=theme.lane_boundary_width
-                ),
-                row=row, col=col
-            )
-
-            # Add label annotation at top of line
-            if show_labels and label:
-                fig.add_annotation(
-                    x=x_pos,
-                    y=y_max,
-                    text=label,
-                    showarrow=False,
-                    yanchor='bottom',
-                    font=dict(
-                        size=theme.lane_boundary_annotation_size,
-                        color=theme.lane_boundary_color
-                    ),
-                    row=row, col=col
-                )
-
-    def _add_zone_shading(
-        self,
-        fig: go.Figure,
-        stats: dict,
-        theme: ChartTheme
-    ) -> None:
-        """
-        Add zone shading to a single chart figure.
-
-        Parameters
-        ----------
-        fig : go.Figure
-            Plotly figure to add shapes to
-        stats : dict
-            Chart statistics with 'center', 'upl', 'lpl' keys
-        theme : ChartTheme
-            Theme with zone colors and opacity
-        """
-        zones = self._calculate_zone_boundaries(stats, theme)
-        if zones is None:
-            return
-
-        for y0, y1, color in zones:
-            fig.add_hrect(
-                y0=y0,
-                y1=y1,
-                fillcolor=color,
-                opacity=theme.zone_opacity,
-                layer='below',
-                line_width=0
-            )
-
-    def _add_zone_shading_facet(
-        self,
-        fig: go.Figure,
-        stats: dict,
-        theme: ChartTheme,
-        row: int,
-        col: int,
-        ncols: int
-    ) -> None:
-        """
-        Add zone shading to a subplot in a faceted figure.
-
-        Parameters
-        ----------
-        fig : go.Figure
-            Plotly figure with subplots
-        stats : dict
-            Chart statistics with 'center', 'upl', 'lpl' keys
-        theme : ChartTheme
-            Theme with zone colors and opacity
-        row : int
-            Row number of subplot (1-indexed)
-        col : int
-            Column number of subplot (1-indexed)
-        ncols : int
-            Number of columns in the faceted layout
-        """
-        zones = self._calculate_zone_boundaries(stats, theme)
-        if zones is None:
-            return
-
-        # Calculate axis references for this subplot
-        # For subplot at row r, col c, the axis names are:
-        # First subplot: xaxis, yaxis
-        # Others: xaxis2, yaxis2, etc.
-        subplot_idx = (row - 1) * ncols + col
-        if subplot_idx == 1:
-            xref = 'x'
-            yref = 'y'
-        else:
-            xref = f'x{subplot_idx}'
-            yref = f'y{subplot_idx}'
-
-        for y0, y1, color in zones:
-            fig.add_shape(
-                type='rect',
-                x0=0,
-                x1=1,
-                y0=y0,
-                y1=y1,
-                xref=f'{xref} domain',
-                yref=yref,
-                fillcolor=color,
-                opacity=theme.zone_opacity,
-                layer='below',
-                line_width=0,
-                row=row,
-                col=col
-            )
-
-    # =========================================================================
-    # Run Rules Visualization
-    # =========================================================================
-
-    def _add_run_rules_visualization(
-        self,
-        fig: go.Figure,
-        data: pd.DataFrame,
-        stats: dict,
-        chart_name: str,
-        value_col: str,
-        x_col: str,
-        theme: ChartTheme,
-        row: int | None = None,
-        col: int | None = None
-    ) -> None:
-        """
-        Add visualization for Western Electric run rules (Rules 2-8).
-
-        Detects rule violations and adds annotations and markers to highlight
-        the specific rules that were violated at each observation.
-
-        Parameters
-        ----------
-        fig : go.Figure
-            Plotly figure to add visualizations to
-        data : DataFrame
-            Chart data
-        stats : dict
-            Chart statistics
-        chart_name : str
-            Name of the chart being plotted
-        value_col : str
-            Name of the value column
-        x_col : str
-            Name of the x-axis column
-        theme : ChartTheme
-            Theme with rule colors and styling
-        row : int, optional
-            Row number for faceted plots (1-indexed)
-        col : int, optional
-            Column number for faceted plots (1-indexed)
-        """
-        try:
-            # Run signal detection to get all rule violations
-            signal_result = self.result.detect_signals(chart=chart_name)
-
-            if not signal_result.has_signals:
-                return
-
-            violations = signal_result.violations
-
-            # Skip Rule 1 (already handled by highlight_signals)
-            violations = violations[violations['rule_name'] != 'rule_1']
-
-            if violations.empty:
-                return
-
-            # Group violations by observation
-            grouped = violations.groupby('obs_id', observed=True)
-
-            # Rule descriptions for hover text
-            rule_short_names = {
-                'rule_2': '2 of 3 in Zone A',
-                'rule_3': '4 of 5 in Zone B+',
-                'rule_4': '8+ same side',
-                'rule_5': 'Trend',
-                'rule_6': 'Oscillation',
-                'rule_7': 'In Zone C',
-                'rule_8': 'Avoiding center',
-            }
-
-            # Collect points to annotate
-            annotated_points = []
-
-            for obs_id, obs_violations in grouped:
-                # Get the observation data
-                if obs_id in data.index:
-                    obs_data = data.loc[obs_id]
-                else:
-                    continue
-
-                # Get x and y values
-                x_val = obs_data[x_col] if x_col in data.columns else obs_id
-
-                y_val = obs_data[value_col]
-
-                # Get rules violated at this observation
-                rules = obs_violations['rule_name'].unique().tolist()
-                rule_nums = [r.split('_')[1] for r in rules]
-
-                annotated_points.append({
-                    'x': x_val,
-                    'y': y_val,
-                    'rules': rules,
-                    'rule_nums': rule_nums,
-                    'hover': '<br>'.join([
-                        rule_short_names.get(r, r) for r in rules
-                    ])
-                })
-
-            if not annotated_points:
-                return
-
-            # Add markers for rule violations
-            # Use different colors based on first violated rule
-            x_vals = [p['x'] for p in annotated_points]
-            y_vals = [p['y'] for p in annotated_points]
-            hover_texts = [
-                f"Rule violations:<br>{p['hover']}<br>Value: {p['y']:.3f}"
-                for p in annotated_points
-            ]
-
-            # Two-tier color system: all pattern rules (2-8) use orange
-            # Rule 1 (beyond limits) is handled separately with red markers
-            # Both use circle markers (same as data) for professional appearance
-            # No legend entry - color differentiation is sufficient
-
-            # Add scatter trace for rule violation markers
-            scatter_kwargs = dict(
-                x=x_vals,
-                y=y_vals,
-                mode='markers',
-                name='Pattern Signals',
-                marker=dict(
-                    size=theme.data_marker_size,  # Same size as data points
-                    color=theme.pattern_signal_color,  # Orange for rules 2-8
-                    symbol='circle',  # Same as data points
-                    line=dict(width=1, color='darkorange')  # Subtle border
-                ),
-                hovertext=hover_texts,
-                hoverinfo='text',
-                showlegend=False  # Color is enough, no legend clutter
-            )
-
-            if row is not None and col is not None:
-                scatter_kwargs['showlegend'] = False
-                fig.add_trace(go.Scatter(**scatter_kwargs), row=row, col=col)
-            else:
-                fig.add_trace(go.Scatter(**scatter_kwargs))
-
-        except Exception as e:
-            # Log but don't fail if signal detection has issues
-            logger.warning(f"Could not add run rules visualization: {e}")
-
-    # =========================================================================
-    # Statistics Box
-    # =========================================================================
-
-    def _build_stats_text(
-        self,
-        stats: dict,
-        data: pd.DataFrame,
-        compact: bool = False
-    ) -> str | None:
-        """
-        Build statistics text for display in a stats box.
-
-        Parameters
-        ----------
-        stats : dict
-            Chart statistics with 'center', 'upl', 'lpl' keys
-        data : DataFrame
-            Chart data (for calculating n)
-        compact : bool, default False
-            If True, use compact format (n=X | CL=Y) for faceted charts.
-            If False, use full format with line breaks.
-
-        Returns
-        -------
-        str or None
-            Formatted stats text, or None if no stats available
-        """
-        n = len(data)
-
-        if compact:
-            # Compact format for faceted charts: "n=X | CL=Y"
-            parts = [f"n={n}"]
-            center = stats.get('center')
-            if center is not None and center != 'Varies':
-                parts.append(f"CL={self._format_stat_value(center, compact=True)}")
-            return ' | '.join(parts) if parts else None
-        else:
-            # Full format: multi-line with n, CL, UPL, LPL
-            lines = [f"n = {n}"]
-
-            center = stats.get('center')
-            if center is not None and center != 'Varies':
-                lines.append(f"CL = {self._format_stat_value(center)}")
-
-            ucl = stats.get('upl')
-            if ucl is not None and ucl != 'Varies':
-                lines.append(f"UPL = {self._format_stat_value(ucl)}")
-
-            lcl = stats.get('lpl')
-            if lcl is not None and lcl != 'Varies':
-                lines.append(f"LPL = {self._format_stat_value(lcl)}")
-
-            return '<br>'.join(lines) if lines else None
-
-    def _add_stats_box(
-        self,
-        fig: go.Figure,
-        stats: dict,
-        data: pd.DataFrame,
-        theme: ChartTheme
-    ) -> None:
-        """
-        Add a statistics box annotation to a single chart.
-
-        Parameters
-        ----------
-        fig : go.Figure
-            Plotly figure to add annotation to
-        stats : dict
-            Chart statistics with 'center', 'upl', 'lpl' keys
-        data : DataFrame
-            Chart data (for calculating n)
-        theme : ChartTheme
-            Theme with stats box styling
-        """
-        stats_text = self._build_stats_text(stats, data, compact=False)
-        if stats_text is None:
-            return
-
-        fig.add_annotation(
-            text=stats_text,
-            xref='paper',
-            yref='paper',
-            x=0.02,
-            y=0.98,
-            xanchor='left',
-            yanchor='top',
-            showarrow=False,
-            font=dict(
-                size=theme.stats_box_font_size,
-                color=theme.stats_box_font_color,
-                family='monospace'
-            ),
-            bgcolor=theme.stats_box_bgcolor,
-            bordercolor=theme.stats_box_bordercolor,
-            borderwidth=theme.stats_box_borderwidth,
-            borderpad=6,
-            align='left'
-        )
-
-    def _add_stats_box_facet(
-        self,
-        fig: go.Figure,
-        stats: dict,
-        data: pd.DataFrame,
-        theme: ChartTheme,
-        row: int,
-        col: int,
-        nrows: int,
-        ncols: int
-    ) -> None:
-        """
-        Add a compact statistics box to a subplot in a faceted figure.
-
-        Parameters
-        ----------
-        fig : go.Figure
-            Plotly figure with subplots
-        stats : dict
-            Chart statistics with 'center', 'upl', 'lpl' keys
-        data : DataFrame
-            Chart data (for calculating n)
-        theme : ChartTheme
-            Theme with stats box styling
-        row : int
-            Row number of subplot (1-indexed)
-        col : int
-            Column number of subplot (1-indexed)
-        nrows : int
-            Total number of rows in the facet grid
-        ncols : int
-            Total number of columns in the facet grid
-        """
-        stats_text = self._build_stats_text(stats, data, compact=True)
-        if stats_text is None:
-            return
-
-        # Calculate position within subplot
-        col_width = 1.0 / ncols
-        row_height = 1.0 / nrows
-        x_pos = (col - 1) * col_width + 0.02 * col_width
-        y_pos = 1.0 - (row - 1) * row_height - 0.05 * row_height
-
-        fig.add_annotation(
-            text=stats_text,
-            xref='paper',
-            yref='paper',
-            x=x_pos,
-            y=y_pos,
-            xanchor='left',
-            yanchor='top',
-            showarrow=False,
-            font=dict(
-                size=theme.stats_box_font_size - 1,  # Slightly smaller for facets
-                color=theme.stats_box_font_color,
-                family='monospace'
-            ),
-            bgcolor=theme.stats_box_bgcolor,
-            bordercolor=theme.stats_box_bordercolor,
-            borderwidth=theme.stats_box_borderwidth,
-            borderpad=3,
-            align='left'
-        )
-
-    def _format_stat_value(self, value: float, compact: bool = False) -> str:
-        """
-        Format a statistic value for display.
-
-        Parameters
-        ----------
-        value : float
-            The statistic value to format
-        compact : bool
-            If True, use fewer decimal places for compact display
-
-        Returns
-        -------
-        str
-            Formatted value string
-        """
-        if compact:
-            if abs(value) >= 100 or abs(value) >= 10:
-                return f"{value:.1f}"
-            else:
-                return f"{value:.2f}"
-        else:
-            if abs(value) >= 100:
-                return f"{value:.2f}"
-            elif abs(value) >= 10:
-                return f"{value:.3f}"
-            else:
-                return f"{value:.4f}"
 
     # =========================================================================
     # Residual Visualization
