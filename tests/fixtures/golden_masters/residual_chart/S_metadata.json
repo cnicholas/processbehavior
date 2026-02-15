@@ -1,0 +1,8 @@
+{
+  "center_col": "center",
+  "chart_type": "S",
+  "question_answered": "Is within-subgroup variation stable?",
+  "recentered": false,
+  "residual_type": "R2",
+  "value_col": "s"
+}

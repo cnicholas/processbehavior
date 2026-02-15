@@ -14,7 +14,6 @@ import pytest
 
 from processbehavior import Analysis
 from processbehavior import analysis_dataset as ad
-from processbehavior.analysis import gather_analysis_statistics, package_analysis
 from processbehavior.data_preparation import DataPreparation
 from processbehavior.formulation_spec import ChartRequest, FormulationSpec
 from processbehavior.sds_detector import SDSRegistry
@@ -517,53 +516,6 @@ class TestCanonicalOrdering:
 
 class TestUtilityFunctions:
     """Tests for analysis utility functions."""
-
-    def test_package_statistics(self):
-        """Test packaging analysis output with statistics."""
-        analysis_output = {'a': "dataframe_a", 'b': "dataframe_b"}
-        statistics = {'a': "statistics_a", 'b': "statistics_b"}
-
-        out = package_analysis(
-            analysis_output=analysis_output,
-            summary_statistics_output=statistics
-        )
-
-        assert isinstance(out.get("a"), dict)
-        assert out.get("a").get('statistics') == "statistics_a"
-        assert isinstance(out.get("b"), dict)
-        assert out.get("b").get('statistics') == "statistics_b"
-
-    def test_gather_statistics_with_grouping(self):
-        """Test gathering statistics with grouping variable."""
-        data = {
-            'rsg': ['a_c', 'a_c', 'a_c', 'b_d', 'b_d', 'b_d', 'b_d'],
-            'stat1': [1.5, 1.5, 1.5, 5.0, 5.0, 5.0, 5.0],
-            'stat2': [2.5, 2.5, 2.5, 6.0, 6.0, 6.0, 6.0],
-            'stat3': [1, 1, 1, 2, 2, 2, 2],
-            'response': [1.1, 1.2, 1.5, 2.1, 2.2, 2.3, 2.4]
-        }
-        df = pd.DataFrame(data=data)
-
-        out = gather_analysis_statistics(df, ['stat1', 'stat2', 'stat3'], grouping_var='rsg')
-
-        assert len(out) == 2  # Two groups
-        assert len(out['a_c']) == 4  # 3 stats + n
-
-    def test_gather_statistics_without_grouping(self):
-        """Test gathering statistics without grouping variable."""
-        data = {
-            'rsg': ['a_c', 'a_c', 'a_c', 'b_d', 'b_d', 'b_d', 'b_d'],
-            'stat1': [1.5, 1.5, 1.5, 5.0, 5.0, 5.0, 5.0],
-            'stat2': [2.5, 2.5, 2.5, 6.0, 6.0, 6.0, 6.0],
-            'stat3': [1, 1, 1, 2, 2, 2, 2],
-            'response': [1.1, 1.2, 1.5, 2.1, 2.2, 2.3, 2.4]
-        }
-        df = pd.DataFrame(data=data)
-
-        out = gather_analysis_statistics(df, ['stat1', 'stat2', 'stat3'])
-
-        assert len(out) == 1  # Single 'Imr' group
-        assert len(out['Imr']) == 4  # 3 stats + n
 
     def test_c4_limit_calculation(self):
         """Test c4 constant and limit calculation."""
