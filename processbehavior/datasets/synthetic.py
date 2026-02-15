@@ -49,7 +49,7 @@ from typing import Optional
 import numpy as np
 import pandas as pd
 
-from ..analysis_dataset import AnalysisSpecification
+from ..formulation_spec import FormulationSpec
 
 logger = logging.getLogger(__name__)
 
@@ -1451,37 +1451,36 @@ def compare_sds_characteristics(
 def validate_sds_detection(
     df: pd.DataFrame,
     expected_sds: int,
-    analysis_specification: 'AnalysisSpecification'
+    spec: 'FormulationSpec'
 ) -> bool:
     """
     Validate that generated data is correctly classified as expected SDS.
-    
+
     This function is useful for testing SDS detection algorithms by
     generating data with known SDS and verifying correct classification.
-    
+
     Args:
         df: DataFrame to validate
         expected_sds: Expected SDS classification (1-6)
-        analysis_specification: Analysis specification object
-        
+        spec: FormulationSpec object
+
     Returns:
         True if detected SDS matches expected
-        
+
     Example:
         >>> df = make_sds1(K1=3, K2=2, T=8, seed=42)
-        >>> spec = AnalysisSpecification('Xbar', {...})
-        >>> ads = AnalysisDataSet(df, spec)
+        >>> spec = FormulationSpec(response_var='Y', rsg_vars=('F1', 'F2'), time_var='T')
         >>> validate_sds_detection(df, expected_sds=1, spec)
         True
-        
+
     Note:
         This requires importing from analysis_dataset module.
         Kept here for convenience in testing.
     """
     try:
-        from analysis_dataset import AnalysisDataSet
-        
-        ads = AnalysisDataSet(df=df, analysis_specification=analysis_specification)
+        from ..analysis_dataset import AnalysisDataSet
+
+        ads = AnalysisDataSet(df=df, spec=spec, sds=expected_sds)
         detected_sds = ads.sampling_design_state
         
         if detected_sds == expected_sds:

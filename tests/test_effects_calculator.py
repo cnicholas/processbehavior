@@ -15,7 +15,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from processbehavior.analysis_dataset import AnalysisSpecification
+from processbehavior.formulation_spec import FormulationSpec
 from processbehavior.effects_calculator import (
     EffectsCalculator,
     calculate_factor_interaction_effects,
@@ -77,33 +77,30 @@ def multi_factor_df():
 @pytest.fixture
 def spec_single_factor():
     """Single factor specification."""
-    return AnalysisSpecification({
-        'analysis_type': 'Xbar',
-        'rsg_vars': ['lane'],
-        'time_var': 'pull',
-        'response_var': 'weight'
-    })
+    return FormulationSpec(
+        response_var='weight',
+        rsg_vars=('lane',),
+        time_var='pull',
+    )
 
 
 @pytest.fixture
 def spec_multi_factor():
     """Multi-factor specification."""
-    return AnalysisSpecification({
-        'analysis_type': 'Xbar',
-        'rsg_vars': ['lane', 'head'],
-        'time_var': 'pull',
-        'response_var': 'weight'
-    })
+    return FormulationSpec(
+        response_var='weight',
+        rsg_vars=('lane', 'head'),
+        time_var='pull',
+    )
 
 
 @pytest.fixture
 def spec_no_grouping():
     """Specification without grouping variables (IMR)."""
-    return AnalysisSpecification({
-        'analysis_type': 'Imr',
-        'time_var': 'pull',
-        'response_var': 'weight'
-    })
+    return FormulationSpec(
+        response_var='weight',
+        time_var='pull',
+    )
 
 
 # ============================================================================

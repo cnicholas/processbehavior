@@ -25,7 +25,7 @@ from typing import TYPE_CHECKING
 import pandas as pd
 
 if TYPE_CHECKING:
-    from analysis_dataset import AnalysisSpecification
+    from .formulation_spec import FormulationSpec
 
 logger = logging.getLogger(__name__)
 
@@ -284,7 +284,7 @@ def calculate_interaction_cell_means(
     if 'R3' not in df.columns:
         raise ValueError("Cannot calculate interactions - R3 column missing")
 
-    keys = rsg_vars + [time_var]
+    keys = list(rsg_vars) + [time_var]
 
     # Use transform to broadcast cell means back to all rows
     return df.groupby(keys, sort=False, observed=True)['R3'].transform('mean')
@@ -387,7 +387,7 @@ def calculate_factor_interaction_effects(
 
     # Calculate mean R5 for each factor combination
     rsg_r5 = (
-        df.groupby(rsg_vars[:2], as_index=False, observed=True)['R5']
+        df.groupby(list(rsg_vars[:2]), as_index=False, observed=True)['R5']
         .mean()
     )
 
@@ -493,7 +493,7 @@ class EffectsCalculator:
     def calculate_all_effects(
         self,
         df: pd.DataFrame,
-        spec: AnalysisSpecification
+        spec: FormulationSpec
     ) -> dict:
         """
         Calculate all main effects.
@@ -511,7 +511,7 @@ class EffectsCalculator:
         ----------
         df : DataFrame
             Data with VAS residuals (R1, R2, R5)
-        spec : AnalysisSpecification
+        spec : FormulationSpec
             Analysis specification
 
         Returns
@@ -582,7 +582,7 @@ class EffectsCalculator:
     def calculate_interactions(
         self,
         df: pd.DataFrame,
-        spec: AnalysisSpecification,
+        spec: FormulationSpec,
         sds: int,
         effects: dict | None = None
     ) -> dict:
@@ -597,7 +597,7 @@ class EffectsCalculator:
         ----------
         df : DataFrame
             Data with VAS residuals
-        spec : AnalysisSpecification
+        spec : FormulationSpec
             Analysis specification
         sds : int
             Sampling Design State

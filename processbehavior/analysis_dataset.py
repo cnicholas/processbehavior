@@ -5,8 +5,8 @@ import logging
 
 import pandas as pd
 
-from .analysis_specification import AnalysisSpecification
 from .data_preparation import DataPreparation
+from .formulation_spec import FormulationSpec
 from .effects_calculator import EffectsCalculator
 from .residual_calculator import ResidualCalculator
 from .sds_detector import SDSRegistry, StructureStats
@@ -33,7 +33,7 @@ class AnalysisDataSet:
     def __init__(
         self,
         df: pd.DataFrame,
-        analysis_specification: AnalysisSpecification,
+        spec: FormulationSpec,
         sds: int
     ):
         """
@@ -43,8 +43,8 @@ class AnalysisDataSet:
         ----------
         df : pd.DataFrame
             Raw input data
-        analysis_specification : AnalysisSpecification
-            Configuration for the analysis
+        spec : FormulationSpec
+            Structural configuration for the analysis
         sds : int
             Sampling Design State (0-6). This is required because SDS is the
             driver of the analysis system - it determines which calculations
@@ -52,9 +52,8 @@ class AnalysisDataSet:
             (ProcessBehavior) and passed through the system.
         """
         # Store inputs
-        self.raw_dataset = df
-        self.spec = analysis_specification
-        self._sds = sds
+        self.spec = spec
+        self.sampling_design_state = sds
 
         # Initialize output containers
         self.interactions = {}
@@ -65,79 +64,77 @@ class AnalysisDataSet:
         self._n_per_cell: pd.Series | None = None
 
         # Composition - each component has one job (Single Responsibility Principle)
-        self.prep = DataPreparation()
-        self.sds_detector = SDSRegistry()
-        self.residual_calc = ResidualCalculator()
-        self.effects_calc = EffectsCalculator()
+        # SDS detection was done on raw data by ProcessBehavior. Here we only use
+        # SDSRegistry for characteristic lookups and R2 method selection on tidy
+        # structure. When the tidy-state concept is formalized, its classification
+        # would live here alongside SDSRegistry.
+        self._prep = DataPreparation()
+        self._sds_registry = SDSRegistry()
+        self._residual_calc = ResidualCalculator()
+        self._effects_calc = EffectsCalculator()
 
         # Run the analysis workflow
-        self._initialize()
+        self._initialize(df)
 
-    def _initialize(self):
+    def _initialize(self, raw_df: pd.DataFrame):
         """
         Execute the analysis workflow.
 
         Clear orchestration that reads like a recipe:
         1. Validate and prepare data
         2. Apply SDS (passed from entry point)
-        3. Calculate VAS residuals (if appropriate for SDS)
-        4. Calculate effects and interactions (if appropriate)
+        3. Compute structure stats on tidy data
+        4. Calculate VAS residuals (if appropriate for SDS)
+        5. Calculate effects and interactions (if appropriate)
         """
         # Step 1: Validate and prepare data
         logger.debug("Preparing dataset")
-        self.prep.validate_columns(self.raw_dataset, self.spec)
-        self.analysis_dataset = self.prep.prepare_dataset(self.raw_dataset, self.spec)
-        self.analysis_dataset = self.prep.build_keys(self.analysis_dataset, self.spec)
+        self._prep.validate_columns(raw_df, self.spec)
+        self.analysis_dataset = self._prep.prepare_dataset(raw_df, self.spec)
+        self.analysis_dataset = self._prep.build_keys(self.analysis_dataset, self.spec)
 
         # Step 2: Use the provided SDS (required - detected at entry point)
-        logger.debug(f"Using SDS: {self._sds}")
-        self.sampling_design_state = self._sds
-        self.sds_characteristics = self.sds_detector.get_sds_characteristics(
+        logger.debug(f"Using SDS: {self.sampling_design_state}")
+        self.raw_sds_characteristics = self._sds_registry.get_sds_characteristics(
             self.sampling_design_state
         )
-
-        # Log analysis summary and SDS
-        logger.debug(self.analysis_summary)
         logger.debug(
-            f"Detected: SDS {self.sampling_design_state} - "
-            f"{self.sds_characteristics['description']}"
+            f"Raw SDS {self.sampling_design_state} - "
+            f"{self.raw_sds_characteristics['description']}"
         )
 
-        # Step 4: Compute structure stats once (single source of truth)
-        # This enables R2 method selection and availability checks
+        # Step 3: Compute structure stats once on tidy data (single source of truth)
+        # This enables R2 method selection and availability checks.
+        # The tidy structure may differ from the raw SDS — e.g., SDS 3 (partial
+        # replication) on raw data can become structurally equivalent to SDS 1
+        # (full replication) after NA rows are dropped.
         self._compute_structure_stats()
 
-        # Step 5: Calculate VAS residuals when we have both grouping AND time
+        # Step 4: Calculate VAS residuals when we have both grouping AND time
         # (need Ybar_k for factor effects and Ybar_t for time effects)
         needs_residuals = self.spec.has_grouping and self.spec.has_time
-
-        # Also calculate residuals if a residual chart is requested
-        residual_requested = getattr(self.spec, 'residual', None) is not None
-        if residual_requested:
-            needs_residuals = True
-            logger.debug("Residual chart requested - forcing VAS residual calculation")
 
         if needs_residuals:
             logger.debug("Calculating VAS residuals (R1-R5)")
 
-            # Get R2 method based on observed structure (not SDS)
-            r2_method = self.sds_detector.get_r2_method(self._structure_stats)
+            # Get R2 method based on observed tidy structure (not raw SDS)
+            r2_method = self._sds_registry.get_r2_method(self._structure_stats)
             logger.debug(f"Using R2 method: {r2_method}")
 
-            self.analysis_dataset = self.residual_calc.calculate_vas_residuals(
+            self.analysis_dataset = self._residual_calc.calculate_vas_residuals(
                 self.analysis_dataset, self.spec, r2_method,
                 n_per_cell=self._n_per_cell
             )
 
-            # Calculate centered residuals (legacy support)
+            # Calculate centered residuals
             self._calculate_centered_residuals()
 
-            # Step 6: Calculate effects and interactions
+            # Step 5: Calculate effects and interactions
             logger.debug("Calculating effects and interactions")
-            self.effects = self.effects_calc.calculate_all_effects(
+            self.effects = self._effects_calc.calculate_all_effects(
                 self.analysis_dataset, self.spec
             )
-            self.interactions = self.effects_calc.calculate_interactions(
+            self.interactions = self._effects_calc.calculate_interactions(
                 self.analysis_dataset, self.spec, self.sampling_design_state,
                 effects=self.effects
             )
@@ -146,6 +143,9 @@ class AnalysisDataSet:
                 f"Skipping VAS residuals: requires both grouping and time. "
                 f"has_grouping={self.spec.has_grouping}, has_time={self.spec.has_time}"
             )
+
+        # Log final analysis summary (after all calculations are complete)
+        logger.debug(self.analysis_summary)
 
     # =========================================================================
     # Properties (for backward compatibility and convenience)
@@ -165,6 +165,35 @@ class AnalysisDataSet:
     def n_per_cell(self) -> pd.Series | None:
         """Get observation counts per cell_key (computed once during initialization)."""
         return self._n_per_cell
+
+    @property
+    def tidy_structure_summary(self) -> dict | None:
+        """
+        Summary of the tidy data structure after NA drops and preparation.
+
+        The tidy structure drives R2 method selection and may differ from
+        what the raw SDS (detected on uncleansed data) would predict.
+        For example, SDS 3 (partial replication) on raw data can become
+        structurally equivalent to full replication after tidying.
+
+        Returns
+        -------
+        dict or None
+            Dictionary with tidy structure details:
+            - n_cell_min: minimum observations per cell
+            - n_cell_max: maximum observations per cell
+            - K_obs: number of unique factor levels observed
+            - r2_method: 'exact', 'ma2', or 'hybrid'
+            Returns None if structure stats haven't been computed.
+        """
+        if self._structure_stats is None:
+            return None
+        return {
+            'n_cell_min': self._structure_stats.n_cell_min,
+            'n_cell_max': self._structure_stats.n_cell_max,
+            'K_obs': self._structure_stats.K_obs,
+            'r2_method': self._sds_registry.get_r2_method(self._structure_stats),
+        }
 
     def _compute_structure_stats(self) -> None:
         """
@@ -199,10 +228,13 @@ class AnalysisDataSet:
             K_obs=df["rsg_key"].nunique() if "rsg_key" in df.columns else 0
         )
 
+        r2_method = self._sds_registry.get_r2_method(self._structure_stats)
+
         logger.debug(
-            f"Structure stats: n_cell_min={self._structure_stats.n_cell_min}, "
-            f"n_cell_max={self._structure_stats.n_cell_max}, "
-            f"K_obs={self._structure_stats.K_obs}"
+            f"Tidy structure: n_cell_min={n_cell_min}, "
+            f"n_cell_max={n_cell_max}, "
+            f"K_obs={self._structure_stats.K_obs}, "
+            f"effective R2 method: {r2_method}"
         )
 
     @property
@@ -222,23 +254,22 @@ class AnalysisDataSet:
         """
         summary = {
             'sds': self.sampling_design_state,
-            'sds_info': self.sds_characteristics,
+            'sds_info': self.raw_sds_characteristics,
             'has_vas_residuals': self.has_vas_residuals,
             'n_observations': len(self.analysis_dataset),
-            'analysis_type': self.spec.analysis_type
         }
         return summary
 
     # =========================================================================
-    # Centered Residuals (legacy support - kept for backward compatibility)
+    # Centered Residuals
     # =========================================================================
 
     def _calculate_centered_residuals(self):
         """
         Calculate centered residuals (Rbar and RCR values).
 
-        These are legacy calculations that center residuals by their means.
-        Kept for backward compatibility with existing code and tests.
+        These calculations center residuals by their means and reconstruct
+        Y from variance components to verify decomposition correctness.
 
         Note: This method intentionally mutates self.analysis_dataset in-place
         (adding columns directly to the DataFrame). This differs from
@@ -249,7 +280,7 @@ class AnalysisDataSet:
         analysis that become part of the dataset.
 
         Calculates:
-        - Rbar_kt: Mean of R1 per cell (factor × time)
+        - Rbar_kt: Mean of R1 per cell (factor x time)
         - Rbar_k: Mean of R1 per factor level
         - Rbar_t: Mean of R1 per time point
         - RCR1-RCR5: Reconstructed Y values from centered residuals
@@ -275,4 +306,3 @@ class AnalysisDataSet:
         df['RCR4'] = (df['Ybar'] + df['Ybar_kt'] - df['Ybar_t']) + df['R4']
         # Y = (Ybar + Ybar_kt - Ybar_k) + R5
         df['RCR5'] = (df['Ybar'] + df['Ybar_kt'] - df['Ybar_k']) + df['R5']
-

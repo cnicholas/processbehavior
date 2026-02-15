@@ -1,286 +1,231 @@
-import logging
-
 import pytest
 
-from processbehavior import analysis_dataset as ad
-from processbehavior.analysis_specification import DataPrepConfig
-
-# Configure logging
-logging.basicConfig(
-    level=logging.DEBUG,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger(__name__)
+from processbehavior.formulation_spec import FormulationSpec, ChartRequest
 
 
 # =============================================================================
-# DataPrepConfig Tests (Base Class - No analysis_type)
+# FormulationSpec Tests
 # =============================================================================
 
-def test_data_prep_config_basic():
-    """Test DataPrepConfig works without analysis_type."""
-    spec = {
-        'response_var': 'Height',
-        'rsg_vars': ['Operator'],
-        'time_var': 'Time'
-    }
-    config = DataPrepConfig(spec)
-
-    assert config.response_var == 'Height'
-    assert config.rsg_vars == ['Operator']
-    assert config.time_var == 'Time'
-    assert config.has_grouping
-    assert config.has_time
-    assert config.requires_sort
-
-
-def test_data_prep_config_requires_response_var():
-    """Test DataPrepConfig raises error without response_var."""
-    spec_no_response = {'rsg_vars': ['a', 'b'], 'time_var': 'd'}
-
-    with pytest.raises(ValueError, match='response variable is required'):
-        DataPrepConfig(spec_no_response)
-
-
-def test_data_prep_config_has_grouping():
-    """Test has_grouping property."""
-    spec_with_grouping = {'response_var': 'y', 'rsg_vars': ['a', 'b']}
-    config = DataPrepConfig(spec_with_grouping)
-    assert config.has_grouping
-
-    spec_no_grouping = {'response_var': 'y'}
-    config = DataPrepConfig(spec_no_grouping)
-    assert not config.has_grouping
-
-
-def test_data_prep_config_has_time():
-    """Test has_time property."""
-    spec_with_time = {'response_var': 'y', 'time_var': 't'}
-    config = DataPrepConfig(spec_with_time)
-    assert config.has_time
-
-    spec_no_time = {'response_var': 'y'}
-    config = DataPrepConfig(spec_no_time)
-    assert not config.has_time
-
-
-def test_data_prep_config_sort_cols():
-    """Test sort_cols are built correctly."""
-    # Both grouping and time
-    spec = {'response_var': 'y', 'rsg_vars': ['a'], 'time_var': 't'}
-    config = DataPrepConfig(spec)
-    assert config.sort_cols == ['rsg', 't']
-    assert config.requires_sort
-
-    # Only time
-    spec = {'response_var': 'y', 'time_var': 't'}
-    config = DataPrepConfig(spec)
-    assert config.sort_cols == ['t']
-    assert config.requires_sort
-
-    # No time
-    spec = {'response_var': 'y', 'rsg_vars': ['a']}
-    config = DataPrepConfig(spec)
-    assert config.sort_cols == []
-    assert not config.requires_sort
-
-
-def test_data_prep_config_rsg_delim():
-    """Test rsg_var_delim configuration."""
-    # Default delimiter
-    spec = {'response_var': 'y', 'rsg_vars': ['a', 'b']}
-    config = DataPrepConfig(spec)
-    assert config.rsg_var_delim == '_'
-
-    # Custom delimiter
-    spec = {'response_var': 'y', 'rsg_vars': ['a', 'b'], 'rsg_var_delim': '|'}
-    config = DataPrepConfig(spec)
-    assert config.rsg_var_delim == '|'
-
-
-# =============================================================================
-# AnalysisSpecification Tests (Extended Class - With analysis_type)
-# =============================================================================
-
-def test_analysis_specification_valid():
-    """Test AnalysisSpecification validation with new unified constructor."""
-    # Handles missing key and None value for valid key - get() resolves to None in both cases
-    spec_with_no_response = {
-        'analysis_type': 'Imr',
-        'rsg_vars': ['a', 'b'],
-        'time_var': 'd',
-        'rsg_var_name': 'rsg',
-        'response_var': None
-    }
-
-    with pytest.raises(ValueError):
-        ad.AnalysisSpecification(spec_with_no_response)
-
-    # TODO: Make loop to test all analysis types
-    spec_with_no_rsg_xbar = {
-        'analysis_type': 'Xbar',
-        'response_var': 'c',
-        'time_var': 'd',
-        'rsg_var_name': 'rsg'
-    }
-    with pytest.raises(ValueError):
-        ad.AnalysisSpecification(spec_with_no_rsg_xbar)
-
-    spec_with_no_rsg_s = {
-        'analysis_type': 'S',
-        'response_var': 'c',
-        'time_var': 'd',
-        'rsg_var_name': 'rsg'
-    }
-    with pytest.raises(ValueError):
-        ad.AnalysisSpecification(spec_with_no_rsg_s)
-
-    # expect time and rsg to be first two columns of output cols
-
-    # Check configuration
-def test_analysis_specification_Imr_no_time_var():
-    spec = {
-        'analysis_type': 'Imr',
-        'rsg_vars': ['a', 'b'],
-        'response_var': 'c',
-        'rsg_var_name': 'rsg'
-    }
-    logger.info(f'Key is: {spec.get("time_var")}')
-    asImr = ad.AnalysisSpecification(spec)
-    logger.debug(f'{spec}')
-    logger.info(f'\nAnalysis Type is: {asImr.analysis_type}')
-
-    # rsg_vars provided
-    assert asImr.has_grouping
-
-    # group if there is an rsg
-    assert not asImr.has_time  # no time_var
-
-    # rsg is present sort by it only add time if it is provided
-    assert asImr.sort_cols == []
-
-    # expect x and rsg to be first two columns of output cols
-    assert asImr.analysis_output_cols == ['x', 'rsg', spec['response_var'], 'mean', 'lpl', 'upl', 'beyond_limits']
-
-
-def test_analysis_specification_Imr_w_time_var():
-    spec = {
-        'analysis_type': 'Imr',
-        'rsg_vars': ['a', 'b'],
-        'time_var': 'd',
-        'response_var': 'c',
-        'rsg_var_name': 'rsg'
-    }
-    # [specs['time_var'], 'rsg', specs['response_var'], 'mean', 'lpl', 'upl', 'beyond_limits']
-    asImr = ad.AnalysisSpecification(spec)
-    logger.debug(f'{spec}')
-    logger.info(f'\nAnalysis Type is: {asImr.analysis_type}')
-    assert asImr.has_grouping
-    assert asImr.has_time
-    assert asImr.sort_cols == [spec['rsg_var_name'], spec['time_var']]
-    assert asImr.requires_sort
-
-    # expect time_var and rsg to be first two columns of output cols
-    assert asImr.analysis_output_cols == [
-        spec['time_var'], spec['rsg_var_name'], spec['response_var'],
-        'mean', 'lpl', 'upl', 'beyond_limits'
-    ]
-        
-    # def test_analysis_specification_test_time_unit(self):
-    #     no_time_invalid_spec = {'analysis_type': 'Imr', 'rsg_vars': ['a', 'b'], 
-    #             'response_var': 'c', 'rsg_var_name': 'rsg','time_unit':'Month'}
-        
-    #     with self.assertRaises(ValueError):
-    #         ad.AnalysisSpecification(
-    #             analysis_type='Imr',
-    #             analysis_specification=no_time_invalid_spec
-    #         )
-
-    #     invalid_time_unit_spec = {
-    #         'analysis_type': 'Imr',
-    #         'rsg_vars': ['a', 'b'],
-    #         'time_var':'d',
-    #         'response_var': 'c',
-    #         'rsg_var_name': 'rsg',
-    #         'time_unit':'month'
-    #     }
-
-    #     with self.assertRaises(ValueError):
-    #         ad.AnalysisSpecification(
-    #             analysis_type='Imr',
-    #             analysis_specification=invalid_time_unit_spec
-    #         )
-        
-        
-    #     valid_spec = {'analysis_type': 'Imr', 'rsg_vars': ['a', 'b'], 
-    #             'response_var': 'c','rsg_var_name': 'rsg'}
-                
-    #     print(f'Testing:data prep output cols with response, and rsg for spec: \n')
-    #     print(f'{valid_spec}')
-    #     result = ad.AnalysisSpecification(analysis_type='Imr', analysis_specification=valid_spec)
-        
-    #     #test data prep output cols   
-    #     expected = ['rsg','n', 'c']
-    #     self.assertEqual(result.data_prep_output_cols, expected)
-    #     print(f'Requires sort: {result.requires_sort}')
-
-def test_analysis_specification_sort_required():
-    time_w_group_spec = {
-        'analysis_type': 'Imr',
-        'rsg_vars': ['a', 'b'],
-        'time_var': 'd',
-        'response_var': 'c',
-        'rsg_var_name': 'rsg',
-        'time_unit': 'Month'
-    }
-    sortable = True
-
-    logger.info(
-        '\nTesting: Sort required when time_var and rsg_var specified '
-        'and that sortcols from match....'
+def test_formulation_spec_basic():
+    """Test FormulationSpec with all primary fields."""
+    spec = FormulationSpec(
+        response_var='Height',
+        rsg_vars=('Operator',),
+        time_var='Time'
     )
-    aspec = ad.AnalysisSpecification(time_w_group_spec)
-    assert aspec.requires_sort == sortable
-    assert aspec.sort_cols == ['rsg', 'd']
 
-    time_no_group_spec = {
-        'analysis_type': 'Imr',
-        'time_var': 'd',
-        'response_var': 'c'
-    }
-    logger.info('\nTesting: Sort required when only time_var specified and that sortcols from match...')
-    aspec = ad.AnalysisSpecification(time_no_group_spec)
-    assert aspec.requires_sort == sortable
-    assert aspec.sort_cols == ['d']
+    assert spec.response_var == 'Height'
+    assert spec.rsg_vars == ('Operator',)
+    assert spec.time_var == 'Time'
+    assert spec.has_grouping
+    assert spec.has_time
+    assert spec.requires_sort
 
 
-def test_analysis_specification_rsg_delim():
-    no_delim_spec = {
-        'analysis_type': 'Imr',
-        'rsg_vars': ['a', 'b'],
-        'time_var': 'd',
-        'response_var': 'c',
-        'rsg_var_name': 'rsg',
-        'time_unit': 'Month'
-    }
-    aspec = ad.AnalysisSpecification(no_delim_spec)
-    logger.info('\nTesting rsg_var_delim is set properly to default: "_" specified in spec:...')
-    assert aspec.rsg_var_delim == "_"
+def test_formulation_spec_requires_response_var():
+    """Test FormulationSpec raises error when response_var is None."""
+    with pytest.raises(ValueError, match='response variable is required'):
+        FormulationSpec(response_var=None)
 
-    logger.info(f'\nTesting n in data prep output cols for grouped data: {aspec.data_prep_output_cols}')
-    actual = "n" in aspec.data_prep_output_cols
-    assert actual
 
-    delim_spec = {
-        'analysis_type': 'Imr',
-        'rsg_vars': ['a', 'b'],
-        'time_var': 'd',
-        'response_var': 'c',
-        'rsg_var_name': 'rsg',
-        'rsg_var_delim': '|',
-        'time_unit': 'Month'
-    }
-    aspec = ad.AnalysisSpecification(delim_spec)
+def test_formulation_spec_has_grouping():
+    """Test has_grouping property."""
+    spec_with_grouping = FormulationSpec(
+        response_var='y',
+        rsg_vars=('a', 'b')
+    )
+    assert spec_with_grouping.has_grouping
 
-    logger.info('\nTesting rsg_var_delim is set properly to: "|" specified in spec:...')
-    assert aspec.rsg_var_delim == "|"
+    spec_no_grouping = FormulationSpec(response_var='y')
+    assert not spec_no_grouping.has_grouping
+
+
+def test_formulation_spec_has_time():
+    """Test has_time property."""
+    spec_with_time = FormulationSpec(response_var='y', time_var='t')
+    assert spec_with_time.has_time
+
+    spec_no_time = FormulationSpec(response_var='y')
+    assert not spec_no_time.has_time
+
+
+def test_formulation_spec_requires_sort():
+    """Test requires_sort is True when time_var is present, False otherwise."""
+    # Both grouping and time -> requires sort
+    spec = FormulationSpec(response_var='y', rsg_vars=('a',), time_var='t')
+    assert spec.requires_sort
+
+    # Only time -> requires sort
+    spec = FormulationSpec(response_var='y', time_var='t')
+    assert spec.requires_sort
+
+    # Only grouping, no time -> no sort required
+    spec = FormulationSpec(response_var='y', rsg_vars=('a',))
+    assert not spec.requires_sort
+
+    # Neither grouping nor time -> no sort required
+    spec = FormulationSpec(response_var='y')
+    assert not spec.requires_sort
+
+
+def test_formulation_spec_rsg_delim_default():
+    """Test rsg_var_delim defaults to underscore."""
+    spec = FormulationSpec(response_var='y', rsg_vars=('a', 'b'))
+    assert spec.rsg_var_delim == '_'
+
+
+def test_formulation_spec_rsg_delim_custom():
+    """Test rsg_var_delim accepts custom delimiter."""
+    spec = FormulationSpec(
+        response_var='y',
+        rsg_vars=('a', 'b'),
+        rsg_var_delim='|'
+    )
+    assert spec.rsg_var_delim == '|'
+
+
+def test_formulation_spec_defaults():
+    """Test default values for all optional fields."""
+    spec = FormulationSpec(response_var='y')
+
+    assert spec.rsg_vars is None
+    assert spec.time_var is None
+    assert spec.round_to == 3
+    assert spec.rsg_var_name == 'rsg'
+    assert spec.rsg_var_delim == '_'
+    assert spec.unit_of_analysis is None
+
+
+def test_formulation_spec_round_to():
+    """Test custom round_to value."""
+    spec = FormulationSpec(response_var='y', round_to=5)
+    assert spec.round_to == 5
+
+
+def test_formulation_spec_unit_of_analysis():
+    """Test unit_of_analysis field."""
+    spec = FormulationSpec(response_var='y', unit_of_analysis='wafer')
+    assert spec.unit_of_analysis == 'wafer'
+
+
+def test_formulation_spec_is_frozen():
+    """Test that FormulationSpec is immutable."""
+    spec = FormulationSpec(response_var='y')
+    with pytest.raises(AttributeError):
+        spec.response_var = 'z'
+
+
+def test_formulation_spec_rsg_vars_is_tuple():
+    """Test that rsg_vars is stored as a tuple, not a list."""
+    spec = FormulationSpec(response_var='y', rsg_vars=('a', 'b'))
+    assert isinstance(spec.rsg_vars, tuple)
+
+
+def test_formulation_spec_multi_rsg_vars():
+    """Test FormulationSpec with multiple rational subgrouping variables."""
+    spec = FormulationSpec(
+        response_var='c',
+        rsg_vars=('a', 'b'),
+        time_var='d',
+        rsg_var_name='rsg'
+    )
+    assert spec.has_grouping
+    assert spec.has_time
+    assert spec.requires_sort
+    assert spec.rsg_vars == ('a', 'b')
+
+
+def test_formulation_spec_grouping_no_time():
+    """Test FormulationSpec with grouping but no time variable."""
+    spec = FormulationSpec(
+        response_var='c',
+        rsg_vars=('a', 'b'),
+        rsg_var_name='rsg'
+    )
+    assert spec.has_grouping
+    assert not spec.has_time
+    assert not spec.requires_sort
+
+
+# =============================================================================
+# ChartRequest Tests
+# =============================================================================
+
+def test_chart_request_basic():
+    """Test ChartRequest with only the required chart field."""
+    req = ChartRequest(chart='Imr')
+    assert req.chart == 'Imr'
+    assert req.by is None
+    assert req.value_col is None
+    assert req.residual is None
+    assert req.residual_chart_type is None
+    assert req.recentered is False
+    assert req.paired is False
+    assert req.bins == 10
+
+
+def test_chart_request_xbar():
+    """Test ChartRequest for Xbar chart type."""
+    req = ChartRequest(chart='Xbar', by=('Operator',))
+    assert req.chart == 'Xbar'
+    assert req.by == ('Operator',)
+
+
+def test_chart_request_s_chart():
+    """Test ChartRequest for S chart type."""
+    req = ChartRequest(chart='S', by=('Operator',))
+    assert req.chart == 'S'
+    assert req.by == ('Operator',)
+
+
+def test_chart_request_paired():
+    """Test ChartRequest with paired=True for Xbar+S or Imr+R."""
+    req = ChartRequest(chart='Xbar', paired=True)
+    assert req.paired is True
+
+
+def test_chart_request_residual():
+    """Test ChartRequest for residual charting."""
+    req = ChartRequest(
+        chart='Imr',
+        residual='R2',
+        residual_chart_type='Imr',
+        value_col='R2'
+    )
+    assert req.residual == 'R2'
+    assert req.residual_chart_type == 'Imr'
+    assert req.value_col == 'R2'
+
+
+def test_chart_request_recentered():
+    """Test ChartRequest with recentered residuals."""
+    req = ChartRequest(chart='Imr', residual='R2', recentered=True)
+    assert req.recentered is True
+
+
+def test_chart_request_histogram():
+    """Test ChartRequest for Histogram with custom bins."""
+    req = ChartRequest(chart='Histogram', bins=20)
+    assert req.chart == 'Histogram'
+    assert req.bins == 20
+
+
+def test_chart_request_is_frozen():
+    """Test that ChartRequest is immutable."""
+    req = ChartRequest(chart='Imr')
+    with pytest.raises(AttributeError):
+        req.chart = 'Xbar'
+
+
+def test_chart_request_value_col():
+    """Test ChartRequest with explicit value_col."""
+    req = ChartRequest(chart='Imr', value_col='Height')
+    assert req.value_col == 'Height'
+
+
+def test_chart_request_by_tuple():
+    """Test that by field is stored as a tuple."""
+    req = ChartRequest(chart='Imr', by=('a', 'b'))
+    assert isinstance(req.by, tuple)
+    assert req.by == ('a', 'b')

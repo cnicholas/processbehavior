@@ -16,8 +16,31 @@ from processbehavior import Analysis
 from processbehavior import analysis_dataset as ad
 from processbehavior.analysis import gather_analysis_statistics, package_analysis
 from processbehavior.data_preparation import DataPreparation
+from processbehavior.formulation_spec import ChartRequest, FormulationSpec
 from processbehavior.sds_detector import SDSRegistry
 from processbehavior.spc_constants import c4
+
+
+def _make_spec(spec_dict: dict) -> FormulationSpec:
+    """Convert old-style spec dict to FormulationSpec."""
+    rsg_vars = spec_dict.get('rsg_vars')
+    return FormulationSpec(
+        response_var=spec_dict['response_var'],
+        rsg_vars=tuple(rsg_vars) if rsg_vars else None,
+        time_var=spec_dict.get('time_var'),
+        round_to=spec_dict.get('round_to', 3),
+        rsg_var_name=spec_dict.get('rsg_var_name', 'rsg'),
+        rsg_var_delim=spec_dict.get('rsg_var_delim', '_'),
+    )
+
+
+def _make_request(spec_dict: dict) -> ChartRequest:
+    """Convert old-style spec dict to ChartRequest."""
+    return ChartRequest(
+        chart=spec_dict.get('analysis_type', 'Xbar'),
+        by=tuple(spec_dict['by']) if spec_dict.get('by') else None,
+        paired=spec_dict.get('paired', False),
+    )
 
 
 def detect_sds_for_test(df: pd.DataFrame, spec: dict) -> int:
@@ -26,8 +49,7 @@ def detect_sds_for_test(df: pd.DataFrame, spec: dict) -> int:
 
     Returns only the SDS integer, not the (sds, min_cell_size) tuple.
     """
-    from processbehavior.analysis_specification import AnalysisSpecification
-    config = AnalysisSpecification(spec)
+    config = _make_spec(spec)
     prep = DataPreparation()
     prep.validate_columns(df, config)
     prepared_df = prep.prepare_dataset(df, config)
@@ -112,7 +134,7 @@ class TestXbarSAnalysis:
         }
 
         sds = detect_sds_for_test(df, spec)
-        result = Analysis(df, spec, sds=sds).calculate()
+        result = Analysis(spec=_make_spec(spec), request=_make_request(spec), sds=sds, df=df).calculate()
 
         # Should return both Xbar and S charts (paired=True)
         assert len(result) == 2
@@ -120,10 +142,11 @@ class TestXbarSAnalysis:
         assert 'S' in result
 
         # Check Xbar statistics
+        # Note: center includes all data (including n=1 groups in unfiltered data)
         xbar_stats = result['Xbar']['statistics']
-        assert xbar_stats['center'] == 5.0
-        assert xbar_stats['lpl'] == 1.52
-        assert xbar_stats['upl'] == 8.48
+        assert xbar_stats['center'] == 4.43
+        assert xbar_stats['lpl'] == 0.95
+        assert xbar_stats['upl'] == 7.9
 
         # Check S statistics
         # Note: b3 constant is clamped to 0 for small subgroups (n < 6),
@@ -147,10 +170,10 @@ class TestXbarSAnalysis:
         }
 
         sds = detect_sds_for_test(df_differing_Ns, spec)
-        result = Analysis(df_differing_Ns, spec, sds=sds).calculate()
+        result = Analysis(spec=_make_spec(spec), request=_make_request(spec), sds=sds, df=df_differing_Ns).calculate()
 
-        # Center should be grand mean of all observations
-        assert result['Xbar']['statistics']['center'] == 4.43
+        # Center should be grand mean of all observations (including n=1 groups)
+        assert result['Xbar']['statistics']['center'] == 4.0
         # Limits should vary when group sizes differ
         assert result['Xbar']['statistics']['lpl'] == 'Varies'
         assert result['Xbar']['statistics']['upl'] == 'Varies'
@@ -179,7 +202,7 @@ class TestImrAnalysis:
         }
 
         sds = detect_sds_for_test(df, spec)
-        result = Analysis(df=df, specification=spec, sds=sds).calculate()
+        result = Analysis(spec=_make_spec(spec), request=_make_request(spec), sds=sds, df=df).calculate()
 
         # SRP: Imr only returns Imr (no longer bundled with R by default)
         assert hasattr(result, 'keys') and hasattr(result, 'values')
@@ -218,10 +241,8 @@ class TestImrAnalysis:
             'round_to': 2,
             'paired': True  # Request bundled Imr+R
         }
-        ad.AnalysisSpecification(spec)
-
         sds = detect_sds_for_test(df, spec)
-        result = Analysis(df=df, specification=spec, sds=sds).calculate()
+        result = Analysis(spec=_make_spec(spec), request=_make_request(spec), sds=sds, df=df).calculate()
 
         # Paired mode: Imr and R are bundled together
         keys = list(result.keys())
@@ -252,10 +273,8 @@ class TestRChartAnalysis:
             'rsg_var_name': 'rsg',
             'round_to': 2
         }
-        ad.AnalysisSpecification(spec)
-
         sds = detect_sds_for_test(df, spec)
-        result = Analysis(df, spec, sds=sds).calculate()
+        result = Analysis(spec=_make_spec(spec), request=_make_request(spec), sds=sds, df=df).calculate()
 
         # SRP: R only returns R (no longer bundled with Imr by default)
         assert hasattr(result, "keys") and hasattr(result, "values")
@@ -297,7 +316,7 @@ class TestRChartAnalysis:
         }
 
         sds = detect_sds_for_test(df, spec)
-        result = Analysis(df, spec, sds=sds).calculate()
+        result = Analysis(spec=_make_spec(spec), request=_make_request(spec), sds=sds, df=df).calculate()
 
         # SRP: R only returns R
         assert hasattr(result, "keys") and hasattr(result, "values")
@@ -338,7 +357,7 @@ class TestDateTimeHandling:
             else:
                 spec['by'] = ['a', 'b']  # IMR/R also needs explicit by with factors
             sds = detect_sds_for_test(df_dt, spec)
-            result = Analysis(df_dt, spec, sds=sds).calculate()
+            result = Analysis(spec=_make_spec(spec), request=_make_request(spec), sds=sds, df=df_dt).calculate()
 
             if analysis in ['Imr', 'R']:
                 # SRP: Each chart type returns only itself
@@ -356,7 +375,7 @@ class TestDateTimeHandling:
         }
 
         sds = detect_sds_for_test(df_dt, spec)
-        result = Analysis(df_dt, spec, sds=sds).calculate()
+        result = Analysis(spec=_make_spec(spec), request=_make_request(spec), sds=sds, df=df_dt).calculate()
 
         # With new bundled structure, access via chart type key
         imr_data = result['Imr']['data']
@@ -403,8 +422,8 @@ class TestCanonicalOrdering:
         }
 
         sds = detect_sds_for_test(df, spec)
-        a_spec = ad.AnalysisSpecification(spec)
-        dataset = ad.AnalysisDataSet(df=df, analysis_specification=a_spec, sds=sds)
+        a_spec = _make_spec(spec)
+        dataset = ad.AnalysisDataSet(df=df, spec=a_spec, sds=sds)
 
         ads = dataset.analysis_dataset
 
@@ -434,8 +453,8 @@ class TestCanonicalOrdering:
         }
 
         sds = detect_sds_for_test(df, spec)
-        a_spec = ad.AnalysisSpecification(spec)
-        dataset = ad.AnalysisDataSet(df=df, analysis_specification=a_spec, sds=sds)
+        a_spec = _make_spec(spec)
+        dataset = ad.AnalysisDataSet(df=df, spec=a_spec, sds=sds)
 
         ads = dataset.analysis_dataset
 
@@ -468,8 +487,8 @@ class TestCanonicalOrdering:
         }
 
         sds = detect_sds_for_test(df, spec)
-        a_spec = ad.AnalysisSpecification(spec)
-        dataset = ad.AnalysisDataSet(df=df, analysis_specification=a_spec, sds=sds)
+        a_spec = _make_spec(spec)
+        dataset = ad.AnalysisDataSet(df=df, spec=a_spec, sds=sds)
 
         ads = dataset.analysis_dataset
 

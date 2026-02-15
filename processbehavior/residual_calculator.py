@@ -36,7 +36,7 @@ import pandas as pd
 from .sds_detector import R2Method
 
 if TYPE_CHECKING:
-    from .analysis_dataset import AnalysisSpecification
+    from .formulation_spec import FormulationSpec
 
 logger = logging.getLogger(__name__)
 
@@ -584,7 +584,7 @@ class ResidualCalculator:
     def calculate_residuals(
         self,
         df: pd.DataFrame,
-        spec: AnalysisSpecification,
+        spec: FormulationSpec,
         sds: int
     ) -> pd.DataFrame:
         """
@@ -600,7 +600,7 @@ class ResidualCalculator:
         ----------
         df : DataFrame
             Input data (prepared, with keys)
-        spec : AnalysisSpecification
+        spec : FormulationSpec
             Analysis specification
         sds : int
             Sampling Design State (1-6)
@@ -683,7 +683,7 @@ class ResidualCalculator:
     def _calculate_r2_for_sds(
         self,
         df: pd.DataFrame,
-        spec: AnalysisSpecification,
+        spec: FormulationSpec,
         sds: int
     ) -> pd.Series:
         """
@@ -751,7 +751,7 @@ class ResidualCalculator:
     def _calculate_r2(
         self,
         df: pd.DataFrame,
-        spec: AnalysisSpecification,
+        spec: FormulationSpec,
         r2_method: R2Method,
         n_per_cell: pd.Series | None = None
     ) -> pd.Series:
@@ -766,7 +766,7 @@ class ResidualCalculator:
         ----------
         df : pd.DataFrame
             Prepared data with required columns
-        spec : AnalysisSpecification
+        spec : FormulationSpec
             Analysis specification
         r2_method : R2Method
             'exact', 'ma2', or 'hybrid'
@@ -821,7 +821,7 @@ class ResidualCalculator:
     def calculate_vas_residuals(
         self,
         df: pd.DataFrame,
-        spec: AnalysisSpecification,
+        spec: FormulationSpec,
         r2_method: R2Method,
         n_per_cell: pd.Series | None = None
     ) -> pd.DataFrame:
@@ -836,7 +836,7 @@ class ResidualCalculator:
         ----------
         df : pd.DataFrame
             Input data (prepared, with keys: rsg_key, obs_id, cell_key)
-        spec : AnalysisSpecification
+        spec : FormulationSpec
             Analysis specification
         r2_method : R2Method
             'exact', 'ma2', or 'hybrid' - determines R2 calculation

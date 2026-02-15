@@ -436,7 +436,7 @@ def create_time_interaction_chart(
 
     # Get unique factor levels and time points from dataset
     # Build aggregated data: mean PDC per (factor_combo, time)
-    agg_cols = factors + [time_var]
+    agg_cols = list(factors) + [time_var]
 
     # Add PDC to dataset for aggregation
     df = dataset.copy()
@@ -458,7 +458,7 @@ def create_time_interaction_chart(
     if len(factors) == 1:
         agg_data['_factor_key'] = agg_data[factors[0]].astype(str)
     else:
-        agg_data['_factor_key'] = agg_data[factors].apply(
+        agg_data['_factor_key'] = agg_data[list(factors)].apply(
             lambda x: '_'.join(str(v) for v in x), axis=1
         )
 

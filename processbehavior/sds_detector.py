@@ -68,7 +68,7 @@ class StructureStats:
     K_obs: int
 
 if TYPE_CHECKING:
-    from .analysis_specification import DataPrepConfig
+    from .formulation_spec import FormulationSpec
 
 logger = logging.getLogger(__name__)
 
@@ -380,7 +380,7 @@ class SDSRegistry:
     def detect_sds_from_structure(
         self,
         df: pd.DataFrame,
-        spec: DataPrepConfig,
+        spec: FormulationSpec,
         response_col: str,
         plan: dict[str, list] | None = None,
         T_planned: int | None = None
@@ -395,7 +395,7 @@ class SDSRegistry:
         ----------
         df : DataFrame
             Raw data (response NA rows NOT yet dropped)
-        spec : DataPrepConfig
+        spec : FormulationSpec
             Data preparation configuration
         response_col : str
             Name of response column
@@ -500,7 +500,7 @@ class SDSRegistry:
     def detect_sds(
         self,
         df: pd.DataFrame,
-        spec: DataPrepConfig,
+        spec: FormulationSpec,
         plan: dict[str, list] | None = None,
         T_planned: int | None = None,
         response_col: str | None = None
@@ -514,7 +514,7 @@ class SDSRegistry:
         ----------
         df : DataFrame
             Data (ideally raw with response NA rows preserved for accurate detection)
-        spec : DataPrepConfig
+        spec : FormulationSpec
             Data preparation configuration
         plan : dict, optional
             Sampling plan specifying expected factor levels. Keys are column
@@ -892,7 +892,7 @@ class SDSRegistry:
     def _build_structure_view(
         self,
         df: pd.DataFrame,
-        spec: DataPrepConfig,
+        spec: FormulationSpec,
         response_col: str,
     ) -> tuple[pd.DataFrame, list[str]]:
         """
@@ -909,7 +909,7 @@ class SDSRegistry:
         ----------
         df : DataFrame
             Raw data (response NA rows NOT yet dropped)
-        spec : DataPrepConfig
+        spec : FormulationSpec
             Data preparation configuration
         response_col : str
             Name of response column
@@ -1077,7 +1077,7 @@ class SDSRegistry:
     def _calculate_coverage_ratio(
         self,
         df: pd.DataFrame,
-        spec: DataPrepConfig,
+        spec: FormulationSpec,
         plan: dict[str, list],
         T_planned: int | None = None
     ) -> float:
@@ -1094,7 +1094,7 @@ class SDSRegistry:
         ----------
         df : DataFrame
             The analysis dataset
-        spec : DataPrepConfig
+        spec : FormulationSpec
             Analysis specification
         plan : dict
             Sampling plan with {column: [levels]} structure.

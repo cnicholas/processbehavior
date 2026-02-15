@@ -8,20 +8,16 @@ the strategy pattern. It supports:
 - R charts (range)
 
 The Analysis class coordinates between:
-- AnalysisSpecification (configuration)
+- FormulationSpec (structural configuration)
+- ChartRequest (per-execute chart parameters)
 - AnalysisDataSet (data preparation and VAS calculations)
 - Chart calculation strategies
 - AnalysisResult (unified result container)
 
 Usage:
-    spec = {
-        'analysis_type': 'Xbar',
-        'response_var': 'Height',
-        'time_var': 'Time',
-        'rsg_vars': ['Operator', 'Machine']
-    }
-
-    analysis = Analysis(df, spec)
+    spec = FormulationSpec(response_var='Height', rsg_vars=('Operator', 'Machine'), time_var='Time')
+    request = ChartRequest(chart='Xbar')
+    analysis = Analysis(spec, request, analysis_dataset=ads)
     result = analysis.calculate()
 
     # Access charts
@@ -38,7 +34,7 @@ import pandas as pd
 
 from .analysis_dataset import AnalysisDataSet
 from .analysis_result import AnalysisResult
-from .analysis_specification import AnalysisSpecification
+from .formulation_spec import ChartRequest, FormulationSpec
 from .spc_constants import calculate_limits, detect_beyond_limits
 
 # Configure module logger
@@ -229,33 +225,32 @@ class Analysis:
 
     def __init__(
         self,
-        df: pd.DataFrame,
-        specification: dict,
+        spec: FormulationSpec,
+        request: ChartRequest,
         analysis_dataset: AnalysisDataSet | None = None,
-        sds: int | None = None
+        sds: int | None = None,
+        df: pd.DataFrame | None = None
     ):
         """
-        Initialize analysis with data and specification.
+        Initialize analysis with spec and chart request.
 
         Args:
-            df: Input DataFrame with raw data
-            specification: Dictionary containing analysis configuration including 'analysis_type'
+            spec: Structural configuration (from formulate())
+            request: Chart-specific request (from execute())
             analysis_dataset: Optional pre-calculated AnalysisDataSet.
                 If provided, skips expensive residual calculation.
                 Used by Study.execute() to reuse formulate() calculations.
             sds: Sampling Design State (0-6). Required if analysis_dataset is not
                 provided. SDS should be detected at the entry point (ProcessBehavior)
                 and passed through the system.
+            df: Raw DataFrame. Required if analysis_dataset is not provided.
 
         Raises:
             ValueError: If neither analysis_dataset nor sds is provided.
         """
-        # Import here to avoid circular dependency
-        from .analysis_dataset import AnalysisDataSet
-
-        self.raw_df = df
-        self.spec = AnalysisSpecification(specification)
-        self.analysis_type = self.spec.analysis_type
+        self.spec = spec
+        self.request = request
+        self.analysis_type = request.chart
 
         # Use pre-calculated AnalysisDataSet if provided, otherwise calculate
         if analysis_dataset is not None:
@@ -264,10 +259,14 @@ class Analysis:
             if sds is None:
                 raise ValueError(
                     "sds is required when analysis_dataset is not provided. "
-                    "SDS should be detected at the entry point (ProcessBehavior)"
+                    "SDS should be detected at the entry point (ProcessBehavior) "
                     "and passed to Analysis."
                 )
-            self.ads = AnalysisDataSet(df, self.spec, sds=sds)
+            if df is None:
+                raise ValueError(
+                    "df is required when analysis_dataset is not provided."
+                )
+            self.ads = AnalysisDataSet(df, spec, sds=sds)
 
     def calculate(self) -> AnalysisResult:
         """
@@ -297,11 +296,11 @@ class Analysis:
         ...     residuals = result.residuals
         """
         # Check if this is a residual chart request
-        residual = getattr(self.spec, 'residual', None)
+        residual = self.request.residual
         if residual:
             # Residual chart analysis - inline logic (was _calculate_residual_chart)
-            chart_type = getattr(self.spec, 'residual_chart_type', 'Imr')
-            recentered = getattr(self.spec, 'recentered', False)
+            chart_type = self.request.residual_chart_type or 'Imr'
+            recentered = self.request.recentered
 
             # Determine column name
             col_prefix = 'RCR' if recentered else 'R'
@@ -399,7 +398,7 @@ class Analysis:
         else:
             # Standard chart analysis
             # Check if paired charts requested (Xbar+S or Imr+R together)
-            paired = getattr(self.spec, 'paired', False)
+            paired = self.request.paired
 
             if paired:
                 # Paired mode: return both charts regardless of which was requested
@@ -427,7 +426,7 @@ class Analysis:
                 )
 
             # Execute analysis strategy
-            chart_data = strategies[self.spec.analysis_type]()
+            chart_data = strategies[self.analysis_type]()
 
         # Wrap in AnalysisResult for unified access
         # Pass analysis_type so result.summary reports the executed chart type, not the recommended one
@@ -547,8 +546,10 @@ class Analysis:
         >>> # by=['factor1','factor2'] -> (['rsg'], 'Ybar_k') - use factor means
         """
         spec = self.spec
-        by = spec.by
-        rsg_vars = spec.rsg_vars or []
+        by = self.request.by
+        # Normalize tuple to list for internal comparison
+        by = list(by) if by is not None else None
+        rsg_vars = list(spec.rsg_vars) if spec.rsg_vars else []
         time_var = spec.time_var
 
         # Determine if we're charting response (can use pre-calculated) or residual
@@ -950,8 +951,9 @@ class Analysis:
             statistics['upl'] = variable_stats
 
         # Determine the grouping column for output
-        if spec.by is not None and spec.by != []:
-            # Explicit by list - create 'subgroup' column (THE BUG FIX)
+        by = self.request.by
+        if by is not None and len(by) > 0:
+            # Explicit by list - create 'subgroup' column
             if len(groupby_cols) == 1:
                 xbar['subgroup'] = xbar[groupby_cols[0]].astype(str)
             else:
@@ -1068,7 +1070,8 @@ class Analysis:
             n_to_use, n_max = self._determine_n_to_use(out)
 
             # Determine group_col
-            if spec.by is not None and spec.by != []:
+            by = self.request.by
+            if by is not None and len(by) > 0:
                 if len(groupby_cols) == 1:
                     out['subgroup'] = out[groupby_cols[0]].astype(str)
                 else:
@@ -1106,7 +1109,8 @@ class Analysis:
             pass
         else:
             # For precomputed path, apply group_col transformation
-            if spec.by is not None and spec.by != [] and 'subgroup' not in out.columns:
+            by = self.request.by
+            if by is not None and len(by) > 0 and 'subgroup' not in out.columns:
                 if len(groupby_cols) == 1:
                     out['subgroup'] = out[groupby_cols[0]].astype(str)
                 else:
@@ -1217,8 +1221,8 @@ class Analysis:
         logger.debug('Dataframe has columns: %s', out.columns.to_list())
 
         # Determine stratification based on `by` parameter
-        by = spec.by
-        rsg_vars = spec.rsg_vars or []
+        by = list(self.request.by) if self.request.by is not None else None
+        rsg_vars = list(spec.rsg_vars) if spec.rsg_vars else []
 
         # Determine stratify_by and collapsed_factors
         # collapsed_factors = factor variables not in `by` (for lane boundaries)
@@ -1635,8 +1639,8 @@ class Analysis:
         logger.debug('Dataframe has columns: %s', out.columns.to_list())
 
         # Determine stratification based on `by` parameter
-        by = spec.by
-        rsg_vars = spec.rsg_vars or []
+        by = list(self.request.by) if self.request.by is not None else None
+        rsg_vars = list(spec.rsg_vars) if spec.rsg_vars else []
 
         # Determine stratify_by and collapsed_factors
         if by is None:
@@ -1864,7 +1868,7 @@ class Analysis:
         """
         spec = self.spec
         if value_col is None:
-            value_col = spec.value_col if spec.value_col else spec.response_var
+            value_col = self.request.value_col if self.request.value_col else spec.response_var
 
         data = self.ads.analysis_dataset.copy()
         values = data[value_col].dropna()
@@ -1875,7 +1879,7 @@ class Analysis:
         std = values.std() if n >= 2 else float('nan')
 
         # Handle stratification via `by` parameter
-        by = spec.by if spec.by is not None else []
+        by = list(self.request.by) if self.request.by is not None else []
 
         if len(by) > 0:
             # Stratified histogram - one per stratum
@@ -1913,7 +1917,7 @@ class Analysis:
                     'metadata': {
                         'chart_type': 'Histogram',
                         'value_col': value_col,
-                        'bins': spec.bins,
+                        'bins': self.request.bins,
                         'stratified': True,
                         'stratify_by': list(by)
                     },
@@ -1935,7 +1939,7 @@ class Analysis:
                 'metadata': {
                     'chart_type': 'Histogram',
                     'value_col': value_col,
-                    'bins': spec.bins
+                    'bins': self.request.bins
                 }
             }
         }
