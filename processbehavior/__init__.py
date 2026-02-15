@@ -34,7 +34,6 @@ Main Classes
 ProcessBehavior : Main user-facing API with auto-completion
 AnalysisResult : Unified result container
 Analysis : Core analysis engine
-AnalysisDataSet : Analysis dataset manager
 """
 
 __version__ = "0.1.0"
@@ -46,8 +45,8 @@ from processbehavior.analysis_dataset import AnalysisDataSet
 
 # Result object
 from processbehavior.analysis_result import AnalysisResult
-from processbehavior.analysis_specification import AnalysisSpecification
 from processbehavior.data_preparation import DataPreparation, encode_rsg, natural_sort_key
+from processbehavior.formulation_spec import ChartRequest, FormulationSpec
 from processbehavior.effects_calculator import EffectsCalculator
 
 # Exceptions
@@ -87,8 +86,8 @@ __all__ = [
 
     # Core classes
     'Analysis',
-    'AnalysisDataSet',
-    'AnalysisSpecification',
+    'FormulationSpec',
+    'ChartRequest',
 
     # Utilities
     'SDSRegistry',

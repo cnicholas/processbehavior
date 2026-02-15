@@ -759,17 +759,16 @@ class TestSDSResultReason:
             'weight': [10.0] * 10
         })
 
-        from processbehavior.analysis_specification import AnalysisSpecification
+        from processbehavior.formulation_spec import FormulationSpec
         from processbehavior.data_preparation import DataPreparation
         from processbehavior.sds_detector import SDSRegistry
 
-        spec = AnalysisSpecification({
-            'analysis_type': 'Xbar',
-            'rsg_vars': ['lane', 'head'],
-            'rsg_var_name': 'rsg',
-            'time_var': 'pull',
-            'response_var': 'weight'
-        })
+        spec = FormulationSpec(
+            response_var='weight',
+            rsg_vars=('lane', 'head'),
+            rsg_var_name='rsg',
+            time_var='pull',
+        )
 
         prep = DataPreparation()
         prep.validate_columns(df, spec)
@@ -784,7 +783,7 @@ class TestSDSResultReason:
 
     def test_sds_5_reason_incomplete_with_replication(self):
         """Incomplete grid with replication should return reason='incomplete_with_replication'."""
-        from processbehavior.analysis_specification import DataPrepConfig
+        from processbehavior.formulation_spec import FormulationSpec
         from processbehavior.data_preparation import DataPreparation
         from processbehavior.sds_detector import SDSRegistry
 
@@ -796,13 +795,12 @@ class TestSDSResultReason:
             'Weight': [10.0] * 8
         })
 
-        spec_dict = {
-            'response_var': 'Weight',
-            'rsg_vars': ['Lane', 'Phase'],
-            'rsg_var_name': 'rsg',
-            'time_var': 'Pull',
-        }
-        config = DataPrepConfig(spec_dict)
+        config = FormulationSpec(
+            response_var='Weight',
+            rsg_vars=('Lane', 'Phase'),
+            rsg_var_name='rsg',
+            time_var='Pull',
+        )
         prep = DataPreparation()
         prep.validate_columns(df, config)
         prepared_df = prep.prepare_dataset(df, config)
@@ -819,7 +817,7 @@ class TestSDSResultReason:
 
     def test_sds_6_reason_incomplete_no_replication(self):
         """Incomplete grid without replication should return reason='incomplete_no_replication'."""
-        from processbehavior.analysis_specification import DataPrepConfig
+        from processbehavior.formulation_spec import FormulationSpec
         from processbehavior.data_preparation import DataPreparation
         from processbehavior.sds_detector import SDSRegistry
 
@@ -831,13 +829,12 @@ class TestSDSResultReason:
             'Weight': [10.0] * 4
         })
 
-        spec_dict = {
-            'response_var': 'Weight',
-            'rsg_vars': ['Lane', 'Phase'],
-            'rsg_var_name': 'rsg',
-            'time_var': 'Pull',
-        }
-        config = DataPrepConfig(spec_dict)
+        config = FormulationSpec(
+            response_var='Weight',
+            rsg_vars=('Lane', 'Phase'),
+            rsg_var_name='rsg',
+            time_var='Pull',
+        )
         prep = DataPreparation()
         prep.validate_columns(df, config)
         prepared_df = prep.prepare_dataset(df, config)

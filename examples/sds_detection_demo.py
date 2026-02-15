@@ -18,7 +18,9 @@ import numpy as np
 import pandas as pd
 
 from processbehavior import Analysis
-from processbehavior.analysis_dataset import AnalysisDataSet, AnalysisSpecification
+from processbehavior.analysis_dataset import AnalysisDataSet
+from processbehavior.data_preparation import DataPreparation
+from processbehavior.formulation_spec import ChartRequest, FormulationSpec
 from processbehavior.datasets import synthetic
 from processbehavior.sds_detector import SDSRegistry
 
@@ -33,6 +35,28 @@ SEED = 42
 # ============================================================================
 # Helper Function for Validation
 # ============================================================================
+
+def _make_spec(spec_dict: dict) -> FormulationSpec:
+    """Convert old-style spec dict to FormulationSpec."""
+    rsg_vars = spec_dict.get('rsg_vars')
+    return FormulationSpec(
+        response_var=spec_dict['response_var'],
+        rsg_vars=tuple(rsg_vars) if rsg_vars else None,
+        time_var=spec_dict.get('time_var'),
+        round_to=spec_dict.get('round_to', 3),
+        rsg_var_name=spec_dict.get('rsg_var_name', 'rsg'),
+        rsg_var_delim=spec_dict.get('rsg_var_delim', '_'),
+    )
+
+
+def _make_request(spec_dict: dict) -> ChartRequest:
+    """Convert old-style spec dict to ChartRequest."""
+    return ChartRequest(
+        chart=spec_dict.get('analysis_type', 'Xbar'),
+        by=tuple(spec_dict['by']) if spec_dict.get('by') else None,
+        paired=spec_dict.get('paired', False),
+    )
+
 
 def validate_sds(expected_sds: int, df: pd.DataFrame, spec: dict, name: str, description: str):
     """Validate SDS detection and show auto-completion."""
@@ -50,27 +74,33 @@ def validate_sds(expected_sds: int, df: pd.DataFrame, spec: dict, name: str, des
     print(f"   Columns: {list(df.columns)}")
 
     # Create specification
-    aspec = AnalysisSpecification(spec)
+    aspec = _make_spec(spec)
 
-    # Create analysis dataset (this is where SDS detection happens)
-    ads = AnalysisDataSet(df=df, analysis_specification=aspec)
-    detected_sds = ads.sampling_design_state
+    # Detect SDS using registry
+    prep = DataPreparation()
+    if aspec.has_grouping or aspec.has_time:
+        prep.validate_columns(df, aspec)
+        prepared_df = prep.prepare_dataset(df, aspec)
+    else:
+        prepared_df = df.copy()
+    detector = SDSRegistry()
+    sds_result = detector.detect_sds(prepared_df, aspec) if aspec.has_grouping else None
+    detected_sds = sds_result.sds if sds_result else 0
+
+    # Create analysis dataset with detected SDS
+    ads = AnalysisDataSet(df=df, spec=aspec, sds=detected_sds)
 
     # Validate
-    status = "✅ PASS" if detected_sds == expected_sds else "❌ FAIL"
-    print(f"\n🔍 SDS Detection Result: {status}")
+    status = "PASS" if detected_sds == expected_sds else "FAIL"
+    print(f"\nSDS Detection Result: {status}")
     print(f"   Expected: SDS {expected_sds}")
     print(f"   Detected: SDS {detected_sds}")
 
     # Show auto-completion information
-    print("\n⚙️  Auto-Completed Analysis Information:")
-    print(f"   • Has grouping: {aspec.has_grouping}")
-    print(f"   • Has time: {aspec.has_time}")
-    print(f"   • Requires sort: {aspec.requires_sort}")
-    if aspec.requires_sort:
-        print(f"   • Sort columns: {aspec.sort_cols}")
-    print(f"   • Data prep columns: {aspec.data_prep_output_cols[:5]}...")  # First 5
-    print(f"   • Analysis output columns: {aspec.analysis_output_cols[:5]}...")  # First 5
+    print("\nAuto-Completed Analysis Information:")
+    print(f"   Has grouping: {aspec.has_grouping}")
+    print(f"   Has time: {aspec.has_time}")
+    print(f"   Requires sort: {aspec.requires_sort}")
 
     # Show SDS characteristics
     detector = SDSRegistry()
@@ -299,11 +329,18 @@ print("\n🎯 STRATIFIED IMR ANALYSIS:")
 print("   Creates separate I-MR chart for EACH factor level")
 print("   Each gets its own appropriate control limits")
 
-result_imr = Analysis(df_sds1, spec_stratified_imr).calculate()
-print(f"\n   ✓ Created {len(result_imr)} individual charts:")
+_imr_spec = _make_spec(spec_stratified_imr)
+_imr_req = _make_request(spec_stratified_imr)
+# Detect SDS for the stratified IMR data
+_prep = DataPreparation()
+_prep.validate_columns(df_sds1, _imr_spec)
+_prepared = _prep.prepare_dataset(df_sds1, _imr_spec)
+_sds_imr = SDSRegistry().detect_sds(_prepared, _imr_spec).sds
+result_imr = Analysis(spec=_imr_spec, request=_imr_req, sds=_sds_imr, df=df_sds1).calculate()
+print(f"\n   Created {len(result_imr)} individual charts:")
 for group_name in sorted(result_imr.keys())[:3]:
     stats = result_imr[group_name]['statistics']
-    print(f"     • {group_name}: μ={stats['center']:.2f}, "
+    print(f"     {group_name}: center={stats['center']:.2f}, "
           f"UCL={stats['ucl']:.2f}, LCL={stats['lcl']:.2f}")
 
 print("\n   💡 This automatic stratification is NOT available in Minitab/JMP!")
@@ -322,10 +359,16 @@ print("\n🎯 XBAR-S ANALYSIS:")
 print("   Treats each (factor × time) cell as a subgroup")
 print("   Calculates VAS residual decomposition")
 
-result_xbar = Analysis(df_sds1, spec_xbar).calculate()
+_xbar_spec = _make_spec(spec_xbar)
+_xbar_req = _make_request(spec_xbar)
+_prep_xbar = DataPreparation()
+_prep_xbar.validate_columns(df_sds1, _xbar_spec)
+_prepared_xbar = _prep_xbar.prepare_dataset(df_sds1, _xbar_spec)
+_sds_xbar = SDSRegistry().detect_sds(_prepared_xbar, _xbar_spec).sds
+result_xbar = Analysis(spec=_xbar_spec, request=_xbar_req, sds=_sds_xbar, df=df_sds1).calculate()
 print("\n   ✓ Created combined analysis:")
-for key in sorted(result_xbar.keys())[:2]:
-    stats = result_xbar[key]['statistics']
+for key in sorted(result_xbar.charts.keys())[:2]:
+    stats = result_xbar.charts[key]['statistics']
     print(f"     • {key} chart: μ={stats['center']}, "
           f"UCL={stats['ucl']}, LCL={stats['lcl']}")
 

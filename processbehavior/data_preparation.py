@@ -24,7 +24,7 @@ from natsort import natsorted
 from pandas.api.types import is_numeric_dtype
 
 if TYPE_CHECKING:
-    from .analysis_specification import AnalysisSpecification, DataPrepConfig
+    from .formulation_spec import FormulationSpec
 
 logger = logging.getLogger(__name__)
 
@@ -122,12 +122,12 @@ class DataPreparation:
     --------
     Basic usage with grouping:
 
-    >>> from analysis_dataset import AnalysisSpecification
-    >>> spec = AnalysisSpecification('Xbar', {
-    ...     'rsg_vars': ['lane', 'head'],
-    ...     'time_var': 'pull',
-    ...     'response_var': 'weight'
-    ... })
+    >>> from processbehavior.formulation_spec import FormulationSpec
+    >>> spec = FormulationSpec(
+    ...     response_var='weight',
+    ...     rsg_vars=('lane', 'head'),
+    ...     time_var='pull'
+    ... )
     >>> prep = DataPreparation()
     >>> clean_df = prep.prepare_dataset(raw_df, spec)
 
@@ -138,10 +138,27 @@ class DataPreparation:
     - Only groups with n > 1
     """
 
+    def _get_sort_cols(self, spec: FormulationSpec) -> list[str]:
+        """Sort order for prepared data."""
+        if spec.has_grouping and spec.has_time:
+            return [spec.rsg_var_name, spec.time_var]
+        elif spec.has_time:
+            return [spec.time_var]
+        return []
+
+    def _get_output_cols(self, spec: FormulationSpec) -> list[str]:
+        """Columns to keep after data preparation."""
+        cols = [spec.response_var]
+        if spec.has_grouping:
+            cols = [spec.rsg_var_name, 'n'] + list(spec.rsg_vars) + cols
+        if spec.has_time and spec.time_var not in cols:
+            cols.insert(0, spec.time_var)
+        return cols
+
     def prepare_dataset(
         self,
         df: pd.DataFrame,
-        spec: DataPrepConfig
+        spec: FormulationSpec
     ) -> pd.DataFrame:
         """
         Prepare raw data for analysis with automatic type conversion.
@@ -166,7 +183,7 @@ class DataPreparation:
         ----------
         df : DataFrame
             Raw input data from user
-        spec : AnalysisSpecification
+        spec : FormulationSpec
             Configuration specifying analysis parameters
 
         Returns
@@ -188,11 +205,11 @@ class DataPreparation:
 
         Examples
         --------
-        >>> spec = AnalysisSpecification('Xbar', {
-        ...     'rsg_vars': ['lane'],
-        ...     'time_var': 'pull',
-        ...     'response_var': 'weight'
-        ... })
+        >>> spec = FormulationSpec(
+        ...     response_var='weight',
+        ...     rsg_vars=('lane',),
+        ...     time_var='pull'
+        ... )
         >>> df = pd.DataFrame({
         ...     'lane': ['A', 'A', 'B'],
         ...     'pull': [1, 2, 1],
@@ -235,17 +252,10 @@ class DataPreparation:
                 drop_cols.append(spec.time_var)
             out = out.dropna(subset=drop_cols)
 
-            # Filter small groups only for Xbar/S (require n≥2 per kt cell for variance)
-            # IMR/R use moving range, not within-cell variance, so n=1 per cell is OK
-            # Use getattr since DataPrepConfig doesn't have analysis_type
-            analysis_type = getattr(spec, 'analysis_type', None)
-            if analysis_type in ('Xbar', 'S'):
-                # Xbar/S need n≥2 per kt cell for within-cell variance
-                out = self._filter_small_groups(out, spec)
-            else:
-                # IMR/R analysis or DataPrepConfig (SDS detection phase)
-                # Just add group sizes, don't filter
-                out = self._add_group_sizes(out, spec)
+            # FormulationSpec is chart-agnostic — filtering for Xbar/S (n≥2)
+            # happens at analysis time, not during data preparation.
+            # Just add group sizes without filtering.
+            out = self._add_group_sizes(out, spec)
 
             # Make RSG categorical with natural sort order
             # This ensures 'Lane_1', 'Lane_2', 'Lane_10' (not 'Lane_1', 'Lane_10', 'Lane_2')
@@ -255,11 +265,13 @@ class DataPreparation:
             )
 
         # Sort if required
-        if spec.requires_sort:
-            out = out.sort_values(spec.sort_cols, kind='stable')
+        sort_cols = self._get_sort_cols(spec)
+        if sort_cols:
+            out = out.sort_values(sort_cols, kind='stable')
 
         # Keep only requested columns
-        out = out[spec.data_prep_output_cols]
+        output_cols = self._get_output_cols(spec)
+        out = out[output_cols]
 
         # Final safety net: drop any remaining rows with missing data
         # (Primary dropna for grouped data happens earlier, before n calculation)
@@ -270,7 +282,7 @@ class DataPreparation:
     def validate_columns(
         self,
         df: pd.DataFrame,
-        spec: DataPrepConfig
+        spec: FormulationSpec
     ) -> None:
         """
         Validate that required columns exist and have correct types.
@@ -288,7 +300,7 @@ class DataPreparation:
         ----------
         df : DataFrame
             Input data to validate
-        spec : AnalysisSpecification
+        spec : FormulationSpec
             Specification with column requirements
 
         Raises
@@ -299,10 +311,10 @@ class DataPreparation:
 
         Examples
         --------
-        >>> spec = AnalysisSpecification('Xbar', {
-        ...     'rsg_vars': ['lane'],
-        ...     'response_var': 'weight'
-        ... })
+        >>> spec = FormulationSpec(
+        ...     response_var='weight',
+        ...     rsg_vars=('lane',)
+        ... )
         >>> df = pd.DataFrame({'weight': [10.1, 10.2]})
         >>> prep = DataPreparation()
         >>> prep.validate_columns(df, spec)  # Raises: lane not found
@@ -353,7 +365,7 @@ class DataPreparation:
     def build_keys(
         self,
         df: pd.DataFrame,
-        spec: DataPrepConfig
+        spec: FormulationSpec
     ) -> pd.DataFrame:
         """
         Add stable key columns for reproducible analysis.
@@ -379,7 +391,7 @@ class DataPreparation:
         ----------
         df : DataFrame
             Input data (must already have grouping/time columns)
-        spec : AnalysisSpecification
+        spec : FormulationSpec
             Specification with grouping and time variables
 
         Returns
@@ -394,11 +406,11 @@ class DataPreparation:
         ...     'pull': [1, 1],
         ...     'weight': [10.1, 9.9]
         ... })
-        >>> spec = AnalysisSpecification('Xbar', {
-        ...     'rsg_vars': ['lane'],
-        ...     'time_var': 'pull',
-        ...     'response_var': 'weight'
-        ... })
+        >>> spec = FormulationSpec(
+        ...     response_var='weight',
+        ...     rsg_vars=('lane',),
+        ...     time_var='pull'
+        ... )
         >>> prep = DataPreparation()
         >>> result = prep.build_keys(df, spec)
         >>> 'obs_id' in result.columns
@@ -412,7 +424,7 @@ class DataPreparation:
         # This captures the row order as it enters build_keys() (post-cleaning/filtering)
         out['obs_id'] = np.arange(len(out), dtype=np.int64)
 
-        k_vars = spec.rsg_vars or []
+        k_vars = list(spec.rsg_vars) if spec.rsg_vars else []
         t = spec.time_var
 
         # 2. Build tuple keys
@@ -445,7 +457,7 @@ class DataPreparation:
     def _add_grouping_column(
         self,
         df: pd.DataFrame,
-        spec: AnalysisSpecification
+        spec: FormulationSpec
     ) -> pd.DataFrame:
         """
         Add composite grouping column (e.g., 'lane_head').
@@ -470,7 +482,7 @@ class DataPreparation:
             # Multiple factors: combine with delimiter
             out = self._add_composite_column(
                 df=out,
-                cols_to_combine=spec.rsg_vars,
+                cols_to_combine=list(spec.rsg_vars),
                 col_name=spec.rsg_var_name,
                 col_delim=spec.rsg_var_delim
             )
@@ -489,7 +501,7 @@ class DataPreparation:
     def _filter_small_groups(
         self,
         df: pd.DataFrame,
-        spec: AnalysisSpecification
+        spec: FormulationSpec
     ) -> pd.DataFrame:
         """
         Remove groups with n ≤ 1 at the factor level (can't calculate variance).
@@ -515,9 +527,8 @@ class DataPreparation:
         if grouped.shape[0] == 0:
             raise ValueError(
                 "All subgroups have 1 or fewer observations!\n"
-                f"Analysis type '{spec.analysis_type}' requires multiple "
-                f"observations per group.\n"
-                f"Fix: Add more data or use 'Imr' analysis for individual values"
+                "Xbar/S analysis requires multiple observations per group.\n"
+                "Fix: Add more data or use 'Imr' analysis for individual values"
             )
 
         grouped = grouped.reset_index()
@@ -541,7 +552,7 @@ class DataPreparation:
     def _add_group_sizes(
         self,
         df: pd.DataFrame,
-        spec: DataPrepConfig
+        spec: FormulationSpec
     ) -> pd.DataFrame:
         """
         Add 'n' column with kt cell sizes without filtering.

@@ -17,7 +17,7 @@ Tests cover:
 import pandas as pd
 import pytest
 
-from processbehavior.analysis_dataset import AnalysisSpecification
+from processbehavior.formulation_spec import FormulationSpec
 from processbehavior.residual_calculator import (
     # Orchestration
     ResidualCalculator,
@@ -255,13 +255,12 @@ def sds1_df():
 @pytest.fixture
 def spec_sds1():
     """Specification for SDS 1 data."""
-    return AnalysisSpecification({
-        'analysis_type': 'Xbar',
-        'rsg_vars': ['rsg'],
-        'rsg_var_name': 'rsg',
-        'time_var': 'time',
-        'response_var': 'weight'
-    })
+    return FormulationSpec(
+        response_var='weight',
+        rsg_vars=('rsg',),
+        rsg_var_name='rsg',
+        time_var='time',
+    )
 
 
 def test_calculate_residuals_adds_all_mean_columns(calc, sds1_df, spec_sds1):
@@ -310,10 +309,9 @@ def test_calculate_residuals_raises_on_unsupported_sds(calc, sds1_df, spec_sds1)
 
 def test_calculate_residuals_raises_without_grouping(calc, sds1_df):
     """Should raise if no grouping variables (VAS requires grouping)."""
-    spec_no_grouping = AnalysisSpecification({
-        'analysis_type': 'Imr',
-        'response_var': 'weight'
-    })
+    spec_no_grouping = FormulationSpec(
+        response_var='weight',
+    )
 
     with pytest.raises(ValueError, match="require grouping structure"):
         calc.calculate_residuals(sds1_df, spec_no_grouping, sds=1)
@@ -441,13 +439,12 @@ def test_calculate_residuals_with_single_observation_per_row(calc):
         'time': [1, 1],
         'weight': [10.0, 10.5]
     })
-    spec = AnalysisSpecification({
-        'analysis_type': 'Xbar',
-        'rsg_vars': ['rsg'],
-        'rsg_var_name': 'rsg',
-        'time_var': 'time',
-        'response_var': 'weight'
-    })
+    spec = FormulationSpec(
+        response_var='weight',
+        rsg_vars=('rsg',),
+        rsg_var_name='rsg',
+        time_var='time',
+    )
 
     result = calc.calculate_residuals(df, spec, sds=1)
 

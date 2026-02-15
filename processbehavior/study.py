@@ -30,7 +30,7 @@ if TYPE_CHECKING:
 
     from .analysis_dataset import AnalysisDataSet
     from .analysis_result import AnalysisResult
-    from .analysis_specification import DataPrepConfig
+    from .formulation_spec import FormulationSpec
     from .process_behavior import ProcessBehavior
     from .sds_detector import SDSAnalysisPlan, SDSResult
 
@@ -685,8 +685,8 @@ class Study:
     ----------
     _pdf : ProcessBehavior
         Reference to the data source
-    _spec : AnalysisSpecification
-        Internal specification (parameter mapping)
+    _spec : FormulationSpec
+        Structural configuration (from formulate())
     _plan : SDSAnalysisPlan
         Analysis plan based on detected SDS
     _ads : AnalysisDataSet
@@ -722,7 +722,7 @@ class Study:
     AnalysisResult : Result of study.execute()
     """
     _pdf: ProcessBehavior
-    _spec: DataPrepConfig
+    _spec: FormulationSpec
     _plan: SDSAnalysisPlan
     _ads: AnalysisDataSet
     _sampling_plan: dict[str, list] | None = None
@@ -1400,27 +1400,23 @@ class Study:
         # Determine if this is a residual chart
         is_residual = value is not None and value.upper().startswith('R')
 
-        # Build spec dict
-        spec_dict = {
-            'analysis_type': base_chart,
-            'response_var': self._spec.response_var,
-            'time_var': self._spec.time_var,
-            'rsg_vars': self._spec.rsg_vars,
-            'rsg_var_name': self._spec.rsg_var_name,
-            'rsg_var_delim': self._spec.rsg_var_delim,
-            'round_to': self._spec.round_to,
-            'by': by_validated,
-            'value_col': value_col,
-            'residual': value.upper() if is_residual else None,
-            'residual_chart_type': base_chart if is_residual else None,
-            'recentered': recentered,
-            'bins': bins if bins is not None else 10,  # Default 10 bins for Histogram
-            'paired': paired,
-        }
+        # Build chart request (ephemeral, per-execute)
+        from .formulation_spec import ChartRequest
+
+        request = ChartRequest(
+            chart=base_chart,
+            by=tuple(by_validated) if by_validated is not None else None,
+            value_col=value_col,
+            residual=value.upper() if is_residual else None,
+            residual_chart_type=base_chart if is_residual else None,
+            recentered=recentered,
+            paired=paired,
+            bins=bins if bins is not None else 10,
+        )
 
         # Create and run analysis using pre-calculated AnalysisDataSet
         # This makes execute() cheap - the expensive residual calculation was done in formulate()
-        analysis = Analysis(self._pdf.data, spec_dict, analysis_dataset=self._ads)
+        analysis = Analysis(self._spec, request, analysis_dataset=self._ads)
         return analysis.calculate()
 
     def _parse_chart_request(self, chart: str) -> str:
@@ -1539,7 +1535,7 @@ class Study:
             If by=None for IMR/R with factors (must be explicit)
             If by contains time variable for IMR/R charts
         """
-        factors = self._spec.rsg_vars or []
+        factors = list(self._spec.rsg_vars) if self._spec.rsg_vars else []
         time_var = self._spec.time_var
         is_time_series_chart = base_chart in ('Imr', 'R')
 

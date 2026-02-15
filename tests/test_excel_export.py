@@ -14,6 +14,7 @@ import pytest
 # Import analysis components
 from processbehavior import analysis_dataset as ad
 from processbehavior import Analysis
+from processbehavior.formulation_spec import ChartRequest, FormulationSpec
 from processbehavior.sds_detector import SDSRegistry
 from processbehavior.data_preparation import DataPreparation
 
@@ -21,17 +22,39 @@ from processbehavior.data_preparation import DataPreparation
 from processbehavior.datasets.synthetic import make_sds
 
 
+def _make_spec(spec_dict: dict) -> FormulationSpec:
+    """Convert old-style spec dict to FormulationSpec."""
+    rsg_vars = spec_dict.get('rsg_vars')
+    return FormulationSpec(
+        response_var=spec_dict['response_var'],
+        rsg_vars=tuple(rsg_vars) if rsg_vars else None,
+        time_var=spec_dict.get('time_var'),
+        round_to=spec_dict.get('round_to', 3),
+        rsg_var_name=spec_dict.get('rsg_var_name', 'rsg'),
+        rsg_var_delim=spec_dict.get('rsg_var_delim', '_'),
+    )
+
+
+def _make_request(spec_dict: dict) -> ChartRequest:
+    """Convert old-style spec dict to ChartRequest."""
+    return ChartRequest(
+        chart=spec_dict.get('analysis_type', 'Xbar'),
+        by=tuple(spec_dict['by']) if spec_dict.get('by') else None,
+        paired=spec_dict.get('paired', False),
+    )
+
+
 def detect_sds_for_test(df: pd.DataFrame, spec: dict) -> int:
     """
     Helper to detect SDS for tests that need to create Analysis directly.
     """
-    from processbehavior.analysis_specification import AnalysisSpecification
-    config = AnalysisSpecification(spec)
+    config = _make_spec(spec)
     prep = DataPreparation()
     prep.validate_columns(df, config)
     prepared_df = prep.prepare_dataset(df, config)
     detector = SDSRegistry()
-    return detector.detect_sds(prepared_df, config)
+    result = detector.detect_sds(prepared_df, config)
+    return result.sds
 
 
 @pytest.fixture
@@ -59,7 +82,7 @@ def test_excel_export_basic(temp_excel_file):
 
     # Run analysis
     sds = detect_sds_for_test(df, spec)
-    analysis = Analysis(df, spec, sds=sds)
+    analysis = Analysis(spec=_make_spec(spec), request=_make_request(spec), sds=sds, df=df)
     result = analysis.calculate()
 
     # Export to Excel
@@ -95,7 +118,7 @@ def test_excel_export_with_full_dataset(temp_excel_file):
     }
 
     sds = detect_sds_for_test(df, spec)
-    analysis = Analysis(df, spec, sds=sds)
+    analysis = Analysis(spec=_make_spec(spec), request=_make_request(spec), sds=sds, df=df)
     result = analysis.calculate()
 
     # Export with full dataset
@@ -123,7 +146,7 @@ def test_excel_export_stratified_imr(temp_excel_file):
     }
 
     sds = detect_sds_for_test(df, spec)
-    analysis = Analysis(df, spec, sds=sds)
+    analysis = Analysis(spec=_make_spec(spec), request=_make_request(spec), sds=sds, df=df)
     result = analysis.calculate()
 
     # Export to Excel
@@ -159,7 +182,7 @@ def test_excel_export_stratified_imr_paired(temp_excel_file):
     }
 
     sds = detect_sds_for_test(df, spec)
-    analysis = Analysis(df, spec, sds=sds)
+    analysis = Analysis(spec=_make_spec(spec), request=_make_request(spec), sds=sds, df=df)
     result = analysis.calculate()
 
     # Export to Excel
@@ -190,7 +213,7 @@ def test_excel_export_with_residuals(temp_excel_file):
     }
 
     sds = detect_sds_for_test(df, spec)
-    analysis = Analysis(df, spec, sds=sds)
+    analysis = Analysis(spec=_make_spec(spec), request=_make_request(spec), sds=sds, df=df)
     result = analysis.calculate()
 
     # Export to Excel
@@ -217,7 +240,7 @@ def test_excel_export_minimal(temp_excel_file):
     }
 
     sds = detect_sds_for_test(df, spec)
-    analysis = Analysis(df, spec, sds=sds)
+    analysis = Analysis(spec=_make_spec(spec), request=_make_request(spec), sds=sds, df=df)
     result = analysis.calculate()
 
     # Export with minimal options
@@ -250,7 +273,7 @@ def test_excel_export_no_formatting(temp_excel_file):
     }
 
     sds = detect_sds_for_test(df, spec)
-    analysis = Analysis(df, spec, sds=sds)
+    analysis = Analysis(spec=_make_spec(spec), request=_make_request(spec), sds=sds, df=df)
     result = analysis.calculate()
 
     # Export without formatting
@@ -274,7 +297,7 @@ def test_excel_export_chart_data_integrity(temp_excel_file):
     }
 
     sds = detect_sds_for_test(df, spec)
-    analysis = Analysis(df, spec, sds=sds)
+    analysis = Analysis(spec=_make_spec(spec), request=_make_request(spec), sds=sds, df=df)
     result = analysis.calculate()
 
     # Get original chart data
@@ -303,7 +326,7 @@ def test_excel_export_summary_content(temp_excel_file):
     }
 
     sds = detect_sds_for_test(df, spec)
-    analysis = Analysis(df, spec, sds=sds)
+    analysis = Analysis(spec=_make_spec(spec), request=_make_request(spec), sds=sds, df=df)
     result = analysis.calculate()
 
     # Export to Excel
@@ -332,7 +355,7 @@ def test_excel_export_effects_tab(temp_excel_file):
     }
 
     sds = detect_sds_for_test(df, spec)
-    analysis = Analysis(df, spec, sds=sds)
+    analysis = Analysis(spec=_make_spec(spec), request=_make_request(spec), sds=sds, df=df)
     result = analysis.calculate()
 
     # Export to Excel
@@ -360,7 +383,7 @@ def test_excel_export_invalid_path():
     }
 
     sds = detect_sds_for_test(df, spec)
-    analysis = Analysis(df, spec, sds=sds)
+    analysis = Analysis(spec=_make_spec(spec), request=_make_request(spec), sds=sds, df=df)
     result = analysis.calculate()
 
     # Try to export to invalid path
@@ -381,7 +404,7 @@ def test_excel_export_multiple_analyses(temp_excel_file):
     }
 
     sds = detect_sds_for_test(df, spec_s)
-    analysis = Analysis(df, spec_s, sds=sds)
+    analysis = Analysis(spec=_make_spec(spec_s), request=_make_request(spec_s), sds=sds, df=df)
     result = analysis.calculate()
 
     # Should successfully export
@@ -410,7 +433,7 @@ def test_excel_tab_name_truncation(temp_excel_file):
     }
 
     sds = detect_sds_for_test(df, spec)
-    analysis = Analysis(df, spec, sds=sds)
+    analysis = Analysis(spec=_make_spec(spec), request=_make_request(spec), sds=sds, df=df)
     result = analysis.calculate()
 
     # Export to Excel
@@ -434,7 +457,7 @@ def test_excel_export_preserves_statistics(temp_excel_file):
     }
 
     sds = detect_sds_for_test(df, spec)
-    analysis = Analysis(df, spec, sds=sds)
+    analysis = Analysis(spec=_make_spec(spec), request=_make_request(spec), sds=sds, df=df)
     result = analysis.calculate()
 
     # Get original statistics

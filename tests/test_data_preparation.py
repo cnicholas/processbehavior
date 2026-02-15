@@ -13,7 +13,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from processbehavior.analysis_dataset import AnalysisSpecification
+from processbehavior.formulation_spec import FormulationSpec
 from processbehavior.data_preparation import DataPreparation
 
 # ============================================================================
@@ -77,23 +77,21 @@ def small_groups_df():
 @pytest.fixture
 def spec_xbar():
     """Xbar analysis specification."""
-    return AnalysisSpecification({
-        'analysis_type': 'Xbar',
-        'rsg_vars': ['lane'],
-        'time_var': 'pull',
-        'response_var': 'weight'
-    })
+    return FormulationSpec(
+        response_var='weight',
+        rsg_vars=('lane',),
+        time_var='pull',
+    )
 
 
 @pytest.fixture
 def spec_multi_factor():
     """Multi-factor specification."""
-    return AnalysisSpecification({
-        'analysis_type': 'Xbar',
-        'rsg_vars': ['lane', 'head'],
-        'time_var': 'pull',
-        'response_var': 'weight'
-    })
+    return FormulationSpec(
+        response_var='weight',
+        rsg_vars=('lane', 'head'),
+        time_var='pull',
+    )
 
 
 # ============================================================================
@@ -108,11 +106,10 @@ def test_validate_columns_passes_with_valid_data(prep, simple_df, spec_xbar):
 
 def test_validate_columns_raises_on_missing_response(prep, simple_df):
     """Should raise helpful error if response variable missing."""
-    spec = AnalysisSpecification({
-        'analysis_type': 'Xbar',
-        'rsg_vars': ['lane'],
-        'response_var': 'missing_column'
-    })
+    spec = FormulationSpec(
+        response_var='missing_column',
+        rsg_vars=('lane',),
+    )
 
     with pytest.raises(ValueError, match="Response variable 'missing_column' not found"):
         prep.validate_columns(simple_df, spec)
@@ -120,11 +117,10 @@ def test_validate_columns_raises_on_missing_response(prep, simple_df):
 
 def test_validate_columns_raises_on_missing_grouping_var(prep, simple_df):
     """Should raise helpful error if grouping variable missing."""
-    spec = AnalysisSpecification({
-        'analysis_type': 'Xbar',
-        'rsg_vars': ['missing_lane'],
-        'response_var': 'weight'
-    })
+    spec = FormulationSpec(
+        response_var='weight',
+        rsg_vars=('missing_lane',),
+    )
 
     with pytest.raises(ValueError, match="grouping variables not found"):
         prep.validate_columns(simple_df, spec)
@@ -132,12 +128,11 @@ def test_validate_columns_raises_on_missing_grouping_var(prep, simple_df):
 
 def test_validate_columns_raises_on_missing_time(prep, simple_df):
     """Should raise helpful error if time variable missing."""
-    spec = AnalysisSpecification({
-        'analysis_type': 'Xbar',
-        'rsg_vars': ['lane'],
-        'time_var': 'missing_time',
-        'response_var': 'weight'
-    })
+    spec = FormulationSpec(
+        response_var='weight',
+        rsg_vars=('lane',),
+        time_var='missing_time',
+    )
 
     with pytest.raises(ValueError, match="Time variable 'missing_time' not found"):
         prep.validate_columns(simple_df, spec)
@@ -149,10 +144,9 @@ def test_validate_columns_raises_on_non_numeric_response(prep):
         'lane': ['A', 'B'],
         'weight': ['ten', 'nine']  # Strings!
     })
-    spec = AnalysisSpecification({
-        'analysis_type': 'Imr',
-        'response_var': 'weight'
-    })
+    spec = FormulationSpec(
+        response_var='weight',
+    )
 
     with pytest.raises(ValueError, match="must be numeric"):
         prep.validate_columns(df, spec)
@@ -160,11 +154,10 @@ def test_validate_columns_raises_on_non_numeric_response(prep):
 
 def test_validate_columns_error_suggests_fix(prep, simple_df):
     """Error messages should suggest how to fix the problem."""
-    spec = AnalysisSpecification({
-        'analysis_type': 'Xbar',
-        'rsg_vars': ['lane'],
-        'response_var': 'weigth'  # Typo!
-    })
+    spec = FormulationSpec(
+        response_var='weigth',  # Typo!
+        rsg_vars=('lane',),
+    )
 
     with pytest.raises(ValueError, match="Fix:"):
         prep.validate_columns(simple_df, spec)
@@ -192,37 +185,39 @@ def test_prepare_dataset_creates_n_column(prep, simple_df, spec_xbar):
     assert all(result['n'] > 1)  # All groups should have n > 1
 
 
-def test_prepare_dataset_removes_small_groups(prep, small_groups_df):
-    """Should remove groups with n ≤ 1."""
-    spec = AnalysisSpecification({
-        'analysis_type': 'Xbar',
-        'rsg_vars': ['lane'],
-        'response_var': 'weight'
-    })
+def test_prepare_dataset_keeps_small_groups(prep, small_groups_df):
+    """FormulationSpec is chart-agnostic, so prepare_dataset keeps all groups.
+
+    Small group filtering (n≤1) is chart-specific and happens at analysis time,
+    not during data preparation.
+    """
+    spec = FormulationSpec(
+        response_var='weight',
+        rsg_vars=('lane',),
+    )
 
     result = prep.prepare_dataset(small_groups_df, spec)
 
-    # Only A and C should remain (both have n=2)
-    # B should be removed (n=1)
+    # All groups should be present (no chart-specific filtering)
     assert 'A' in result['rsg'].values
-    assert 'B' not in result['rsg'].values
+    assert 'B' in result['rsg'].values
     assert 'C' in result['rsg'].values
 
 
-def test_prepare_dataset_raises_if_all_groups_small(prep):
-    """Should raise helpful error if all groups have n ≤ 1."""
+def test_prepare_dataset_all_groups_small_no_error(prep):
+    """FormulationSpec is chart-agnostic, so all-small groups don't raise."""
     df = pd.DataFrame({
         'lane': ['A', 'B', 'C'],  # All have n=1
         'weight': [10.1, 9.9, 10.0]
     })
-    spec = AnalysisSpecification({
-        'analysis_type': 'Xbar',
-        'rsg_vars': ['lane'],
-        'response_var': 'weight'
-    })
+    spec = FormulationSpec(
+        response_var='weight',
+        rsg_vars=('lane',),
+    )
 
-    with pytest.raises(ValueError, match="All subgroups have 1 or fewer observations"):
-        prep.prepare_dataset(df, spec)
+    # Should not raise — filtering is chart-specific
+    result = prep.prepare_dataset(df, spec)
+    assert len(result) == 3
 
 
 def test_prepare_dataset_sorts_when_needed(prep, simple_df, spec_xbar):
@@ -252,11 +247,10 @@ def test_prepare_dataset_drops_na_rows(prep):
         'lane': ['A', 'A', 'A', 'B', 'B'],
         'weight': [10.1, np.nan, 10.2, 9.9, 10.0]
     })
-    spec = AnalysisSpecification({
-        'analysis_type': 'Xbar',
-        'rsg_vars': ['lane'],
-        'response_var': 'weight'
-    })
+    spec = FormulationSpec(
+        response_var='weight',
+        rsg_vars=('lane',),
+    )
 
     result = prep.prepare_dataset(df, spec)
 
@@ -328,10 +322,9 @@ def test_build_keys_adds_cell_key(prep, simple_df, spec_xbar):
 def test_build_keys_empty_rsg_key_when_no_factors(prep):
     """Should use empty tuples for rsg_key when no grouping."""
     df = pd.DataFrame({'weight': [10.1, 10.2]})
-    spec = AnalysisSpecification({
-        'analysis_type': 'Imr',
-        'response_var': 'weight'
-    })
+    spec = FormulationSpec(
+        response_var='weight',
+    )
 
     result = prep.build_keys(df, spec)
 
@@ -402,11 +395,10 @@ def test_add_column_copies_existing(prep):
 
 def test_filter_small_groups_logs_count(prep, small_groups_df, caplog):
     """Should log how many groups were filtered."""
-    spec = AnalysisSpecification({
-        'analysis_type': 'Xbar',
-        'rsg_vars': ['lane'],
-        'response_var': 'weight'
-    })
+    spec = FormulationSpec(
+        response_var='weight',
+        rsg_vars=('lane',),
+    )
 
     # Need to add RSG column first (what _add_grouping_column does)
     df_with_rsg = prep._add_grouping_column(small_groups_df, spec)
@@ -429,11 +421,10 @@ def test_prepare_dataset_with_single_factor(prep):
         'lane': ['A', 'A', 'B', 'B'],
         'weight': [10.1, 10.2, 9.9, 10.0]
     })
-    spec = AnalysisSpecification({
-        'analysis_type': 'Xbar',
-        'rsg_vars': ['lane'],
-        'response_var': 'weight'
-    })
+    spec = FormulationSpec(
+        response_var='weight',
+        rsg_vars=('lane',),
+    )
 
     result = prep.prepare_dataset(df, spec)
 
@@ -448,11 +439,10 @@ def test_prepare_dataset_without_grouping(prep):
         'time': [1, 2, 3],
         'weight': [10.1, 10.2, 10.3]
     })
-    spec = AnalysisSpecification({
-        'analysis_type': 'Imr',
-        'time_var': 'time',
-        'response_var': 'weight'
-    })
+    spec = FormulationSpec(
+        response_var='weight',
+        time_var='time',
+    )
 
     result = prep.prepare_dataset(df, spec)
 
@@ -467,11 +457,10 @@ def test_prepare_dataset_without_time(prep):
         'lane': ['A', 'A', 'B', 'B'],
         'weight': [10.1, 10.2, 9.9, 10.0]
     })
-    spec = AnalysisSpecification({
-        'analysis_type': 'Xbar',
-        'rsg_vars': ['lane'],
-        'response_var': 'weight'
-    })
+    spec = FormulationSpec(
+        response_var='weight',
+        rsg_vars=('lane',),
+    )
 
     result = prep.prepare_dataset(df, spec)
 
@@ -493,11 +482,10 @@ def test_validate_columns_with_categorical_grouping(prep):
         'lane': pd.Categorical(['A', 'A', 'B', 'B']),
         'weight': [10.1, 10.2, 9.9, 10.0]
     })
-    spec = AnalysisSpecification({
-        'analysis_type': 'Xbar',
-        'rsg_vars': ['lane'],
-        'response_var': 'weight'
-    })
+    spec = FormulationSpec(
+        response_var='weight',
+        rsg_vars=('lane',),
+    )
 
     # Should not raise
     prep.validate_columns(df, spec)
@@ -540,12 +528,11 @@ def test_time_var_numeric_unchanged(prep):
         'time': [1, 1, 2, 2, 10, 10],  # 2 obs per time point
         'weight': [10.1, 10.15, 10.2, 10.25, 10.3, 10.35]
     })
-    spec = AnalysisSpecification({
-        'analysis_type': 'Xbar',
-        'rsg_vars': ['lane'],
-        'time_var': 'time',
-        'response_var': 'weight'
-    })
+    spec = FormulationSpec(
+        response_var='weight',
+        rsg_vars=('lane',),
+        time_var='time',
+    )
 
     result = prep.prepare_dataset(df, spec)
 
@@ -561,12 +548,11 @@ def test_time_var_string_numeric_converted(prep):
         'time': ['1', '2', '10', '1', '2', '10'],  # String numbers
         'weight': [10.1, 10.2, 10.3, 10.0, 10.1, 10.2]
     })
-    spec = AnalysisSpecification({
-        'analysis_type': 'Xbar',
-        'rsg_vars': ['lane'],
-        'time_var': 'time',
-        'response_var': 'weight'
-    })
+    spec = FormulationSpec(
+        response_var='weight',
+        rsg_vars=('lane',),
+        time_var='time',
+    )
 
     result = prep.prepare_dataset(df, spec)
 
@@ -588,12 +574,11 @@ def test_time_var_date_unchanged(prep):
                  date(2024, 1, 10), date(2024, 1, 10)],
         'weight': [10.1, 10.15, 10.2, 10.25, 10.3, 10.35]
     })
-    spec = AnalysisSpecification({
-        'analysis_type': 'Xbar',
-        'rsg_vars': ['lane'],
-        'time_var': 'time',
-        'response_var': 'weight'
-    })
+    spec = FormulationSpec(
+        response_var='weight',
+        rsg_vars=('lane',),
+        time_var='time',
+    )
 
     result = prep.prepare_dataset(df, spec)
 
@@ -615,12 +600,11 @@ def test_time_var_datetime_unchanged(prep):
                  datetime(2024, 1, 10), datetime(2024, 1, 10)],
         'weight': [10.1, 10.15, 10.2, 10.25, 10.3, 10.35]
     })
-    spec = AnalysisSpecification({
-        'analysis_type': 'Xbar',
-        'rsg_vars': ['lane'],
-        'time_var': 'time',
-        'response_var': 'weight'
-    })
+    spec = FormulationSpec(
+        response_var='weight',
+        rsg_vars=('lane',),
+        time_var='time',
+    )
 
     result = prep.prepare_dataset(df, spec)
 
@@ -637,12 +621,11 @@ def test_time_var_string_date_converted(prep):
                  '2024-01-10', '2024-01-10'],
         'weight': [10.1, 10.15, 10.2, 10.25, 10.3, 10.35]
     })
-    spec = AnalysisSpecification({
-        'analysis_type': 'Xbar',
-        'rsg_vars': ['lane'],
-        'time_var': 'time',
-        'response_var': 'weight'
-    })
+    spec = FormulationSpec(
+        response_var='weight',
+        rsg_vars=('lane',),
+        time_var='time',
+    )
 
     result = prep.prepare_dataset(df, spec)
 
@@ -659,12 +642,11 @@ def test_time_var_categorical_unchanged(prep):
         'time': times,
         'weight': [10.1, 10.15, 10.2, 10.25, 10.3, 10.35]
     })
-    spec = AnalysisSpecification({
-        'analysis_type': 'Xbar',
-        'rsg_vars': ['lane'],
-        'time_var': 'time',
-        'response_var': 'weight'
-    })
+    spec = FormulationSpec(
+        response_var='weight',
+        rsg_vars=('lane',),
+        time_var='time',
+    )
 
     result = prep.prepare_dataset(df, spec)
 
@@ -681,12 +663,11 @@ def test_time_var_period_unchanged(prep):
         'time': [periods[0], periods[0], periods[1], periods[1], periods[2], periods[2]],
         'weight': [10.1, 10.15, 10.2, 10.25, 10.3, 10.35]
     })
-    spec = AnalysisSpecification({
-        'analysis_type': 'Xbar',
-        'rsg_vars': ['lane'],
-        'time_var': 'time',
-        'response_var': 'weight'
-    })
+    spec = FormulationSpec(
+        response_var='weight',
+        rsg_vars=('lane',),
+        time_var='time',
+    )
 
     result = prep.prepare_dataset(df, spec)
 
@@ -704,11 +685,10 @@ def test_factor_numeric_unchanged(prep):
         'lane': [1, 1, 2, 2, 10, 10],  # Already numeric
         'weight': [10.1, 10.2, 10.3, 10.4, 10.5, 10.6]
     })
-    spec = AnalysisSpecification({
-        'analysis_type': 'Xbar',
-        'rsg_vars': ['lane'],
-        'response_var': 'weight'
-    })
+    spec = FormulationSpec(
+        response_var='weight',
+        rsg_vars=('lane',),
+    )
 
     result = prep.prepare_dataset(df, spec)
 
@@ -722,11 +702,10 @@ def test_factor_string_numeric_converted(prep):
         'lane': ['1', '1', '2', '2', '10', '10'],  # String numbers
         'weight': [10.1, 10.2, 10.3, 10.4, 10.5, 10.6]
     })
-    spec = AnalysisSpecification({
-        'analysis_type': 'Xbar',
-        'rsg_vars': ['lane'],
-        'response_var': 'weight'
-    })
+    spec = FormulationSpec(
+        response_var='weight',
+        rsg_vars=('lane',),
+    )
 
     result = prep.prepare_dataset(df, spec)
 
@@ -742,11 +721,10 @@ def test_factor_mixed_stays_string(prep):
         'lane': ['A', 'A', 'B', 'B', '1', '1'],  # Mixed
         'weight': [10.1, 10.2, 10.3, 10.4, 10.5, 10.6]
     })
-    spec = AnalysisSpecification({
-        'analysis_type': 'Xbar',
-        'rsg_vars': ['lane'],
-        'response_var': 'weight'
-    })
+    spec = FormulationSpec(
+        response_var='weight',
+        rsg_vars=('lane',),
+    )
 
     result = prep.prepare_dataset(df, spec)
 
@@ -765,11 +743,10 @@ def test_rsg_categorical_natural_sort(prep):
         'lane': ['Lane_1', 'Lane_10', 'Lane_2'] * 2,  # Would sort wrong lexicographically
         'weight': [10.1, 10.2, 10.3, 10.4, 10.5, 10.6]
     })
-    spec = AnalysisSpecification({
-        'analysis_type': 'Xbar',
-        'rsg_vars': ['lane'],
-        'response_var': 'weight'
-    })
+    spec = FormulationSpec(
+        response_var='weight',
+        rsg_vars=('lane',),
+    )
 
     result = prep.prepare_dataset(df, spec)
 
@@ -786,11 +763,10 @@ def test_rsg_categorical_preserves_groupby_order(prep):
         'lane': ['10', '10', '2', '2', '1', '1'],  # Would sort wrong as strings
         'weight': [10.1, 10.2, 10.3, 10.4, 10.5, 10.6]
     })
-    spec = AnalysisSpecification({
-        'analysis_type': 'Xbar',
-        'rsg_vars': ['lane'],
-        'response_var': 'weight'
-    })
+    spec = FormulationSpec(
+        response_var='weight',
+        rsg_vars=('lane',),
+    )
 
     result = prep.prepare_dataset(df, spec)
 
@@ -809,11 +785,10 @@ def test_rsg_categorical_with_numeric_factors(prep):
         'head': [1, 1, 1, 1, 1, 1, 10, 10, 10, 10, 10, 10],
         'weight': [10.1, 10.2, 10.3, 10.4, 10.5, 10.6, 10.7, 10.8, 10.9, 11.0, 11.1, 11.2]
     })
-    spec = AnalysisSpecification({
-        'analysis_type': 'Xbar',
-        'rsg_vars': ['lane', 'head'],
-        'response_var': 'weight'
-    })
+    spec = FormulationSpec(
+        response_var='weight',
+        rsg_vars=('lane', 'head'),
+    )
 
     result = prep.prepare_dataset(df, spec)
 
@@ -836,11 +811,10 @@ def test_sorting_correctness_for_moving_range(prep):
         'time': ['1', '10', '2', '20', '3'],  # Intentionally scrambled strings
         'weight': [10.1, 10.2, 10.3, 10.4, 10.5]
     })
-    spec = AnalysisSpecification({
-        'analysis_type': 'Imr',
-        'time_var': 'time',
-        'response_var': 'weight'
-    })
+    spec = FormulationSpec(
+        response_var='weight',
+        time_var='time',
+    )
 
     result = prep.prepare_dataset(df, spec)
 
@@ -860,12 +834,11 @@ def test_sorting_correctness_for_signal_detection(prep):
         'weight': [10.1, 10.15, 10.2, 10.25, 10.3, 10.35, 10.4, 10.45, 10.5, 10.55,
                    10.6, 10.65, 10.7, 10.75, 10.8, 10.85, 10.9, 10.95, 11.0, 11.05]
     })
-    spec = AnalysisSpecification({
-        'analysis_type': 'Xbar',
-        'rsg_vars': ['lane'],
-        'time_var': 'time',
-        'response_var': 'weight'
-    })
+    spec = FormulationSpec(
+        response_var='weight',
+        rsg_vars=('lane',),
+        time_var='time',
+    )
 
     result = prep.prepare_dataset(df, spec)
 
@@ -885,12 +858,11 @@ def test_integration_string_numeric_time_correct_chart_ordering(prep):
         'time': ['1', '2', '3', '10', '11', '12'] * 2,  # Strings
         'weight': np.random.normal(10, 0.1, 12)
     })
-    spec = AnalysisSpecification({
-        'analysis_type': 'Xbar',
-        'rsg_vars': ['lane'],
-        'time_var': 'time',
-        'response_var': 'weight'
-    })
+    spec = FormulationSpec(
+        response_var='weight',
+        rsg_vars=('lane',),
+        time_var='time',
+    )
 
     result = prep.prepare_dataset(df, spec)
 
@@ -906,11 +878,10 @@ def test_integration_mixed_factor_types_correct_stratification(prep):
         'operator': ['A', 'B'] * 6,  # Categorical
         'weight': np.random.normal(10, 0.1, 12)
     })
-    spec = AnalysisSpecification({
-        'analysis_type': 'Xbar',
-        'rsg_vars': ['batch', 'operator'],
-        'response_var': 'weight'
-    })
+    spec = FormulationSpec(
+        response_var='weight',
+        rsg_vars=('batch', 'operator'),
+    )
 
     result = prep.prepare_dataset(df, spec)
 
@@ -933,12 +904,11 @@ def test_prepare_dataset_preserves_observation_counts(prep):
         'pull': [1, 2, 1, 2, 1, 2] * 3,
         'weight': [10.1, 10.2, 10.3, 10.4, 10.5, 10.6] * 3
     })
-    spec = AnalysisSpecification({
-        'analysis_type': 'Xbar',
-        'rsg_vars': ['lane'],
-        'time_var': 'pull',
-        'response_var': 'weight'
-    })
+    spec = FormulationSpec(
+        response_var='weight',
+        rsg_vars=('lane',),
+        time_var='pull',
+    )
 
     result = prep.prepare_dataset(df, spec)
 
@@ -964,12 +934,11 @@ def test_prepare_dataset_handles_missing_data_correctly(prep):
                    10.4, 10.45, 10.5, 10.55,  # Lane 2: all ok
                    10.7, 10.75, 10.8, 10.85]  # Lane 3: all ok
     })
-    spec = AnalysisSpecification({
-        'analysis_type': 'Xbar',
-        'rsg_vars': ['lane'],
-        'time_var': 'pull',
-        'response_var': 'weight'
-    })
+    spec = FormulationSpec(
+        response_var='weight',
+        rsg_vars=('lane',),
+        time_var='pull',
+    )
 
     result = prep.prepare_dataset(df, spec)
 
@@ -1004,12 +973,11 @@ def test_full_pipeline_observation_count_integrity(prep):
         'weight': np.random.normal(10, 0.5, 200)
     })
 
-    spec = AnalysisSpecification({
-        'analysis_type': 'Xbar',
-        'rsg_vars': ['lane'],
-        'time_var': 'pull',
-        'response_var': 'weight'
-    })
+    spec = FormulationSpec(
+        response_var='weight',
+        rsg_vars=('lane',),
+        time_var='pull',
+    )
 
     result = prep.prepare_dataset(df, spec)
 
@@ -1045,12 +1013,11 @@ def test_filter_uses_factor_level_for_flexibility(prep):
         'y': [1.0, 2.0, 3.0, 4.0, 5.0, 6.0]
     })
 
-    spec = AnalysisSpecification({
-        'analysis_type': 'Xbar',
-        'rsg_vars': ['factor'],
-        'time_var': 'time',
-        'response_var': 'y'
-    })
+    spec = FormulationSpec(
+        response_var='y',
+        rsg_vars=('factor',),
+        time_var='time',
+    )
 
     # Should NOT raise - factor A has n=6 which is > 1
     # This allows factor-level analysis with by=['factor']
@@ -1070,12 +1037,11 @@ def test_filter_at_factor_level_keeps_all_factors_with_n_gt_1(prep):
         'y': [1.0, 1.1, 2.0, 2.1, 3.0, 4.0]
     })
 
-    spec = AnalysisSpecification({
-        'analysis_type': 'Xbar',
-        'rsg_vars': ['factor'],
-        'time_var': 'time',
-        'response_var': 'y'
-    })
+    spec = FormulationSpec(
+        response_var='y',
+        rsg_vars=('factor',),
+        time_var='time',
+    )
 
     result = prep.prepare_dataset(df, spec)
 
@@ -1085,25 +1051,23 @@ def test_filter_at_factor_level_keeps_all_factors_with_n_gt_1(prep):
     assert len(result) == 6  # All rows kept
 
 
-def test_filter_without_time_uses_factor_only(prep):
-    """Without time variable, filtering should use factor-level counts."""
-    # Data without time variable - filtering uses factor only
+def test_no_filter_without_time_chart_agnostic(prep):
+    """Chart-agnostic prepare_dataset keeps all groups regardless of size."""
     df = pd.DataFrame({
         'factor': ['A', 'A', 'B'],  # A has n=2, B has n=1
         'y': [1.0, 1.1, 2.0]
     })
 
-    spec = AnalysisSpecification({
-        'analysis_type': 'Xbar',
-        'rsg_vars': ['factor'],
-        'response_var': 'y'
-    })
+    spec = FormulationSpec(
+        response_var='y',
+        rsg_vars=('factor',),
+    )
 
     result = prep.prepare_dataset(df, spec)
 
-    # Factor A should pass (n=2), factor B filtered out (n=1)
+    # Both factors kept (no chart-specific filtering)
     assert 'A' in result['rsg'].values
-    assert 'B' not in result['rsg'].values
+    assert 'B' in result['rsg'].values
 
 
 def test_n_column_reflects_kt_cell_size(prep):
@@ -1115,12 +1079,11 @@ def test_n_column_reflects_kt_cell_size(prep):
         'y': [1.0, 1.1, 2.0, 2.1, 2.2]
     })
 
-    spec = AnalysisSpecification({
-        'analysis_type': 'Xbar',
-        'rsg_vars': ['factor'],
-        'time_var': 'time',
-        'response_var': 'y'
-    })
+    spec = FormulationSpec(
+        response_var='y',
+        rsg_vars=('factor',),
+        time_var='time',
+    )
 
     result = prep.prepare_dataset(df, spec)
 

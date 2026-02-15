@@ -12,7 +12,7 @@ Tests cover:
 import pandas as pd
 import pytest
 
-from processbehavior.analysis_dataset import AnalysisSpecification
+from processbehavior.formulation_spec import FormulationSpec
 from processbehavior.sds_detector import SDSRegistry
 
 # ============================================================================
@@ -28,24 +28,22 @@ def detector():
 @pytest.fixture
 def spec_with_grouping_and_time():
     """Specification with both grouping and time."""
-    return AnalysisSpecification({
-        'analysis_type': 'Xbar',
-        'rsg_vars': ['lane'],
-        'rsg_var_name': 'rsg',
-        'time_var': 'pull',
-        'response_var': 'weight'
-    })
+    return FormulationSpec(
+        response_var='weight',
+        rsg_vars=('lane',),
+        rsg_var_name='rsg',
+        time_var='pull',
+    )
 
 
 @pytest.fixture
 def spec_no_time():
     """Specification with grouping but no time."""
-    return AnalysisSpecification({
-        'analysis_type': 'Xbar',
-        'rsg_vars': ['lane'],
-        'rsg_var_name': 'rsg',
-        'response_var': 'weight'
-    })
+    return FormulationSpec(
+        response_var='weight',
+        rsg_vars=('lane',),
+        rsg_var_name='rsg',
+    )
 
 
 # ============================================================================
@@ -213,13 +211,12 @@ def test_detect_sds_nested_design(detector):
     # Add composite rsg column
     df['rsg'] = df['lane'] + '_' + df['head'].astype(str)
 
-    spec = AnalysisSpecification({
-        'analysis_type': 'Xbar',
-        'rsg_vars': ['lane', 'head'],
-        'rsg_var_name': 'rsg',
-        'time_var': 'pull',
-        'response_var': 'weight'
-    })
+    spec = FormulationSpec(
+        response_var='weight',
+        rsg_vars=('lane', 'head'),
+        rsg_var_name='rsg',
+        time_var='pull',
+    )
 
     result = detector.detect_sds(df, spec)
 
@@ -541,13 +538,12 @@ def test_detect_sds_with_three_factors(detector):
     # Add composite rsg
     df['rsg'] = df['f1'] + '_' + df['f2'].astype(str) + '_' + df['f3']
 
-    spec = AnalysisSpecification({
-        'analysis_type': 'Xbar',
-        'rsg_vars': ['f1', 'f2', 'f3'],
-        'rsg_var_name': 'rsg',
-        'time_var': 'time',
-        'response_var': 'weight'
-    })
+    spec = FormulationSpec(
+        response_var='weight',
+        rsg_vars=('f1', 'f2', 'f3'),
+        rsg_var_name='rsg',
+        time_var='time',
+    )
 
     # Should not crash, should detect some SDS
     result = detector.detect_sds(df, spec)
@@ -573,13 +569,12 @@ def test_realistic_scenario_manufacturing_4_lanes_hourly(detector):
                 })
     df = pd.DataFrame(rows)
 
-    spec = AnalysisSpecification({
-        'analysis_type': 'Xbar',
-        'rsg_vars': ['lane'],
-        'rsg_var_name': 'rsg',
-        'time_var': 'hour',
-        'response_var': 'weight'
-    })
+    spec = FormulationSpec(
+        response_var='weight',
+        rsg_vars=('lane',),
+        rsg_var_name='rsg',
+        time_var='hour',
+    )
 
     result = detector.detect_sds(df, spec)
     info = detector.get_sds_characteristics(result.sds)
@@ -606,13 +601,12 @@ def test_realistic_scenario_designed_experiment_no_replication(detector):
     df = pd.DataFrame(rows)
     df['rsg'] = df['temperature'] + '_' + df['pressure']
 
-    spec = AnalysisSpecification({
-        'analysis_type': 'Xbar',
-        'rsg_vars': ['temperature', 'pressure'],
-        'rsg_var_name': 'rsg',
-        'time_var': 'time',
-        'response_var': 'yield'
-    })
+    spec = FormulationSpec(
+        response_var='yield',
+        rsg_vars=('temperature', 'pressure'),
+        rsg_var_name='rsg',
+        time_var='time',
+    )
 
     result = detector.detect_sds(df, spec)
 
@@ -877,13 +871,12 @@ class TestTPlannedCoverage:
             'rsg': ['A'] * 4 + ['B'] * 4,
             'weight': [10.0] * 8
         })
-        spec = AnalysisSpecification({
-            'analysis_type': 'Xbar',
-            'rsg_vars': ['factor'],
-            'rsg_var_name': 'rsg',
-            'time_var': 'time',
-            'response_var': 'weight'
-        })
+        spec = FormulationSpec(
+            response_var='weight',
+            rsg_vars=('factor',),
+            rsg_var_name='rsg',
+            time_var='time',
+        )
         plan = {'factor': ['A', 'B']}
 
         # Without T_planned: coverage = 8/8 = 100%
@@ -906,13 +899,12 @@ class TestTPlannedCoverage:
             'rsg': ['A', 'A', 'B', 'B'],
             'weight': [10.0] * 4
         })
-        spec = AnalysisSpecification({
-            'analysis_type': 'Xbar',
-            'rsg_vars': ['factor'],
-            'rsg_var_name': 'rsg',
-            'time_var': 'time',
-            'response_var': 'weight'
-        })
+        spec = FormulationSpec(
+            response_var='weight',
+            rsg_vars=('factor',),
+            rsg_var_name='rsg',
+            time_var='time',
+        )
         plan = {'factor': ['A', 'B']}
 
         # T_planned=None should behave same as not providing it
@@ -943,13 +935,12 @@ class TestTPlannedCoverage:
         for part in rsg_parts[1:]:
             df['rsg'] = df['rsg'] + '_' + part
 
-        spec = AnalysisSpecification({
-            'analysis_type': 'Xbar',
-            'rsg_vars': [f'f{i}' for i in range(n_factors)],
-            'rsg_var_name': 'rsg',
-            'time_var': 'time',
-            'response_var': 'weight'
-        })
+        spec = FormulationSpec(
+            response_var='weight',
+            rsg_vars=tuple(f'f{i}' for i in range(n_factors)),
+            rsg_var_name='rsg',
+            time_var='time',
+        )
 
         # Plan with 10 levels per factor = 10^5 = 100,000 combinations
         plan = {f'f{i}': [f'L{i}_{j}' for j in range(n_levels)] for i in range(n_factors)}
@@ -984,13 +975,12 @@ class TestStructureDetection:
             'time': [1, 2, 1, 2],
             'weight': [10.5, pd.NA, 9.8, 10.0]  # cell (1,2) is all-NA
         })
-        spec = AnalysisSpecification({
-            'analysis_type': 'Xbar',
-            'rsg_vars': ['lane'],
-            'rsg_var_name': 'rsg',
-            'time_var': 'time',
-            'response_var': 'weight'
-        })
+        spec = FormulationSpec(
+            response_var='weight',
+            rsg_vars=('lane',),
+            rsg_var_name='rsg',
+            time_var='time',
+        )
 
         # Use detect_sds_from_structure to detect on raw data
         result = detector.detect_sds_from_structure(
@@ -1011,13 +1001,12 @@ class TestStructureDetection:
             'time': [1, 2, 1, 2],
             'weight': [10.5, pd.NA, 9.8, 10.0]  # cell (1,2) is all-NA
         })
-        spec = AnalysisSpecification({
-            'analysis_type': 'Xbar',
-            'rsg_vars': ['lane'],
-            'rsg_var_name': 'rsg',
-            'time_var': 'time',
-            'response_var': 'weight'
-        })
+        spec = FormulationSpec(
+            response_var='weight',
+            rsg_vars=('lane',),
+            rsg_var_name='rsg',
+            time_var='time',
+        )
         plan = {'lane': [1, 2], 'time': [1, 2]}
 
         result = detector.detect_sds_from_structure(
@@ -1035,13 +1024,12 @@ class TestStructureDetection:
             'time': [1, 1],
             'weight': [10.5, 9.8]
         })
-        spec = AnalysisSpecification({
-            'analysis_type': 'Xbar',
-            'rsg_vars': ['lane'],
-            'rsg_var_name': 'rsg',
-            'time_var': 'time',
-            'response_var': 'weight'
-        })
+        spec = FormulationSpec(
+            response_var='weight',
+            rsg_vars=('lane',),
+            rsg_var_name='rsg',
+            time_var='time',
+        )
         # Plan with string values that should match numeric data
         plan = {'lane': ['1', '2'], 'time': ['1']}
 
@@ -1061,13 +1049,12 @@ class TestStructureDetection:
             'time': [1, 1, 1],
             'weight': [10.5, 11.0, 9.8]
         })
-        spec = AnalysisSpecification({
-            'analysis_type': 'Xbar',
-            'rsg_vars': ['lane'],
-            'rsg_var_name': 'rsg',
-            'time_var': 'time',
-            'response_var': 'weight'
-        })
+        spec = FormulationSpec(
+            response_var='weight',
+            rsg_vars=('lane',),
+            rsg_var_name='rsg',
+            time_var='time',
+        )
 
         result = detector.detect_sds_from_structure(
             df, spec, response_col='weight'
@@ -1089,13 +1076,12 @@ class TestStructureDetection:
             'time': [1, 1, 1],
             'weight': [10.5, 11.0, 10.8]
         })
-        spec = AnalysisSpecification({
-            'analysis_type': 'Xbar',
-            'rsg_vars': ['lane'],
-            'rsg_var_name': 'rsg',
-            'time_var': 'time',
-            'response_var': 'weight'
-        })
+        spec = FormulationSpec(
+            response_var='weight',
+            rsg_vars=('lane',),
+            rsg_var_name='rsg',
+            time_var='time',
+        )
 
         result = detector.detect_sds_from_structure(
             df, spec, response_col='weight'
@@ -1114,13 +1100,12 @@ class TestStructureDetection:
             'time': [1, 1, 1, 1],
             'weight': [10.5, '*', 'NA', 'N/A']  # Various missing tokens
         })
-        spec = AnalysisSpecification({
-            'analysis_type': 'Xbar',
-            'rsg_vars': ['lane'],
-            'rsg_var_name': 'rsg',
-            'time_var': 'time',
-            'response_var': 'weight'
-        })
+        spec = FormulationSpec(
+            response_var='weight',
+            rsg_vars=('lane',),
+            rsg_var_name='rsg',
+            time_var='time',
+        )
 
         result = detector.detect_sds_from_structure(
             df, spec, response_col='weight'
@@ -1138,13 +1123,12 @@ class TestStructureDetection:
             'time': [1, 1, 1, 1],
             'weight': [10.5, 10.6, 9.8, 9.9]
         })
-        spec = AnalysisSpecification({
-            'analysis_type': 'Xbar',
-            'rsg_vars': ['lane'],
-            'rsg_var_name': 'rsg',
-            'time_var': 'time',
-            'response_var': 'weight'
-        })
+        spec = FormulationSpec(
+            response_var='weight',
+            rsg_vars=('lane',),
+            rsg_var_name='rsg',
+            time_var='time',
+        )
         # Plan expects 4 cells, but only 2 exist
         plan = {'lane': [1, 2], 'time': [1, 2]}
 
@@ -1163,13 +1147,12 @@ class TestStructureDetection:
             'time': [1, 1],
             'weight': [10.5, 9.8]
         })
-        spec = AnalysisSpecification({
-            'analysis_type': 'Xbar',
-            'rsg_vars': ['lane'],
-            'rsg_var_name': 'rsg',
-            'time_var': 'time',
-            'response_var': 'weight'
-        })
+        spec = FormulationSpec(
+            response_var='weight',
+            rsg_vars=('lane',),
+            rsg_var_name='rsg',
+            time_var='time',
+        )
         # Plan only specifies factors, T_planned specifies time extent
         plan = {'lane': [1, 2]}  # No time column in plan
 
@@ -1203,13 +1186,12 @@ class TestStructureDetection:
                 'time': [1],
                 'weight': [10.5]
             })
-            spec = AnalysisSpecification({
-                'analysis_type': 'Xbar',
-                'rsg_vars': ['lane'],
-                'rsg_var_name': 'rsg',
-                'time_var': 'time',
-                'response_var': 'weight'
-            })
+            spec = FormulationSpec(
+                response_var='weight',
+                rsg_vars=('lane',),
+                rsg_var_name='rsg',
+                time_var='time',
+            )
             plan = {'lane': [plan_val], 'time': [1]}
 
             result = detector.detect_sds_from_structure(
@@ -1228,13 +1210,12 @@ class TestStructureDetection:
             'time': [1, 1],
             'weight': [10.5, 9.8]
         })
-        spec = AnalysisSpecification({
-            'analysis_type': 'Xbar',
-            'rsg_vars': ['lane'],
-            'rsg_var_name': 'rsg',
-            'time_var': 'time',
-            'response_var': 'weight'
-        })
+        spec = FormulationSpec(
+            response_var='weight',
+            rsg_vars=('lane',),
+            rsg_var_name='rsg',
+            time_var='time',
+        )
 
         result = detector.detect_sds_from_structure(
             df, spec, response_col='weight'

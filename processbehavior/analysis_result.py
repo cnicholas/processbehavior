@@ -160,7 +160,7 @@ class AnalysisResult:
 
         # Extract SDS information
         self.sds = analysis_dataset_obj.sampling_design_state
-        self.sds_info = analysis_dataset_obj.sds_characteristics
+        self.sds_info = analysis_dataset_obj.raw_sds_characteristics
 
         # Extract residuals if calculated
         self._residuals = None

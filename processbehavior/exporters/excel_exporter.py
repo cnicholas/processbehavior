@@ -235,7 +235,7 @@ class ExcelExporter:
             self._write_stratified_chart_tab(writer, format_cells)
 
             # For stratified IMR/R charts, also create a summary tab for quick comparison
-            chart_type = self.result._ads.spec.analysis_type
+            chart_type = self.result._analysis_type
             if chart_type in ['Imr', 'R']:
                 self._write_stratified_summary_tab(writer, format_cells)
         else:
@@ -292,7 +292,7 @@ class ExcelExporter:
             combined_df = pd.concat(combined_data, ignore_index=True)
 
             # Create descriptive tab name
-            chart_type = self.result._ads.spec.analysis_type
+            chart_type = self.result._analysis_type
             grouping_vars = self.result._ads.spec.rsg_vars if self.result._ads.spec.has_grouping else []
 
             if len(grouping_vars) == 1:

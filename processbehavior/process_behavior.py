@@ -28,8 +28,8 @@ from typing import TYPE_CHECKING
 
 import pandas as pd
 
-from .analysis_specification import DataPrepConfig
 from .exceptions import ColumnNotFoundError, ValidationError
+from .formulation_spec import FormulationSpec
 from .sds_detector import SDSRegistry
 
 if TYPE_CHECKING:
@@ -724,24 +724,19 @@ class ProcessBehavior:
             # Normalize factors list
             factors_str = [self._to_column_name(f) for f in factors]
 
-        # Build spec dict with user-friendly parameter names mapped to internal names
-        spec_dict = {
-            'response_var': response_str,   # response → response_var
-            'rsg_vars': factors_str,        # factors → rsg_vars
-            'time_var': time_str,           # time → time_var
-            'round_to': precision,          # precision → round_to
-            'rsg_var_name': 'rsg',          # Auto-generated (hidden from user)
-            'rsg_var_delim': '_',           # Auto-generated (hidden from user)
-            'unit_of_analysis': unit_of_analysis
-        }
-
-        # Create config for data preparation (no analysis_type needed yet)
-        config = DataPrepConfig(spec_dict)
+        # Create FormulationSpec directly — no dict intermediary
+        spec = FormulationSpec(
+            response_var=response_str,
+            rsg_vars=tuple(factors_str) if factors_str else None,
+            time_var=time_str,
+            round_to=precision,
+            unit_of_analysis=unit_of_analysis,
+        )
 
         # Validate columns early (fail fast)
         from .data_preparation import DataPreparation
         prep = DataPreparation()
-        prep.validate_columns(self.data, config)
+        prep.validate_columns(self.data, spec)
 
         # SDS detection runs FIRST on raw data (response NA rows preserved)
         # This matches Tom Bishop's Minitab approach: cells with all-NA responses
@@ -749,16 +744,11 @@ class ProcessBehavior:
         detector = SDSRegistry()
         sds_result = detector.detect_sds_from_structure(
             self.data,           # Raw data (NA rows still present)
-            config,
+            spec,
             response_col=response_str,
             plan=sampling_plan,
             T_planned=T_planned
         )
-
-        # Prepare data for analysis (drops response NA rows, adds keys)
-        # Note: prepared_df is not used directly here but AnalysisDataSet will
-        # re-prepare from raw data (self.data) using the spec
-        prep.prepare_dataset(self.data, config)
 
         # Get SDS analysis plan with all metadata
         analysis_plan = SDSRegistry.get_analysis_plan(
@@ -766,20 +756,16 @@ class ProcessBehavior:
         )
 
         # Calculate full dataset with residuals (R1-R5, RCR1-RCR5)
-        # Use AnalysisDataSet with the recommended chart type to trigger calculation
+        # ADS is chart-agnostic — chart-specific params live in ChartRequest at execute() time
         # Pass SDS to avoid redundant detection (SDS is the driver of the system)
         from .analysis_dataset import AnalysisDataSet
-        from .analysis_specification import AnalysisSpecification
-
-        # ADS is chart-agnostic - analysis_type is set at execute() time
-        full_spec = AnalysisSpecification(spec_dict)
-        ads = AnalysisDataSet(self.data, full_spec, sds=sds_result.sds)
+        ads = AnalysisDataSet(self.data, spec, sds=sds_result.sds)
 
         # Create and return Study object with pre-calculated AnalysisDataSet
         # This enables execute() to reuse the expensive calculation
         return Study(
             _pdf=self,
-            _spec=config,
+            _spec=spec,
             _plan=analysis_plan,
             _ads=ads,
             _sampling_plan=sampling_plan,
