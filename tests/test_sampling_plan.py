@@ -759,8 +759,8 @@ class TestSDSResultReason:
             'weight': [10.0] * 10
         })
 
-        from processbehavior.formulation_spec import FormulationSpec
         from processbehavior.data_preparation import DataPreparation
+        from processbehavior.formulation_spec import FormulationSpec
         from processbehavior.sds_detector import SDSRegistry
 
         spec = FormulationSpec(
@@ -783,8 +783,8 @@ class TestSDSResultReason:
 
     def test_sds_5_reason_incomplete_with_replication(self):
         """Incomplete grid with replication should return reason='incomplete_with_replication'."""
-        from processbehavior.formulation_spec import FormulationSpec
         from processbehavior.data_preparation import DataPreparation
+        from processbehavior.formulation_spec import FormulationSpec
         from processbehavior.sds_detector import SDSRegistry
 
         # Incomplete grid (missing Lane 3) with replication (n=2 per cell)
@@ -817,8 +817,8 @@ class TestSDSResultReason:
 
     def test_sds_6_reason_incomplete_no_replication(self):
         """Incomplete grid without replication should return reason='incomplete_no_replication'."""
-        from processbehavior.formulation_spec import FormulationSpec
         from processbehavior.data_preparation import DataPreparation
+        from processbehavior.formulation_spec import FormulationSpec
         from processbehavior.sds_detector import SDSRegistry
 
         # Incomplete grid (missing Lane 3) with NO replication (n=1 per cell)
