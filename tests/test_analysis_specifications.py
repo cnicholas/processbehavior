@@ -1,7 +1,6 @@
 import pytest
 
-from processbehavior.formulation_spec import FormulationSpec, ChartRequest
-
+from processbehavior.formulation_spec import ChartRequest, FormulationSpec
 
 # =============================================================================
 # FormulationSpec Tests

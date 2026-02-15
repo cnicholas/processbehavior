@@ -15,7 +15,6 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from processbehavior.formulation_spec import FormulationSpec
 from processbehavior.effects_calculator import (
     EffectsCalculator,
     calculate_factor_interaction_effects,
@@ -26,6 +25,7 @@ from processbehavior.effects_calculator import (
     calculate_pdc_by_time_sds2,
     calculate_time_main_effects,
 )
+from processbehavior.formulation_spec import FormulationSpec
 
 # ============================================================================
 # Fixtures

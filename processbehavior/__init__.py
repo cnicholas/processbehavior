@@ -46,7 +46,6 @@ from processbehavior.analysis_dataset import AnalysisDataSet
 # Result object
 from processbehavior.analysis_result import AnalysisResult
 from processbehavior.data_preparation import DataPreparation, encode_rsg, natural_sort_key
-from processbehavior.formulation_spec import ChartRequest, FormulationSpec
 from processbehavior.effects_calculator import EffectsCalculator
 
 # Exceptions
@@ -57,6 +56,7 @@ from processbehavior.exceptions import (
     ProcessBehaviorError,
     ValidationError,
 )
+from processbehavior.formulation_spec import ChartRequest, FormulationSpec
 
 # Plotting/theming
 from processbehavior.plotting import ChartTheme, get_theme, list_themes, register_theme
@@ -86,6 +86,7 @@ __all__ = [
 
     # Core classes
     'Analysis',
+    'AnalysisDataSet',
     'FormulationSpec',
     'ChartRequest',
 

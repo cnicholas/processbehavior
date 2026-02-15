@@ -13,8 +13,8 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from processbehavior.formulation_spec import FormulationSpec
 from processbehavior.data_preparation import DataPreparation
+from processbehavior.formulation_spec import FormulationSpec
 
 # ============================================================================
 # Fixtures

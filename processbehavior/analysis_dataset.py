@@ -6,8 +6,8 @@ import logging
 import pandas as pd
 
 from .data_preparation import DataPreparation
-from .formulation_spec import FormulationSpec
 from .effects_calculator import EffectsCalculator
+from .formulation_spec import FormulationSpec
 from .residual_calculator import ResidualCalculator
 from .sds_detector import SDSRegistry, StructureStats
 

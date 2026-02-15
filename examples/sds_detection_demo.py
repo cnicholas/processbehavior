@@ -20,8 +20,8 @@ import pandas as pd
 from processbehavior import Analysis
 from processbehavior.analysis_dataset import AnalysisDataSet
 from processbehavior.data_preparation import DataPreparation
-from processbehavior.formulation_spec import ChartRequest, FormulationSpec
 from processbehavior.datasets import synthetic
+from processbehavior.formulation_spec import ChartRequest, FormulationSpec
 from processbehavior.sds_detector import SDSRegistry
 
 # Configure display
