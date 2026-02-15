@@ -925,7 +925,7 @@ class SDSRegistry:
         prep = DataPreparation()
 
         # Determine kt_cols
-        k_vars = list(spec.rsg_vars) if spec.rsg_vars else []
+        k_vars = spec.rsg_vars_list
         t = spec.time_var
         # Include time_var only if not already in rsg_vars (avoid duplicates)
         kt_cols = k_vars + [t] if (t and t not in k_vars) else k_vars
@@ -1130,7 +1130,7 @@ class SDSRegistry:
 
         # Group by actual factor columns (not derived rsg string)
         # This is more explicit and avoids any encoding issues
-        group_cols = list(spec.rsg_vars)
+        group_cols = spec.rsg_vars_list
         if spec.has_time:
             group_cols.append(spec.time_var)
             observed_T = df[spec.time_var].nunique(dropna=True)

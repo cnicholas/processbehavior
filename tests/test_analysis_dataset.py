@@ -69,7 +69,7 @@ def analysis_types():
 
 @pytest.fixture
 def df():
-    """Basic test data with integer time variable."""
+    """SDS 2 test data: n=1 per (factor x time) cell. Valid for IMR/R."""
     data = {
         'a': ['a', 'a', 'a', 'b', 'b', 'b', 'c'],
         'b': ['c', 'c', 'c', 'd', 'd', 'd', 'e'],
@@ -77,6 +77,18 @@ def df():
         'd': [1, 2, 3, 1, 2, 3, 1],
         'a1': [1, 1, 1, 1, 1, 1, 1],
         'a2': [2, 2, 2, 2, 2, 2, 2],
+    }
+    return pd.DataFrame(data=data)
+
+
+@pytest.fixture
+def df_sds1():
+    """SDS 1 test data: balanced, complete, replicated (n=2 per cell)."""
+    data = {
+        'a': ['a', 'a', 'a', 'a', 'b', 'b', 'b', 'b'],
+        'b': ['c', 'c', 'c', 'c', 'd', 'd', 'd', 'd'],
+        'c': [1.5, 2.0, 3.5, 4.0, 5.0, 8.0, 10.0, 7.0],
+        'd': [1, 1, 2, 2, 1, 1, 2, 2],
     }
     return pd.DataFrame(data=data)
 
@@ -120,8 +132,8 @@ def df_dt():
 class TestXbarSAnalysis:
     """Tests for Xbar and S chart calculations."""
 
-    def test_xbar_s_basic(self, df):
-        """Test basic Xbar-S analysis with expected statistics."""
+    def test_xbar_s_basic(self, df_sds1):
+        """Test basic Xbar-S analysis with SDS 1 data (n=2 per cell)."""
         spec = {
             'analysis_type': 'Xbar',
             'rsg_vars': ['a', 'b'],
@@ -133,28 +145,28 @@ class TestXbarSAnalysis:
             'paired': True,  # Request both Xbar and S charts
         }
 
-        sds = detect_sds_for_test(df, spec)
-        result = Analysis(spec=_make_spec(spec), request=_make_request(spec), sds=sds, df=df).calculate()
+        sds = detect_sds_for_test(df_sds1, spec)
+        assert sds == 1  # Verify this is actually SDS 1
+
+        result = Analysis(spec=_make_spec(spec), request=_make_request(spec), sds=sds, df=df_sds1).calculate()
 
         # Should return both Xbar and S charts (paired=True)
         assert len(result) == 2
         assert 'Xbar' in result
         assert 'S' in result
 
-        # Check Xbar statistics
-        # Note: center includes all data (including n=1 groups in unfiltered data)
+        # Check Xbar statistics (n=4 per factor group)
         xbar_stats = result['Xbar']['statistics']
-        assert xbar_stats['center'] == 4.43
-        assert xbar_stats['lpl'] == 0.95
-        assert xbar_stats['upl'] == 7.9
+        assert xbar_stats['center'] == 5.12
+        assert xbar_stats['lpl'] == 2.46
+        assert xbar_stats['upl'] == 7.79
 
         # Check S statistics
-        # Note: b3 constant is clamped to 0 for small subgroups (n < 6),
-        # so S chart LPL = Sbar * b3(n) = 0.0
+        # b3 clamped to 0 for small subgroups (n < 6), so LPL = 0.0
         sbar_stats = result['S']['statistics']
-        assert sbar_stats['center'] == 1.78
-        assert sbar_stats['lpl'] == 0.0  # b3 clamped to 0 for small n
-        assert sbar_stats['upl'] == 4.57
+        assert sbar_stats['center'] == 1.64
+        assert sbar_stats['lpl'] == 0.0
+        assert sbar_stats['upl'] == 3.71
 
     def test_xbar_s_differing_ns(self, df_differing_Ns):
         """Test Xbar-S with varying group sizes (limits vary by subgroup)."""

@@ -109,6 +109,18 @@ def test_formulation_spec_unit_of_analysis():
     assert spec.unit_of_analysis == 'wafer'
 
 
+def test_formulation_spec_rsg_vars_list():
+    """Test rsg_vars_list returns a list copy, or empty list if None."""
+    spec_with = FormulationSpec(response_var='y', rsg_vars=('a', 'b'))
+    assert spec_with.rsg_vars_list == ['a', 'b']
+    assert isinstance(spec_with.rsg_vars_list, list)
+    # Each call returns a fresh list (safe to mutate)
+    assert spec_with.rsg_vars_list is not spec_with.rsg_vars_list
+
+    spec_none = FormulationSpec(response_var='y')
+    assert spec_none.rsg_vars_list == []
+
+
 def test_formulation_spec_is_frozen():
     """Test that FormulationSpec is immutable."""
     spec = FormulationSpec(response_var='y')
