@@ -1,0 +1,31 @@
+{
+  "center_col": "center",
+  "chart_type": "Imr",
+  "lane_boundaries": [
+    {
+      "label": "F1_1_F2_2",
+      "position": 12,
+      "variables": [
+        "factor 1",
+        "factor 2"
+      ]
+    },
+    {
+      "label": "F1_2_F2_1",
+      "position": 23,
+      "variables": [
+        "factor 1",
+        "factor 2"
+      ]
+    },
+    {
+      "label": "F1_2_F2_2",
+      "position": 33,
+      "variables": [
+        "factor 1",
+        "factor 2"
+      ]
+    }
+  ],
+  "value_col": "y"
+}
