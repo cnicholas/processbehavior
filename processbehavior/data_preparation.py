@@ -150,7 +150,7 @@ class DataPreparation:
         """Columns to keep after data preparation."""
         cols = [spec.response_var]
         if spec.has_grouping:
-            cols = [spec.rsg_var_name, 'n'] + list(spec.rsg_vars) + cols
+            cols = [spec.rsg_var_name, 'n'] + spec.rsg_vars_list + cols
         if spec.has_time and spec.time_var not in cols:
             cols.insert(0, spec.time_var)
         return cols
@@ -424,7 +424,7 @@ class DataPreparation:
         # This captures the row order as it enters build_keys() (post-cleaning/filtering)
         out['obs_id'] = np.arange(len(out), dtype=np.int64)
 
-        k_vars = list(spec.rsg_vars) if spec.rsg_vars else []
+        k_vars = spec.rsg_vars_list
         t = spec.time_var
 
         # 2. Build tuple keys
@@ -482,7 +482,7 @@ class DataPreparation:
             # Multiple factors: combine with delimiter
             out = self._add_composite_column(
                 df=out,
-                cols_to_combine=list(spec.rsg_vars),
+                cols_to_combine=spec.rsg_vars_list,
                 col_name=spec.rsg_var_name,
                 col_delim=spec.rsg_var_delim
             )
@@ -495,57 +495,6 @@ class DataPreparation:
             )
             # Ensure RSG is string (even if source column is numeric)
             out[spec.rsg_var_name] = out[spec.rsg_var_name].astype(str)
-
-        return out
-
-    def _filter_small_groups(
-        self,
-        df: pd.DataFrame,
-        spec: FormulationSpec
-    ) -> pd.DataFrame:
-        """
-        Remove groups with n ≤ 1 at the factor level (can't calculate variance).
-
-        For grouped analyses (Xbar, S), we need at least 2 observations
-        per factor to calculate within-group variance. Filtering at factor
-        level (not kt level) allows factor-level aggregation when `by` is
-        specified, even if individual kt cells have n=1.
-
-        Note: After filtering, n column is added at kt level for accurate
-        metadata. The analysis-level groupby will re-compute n at whatever
-        level `by` specifies.
-        """
-        # Filter at factor level (original behavior)
-        # This allows factor-level analysis even when kt cells have n=1
-        grouped = df.groupby(spec.rsg_var_name, observed=True).size()
-        starting_count = grouped.count()
-        logger.debug('Starting with %s groups', starting_count)
-
-        # Keep only groups with n > 1
-        grouped = grouped[grouped > 1]
-
-        if grouped.shape[0] == 0:
-            raise ValueError(
-                "All subgroups have 1 or fewer observations!\n"
-                "Xbar/S analysis requires multiple observations per group.\n"
-                "Fix: Add more data or use 'Imr' analysis for individual values"
-            )
-
-        grouped = grouped.reset_index()
-        grouped = grouped.rename(columns={0: 'n_factor'})
-
-        ending_count = grouped.shape[0]
-        logger.debug('Groups remaining: %s', ending_count)
-        logger.debug('Removed %s group(s)', starting_count - ending_count)
-
-        # Filter to keep only rows in valid groups
-        out = pd.merge(df, grouped[spec.rsg_var_name], how='inner', on=spec.rsg_var_name)
-
-        # Now add n at kt level for accurate metadata
-        kt_cols = [spec.rsg_var_name, spec.time_var] if spec.has_time else [spec.rsg_var_name]
-
-        n_per_kt = df.groupby(kt_cols, observed=True).size().reset_index(name='n')
-        out = pd.merge(out, n_per_kt, how='left', on=kt_cols)
 
         return out
 

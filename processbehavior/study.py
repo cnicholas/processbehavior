@@ -1162,7 +1162,7 @@ class Study:
         """
         # _factors MUST be spec.rsg_vars order (not plan dict order)
         # to ensure correct cartesian product encoding
-        factors = list(self._spec.rsg_vars) if self._spec.rsg_vars else []
+        factors = self._spec.rsg_vars_list
 
         # Use analysis dataset (post-filtering, NA-handled) for all observed values
         ads_df = self._ads.analysis_dataset
@@ -1535,7 +1535,7 @@ class Study:
             If by=None for IMR/R with factors (must be explicit)
             If by contains time variable for IMR/R charts
         """
-        factors = list(self._spec.rsg_vars) if self._spec.rsg_vars else []
+        factors = self._spec.rsg_vars_list
         time_var = self._spec.time_var
         is_time_series_chart = base_chart in ('Imr', 'R')
 

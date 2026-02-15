@@ -549,7 +549,7 @@ class Analysis:
         by = self.request.by
         # Normalize tuple to list for internal comparison
         by = list(by) if by is not None else None
-        rsg_vars = list(spec.rsg_vars) if spec.rsg_vars else []
+        rsg_vars = spec.rsg_vars_list
         time_var = spec.time_var
 
         # Determine if we're charting response (can use pre-calculated) or residual
@@ -1222,7 +1222,7 @@ class Analysis:
 
         # Determine stratification based on `by` parameter
         by = list(self.request.by) if self.request.by is not None else None
-        rsg_vars = list(spec.rsg_vars) if spec.rsg_vars else []
+        rsg_vars = spec.rsg_vars_list
 
         # Determine stratify_by and collapsed_factors
         # collapsed_factors = factor variables not in `by` (for lane boundaries)
@@ -1640,7 +1640,7 @@ class Analysis:
 
         # Determine stratification based on `by` parameter
         by = list(self.request.by) if self.request.by is not None else None
-        rsg_vars = list(spec.rsg_vars) if spec.rsg_vars else []
+        rsg_vars = spec.rsg_vars_list
 
         # Determine stratify_by and collapsed_factors
         if by is None:

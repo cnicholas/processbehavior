@@ -393,23 +393,6 @@ def test_add_column_copies_existing(prep):
     assert result['new_name'].tolist() == [1, 2, 3]
 
 
-def test_filter_small_groups_logs_count(prep, small_groups_df, caplog):
-    """Should log how many groups were filtered."""
-    spec = FormulationSpec(
-        response_var='weight',
-        rsg_vars=('lane',),
-    )
-
-    # Need to add RSG column first (what _add_grouping_column does)
-    df_with_rsg = prep._add_grouping_column(small_groups_df, spec)
-
-    with caplog.at_level('DEBUG'):
-        prep._filter_small_groups(df_with_rsg, spec)
-
-    # Should log starting and ending counts
-    assert 'Starting with' in caplog.text
-    assert 'remaining' in caplog.text.lower()
-
 
 # ============================================================================
 # Test: Edge cases

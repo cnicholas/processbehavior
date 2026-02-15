@@ -82,6 +82,11 @@ class FormulationSpec:
         return self.time_var is not None
 
     @property
+    def rsg_vars_list(self) -> list[str]:
+        """rsg_vars as a mutable list for pandas operations. Empty list if None."""
+        return list(self.rsg_vars) if self.rsg_vars else []
+
+    @property
     def requires_sort(self) -> bool:
         """Return True if data needs sorting (has time variable)."""
         return self.has_time
