@@ -24,7 +24,6 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
-import pytest
 
 from processbehavior import ProcessBehavior
 from processbehavior.datasets import synthetic
@@ -171,7 +170,7 @@ def _assert_chart_matches_snapshot(scenario_name: str, chart_key: str,
     data = chart_result["data"]
     statistics = chart_result["statistics"]
     metadata = chart_result.get("metadata", {})
-    strata = chart_result.get("strata", None)
+    strata = chart_result.get("strata")
 
     if REGEN:
         _save_snapshot(scenario_name, chart_key, data, statistics, metadata)

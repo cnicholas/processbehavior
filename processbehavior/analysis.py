@@ -997,8 +997,6 @@ class Analysis:
         if value_col is None:
             value_col = spec.response_var
 
-        result = {}
-
         logger.debug('In calculate statistics %s', mr_spec.chart_type)
 
         # --- Determine stratification (shared logic) ---
@@ -1033,6 +1031,103 @@ class Analysis:
                 _return_intermediates, _precomputed,
             )
 
+    def _calculate_mr_chart_from_precomputed(
+        self,
+        mr_spec: _MRChartSpec,
+        plot_col: str,
+        precomputed: dict,
+    ) -> dict:
+        """Build an MR-family chart reusing intermediates from a paired IMR call."""
+        spec = self.spec
+        out = precomputed['out'].copy()
+        grouped = precomputed['grouped'].copy()
+        stratify_col = precomputed['stratify_col']
+        stratify_by = precomputed['stratify_by']
+        strata = precomputed['strata']
+        imr_lane_boundaries = precomputed['lane_boundaries']
+        extra_cols = precomputed['extra_cols']
+
+        # For R chart: compute R-specific limits from IMR's grouped data
+        # grouped has columns: stratify_col, center (=mean), mR, lpl, upl (IMR limits)
+        r_grouped = grouped.rename(columns={'center': 'imr_center', 'mR': 'center'})
+
+        r_lims = r_grouped.apply(
+            lambda row: calculate_limits(
+                mean=0, sd=0, N=0,
+                mR=row['center'],
+                limits_type=mr_spec.limits_type,
+                round_to=spec.round_to,
+            ),
+            axis=1,
+        )
+
+        r_grouped = _join_limits(r_grouped, r_lims, rsuffix='_r')
+
+        # Resolve lpl/upl column names (may have suffix if IMR lpl/upl exist)
+        if 'lpl_r' in r_grouped.columns:
+            r_grouped = r_grouped.rename(columns={'lpl_r': 'r_lpl', 'upl_r': 'r_upl'})
+            r_lpl_col, r_upl_col = 'r_lpl', 'r_upl'
+        else:
+            r_lpl_col, r_upl_col = 'lpl', 'upl'
+
+        # Merge R limits to the data (drop IMR-specific columns first)
+        r_out = out.drop(columns=['center', 'lpl', 'upl', 'beyond_limits'], errors='ignore')
+        r_merge_data = r_grouped[[stratify_col, 'center', r_lpl_col, r_upl_col]].rename(
+            columns={r_lpl_col: 'lpl', r_upl_col: 'upl'}
+        )
+        r_out = r_out.merge(r_merge_data, on=stratify_col, how='left', validate='many_to_one')
+
+        # R chart drops first observation per stratum (NaN moving range)
+        if mr_spec.drops_first_mr:
+            r_out = r_out.dropna(subset=['mr'])
+
+        # Detect beyond limits
+        r_out = self._add_beyond_limits_flag(r_out, value_col=plot_col)
+
+        # Build statistics
+        chart_statistics = {}
+        for stratum in strata:
+            row = r_grouped[r_grouped[stratify_col] == stratum].iloc[0]
+            chart_statistics[stratum] = {
+                'center': round(row['center'], spec.round_to),
+                'lpl': round(row[r_lpl_col], spec.round_to),
+                'upl': round(row[r_upl_col], spec.round_to),
+            }
+
+        # Format output
+        chart_out = self._build_output_columns(
+            df=r_out,
+            value_cols=extra_cols + [plot_col, 'center', 'lpl', 'upl', 'beyond_limits'],
+        )
+
+        # Adjust lane boundaries for R chart (first row dropped per stratum)
+        lane_boundaries = {}
+        if imr_lane_boundaries:
+            for stratum, boundaries in imr_lane_boundaries.items():
+                adjusted = [
+                    {**b, 'position': b['position'] + mr_spec.lane_boundary_offset}
+                    for b in boundaries
+                    if b['position'] + mr_spec.lane_boundary_offset >= 0
+                ]
+                if adjusted:
+                    lane_boundaries[stratum] = adjusted
+
+        return {
+            mr_spec.chart_type: {
+                'data': chart_out,
+                'statistics': chart_statistics,
+                'metadata': {
+                    'chart_type': mr_spec.chart_type,
+                    'value_col': plot_col,
+                    'center_col': 'center',
+                    'stratified': True,
+                    'lane_boundaries': lane_boundaries if lane_boundaries else None,
+                    'stratify_by': list(stratify_by),
+                },
+                'strata': strata,
+            },
+        }
+
     def _calculate_mr_chart_stratified(
         self,
         mr_spec: _MRChartSpec,
@@ -1045,103 +1140,14 @@ class Analysis:
     ) -> dict:
         """Stratified path for _calculate_mr_chart."""
         spec = self.spec
-        result = {}
 
         if _precomputed is not None and _precomputed['is_stratified']:
-            # Reuse intermediates from paired IMR call
-            out = _precomputed['out'].copy()
-            grouped = _precomputed['grouped'].copy()
-            stratify_col = _precomputed['stratify_col']
-            stratify_by = _precomputed['stratify_by']
-            strata = _precomputed['strata']
-            imr_lane_boundaries = _precomputed['lane_boundaries']
-            extra_cols = _precomputed['extra_cols']
-
-            # For R chart: compute R-specific limits from IMR's grouped data
-            # grouped has columns: stratify_col, center (=mean), mR, lpl, upl (IMR limits)
-            r_grouped = grouped.copy()
-            # Rename: mR becomes center for R chart, keep IMR center aside
-            r_grouped = r_grouped.rename(columns={'center': 'imr_center', 'mR': 'center'})
-
-            r_lims = r_grouped.apply(
-                lambda row: calculate_limits(
-                    mean=0, sd=0, N=0,
-                    mR=row['center'],
-                    limits_type=mr_spec.limits_type,
-                    round_to=spec.round_to,
-                ),
-                axis=1,
+            return self._calculate_mr_chart_from_precomputed(
+                mr_spec, plot_col, _precomputed,
             )
-
-            r_grouped = _join_limits(r_grouped, r_lims, rsuffix='_r')
-
-            # Resolve lpl/upl column names (may have suffix if IMR lpl/upl exist)
-            if 'lpl_r' in r_grouped.columns:
-                r_grouped = r_grouped.rename(columns={'lpl_r': 'r_lpl', 'upl_r': 'r_upl'})
-                r_lpl_col, r_upl_col = 'r_lpl', 'r_upl'
-            else:
-                r_lpl_col, r_upl_col = 'lpl', 'upl'
-
-            # Merge R limits to the data (drop IMR-specific columns first)
-            r_out = out.copy()
-            r_out = r_out.drop(columns=['center', 'lpl', 'upl', 'beyond_limits'], errors='ignore')
-            r_merge_data = r_grouped[[stratify_col, 'center', r_lpl_col, r_upl_col]].rename(
-                columns={r_lpl_col: 'lpl', r_upl_col: 'upl'}
-            )
-            r_out = r_out.merge(r_merge_data, on=stratify_col, how='left', validate='many_to_one')
-
-            # R chart drops first observation per stratum (NaN moving range)
-            if mr_spec.drops_first_mr:
-                r_out = r_out.dropna(subset=['mr'])
-
-            # Detect beyond limits
-            r_out = self._add_beyond_limits_flag(r_out, value_col=plot_col)
-
-            # Build statistics
-            chart_statistics = {}
-            for stratum in strata:
-                row = r_grouped[r_grouped[stratify_col] == stratum].iloc[0]
-                chart_statistics[stratum] = {
-                    'center': round(row['center'], spec.round_to),
-                    'lpl': round(row[r_lpl_col], spec.round_to),
-                    'upl': round(row[r_upl_col], spec.round_to),
-                }
-
-            # Format output
-            chart_out = self._build_output_columns(
-                df=r_out,
-                value_cols=extra_cols + [plot_col, 'center', 'lpl', 'upl', 'beyond_limits'],
-            )
-
-            # Adjust lane boundaries for R chart (first row dropped per stratum)
-            lane_boundaries = {}
-            if imr_lane_boundaries:
-                for stratum, boundaries in imr_lane_boundaries.items():
-                    adjusted = []
-                    for b in boundaries:
-                        new_pos = b['position'] + mr_spec.lane_boundary_offset
-                        if new_pos >= 0:
-                            adjusted.append({**b, 'position': new_pos})
-                    if adjusted:
-                        lane_boundaries[stratum] = adjusted
-
-            result[mr_spec.chart_type] = {
-                'data': chart_out,
-                'statistics': chart_statistics,
-                'metadata': {
-                    'chart_type': mr_spec.chart_type,
-                    'value_col': plot_col,
-                    'center_col': 'center',
-                    'stratified': True,
-                    'lane_boundaries': lane_boundaries if lane_boundaries else None,
-                    'stratify_by': list(stratify_by),
-                },
-                'strata': strata,
-            }
-
-            return result
 
         # --- Independent calculation (no precomputed values) ---
+        result = {}
         out = self.ads.analysis_dataset.copy()
         logger.debug('Dataframe has columns: %s', out.columns.to_list())
 
