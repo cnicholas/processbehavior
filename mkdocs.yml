@@ -70,6 +70,7 @@ nav:
     - Signal Detection: tutorials/signal-detection.ipynb
     - Xbar-S Analysis: tutorials/xbar-s-analysis.ipynb
     - Stratified Analysis: tutorials/stratified-analysis.ipynb
+    - Process Capability: tutorials/process-capability.ipynb
     - SDS Validation: tutorials/sds-validation.ipynb
     - Complete SDS 1 Analysis: tutorials/sds1-complete-analysis.ipynb
   - User Guide:

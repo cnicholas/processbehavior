@@ -39,12 +39,14 @@ Analysis : Core analysis engine
 __version__ = "0.1.0"
 
 # Main user-facing API
+# Capability analysis
 # Core analysis classes
 from processbehavior.analysis import Analysis
 from processbehavior.analysis_dataset import AnalysisDataSet
 
 # Result object
 from processbehavior.analysis_result import AnalysisResult
+from processbehavior.capability import CapabilityResult, SpecLimits
 from processbehavior.data_preparation import DataPreparation, encode_rsg, natural_sort_key
 from processbehavior.effects_calculator import EffectsCalculator
 
@@ -76,6 +78,8 @@ __all__ = [
     'Study',
     'DesignReport',
     'AnalysisResult',
+    'SpecLimits',
+    'CapabilityResult',
 
     # Exceptions
     'ProcessBehaviorError',
