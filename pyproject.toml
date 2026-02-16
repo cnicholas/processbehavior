@@ -31,6 +31,7 @@ dev = [
   "jupyter-book>=1.0",
   "kaleido>=0.2",
   "pillow>=10.0",
+  "pyarrow>=14.0",
 ]
 
 [tool.pytest.ini_options]
