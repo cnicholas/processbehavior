@@ -30,6 +30,7 @@ if TYPE_CHECKING:
 
     from .analysis_dataset import AnalysisDataSet
     from .analysis_result import AnalysisResult
+    from .capability import CapabilityResult, SpecLimits
     from .formulation_spec import FormulationSpec
     from .process_behavior import ProcessBehavior
     from .sds_detector import SDSAnalysisPlan, SDSResult
@@ -1226,6 +1227,50 @@ class Study:
             _unit_of_analysis=self._spec.unit_of_analysis,
             _R_observed=R_observed,
         )
+
+    def capability(
+        self,
+        specs: SpecLimits | None = None,
+        *,
+        usl: float | None = None,
+        lsl: float | None = None,
+        target: float | None = None,
+    ) -> CapabilityResult:
+        """
+        Assess process capability against specification limits (Ch. 16).
+
+        Parameters
+        ----------
+        specs : SpecLimits, optional
+            Pre-built specification limits.  If provided, keyword arguments
+            are ignored.
+        usl : float, optional
+            Upper specification limit.
+        lsl : float, optional
+            Lower specification limit.
+        target : float, optional
+            Target value.
+
+        Returns
+        -------
+        CapabilityResult
+            Frozen dataclass with Pp/Ppk, Cp/Cpk (when R2 available),
+            Z-scores, and empirical percent outside.
+
+        Examples
+        --------
+        >>> cap = study.capability(usl=250.5, lsl=249.5, target=250.0)
+        >>> cap.ppk
+        1.42
+
+        >>> cap2 = study.capability(usl=251.0, lsl=249.0)  # wider specs
+        """
+        from .capability import SpecLimits as _SpecLimits
+        from .capability import assess_capability
+
+        if specs is None:
+            specs = _SpecLimits(usl=usl, lsl=lsl, target=target)
+        return assess_capability(self._ads, specs, round_to=self._spec.round_to)
 
     def execute(
         self,
