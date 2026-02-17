@@ -1,0 +1,501 @@
+"""
+Tests for process capability visualization chart.
+
+Tests assert semantic presence (shapes, annotations, trace types), not exact
+numeric bins or strict ordering. Follows the existing test_capability.py pattern.
+"""
+
+from __future__ import annotations
+
+import numpy as np
+import plotly.graph_objects as go
+import pytest
+
+from processbehavior.capability import CapabilityResult, SpecLimits
+from processbehavior.plotting import create_capability_chart
+from processbehavior.plotting.themes import get_theme
+
+# ============================================================================
+# Fixtures
+# ============================================================================
+
+
+def _make_cap_two_sided(*, with_r2: bool = True, sigma_hat: float = 1.5) -> CapabilityResult:
+    """Two-sided CapabilityResult with known values."""
+    specs = SpecLimits(usl=243, lsl=233, target=238)
+    y_bar = 238.0
+    n = 100
+
+    pp = (243 - 233) / (6 * sigma_hat)
+    ppk_lower = (y_bar - 233) / (3 * sigma_hat)
+    ppk_upper = (243 - y_bar) / (3 * sigma_hat)
+    ppk = min(ppk_lower, ppk_upper)
+
+    cp = cpk = cpk_lower = cpk_upper = sigma_hat_r2 = None
+    reason = "no R2" if not with_r2 else None
+    if with_r2:
+        sigma_hat_r2 = 0.8
+        cp = (243 - 233) / (6 * sigma_hat_r2)
+        cpk_lower = (y_bar - 233) / (3 * sigma_hat_r2)
+        cpk_upper = (243 - y_bar) / (3 * sigma_hat_r2)
+        cpk = min(cpk_lower, cpk_upper)
+
+    return CapabilityResult(
+        specs=specs, n=n, y_bar=y_bar, s=sigma_hat * 0.99, sigma_hat=sigma_hat,
+        pp=pp, ppk_lower=ppk_lower, ppk_upper=ppk_upper, ppk=ppk,
+        sigma_hat_r2=sigma_hat_r2, cp=cp, cpk_lower=cpk_lower,
+        cpk_upper=cpk_upper, cpk=cpk,
+        potential_unavailable_reason=reason,
+        z_lower=(y_bar - 233) / sigma_hat, z_upper=(243 - y_bar) / sigma_hat,
+        n_below_lsl=2, n_above_usl=3, n_outside=5,
+        pct_below_lsl=2.0, pct_above_usl=3.0, pct_outside=5.0,
+        round_to=3,
+    )
+
+
+def _make_cap_usl_only() -> CapabilityResult:
+    """USL-only CapabilityResult."""
+    specs = SpecLimits(usl=242)
+    y_bar = 238.0
+    sigma_hat = 1.5
+    return CapabilityResult(
+        specs=specs, n=100, y_bar=y_bar, s=1.485, sigma_hat=sigma_hat,
+        pp=None, ppk_lower=None,
+        ppk_upper=(242 - y_bar) / (3 * sigma_hat),
+        ppk=(242 - y_bar) / (3 * sigma_hat),
+        sigma_hat_r2=None, cp=None, cpk_lower=None,
+        cpk_upper=None, cpk=None,
+        potential_unavailable_reason="no R2",
+        z_lower=None, z_upper=(242 - y_bar) / sigma_hat,
+        n_below_lsl=None, n_above_usl=5, n_outside=5,
+        pct_below_lsl=None, pct_above_usl=5.0, pct_outside=5.0,
+        round_to=3,
+    )
+
+
+def _make_cap_lsl_only() -> CapabilityResult:
+    """LSL-only CapabilityResult."""
+    specs = SpecLimits(lsl=234)
+    y_bar = 238.0
+    sigma_hat = 1.5
+    return CapabilityResult(
+        specs=specs, n=100, y_bar=y_bar, s=1.485, sigma_hat=sigma_hat,
+        pp=None,
+        ppk_lower=(y_bar - 234) / (3 * sigma_hat),
+        ppk_upper=None,
+        ppk=(y_bar - 234) / (3 * sigma_hat),
+        sigma_hat_r2=None, cp=None, cpk_lower=None,
+        cpk_upper=None, cpk=None,
+        potential_unavailable_reason="no R2",
+        z_lower=(y_bar - 234) / sigma_hat, z_upper=None,
+        n_below_lsl=3, n_above_usl=None, n_outside=3,
+        pct_below_lsl=3.0, pct_above_usl=None, pct_outside=3.0,
+        round_to=3,
+    )
+
+
+def _make_cap_sigma_zero() -> CapabilityResult:
+    """CapabilityResult with sigma_hat=0 (all identical values)."""
+    specs = SpecLimits(usl=243, lsl=233)
+    return CapabilityResult(
+        specs=specs, n=50, y_bar=238.0, s=0.0, sigma_hat=0.0,
+        pp=float("inf"), ppk_lower=float("inf"),
+        ppk_upper=float("inf"), ppk=float("inf"),
+        sigma_hat_r2=None, cp=None, cpk_lower=None,
+        cpk_upper=None, cpk=None,
+        potential_unavailable_reason="no R2",
+        z_lower=float("inf"), z_upper=float("inf"),
+        n_below_lsl=0, n_above_usl=0, n_outside=0,
+        pct_below_lsl=0.0, pct_above_usl=0.0, pct_outside=0.0,
+        round_to=3,
+    )
+
+
+@pytest.fixture
+def sample_values():
+    """100 normally-distributed values around 238."""
+    rng = np.random.default_rng(42)
+    return rng.normal(238, 1.5, size=100)
+
+
+# ============================================================================
+# Smoke Tests
+# ============================================================================
+
+
+class TestSmoke:
+    """Basic returns go.Figure for all spec configurations."""
+
+    def test_two_sided(self, sample_values):
+        cap = _make_cap_two_sided()
+        fig = create_capability_chart(cap, sample_values)
+        assert isinstance(fig, go.Figure)
+
+    def test_usl_only(self, sample_values):
+        cap = _make_cap_usl_only()
+        fig = create_capability_chart(cap, sample_values)
+        assert isinstance(fig, go.Figure)
+
+    def test_lsl_only(self, sample_values):
+        cap = _make_cap_lsl_only()
+        fig = create_capability_chart(cap, sample_values)
+        assert isinstance(fig, go.Figure)
+
+
+# ============================================================================
+# Histogram Trace
+# ============================================================================
+
+
+class TestHistogram:
+    """Verify the histogram trace."""
+
+    def test_single_histogram_trace(self, sample_values):
+        cap = _make_cap_two_sided()
+        fig = create_capability_chart(cap, sample_values)
+        histograms = [t for t in fig.data if isinstance(t, go.Histogram)]
+        assert len(histograms) == 1
+
+    def test_nbins_passed_through(self, sample_values):
+        cap = _make_cap_two_sided()
+        fig = create_capability_chart(cap, sample_values, nbins=20)
+        hist = fig.data[0]
+        assert hist.nbinsx == 20
+
+    def test_x_label_applied(self, sample_values):
+        cap = _make_cap_two_sided()
+        fig = create_capability_chart(cap, sample_values, x_label="Measurement (mm)")
+        assert fig.layout.xaxis.title.text == "Measurement (mm)"
+
+
+# ============================================================================
+# Spec Lines (Shapes)
+# ============================================================================
+
+
+def _get_vline_shapes(fig: go.Figure) -> list:
+    """Extract vline shapes from figure (type='line', x0==x1)."""
+    return [
+        s for s in (fig.layout.shapes or [])
+        if s.type == "line" and s.x0 == s.x1
+    ]
+
+
+def _get_vrect_shapes(fig: go.Figure) -> list:
+    """Extract vrect shapes from figure (type='rect')."""
+    return [
+        s for s in (fig.layout.shapes or [])
+        if s.type == "rect"
+    ]
+
+
+class TestSpecLines:
+    """Verify spec limit vertical lines."""
+
+    def test_two_sided_has_lsl_and_usl_lines(self, sample_values):
+        cap = _make_cap_two_sided()
+        fig = create_capability_chart(cap, sample_values)
+        vlines = _get_vline_shapes(fig)
+        x_values = [s.x0 for s in vlines]
+        assert 233 in x_values  # LSL
+        assert 243 in x_values  # USL
+
+    def test_usl_only_has_usl_no_lsl(self, sample_values):
+        cap = _make_cap_usl_only()
+        fig = create_capability_chart(cap, sample_values)
+        vlines = _get_vline_shapes(fig)
+        x_values = [s.x0 for s in vlines]
+        assert 242 in x_values  # USL
+        assert 234 not in x_values  # no LSL
+
+    def test_lsl_only_has_lsl_no_usl(self, sample_values):
+        cap = _make_cap_lsl_only()
+        fig = create_capability_chart(cap, sample_values)
+        vlines = _get_vline_shapes(fig)
+        x_values = [s.x0 for s in vlines]
+        assert 234 in x_values  # LSL
+
+    def test_target_line_present(self, sample_values):
+        """Two-sided with target=238 → target vline present."""
+        cap = _make_cap_two_sided()
+        fig = create_capability_chart(cap, sample_values)
+        vlines = _get_vline_shapes(fig)
+        x_values = [s.x0 for s in vlines]
+        assert 238 in x_values  # target
+
+
+# ============================================================================
+# Out-of-Spec Shading (vrects)
+# ============================================================================
+
+
+class TestOutOfSpecShading:
+    """Verify vrect shading for out-of-spec regions."""
+
+    def _wide_values(self):
+        """Values that extend well beyond typical spec limits."""
+        rng = np.random.default_rng(99)
+        return rng.normal(238, 5, size=200)
+
+    def test_two_sided_has_two_vrects(self):
+        """With wide data, both LSL and USL vrects appear."""
+        cap = _make_cap_two_sided()
+        vals = self._wide_values()
+        fig = create_capability_chart(cap, vals)
+        vrects = _get_vrect_shapes(fig)
+        assert len(vrects) == 2
+
+    def test_usl_only_has_usl_vrect(self):
+        cap = _make_cap_usl_only()
+        vals = self._wide_values()
+        fig = create_capability_chart(cap, vals)
+        vrects = _get_vrect_shapes(fig)
+        # Only USL side
+        assert len(vrects) == 1
+        assert vrects[0].x0 >= 240
+
+    def test_lsl_only_has_lsl_vrect(self):
+        cap = _make_cap_lsl_only()
+        vals = self._wide_values()
+        fig = create_capability_chart(cap, vals)
+        vrects = _get_vrect_shapes(fig)
+        # Only LSL side
+        assert len(vrects) == 1
+        assert vrects[0].x1 <= 236
+
+
+# ============================================================================
+# Natural Process Limits
+# ============================================================================
+
+
+class TestNPLLines:
+    """Verify NPL lines (mean, LNPL, UNPL)."""
+
+    def test_npl_lines_present_normal_sigma(self, sample_values):
+        cap = _make_cap_two_sided()
+        fig = create_capability_chart(cap, sample_values)
+        vlines = _get_vline_shapes(fig)
+        x_values = [s.x0 for s in vlines]
+
+        # Mean line
+        assert cap.y_bar in x_values
+
+        # LNPL and UNPL
+        lnpl = cap.y_bar - 3 * cap.sigma_hat
+        unpl = cap.y_bar + 3 * cap.sigma_hat
+        assert lnpl in x_values
+        assert unpl in x_values
+
+    def test_sigma_zero_only_mean(self, sample_values):
+        """When sigma=0, only mean line — no LNPL/UNPL."""
+        cap = _make_cap_sigma_zero()
+        fig = create_capability_chart(cap, sample_values)
+        vlines = _get_vline_shapes(fig)
+        x_values = [s.x0 for s in vlines]
+
+        # Mean line present
+        assert cap.y_bar in x_values
+
+        # LNPL and UNPL would be at y_bar (same point) — should NOT be drawn
+        # Count how many lines are at y_bar: should be exactly 1 (the mean)
+        mean_lines = [v for v in vlines if v.x0 == cap.y_bar]
+        assert len(mean_lines) == 1
+
+
+# ============================================================================
+# Annotation Box
+# ============================================================================
+
+
+def _get_annotation_text(fig: go.Figure) -> str:
+    """Get text from the capability index annotation (top-right, monospace)."""
+    for ann in fig.layout.annotations:
+        if hasattr(ann, 'font') and ann.font and ann.font.family == "monospace":
+            return ann.text
+    return ""
+
+
+class TestAnnotationBox:
+    """Verify capability index annotation content."""
+
+    def test_two_sided_shows_pp_ppk(self, sample_values):
+        cap = _make_cap_two_sided()
+        fig = create_capability_chart(cap, sample_values)
+        text = _get_annotation_text(fig)
+        assert "Pp" in text
+        assert "Ppk" in text
+
+    def test_two_sided_shows_cp_cpk_with_r2(self, sample_values):
+        cap = _make_cap_two_sided(with_r2=True)
+        fig = create_capability_chart(cap, sample_values)
+        text = _get_annotation_text(fig)
+        assert "Cp" in text
+        assert "Cpk" in text
+
+    def test_no_r2_omits_cp_cpk(self, sample_values):
+        cap = _make_cap_two_sided(with_r2=False)
+        fig = create_capability_chart(cap, sample_values)
+        text = _get_annotation_text(fig)
+        # Pp and Ppk should be there
+        assert "Pp" in text
+        # Cp should NOT be there (only appears with R2)
+        # Must check carefully: "Cp" substring of "Cpk" — check for "Cp " or "Cp="
+        assert "Cp " not in text
+        assert "Cpk" not in text
+
+    def test_show_potential_false_omits_cp_cpk(self, sample_values):
+        cap = _make_cap_two_sided(with_r2=True)
+        fig = create_capability_chart(cap, sample_values, show_potential=False)
+        text = _get_annotation_text(fig)
+        assert "Pp" in text
+        # Cp/Cpk should be suppressed
+        assert "Cp " not in text
+        assert "Cpk" not in text
+
+    def test_usl_only_shows_ppk_usl(self, sample_values):
+        cap = _make_cap_usl_only()
+        fig = create_capability_chart(cap, sample_values)
+        text = _get_annotation_text(fig)
+        assert "Ppk(USL)" in text
+
+    def test_lsl_only_shows_ppk_lsl(self, sample_values):
+        cap = _make_cap_lsl_only()
+        fig = create_capability_chart(cap, sample_values)
+        text = _get_annotation_text(fig)
+        assert "Ppk(LSL)" in text
+
+    def test_shows_n_and_sigma(self, sample_values):
+        cap = _make_cap_two_sided()
+        fig = create_capability_chart(cap, sample_values)
+        text = _get_annotation_text(fig)
+        assert "n = 100" in text
+        assert "sigma" in text
+
+    def test_two_sided_outside_count(self, sample_values):
+        cap = _make_cap_two_sided()
+        fig = create_capability_chart(cap, sample_values)
+        text = _get_annotation_text(fig)
+        assert "Outside:" in text
+
+    def test_usl_only_above_usl_count(self, sample_values):
+        cap = _make_cap_usl_only()
+        fig = create_capability_chart(cap, sample_values)
+        text = _get_annotation_text(fig)
+        assert "Above USL:" in text
+
+    def test_lsl_only_below_lsl_count(self, sample_values):
+        cap = _make_cap_lsl_only()
+        fig = create_capability_chart(cap, sample_values)
+        text = _get_annotation_text(fig)
+        assert "Below LSL:" in text
+
+
+# ============================================================================
+# Title
+# ============================================================================
+
+
+class TestTitle:
+    """Verify title generation."""
+
+    def test_auto_title_two_sided(self, sample_values):
+        cap = _make_cap_two_sided()
+        fig = create_capability_chart(cap, sample_values)
+        assert "LSL=233" in fig.layout.title.text
+        assert "USL=243" in fig.layout.title.text
+        assert "Target=238" in fig.layout.title.text
+
+    def test_auto_title_usl_only(self, sample_values):
+        cap = _make_cap_usl_only()
+        fig = create_capability_chart(cap, sample_values)
+        assert "USL=242" in fig.layout.title.text
+
+    def test_custom_title(self, sample_values):
+        cap = _make_cap_two_sided()
+        fig = create_capability_chart(cap, sample_values, title="Custom Title")
+        assert fig.layout.title.text == "Custom Title"
+
+
+# ============================================================================
+# Theme
+# ============================================================================
+
+
+class TestTheme:
+    """Verify theme colors are applied."""
+
+    def test_custom_theme_data_color(self, sample_values):
+        cap = _make_cap_two_sided()
+        theme = get_theme("dark")
+        fig = create_capability_chart(cap, sample_values, theme=theme)
+        hist = fig.data[0]
+        assert hist.marker.color == theme.data_color
+
+    def test_default_theme_data_color(self, sample_values):
+        cap = _make_cap_two_sided()
+        fig = create_capability_chart(cap, sample_values)
+        hist = fig.data[0]
+        default_theme = get_theme("processbehavior")
+        assert hist.marker.color == default_theme.data_color
+
+
+# ============================================================================
+# Convenience Method
+# ============================================================================
+
+
+class TestConvenienceMethod:
+    """Verify CapabilityResult.plot() works."""
+
+    def test_plot_returns_figure(self, sample_values):
+        cap = _make_cap_two_sided()
+        fig = cap.plot(sample_values)
+        assert isinstance(fig, go.Figure)
+
+    def test_plot_passes_kwargs(self, sample_values):
+        cap = _make_cap_two_sided()
+        fig = cap.plot(sample_values, title="Via .plot()", nbins=15)
+        assert fig.layout.title.text == "Via .plot()"
+        assert fig.data[0].nbinsx == 15
+
+
+# ============================================================================
+# Edge Cases
+# ============================================================================
+
+
+class TestEdgeCases:
+    """Edge cases for values normalization and special inputs."""
+
+    def test_nan_values_dropped(self):
+        """NaN values in the input are dropped silently."""
+        cap = _make_cap_two_sided()
+        values = [238.0, np.nan, 237.0, np.nan, 239.0]
+        fig = create_capability_chart(cap, values)
+        assert isinstance(fig, go.Figure)
+        # Histogram should have 3 values
+        assert len(fig.data[0].x) == 3
+
+    def test_pandas_series_input(self):
+        """pd.Series input works."""
+        import pandas as pd
+
+        cap = _make_cap_two_sided()
+        values = pd.Series([237.0, 238.0, 239.0, 240.0])
+        fig = create_capability_chart(cap, values)
+        assert isinstance(fig, go.Figure)
+
+    def test_list_input(self):
+        """Plain list input works."""
+        cap = _make_cap_two_sided()
+        values = [237.0, 238.0, 239.0, 240.0]
+        fig = create_capability_chart(cap, values)
+        assert isinstance(fig, go.Figure)
+
+    def test_width_height(self, sample_values):
+        """Width and height parameters are applied."""
+        cap = _make_cap_two_sided()
+        fig = create_capability_chart(cap, sample_values, width=1200, height=700)
+        assert fig.layout.width == 1200
+        assert fig.layout.height == 700

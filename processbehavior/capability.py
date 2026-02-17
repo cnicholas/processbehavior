@@ -174,6 +174,39 @@ class CapabilityResult:
     round_to: int = 3
 
     # ------------------------------------------------------------------
+    # Visualization
+    # ------------------------------------------------------------------
+
+    def plot(self, values, *, theme=None, show_potential=True,
+             x_label=None, nbins=None, histnorm="", width=900, height=500,
+             title=None):
+        """
+        Create a capability histogram with spec lines and index annotations.
+
+        Parameters
+        ----------
+        values : array-like
+            Response values to histogram.
+        theme : ChartTheme, optional
+            Visual theme (default: processbehavior theme).
+        show_potential : bool, default True
+            Show Cp/Cpk in the annotation box when available.
+        x_label, nbins, histnorm, width, height, title
+            Passed through to ``create_capability_chart()``.
+
+        Returns
+        -------
+        plotly.graph_objects.Figure
+        """
+        from .plotting.capability_chart import create_capability_chart
+
+        return create_capability_chart(
+            self, values, theme=theme, show_potential=show_potential,
+            x_label=x_label, nbins=nbins, histnorm=histnorm,
+            width=width, height=height, title=title,
+        )
+
+    # ------------------------------------------------------------------
     # Presentation helpers
     # ------------------------------------------------------------------
 
