@@ -657,7 +657,7 @@ class ProcessBehavior:
         When no ``time`` parameter is specified, the system treats observation
         order as implicit time. This design decision is intentional:
 
-        1. Wheeler's IMR chart fundamentally assumes temporal ordering - moving
+        1. Wheeler's XmR chart fundamentally assumes temporal ordering - moving
            ranges between consecutive observations only make sense in sequence.
 
         2. The ``obs_id`` column (assigned during data preparation) serves as

@@ -76,7 +76,7 @@ Expected output:
 ```
 ProcessBehavior version: 0.1.0
 SDS detected: 4
-Charts available: ['Imr', 'R']
+Charts available: ['XmR', 'R']
 Installation verified!
 ```
 

@@ -1,6 +1,6 @@
 {
   "center_col": "center",
-  "chart_type": "Imr",
+  "chart_type": "XmR",
   "lane_boundaries": [],
   "value_col": "y"
 }

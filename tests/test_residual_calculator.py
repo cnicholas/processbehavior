@@ -477,7 +477,7 @@ def test_r2_sds2_equals_half_moving_range():
     Validate Tom Bishop's formula: R2 = (Y_j - Y_{j-1}) / 2 = MR / 2.
 
     This test confirms the mathematical relationship between R2 residuals
-    and the moving range used in IMR charts.
+    and the moving range used in XmR charts.
     """
     df = pd.DataFrame({
         'rsg': ['A'] * 5,

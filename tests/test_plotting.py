@@ -156,7 +156,7 @@ class TestControlChartFigure:
         })
         pdf = ProcessBehavior(df)
         study = pdf.formulate(response=pdf.cols.value, factors=[pdf.cols.group], time=pdf.cols.time)
-        return study.execute(chart='Imr', by=['group'])
+        return study.execute(chart='XmR', by=['group'])
 
     @pytest.fixture
     def sample_figure(self, sample_result):
@@ -205,7 +205,7 @@ class TestPlotter:
 
     @pytest.fixture
     def simple_result(self):
-        """Create simple I-mR analysis result with a factor."""
+        """Create simple XmR analysis result with a factor."""
         np.random.seed(42)
         df = pd.DataFrame({
             'value': np.random.normal(100, 5, 30),
@@ -214,7 +214,7 @@ class TestPlotter:
         })
         pdf = ProcessBehavior(df)
         study = pdf.formulate(response=pdf.cols.value, factors=[pdf.cols.group], time=pdf.cols.time)
-        return study.execute(chart='Imr', by=['group'])
+        return study.execute(chart='XmR', by=['group'])
 
     @pytest.fixture
     def xbar_result(self):
@@ -246,8 +246,8 @@ class TestPlotter:
     def test_plot_single_chart(self, simple_result):
         """Test plotting a single specific chart."""
         plotter = Plotter(simple_result)
-        # Use 'Imr' which is the key for the IMR chart
-        fig = plotter.plot(chart='Imr')
+        # Use 'XmR' which is the key for the XmR chart
+        fig = plotter.plot(chart='XmR')
 
         assert isinstance(fig, ControlChartFigure)
         assert isinstance(fig.figure, go.Figure)
@@ -271,13 +271,13 @@ class TestPlotter:
 
         # Test each template
         for template in ['processbehavior', 'minimal', 'dark']:
-            fig = plotter.plot(chart='Imr', template=template)
+            fig = plotter.plot(chart='XmR', template=template)
             assert isinstance(fig, ControlChartFigure)
 
     def test_plot_with_custom_dimensions(self, simple_result):
         """Test plotting with custom dimensions."""
         plotter = Plotter(simple_result)
-        fig = plotter.plot(chart='Imr', width=1200, height=600)
+        fig = plotter.plot(chart='XmR', width=1200, height=600)
 
         assert fig.figure.layout.width == 1200
         assert fig.figure.layout.height == 600
@@ -285,21 +285,21 @@ class TestPlotter:
     def test_plot_with_title(self, simple_result):
         """Test plotting with custom title."""
         plotter = Plotter(simple_result)
-        fig = plotter.plot(chart='Imr', title='Custom Title')
+        fig = plotter.plot(chart='XmR', title='Custom Title')
 
         assert fig.figure.layout.title.text == 'Custom Title'
 
     def test_plot_without_limits(self, simple_result):
         """Test plotting without control limits."""
         plotter = Plotter(simple_result)
-        fig = plotter.plot(chart='Imr', show_limits=False)
+        fig = plotter.plot(chart='XmR', show_limits=False)
 
         assert isinstance(fig, ControlChartFigure)
 
     def test_plot_without_signals(self, simple_result):
         """Test plotting without signal highlighting."""
         plotter = Plotter(simple_result)
-        fig = plotter.plot(chart='Imr', highlight_signals=False)
+        fig = plotter.plot(chart='XmR', highlight_signals=False)
 
         assert isinstance(fig, ControlChartFigure)
 
@@ -352,7 +352,7 @@ class TestPlotter:
     def test_plot_with_zone_shading(self, simple_result):
         """Test plotting with zone shading enabled."""
         plotter = Plotter(simple_result)
-        fig = plotter.plot(chart='Imr', show_zones=True)
+        fig = plotter.plot(chart='XmR', show_zones=True)
 
         assert isinstance(fig, ControlChartFigure)
         # Figure should have shapes (zone rectangles)
@@ -365,7 +365,7 @@ class TestPlotter:
         plotter = Plotter(simple_result)
 
         # Use publication theme which has zone_opacity=0
-        fig = plotter.plot(chart='Imr', show_zones=True, template='publication')
+        fig = plotter.plot(chart='XmR', show_zones=True, template='publication')
 
         # With opacity=0, no zone shapes should be added (only control limit lines)
         shapes = fig.figure.layout.shapes
@@ -384,7 +384,7 @@ class TestPlotter:
         )
 
         plotter = Plotter(simple_result)
-        fig = plotter.plot(chart='Imr', show_zones=True, template=custom_theme)
+        fig = plotter.plot(chart='XmR', show_zones=True, template=custom_theme)
 
         assert isinstance(fig, ControlChartFigure)
         shapes = fig.figure.layout.shapes
@@ -394,7 +394,7 @@ class TestPlotter:
         """Test plotting with run rules visualization."""
         plotter = Plotter(simple_result)
         # show_rules should not error even if no rule violations exist
-        fig = plotter.plot(chart='Imr', show_rules=True)
+        fig = plotter.plot(chart='XmR', show_rules=True)
 
         assert isinstance(fig, ControlChartFigure)
         # Figure should render without errors
@@ -404,7 +404,7 @@ class TestPlotter:
         """Test plotting with both show_rules and show_zones enabled."""
         plotter = Plotter(simple_result)
         fig = plotter.plot(
-            chart='Imr',
+            chart='XmR',
             show_rules=True,
             show_zones=True,
             highlight_signals=True
@@ -432,7 +432,7 @@ class TestAnalysisResultIntegration:
         })
         pdf = ProcessBehavior(df)
         study = pdf.formulate(response=pdf.cols.value, factors=[pdf.cols.group], time=pdf.cols.time)
-        return study.execute(chart='Imr', by=['group'])
+        return study.execute(chart='XmR', by=['group'])
 
     def test_plot_method_exists(self, result):
         """Test that plot() method exists on AnalysisResult."""
@@ -505,7 +505,7 @@ class TestNumericStrataPlotting:
             factors=[pdf.cols.factor1, pdf.cols.factor2],
             time=pdf.cols.time
         )
-        result = study.execute(chart='Imr', by=['factor1', 'factor2'])
+        result = study.execute(chart='XmR', by=['factor1', 'factor2'])
 
         # Verify strata are tuples with numeric values
         assert result.is_stratified
@@ -514,7 +514,7 @@ class TestNumericStrataPlotting:
 
         # This should NOT raise TypeError
         plotter = Plotter(result)
-        fig = plotter.plot(chart='Imr', show_zones=True)
+        fig = plotter.plot(chart='XmR', show_zones=True)
         assert isinstance(fig, ControlChartFigure)
 
     def test_plot_with_mixed_type_strata(self):
@@ -531,10 +531,10 @@ class TestNumericStrataPlotting:
             factors=[pdf.cols.machine, pdf.cols.shift],
             time=pdf.cols.time
         )
-        result = study.execute(chart='Imr', by=['machine', 'shift'])
+        result = study.execute(chart='XmR', by=['machine', 'shift'])
 
         plotter = Plotter(result)
-        fig = plotter.plot(chart='Imr')
+        fig = plotter.plot(chart='XmR')
         assert isinstance(fig, ControlChartFigure)
 
 
@@ -543,7 +543,7 @@ class TestAspectRatio:
 
     @pytest.fixture
     def simple_result(self):
-        """Create simple I-mR analysis result with a factor."""
+        """Create simple XmR analysis result with a factor."""
         np.random.seed(42)
         df = pd.DataFrame({
             'value': np.random.normal(100, 5, 30),
@@ -552,14 +552,14 @@ class TestAspectRatio:
         })
         pdf = ProcessBehavior(df)
         study = pdf.formulate(response=pdf.cols.value, factors=[pdf.cols.group], time=pdf.cols.time)
-        return study.execute(chart='Imr', by=['group'])
+        return study.execute(chart='XmR', by=['group'])
 
     def test_aspect_ratio_calculation(self, simple_result):
         """Test that aspect ratio correctly calculates height."""
         plotter = Plotter(simple_result)
 
         # 16:9 aspect ratio
-        fig = plotter.plot(chart='Imr', width=1600, aspect_ratio=16/9)
+        fig = plotter.plot(chart='XmR', width=1600, aspect_ratio=16/9)
         assert fig.figure.layout.width == 1600
         assert fig.figure.layout.height == 900
 
@@ -567,14 +567,14 @@ class TestAspectRatio:
         """Test square aspect ratio."""
         plotter = Plotter(simple_result)
 
-        fig = plotter.plot(chart='Imr', width=800, aspect_ratio=1.0)
+        fig = plotter.plot(chart='XmR', width=800, aspect_ratio=1.0)
         assert fig.figure.layout.height == 800
 
     def test_aspect_ratio_portrait(self, simple_result):
         """Test portrait aspect ratio."""
         plotter = Plotter(simple_result)
 
-        fig = plotter.plot(chart='Imr', width=600, aspect_ratio=0.75)
+        fig = plotter.plot(chart='XmR', width=600, aspect_ratio=0.75)
         assert fig.figure.layout.height == 800
 
 
@@ -583,7 +583,7 @@ class TestReportGeneration:
 
     @pytest.fixture
     def simple_result(self):
-        """Create simple I-mR analysis result with a factor."""
+        """Create simple XmR analysis result with a factor."""
         np.random.seed(42)
         df = pd.DataFrame({
             'value': np.random.normal(100, 5, 30),
@@ -592,7 +592,7 @@ class TestReportGeneration:
         })
         pdf = ProcessBehavior(df)
         study = pdf.formulate(response=pdf.cols.value, factors=[pdf.cols.group], time=pdf.cols.time)
-        return study.execute(chart='Imr', by=['group'])
+        return study.execute(chart='XmR', by=['group'])
 
     def test_generate_report(self, simple_result):
         """Test basic report generation."""

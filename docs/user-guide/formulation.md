@@ -49,8 +49,8 @@ study = pb.formulate(...)
 
 # Type study.charts. and see only valid charts for your SDS
 study.charts.Xbar      # Available if SDS supports it
-study.charts.Imr       # Always available
-study.charts.R4_Imr    # VAS residual chart
+study.charts.XmR       # Always available
+study.charts.R4_XmR    # VAS residual chart
 ```
 
 ## Parameter Details
@@ -128,9 +128,9 @@ print(study.sds_name)         # "Full Replication"
 print(study.sds_description)  # Detailed explanation
 
 # Chart recommendations
-print(study.valid_charts)       # ['Xbar', 'S', 'Imr']
+print(study.valid_charts)       # ['Xbar', 'S', 'XmR']
 print(study.recommended_chart)  # 'Xbar'
-print(study.residual_charts)    # ['R2_S', 'R3_Imr', 'R4_Imr', 'R5_Imr']
+print(study.residual_charts)    # ['R2_S', 'R3_XmR', 'R4_XmR', 'R5_XmR']
 
 # Chart auto-completion
 result = study.execute(study.charts.Xbar)  # IDE suggests valid charts
@@ -163,7 +163,7 @@ study = pb.formulate(
     response=pb.cols.temperature,
     time=pb.cols.day
 )
-# Results in SDS 4, recommends IMR
+# Results in SDS 4, recommends XmR
 ```
 
 ### Pattern 2: Comparing Groups
@@ -175,7 +175,7 @@ study = pb.formulate(
     response=pb.cols.yield_pct,
     factors=[pb.cols.machine, pb.cols.operator]
 )
-# Results in SDS varies, recommends Xbar or IMR
+# Results in SDS varies, recommends Xbar or XmR
 ```
 
 ### Pattern 3: Groups Over Time
@@ -282,14 +282,14 @@ After formulating with `plan`, use `study.design()` to see planned vs observed s
 
 ## The `paired` Parameter
 
-Wheeler recommends reading certain charts as pairs: Xbar with S, and Imr with R (the variation chart first, then the location chart). The `paired` parameter in `execute()` returns both charts together.
+Wheeler recommends reading certain charts as pairs: Xbar with S, and XmR with R (the variation chart first, then the location chart). The `paired` parameter in `execute()` returns both charts together.
 
 ```python
 # Returns both Xbar and S charts together
 result = study.execute(chart='Xbar', paired=True)
 
-# Returns both Imr and R charts together, stratified
-result = study.execute(chart='Imr', by=['lane'], paired=True)
+# Returns both XmR and R charts together, stratified
+result = study.execute(chart='XmR', by=['lane'], paired=True)
 ```
 
 Key details:
@@ -325,7 +325,7 @@ study.support[study.support['available']]
 Explains why a specific chart is unavailable:
 
 ```python
-study.why_not('R2_Imr')
+study.why_not('R2_XmR')
 # "Not available for this SDS"
 ```
 

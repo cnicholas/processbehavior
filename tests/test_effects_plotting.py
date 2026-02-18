@@ -95,7 +95,7 @@ def result_no_time():
         response=pdf.cols.value,
         factors=[pdf.cols.factor1]
     )
-    return study.execute(chart='Imr', by=['factor1'])
+    return study.execute(chart='XmR', by=['factor1'])
 
 
 @pytest.fixture
@@ -485,7 +485,7 @@ class TestEffectsPlottingErrors:
 
     def test_main_effects_requires_effects(self, result_no_time):
         """MainEffects should raise error when effects not computed."""
-        # result_no_time has factors but has_effects=False (Imr chart with by param)
+        # result_no_time has factors but has_effects=False (XmR chart with by param)
         with pytest.raises(ValueError, match="Effects not available"):
             result_no_time.plot(chart='MainEffects')
 
@@ -511,7 +511,7 @@ class TestEffectsPottingDifferentSDS:
         """SDS 2 (no replication) should still have effects."""
         np.random.seed(42)
 
-        # SDS 2: one observation per cell - need Imr chart with by parameter
+        # SDS 2: one observation per cell - need XmR chart with by parameter
         data = []
         for f1 in ['A', 'B']:
             for f2 in [1, 2]:
@@ -527,7 +527,7 @@ class TestEffectsPottingDifferentSDS:
             factors=[pdf.cols.factor1, pdf.cols.factor2],
             time=pdf.cols.time
         )
-        result = study.execute(chart='Imr', by=['factor1', 'factor2'])
+        result = study.execute(chart='XmR', by=['factor1', 'factor2'])
 
         assert result.sds == 2
         assert result.has_effects

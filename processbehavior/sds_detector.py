@@ -133,7 +133,7 @@ class SDSAnalysisPlan:
     >>> print(plan.vas_residuals_supported)
     True
     >>> print(plan.valid_charts)
-    ['Xbar', 'S', 'Imr']
+    ['Xbar', 'S', 'XmR']
     """
     sds: int
     name: str
@@ -174,18 +174,18 @@ class SDSAnalysisPlan:
         # Primary charts
         'Xbar': 'Are subgroup means stable over time?',
         'S': 'Is within-subgroup variation stable?',
-        'Imr': 'Is individual variation stable over time?',
+        'XmR': 'Is individual variation stable over time?',
         'R': 'Is range variation stable over time?',
         # Residual charts
         'R2_S': 'Is within-subgroup variation stable?',
-        'R2_Imr': 'Is within-subgroup variation stable?',
-        'R3_Imr': 'Is there factor×time interaction?',
+        'R2_XmR': 'Is within-subgroup variation stable?',
+        'R3_XmR': 'Is there factor×time interaction?',
         'R3_Xbar': 'Is there factor×time interaction affecting the mean?',
         'R3_S': 'Is there factor×time interaction affecting variation?',
-        'R4_Imr': 'Does time have a significant effect?',
+        'R4_XmR': 'Does time have a significant effect?',
         'R4_Xbar': 'Does time have a significant effect on the mean?',
         'R4_S': 'Does time have a significant effect on variation?',
-        'R5_Imr': 'Does the factor have a significant effect?',
+        'R5_XmR': 'Does the factor have a significant effect?',
         'R5_Xbar': 'Do factors have a significant effect on the mean?',
         'R5_S': 'Do factors have a significant effect on variation?',
     }
@@ -198,8 +198,8 @@ class SDSAnalysisPlan:
         Returns the appropriate residual charts based on VAS support
         and data structure:
 
-        - R2: S chart when cells have n>=2, otherwise Imr
-        - R3: Xbar/S when cells have n>=2, otherwise Imr (same subgrouping as R2)
+        - R2: S chart when cells have n>=2, otherwise XmR
+        - R3: Xbar/S when cells have n>=2, otherwise XmR (same subgrouping as R2)
         - R4: Xbar/S when has_factors (aggregate across factors by time)
         - R5: Xbar/S when has_time (aggregate across time by factor)
 
@@ -213,19 +213,19 @@ class SDSAnalysisPlan:
             return []
 
         # R2: S chart when cells have replication (min_cell_size >= 2)
-        r2_chart = 'R2_S' if self.min_cell_size >= 2 else 'R2_Imr'
+        r2_chart = 'R2_S' if self.min_cell_size >= 2 else 'R2_XmR'
 
         # R3: Same subgrouping as R2 - Xbar/S when min_cell_size >= 2
         # Per Wheeler Section 20.6.2: "Xbar and S charts can be used for SDS 1, 3, 4, 5"
-        r3_charts = ['R3_Xbar', 'R3_S'] if self.min_cell_size >= 2 else ['R3_Imr']
+        r3_charts = ['R3_Xbar', 'R3_S'] if self.min_cell_size >= 2 else ['R3_XmR']
 
         # R4: Xbar/S when aggregating across factors gives n>=2 per time subgroup
         # Requires has_factors=True (multiple factors to aggregate)
-        r4_charts = ['R4_Xbar', 'R4_S'] if self.has_factors else ['R4_Imr']
+        r4_charts = ['R4_Xbar', 'R4_S'] if self.has_factors else ['R4_XmR']
 
         # R5: Xbar/S when aggregating across time gives n>=2 per factor subgroup
         # Requires has_time=True (multiple time points to aggregate)
-        r5_charts = ['R5_Xbar', 'R5_S'] if self.has_time else ['R5_Imr']
+        r5_charts = ['R5_Xbar', 'R5_S'] if self.has_time else ['R5_XmR']
 
         return [r2_chart] + r3_charts + r4_charts + r5_charts
 
@@ -731,7 +731,7 @@ class SDSRegistry:
         sds : int
             Detected SDS (1-6)
         analysis_type : str
-            Requested analysis type ('Xbar', 'S', 'Imr', 'R')
+            Requested analysis type ('Xbar', 'S', 'XmR', 'R')
 
         Returns
         -------
@@ -766,7 +766,7 @@ class SDSRegistry:
             logger.warning(
                 "SDS 6 detected: Incomplete grid without replication.\n"
                 "Analysis results may be limited - no within-cell variance estimation.\n"
-                "Consider using 'Imr' analysis for this data structure."
+                "Consider using 'XmR' analysis for this data structure."
             )
 
         return True
@@ -791,7 +791,7 @@ class SDSRegistry:
         2. AND we have factorial structure (SDS 1-5)
 
         **Don't calculate VAS when:**
-        1. User requests IMR or R chart (individual-level analysis)
+        1. User requests XmR or R chart (individual-level analysis)
         2. OR SDS 6 (incomplete without replication - very limited structure)
 
         Parameters
@@ -799,7 +799,7 @@ class SDSRegistry:
         sds : int
             Detected SDS (1-6)
         analysis_type : str
-            Analysis type ('Xbar', 'S', 'Imr', 'R')
+            Analysis type ('Xbar', 'S', 'XmR', 'R')
 
         Returns
         -------
@@ -812,8 +812,8 @@ class SDSRegistry:
         >>> detector.should_calculate_vas_residuals(sds=1, analysis_type='Xbar')
         True
 
-        >>> # IMR with SDS 1 - doesn't need VAS (stratified charts)
-        >>> detector.should_calculate_vas_residuals(sds=1, analysis_type='Imr')
+        >>> # XmR with SDS 1 - doesn't need VAS (stratified charts)
+        >>> detector.should_calculate_vas_residuals(sds=1, analysis_type='XmR')
         False
         """
         # SDS 6: Incomplete without replication - very limited analysis possible
@@ -821,9 +821,9 @@ class SDSRegistry:
             logger.debug("No VAS: SDS 6 (incomplete without replication)")
             return False
 
-        # IMR/R use moving ranges, not factorial decomposition
+        # XmR/R use moving ranges, not factorial decomposition
         # Grouping just creates separate stratified charts
-        if analysis_type in ['Imr', 'R']:
+        if analysis_type in ['XmR', 'R']:
             logger.debug(
                 f"No VAS: {analysis_type} analysis uses moving ranges, "
                 f"not factorial decomposition. "
@@ -1192,7 +1192,7 @@ class SDSRegistry:
         >>> print(plan.vas_residuals_supported)
         True
         >>> print(plan.valid_charts)
-        ['Xbar', 'S', 'Imr']
+        ['Xbar', 'S', 'XmR']
 
         >>> # Check what your data structure supports
         >>> detector = SDSRegistry()
@@ -1211,7 +1211,7 @@ class SDSRegistry:
                 has_factors=True,
                 has_time=True,
                 has_replication='full',
-                valid_charts=['Xbar', 'S', 'R', 'Imr', 'Histogram'],
+                valid_charts=['Xbar', 'S', 'R', 'XmR', 'Histogram'],
                 recommended_chart='Xbar',
                 invalid_charts=[],
                 vas_residuals_supported=True,
@@ -1237,7 +1237,7 @@ class SDSRegistry:
                 has_factors=True,
                 has_time=True,
                 has_replication='none',
-                valid_charts=['Xbar', 'S', 'Imr', 'R', 'Histogram'],
+                valid_charts=['Xbar', 'S', 'XmR', 'R', 'Histogram'],
                 recommended_chart='Xbar',
                 invalid_charts=[],
                 vas_residuals_supported=True,
@@ -1266,7 +1266,7 @@ class SDSRegistry:
                 has_factors=True,
                 has_time=True,
                 has_replication='partial',
-                valid_charts=['Xbar', 'S', 'R', 'Imr', 'Histogram'],
+                valid_charts=['Xbar', 'S', 'R', 'XmR', 'Histogram'],
                 recommended_chart='Xbar',
                 invalid_charts=[],
                 vas_residuals_supported=True,
@@ -1296,7 +1296,7 @@ class SDSRegistry:
                 has_factors=True,
                 has_time=True,
                 has_replication='partial',  # Mixed: some n=1, some n≥2
-                valid_charts=['Xbar', 'S', 'R', 'Imr', 'Histogram'],
+                valid_charts=['Xbar', 'S', 'R', 'XmR', 'Histogram'],
                 recommended_chart='Xbar',
                 invalid_charts=[],
                 vas_residuals_supported=True,
@@ -1326,7 +1326,7 @@ class SDSRegistry:
                 has_factors=True,
                 has_time=True,
                 has_replication='full',  # All observed cells have n≥2
-                valid_charts=['Xbar', 'S', 'R', 'Imr', 'Histogram'],
+                valid_charts=['Xbar', 'S', 'R', 'XmR', 'Histogram'],
                 recommended_chart='Xbar',
                 invalid_charts=[],
                 vas_residuals_supported=True,
@@ -1356,8 +1356,8 @@ class SDSRegistry:
                 has_factors=True,
                 has_time=True,
                 has_replication='none',  # Cannot estimate within-cell variance
-                valid_charts=['Imr', 'R', 'Histogram'],
-                recommended_chart='Imr',
+                valid_charts=['XmR', 'R', 'Histogram'],
+                recommended_chart='XmR',
                 invalid_charts=['Xbar (no within-cell variance)', 'S (no within-cell variance)'],
                 vas_residuals_supported=True,  # VAS works via moving average (like SDS 2)
                 residuals_available=['R1', 'R2', 'R3', 'R4', 'R5'],

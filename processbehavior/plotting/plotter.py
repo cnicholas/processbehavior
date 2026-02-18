@@ -225,7 +225,7 @@ class Plotter:
         Parameters
         ----------
         chart : str, optional
-            Specific chart to plot ('Xbar', 'S', 'Imr', etc.)
+            Specific chart to plot ('Xbar', 'S', 'XmR', etc.)
             If None, plots all available charts
         facet : bool, default False
             Whether to create faceted plot for stratified data
@@ -351,7 +351,7 @@ class Plotter:
             # Plot all standard charts
             charts_to_plot = {
                 k: v for k, v in self.charts.items()
-                if k in ['Xbar', 'S', 'Imr', 'R', 'Histogram']
+                if k in ['Xbar', 'S', 'XmR', 'R', 'Histogram']
             }
 
             # If no standard charts found but only one chart exists, use it
@@ -1174,7 +1174,7 @@ class Plotter:
         """
         Extract base chart type from a chart name.
 
-        Chart names may include suffixes (e.g., 'Xbar_Lane1', 'Imr_Group2').
+        Chart names may include suffixes (e.g., 'Xbar_Lane1', 'XmR_Group2').
         This extracts just the base type for scale comparison.
 
         Parameters
@@ -1185,7 +1185,7 @@ class Plotter:
         Returns
         -------
         str
-            Base chart type: 'Xbar', 'S', 'Imr', or 'R'
+            Base chart type: 'Xbar', 'S', 'XmR', or 'R'
         """
         # Split on underscore and take first part
         base = chart_name.split('_')[0]
@@ -1239,7 +1239,7 @@ class Plotter:
         this expands them into per-stratum charts suitable for faceted plotting.
 
         The expansion process:
-        1. Detects charts with 'strata' key (stratified Imr/R charts)
+        1. Detects charts with 'strata' key (stratified XmR/R charts)
         2. Splits combined DataFrame by RSG column
         3. Extracts per-stratum statistics from nested structure
         4. Creates expanded chart names as '{chart_type}_{stratum}'
@@ -1248,7 +1248,7 @@ class Plotter:
         -------
         dict
             Expanded charts with per-stratum data:
-            - Keys: '{chart_type}_{stratum}' (e.g., 'Imr_Machine1_F2_1')
+            - Keys: '{chart_type}_{stratum}' (e.g., 'XmR_Machine1_F2_1')
             - Values: {'data': DataFrame, 'statistics': dict, 'metadata': dict}
             - metadata includes 'original_chart' and 'stratum' for filtering
         """
@@ -1511,7 +1511,7 @@ class Plotter:
         Creates contextual titles like:
         - "Xbar Chart of Weight"
         - "Xbar Chart of Weight by Operator"
-        - "IMR Chart of Temperature - Line A"
+        - "XmR Chart of Temperature - Line A"
 
         Parameters
         ----------
@@ -1541,7 +1541,7 @@ class Plotter:
             title_parts.append(f"by {grouping_vars[0]}")
 
         # Check if this is a stratified chart (has stratum in name)
-        if '_' in chart_name and chart_name not in ['Xbar', 'S', 'Imr']:
+        if '_' in chart_name and chart_name not in ['Xbar', 'S', 'XmR']:
             # Extract stratum name (e.g., "Operator_A" -> "Operator A")
             stratum = self._extract_stratum_name(chart_name)
             if stratum:
@@ -1554,7 +1554,7 @@ class Plotter:
         Generate a title for a subplot in faceted layout.
 
         Keeps subplot titles concise while still informative.
-        Includes chart type and stratum name (e.g., "I-MR F1_1 F2_1").
+        Includes chart type and stratum name (e.g., "XmR F1_1 F2_1").
 
         Parameters
         ----------
@@ -1598,14 +1598,14 @@ class Plotter:
         Returns
         -------
         str
-            Display-friendly name (e.g., "Xbar" -> "X̄", "Imr" -> "I-MR")
+            Display-friendly name (e.g., "Xbar" -> "X̄", "XmR" -> "XmR")
         """
         # Map technical names to display names
-        # Valid chart types: Xbar, S, R, Imr, Histogram
+        # Valid chart types: Xbar, S, R, XmR, Histogram
         display_names = {
             'Xbar': 'X̄',
             'S': 'S',
-            'Imr': 'I-MR',
+            'XmR': 'XmR',
             'R': 'R',
             'Histogram': 'Histogram'
         }
@@ -1629,7 +1629,7 @@ class Plotter:
         Parameters
         ----------
         chart_name : str
-            Chart name like "Imr_Operator_A" or "Lane_1"
+            Chart name like "XmR_Operator_A" or "Lane_1"
 
         Returns
         -------
@@ -1637,8 +1637,8 @@ class Plotter:
             Cleaned stratum name like "Operator A" or "Lane 1"
         """
         # Known chart type prefixes to strip
-        # Valid chart types: Xbar, S, R, Imr, Histogram
-        prefixes = ['Xbar_', 'S_', 'Imr_', 'R_', 'Histogram_']
+        # Valid chart types: Xbar, S, R, XmR, Histogram
+        prefixes = ['Xbar_', 'S_', 'XmR_', 'R_', 'Histogram_']
 
         result = chart_name
         for prefix in prefixes:
@@ -1674,7 +1674,7 @@ class Plotter:
         if time_var and (x_col is None or x_col == time_var):
             return time_var.replace('_', ' ').title()
 
-        # Time series charts (Imr, R) without explicit time variable
+        # Time series charts (XmR, R) without explicit time variable
         if x_col is None:
             return 'Time'
 

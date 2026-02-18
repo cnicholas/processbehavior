@@ -25,9 +25,9 @@ SDS detection runs on raw data before NA rows are dropped, so cells where all re
 | 1 | Full Replication | All cells n >= 2 | Xbar-S |
 | 2 | No Replication | All cells n = 1 | Xbar-S (MR-based) |
 | 3 | Partial Replication | Mixed n=1 and n>=2 | Xbar-S (hybrid) |
-| 4 | Single Stream | One factor, multiple times | Stratified IMR |
-| 5 | Nested Design | Hierarchical structure | IMR |
-| 6 | Unstructured | Irregular collection | IMR |
+| 4 | Single Stream | One factor, multiple times | Stratified XmR |
+| 5 | Nested Design | Hierarchical structure | XmR |
+| 6 | Unstructured | Irregular collection | XmR |
 
 ## How SDS is Detected
 
@@ -213,7 +213,7 @@ The design report shows:
 - ✅ Full interaction analysis
 - ✅ Most powerful statistical tests
 
-**Valid Charts**: Xbar, S, Imr, R2_S, R3_Imr, R4_Imr, R5_Imr
+**Valid Charts**: Xbar, S, XmR, R2_S, R3_XmR, R4_XmR, R5_XmR
 
 ## SDS 2: No Replication
 
@@ -234,7 +234,7 @@ The design report shows:
 - ✅ Main effects analysis
 - ✅ Xbar-S analysis (with MR-based limits)
 
-**Valid Charts**: Xbar, S, Imr
+**Valid Charts**: Xbar, S, XmR
 
 ## SDS 3: Partial Replication
 
@@ -254,7 +254,7 @@ The design report shows:
 - ⚠️ VAS residuals available but interpretation requires care
 - ✅ Xbar-S analysis with hybrid limits
 
-**Valid Charts**: Xbar, S, Imr
+**Valid Charts**: Xbar, S, XmR
 
 ## SDS 4: Single Stream Over Time
 
@@ -275,7 +275,7 @@ The design report shows:
 - ✅ All 8 WECO rules applicable
 - ❌ No factor comparisons (only one level)
 
-**Valid Charts**: Imr, R
+**Valid Charts**: XmR, R
 
 ## SDS 5: Nested Design
 
@@ -284,10 +284,10 @@ The design report shows:
 **Example**: Different operators work different shifts on different days
 
 **Capabilities**:
-- ⚠️ Limited to IMR analysis
+- ⚠️ Limited to XmR analysis
 - ⚠️ Stratified analysis recommended
 
-**Valid Charts**: Imr, R
+**Valid Charts**: XmR, R
 
 ## SDS 6: Unstructured
 
@@ -297,9 +297,9 @@ The design report shows:
 
 **Capabilities**:
 - ⚠️ Most limited analysis options
-- ⚠️ IMR with adaptive limits
+- ⚠️ XmR with adaptive limits
 
-**Valid Charts**: Imr, R
+**Valid Charts**: XmR, R
 
 ## Checking Your SDS
 
@@ -344,7 +344,7 @@ The SDS affects three key aspects:
 
 #### Standard Charts
 
-| SDS | Xbar-S | Stratified IMR |
+| SDS | Xbar-S | Stratified XmR |
 |-----|--------|----------------|
 | 1 | ✅ | ✅ |
 | 2 | ✅ (MR-based limits) | ✅ |
@@ -357,14 +357,14 @@ The SDS affects three key aspects:
 
 The available chart types for each residual depend on the **rational subgrouping structure**:
 
-| Residual | Subgrouping | Xbar/S Available | IMR Available |
+| Residual | Subgrouping | Xbar/S Available | XmR Available |
 |----------|-------------|------------------|---------------|
 | **R2** | By cell (k,t) | SDS 1, 3, 4, 5* | All SDS |
 | **R3** | By cell (k,t) | SDS 1, 3, 4, 5* | All SDS |
 | **R4** | By time (aggregate across factors) | All SDS | All SDS |
 | **R5** | By factor (aggregate across time) | All SDS | All SDS |
 
-*When cells have n≥2. SDS 2 and 6 use IMR only.
+*When cells have n≥2. SDS 2 and 6 use XmR only.
 
 **Key insight**: R4 and R5 use different rational subgrouping than R2/R3:
 - **R4**: Aggregates observations across factor levels for each time point (N_.t = Σ_k N_kt)
@@ -382,7 +382,7 @@ This enables Xbar/S analysis for R4 and R5 even when individual cells have n=1, 
 | SDS | Applicable Rules |
 |-----|-----------------|
 | 1-3 (Xbar/S) | Rule 1 only |
-| 1-6 (IMR) | All 8 rules |
+| 1-6 (XmR) | All 8 rules |
 
 ## Improving Your SDS
 
@@ -446,9 +446,9 @@ print(cell_counts['n'].value_counts())
 | Full replication (n>=2 per cell) | 1 | Xbar-S with full VAS |
 | One observation per cell | 2 | Xbar-S with MR limits |
 | Mixed replication | 3 | Xbar-S with hybrid limits |
-| Single stream over time | 4 | IMR with full WECO rules |
-| Nested/hierarchical | 5 | Stratified IMR |
-| Irregular collection | 6 | IMR with caution |
+| Single stream over time | 4 | XmR with full WECO rules |
+| Nested/hierarchical | 5 | Stratified XmR |
+| Irregular collection | 6 | XmR with caution |
 
 ## Next Steps
 

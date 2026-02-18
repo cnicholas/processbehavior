@@ -317,10 +317,10 @@ def test_get_sds_characteristics_unknown_defaults_to_sds0(detector):
 # Test: validate_sds_for_analysis
 # ============================================================================
 
-def test_validate_sds_for_analysis_sds4_with_imr_passes(detector):
-    """Should allow SDS 4 with IMR analysis."""
-    # SDS 4 supports IMR for single condition over time (including response-only data)
-    result = detector.validate_sds_for_analysis(sds=4, analysis_type='Imr')
+def test_validate_sds_for_analysis_sds4_with_xmr_passes(detector):
+    """Should allow SDS 4 with XmR analysis."""
+    # SDS 4 supports XmR for single condition over time (including response-only data)
+    result = detector.validate_sds_for_analysis(sds=4, analysis_type='XmR')
     assert result is True
 
 
@@ -378,9 +378,9 @@ def test_should_calculate_vas_sds6_returns_false(detector):
     assert result is False
 
 
-def test_should_calculate_vas_imr_returns_false(detector):
-    """IMR uses moving ranges, not VAS (even with proper structure)."""
-    result = detector.should_calculate_vas_residuals(sds=1, analysis_type='Imr')
+def test_should_calculate_vas_xmr_returns_false(detector):
+    """XmR uses moving ranges, not VAS (even with proper structure)."""
+    result = detector.should_calculate_vas_residuals(sds=1, analysis_type='XmR')
     assert result is False
 
 
@@ -619,11 +619,11 @@ def test_realistic_scenario_designed_experiment_no_replication(detector):
 # ============================================================================
 
 class TestR2ChartAvailability:
-    """Tests for R2_S vs R2_Imr selection based on actual cell sizes.
+    """Tests for R2_S vs R2_XmR selection based on actual cell sizes.
 
     Per Wheeler/Bishop Section 20.6.1:
     - R2_S is available when rational subgroups have n≥2
-    - R2_Imr is used when n=1 (no within-cell variation)
+    - R2_XmR is used when n=1 (no within-cell variation)
     """
 
     def test_sds1_always_has_r2_s(self):
@@ -636,10 +636,10 @@ class TestR2ChartAvailability:
         assert plan.vas_residuals_supported is True
         assert plan.min_cell_size == 3
         assert 'R2_S' in plan.residual_charts
-        assert 'R2_Imr' not in plan.residual_charts
+        assert 'R2_XmR' not in plan.residual_charts
 
-    def test_sds2_always_has_r2_imr(self):
-        """SDS 2 (no replication) should always have R2_Imr.
+    def test_sds2_always_has_r2_xmr(self):
+        """SDS 2 (no replication) should always have R2_XmR.
 
         By definition, SDS 2 requires all cells to have n=1.
         """
@@ -647,7 +647,7 @@ class TestR2ChartAvailability:
 
         assert plan.vas_residuals_supported is True
         assert plan.min_cell_size == 1
-        assert 'R2_Imr' in plan.residual_charts
+        assert 'R2_XmR' in plan.residual_charts
         assert 'R2_S' not in plan.residual_charts
 
     def test_sds3_with_replication_has_r2_s(self):
@@ -661,18 +661,18 @@ class TestR2ChartAvailability:
         assert plan.vas_residuals_supported is True
         assert plan.min_cell_size == 2
         assert 'R2_S' in plan.residual_charts
-        assert 'R2_Imr' not in plan.residual_charts
+        assert 'R2_XmR' not in plan.residual_charts
 
-    def test_sds3_without_replication_has_r2_imr(self):
-        """SDS 3 with min_cell_size=1 should use R2_Imr.
+    def test_sds3_without_replication_has_r2_xmr(self):
+        """SDS 3 with min_cell_size=1 should use R2_XmR.
 
-        When some cells have only n=1, we must use Imr for R2.
+        When some cells have only n=1, we must use XmR for R2.
         """
         plan = SDSRegistry.get_analysis_plan(sds=3, min_cell_size=1)
 
         assert plan.vas_residuals_supported is True
         assert plan.min_cell_size == 1
-        assert 'R2_Imr' in plan.residual_charts
+        assert 'R2_XmR' in plan.residual_charts
         assert 'R2_S' not in plan.residual_charts
 
     def test_sds4_with_replication_has_r2_s(self):
@@ -686,15 +686,15 @@ class TestR2ChartAvailability:
         assert plan.vas_residuals_supported is True
         assert plan.min_cell_size == 3
         assert 'R2_S' in plan.residual_charts
-        assert 'R2_Imr' not in plan.residual_charts
+        assert 'R2_XmR' not in plan.residual_charts
 
-    def test_sds4_without_replication_has_r2_imr(self):
-        """SDS 4 with min_cell_size=1 should use R2_Imr."""
+    def test_sds4_without_replication_has_r2_xmr(self):
+        """SDS 4 with min_cell_size=1 should use R2_XmR."""
         plan = SDSRegistry.get_analysis_plan(sds=4, min_cell_size=1)
 
         assert plan.vas_residuals_supported is True
         assert plan.min_cell_size == 1
-        assert 'R2_Imr' in plan.residual_charts
+        assert 'R2_XmR' in plan.residual_charts
         assert 'R2_S' not in plan.residual_charts
 
     def test_sds5_with_replication_has_r2_s(self):
@@ -708,15 +708,15 @@ class TestR2ChartAvailability:
         assert plan.vas_residuals_supported is True
         assert plan.min_cell_size == 2
         assert 'R2_S' in plan.residual_charts
-        assert 'R2_Imr' not in plan.residual_charts
+        assert 'R2_XmR' not in plan.residual_charts
 
-    def test_sds5_without_replication_has_r2_imr(self):
-        """SDS 5 with min_cell_size=1 should use R2_Imr."""
+    def test_sds5_without_replication_has_r2_xmr(self):
+        """SDS 5 with min_cell_size=1 should use R2_XmR."""
         plan = SDSRegistry.get_analysis_plan(sds=5, min_cell_size=1)
 
         assert plan.vas_residuals_supported is True
         assert plan.min_cell_size == 1
-        assert 'R2_Imr' in plan.residual_charts
+        assert 'R2_XmR' in plan.residual_charts
         assert 'R2_S' not in plan.residual_charts
 
     def test_sds6_with_replication_has_r2_s(self):
@@ -731,13 +731,13 @@ class TestR2ChartAvailability:
         assert plan.min_cell_size == 5
         assert 'R2_S' in plan.residual_charts
 
-    def test_sds6_without_replication_has_r2_imr(self):
-        """SDS 6 (irregular) without replication uses R2_Imr."""
+    def test_sds6_without_replication_has_r2_xmr(self):
+        """SDS 6 (irregular) without replication uses R2_XmR."""
         plan = SDSRegistry.get_analysis_plan(sds=6, min_cell_size=1)
 
         assert plan.vas_residuals_supported is True
         assert plan.min_cell_size == 1
-        assert 'R2_Imr' in plan.residual_charts
+        assert 'R2_XmR' in plan.residual_charts
         assert 'R2_S' not in plan.residual_charts
 
     def test_all_r2_supporting_sds_have_other_residuals(self):
@@ -746,7 +746,7 @@ class TestR2ChartAvailability:
             plan = SDSRegistry.get_analysis_plan(sds=sds, min_cell_size=2)
 
             if plan.vas_residuals_supported:
-                # R3, R4 and R5 can be Xbar/S or Imr depending on data structure
+                # R3, R4 and R5 can be Xbar/S or XmR depending on data structure
                 r3_charts = [c for c in plan.residual_charts if c.startswith('R3_')]
                 r4_charts = [c for c in plan.residual_charts if c.startswith('R4_')]
                 r5_charts = [c for c in plan.residual_charts if c.startswith('R5_')]
@@ -775,10 +775,10 @@ class TestR4R5XbarSAvailability:
         assert plan.has_factors is True
         assert 'R4_Xbar' in plan.residual_charts
         assert 'R4_S' in plan.residual_charts
-        assert 'R4_Imr' not in plan.residual_charts
+        assert 'R4_XmR' not in plan.residual_charts
 
-    def test_r4_imr_when_no_factors(self):
-        """R4_Imr fallback when has_factors=False."""
+    def test_r4_xmr_when_no_factors(self):
+        """R4_XmR fallback when has_factors=False."""
         # SDS 4 has_factors=False (single condition over time)
         plan = SDSRegistry.get_analysis_plan(sds=4, min_cell_size=2)
 
@@ -787,7 +787,7 @@ class TestR4R5XbarSAvailability:
         if plan.has_factors:
             assert 'R4_Xbar' in plan.residual_charts
         else:
-            assert 'R4_Imr' in plan.residual_charts
+            assert 'R4_XmR' in plan.residual_charts
 
     def test_r5_xbar_s_when_has_time(self):
         """R5_Xbar and R5_S available when has_time=True."""
@@ -797,15 +797,15 @@ class TestR4R5XbarSAvailability:
         assert plan.has_time is True
         assert 'R5_Xbar' in plan.residual_charts
         assert 'R5_S' in plan.residual_charts
-        assert 'R5_Imr' not in plan.residual_charts
+        assert 'R5_XmR' not in plan.residual_charts
 
-    def test_r5_imr_when_no_time(self):
-        """R5_Imr fallback when has_time=False."""
+    def test_r5_xmr_when_no_time(self):
+        """R5_XmR fallback when has_time=False."""
         # Check SDS configurations - SDS 1-6 only (SDS 0 consolidated into SDS 4)
         for sds in range(1, 7):
             plan = SDSRegistry.get_analysis_plan(sds=sds, min_cell_size=2)
             if plan.vas_residuals_supported and not plan.has_time:
-                assert 'R5_Imr' in plan.residual_charts
+                assert 'R5_XmR' in plan.residual_charts
                 assert 'R5_Xbar' not in plan.residual_charts
                 return
         # If all VAS-supporting SDS have time, that's fine
@@ -821,9 +821,9 @@ class TestR4R5XbarSAvailability:
         """SDS 2 (no replication) should still have R4/R5 Xbar/S."""
         plan = SDSRegistry.get_analysis_plan(sds=2, min_cell_size=1)
 
-        # R2 and R3 should be Imr (no replication)
-        assert 'R2_Imr' in plan.residual_charts
-        assert 'R3_Imr' in plan.residual_charts
+        # R2 and R3 should be XmR (no replication)
+        assert 'R2_XmR' in plan.residual_charts
+        assert 'R3_XmR' in plan.residual_charts
         # R4/R5 should still have Xbar/S if has_factors/has_time
         if plan.has_factors:
             assert 'R4_Xbar' in plan.residual_charts
@@ -833,24 +833,24 @@ class TestR4R5XbarSAvailability:
             assert 'R5_S' in plan.residual_charts
 
     def test_r3_xbar_s_when_replication(self):
-        """R3 should have Xbar/S when min_cell_size >= 2, otherwise Imr."""
+        """R3 should have Xbar/S when min_cell_size >= 2, otherwise XmR."""
         # SDS 1 with replication should have R3_Xbar and R3_S
         plan = SDSRegistry.get_analysis_plan(sds=1, min_cell_size=2)
         assert 'R3_Xbar' in plan.residual_charts
         assert 'R3_S' in plan.residual_charts
-        assert 'R3_Imr' not in plan.residual_charts
+        assert 'R3_XmR' not in plan.residual_charts
 
-        # SDS 2 (no replication by definition) should have R3_Imr
+        # SDS 2 (no replication by definition) should have R3_XmR
         plan_sds2 = SDSRegistry.get_analysis_plan(sds=2, min_cell_size=1)
-        assert 'R3_Imr' in plan_sds2.residual_charts
+        assert 'R3_XmR' in plan_sds2.residual_charts
         assert 'R3_Xbar' not in plan_sds2.residual_charts
         assert 'R3_S' not in plan_sds2.residual_charts
 
-    def test_r3_imr_when_no_replication(self):
-        """R3 should use Imr when min_cell_size < 2."""
-        # Even SDS 1 should use Imr if data happens to have no replication
+    def test_r3_xmr_when_no_replication(self):
+        """R3 should use XmR when min_cell_size < 2."""
+        # Even SDS 1 should use XmR if data happens to have no replication
         plan = SDSRegistry.get_analysis_plan(sds=1, min_cell_size=1)
-        assert 'R3_Imr' in plan.residual_charts
+        assert 'R3_XmR' in plan.residual_charts
         assert 'R3_Xbar' not in plan.residual_charts
         assert 'R3_S' not in plan.residual_charts
 

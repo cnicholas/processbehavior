@@ -4,7 +4,7 @@ Unit tests for ProcessBehavior - the user-friendly wrapper with auto-completion.
 Tests cover:
 - Column accessor with auto-completion
 - SDS detection via formulate()
-- Simple series (SDS 4) → IMR chart
+- Simple series (SDS 4) → XmR chart
 - Grouped data → Xbar/S charts
 - User-friendly output and explanations
 
@@ -318,8 +318,8 @@ def test_study_has_charts_accessor(simple_values):
 
     assert hasattr(study, 'charts')
     # Should be able to access valid chart types as attributes
-    if 'Imr' in study.valid_charts:
-        assert study.charts.Imr == 'Imr'
+    if 'XmR' in study.valid_charts:
+        assert study.charts.XmR == 'XmR'
 
 
 # ============================================================================
@@ -468,9 +468,9 @@ def test_formulate_with_chart_selection():
     result_xbar = study.execute(chart='Xbar')
     assert result_xbar is not None
 
-    # IMR with factors requires explicit 'by' parameter
-    result_imr = study.execute(chart='Imr', by=['Batch'])
-    assert result_imr is not None
+    # XmR with factors requires explicit 'by' parameter
+    result_xmr = study.execute(chart='XmR', by=['Batch'])
+    assert result_xmr is not None
 
 
 # ============================================================================
@@ -660,9 +660,9 @@ def test_study_residual_charts_sds1_has_all(grouped_single_factor):
         time='Time'
     )
 
-    # SDS 1 should have R2_S, R3_Imr, R4_Imr, R5_Imr
+    # SDS 1 should have R2_S, R3_XmR, R4_XmR, R5_XmR
     residual_charts = study.residual_charts
-    assert 'R2_S' in residual_charts or 'R2_Imr' in residual_charts
+    assert 'R2_S' in residual_charts or 'R2_XmR' in residual_charts
     assert any('R3' in r for r in residual_charts)
     assert any('R4' in r for r in residual_charts)
     assert any('R5' in r for r in residual_charts)
@@ -676,8 +676,8 @@ def test_study_why_not_valid_chart(simple_values):
     """why_not() should confirm valid charts."""
     study = ProcessBehavior(simple_values).formulate(response='Value', factors=['Factor'], time='Time')
 
-    # Imr is valid for SDS 4
-    result = study.why_not('Imr')
+    # XmR is valid for SDS 4
+    result = study.why_not('XmR')
     assert 'IS available' in result or 'available' in result.lower()
 
 
@@ -707,9 +707,9 @@ def test_study_charts_accessor_has_valid_charts(simple_values):
     """Study.charts should have attributes for each valid chart."""
     study = ProcessBehavior(simple_values).formulate(response='Value', factors=['Factor'], time='Time')
 
-    # For SDS 4, Imr should be available
-    assert hasattr(study.charts, 'Imr')
-    assert study.charts.Imr == 'Imr'
+    # For SDS 4, XmR should be available
+    assert hasattr(study.charts, 'XmR')
+    assert study.charts.XmR == 'XmR'
 
 
 def test_study_charts_accessor_dir(simple_values):
@@ -717,7 +717,7 @@ def test_study_charts_accessor_dir(simple_values):
     study = ProcessBehavior(simple_values).formulate(response='Value', factors=['Factor'], time='Time')
 
     chart_attrs = dir(study.charts)
-    assert 'Imr' in chart_attrs
+    assert 'XmR' in chart_attrs
 
 
 def test_study_charts_accessor_xbar_for_grouped(grouped_single_factor):

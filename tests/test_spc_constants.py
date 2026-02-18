@@ -3,7 +3,7 @@ Unit tests for SPC constants and formulas.
 
 Tests cover:
 - Bias correction constants (c4, b3, b4)
-- Control limit calculations (Xbar, S, Imr, R)
+- Control limit calculations (Xbar, S, XmR, R)
 - Signal detection
 - Edge cases and validation
 """
@@ -12,7 +12,7 @@ import pandas as pd
 import pytest
 
 from processbehavior.spc_constants import (
-    IMR_LIMIT_MULTIPLIER,
+    XMR_LIMIT_MULTIPLIER,
     R_UPPER_LIMIT_MULTIPLIER,
     SIGMA_MULTIPLIER,
     b3,
@@ -31,9 +31,9 @@ def test_sigma_multiplier():
     assert SIGMA_MULTIPLIER == 3
 
 
-def test_imr_limit_multiplier():
-    """IMR E2 constant should be 2.66."""
-    assert IMR_LIMIT_MULTIPLIER == 2.66
+def test_xmr_limit_multiplier():
+    """XmR E2 constant should be 2.66."""
+    assert XMR_LIMIT_MULTIPLIER == 2.66
 
 
 def test_r_upper_limit_multiplier():
@@ -252,13 +252,13 @@ def test_calculate_limits_s_lcl_clamped_for_small_n():
 
 
 # ============================================================================
-# Test: calculate_limits - IMR chart
+# Test: calculate_limits - XmR chart
 # ============================================================================
 
-def test_calculate_limits_imr():
-    """Should calculate IMR chart limits correctly."""
+def test_calculate_limits_xmr():
+    """Should calculate XmR chart limits correctly."""
     result = calculate_limits(
-        limits_type='Imr',
+        limits_type='XmR',
         mean=10.0,
         mR=0.3
     )
@@ -275,19 +275,19 @@ def test_calculate_limits_imr():
     assert abs(result['upl'] - expected_ucl) < 0.001
 
 
-def test_calculate_limits_imr_missing_params():
-    """Should raise error if IMR parameters missing."""
+def test_calculate_limits_xmr_missing_params():
+    """Should raise error if XmR parameters missing."""
     with pytest.raises(ValueError, match="requires \\(mean, and mR\\)"):
-        calculate_limits(limits_type='Imr', mean=10.0)
+        calculate_limits(limits_type='XmR', mean=10.0)
 
     with pytest.raises(ValueError, match="requires \\(mean, and mR\\)"):
-        calculate_limits(limits_type='Imr', mR=0.3)
+        calculate_limits(limits_type='XmR', mR=0.3)
 
 
-def test_calculate_limits_imr_symmetric():
-    """IMR limits should be symmetric around mean."""
+def test_calculate_limits_xmr_symmetric():
+    """XmR limits should be symmetric around mean."""
     result = calculate_limits(
-        limits_type='Imr',
+        limits_type='XmR',
         mean=50.0,
         mR=1.5
     )
@@ -442,15 +442,15 @@ def test_full_xbar_workflow():
     assert all(s in [-1, 0, 1] for s in signals)
 
 
-def test_full_imr_workflow():
-    """Test complete IMR workflow."""
+def test_full_xmr_workflow():
+    """Test complete XmR workflow."""
     # Setup
     mean = 50.0
     mR = 2.0
 
     # Calculate limits
     limits = calculate_limits(
-        limits_type='Imr',
+        limits_type='XmR',
         mean=mean,
         mR=mR
     )

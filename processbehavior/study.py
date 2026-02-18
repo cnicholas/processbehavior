@@ -647,7 +647,7 @@ class StudyChartAccessor:
         Parameters
         ----------
         valid_charts : list of str
-            Primary chart types (Xbar, S, Imr, R)
+            Primary chart types (Xbar, S, XmR, R)
         """
         self._valid_charts = valid_charts
 
@@ -876,7 +876,7 @@ class Study:
         Returns
         -------
         list of str
-            Valid chart types (e.g., ['Xbar', 'S', 'Imr'])
+            Valid chart types (e.g., ['Xbar', 'S', 'XmR'])
         """
         return self._plan.valid_charts
 
@@ -904,7 +904,7 @@ class Study:
         Returns
         -------
         list of str
-            Available residual chart types (e.g., ['R2_S', 'R3_Imr'])
+            Available residual chart types (e.g., ['R2_S', 'R3_XmR'])
         """
         return self._plan.residual_charts
 
@@ -914,13 +914,13 @@ class Study:
         Accessor for IDE auto-completion of primary chart types.
 
         Primary charts are the standard process behavior charts:
-        Xbar, S, Imr, R
+        Xbar, S, XmR, R
 
         For residual charts (VAS analysis), use study.residuals instead.
 
         Usage:
             study.charts.Xbar  # Auto-completes valid primary charts
-            study.charts.Imr
+            study.charts.XmR
 
         Returns
         -------
@@ -945,7 +945,7 @@ class Study:
 
         Usage:
             study.execute(chart='Xbar', value='R5')  # Factor effects
-            study.execute(chart='Imr', value='R4')   # Time effects
+            study.execute(chart='XmR', value='R4')   # Time effects
 
         Returns
         -------
@@ -993,7 +993,7 @@ class Study:
         rows = []
 
         # All possible primary charts
-        ALL_PRIMARY = ['Xbar', 'S', 'Imr', 'R']
+        ALL_PRIMARY = ['Xbar', 'S', 'XmR', 'R']
 
         # Build invalid_reasons dict from _plan.invalid_charts
         invalid_reasons = self._parse_invalid_charts()
@@ -1010,10 +1010,10 @@ class Study:
 
         # All possible residual charts
         ALL_RESIDUALS = [
-            'R2_S', 'R2_Imr',
-            'R3_Xbar', 'R3_S', 'R3_Imr',
-            'R4_Xbar', 'R4_S', 'R4_Imr',
-            'R5_Xbar', 'R5_S', 'R5_Imr'
+            'R2_S', 'R2_XmR',
+            'R3_Xbar', 'R3_S', 'R3_XmR',
+            'R4_Xbar', 'R4_S', 'R4_XmR',
+            'R5_Xbar', 'R5_S', 'R5_XmR'
         ]
 
         for chart in ALL_RESIDUALS:
@@ -1060,7 +1060,7 @@ class Study:
         Parameters
         ----------
         chart : str
-            Chart type to check (e.g., 'Imr', 'S', 'R2_S')
+            Chart type to check (e.g., 'XmR', 'S', 'R2_S')
 
         Returns
         -------
@@ -1299,19 +1299,19 @@ class Study:
             Chart type to use. If None, uses recommended_chart.
             Can use study.charts.Xbar for IDE auto-completion.
 
-            Valid charts: 'Xbar', 'S', 'Imr', 'R'
+            Valid charts: 'Xbar', 'S', 'XmR', 'R'
 
         by : list[str], optional
             Factors to group/stratify by. Controls view granularity.
 
             - by=None: Default for chart type (full rsg_key for Xbar/S,
-              ERROR for Imr/R with factors - must be explicit)
+              ERROR for XmR/R with factors - must be explicit)
             - by=[]: Collapse all factors (single overall chart/group)
             - by=['factor']: Stratify/aggregate by single factor
             - by=['f1', 'f2']: Stratify/aggregate by factor combination
 
             For Xbar/S: by controls aggregation (groups on x-axis)
-            For Imr/R: by controls stratification (separate charts)
+            For XmR/R: by controls stratification (separate charts)
 
         value : str, optional
             What to chart. Options:
@@ -1325,12 +1325,12 @@ class Study:
             easier interpretation. See Tom Bishop Equation 80.
 
         paired : bool, default False
-            When True, returns both Xbar and S charts together (or both Imr
+            When True, returns both Xbar and S charts together (or both XmR
             and R charts) regardless of which chart is requested. This follows
             Wheeler's methodology of always analyzing paired charts together.
 
             - paired=False (default): Returns only the requested chart (SRP-compliant)
-            - paired=True: Returns both paired charts (Xbar+S or Imr+R)
+            - paired=True: Returns both paired charts (Xbar+S or XmR+R)
 
         Returns
         -------
@@ -1343,7 +1343,7 @@ class Study:
         ValueError
             If specified chart is not valid for this SDS
             If by contains invalid factors
-            If Imr/R with factors but by not specified
+            If XmR/R with factors but by not specified
 
         Examples
         --------
@@ -1362,15 +1362,15 @@ class Study:
         >>> result = study.execute(chart='Xbar', by=['factor 1'])
 
         >>> # IMR stratified by all factors (separate chart per combo)
-        >>> result = study.execute(chart='Imr', by=['factor 1', 'factor 2'])
+        >>> result = study.execute(chart='XmR', by=['factor 1', 'factor 2'])
 
         >>> # IMR single overall chart
-        >>> result = study.execute(chart='Imr', by=[])
+        >>> result = study.execute(chart='XmR', by=[])
 
         Chart residuals:
 
         >>> result = study.execute(chart='Xbar', value='R5')  # Factor effects
-        >>> result = study.execute(chart='Imr', value='R4', recentered=True)
+        >>> result = study.execute(chart='XmR', value='R4', recentered=True)
 
         Chain to visualization:
 
@@ -1471,7 +1471,7 @@ class Study:
         Parameters
         ----------
         chart : str
-            Chart request string. Only accepts base charts: 'Xbar', 'S', 'Imr', 'R'
+            Chart request string. Only accepts base charts: 'Xbar', 'S', 'XmR', 'R'
 
         Returns
         -------
@@ -1500,7 +1500,7 @@ class Study:
             raise ValueError(
                 f"'{chart}' is a residual identifier, not a chart type.\n"
                 f"Use: study.execute(chart='Xbar', value='{chart}')\n"
-                f"Or: study.execute(chart='Imr', value='{chart}')"
+                f"Or: study.execute(chart='XmR', value='{chart}')"
             )
 
         # Alias without base chart
@@ -1509,7 +1509,7 @@ class Study:
             raise ValueError(
                 f"'{chart}' is a residual alias for {residual_id}, not a chart type.\n"
                 f"Use: study.execute(chart='Xbar', value='{residual_id}')\n"
-                f"Or: study.execute(chart='Imr', value='{residual_id}')"
+                f"Or: study.execute(chart='XmR', value='{residual_id}')"
             )
 
         raise ValueError(
@@ -1566,7 +1566,7 @@ class Study:
         by : list[str] | None
             User-specified by parameter
         base_chart : str
-            Base chart type being requested (Xbar, S, Imr, R)
+            Base chart type being requested (Xbar, S, XmR, R)
 
         Returns
         -------
@@ -1582,7 +1582,7 @@ class Study:
         """
         factors = self._spec.rsg_vars_list
         time_var = self._spec.time_var
-        is_time_series_chart = base_chart in ('Imr', 'R')
+        is_time_series_chart = base_chart in ('XmR', 'R')
 
         # No factors case: by=None is fine, by=[] is also fine
         if not factors:

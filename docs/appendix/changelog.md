@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - Jupyter Book documentation structure
-- Comprehensive tutorials (IMR, Xbar-S, Stratified, Signal Detection)
+- Comprehensive tutorials (XmR, Xbar-S, Stratified, Signal Detection)
 - User guide for all major features
 - API reference documentation
 - Western Electric rules reference
@@ -38,8 +38,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `analyze()` method for chart calculation
 - `AnalysisResult` class for unified result access
 - VAS residual calculations (R1-R5)
-- Support for Xbar, S, Imr, and R charts
-- Stratified IMR analysis
+- Support for Xbar, S, XmR, and R charts
+- Stratified XmR analysis
 
 #### Signal Detection
 - Western Electric rules 1-8
@@ -142,7 +142,7 @@ If you were using a pre-release version, note these changes:
 #### API Changes
 ```python
 # Old (pre-release)
-result = pb.analyze(response_var='weight', chart_type='Imr').calculate()
+result = pb.analyze(response_var='weight', chart_type='XmR').calculate()
 
 # New (v0.1.0)
 study = pb.formulate(response=pb.cols.weight)

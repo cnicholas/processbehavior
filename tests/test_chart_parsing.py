@@ -1,6 +1,6 @@
 """Tests for chart name parsing in Study._parse_chart_request().
 
-The parser now only accepts base chart types (Xbar, S, Imr, R).
+The parser now only accepts base chart types (Xbar, S, XmR, R).
 Residual charts are specified via the `value` parameter:
   study.execute(chart='Xbar', value='R5')  # instead of chart='R5_Xbar'
 """
@@ -37,9 +37,9 @@ class TestBaseCharts:
         base_chart = study._parse_chart_request("S")
         assert base_chart == "S"
 
-    def test_imr(self, study):
-        base_chart = study._parse_chart_request("Imr")
-        assert base_chart == "Imr"
+    def test_xmr(self, study):
+        base_chart = study._parse_chart_request("XmR")
+        assert base_chart == "XmR"
 
     def test_r(self, study):
         base_chart = study._parse_chart_request("R")
@@ -59,10 +59,10 @@ class TestOldSyntaxRaisesError:
         with pytest.raises(ValueError, match="no longer supported"):
             study._parse_chart_request("R2_S")
 
-    def test_r4_imr_old_syntax(self, study):
-        """Old R4_Imr syntax should error with migration guidance."""
+    def test_r4_xmr_old_syntax(self, study):
+        """Old R4_XmR syntax should error with migration guidance."""
         with pytest.raises(ValueError, match="no longer supported"):
-            study._parse_chart_request("R4_Imr")
+            study._parse_chart_request("R4_XmR")
 
     def test_rcr5_xbar_old_syntax(self, study):
         """Old RCR5_Xbar syntax should error with migration guidance."""

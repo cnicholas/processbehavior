@@ -417,7 +417,7 @@ def test_prepare_dataset_with_single_factor(prep):
 
 
 def test_prepare_dataset_without_grouping(prep):
-    """Should work without grouping variables (IMR case)."""
+    """Should work without grouping variables (XmR case)."""
     df = pd.DataFrame({
         'time': [1, 2, 3],
         'weight': [10.1, 10.2, 10.3]

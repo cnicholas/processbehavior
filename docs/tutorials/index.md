@@ -4,7 +4,7 @@ These tutorials walk through ProcessBehavior from first chart to full factorial 
 
 | # | Tutorial | What You'll Learn |
 |---|----------|-------------------|
-| 1 | [Your First Analysis](basic-imr.ipynb) | Basic IMR chart workflow: load data, formulate, execute, plot |
+| 1 | [Your First Analysis](basic-imr.ipynb) | Basic XmR chart workflow: load data, formulate, execute, plot |
 | 2 | [Signal Detection](signal-detection.ipynb) | Western Electric rules, custom rule sets, interpreting signals |
 | 3 | [Xbar-S Analysis](xbar-s-analysis.ipynb) | Replicated data, Xbar and S charts, VAS residuals |
 | 4 | [Stratified Analysis](stratified-analysis.ipynb) | Multi-stream data, the `by` parameter, faceted plots |

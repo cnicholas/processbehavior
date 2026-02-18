@@ -28,7 +28,7 @@ project:
         - file: tutorials/index.md
           title: Tutorial Overview
         - file: tutorials/basic-imr.ipynb
-          title: Basic IMR Chart
+          title: Basic XmR Chart
         - file: tutorials/signal-detection.ipynb
           title: Signal Detection
         - file: tutorials/xbar-s-analysis.ipynb

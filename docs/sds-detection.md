@@ -288,7 +288,7 @@ design = study.design()
 design.sds_reason      # Why this SDS was classified (e.g., 'full_replication')
 ```
 
-The `min_cell_size` value is used internally to determine R2 chart selection (S vs IMR).
+The `min_cell_size` value is used internally to determine R2 chart selection (S vs XmR).
 
 ## min_cell_size Calculation
 
@@ -301,7 +301,7 @@ min_cell_size = int(valid_nkt.min()) if len(valid_nkt) > 0 else 0
 
 This value drives R2 chart selection:
 - **`min_cell_size ≥ 2`**: Can use S chart (within-cell variance available)
-- **`min_cell_size = 1`**: Must use IMR chart (no within-cell variance)
+- **`min_cell_size = 1`**: Must use XmR chart (no within-cell variance)
 
 The R2 residual represents within-cell variation. When cells have replication (n ≥ 2), exact variance can be calculated. When cells are singletons (n = 1), variance must be estimated via moving average.
 

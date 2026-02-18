@@ -370,7 +370,7 @@ class TestAddRunRulesVisualization:
             factors=[pdf.cols.group],
             time=pdf.cols.time
         )
-        result = study.execute(chart='Imr', by=['group'])
+        result = study.execute(chart='XmR', by=['group'])
 
         # Pick the first available chart
         chart_name = list(result.charts.keys())[0]

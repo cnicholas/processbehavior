@@ -74,7 +74,7 @@ class TestSDSDetection:
 
         # With time as factor: 30 factor×time cells with n=1 each = SDS 2
         spec = {
-            'analysis_type': 'Imr',
+            'analysis_type': 'XmR',
             'rsg_vars': ['factor 1', 'time'],  # time is now a factor!
             'time_var': 'time',
             'response_var': 'y',
@@ -135,8 +135,8 @@ class TestSDSDetection:
         for head in sample_heads:
             assert 'Line' in head, f"Head name should contain 'Line': {head}"
 
-    def test_sds6_stratified_imr(self):
-        """Test that stratified IMR works with irregular SDS6 data."""
+    def test_sds6_stratified_xmr(self):
+        """Test that stratified XmR works with irregular SDS6 data."""
         df = synthetic.make_sds(6, T=80, K1=3, K2=2, p_sampled=0.6, seed=42)
 
         pdf = ProcessBehavior(df)
@@ -146,14 +146,14 @@ class TestSDSDetection:
             time=pdf.cols.time
         )
 
-        # IMR with factors requires explicit 'by' parameter
-        # SRP: Imr only returns Imr (use paired=True for bundled Imr+R)
-        result = study.execute(chart='Imr', by=['factor 1', 'factor 2'])
+        # XmR with factors requires explicit 'by' parameter
+        # SRP: XmR only returns XmR (use paired=True for bundled XmR+R)
+        result = study.execute(chart='XmR', by=['factor 1', 'factor 2'])
 
         assert result is not None
-        # SRP: Should have single Imr chart
+        # SRP: Should have single XmR chart
         assert len(result.charts) == 1
-        assert 'Imr' in result.charts
+        assert 'XmR' in result.charts
 
 
 class TestVASCalculationDecisions:
@@ -178,8 +178,8 @@ class TestVASCalculationDecisions:
         assert 'R1' in ads.analysis_dataset.columns, "SDS1 + Xbar should have VAS residuals"
         assert 'R2' in ads.analysis_dataset.columns
 
-    def test_sds1_imr_has_vas(self):
-        """SDS 1 + IMR should have VAS residuals (ADS is chart-agnostic).
+    def test_sds1_xmr_has_vas(self):
+        """SDS 1 + XmR should have VAS residuals (ADS is chart-agnostic).
 
         Note: VAS residuals are always computed when we have grouping AND time.
         The analysis_type no longer gates VAS calculation - ADS is chart-agnostic.
@@ -187,7 +187,7 @@ class TestVASCalculationDecisions:
         df = synthetic.make_sds(1, K1=2, K2=2, T=3, n_min=2, n_max=4, seed=42)
 
         spec = {
-            'analysis_type': 'Imr',
+            'analysis_type': 'XmR',
             'rsg_vars': ['factor 1'],
             'response_var': 'y',
             'time_var': 'time',
@@ -214,12 +214,12 @@ class TestVASCalculationDecisions:
             # SDS 1: Has grouping + time → always VAS
             (1, 'Xbar'): True,
             (1, 'S'): True,
-            (1, 'Imr'): True,  # Changed from False
+            (1, 'XmR'): True,  # Changed from False
             (1, 'R'): True,    # Changed from False
 
             # SDS 2: Has grouping + time → always VAS
             (2, 'Xbar'): True,
-            (2, 'Imr'): True,  # Changed from False
+            (2, 'XmR'): True,  # Changed from False
         }
 
         generators = {

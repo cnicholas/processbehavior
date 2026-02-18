@@ -96,7 +96,7 @@ def spec_multi_factor():
 
 @pytest.fixture
 def spec_no_grouping():
-    """Specification without grouping variables (IMR)."""
+    """Specification without grouping variables (XmR)."""
     return FormulationSpec(
         response_var='weight',
         time_var='pull',

@@ -53,9 +53,9 @@ class TestResidualsInvariant:
     def test_residuals_identical_across_by_views(self, sds1_study):
         """Residual values must be identical regardless of by parameter."""
         # Execute with different `by` values
-        result_full = sds1_study.execute(chart='Imr', by=['factor 1', 'factor 2'])
-        result_f1 = sds1_study.execute(chart='Imr', by=['factor 1'])
-        result_all = sds1_study.execute(chart='Imr', by=[])
+        result_full = sds1_study.execute(chart='XmR', by=['factor 1', 'factor 2'])
+        result_f1 = sds1_study.execute(chart='XmR', by=['factor 1'])
+        result_all = sds1_study.execute(chart='XmR', by=[])
 
         # Get the analytic dataset from each (should be identical)
         ds_full = result_full.dataset
@@ -85,32 +85,32 @@ class TestResidualsInvariant:
 class TestByParameterValidation:
     """Test validation rules for the `by` parameter."""
 
-    def test_imr_with_factors_requires_by(self, sds1_study):
-        """IMR charts with factors should require explicit `by` parameter."""
+    def test_xmr_with_factors_requires_by(self, sds1_study):
+        """XmR charts with factors should require explicit `by` parameter."""
         with pytest.raises(ValueError, match="require.*by"):
-            sds1_study.execute(chart='Imr')
+            sds1_study.execute(chart='XmR')
 
     def test_by_must_be_subset_of_factors(self, sds1_study):
         """by parameter must only contain factor variables."""
         with pytest.raises(FactorNotFoundError, match="not a valid by variable"):
-            sds1_study.execute(chart='Imr', by=['invalid_factor'])
+            sds1_study.execute(chart='XmR', by=['invalid_factor'])
 
     def test_by_empty_list_allowed(self, sds1_study):
         """by=[] should be allowed (collapses all factors)."""
-        result = sds1_study.execute(chart='Imr', by=[])
-        assert 'Imr' in result.charts
+        result = sds1_study.execute(chart='XmR', by=[])
+        assert 'XmR' in result.charts
 
     def test_by_single_factor_allowed(self, sds1_study):
         """by=['factor 1'] should stratify by that factor."""
-        result = sds1_study.execute(chart='Imr', by=['factor 1'])
-        assert 'Imr' in result.charts
-        assert result.charts['Imr'].get('strata') is not None
+        result = sds1_study.execute(chart='XmR', by=['factor 1'])
+        assert 'XmR' in result.charts
+        assert result.charts['XmR'].get('strata') is not None
 
     def test_by_all_factors_allowed(self, sds1_study):
         """by=['factor 1', 'factor 2'] should stratify by all factors."""
-        result = sds1_study.execute(chart='Imr', by=['factor 1', 'factor 2'])
-        assert 'Imr' in result.charts
-        assert result.charts['Imr'].get('strata') is not None
+        result = sds1_study.execute(chart='XmR', by=['factor 1', 'factor 2'])
+        assert 'XmR' in result.charts
+        assert result.charts['XmR'].get('strata') is not None
 
 
 # =============================================================================
@@ -201,44 +201,44 @@ class TestOrderPreservation:
 
 
 # =============================================================================
-# IMR STRATIFICATION TESTS
+# XmR STRATIFICATION TESTS
 # =============================================================================
 
-class TestImrStratification:
-    """Test IMR chart stratification with `by` parameter."""
+class TestXmRStratification:
+    """Test XmR chart stratification with `by` parameter."""
 
-    def test_imr_by_all_factors_stratifies(self, sds1_study):
-        """IMR with by=['factor 1', 'factor 2'] creates strata for each combo."""
-        result = sds1_study.execute(chart='Imr', by=['factor 1', 'factor 2'])
-        strata = result.charts['Imr'].get('strata')
+    def test_xmr_by_all_factors_stratifies(self, sds1_study):
+        """XmR with by=['factor 1', 'factor 2'] creates strata for each combo."""
+        result = sds1_study.execute(chart='XmR', by=['factor 1', 'factor 2'])
+        strata = result.charts['XmR'].get('strata')
         assert strata is not None
         # K1=3, K2=2 -> 6 strata
         assert len(strata) == 6
 
-    def test_imr_by_single_factor_with_boundaries(self, sds1_study):
-        """IMR with by=['factor 1'] creates strata with lane boundaries for factor 2."""
-        result = sds1_study.execute(chart='Imr', by=['factor 1'])
-        strata = result.charts['Imr'].get('strata')
+    def test_xmr_by_single_factor_with_boundaries(self, sds1_study):
+        """XmR with by=['factor 1'] creates strata with lane boundaries for factor 2."""
+        result = sds1_study.execute(chart='XmR', by=['factor 1'])
+        strata = result.charts['XmR'].get('strata')
         assert strata is not None
         # K1=3 -> 3 strata
         assert len(strata) == 3
 
         # Should have lane boundaries for factor 2
-        metadata = result.charts['Imr']['metadata']
+        metadata = result.charts['XmR']['metadata']
         lane_boundaries = metadata.get('lane_boundaries')
         assert lane_boundaries is not None
         # Boundaries should be keyed by stratum
         assert isinstance(lane_boundaries, dict)
 
-    def test_imr_by_empty_single_chart_with_boundaries(self, sds1_study):
-        """IMR with by=[] creates single chart with lane boundaries."""
-        result = sds1_study.execute(chart='Imr', by=[])
+    def test_xmr_by_empty_single_chart_with_boundaries(self, sds1_study):
+        """XmR with by=[] creates single chart with lane boundaries."""
+        result = sds1_study.execute(chart='XmR', by=[])
 
         # Should NOT have strata (single chart)
-        assert result.charts['Imr'].get('strata') is None
+        assert result.charts['XmR'].get('strata') is None
 
         # Should have lane boundaries for collapsed factors
-        metadata = result.charts['Imr']['metadata']
+        metadata = result.charts['XmR']['metadata']
         lane_boundaries = metadata.get('lane_boundaries')
         assert lane_boundaries is not None
         # Boundaries should be a list (not dict) for single chart
@@ -247,7 +247,7 @@ class TestImrStratification:
 
 
 class TestRStratification:
-    """Test R chart stratification with `by` parameter (bundled with IMR)."""
+    """Test R chart stratification with `by` parameter (bundled with XmR)."""
 
     def test_r_by_single_factor_has_boundaries(self, sds1_study):
         """R chart should also have lane boundaries when stratified."""
@@ -310,25 +310,25 @@ class TestLaneBoundaryContent:
 
     def test_lane_boundary_has_position(self, sds1_study):
         """Lane boundaries should have position field."""
-        result = sds1_study.execute(chart='Imr', by=[])
-        boundaries = result.charts['Imr']['metadata']['lane_boundaries']
+        result = sds1_study.execute(chart='XmR', by=[])
+        boundaries = result.charts['XmR']['metadata']['lane_boundaries']
         assert all('position' in b for b in boundaries)
 
     def test_lane_boundary_has_label(self, sds1_study):
         """Lane boundaries should have label field."""
-        result = sds1_study.execute(chart='Imr', by=[])
-        boundaries = result.charts['Imr']['metadata']['lane_boundaries']
+        result = sds1_study.execute(chart='XmR', by=[])
+        boundaries = result.charts['XmR']['metadata']['lane_boundaries']
         assert all('label' in b for b in boundaries)
 
     def test_lane_boundary_has_variables(self, sds1_study):
         """Lane boundaries should indicate which variables changed."""
-        result = sds1_study.execute(chart='Imr', by=[])
-        boundaries = result.charts['Imr']['metadata']['lane_boundaries']
+        result = sds1_study.execute(chart='XmR', by=[])
+        boundaries = result.charts['XmR']['metadata']['lane_boundaries']
         assert all('variables' in b for b in boundaries)
 
     def test_lane_boundaries_positions_are_ordered(self, sds1_study):
         """Lane boundary positions should be in ascending order."""
-        result = sds1_study.execute(chart='Imr', by=[])
-        boundaries = result.charts['Imr']['metadata']['lane_boundaries']
+        result = sds1_study.execute(chart='XmR', by=[])
+        boundaries = result.charts['XmR']['metadata']['lane_boundaries']
         positions = [b['position'] for b in boundaries]
         assert positions == sorted(positions)

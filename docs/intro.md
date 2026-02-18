@@ -98,7 +98,7 @@ ProcessBehavior identifies six distinct sampling design states (SDS 1-6) and con
 | 1 | Full replication | Xbar-S with VAS residuals |
 | 2 | No replication | Xbar-S with moving range |
 | 3 | Partial replication | Hybrid approach |
-| 4 | Single stream | Stratified IMR |
+| 4 | Single stream | Stratified XmR |
 | 5 | Nested/hierarchical | Multi-level analysis |
 | 6 | Unstructured | Special handling |
 
@@ -132,7 +132,7 @@ pip install processbehavior[plotting]
 ## Quick Links
 
 - [Quickstart](getting-started/quickstart.ipynb) - Get up and running in 5 minutes
-- [Basic IMR Chart](tutorials/basic-imr.ipynb) - Your first control chart
+- [Basic XmR Chart](tutorials/basic-imr.ipynb) - Your first control chart
 - [Sampling Design States](user-guide/sds-detection.md) - Understanding sampling designs
 - [API Reference](reference/api.md) - Complete API reference
 
