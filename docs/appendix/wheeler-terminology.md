@@ -104,7 +104,7 @@ Wheeler identifies six sampling design states that determine valid analysis appr
 
 **ProcessBehavior Detection**: No factors, or single factor level
 
-**Capabilities**: IMR analysis, full WECO rules
+**Capabilities**: XmR analysis, full WECO rules
 
 ---
 
@@ -112,7 +112,7 @@ Wheeler identifies six sampling design states that determine valid analysis appr
 
 **Definition**: Hierarchical factor structure.
 
-**Capabilities**: Limited to stratified IMR
+**Capabilities**: Limited to stratified XmR
 
 ---
 
@@ -206,7 +206,7 @@ Wheeler's framework for decomposing variation into meaningful components.
 
 **Definition**: Combined Individual and Moving Range chart.
 
-**In ProcessBehavior**: `study.charts.Imr`
+**In ProcessBehavior**: `study.charts.XmR`
 
 ---
 
@@ -312,7 +312,7 @@ Essential references:
 | Process Behavior Chart | `result.plot()` |
 | Rational Subgroup | `factors` parameter |
 | Time Sequence | `time` parameter |
-| XmR Chart | `study.charts.Imr` |
+| XmR Chart | `study.charts.XmR` |
 | Average Chart | `study.charts.Xbar` |
 | s Chart | `study.charts.S` |
 | R1-R5 Residuals | `result.residuals` |

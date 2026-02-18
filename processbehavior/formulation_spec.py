@@ -101,7 +101,7 @@ class ChartRequest:
     Parameters
     ----------
     chart : str
-        Chart type to produce ('Xbar', 'S', 'Imr', 'R', 'Histogram').
+        Chart type to produce ('Xbar', 'S', 'XmR', 'R', 'Histogram').
     by : tuple[str, ...] or None
         Factors to group/stratify by.
     value_col : str or None
@@ -113,7 +113,7 @@ class ChartRequest:
     recentered : bool
         Whether to use re-centered residuals (RCR columns).
     paired : bool
-        Whether to return both paired charts (Xbar+S or Imr+R).
+        Whether to return both paired charts (Xbar+S or XmR+R).
     bins : int
         Number of bins for Histogram chart.
     """

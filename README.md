@@ -3,7 +3,7 @@
 **processbehavior** is a Python package for **Statistical Process Control (SPC)** with a focus on **analyst usability** and **UI integration**. It prepares datasets, computes control-chart statistics, and returns **tidy, well-documented tables** suitable for dashboards and deeper analysis.
 
 ## Features
-- **Charts:** X̄–S, Individuals–Moving Range (I–MR), Range (R) *(R refining)*  
+- **Charts:** X̄–S, Individuals–Moving Range (XmR), Range (R) *(R refining)*
 - **Rational subgrouping:** flexible multi-key grouping, robust validation  
 - **Time support:** Year/Quarter/Month/Week/DOY extraction for analyses & plots  
 - **Classic limits:** A3/B3/B4/D3/D4/d2/c4 with variable subgroup sizes  
@@ -158,7 +158,7 @@ Traditional SPC tools force you to choose:
 from processbehavior import Analysis
 
 spec = {
-    'analysis_type': 'Imr',
+    'analysis_type': 'XmR',
     'rsg_vars': ['lane', 'phase'],  # ← Stratify by these
     'time_var': 'pull',
     'response_var': 'fill_weight'
@@ -180,7 +180,7 @@ results = Analysis(df, spec).calculate()
 
 | Analysis | Grouping Purpose | Output | VAS Residuals |
 |----------|-----------------|---------|---------------|
-| **IMR/R** | **Stratification** | Separate chart per group | No (not needed) |
+| **XmR/R** | **Stratification** | Separate chart per group | No (not needed) |
 | **Xbar-S** | **Variance decomposition** | Variance components | Yes (that's the point) |
 
 Both use `rsg_vars`, but for completely different reasons!

@@ -82,8 +82,8 @@ def example1_unified_access():
     print(f"  Signals: {result.summary['n_signals_total']}")
 
 
-def example2_stratified_imr():
-    """Example 2: Stratified IMR charts (killer feature!)"""
+def example2_stratified_xmr():
+    """Example 2: Stratified XmR charts (killer feature!)"""
     print("\n" + "="*80)
     print("EXAMPLE 2: Stratified Individuals Charts")
     print("="*80)
@@ -101,7 +101,7 @@ def example2_stratified_imr():
     })
 
     spec = {
-        'analysis_type': 'Imr',
+        'analysis_type': 'XmR',
         'response_var': 'Measurement',
         'time_var': 'Time',
         'rsg_vars': ['Operator']
@@ -200,7 +200,7 @@ def example4_backward_compatibility():
     })
 
     spec = {
-        'analysis_type': 'Imr',
+        'analysis_type': 'XmR',
         'response_var': 'Value',
         'time_var': 'Time'
     }
@@ -239,7 +239,7 @@ def main():
     print("="*80)
 
     example1_unified_access()
-    example2_stratified_imr()
+    example2_stratified_xmr()
     example3_with_residuals()
     example4_backward_compatibility()
 
@@ -254,8 +254,8 @@ def main():
    - Interactions:  result.interactions
    - Summary:       result.summary
 
-2. Stratified IMR charts:
-   - Separate IMR chart per group with group-specific limits
+2. Stratified XmR charts:
+   - Separate XmR chart per group with group-specific limits
    - Access via result.iter_charts() or result['group_name']
 
 3. Backward compatible:

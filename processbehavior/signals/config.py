@@ -13,12 +13,12 @@ from typing import Callable, Literal
 # ================================
 # WECO rules 2-8 require sequential/temporal ordering of observations.
 # - Xbar/S: Categorical comparison of subgroups → Only Rule 1 applies
-# - Imr/R: Sequential observations over time → All rules apply
+# - XmR/R: Sequential observations over time → All rules apply
 # Easy to extend for new chart types (CUSUM, EWMA, etc.)
 CHART_TYPE_RULES = {
     'Xbar': ['rule_1'],  # Rational subgroup means (categorical)
     'S': ['rule_1'],     # Rational subgroup variation (categorical)
-    'Imr': ['rule_1', 'rule_2', 'rule_3', 'rule_4', 'rule_5', 'rule_6', 'rule_7', 'rule_8'],
+    'XmR': ['rule_1', 'rule_2', 'rule_3', 'rule_4', 'rule_5', 'rule_6', 'rule_7', 'rule_8'],
     'R': ['rule_1', 'rule_2', 'rule_3', 'rule_4', 'rule_5', 'rule_6', 'rule_7', 'rule_8'],
 }
 
@@ -86,7 +86,7 @@ class SignalConfig:
     ----------
     enabled_rules : list or str, default 'default'
         Which rules to apply:
-        - 'default': Use chart-type-based defaults (Xbar/S: Rule 1, Imr/R: Rules 1-8)
+        - 'default': Use chart-type-based defaults (Xbar/S: Rule 1, XmR/R: Rules 1-8)
         - 'standard': Rules 1-4 (filtered by chart type)
         - 'extended': Rules 1-8 (filtered by chart type)
         - 'all': Same as extended
@@ -159,7 +159,7 @@ class SignalConfig:
         Parameters
         ----------
         chart_type : str
-            Chart type ('Xbar', 'S', 'Imr', 'R')
+            Chart type ('Xbar', 'S', 'XmR', 'R')
 
         Returns
         -------
@@ -173,7 +173,7 @@ class SignalConfig:
         >>> config = SignalConfig(enabled_rules='default')
         >>> config.get_rules_for_chart('Xbar')
         ['rule_1']
-        >>> config.get_rules_for_chart('Imr')
+        >>> config.get_rules_for_chart('XmR')
         ['rule_1', 'rule_2', ..., 'rule_8']
 
         Explicit rules (no filtering):

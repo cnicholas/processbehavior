@@ -52,16 +52,16 @@ print(f"  - Has residuals: {result1.has_residuals}")
 print(f"  - Has effects: {result1.has_effects}")
 
 # =============================================================================
-# Example 2: Stratified IMR Charts
+# Example 2: Stratified XmR Charts
 # =============================================================================
 print("\n" + "=" * 70)
-print("Example 2: Stratified IMR Charts Export (Killer Feature!)")
+print("Example 2: Stratified XmR Charts Export (Killer Feature!)")
 print("=" * 70)
 
 df2 = make_sds1(K=4, T=10, n_min=2, n_max=3, seed=42)
 
 spec2 = {
-    'analysis_type': 'Imr',
+    'analysis_type': 'XmR',
     'rsg_vars': ['factor 1'],
     'time_var': 'time',
     'response_var': 'y'
@@ -71,13 +71,13 @@ analysis2 = ad.Analysis(df2, spec2)
 result2 = analysis2.calculate()
 
 # Export stratified charts
-result2.to_excel('example2_stratified_imr.xlsx')
+result2.to_excel('example2_stratified_xmr.xlsx')
 
-print("✓ Exported to: example2_stratified_imr.xlsx")
+print("✓ Exported to: example2_stratified_xmr.xlsx")
 print(f"  - Stratified: {result2.summary['is_stratified']}")
 print(f"  - Number of charts: {result2.summary['n_charts']}")
 print(f"  - Chart names: {', '.join(result2.all_charts)}")
-print("  - Each group gets its own IMR chart with group-specific control limits!")
+print("  - Each group gets its own XmR chart with group-specific control limits!")
 
 # =============================================================================
 # Example 3: Complete Export with Full Dataset
@@ -212,7 +212,7 @@ All examples exported successfully!
 
 Files created:
   1. example1_xbar_chart.xlsx      - Basic Xbar/S chart
-  2. example2_stratified_imr.xlsx  - Stratified IMR charts (killer feature!)
+  2. example2_stratified_xmr.xlsx  - Stratified XmR charts (killer feature!)
   3. example3_complete.xlsx        - Complete export with full dataset
   4. example4_minimal.xlsx         - Charts only
   5. example5_frictionless.xlsx    - Using ProcessBehavior API

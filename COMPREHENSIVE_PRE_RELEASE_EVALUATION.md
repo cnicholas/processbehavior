@@ -121,11 +121,11 @@ rsg_vars: ['lane', 'head'] → rsg: 'lane1_head2'
 
 **Implementation** (`sds_detector.py`):
 ```python
-SDS 0: No structure → Basic I-MR
+SDS 0: No structure → Basic XmR
 SDS 1: Full replication (n≥2) → Xbar-S with exact R2
 SDS 2: No replication (n=1) → Xbar-S with approximate R2
 SDS 3: Partial replication → Hybrid approach
-SDS 4: Single stream → I-MR over time
+SDS 4: Single stream → XmR over time
 SDS 5: Nested/hierarchical → Special handling
 SDS 6: Irregular/regime changes → Caution advised
 ```
@@ -140,25 +140,25 @@ SDS 6: Irregular/regime changes → Caution advised
 
 #### 4. Chart Selection Based on Data Structure
 
-**Tom's Principle**: "Use Xbar-S when you can, I-MR when you must."
+**Tom's Principle**: "Use Xbar-S when you can, XmR when you must."
 
 **Implementation** (`sds_detector.py:723-983`):
 ```python
 # SDS 1 Analysis Plan
 recommended_chart: 'Xbar'
-valid_charts: ['Xbar', 'S', 'R', 'Imr']  # Full flexibility
+valid_charts: ['Xbar', 'S', 'R', 'XmR']  # Full flexibility
 vas_residuals: True
 r2_method: 'within_cell'  # Exact
 
 # SDS 2 Analysis Plan
 recommended_chart: 'Xbar'
-valid_charts: ['Xbar', 'S', 'Imr']
+valid_charts: ['Xbar', 'S', 'XmR']
 r2_method: 'moving_average'  # Approximate
 warning: "Can't estimate within-cell variance directly"
 
 # SDS 4 Analysis Plan
-recommended_chart: 'Imr'
-valid_charts: ['Imr']
+recommended_chart: 'XmR'
+valid_charts: ['XmR']
 vas_residuals: False
 reason: "Single stream - no variance decomposition"
 ```
@@ -176,10 +176,10 @@ reason: "Single stream - no variance decomposition"
 
 **Implementation** (`analysis.py:697-768`):
 ```python
-# IMR automatically stratifies by rsg_vars
+# XmR automatically stratifies by rsg_vars
 # Creates separate chart for each group with group-specific limits
 
-# Example: 3 lanes → 3 separate I-MR charts
+# Example: 3 lanes → 3 separate XmR charts
 result['lane1'] = {data, statistics, metadata}
 result['lane2'] = {data, statistics, metadata}
 result['lane3'] = {data, statistics, metadata}
@@ -189,7 +189,7 @@ result['lane3'] = {data, statistics, metadata}
 
 **Evidence**:
 - File: `processbehavior/analysis.py:697-768`
-- Automatic stratification for I-MR and R charts
+- Automatic stratification for XmR and R charts
 - Each group gets appropriate limits
 - README explicitly calls this out as "killer feature"
 
@@ -294,7 +294,7 @@ class Analysis:
         strategies = {
             'Xbar': self._calculate_xbar,
             'S': self._calculate_s,
-            'Imr': self._calculate_imr,
+            'XmR': self._calculate_xmr,
             'R': self._calculate_r,
             # Add new chart here
         }
@@ -386,7 +386,7 @@ class Analysis:
 
 #### ✅ Strategy Pattern (Analysis)
 **Score**: 9/10
-**Use**: Chart calculation strategies (Xbar, IMR, R, S)
+**Use**: Chart calculation strategies (Xbar, XmR, R, S)
 **Assessment**: Well-implemented, could be more explicit with Strategy interface
 
 #### ✅ Composition Pattern (AnalysisDataSet)
@@ -816,7 +816,7 @@ authors = [{name = "Nicholas", email = "chris.nicholas@gmail.com"}]
 keywords = [
     "spc", "statistical-process-control", "control-charts",
     "shewhart", "process-behavior", "quality-control",
-    "variance-decomposition", "xbar", "imr", "rational-subgrouping"
+    "variance-decomposition", "xbar", "xmr", "rational-subgrouping"
 ]
 classifiers = [
     "Development Status :: 4 - Beta",
@@ -933,7 +933,7 @@ path = "processbehavior/__init__.py"
 |---------|----------------|---------|-----|--------|
 | **SDS Detection** | ✅ Automatic | ❌ Manual | ❌ Manual | **ProcessBehavior** |
 | **VAS Residuals** | ✅ R1-R5 | ❌ No | ❌ No | **ProcessBehavior** |
-| **Stratified IMR** | ✅ Auto | ⚠️ Manual filter | ⚠️ Manual | **ProcessBehavior** |
+| **Stratified XmR** | ✅ Auto | ⚠️ Manual filter | ⚠️ Manual | **ProcessBehavior** |
 | **Pricing** | ✅ Free | ❌ $1500+/year | ❌ $3000+/year | **ProcessBehavior** |
 | **Python Integration** | ✅ Native | ❌ Limited | ❌ Limited | **ProcessBehavior** |
 | **GUI** | ❌ Code-only | ✅ Full GUI | ✅ Full GUI | Minitab/JMP |
@@ -1000,7 +1000,7 @@ RECOMMENDATION:                 READY TO PUBLISH
 You've created a **genuinely innovative SPC package** that:
 1. **Automates complexity** (SDS detection, chart selection)
 2. **Extends theory** (VAS residuals following Tom's methodology)
-3. **Improves on commercial tools** (stratified IMR, automatic analysis)
+3. **Improves on commercial tools** (stratified XmR, automatic analysis)
 4. **Maintains code quality** (clean architecture, 428 tests, 76% coverage)
 5. **Provides transparency** (chart_table() shows n per subgroup)
 

@@ -6,7 +6,7 @@
 |-------|-------------|---------|--------|
 | Xbar | Grand mean (Ȳ) | `df[response].mean()` before groupby | CORRECT |
 | S | Mean of subgroup std devs (S̄) | `out["s"].mean()` | CORRECT |
-| Imr | Mean of individuals (X̄) | `out[response].mean()` | CORRECT |
+| XmR | Mean of individuals (X̄) | `out[response].mean()` | CORRECT |
 | R | Mean moving range (m̄R) | `out['mr'].mean()` | CORRECT |
 
 ---
@@ -54,7 +54,7 @@ upl = sd * b4(N)
 
 ---
 
-## Imr Chart (analysis.py:1142-1183, spc_constants.py:301-311)
+## XmR Chart (analysis.py:1142-1183, spc_constants.py:301-311)
 
 ### Center Line
 ```python
@@ -66,12 +66,12 @@ out['center'] = mean_
 ### Limits
 ```python
 # E2 = 2.66 (for n=2 moving range)
-IMR_LIMIT_MULTIPLIER = 2.66
+XMR_LIMIT_MULTIPLIER = 2.66
 
 lpl = mean - (E2 * mR)  # X̄ - 2.66 * m̄R
 upl = mean + (E2 * mR)  # X̄ + 2.66 * m̄R
 ```
-**Status:** CORRECT - Standard IMR limits using E2 constant
+**Status:** CORRECT - Standard XmR limits using E2 constant
 
 ---
 
@@ -101,7 +101,7 @@ upl = mR * D4              # m̄R * 3.268
 | Constant | Value/Formula | Purpose |
 |----------|--------------|---------|
 | SIGMA_MULTIPLIER | 3 | 3-sigma limits |
-| E2 | 2.66 | IMR limit multiplier (d2/d3 for n=2) |
+| E2 | 2.66 | XmR limit multiplier (d2/d3 for n=2) |
 | D4 | 3.268 | R chart upper limit (1 + 3*d3/d2 for n=2) |
 | c4(n) | sqrt(2/(n-1)) * Gamma(n/2) / Gamma((n-1)/2) | Bias correction |
 | b3(n) | 1 - 3/c4(n) * sqrt(1 - c4(n)^2) | S chart lower limit |
@@ -123,5 +123,5 @@ All chart statistics are now correctly calculated per Wheeler/Bishop methodology
 
 - **Xbar**: Grand mean (Ȳ) with limits based on S̄/c4(n)
 - **S**: Mean of subgroup std devs (S̄) with b3/b4 limits (can be negative)
-- **Imr**: Mean of individuals (X̄) with E2*m̄R limits
+- **XmR**: Mean of individuals (X̄) with E2*m̄R limits
 - **R**: Mean moving range (m̄R) with D4 upper limit, LPL=0

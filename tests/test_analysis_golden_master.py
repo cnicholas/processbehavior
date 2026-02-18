@@ -260,12 +260,12 @@ def _make_missing_values():
 
 
 def _make_paired_mode():
-    """Scenario 5: Paired mode — Xbar+S and Imr+R paired charts."""
+    """Scenario 5: Paired mode — Xbar+S and XmR+R paired charts."""
     return synthetic.make_sds(1, K1=3, K2=2, T=6, n_min=2, n_max=4, seed=42)
 
 
 def _make_residual_chart():
-    """Scenario 6: Residual chart (R2 via Imr)."""
+    """Scenario 6: Residual chart (R2 via XmR)."""
     return synthetic.make_sds(1, K1=3, K2=2, T=4, n_min=3, n_max=3, seed=42)
 
 
@@ -287,11 +287,11 @@ def _make_pathological_ordering():
 # ============================================================================
 
 def _execute_unstratified_small():
-    """Execute scenario 1: SDS 4 single-condition IMR (by=[] for single stream)."""
+    """Execute scenario 1: SDS 4 single-condition XmR (by=[] for single stream)."""
     df = _make_unstratified_small()
     pb = ProcessBehavior(df)
     study = pb.formulate(response="y", factors=["factor 1"], time="time")
-    return study.execute(chart="Imr", by=[], paired=True)
+    return study.execute(chart="XmR", by=[], paired=True)
 
 
 def _execute_stratified_balanced():
@@ -311,19 +311,19 @@ def _execute_stratified_uneven():
 
 
 def _execute_missing_values():
-    """Execute scenario 4: missing values, IMR."""
+    """Execute scenario 4: missing values, XmR."""
     df = _make_missing_values()
     pb = ProcessBehavior(df)
     study = pb.formulate(response="y", factors=["factor 1", "factor 2"], time="time")
-    return study.execute(chart="Imr", by=[], paired=True)
+    return study.execute(chart="XmR", by=[], paired=True)
 
 
-def _execute_paired_imr_r():
-    """Execute scenario 5a: paired Imr+R."""
+def _execute_paired_xmr_r():
+    """Execute scenario 5a: paired XmR+R."""
     df = _make_paired_mode()
     pb = ProcessBehavior(df)
     study = pb.formulate(response="y", factors=["factor 1", "factor 2"], time="time")
-    return study.execute(chart="Imr", by=[], paired=True)
+    return study.execute(chart="XmR", by=[], paired=True)
 
 
 def _execute_paired_xbar_s():
@@ -343,19 +343,19 @@ def _execute_residual_chart():
 
 
 def _execute_single_obs_strata():
-    """Execute scenario 7: SDS 3 with n=1 strata, IMR by=[]."""
+    """Execute scenario 7: SDS 3 with n=1 strata, XmR by=[]."""
     df = _make_single_obs_strata()
     pb = ProcessBehavior(df)
     study = pb.formulate(response="y", factors=["factor 1", "factor 2"], time="time")
-    return study.execute(chart="Imr", by=[], paired=True)
+    return study.execute(chart="XmR", by=[], paired=True)
 
 
 def _execute_pathological_ordering():
-    """Execute scenario 8: reverse-sorted input, IMR paired."""
+    """Execute scenario 8: reverse-sorted input, XmR paired."""
     df = _make_pathological_ordering()
     pb = ProcessBehavior(df)
     study = pb.formulate(response="y", factors=["factor 1", "factor 2"], time="time")
-    return study.execute(chart="Imr", by=[], paired=True)
+    return study.execute(chart="XmR", by=[], paired=True)
 
 
 # ============================================================================
@@ -381,9 +381,9 @@ class TestGoldenMasterSnapshots:
         result = _execute_missing_values()
         _assert_result_matches_snapshot("missing_values", result)
 
-    def test_paired_imr_r(self):
-        result = _execute_paired_imr_r()
-        _assert_result_matches_snapshot("paired_imr_r", result)
+    def test_paired_xmr_r(self):
+        result = _execute_paired_xmr_r()
+        _assert_result_matches_snapshot("paired_xmr_r", result)
 
     def test_paired_xbar_s(self):
         result = _execute_paired_xbar_s()
@@ -407,27 +407,27 @@ class TestGoldenMasterSnapshots:
 # ============================================================================
 
 class TestPairedEquivalence:
-    """Assert paired output == independent output for Imr+R and Xbar+S.
+    """Assert paired output == independent output for XmR+R and Xbar+S.
 
     Checks all three result components: data, statistics, metadata.
     """
 
-    def test_imr_paired_vs_independent(self):
-        """Paired Imr+R should match independent Imr + independent R."""
+    def test_xmr_paired_vs_independent(self):
+        """Paired XmR+R should match independent XmR + independent R."""
         df = _make_paired_mode()
         pb = ProcessBehavior(df)
         study = pb.formulate(response="y", factors=["factor 1", "factor 2"], time="time")
 
         # Paired
-        paired = study.execute(chart="Imr", by=[], paired=True)
+        paired = study.execute(chart="XmR", by=[], paired=True)
 
         # Independent
-        imr_only = study.execute(chart="Imr", by=[])
+        xmr_only = study.execute(chart="XmR", by=[])
         r_only = study.execute(chart="R", by=[])
 
-        # Compare Imr
+        # Compare XmR
         _assert_chart_equivalence(
-            paired.charts["Imr"], imr_only.charts["Imr"], "Imr paired vs independent"
+            paired.charts["XmR"], xmr_only.charts["XmR"], "XmR paired vs independent"
         )
 
         # Compare R
@@ -458,21 +458,21 @@ class TestPairedEquivalence:
             paired.charts["S"], s_only.charts["S"], "S paired vs independent"
         )
 
-    def test_imr_stratified_paired_vs_independent(self):
-        """Paired stratified Imr+R should match independent stratified Imr + R."""
+    def test_xmr_stratified_paired_vs_independent(self):
+        """Paired stratified XmR+R should match independent stratified XmR + R."""
         df = _make_stratified_balanced()
         pb = ProcessBehavior(df)
         study = pb.formulate(response="y", factors=["factor 1", "factor 2"], time="time")
 
         # Paired stratified
-        paired = study.execute(chart="Imr", by=["factor 1", "factor 2"], paired=True)
+        paired = study.execute(chart="XmR", by=["factor 1", "factor 2"], paired=True)
 
         # Independent stratified
-        imr_only = study.execute(chart="Imr", by=["factor 1", "factor 2"])
+        xmr_only = study.execute(chart="XmR", by=["factor 1", "factor 2"])
         r_only = study.execute(chart="R", by=["factor 1", "factor 2"])
 
         _assert_chart_equivalence(
-            paired.charts["Imr"], imr_only.charts["Imr"], "Imr stratified paired vs independent"
+            paired.charts["XmR"], xmr_only.charts["XmR"], "XmR stratified paired vs independent"
         )
         _assert_chart_equivalence(
             paired.charts["R"], r_only.charts["R"], "R stratified paired vs independent"
@@ -532,16 +532,16 @@ def _limits_are_scalar(stats: dict) -> bool:
 class TestShapeInvariants:
     """Assert structural properties that hold for any dataset."""
 
-    def test_imr_row_count_preserved(self):
-        """IMR: len(output) == len(input) per stratum."""
+    def test_xmr_row_count_preserved(self):
+        """XmR: len(output) == len(input) per stratum."""
         df = _make_unstratified_small()
         pb = ProcessBehavior(df)
         study = pb.formulate(response="y", factors=["factor 1"], time="time")
-        result = study.execute(chart="Imr", by=[])
+        result = study.execute(chart="XmR", by=[])
 
-        imr_data = result.charts["Imr"]["data"]
-        assert len(imr_data) == len(df), (
-            f"IMR row count mismatch: output={len(imr_data)}, input={len(df)}"
+        xmr_data = result.charts["XmR"]["data"]
+        assert len(xmr_data) == len(df), (
+            f"XmR row count mismatch: output={len(xmr_data)}, input={len(df)}"
         )
 
     def test_r_row_count_drops_first(self):
@@ -561,9 +561,9 @@ class TestShapeInvariants:
         df = _make_stratified_balanced()
         pb = ProcessBehavior(df)
         study = pb.formulate(response="y", factors=["factor 1", "factor 2"], time="time")
-        result = study.execute(chart="Imr", by=[], paired=True)
+        result = study.execute(chart="XmR", by=[], paired=True)
 
-        for chart_key in ("Imr", "R"):
+        for chart_key in ("XmR", "R"):
             data = result.charts[chart_key]["data"]
             if "beyond_limits" in data.columns:
                 unique_vals = set(data["beyond_limits"].unique())
@@ -576,10 +576,10 @@ class TestShapeInvariants:
         df = _make_unstratified_small()
         pb = ProcessBehavior(df)
         study = pb.formulate(response="y", factors=["factor 1"], time="time")
-        result = study.execute(chart="Imr", by=[])
+        result = study.execute(chart="XmR", by=[])
 
-        imr_data = result.charts["Imr"]["data"]
-        centers = imr_data["center"].unique()
+        xmr_data = result.charts["XmR"]["data"]
+        centers = xmr_data["center"].unique()
         assert len(centers) == 1, (
             f"Center line should be constant, got {len(centers)} unique values"
         )
@@ -589,9 +589,9 @@ class TestShapeInvariants:
         df = _make_unstratified_small()
         pb = ProcessBehavior(df)
         study = pb.formulate(response="y", factors=["factor 1"], time="time")
-        result = study.execute(chart="Imr", by=[])
+        result = study.execute(chart="XmR", by=[])
 
-        stats = result.charts["Imr"]["statistics"]
+        stats = result.charts["XmR"]["statistics"]
         if _limits_are_scalar(stats):
             assert stats["lpl"] <= stats["center"] <= stats["upl"], (
                 f"Limit ordering violated: LPL={stats['lpl']}, "
@@ -603,9 +603,9 @@ class TestShapeInvariants:
         df = _make_stratified_balanced()
         pb = ProcessBehavior(df)
         study = pb.formulate(response="y", factors=["factor 1", "factor 2"], time="time")
-        result = study.execute(chart="Imr", by=["factor 1", "factor 2"])
+        result = study.execute(chart="XmR", by=["factor 1", "factor 2"])
 
-        stats = result.charts["Imr"]["statistics"]
+        stats = result.charts["XmR"]["statistics"]
         for stratum, s in stats.items():
             if _limits_are_scalar(s):
                 assert s["lpl"] <= s["center"] <= s["upl"], (
@@ -651,7 +651,7 @@ class TestShapeInvariants:
         study_normal = pb_normal.formulate(
             response="y", factors=["factor 1", "factor 2"], time="time"
         )
-        result_normal = study_normal.execute(chart="Imr", by=[], paired=True)
+        result_normal = study_normal.execute(chart="XmR", by=[], paired=True)
 
         # Reverse ordering
         df_reverse = df_normal.iloc[::-1].reset_index(drop=True)
@@ -659,9 +659,9 @@ class TestShapeInvariants:
         study_reverse = pb_reverse.formulate(
             response="y", factors=["factor 1", "factor 2"], time="time"
         )
-        result_reverse = study_reverse.execute(chart="Imr", by=[], paired=True)
+        result_reverse = study_reverse.execute(chart="XmR", by=[], paired=True)
 
-        for chart_key in ("Imr", "R"):
+        for chart_key in ("XmR", "R"):
             _assert_chart_equivalence(
                 result_normal.charts[chart_key],
                 result_reverse.charts[chart_key],
@@ -673,9 +673,9 @@ class TestShapeInvariants:
         df = _make_stratified_balanced()
         pb = ProcessBehavior(df)
         study = pb.formulate(response="y", factors=["factor 1", "factor 2"], time="time")
-        result = study.execute(chart="Imr", by=[])
+        result = study.execute(chart="XmR", by=[])
 
-        meta = result.charts["Imr"].get("metadata", {})
+        meta = result.charts["XmR"].get("metadata", {})
         boundaries = meta.get("lane_boundaries")
         if boundaries:
             # boundaries can be a list (ungrouped) or dict (stratified)

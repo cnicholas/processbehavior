@@ -29,9 +29,9 @@ The **Sampling Design State** describes the structure of your data. ProcessBehav
 | 1 | Full Replication | All factor-time cells have n >= 2 | Xbar-S |
 | 2 | No Replication | All cells have exactly n = 1 | Xbar-S (MR-based) |
 | 3 | Partial Replication | Mix of n=1 and n>=2 cells | Xbar-S (hybrid) |
-| 4 | Single Stream | One factor level over time | Stratified IMR |
-| 5 | Nested Design | Hierarchical factor structure | IMR |
-| 6 | Unstructured | Irregular/sporadic collection | IMR |
+| 4 | Single Stream | One factor level over time | Stratified XmR |
+| 5 | Nested Design | Hierarchical factor structure | XmR |
+| 6 | Unstructured | Irregular/sporadic collection | XmR |
 
 ### Why SDS Matters
 
@@ -45,7 +45,7 @@ The SDS determines:
 study = pb.formulate(response='weight', factors=['lane'], time='batch')
 print(f"SDS: {study.sds}")           # e.g., 3
 print(f"Name: {study.sds_name}")     # e.g., "Partial Replication"
-print(f"Valid: {study.valid_charts}") # e.g., ['Xbar', 'S', 'Imr']
+print(f"Valid: {study.valid_charts}") # e.g., ['Xbar', 'S', 'XmR']
 ```
 
 ## Wheeler's Variance Analysis System (VAS)
@@ -72,7 +72,7 @@ For replicated designs (SDS 1-3), ProcessBehavior computes five residual decompo
 print(study.dataset[['R1', 'R2', 'R3', 'R4', 'R5']].head())
 
 # Chart residuals using the value parameter
-result = study.execute(chart='Imr', by=['lane'], value='R4')
+result = study.execute(chart='XmR', by=['lane'], value='R4')
 result.plot()
 ```
 
@@ -84,7 +84,7 @@ result.plot()
 |-------|----------|--------------|
 | **Xbar** | Compare subgroup means | n >= 2 per subgroup |
 | **S** | Monitor subgroup variation | n >= 2 per subgroup |
-| **Imr** | Individual measurements over time | Any structure |
+| **XmR** | Individual measurements over time | Any structure |
 | **R** | Range of subgroups | n >= 2 per subgroup |
 
 ### Residual Charts
@@ -95,16 +95,16 @@ Use the `value` parameter to chart residuals instead of the response variable:
 # Chart R5 residuals (factor effects) on an Xbar chart
 result = study.execute(chart='Xbar', value='R5')
 
-# Chart R4 residuals (time effects) on a stratified IMR chart
-result = study.execute(chart='Imr', by=['lane'], value='R4')
+# Chart R4 residuals (time effects) on a stratified XmR chart
+result = study.execute(chart='XmR', by=['lane'], value='R4')
 ```
 
 | Residual | Chart Type | Purpose |
 |----------|------------|---------|
-| **R2** | S or IMR | Within-group variation stability |
-| **R3** | IMR | Detect factor-time interactions |
-| **R4** | IMR | Detect time effects |
-| **R5** | Xbar or IMR | Detect factor effects |
+| **R2** | S or XmR | Within-group variation stability |
+| **R3** | XmR | Detect factor-time interactions |
+| **R4** | XmR | Detect time effects |
+| **R5** | Xbar or XmR | Detect factor effects |
 
 ## The `by` Parameter
 
@@ -120,8 +120,8 @@ result = study.execute(chart='Xbar', by=['factor 1'])
 # Xbar chart collapsed to grand mean
 result = study.execute(chart='Xbar', by=[])
 
-# IMR chart stratified by factor (separate chart per level)
-result = study.execute(chart='Imr', by=['lane'])
+# XmR chart stratified by factor (separate chart per level)
+result = study.execute(chart='XmR', by=['lane'])
 ```
 
 **Key concept**: The `by` parameter creates *views* over the same underlying data. Residuals are computed once during formulation and never change regardless of how you view them.
@@ -144,7 +144,7 @@ Signal detection uses the Western Electric (WECO) rules:
 ### Rule Applicability
 
 - **Xbar/S charts**: Only Rule 1 applies (beyond limits)
-- **IMR charts**: All 8 rules apply
+- **XmR charts**: All 8 rules apply
 
 ```python
 # Standard rules (1-4)
@@ -180,6 +180,6 @@ ProcessBehavior follows Wheeler's philosophy:
 
 ## Next Steps
 
-- [Basic IMR Chart](../tutorials/basic-imr.ipynb) - Create your first IMR chart
+- [Basic XmR Chart](../tutorials/basic-imr.ipynb) - Create your first XmR chart
 - [Sampling Design States](../user-guide/sds-detection.md) - Deep dive into SDS
 - [VAS Residuals](../user-guide/residuals.md) - Understanding VAS residuals

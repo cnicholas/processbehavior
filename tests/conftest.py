@@ -91,10 +91,10 @@ def perf_spec():
 
 
 @pytest.fixture
-def perf_spec_imr():
-    """Specification for IMR analysis performance tests."""
+def perf_spec_xmr():
+    """Specification for XmR analysis performance tests."""
     return {
-        'analysis_type': 'Imr',
+        'analysis_type': 'XmR',
         'rsg_vars': ['factor 1'],
         'time_var': 'time',
         'response_var': 'y',
@@ -135,7 +135,7 @@ def sds2_small():
     Total rows: 16
     Columns: factor 1, factor 2, time, y
 
-    Use for: IMR chart tests, unreplicated factorial designs
+    Use for: XmR chart tests, unreplicated factorial designs
     """
     return synthetic.make_sds(2, K1=2, K2=2, T=4, seed=42)
 
@@ -163,7 +163,7 @@ def sds4_small():
     Total rows: 20
     Columns: time, y
 
-    Use for: IMR charts, time series analysis, trend detection
+    Use for: XmR charts, time series analysis, trend detection
     """
     return synthetic.make_sds(4, T=20, seed=42)
 
@@ -177,7 +177,7 @@ def sds4_minimal():
     Total rows: 10
     Columns: time, y
 
-    Use for: Quick IMR tests, minimal valid data scenarios
+    Use for: Quick XmR tests, minimal valid data scenarios
     """
     return synthetic.make_sds(4, T=10, seed=42)
 
@@ -218,7 +218,7 @@ def sds6_small():
 @pytest.fixture
 def single_factor_data():
     """
-    Single grouping factor with time - basic grouped IMR scenario.
+    Single grouping factor with time - basic grouped XmR scenario.
 
     Structure: 3 levels × 6 time points × 2 reps = 36 rows
     Columns: factor 1, time, y
@@ -242,14 +242,14 @@ def two_factor_data():
 
 
 @pytest.fixture
-def imr_only_data():
+def xmr_only_data():
     """
-    Response-only data for IMR analysis (no factors, no explicit time).
+    Response-only data for XmR analysis (no factors, no explicit time).
 
     Structure: 15 observations
     Columns: y only (time implicit via obs_id after processing)
 
-    Use for: Simplest IMR scenario, response-only formulation tests
+    Use for: Simplest XmR scenario, response-only formulation tests
     """
     import pandas as pd
     # Use make_sds4 but drop the time column to simulate response-only input
@@ -282,7 +282,7 @@ def simple_values_10():
     """
     Simple 10-value DataFrame for tests needing slightly more data.
 
-    Use for: Tests requiring valid IMR calculation (needs >2 points for mR)
+    Use for: Tests requiring valid XmR calculation (needs >2 points for mR)
     """
     import pandas as pd
     return pd.DataFrame({'Value': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]})

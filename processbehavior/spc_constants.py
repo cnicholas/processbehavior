@@ -27,10 +27,10 @@ import pandas as pd
 # Control limit multiplier (3-sigma limits are standard in SPC)
 SIGMA_MULTIPLIER = 3
 
-# E2 constant for IMR charts (n=2, moving range of 2 consecutive observations)
+# E2 constant for XmR charts (n=2, moving range of 2 consecutive observations)
 # Used for calculating control limits on individual values
 # E2 = d2 / d3 for n=2, where d2 = 1.128 and d3 = 0.8525
-IMR_LIMIT_MULTIPLIER = 2.66
+XMR_LIMIT_MULTIPLIER = 2.66
 
 # D4 constant for R charts (n=2, range of 2 consecutive observations)
 # Used for upper control limit on moving range
@@ -196,20 +196,20 @@ def calculate_limits(
     """
     Calculate control limits for various chart types.
 
-    Supports Xbar, S, Imr (individuals/moving range), and R charts.
+    Supports Xbar, S, XmR (individuals/moving range), and R charts.
 
     Parameters
     ----------
     limits_type : str
-        Type of control chart: 'Xbar', 'S', 'Imr', or 'R'
+        Type of control chart: 'Xbar', 'S', 'XmR', or 'R'
     mean : float, optional
-        Grand mean or subgroup mean (required for Xbar, Imr)
+        Grand mean or subgroup mean (required for Xbar, XmR)
     sd : float, optional
         Standard deviation (required for Xbar, S)
     N : int, optional
         Subgroup size (required for Xbar, S)
     mR : float, optional
-        Mean moving range (required for Imr, R)
+        Mean moving range (required for XmR, R)
     round_to : int, default=3
         Number of decimal places for rounding (currently unused)
 
@@ -232,8 +232,8 @@ def calculate_limits(
     upl    1.044...
     dtype: float64
 
-    Calculate IMR chart limits:
-    >>> calculate_limits(limits_type='Imr', mean=10.0, mR=0.3)
+    Calculate XmR chart limits:
+    >>> calculate_limits(limits_type='XmR', mean=10.0, mR=0.3)
     lpl    9.202
     upl   10.798
     dtype: float64
@@ -253,7 +253,7 @@ def calculate_limits(
     -----
     Xbar limits: X̄ ± (3 * Wd) / sqrt(n), where Wd = S / c4(n)
     S limits: S * b3(n) to S * b4(n)
-    IMR limits: X̄ ± (E2 * mR), where E2 = 2.66
+    XmR limits: X̄ ± (E2 * mR), where E2 = 2.66
     R limits: 0 to mR * D4, where D4 = 3.268
 
     References
@@ -288,7 +288,7 @@ def calculate_limits(
         lpl = sd * b3(N)
         upl = sd * b4(N)
 
-    elif limits_type == "Imr":
+    elif limits_type == "XmR":
         if None in [mean, mR]:
             raise ValueError(
                 f"The limits calculation for {limits_type} requires (mean, and mR). "
@@ -297,8 +297,8 @@ def calculate_limits(
 
         # LPL = X̄ - (E2 * mR)
         # UPL = X̄ + (E2 * mR)
-        lpl = mean - (IMR_LIMIT_MULTIPLIER * mR)
-        upl = mean + (IMR_LIMIT_MULTIPLIER * mR)
+        lpl = mean - (XMR_LIMIT_MULTIPLIER * mR)
+        upl = mean + (XMR_LIMIT_MULTIPLIER * mR)
 
     elif limits_type == "R":
         if mR is None:
@@ -315,7 +315,7 @@ def calculate_limits(
     else:
         raise ValueError(
             f"The limits type '{limits_type}' is not supported. "
-            f"Supported types: 'Xbar', 'S', 'Imr', 'R'"
+            f"Supported types: 'Xbar', 'S', 'XmR', 'R'"
         )
 
     return pd.Series({'lpl': lpl, 'upl': upl}, index=['lpl', 'upl'])
@@ -380,7 +380,7 @@ def detect_beyond_limits(x: float, lpl: float, upl: float) -> int:
 # ============================================================================
 
 # Valid base chart types for syntactic validation
-VALID_BASE_CHARTS = {"Xbar", "S", "Imr", "R", "Histogram"}
+VALID_BASE_CHARTS = {"Xbar", "S", "XmR", "R", "Histogram"}
 
 # Human-readable residual aliases
 # Maps alias -> {id, label, description}

@@ -81,7 +81,7 @@ study = pb.formulate(...)
 - `.sds_description`: Detailed SDS explanation
 
 **Properties - Charts:**
-- `.valid_charts`: List of valid chart types ('Xbar', 'S', 'Imr', 'R')
+- `.valid_charts`: List of valid chart types ('Xbar', 'S', 'XmR', 'R')
 - `.recommended_chart`: Best chart for this SDS
 - `.available_residuals`: List of available residuals ('R1'-'R5')
 
@@ -95,20 +95,20 @@ study = pb.formulate(...)
 
 ```python
 result = study.execute(
-    chart: str = None,           # Chart type: 'Xbar', 'S', 'Imr', 'R'
+    chart: str = None,           # Chart type: 'Xbar', 'S', 'XmR', 'R'
     by: list[str] = None,        # Grouping/stratification (subset of factors)
     value: str = None,           # What to chart: None (response) or 'R1'-'R5'
     recentered: bool = False,    # Re-center residuals on original scale
     bins: int = None,            # Number of bins for histogram charts
-    paired: bool = False         # Return paired charts (Xbar+S or Imr+R)
+    paired: bool = False         # Return paired charts (Xbar+S or XmR+R)
 ) -> AnalysisResult
 ```
 
 **Parameters:**
 
-- `chart`: Base chart type. One of `'Xbar'`, `'S'`, `'Imr'`, `'R'`.
+- `chart`: Base chart type. One of `'Xbar'`, `'S'`, `'XmR'`, `'R'`.
 - `by`: Controls grouping/stratification:
-  - `None`: Default for chart type (full factors for Xbar/S, required for IMR with factors)
+  - `None`: Default for chart type (full factors for Xbar/S, required for XmR with factors)
   - `[]`: Collapse all factors
   - `['factor']`: Aggregate/stratify by single factor
   - `['f1', 'f2']`: Aggregate/stratify by multiple factors
@@ -117,7 +117,7 @@ result = study.execute(
   - `'R1'` to `'R5'`: Chart the specified VAS residual
 - `recentered`: If True and using residuals, re-center on original scale
 - `bins`: Number of bins for histogram charts
-- `paired`: If True, returns both charts in a pair (Xbar+S or Imr+R). Either chart in the pair triggers the pair (e.g., `chart='S', paired=True` returns Xbar+S)
+- `paired`: If True, returns both charts in a pair (Xbar+S or XmR+R). Either chart in the pair triggers the pair (e.g., `chart='S', paired=True` returns Xbar+S)
 
 **Examples:**
 
@@ -128,14 +128,14 @@ result = study.execute(chart='Xbar')
 # Xbar chart aggregated by single factor
 result = study.execute(chart='Xbar', by=['factor 1'])
 
-# IMR chart stratified by factor (one chart per level)
-result = study.execute(chart='Imr', by=['lane'])
+# XmR chart stratified by factor (one chart per level)
+result = study.execute(chart='XmR', by=['lane'])
 
 # Chart R5 residuals on Xbar
 result = study.execute(chart='Xbar', value='R5')
 
-# Recentered R4 residuals on stratified IMR
-result = study.execute(chart='Imr', by=['lane'], value='R4', recentered=True)
+# Recentered R4 residuals on stratified XmR
+result = study.execute(chart='XmR', by=['lane'], value='R4', recentered=True)
 ```
 
 #### why_not()
@@ -545,7 +545,7 @@ Valid chart type strings:
 
 ```python
 # Standard charts
-'Xbar', 'S', 'Imr', 'R'
+'Xbar', 'S', 'XmR', 'R'
 
 # Effects and interaction charts (passed to result.plot())
 'Effects'            # All main effects (factor + time) combined
@@ -561,16 +561,16 @@ To chart residuals, use the `value` parameter:
 # Chart R5 residuals on Xbar
 study.execute(chart='Xbar', value='R5')
 
-# Chart R4 residuals on stratified IMR
-study.execute(chart='Imr', by=['lane'], value='R4')
+# Chart R4 residuals on stratified XmR
+study.execute(chart='XmR', by=['lane'], value='R4')
 ```
 
 For stratified charts, use the `by` parameter:
 
 ```python
 # Stratify by single factor
-result = study.execute(chart='Imr', by=['lane'])
-# Access strata: result.charts['Imr']['strata']  # ['A', 'B', 'C', 'D']
+result = study.execute(chart='XmR', by=['lane'])
+# Access strata: result.charts['XmR']['strata']  # ['A', 'B', 'C', 'D']
 ```
 
 ### Rule Types

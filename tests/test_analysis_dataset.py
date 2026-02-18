@@ -2,7 +2,7 @@
 Integration tests for Analysis and AnalysisDataSet classes.
 
 These tests validate:
-1. Correct control chart calculations (Xbar, S, IMR, R)
+1. Correct control chart calculations (Xbar, S, XmR, R)
 2. Proper handling of grouping variables
 3. Correct limit calculations
 4. Data type handling (datetime columns, etc.)
@@ -63,12 +63,12 @@ def detect_sds_for_test(df: pd.DataFrame, spec: dict) -> int:
 
 @pytest.fixture
 def analysis_types():
-    return ['Xbar', 'S', 'Imr', 'R']
+    return ['Xbar', 'S', 'XmR', 'R']
 
 
 @pytest.fixture
 def df():
-    """SDS 2 test data: n=1 per (factor x time) cell. Valid for IMR/R."""
+    """SDS 2 test data: n=1 per (factor x time) cell. Valid for XmR/R."""
     data = {
         'a': ['a', 'a', 'a', 'b', 'b', 'b', 'c'],
         'b': ['c', 'c', 'c', 'd', 'd', 'd', 'e'],
@@ -195,16 +195,16 @@ class TestXbarSAnalysis:
 
 
 # ========================
-# IMR Chart Tests
+# XmR Chart Tests
 # ========================
 
-class TestImrAnalysis:
-    """Tests for Individual Moving Range (IMR) chart calculations."""
+class TestXmRAnalysis:
+    """Tests for Individual Moving Range (XmR) chart calculations."""
 
-    def test_imr_with_grouping(self, df):
-        """Test stratified IMR analysis with grouping."""
+    def test_xmr_with_grouping(self, df):
+        """Test stratified XmR analysis with grouping."""
         spec = {
-            'analysis_type': 'Imr',
+            'analysis_type': 'XmR',
             'rsg_vars': ['a', 'b'],
             'time_var': 'd',
             'response_var': 'c',
@@ -215,49 +215,49 @@ class TestImrAnalysis:
         sds = detect_sds_for_test(df, spec)
         result = Analysis(spec=_make_spec(spec), request=_make_request(spec), sds=sds, df=df).calculate()
 
-        # SRP: Imr only returns Imr (no longer bundled with R by default)
+        # SRP: XmR only returns XmR (no longer bundled with R by default)
         assert hasattr(result, 'keys') and hasattr(result, 'values')
         keys = list(result.keys())
-        assert 'Imr' in keys
+        assert 'XmR' in keys
 
-        # Check that Imr chart has strata
-        imr_chart = result['Imr']
-        assert 'strata' in imr_chart
+        # Check that XmR chart has strata
+        xmr_chart = result['XmR']
+        assert 'strata' in xmr_chart
         # Third group only had 1 obs so should be dropped
-        strata = imr_chart['strata']
+        strata = xmr_chart['strata']
         assert 'a_c' in strata
         assert 'b_d' in strata
 
         # Statistics are nested by stratum
-        imr_stats = imr_chart['statistics']
+        xmr_stats = xmr_chart['statistics']
 
         # Check centers
-        assert imr_stats['a_c']['center'] == 2.33
-        assert imr_stats['b_d']['center'] == 7.67
+        assert xmr_stats['a_c']['center'] == 2.33
+        assert xmr_stats['b_d']['center'] == 7.67
 
         # Check limits
-        assert imr_stats['a_c']['lpl'] == -0.33
-        assert imr_stats['b_d']['lpl'] == 1.02
-        assert imr_stats['a_c']['upl'] == 4.99
-        assert imr_stats['b_d']['upl'] == 14.32
+        assert xmr_stats['a_c']['lpl'] == -0.33
+        assert xmr_stats['b_d']['lpl'] == 1.02
+        assert xmr_stats['a_c']['upl'] == 4.99
+        assert xmr_stats['b_d']['upl'] == 14.32
 
-    def test_imr_with_grouping_paired(self, df):
-        """Test Imr chart with grouping returns both Imr and R when paired=True."""
+    def test_xmr_with_grouping_paired(self, df):
+        """Test XmR chart with grouping returns both XmR and R when paired=True."""
         spec = {
-            'analysis_type': 'Imr',
+            'analysis_type': 'XmR',
             'rsg_vars': ['a', 'b'],
             'time_var': 'd',
             'response_var': 'c',
             'rsg_var_name': 'rsg',
             'round_to': 2,
-            'paired': True  # Request bundled Imr+R
+            'paired': True  # Request bundled XmR+R
         }
         sds = detect_sds_for_test(df, spec)
         result = Analysis(spec=_make_spec(spec), request=_make_request(spec), sds=sds, df=df).calculate()
 
-        # Paired mode: Imr and R are bundled together
+        # Paired mode: XmR and R are bundled together
         keys = list(result.keys())
-        assert 'Imr' in keys
+        assert 'XmR' in keys
         assert 'R' in keys
 
         # Check R chart is present with nested statistics
@@ -287,7 +287,7 @@ class TestRChartAnalysis:
         sds = detect_sds_for_test(df, spec)
         result = Analysis(spec=_make_spec(spec), request=_make_request(spec), sds=sds, df=df).calculate()
 
-        # SRP: R only returns R (no longer bundled with Imr by default)
+        # SRP: R only returns R (no longer bundled with XmR by default)
         assert hasattr(result, "keys") and hasattr(result, "values")
         keys = list(result.keys())
         assert 'R' in keys
@@ -366,11 +366,11 @@ class TestDateTimeHandling:
             if analysis in ['Xbar', 'S']:
                 spec['by'] = ['a', 'b']
             else:
-                spec['by'] = ['a', 'b']  # IMR/R also needs explicit by with factors
+                spec['by'] = ['a', 'b']  # XmR/R also needs explicit by with factors
             sds = detect_sds_for_test(df_dt, spec)
             result = Analysis(spec=_make_spec(spec), request=_make_request(spec), sds=sds, df=df_dt).calculate()
 
-            if analysis in ['Imr', 'R']:
+            if analysis in ['XmR', 'R']:
                 # SRP: Each chart type returns only itself
                 out = result[analysis]['data']
                 assert out.columns.tolist()[0] == has_time
@@ -378,7 +378,7 @@ class TestDateTimeHandling:
     def test_string_date_converted_and_sorted(self, df_dt):
         """Test that string date columns are converted and sorted chronologically."""
         spec = {
-            'analysis_type': 'Imr',
+            'analysis_type': 'XmR',
             'rsg_vars': ['a', 'b'],
             'time_var': 'd2',
             'response_var': 'c',
@@ -389,14 +389,14 @@ class TestDateTimeHandling:
         result = Analysis(spec=_make_spec(spec), request=_make_request(spec), sds=sds, df=df_dt).calculate()
 
         # With new bundled structure, access via chart type key
-        imr_data = result['Imr']['data']
+        xmr_data = result['XmR']['data']
 
         # String dates should be converted to datetime
-        o_type = imr_data['d2'].dtype
+        o_type = xmr_data['d2'].dtype
         assert pd.api.types.is_datetime64_any_dtype(o_type), f"Expected datetime type, got {o_type}"
 
         # Filter to a specific stratum for ordering check
-        stratum_data = imr_data[imr_data['rsg'] == 'a_c']
+        stratum_data = xmr_data[xmr_data['rsg'] == 'a_c']
 
         # Should be chronologically ordered (2000-02-01 is first)
         dt_val = stratum_data.iloc[0, 0]

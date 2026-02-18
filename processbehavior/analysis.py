@@ -4,7 +4,7 @@ Analysis - Chart calculation strategies for process behavior analysis.
 This module provides the Analysis class which executes chart calculations using
 the strategy pattern. It supports:
 - Xbar and S charts (subgroup mean and variation)
-- IMR charts (individual moving range)
+- XmR charts (individual and moving range)
 - R charts (range)
 
 The Analysis class coordinates between:
@@ -49,20 +49,20 @@ logger = logging.getLogger(__name__)
 class _MRChartSpec:
     """Captures what makes an MR-family chart different from its sibling.
 
-    IMR and R charts share >85% of their calculation pipeline. The differences
+    XmR and R charts share >85% of their calculation pipeline. The differences
     are behavioral, not parametric — this dataclass encodes those differences
     so a single shared method can serve both chart types.
     """
-    chart_type: str         # 'Imr' or 'R'
-    limits_type: str        # "Imr" or "R" — passed to calculate_limits()
+    chart_type: str         # 'XmR' or 'R'
+    limits_type: str        # "XmR" or "R" — passed to calculate_limits()
     plot_col: str           # Which column to plot: 'raw' (use value_col) or 'mr'
     center_source: str      # What the center line represents: 'mean' or 'mR'
-    drops_first_mr: bool    # False for Imr, True for R
-    lane_boundary_offset: int  # 0 for Imr, -1 for R
+    drops_first_mr: bool    # False for XmR, True for R
+    lane_boundary_offset: int  # 0 for XmR, -1 for R
 
 
-_IMR_SPEC = _MRChartSpec(
-    chart_type='Imr', limits_type='Imr',
+_XMR_SPEC = _MRChartSpec(
+    chart_type='XmR', limits_type='XmR',
     plot_col='raw', center_source='mean',
     drops_first_mr=False, lane_boundary_offset=0,
 )
@@ -99,7 +99,7 @@ class Analysis:
     Unified analysis class handling all chart types via strategy pattern.
 
     This class replaces the AbstractFactory pattern with a simpler, more maintainable
-    approach. All analysis types (Xbar, S, Imr, R) are handled through internal
+    approach. All analysis types (Xbar, S, XmR, R) are handled through internal
     strategy methods.
 
     Usage:
@@ -188,7 +188,7 @@ class Analysis:
         residual = self.request.residual
         if residual:
             # Residual chart analysis - inline logic (was _calculate_residual_chart)
-            chart_type = self.request.residual_chart_type or 'Imr'
+            chart_type = self.request.residual_chart_type or 'XmR'
             recentered = self.request.recentered
 
             # Determine column name
@@ -207,7 +207,7 @@ class Analysis:
                 )
 
             # Validate chart type
-            valid_chart_types = {'Xbar', 'S', 'Imr', 'Histogram'}
+            valid_chart_types = {'Xbar', 'S', 'XmR', 'Histogram'}
             if chart_type not in valid_chart_types:
                 raise ValueError(
                     f"Chart type '{chart_type}' not supported for residual charts.\n"
@@ -226,7 +226,7 @@ class Analysis:
             residual_strategies = {
                 'Xbar': self._calculate_xbar,
                 'S': self._calculate_s,
-                'Imr': self._calculate_imr,
+                'XmR': self._calculate_xmr,
                 'Histogram': self._calculate_histogram,
             }
             chart_data = residual_strategies[chart_type](value_col=col_name)
@@ -236,7 +236,7 @@ class Analysis:
 
         else:
             # Standard chart analysis
-            # Check if paired charts requested (Xbar+S or Imr+R together)
+            # Check if paired charts requested (Xbar+S or XmR+R together)
             paired = self.request.paired
 
             if paired:
@@ -244,8 +244,8 @@ class Analysis:
                 strategies = {
                     'Xbar': self._calculate_xbar_s,
                     'S': self._calculate_xbar_s,
-                    'Imr': self._calculate_imr_r,  # Bundled Imr+R
-                    'R': self._calculate_imr_r,
+                    'XmR': self._calculate_xmr_r,  # Bundled XmR+R
+                    'R': self._calculate_xmr_r,
                     'Histogram': self._calculate_histogram  # No pairing for Histogram
                 }
             else:
@@ -253,7 +253,7 @@ class Analysis:
                 strategies = {
                     'Xbar': self._calculate_xbar,
                     'S': self._calculate_s,
-                    'Imr': self._calculate_imr,  # SRP: Imr only
+                    'XmR': self._calculate_xmr,  # SRP: XmR only
                     'R': self._calculate_r,  # SRP: R only
                     'Histogram': self._calculate_histogram
                 }
@@ -411,9 +411,9 @@ class Analysis:
         is_response = value_col == spec.response_var
 
         # Xbar/S: by=[] normalizes to by=None (Kt-level aggregation).
-        # Imr/R handles by=[] directly in _calculate_imr() as single-stream.
+        # XmR/R handles by=[] directly in _calculate_xmr() as single-stream.
         # This split is intentional — `by` means "aggregate by" for Xbar/S
-        # and "stratify by" for Imr/R, matching each chart type's semantics.
+        # and "stratify by" for XmR/R, matching each chart type's semantics.
         if by == []:
             by = None
 
@@ -477,7 +477,7 @@ class Analysis:
 
         Lane boundaries are positions in the data where a factor that was
         "collapsed" (not in `by`) changes value. These are rendered as
-        vertical dashed lines on IMR charts.
+        vertical dashed lines on XmR charts.
 
         Parameters
         ----------
@@ -588,7 +588,7 @@ class Analysis:
                 cols_to_keep.insert(0, 'x')
             else:
                 # Use obs_id as implicit time for single condition over time (SDS 4)
-                # Rationale: Wheeler's IMR assumes temporal ordering, and obs_id
+                # Rationale: Wheeler's XmR assumes temporal ordering, and obs_id
                 # provides that ordering from the original data sequence.
                 # See: ProcessBehavior.formulate() docstring for full explanation.
                 cols_to_keep.insert(0, 'obs_id')
@@ -971,21 +971,21 @@ class Analysis:
         _precomputed: dict = None,
     ) -> dict:
         """
-        Shared pipeline for MR-family charts (IMR and R).
+        Shared pipeline for MR-family charts (XmR and R).
 
-        The IMR and R charts share >85% of their calculation logic. The behavioral
+        The XmR and R charts share >85% of their calculation logic. The behavioral
         differences are encoded in ``mr_spec`` — no boolean flags needed.
 
         Parameters
         ----------
         mr_spec : _MRChartSpec
-            Chart behavior specification (_IMR_SPEC or _R_SPEC).
+            Chart behavior specification (_XMR_SPEC or _R_SPEC).
         value_col : str, optional
             Column to use for calculations. Defaults to spec.response_var.
         _return_intermediates : bool, optional
             If True, includes '_intermediates' key for paired-mode reuse.
         _precomputed : dict, optional
-            Pre-computed intermediates from a prior IMR call (paired mode).
+            Pre-computed intermediates from a prior XmR call (paired mode).
             When provided, skips data preparation and uses these values directly.
 
         Returns
@@ -1037,19 +1037,19 @@ class Analysis:
         plot_col: str,
         precomputed: dict,
     ) -> dict:
-        """Build an MR-family chart reusing intermediates from a paired IMR call."""
+        """Build an MR-family chart reusing intermediates from a paired XmR call."""
         spec = self.spec
         out = precomputed['out'].copy()
         grouped = precomputed['grouped'].copy()
         stratify_col = precomputed['stratify_col']
         stratify_by = precomputed['stratify_by']
         strata = precomputed['strata']
-        imr_lane_boundaries = precomputed['lane_boundaries']
+        xmr_lane_boundaries = precomputed['lane_boundaries']
         extra_cols = precomputed['extra_cols']
 
-        # For R chart: compute R-specific limits from IMR's grouped data
-        # grouped has columns: stratify_col, center (=mean), mR, lpl, upl (IMR limits)
-        r_grouped = grouped.rename(columns={'center': 'imr_center', 'mR': 'center'})
+        # For R chart: compute R-specific limits from XmR's grouped data
+        # grouped has columns: stratify_col, center (=mean), mR, lpl, upl (XmR limits)
+        r_grouped = grouped.rename(columns={'center': 'xmr_center', 'mR': 'center'})
 
         r_lims = r_grouped.apply(
             lambda row: calculate_limits(
@@ -1063,14 +1063,14 @@ class Analysis:
 
         r_grouped = _join_limits(r_grouped, r_lims, rsuffix='_r')
 
-        # Resolve lpl/upl column names (may have suffix if IMR lpl/upl exist)
+        # Resolve lpl/upl column names (may have suffix if XmR lpl/upl exist)
         if 'lpl_r' in r_grouped.columns:
             r_grouped = r_grouped.rename(columns={'lpl_r': 'r_lpl', 'upl_r': 'r_upl'})
             r_lpl_col, r_upl_col = 'r_lpl', 'r_upl'
         else:
             r_lpl_col, r_upl_col = 'lpl', 'upl'
 
-        # Merge R limits to the data (drop IMR-specific columns first)
+        # Merge R limits to the data (drop XmR-specific columns first)
         r_out = out.drop(columns=['center', 'lpl', 'upl', 'beyond_limits'], errors='ignore')
         r_merge_data = r_grouped[[stratify_col, 'center', r_lpl_col, r_upl_col]].rename(
             columns={r_lpl_col: 'lpl', r_upl_col: 'upl'}
@@ -1102,8 +1102,8 @@ class Analysis:
 
         # Adjust lane boundaries for R chart (first row dropped per stratum)
         lane_boundaries = {}
-        if imr_lane_boundaries:
-            for stratum, boundaries in imr_lane_boundaries.items():
+        if xmr_lane_boundaries:
+            for stratum, boundaries in xmr_lane_boundaries.items():
                 adjusted = [
                     {**b, 'position': b['position'] + mr_spec.lane_boundary_offset}
                     for b in boundaries
@@ -1186,7 +1186,7 @@ class Analysis:
         )
 
         # Compute limits per group
-        # For IMR: center=mean, limits based on mean ± E2*mR
+        # For XmR: center=mean, limits based on mean ± E2*mR
         # For R:   center=mR, limits based on 0 to D4*mR
         if mr_spec.center_source == 'mean':
             lims = grouped.apply(
@@ -1306,10 +1306,10 @@ class Analysis:
         result = {}
 
         if _precomputed is not None and not _precomputed['is_stratified']:
-            # Reuse intermediates from paired IMR call
+            # Reuse intermediates from paired XmR call
             out = _precomputed['out'].copy()
             mR = _precomputed['mR']
-            imr_lane_boundaries = _precomputed['lane_boundaries']
+            xmr_lane_boundaries = _precomputed['lane_boundaries']
 
             # R chart: drop first observation (NaN moving range)
             if mr_spec.drops_first_mr:
@@ -1342,9 +1342,9 @@ class Analysis:
 
             # Adjust lane boundaries
             r_lane_boundaries = None
-            if imr_lane_boundaries:
+            if xmr_lane_boundaries:
                 r_lane_boundaries = []
-                for b in imr_lane_boundaries:
+                for b in xmr_lane_boundaries:
                     new_pos = b['position'] + mr_spec.lane_boundary_offset
                     if new_pos >= 0:
                         r_lane_boundaries.append({**b, 'position': new_pos})
@@ -1448,15 +1448,15 @@ class Analysis:
 
         return result
 
-    def _calculate_imr(
+    def _calculate_xmr(
         self,
         value_col: str = None,
         _return_intermediates: bool = False,
     ) -> dict:
         """
-        Calculate IMR (Individual) chart statistics.
+        Calculate XmR (Individual) chart statistics.
 
-        Delegates to _calculate_mr_chart with _IMR_SPEC.
+        Delegates to _calculate_mr_chart with _XMR_SPEC.
 
         Parameters
         ----------
@@ -1468,10 +1468,10 @@ class Analysis:
         Returns
         -------
         dict
-            Chart data: {'Imr': {'data': df, 'statistics': dict, 'metadata': dict}}
+            Chart data: {'XmR': {'data': df, 'statistics': dict, 'metadata': dict}}
         """
         return self._calculate_mr_chart(
-            _IMR_SPEC, value_col=value_col,
+            _XMR_SPEC, value_col=value_col,
             _return_intermediates=_return_intermediates,
         )
 
@@ -1490,7 +1490,7 @@ class Analysis:
         value_col : str, optional
             Column to use for calculations. Defaults to spec.response_var.
         _precomputed : dict, optional
-            Pre-computed intermediates from _calculate_imr() for paired mode.
+            Pre-computed intermediates from _calculate_xmr() for paired mode.
 
         Returns
         -------
@@ -1502,13 +1502,13 @@ class Analysis:
             _precomputed=_precomputed,
         )
 
-    def _calculate_imr_r(self, value_col: str = None) -> dict:
+    def _calculate_xmr_r(self, value_col: str = None) -> dict:
         """
-        Calculate Imr and R charts together (Wheeler methodology).
+        Calculate XmR and R charts together (Wheeler methodology).
 
         This method ensures that when paired=True, both charts are calculated
         efficiently using shared intermediate values. The R chart uses the
-        same data computed for Imr, avoiding redundant calculation.
+        same data computed for XmR, avoiding redundant calculation.
 
         Parameters
         ----------
@@ -1518,19 +1518,19 @@ class Analysis:
         Returns
         -------
         dict
-            Combined chart data: {'Imr': {...}, 'R': {...}}
+            Combined chart data: {'XmR': {...}, 'R': {...}}
         """
-        # Calculate Imr with intermediates for R reuse
-        imr_result = self._calculate_imr(value_col, _return_intermediates=True)
+        # Calculate XmR with intermediates for R reuse
+        xmr_result = self._calculate_xmr(value_col, _return_intermediates=True)
 
         # Extract intermediates and remove from result
-        intermediates = imr_result.pop('_intermediates')
+        intermediates = xmr_result.pop('_intermediates')
 
         # Calculate R using precomputed values
         r_result = self._calculate_r(value_col, _precomputed=intermediates)
 
         # Combine results
-        return {**imr_result, **r_result}
+        return {**xmr_result, **r_result}
 
     def _calculate_histogram(self, value_col: str = None) -> dict:
         """

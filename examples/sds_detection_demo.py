@@ -148,7 +148,7 @@ sds_configs = [
         'description': ('Data has no grouping variables and no time ordering.\n'
                         'Typically indicates user needs to specify rsg_vars or time_var.'),
         'spec': {
-            'analysis_type': 'Imr',
+            'analysis_type': 'XmR',
             'response_var': 'y'
         },
         'kwargs': None,  # SDS 0 not in make_sds() dispatcher
@@ -205,7 +205,7 @@ sds_configs = [
         'description': ('One process, measured over time with no grouping.\n'
                         'Traditional individuals chart - perfect for continuous monitoring.'),
         'spec': {
-            'analysis_type': 'Imr',
+            'analysis_type': 'XmR',
             'rsg_vars': ['factor 1'],  # Need grouping var even though K=1 for SDS detection
             'time_var': 'time',
             'response_var': 'y',
@@ -237,7 +237,7 @@ sds_configs = [
         'description': ('Sparse or irregular sampling patterns - process changes mid-stream.\n'
                         'Requires special handling - can\'t assume consistent structure.'),
         'spec': {
-            'analysis_type': 'Imr',
+            'analysis_type': 'XmR',
             'rsg_vars': ['factor 1'],
             'time_var': 'time',
             'response_var': 'y',
@@ -303,43 +303,43 @@ for config in sds_configs:
 
 
 # ============================================================================
-# Killer Feature Demo: Stratified IMR vs Xbar-S
+# Killer Feature Demo: Stratified XmR vs Xbar-S
 # ============================================================================
 
 print("\n\n" + "█" * 80)
 print("KILLER FEATURE: AUTOMATIC STRATIFICATION")
 print("█" * 80)
 print("The same SDS 1 data can be analyzed two ways:")
-print("1. Stratified IMR: Separate I-MR charts per factor (not in Minitab!)")
+print("1. Stratified XmR: Separate XmR charts per factor (not in Minitab!)")
 print("2. Xbar-S: Cell-level analysis with VAS decomposition")
 
 # Generate SDS 1 data for comparison
 df_sds1 = synthetic.make_sds(sds=1, K=3, T=8, seed=SEED, n_min=2, n_max=4)
 
-# Stratified IMR analysis
-spec_stratified_imr = {
-    'analysis_type': 'Imr',
+# Stratified XmR analysis
+spec_stratified_xmr = {
+    'analysis_type': 'XmR',
     'rsg_vars': ['factor 1'],
     'time_var': 'time',
     'response_var': 'y',
     'rsg_var_name': 'rsg'
 }
 
-print("\n🎯 STRATIFIED IMR ANALYSIS:")
-print("   Creates separate I-MR chart for EACH factor level")
+print("\n🎯 STRATIFIED XmR ANALYSIS:")
+print("   Creates separate XmR chart for EACH factor level")
 print("   Each gets its own appropriate control limits")
 
-_imr_spec = _make_spec(spec_stratified_imr)
-_imr_req = _make_request(spec_stratified_imr)
-# Detect SDS for the stratified IMR data
+_xmr_spec = _make_spec(spec_stratified_xmr)
+_xmr_req = _make_request(spec_stratified_xmr)
+# Detect SDS for the stratified XmR data
 _prep = DataPreparation()
-_prep.validate_columns(df_sds1, _imr_spec)
-_prepared = _prep.prepare_dataset(df_sds1, _imr_spec)
-_sds_imr = SDSRegistry().detect_sds(_prepared, _imr_spec).sds
-result_imr = Analysis(spec=_imr_spec, request=_imr_req, sds=_sds_imr, df=df_sds1).calculate()
-print(f"\n   Created {len(result_imr)} individual charts:")
-for group_name in sorted(result_imr.keys())[:3]:
-    stats = result_imr[group_name]['statistics']
+_prep.validate_columns(df_sds1, _xmr_spec)
+_prepared = _prep.prepare_dataset(df_sds1, _xmr_spec)
+_sds_xmr = SDSRegistry().detect_sds(_prepared, _xmr_spec).sds
+result_xmr = Analysis(spec=_xmr_spec, request=_xmr_req, sds=_sds_xmr, df=df_sds1).calculate()
+print(f"\n   Created {len(result_xmr)} individual charts:")
+for group_name in sorted(result_xmr.keys())[:3]:
+    stats = result_xmr[group_name]['statistics']
     print(f"     {group_name}: center={stats['center']:.2f}, "
           f"UCL={stats['ucl']:.2f}, LCL={stats['lcl']:.2f}")
 

@@ -30,8 +30,8 @@ Once SDS is detected, the package automatically completes:
 ### 3. **Killer Feature: Automatic Stratification**
 The demo compares two analyses of the same SDS 1 data:
 
-**Stratified IMR Analysis:**
-- Creates separate I-MR charts for EACH factor level
+**Stratified XmR Analysis:**
+- Creates separate XmR charts for EACH factor level
 - Each chart gets its own appropriate control limits
 - **NOT available in Minitab/JMP** (requires manual filtering)
 
@@ -129,7 +129,7 @@ df = synthetic.make_sds(sds=6, K=3, T=40, seed=42)
 |---------|----------------|-------------|
 | **Automatic SDS detection** | ✅ Yes | ❌ No |
 | **Auto-completion** | ✅ Yes | ❌ No |
-| **Stratified IMR charts** | ✅ Automatic | ❌ Manual filtering required |
+| **Stratified XmR charts** | ✅ Automatic | ❌ Manual filtering required |
 | **VAS residual decomposition** | ✅ Automatic | ❌ Not available |
 | **Rational subgrouping intelligence** | ✅ Yes | ⚠️ Limited |
 

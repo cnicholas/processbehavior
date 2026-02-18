@@ -9,7 +9,7 @@ running the appropriate analysis.
 Key features demonstrated:
 1. Column name auto-completion via pb.cols
 2. SDS-driven automatic analysis selection
-3. IMR charts for simple series
+3. XmR charts for simple series
 4. Xbar/S charts for grouped data
 5. Clear explanations of what's running and why
 """
@@ -24,7 +24,7 @@ np.random.seed(42)
 
 
 def example1_simple_series():
-    """Example 1: Simple time series -> IMR Chart (SDS 4)"""
+    """Example 1: Simple time series -> XmR Chart (SDS 4)"""
     print("\n" + "="*80)
     print("EXAMPLE 1: Simple Time Series")
     print("="*80)
@@ -56,7 +56,7 @@ def example1_simple_series():
     # Step 2: Execute the analysis
     result = study.execute()
 
-    print("\nIMR Chart Results:")
+    print("\nXmR Chart Results:")
     print(result.summary)
 
 
@@ -103,7 +103,7 @@ def example2_grouped_data():
 
 
 def example3_single_factor():
-    """Example 3: Single factor with time -> Stratified IMR"""
+    """Example 3: Single factor with time -> Stratified XmR"""
     print("\n" + "="*80)
     print("EXAMPLE 3: Single Factor Analysis (SDS 2)")
     print("="*80)
@@ -194,8 +194,8 @@ def example5_chart_type_selection():
     print(result1.summary)
 
     # Or specify chart explicitly using auto-completion
-    result2 = study.execute(chart=study.charts.Imr)
-    print(f"\nWith chart=study.charts.Imr:")
+    result2 = study.execute(chart=study.charts.XmR)
+    print(f"\nWith chart=study.charts.XmR:")
     print(result2.summary)
 
 
