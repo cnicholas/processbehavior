@@ -12,9 +12,9 @@ import pandas as pd
 import pytest
 
 from processbehavior.spc_constants import (
-    XMR_LIMIT_MULTIPLIER,
     R_UPPER_LIMIT_MULTIPLIER,
     SIGMA_MULTIPLIER,
+    XMR_LIMIT_MULTIPLIER,
     b3,
     b4,
     c4,
