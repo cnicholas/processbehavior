@@ -370,6 +370,7 @@ def compute_capability_indices(
 
     if specs.is_two_sided:
         pp = _safe_div(specs.usl - specs.lsl, 6 * sigma_hat)
+        assert ppk_lower is not None and ppk_upper is not None
         ppk = min(ppk_lower, ppk_upper)
     elif ppk_lower is not None:
         ppk = ppk_lower
