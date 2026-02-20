@@ -1,40 +1,43 @@
 """
-Unit tests for ResidualCalculator - Pure Function Testing!
-
-This showcases the power of pure functions:
-- No setup required
-- Test inputs → outputs directly
-- Fast, focused tests
-- Easy to understand
+Unit tests for VAS residual calculations.
 
 Tests cover:
 - All mean calculations (Ybar, Ybar_k, Ybar_kt, Ybar_t)
 - All residuals (R1-R5)
-- SDS-specific R2 calculations
-- Orchestration class
+- R2 method variants (exact, ma2, hybrid)
+- Orchestration via calculate_vas_residuals
+- Tom Bishop validation data
 """
 
 import pandas as pd
 import pytest
 
+from processbehavior.data_preparation import DataPreparation
 from processbehavior.formulation_spec import FormulationSpec
 from processbehavior.residual_calculator import (
-    # Orchestration
-    ResidualCalculator,
     calculate_cell_means,
     calculate_factor_means,
-    # Pure functions for means
     calculate_grand_mean,
-    # Pure functions for residuals
     calculate_r1_residual,
-    calculate_r2_residual_sds1,
-    calculate_r2_residual_sds2,
-    calculate_r2_residual_sds3,
+    calculate_r2,
     calculate_r3_residual,
     calculate_r4_residual,
     calculate_r5_residual,
     calculate_time_means,
+    calculate_vas_residuals,
 )
+
+
+# ============================================================================
+# Helpers
+# ============================================================================
+
+def _prepare_for_vas(df: pd.DataFrame, spec: FormulationSpec) -> pd.DataFrame:
+    """Run DataPreparation pipeline to add required keys for calculate_vas_residuals."""
+    prep = DataPreparation()
+    out = prep.prepare_dataset(df, spec)
+    return prep.build_keys(out, spec)
+
 
 # ============================================================================
 # Test: Pure Functions for Means
@@ -139,53 +142,65 @@ def test_calculate_r1_residual_sum_is_zero():
     assert pytest.approx(r1.sum(), abs=1e-10) == 0.0
 
 
-def test_calculate_r2_residual_sds1():
-    """R2 for SDS 1 = Y - Ybar_kt (within-cell deviation)."""
-    df = pd.DataFrame({'weight': [10.0, 10.5, 9.0, 9.5]})
-    cell_means = pd.Series([10.25, 10.25, 9.25, 9.25])
+def test_calculate_r2_exact():
+    """R2 exact = Y - Ybar_kt (within-cell deviation)."""
+    # Build data with required keys
+    df = pd.DataFrame({
+        'weight': [10.0, 10.5, 9.0, 9.5],
+        'Ybar_kt': [10.25, 10.25, 9.25, 9.25],
+        'cell_key': [('A', 1), ('A', 1), ('B', 1), ('B', 1)],
+        'rsg_key': ['A', 'A', 'B', 'B'],
+        'sort_key': [(('A',), 1, 0), (('A',), 1, 1), (('B',), 1, 0), (('B',), 1, 1)],
+    })
 
-    result = calculate_r2_residual_sds1(df, 'weight', cell_means)
+    result = calculate_r2(df, 'weight', r2_method='exact')
 
     expected = pd.Series([-0.25, 0.25, -0.25, 0.25])
     pd.testing.assert_series_equal(result, expected, check_names=False)
 
 
-def test_calculate_r2_residual_sds2_moving_average():
-    """R2 for SDS 2 uses backward 2-point moving average per Tom Bishop."""
-    # Sorted data: [10, 11, 12] within group
+def test_calculate_r2_ma2():
+    """R2 ma2 uses backward 2-point moving average per Tom Bishop."""
     df = pd.DataFrame({
-        'rsg': ['A', 'A', 'A'],
-        'weight': [10.0, 11.0, 12.0]
-    }).sort_values(['rsg'])  # Must be sorted!
+        'weight': [10.0, 11.0, 12.0],
+        'Ybar_kt': [10.0, 11.0, 12.0],
+        'cell_key': [('A', 1), ('A', 2), ('A', 3)],
+        'rsg_key': ['A', 'A', 'A'],
+        'sort_key': [(('A',), 1, 0), (('A',), 2, 0), (('A',), 3, 0)],
+    })
 
-    result = calculate_r2_residual_sds2(df, 'weight', 'rsg')
+    result = calculate_r2(df, 'weight', r2_method='ma2')
 
-    # Per Tom Bishop Eq. 65: Y_ma = (Y_j + Y_{j-1}) / 2
-    # R2_j = Y_j - Y_ma = (Y_j - Y_{j-1}) / 2
-    #
-    # Point 0 (j=1): No lag, R2 = NaN
-    # Point 1 (j=2): MA = (11 + 10)/2 = 10.5, R2 = 11 - 10.5 = 0.5
-    # Point 2 (j=3): MA = (12 + 11)/2 = 11.5, R2 = 12 - 11.5 = 0.5
-    assert pd.isna(result.iloc[0])  # First point has no lag
+    # R2_j = (Y_j - Y_{j-1}) / 2
+    # Point 0: NaN (no lag)
+    # Point 1: (11-10)/2 = 0.5
+    # Point 2: (12-11)/2 = 0.5
+    assert pd.isna(result.iloc[0])
     assert pytest.approx(result.iloc[1], 0.01) == 0.5
     assert pytest.approx(result.iloc[2], 0.01) == 0.5
 
 
-def test_calculate_r2_residual_sds3_hybrid():
-    """R2 for SDS 3 uses within-cell for n>1, zero for n=1."""
+def test_calculate_r2_hybrid():
+    """R2 hybrid uses exact for n>=2 and MA2 for singletons."""
+    # A×1 has n=2 (exact), B×1 has n=1 (MA2), B×2 has n=1 (MA2)
     df = pd.DataFrame({
-        'rsg': ['A', 'A', 'B'],  # A has n=2, B has n=1
-        'time': [1, 1, 1],
-        'weight': [10.0, 10.5, 9.0]
+        'weight': [10.0, 10.5, 9.0, 11.0],
+        'Ybar_kt': [10.25, 10.25, 9.0, 11.0],
+        'cell_key': [('A', 1), ('A', 1), ('B', 1), ('B', 2)],
+        'rsg_key': ['A', 'A', 'B', 'B'],
+        'sort_key': [(('A',), 1, 0), (('A',), 1, 1), (('B',), 1, 0), (('B',), 2, 0)],
     })
-    cell_means = pd.Series([10.25, 10.25, 9.0])
+    n_per_cell = pd.Series([2, 2, 1, 1])
 
-    result = calculate_r2_residual_sds3(df, 'weight', cell_means, 'rsg', 'time')
+    result = calculate_r2(df, 'weight', r2_method='hybrid', n_per_cell=n_per_cell)
 
-    # A: n=2, use within-cell: [10.0-10.25, 10.5-10.25] = [-0.25, 0.25]
-    # B: n=1, use zero: [0.0]
-    expected = pd.Series([-0.25, 0.25, 0.0])
-    pd.testing.assert_series_equal(result, expected, check_names=False)
+    # A rows (n=2): exact = Y - Ybar_kt = [-0.25, 0.25]
+    assert pytest.approx(result.iloc[0], 0.01) == -0.25
+    assert pytest.approx(result.iloc[1], 0.01) == 0.25
+    # B row 0 (n=1, first in group): MA2 = NaN
+    assert pd.isna(result.iloc[2])
+    # B row 1 (n=1): MA2 = (11-9)/2 = 1.0
+    assert pytest.approx(result.iloc[3], 0.01) == 1.0
 
 
 def test_calculate_r3_residual():
@@ -233,20 +248,14 @@ def test_calculate_r5_residual():
 
 
 # ============================================================================
-# Test: Orchestration Class (ResidualCalculator)
+# Test: calculate_vas_residuals orchestration
 # ============================================================================
 
 @pytest.fixture
-def calc():
-    """Create ResidualCalculator instance."""
-    return ResidualCalculator()
-
-
-@pytest.fixture
 def sds1_df():
-    """SDS 1 data - full replication (all cells have n≥2)."""
+    """SDS 1 data - full replication (all cells have n>=2)."""
     return pd.DataFrame({
-        'rsg': ['A', 'A', 'B', 'B'] * 2,  # Each cell has n=2
+        'lane': ['A', 'A', 'B', 'B'] * 2,  # Each cell has n=2
         'time': [1, 1, 1, 1, 2, 2, 2, 2],
         'weight': [10.0, 10.5, 9.0, 9.5, 10.2, 10.4, 9.1, 9.3]
     })
@@ -257,147 +266,154 @@ def spec_sds1():
     """Specification for SDS 1 data."""
     return FormulationSpec(
         response_var='weight',
-        rsg_vars=('rsg',),
+        rsg_vars=('lane',),
         rsg_var_name='rsg',
         time_var='time',
     )
 
 
-def test_calculate_residuals_adds_all_mean_columns(calc, sds1_df, spec_sds1):
+def test_calculate_vas_residuals_adds_all_mean_columns(sds1_df, spec_sds1):
     """Should add Ybar, Ybar_k, Ybar_t, Ybar_kt columns."""
-    result = calc.calculate_residuals(sds1_df, spec_sds1, sds=1)
+    df = _prepare_for_vas(sds1_df, spec_sds1)
+    result = calculate_vas_residuals(df, spec_sds1, r2_method='exact')
 
     mean_cols = ['Ybar', 'Ybar_k', 'Ybar_t', 'Ybar_kt']
     for col in mean_cols:
         assert col in result.columns, f"Missing column: {col}"
 
 
-def test_calculate_residuals_adds_all_residual_columns(calc, sds1_df, spec_sds1):
+def test_calculate_vas_residuals_adds_all_residual_columns(sds1_df, spec_sds1):
     """Should add R1, R2, R3, R4, R5 columns."""
-    result = calc.calculate_residuals(sds1_df, spec_sds1, sds=1)
+    df = _prepare_for_vas(sds1_df, spec_sds1)
+    result = calculate_vas_residuals(df, spec_sds1, r2_method='exact')
 
     residual_cols = ['R1', 'R2', 'R3', 'R4', 'R5']
     for col in residual_cols:
         assert col in result.columns, f"Missing column: {col}"
 
 
-def test_calculate_residuals_sds1_uses_within_cell_variance(calc, sds1_df, spec_sds1):
-    """SDS 1 should use within-cell variance for R2."""
-    result = calc.calculate_residuals(sds1_df, spec_sds1, sds=1)
+def test_calculate_vas_residuals_sds1_uses_within_cell_variance(sds1_df, spec_sds1):
+    """SDS 1 (exact) should use within-cell variance for R2."""
+    df = _prepare_for_vas(sds1_df, spec_sds1)
+    result = calculate_vas_residuals(df, spec_sds1, r2_method='exact')
 
     # R2 should be Y - Ybar_kt
     expected_r2 = result['weight'] - result['Ybar_kt']
     pd.testing.assert_series_equal(result['R2'], expected_r2, check_names=False)
 
 
-def test_calculate_residuals_preserves_original_data(calc, sds1_df, spec_sds1):
+def test_calculate_vas_residuals_preserves_original_data(sds1_df, spec_sds1):
     """Should not modify original DataFrame columns."""
-    original_cols = sds1_df.columns.tolist()
+    df = _prepare_for_vas(sds1_df, spec_sds1)
+    original_cols = df.columns.tolist()
 
-    result = calc.calculate_residuals(sds1_df, spec_sds1, sds=1)
+    result = calculate_vas_residuals(df, spec_sds1, r2_method='exact')
 
     # Original columns should still be present
     for col in original_cols:
         assert col in result.columns
 
 
-def test_calculate_residuals_raises_on_unsupported_sds(calc, sds1_df, spec_sds1):
-    """Should raise helpful error for unsupported SDS."""
-    with pytest.raises(ValueError, match="not supported for SDS 0"):
-        calc.calculate_residuals(sds1_df, spec_sds1, sds=0)
+def test_calculate_vas_residuals_raises_on_missing_keys(sds1_df, spec_sds1):
+    """Should raise if required key columns are missing."""
+    # Raw df without build_keys — missing rsg_key, obs_id, cell_key
+    with pytest.raises(ValueError, match="Missing required columns"):
+        calculate_vas_residuals(sds1_df, spec_sds1, r2_method='exact')
 
 
-def test_calculate_residuals_raises_without_grouping(calc, sds1_df):
+def test_calculate_vas_residuals_raises_without_grouping():
     """Should raise if no grouping variables (VAS requires grouping)."""
     spec_no_grouping = FormulationSpec(
         response_var='weight',
     )
+    # Need to provide keys to get past _validate_prerequisites
+    df = pd.DataFrame({'weight': [10.0, 10.5]})
+    df['rsg_key'] = 'A'
+    df['obs_id'] = range(len(df))
+    df['cell_key'] = 'X'
 
     with pytest.raises(ValueError, match="require grouping structure"):
-        calc.calculate_residuals(sds1_df, spec_no_grouping, sds=1)
+        calculate_vas_residuals(df, spec_no_grouping, r2_method='exact')
 
 
-def test_calculate_residuals_r1_sum_is_zero(calc, sds1_df, spec_sds1):
+def test_calculate_vas_residuals_r1_sum_is_zero(sds1_df, spec_sds1):
     """R1 residuals should sum to zero (deviations from mean)."""
-    result = calc.calculate_residuals(sds1_df, spec_sds1, sds=1)
+    df = _prepare_for_vas(sds1_df, spec_sds1)
+    result = calculate_vas_residuals(df, spec_sds1, r2_method='exact')
 
     assert pytest.approx(result['R1'].sum(), abs=1e-10) == 0.0
 
 
-def test_calculate_residuals_sds2_uses_moving_average(calc, spec_sds1):
-    """SDS 2 should use backward moving average for R2."""
-    # SDS 2: Each cell has n=1
+def test_calculate_vas_residuals_sds2_uses_moving_average(spec_sds1):
+    """SDS 2 (ma2) should use backward moving average for R2."""
     sds2_df = pd.DataFrame({
-        'rsg': ['A', 'A', 'A'],
+        'lane': ['A', 'A', 'A'],
         'time': [1, 2, 3],
         'weight': [10.0, 11.0, 12.0]
-    }).sort_values(['rsg', 'time'])
-
-    result = calc.calculate_residuals(sds2_df, spec_sds1, sds=2)
-
-    # R2 should use backward moving average: R2 = (Y_j - Y_{j-1}) / 2
-    assert 'R2' in result.columns
-    # First observation should be NaN (no lag)
-    assert pd.isna(result['R2'].iloc[0])
-    # Remaining should equal (Y_j - Y_{j-1}) / 2
-    assert pytest.approx(result['R2'].iloc[1], 0.01) == 0.5  # (11-10)/2
-    assert pytest.approx(result['R2'].iloc[2], 0.01) == 0.5  # (12-11)/2
-
-
-def test_calculate_residuals_sds3_hybrid_approach(calc, spec_sds1):
-    """SDS 3 should use hybrid: within-cell for n>1, zero for n=1."""
-    # Mix of n=2 and n=1 cells
-    sds3_df = pd.DataFrame({
-        'rsg': ['A', 'A', 'B'],  # A has n=2, B has n=1
-        'time': [1, 1, 1],
-        'weight': [10.0, 10.5, 9.0]
     })
+    df = _prepare_for_vas(sds2_df, spec_sds1)
+    result = calculate_vas_residuals(df, spec_sds1, r2_method='ma2')
 
-    result = calc.calculate_residuals(sds3_df, spec_sds1, sds=3)
+    assert 'R2' in result.columns
+    # R2 = (Y_j - Y_{j-1}) / 2
+    # First observation: NaN (no lag)
+    assert pd.isna(result['R2'].iloc[0])
+    # Remaining: (11-10)/2=0.5, (12-11)/2=0.5
+    assert pytest.approx(result['R2'].iloc[1], 0.01) == 0.5
+    assert pytest.approx(result['R2'].iloc[2], 0.01) == 0.5
 
-    # A (n=2): Should have non-zero R2 (within-cell variation)
-    # B (n=1): Should have R2 = 0
+
+def test_calculate_vas_residuals_sds3_hybrid_uses_ma2_for_singletons(spec_sds1):
+    """SDS 3 (hybrid) should use MA2 for singleton cells, not zero."""
+    # A has n=2 at time=1, B has n=1 at time=1 and n=1 at time=2
+    sds3_df = pd.DataFrame({
+        'lane': ['A', 'A', 'B', 'B'],
+        'time': [1, 1, 1, 2],
+        'weight': [10.0, 10.5, 9.0, 11.0]
+    })
+    df = _prepare_for_vas(sds3_df, spec_sds1)
+    n_per_cell = df.groupby('cell_key', observed=True)['weight'].transform('size')
+    result = calculate_vas_residuals(
+        df, spec_sds1, r2_method='hybrid', n_per_cell=n_per_cell
+    )
+
+    # A (n=2): exact, should have non-zero R2
     a_rows = result[result['rsg'] == 'A']
+    assert not (a_rows['R2'] == 0).all()
+
+    # B (n=1): MA2, first in group is NaN, second gets (Y_j - Y_{j-1})/2
     b_rows = result[result['rsg'] == 'B']
+    assert pd.isna(b_rows['R2'].iloc[0])  # First in B group: NaN from MA2
+    assert b_rows['R2'].iloc[1] != 0  # Second in B group: MA2 value, not zero
 
-    assert not (a_rows['R2'] == 0).all()  # A has within-cell variation
-    assert (b_rows['R2'] == 0).all()      # B has no variation (n=1)
 
-
-def test_calculate_residuals_sds4_same_as_sds3(calc, spec_sds1):
-    """SDS 4 (replicated design) should use same R2 method as SDS 1/3/5."""
-    # SDS 4: Full replication like SDS 1
+def test_calculate_vas_residuals_sds4_exact(spec_sds1):
+    """SDS 4 (full replication) should use exact R2 = Y - Ybar_kt."""
     sds4_df = pd.DataFrame({
-        'rsg': ['A', 'A', 'B', 'B'] * 2,
+        'lane': ['A', 'A', 'B', 'B'] * 2,
         'time': [1, 1, 1, 1, 2, 2, 2, 2],
         'weight': [10.0, 10.5, 9.0, 9.5, 10.2, 10.4, 9.1, 9.3]
     })
+    df = _prepare_for_vas(sds4_df, spec_sds1)
+    result = calculate_vas_residuals(df, spec_sds1, r2_method='exact')
 
-    result = calc.calculate_residuals(sds4_df, spec_sds1, sds=4)
-
-    # R2 should be Y - Ybar_kt (within-cell deviation)
     expected_r2 = result['weight'] - result['Ybar_kt']
     pd.testing.assert_series_equal(result['R2'], expected_r2, check_names=False)
 
 
-def test_calculate_residuals_sds6_uses_moving_average(calc, spec_sds1):
-    """SDS 6 (sparse design) should use backward moving average for R2 like SDS 2."""
-    # SDS 6: Each cell has n=1 (sparse design)
+def test_calculate_vas_residuals_sds6_uses_moving_average(spec_sds1):
+    """SDS 6 (sparse, all n=1) should use MA2 for R2."""
     sds6_df = pd.DataFrame({
-        'rsg': ['A', 'A', 'A'],
+        'lane': ['A', 'A', 'A'],
         'time': [1, 2, 3],
         'weight': [10.0, 11.0, 12.0]
-    }).sort_values(['rsg', 'time'])
+    })
+    df = _prepare_for_vas(sds6_df, spec_sds1)
+    result = calculate_vas_residuals(df, spec_sds1, r2_method='ma2')
 
-    result = calc.calculate_residuals(sds6_df, spec_sds1, sds=6)
-
-    # R2 should use backward moving average: R2 = (Y_j - Y_{j-1}) / 2
-    assert 'R2' in result.columns
-    # First observation should be NaN (no lag)
     assert pd.isna(result['R2'].iloc[0])
-    # Remaining should equal (Y_j - Y_{j-1}) / 2
-    assert pytest.approx(result['R2'].iloc[1], 0.01) == 0.5  # (11-10)/2
-    assert pytest.approx(result['R2'].iloc[2], 0.01) == 0.5  # (12-11)/2
+    assert pytest.approx(result['R2'].iloc[1], 0.01) == 0.5
+    assert pytest.approx(result['R2'].iloc[2], 0.01) == 0.5
 
 
 # ============================================================================
@@ -432,47 +448,31 @@ def test_pure_functions_same_input_same_output():
 # Test: Edge Cases
 # ============================================================================
 
-def test_calculate_residuals_with_single_observation_per_row(calc):
+def test_calculate_vas_residuals_with_single_observation_per_row():
     """Should handle edge case of minimal data."""
     df = pd.DataFrame({
-        'rsg': ['A', 'A'],
+        'lane': ['A', 'A'],
         'time': [1, 1],
         'weight': [10.0, 10.5]
     })
     spec = FormulationSpec(
         response_var='weight',
-        rsg_vars=('rsg',),
+        rsg_vars=('lane',),
         rsg_var_name='rsg',
         time_var='time',
     )
+    prepared = _prepare_for_vas(df, spec)
+    result = calculate_vas_residuals(prepared, spec, r2_method='exact')
 
-    result = calc.calculate_residuals(df, spec, sds=1)
-
-    # Should complete without error
     assert len(result) == 2
     assert all(col in result.columns for col in ['R1', 'R2', 'R3', 'R4', 'R5'])
 
 
-def test_r2_sds2_handles_single_group(calc):
-    """SDS 2 R2 calculation should handle minimal data correctly."""
-    df = pd.DataFrame({
-        'rsg': ['A', 'A'],  # Only 2 points
-        'weight': [10.0, 11.0]
-    }).sort_values('rsg')
-
-    result = calculate_r2_residual_sds2(df, 'weight', 'rsg')
-
-    # First point has no lag (NaN), second point has R2 = (11-10)/2 = 0.5
-    assert len(result) == 2
-    assert pd.isna(result.iloc[0])  # First point: no lag
-    assert pytest.approx(result.iloc[1], 0.01) == 0.5  # Second: (11-10)/2
-
-
 # ============================================================================
-# Test: Tom Bishop Validation - R2 = MR/2 for SDS 2
+# Test: Tom Bishop Validation - R2 = MR/2 for MA2
 # ============================================================================
 
-def test_r2_sds2_equals_half_moving_range():
+def test_r2_ma2_equals_half_moving_range():
     """
     Validate Tom Bishop's formula: R2 = (Y_j - Y_{j-1}) / 2 = MR / 2.
 
@@ -480,85 +480,104 @@ def test_r2_sds2_equals_half_moving_range():
     and the moving range used in XmR charts.
     """
     df = pd.DataFrame({
-        'rsg': ['A'] * 5,
-        'weight': [10.0, 12.0, 11.0, 13.0, 12.5]
+        'weight': [10.0, 12.0, 11.0, 13.0, 12.5],
+        'Ybar_kt': [10.0, 12.0, 11.0, 13.0, 12.5],
+        'cell_key': [('A', i) for i in range(1, 6)],
+        'rsg_key': ['A'] * 5,
+        'sort_key': [(('A',), i, 0) for i in range(1, 6)],
     })
 
-    r2 = calculate_r2_residual_sds2(df, 'weight', 'rsg')
+    r2 = calculate_r2(df, 'weight', r2_method='ma2')
 
-    # Calculate moving range: MR_j = |Y_j - Y_{j-1}|
-    # For our data:
-    # j=1: MR = NA
-    # j=2: MR = |12 - 10| = 2, R2 should = 2/2 = 1.0
-    # j=3: MR = |11 - 12| = 1, R2 should = -1/2 = -0.5 (signed!)
-    # j=4: MR = |13 - 11| = 2, R2 should = 2/2 = 1.0
-    # j=5: MR = |12.5 - 13| = 0.5, R2 should = -0.5/2 = -0.25
-
+    # R2_j = (Y_j - Y_{j-1}) / 2
+    # j=1: NaN
+    # j=2: (12-10)/2 = 1.0
+    # j=3: (11-12)/2 = -0.5
+    # j=4: (13-11)/2 = 1.0
+    # j=5: (12.5-13)/2 = -0.25
     assert pd.isna(r2.iloc[0])
-    assert pytest.approx(r2.iloc[1], 0.01) == 1.0   # (12-10)/2
-    assert pytest.approx(r2.iloc[2], 0.01) == -0.5  # (11-12)/2
-    assert pytest.approx(r2.iloc[3], 0.01) == 1.0   # (13-11)/2
-    assert pytest.approx(r2.iloc[4], 0.01) == -0.25 # (12.5-13)/2
+    assert pytest.approx(r2.iloc[1], 0.01) == 1.0
+    assert pytest.approx(r2.iloc[2], 0.01) == -0.5
+    assert pytest.approx(r2.iloc[3], 0.01) == 1.0
+    assert pytest.approx(r2.iloc[4], 0.01) == -0.25
 
 
-def test_r2_sds2_multiple_groups():
+def test_r2_ma2_multiple_groups():
     """
-    SDS 2 R2 calculation should work independently per group.
+    MA2 R2 should work independently per rsg_key group.
 
     Validates that the backward MA is calculated within each group
     (process design condition), not across groups.
     """
     df = pd.DataFrame({
-        'rsg': ['A', 'A', 'A', 'B', 'B', 'B'],
-        'time': [1, 2, 3, 1, 2, 3],
-        'weight': [10.0, 11.0, 12.0, 20.0, 22.0, 21.0]
-    }).sort_values(['rsg', 'time'])
+        'weight': [10.0, 11.0, 12.0, 20.0, 22.0, 21.0],
+        'Ybar_kt': [10.0, 11.0, 12.0, 20.0, 22.0, 21.0],
+        'cell_key': [('A', 1), ('A', 2), ('A', 3), ('B', 1), ('B', 2), ('B', 3)],
+        'rsg_key': ['A', 'A', 'A', 'B', 'B', 'B'],
+        'sort_key': [
+            (('A',), 1, 0), (('A',), 2, 0), (('A',), 3, 0),
+            (('B',), 1, 0), (('B',), 2, 0), (('B',), 3, 0),
+        ],
+    })
 
-    result = calculate_r2_residual_sds2(df, 'weight', 'rsg')
+    result = calculate_r2(df, 'weight', r2_method='ma2')
 
-    # Group A (indices 0-2):
-    assert pd.isna(result.iloc[0])  # First in group A
+    # Group A:
+    assert pd.isna(result.iloc[0])
     assert pytest.approx(result.iloc[1], 0.01) == 0.5   # (11-10)/2
     assert pytest.approx(result.iloc[2], 0.01) == 0.5   # (12-11)/2
 
-    # Group B (indices 3-5):
-    assert pd.isna(result.iloc[3])  # First in group B
+    # Group B:
+    assert pd.isna(result.iloc[3])
     assert pytest.approx(result.iloc[4], 0.01) == 1.0   # (22-20)/2
     assert pytest.approx(result.iloc[5], 0.01) == -0.5  # (21-22)/2
 
 
-def test_r2_sds2_tom_bishop_example():
+def test_r2_ma2_tom_bishop_example():
     """
     Test with values inspired by Tom Bishop's Figure 30 example.
 
-    This validates that our implementation produces the "unexplained"
-    variation pattern that Tom describes - removing PDC and PT effects
-    to leave only the residual variation.
+    Validates that R2 = (Y_j - Y_{j-1}) / 2 for each consecutive pair,
+    removing trend (PT effect) and leaving unexplained variation.
     """
-    # Simulated data with trend (PT effect) and noise
+    weights = [238.0, 239.0, 240.0, 239.5, 240.5,
+               241.0, 240.0, 241.5, 241.0, 242.0]
     df = pd.DataFrame({
-        'rsg': ['Lane4'] * 10,
-        'time': list(range(1, 11)),
-        'weight': [238.0, 239.0, 240.0, 239.5, 240.5,
-                   241.0, 240.0, 241.5, 241.0, 242.0]
+        'weight': weights,
+        'Ybar_kt': weights,  # n=1 per cell, so Ybar_kt = Y
+        'cell_key': [('Lane4', i) for i in range(1, 11)],
+        'rsg_key': ['Lane4'] * 10,
+        'sort_key': [(('Lane4',), i, 0) for i in range(1, 11)],
     })
 
-    result = calculate_r2_residual_sds2(df, 'weight', 'rsg')
+    result = calculate_r2(df, 'weight', r2_method='ma2')
 
-    # First point should be NaN
     assert pd.isna(result.iloc[0])
-
-    # Remaining R2 values should be small (trend removed)
-    # and should equal (Y_j - Y_{j-1}) / 2
     for i in range(1, len(result)):
         y_current = df['weight'].iloc[i]
         y_previous = df['weight'].iloc[i-1]
         expected_r2 = (y_current - y_previous) / 2.0
         assert pytest.approx(result.iloc[i], 0.01) == expected_r2
 
-    # Verify that R2 values are generally smaller than original variation
-    # (trend has been removed by the moving average)
+    # R2 values should be smaller than original variation (trend removed)
     assert result[1:].abs().max() < df['weight'].std()
+
+
+def test_r2_ma2_handles_single_group():
+    """MA2 R2 calculation should handle minimal data (2 points) correctly."""
+    df = pd.DataFrame({
+        'weight': [10.0, 11.0],
+        'Ybar_kt': [10.0, 11.0],
+        'cell_key': [('A', 1), ('A', 2)],
+        'rsg_key': ['A', 'A'],
+        'sort_key': [(('A',), 1, 0), (('A',), 2, 0)],
+    })
+
+    result = calculate_r2(df, 'weight', r2_method='ma2')
+
+    assert len(result) == 2
+    assert pd.isna(result.iloc[0])
+    assert pytest.approx(result.iloc[1], 0.01) == 0.5  # (11-10)/2
 
 
 # ============================================================================
