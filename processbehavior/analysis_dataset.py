@@ -8,7 +8,7 @@ import pandas as pd
 from .data_preparation import DataPreparation
 from .effects_calculator import EffectsCalculator
 from .formulation_spec import FormulationSpec
-from .residual_calculator import ResidualCalculator
+from .residual_calculator import calculate_vas_residuals
 from .sds_detector import SDSRegistry, StructureStats
 
 # Configure module logger
@@ -62,6 +62,7 @@ class AnalysisDataSet:
         # Structure stats (computed once in _initialize)
         self._structure_stats: StructureStats | None = None
         self._n_per_cell: pd.Series | None = None
+        self._ybar_kt: pd.Series | None = None
 
         # Composition - each component has one job (Single Responsibility Principle)
         # SDS detection was done on raw data by ProcessBehavior. Here we only use
@@ -70,7 +71,6 @@ class AnalysisDataSet:
         # would live here alongside SDSRegistry.
         self._prep = DataPreparation()
         self._sds_registry = SDSRegistry()
-        self._residual_calc = ResidualCalculator()
         self._effects_calc = EffectsCalculator()
 
         # Run the analysis workflow
@@ -121,9 +121,10 @@ class AnalysisDataSet:
             r2_method = self._sds_registry.get_r2_method(self._structure_stats)
             logger.debug(f"Using R2 method: {r2_method}")
 
-            self.analysis_dataset = self._residual_calc.calculate_vas_residuals(
+            self.analysis_dataset = calculate_vas_residuals(
                 self.analysis_dataset, self.spec, r2_method,
-                n_per_cell=self._n_per_cell
+                n_per_cell=self._n_per_cell,
+                ybar_kt=self._ybar_kt,
             )
 
             # Calculate centered residuals
@@ -208,8 +209,9 @@ class AnalysisDataSet:
         df = self.analysis_dataset
         y = self.spec.response_var
 
-        # Compute n_per_cell once
+        # Compute n_per_cell and cell means once
         self._n_per_cell = df.groupby("cell_key", observed=True)[y].transform("size")
+        self._ybar_kt = df.groupby("cell_key", observed=True)[y].transform("mean")
 
         # Handle edge case: empty data or all NaN
         if len(self._n_per_cell) == 0 or self._n_per_cell.isna().all():
@@ -273,8 +275,8 @@ class AnalysisDataSet:
 
         Note: This method intentionally mutates self.analysis_dataset in-place
         (adding columns directly to the DataFrame). This differs from
-        ResidualCalculator.calculate_vas_residuals() which returns a new
-        DataFrame. The mutation is safe here because this is called once
+        calculate_vas_residuals() which returns a new DataFrame.
+        The mutation is safe here because this is called once
         during __init__ as part of the analysis pipeline, and the columns
         added (Rbar_kt, Rbar_k, Rbar_t, RCR1-RCR5) are outputs of the
         analysis that become part of the dataset.

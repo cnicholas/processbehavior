@@ -63,7 +63,7 @@ from processbehavior.formulation_spec import ChartRequest, FormulationSpec
 # Plotting/theming
 from processbehavior.plotting import ChartTheme, get_theme, list_themes, register_theme
 from processbehavior.process_behavior import ColumnRef, ProcessBehavior
-from processbehavior.residual_calculator import ResidualCalculator
+from processbehavior.residual_calculator import calculate_vas_residuals
 
 # Utility classes (advanced users)
 from processbehavior.sds_detector import SDSAnalysisPlan, SDSRegistry, SDSResult
@@ -100,7 +100,7 @@ __all__ = [
     'SDSResult',
     'DataPreparation',
     'EffectsCalculator',
-    'ResidualCalculator',
+    'calculate_vas_residuals',
     'encode_rsg',
     'natural_sort_key',
 

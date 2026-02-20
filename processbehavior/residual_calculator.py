@@ -18,11 +18,13 @@ R2 is the ONLY residual whose calculation varies by structure:
 All other residuals (R1, R3, R4, R5) are pure algebraic transformations
 that don't depend on structure once the means are defined.
 
-Follows the Pythonic Hadley philosophy:
-- Pure functions (no mutation)
-- Explicit inputs and outputs
-- Type hints everywhere
-- Comprehensive docstrings with examples
+Module structure:
+- Pure mean functions: calculate_grand_mean, calculate_factor_means,
+  calculate_time_means, calculate_cell_means
+- Pure residual functions: calculate_r1_residual, calculate_r3_residual,
+  calculate_r4_residual, calculate_r5_residual
+- Consolidated R2: calculate_r2(df, y, r2_method, n_per_cell)
+- Orchestration: calculate_vas_residuals(df, spec, r2_method, ...)
 """
 
 from __future__ import annotations
@@ -197,7 +199,7 @@ def calculate_cell_means(
 
 
 # ============================================================================
-# Pure Functions: Residuals (R1-R5)
+# Pure Functions: Residuals (R1, R3, R4, R5)
 # ============================================================================
 
 def calculate_r1_residual(
@@ -240,216 +242,6 @@ def calculate_r1_residual(
     is from the overall average. The sum of all R1 values is always zero.
     """
     return df[response_var] - grand_mean
-
-
-def calculate_r2_residual_sds1(
-    df: pd.DataFrame,
-    response_var: str,
-    cell_means: pd.Series
-) -> pd.Series:
-    """
-    Calculate R2 for SDS 1 (full replication): within-cell variation.
-
-    R2 = Y - Ȳ_kt  (Equation 58 from Wheeler)
-
-    With full replication (all cells have n≥2), we can directly estimate
-    within-cell variance from the deviations within each cell.
-
-    Parameters
-    ----------
-    df : DataFrame
-        Input data
-    response_var : str
-        Name of response variable
-    cell_means : Series
-        Cell means (Ȳ_kt), broadcast to rows
-
-    Returns
-    -------
-    Series
-        R2 residuals
-
-    Examples
-    --------
-    >>> df = pd.DataFrame({'y': [10.0, 10.5, 9.0, 9.5]})
-    >>> cell_means = pd.Series([10.25, 10.25, 9.25, 9.25])
-    >>> r2 = calculate_r2_residual_sds1(df, 'y', cell_means)
-    >>> r2.tolist()
-    [-0.25, 0.25, -0.25, 0.25]
-    """
-    return df[response_var] - cell_means
-
-
-def calculate_r2_residual_sds2(
-    df: pd.DataFrame,
-    response_var: str,
-    rsg_var: str
-) -> pd.Series:
-    """
-    Calculate R2 for SDS 2 (no replication): backward moving average.
-
-    Per Tom Bishop Equation 65-66:
-    Y_ma_j = (Y_j + Y_{j-1}) / 2
-    R2_j = Y_j - Y_ma_j = (Y_j - Y_{j-1}) / 2 = MR_j / 2
-
-    With no replication (all cells n=1), R2 = Y - Ȳ_kt would give R2=0
-    (no information about within-subgroup variation). Instead, use a
-    backward-looking 2-point moving average to approximate the local mean
-    and extract the "unexplained" variation.
-
-    Parameters
-    ----------
-    df : DataFrame
-        Input data (must be sorted by [rsg_var, time])
-    response_var : str
-        Name of response variable
-    rsg_var : str
-        Rational subgroup variable
-
-    Returns
-    -------
-    Series
-        R2 residuals where R2_j = (Y_j - Y_{j-1}) / 2 for j ≥ 2
-        First observation in each group is NaN (no lag available)
-
-    Notes
-    -----
-    This is Tom Bishop's method for SDS 2 and 6 (Equations 64-66).
-    The backward MA smooths the data to remove PDC and PT effects,
-    leaving the unexplained variation (R2 ≈ λ + η + ε).
-
-    Mathematical result: R2_j = (Y_j - Y_{j-1}) / 2
-    This equals half of the moving range, connecting to IMR methodology.
-
-    References
-    ----------
-    Tom Bishop, "Understanding Statistical Process Control", Section 20.2.1
-    """
-    # Backward-looking moving average: (Y_j + Y_{j-1}) / 2
-    # This is the current value + the lagged value, divided by 2
-    ma2 = df.groupby(rsg_var, observed=True)[response_var].transform(
-        lambda s: (s + s.shift(1)) / 2.0
-    )
-
-    # R2 = Y - Y_ma
-    # Note: First observation in each group will have NaN (no lag)
-    return df[response_var] - ma2
-
-
-def calculate_r2_residual_sds3(
-    df: pd.DataFrame,
-    response_var: str,
-    cell_means: pd.Series,
-    rsg_var: str,
-    time_var: str
-) -> pd.Series:
-    """
-    Calculate R2 for SDS 3 (partial replication): hybrid approach.
-
-    R2 = Y - Ȳ_kt  for cells with n > 1
-    R2 = 0         for cells with n = 1
-
-    With partial replication, some cells have n≥2 (can estimate variance)
-    and some have n=1 (cannot). For n=1 cells, set R2=0 (no within-cell
-    variance estimable).
-
-    Parameters
-    ----------
-    df : DataFrame
-        Input data
-    response_var : str
-        Name of response variable
-    cell_means : Series
-        Cell means (Ȳ_kt)
-    rsg_var : str
-        Rational subgroup variable
-    time_var : str
-        Time variable
-
-    Returns
-    -------
-    Series
-        R2 residuals (hybrid)
-
-    Examples
-    --------
-    >>> df = pd.DataFrame({
-    ...     'rsg': ['A', 'A', 'B'],  # A has n=2, B has n=1
-    ...     'time': [1, 1, 1],
-    ...     'y': [10.0, 10.5, 9.0]
-    ... })
-    >>> # Cell means would be: [10.25, 10.25, 9.0]
-    >>> # n per cell: A×1 has n=2, B×1 has n=1
-    >>> # R2: [-0.25, 0.25, 0.0]  (B gets 0 because n=1)
-    """
-    # Count observations per cell
-    n_per_cell = df.groupby([rsg_var, time_var], observed=True)[response_var].transform('count')
-
-    # Calculate within-cell deviation
-    r2_within = df[response_var] - cell_means
-
-    # Use within-cell deviation only for n>1, otherwise 0
-    # Return as Series to match expected type
-    # NOTE: This is DEPRECATED - use calculate_r2_hybrid instead which correctly
-    # uses MA2 for singleton cells instead of zeroing them out.
-    return pd.Series(
-        np.where(n_per_cell > 1, r2_within, 0.0),
-        index=df.index
-    )
-
-
-def calculate_r2_hybrid(
-    df: pd.DataFrame,
-    y: str,
-    n_per_cell: pd.Series | None = None
-) -> pd.Series:
-    """
-    Calculate R2 using hybrid method: exact where replicated, MA2 where singleton.
-
-    This is the correct implementation for partial replication (SDS 3/5) that
-    uses MA2 for singleton cells instead of zeroing them out.
-
-    Parameters
-    ----------
-    df : pd.DataFrame
-        Input data with 'cell_key', 'rsg_key', 'obs_id', 'Ybar_kt' columns
-    y : str
-        Name of response variable
-    n_per_cell : pd.Series, optional
-        Pre-computed observations per cell. If None, will be computed.
-        Pass this when available to avoid recomputation.
-
-    Returns
-    -------
-    pd.Series
-        R2 residuals with name="R2"
-
-    Notes
-    -----
-    For cells with n >= 2: R2 = Y - Ȳ_kt (exact method, Eq 59)
-    For cells with n = 1:  R2 = MA2 (moving average, Eq 66)
-
-    MA2 is computed on the full ordered series within each rsg_key,
-    then selected for singleton cells. This ensures proper variance
-    estimation even for cells without replication.
-    """
-    # Use passed n_per_cell if available (computed once in ADS), else compute
-    if n_per_cell is None:
-        n_per_cell = df.groupby("cell_key", observed=True)[y].transform("size")
-
-    # Exact: Y - Ybar_kt
-    r2_exact = df[y] - df["Ybar_kt"]
-
-    # MA2 on full ordered series (use canonical sort_key)
-    df_sorted = df.sort_values("sort_key")
-    r2_ma2 = df_sorted.groupby("rsg_key", observed=True)[y].transform(
-        lambda s: (s - s.shift(1)) / 2
-    )
-    r2_ma2 = r2_ma2.loc[df.index]  # restore original order by index
-
-    # Combine: exact where n >= 2, MA2 where n = 1
-    out = np.where(n_per_cell >= 2, r2_exact, r2_ma2)
-    return pd.Series(out, index=df.index, name="R2")
 
 
 def calculate_r3_residual(
@@ -557,347 +349,182 @@ def calculate_r5_residual(
 
 
 # ============================================================================
-# Orchestration Class
+# R2: Structure-dependent residual (consolidated)
 # ============================================================================
 
-class ResidualCalculator:
+def calculate_r2(
+    df: pd.DataFrame,
+    y: str,
+    r2_method: R2Method,
+    n_per_cell: pd.Series | None = None
+) -> pd.Series:
     """
-    Calculates VAS residuals (R1-R5) using structure-driven R2 method.
+    Calculate R2 residual using the specified method.
 
-    This class orchestrates the pure residual calculation functions,
-    adapting the R2 calculation based on observed cell structure and
-    adding all necessary mean columns to the dataset.
+    R2 is the ONLY structure-dependent residual. The method is determined by
+    observed cell sizes (via SDSRegistry.get_r2_method()):
 
-    The primary entry point is :meth:`calculate_vas_residuals`, which
-    accepts an R2Method ('exact', 'ma2', or 'hybrid') determined by
+    - exact: R2 = Y - Ȳ_kt (Eq 59), all cells have n >= 2
+    - ma2: R2 = (Y_j - Y_{j-1}) / 2 (Eq 66), all cells have n = 1
+    - hybrid: exact where n >= 2, MA2 where n = 1
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Input data with 'cell_key', 'rsg_key', 'sort_key', 'Ybar_kt' columns
+    y : str
+        Name of response variable
+    r2_method : R2Method
+        'exact', 'ma2', or 'hybrid'
+    n_per_cell : pd.Series, optional
+        Pre-computed observations per cell. Pass from ADS to avoid recomputation.
+
+    Returns
+    -------
+    pd.Series
+        R2 residuals with name="R2"
+
+    Notes
+    -----
+    For hybrid: MA2 is computed on the FULL ordered stream within each rsg_key,
+    then selected only for singleton cells. This is methodologically required —
+    filtering to singletons first would break the consecutive-observation
+    assumption in Wheeler's (Y_j - Y_{j-1})/2 formula.
+    """
+    if r2_method == "exact":
+        return pd.Series(df[y] - df["Ybar_kt"], index=df.index, name="R2")
+
+    if r2_method == "ma2":
+        df_sorted = df.sort_values("sort_key")
+        r2 = df_sorted.groupby("rsg_key", observed=True)[y].transform(
+            lambda s: (s - s.shift(1)) / 2
+        )
+        return pd.Series(r2.loc[df.index], index=df.index, name="R2")
+
+    # hybrid: exact where n >= 2, MA2 where n = 1
+    if n_per_cell is None:
+        n_per_cell = df.groupby("cell_key", observed=True)[y].transform("size")
+
+    r2_exact = df[y] - df["Ybar_kt"]
+
+    # MA2 on full ordered stream (not filtered to singletons)
+    df_sorted = df.sort_values("sort_key")
+    r2_ma2 = df_sorted.groupby("rsg_key", observed=True)[y].transform(
+        lambda s: (s - s.shift(1)) / 2
+    )
+    r2_ma2 = r2_ma2.loc[df.index]
+
+    out = np.where(n_per_cell >= 2, r2_exact, r2_ma2)
+    return pd.Series(out, index=df.index, name="R2")
+
+
+# ============================================================================
+# Orchestration: calculate_vas_residuals
+# ============================================================================
+
+def _validate_prerequisites(df: pd.DataFrame) -> None:
+    """
+    Ensure required keys exist before computing residuals.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Input data
+
+    Raises
+    ------
+    ValueError
+        If required columns are missing
+    """
+    required = {"rsg_key", "obs_id", "cell_key"}
+    missing = required - set(df.columns)
+    if missing:
+        raise ValueError(
+            f"Missing required columns for VAS residuals: {missing}. "
+            f"Ensure data_preparation.build_keys() was called."
+        )
+
+
+def calculate_vas_residuals(
+    df: pd.DataFrame,
+    spec: FormulationSpec,
+    r2_method: R2Method,
+    n_per_cell: pd.Series | None = None,
+    ybar_kt: pd.Series | None = None
+) -> pd.DataFrame:
+    """
+    Calculate all VAS residuals using structure-driven R2 method.
+
+    This is the primary entry point. The r2_method should be determined by
     SDSRegistry.get_r2_method() based on observed cell sizes.
 
-    Examples
-    --------
-    Calculate residuals using structure-driven R2 method:
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Input data (prepared, with keys: rsg_key, obs_id, cell_key)
+    spec : FormulationSpec
+        Analysis specification
+    r2_method : R2Method
+        'exact', 'ma2', or 'hybrid' - determines R2 calculation
+    n_per_cell : pd.Series, optional
+        Pre-computed observations per cell. Pass from ADS to avoid recomputation.
+    ybar_kt : pd.Series, optional
+        Pre-computed cell means (Ȳ_kt). Pass from ADS to avoid recomputation.
 
-    >>> calc = ResidualCalculator()
-    >>> df_with_residuals = calc.calculate_vas_residuals(df, spec, r2_method='exact')
-    >>> # df now has: Ybar, Ybar_k, Ybar_t, Ybar_kt, R1, R2, R3, R4, R5
+    Returns
+    -------
+    pd.DataFrame
+        Input data with added columns:
+        - Ybar, Ybar_k, Ybar_t, Ybar_kt (means)
+        - R1, R2, R3, R4, R5 (residuals)
+
+    Raises
+    ------
+    ValueError
+        If required columns are missing or no grouping structure
     """
+    _validate_prerequisites(df)
 
-    def calculate_residuals(
-        self,
-        df: pd.DataFrame,
-        spec: FormulationSpec,
-        sds: int
-    ) -> pd.DataFrame:
-        """
-        Calculate all VAS residuals and add to DataFrame.
-
-        .. deprecated::
-            Use :meth:`calculate_vas_residuals` instead, which uses
-            structure-driven R2 method selection (R2Method) rather than
-            SDS-based dispatch. The new method correctly handles hybrid
-            R2 (MA2 for singleton cells instead of zeroing them out).
-
-        Parameters
-        ----------
-        df : DataFrame
-            Input data (prepared, with keys)
-        spec : FormulationSpec
-            Analysis specification
-        sds : int
-            Sampling Design State (1-6)
-
-        Returns
-        -------
-        DataFrame
-            Input data with added columns:
-            - Ybar, Ybar_k, Ybar_t, Ybar_kt (means)
-            - R1, R2, R3, R4, R5 (residuals)
-
-        Raises
-        ------
-        ValueError
-            If SDS doesn't support VAS residuals (0)
-            If required columns missing
-        """
-        import warnings
-        warnings.warn(
-            "calculate_residuals() is deprecated. Use calculate_vas_residuals() "
-            "with an R2Method parameter instead.",
-            DeprecationWarning,
-            stacklevel=2
-        )
-        if not spec.has_grouping:
-            raise ValueError(
-                "VAS residuals require grouping structure.\n"
-                "No grouping variables specified in spec."
-            )
-
-        if sds not in [1, 2, 3, 4, 5, 6]:
-            raise ValueError(
-                f"VAS residuals not supported for SDS {sds}.\n"
-                f"Valid SDS values: 1 (full replication), "
-                f"2 (no replication), 3 (partial replication), "
-                f"4 (replicated design), 5 (nested), 6 (sparse design).\n"
-                f"Current SDS: {sds}"
-            )
-
-        out = df.copy()
-        y = spec.response_var
-
-        # Step 1: Calculate all means
-        logger.debug("Calculating means (Ybar, Ybar_k, Ybar_t, Ybar_kt)")
-
-        grand_mean = calculate_grand_mean(out, y)
-        out['Ybar'] = grand_mean
-
-        out['Ybar_k'] = calculate_factor_means(out, y, spec.rsg_var_name)
-
-        out['Ybar_t'] = calculate_time_means(out, y, spec.time_var)
-
-        out['Ybar_kt'] = calculate_cell_means(out, y, spec.rsg_var_name, spec.time_var)
-
-        # Step 2: Calculate R1 (always the same)
-        logger.debug("Calculating R1 residual")
-        out['R1'] = calculate_r1_residual(out, y, grand_mean)
-
-        # Step 3: Calculate R2 (SDS-dependent)
-        logger.debug(f"Calculating R2 residual (SDS {sds} method)")
-        out['R2'] = self._calculate_r2_for_sds(out, spec, sds)
-
-        # Step 4: Calculate R3
-        logger.debug("Calculating R3 residual")
-        out['R3'] = calculate_r3_residual(
-            out, y, out['Ybar_k'], out['Ybar_t'], grand_mean
+    if not spec.has_grouping:
+        raise ValueError(
+            "VAS residuals require grouping structure.\n"
+            "No grouping variables specified in spec."
         )
 
-        # Step 5: Calculate R4
-        logger.debug("Calculating R4 residual")
-        out['R4'] = calculate_r4_residual(out['Ybar_t'], grand_mean, out['R2'])
+    out = df.copy()
+    y = spec.response_var
 
-        # Step 6: Calculate R5
-        logger.debug("Calculating R5 residual")
-        out['R5'] = calculate_r5_residual(out['Ybar_k'], grand_mean, out['R2'])
+    # Step 1: Calculate all means
+    logger.debug("Calculating means (Ybar, Ybar_k, Ybar_t, Ybar_kt)")
 
-        logger.debug("VAS residuals calculated successfully")
-        return out
+    grand_mean = calculate_grand_mean(out, y)
+    out['Ybar'] = grand_mean
 
-    def _calculate_r2_for_sds(
-        self,
-        df: pd.DataFrame,
-        spec: FormulationSpec,
-        sds: int
-    ) -> pd.Series:
-        """
-        Calculate R2 using appropriate method for the SDS.
+    out['Ybar_k'] = calculate_factor_means(out, y, spec.rsg_var_name)
+    out['Ybar_t'] = calculate_time_means(out, y, spec.time_var)
+    out['Ybar_kt'] = ybar_kt if ybar_kt is not None else calculate_cell_means(out, y, spec.rsg_var_name, spec.time_var)
 
-        .. deprecated::
-            Used only by the deprecated :meth:`calculate_residuals`.
-            Prefer :meth:`_calculate_r2` with R2Method for new code.
-        """
-        y = spec.response_var
+    # Step 2: Calculate R1 (pure algebra)
+    logger.debug("Calculating R1 residual")
+    out['R1'] = calculate_r1_residual(out, y, grand_mean)
 
-        if sds == 1:
-            # Full replication: direct within-cell variance
-            # R2 = Y - Ȳ_kt (Equation 59)
-            logger.debug("SDS 1: R2 = Y - Ybar_kt")
-            return calculate_r2_residual_sds1(df, y, df['Ybar_kt'])
+    # Step 3: Calculate R2 (structure-dependent)
+    logger.debug(f"Calculating R2 residual (method: {r2_method})")
+    out['R2'] = calculate_r2(out, y, r2_method, n_per_cell=n_per_cell)
 
-        elif sds == 2:
-            # No replication (all N_kt = 1): moving average approximation
-            # R2 = Y - Y_ma where Y_ma = (Y_j + Y_{j-1}) / 2 (Equations 64-66)
-            logger.debug("SDS 2: R2 = Y - MA2 (moving average method)")
-            # Must sort for moving average to work correctly
-            df_sorted = df.sort_values([spec.rsg_var_name, spec.time_var]).copy()
-            r2 = calculate_r2_residual_sds2(df_sorted, y, spec.rsg_var_name)
-            # Re-index to match original order
-            return r2.reindex(df.index)
+    # Step 4: Calculate R3 (pure algebra)
+    logger.debug("Calculating R3 residual")
+    out['R3'] = calculate_r3_residual(
+        out, y, out['Ybar_k'], out['Ybar_t'], grand_mean
+    )
 
-        elif sds == 3:
-            # Partial replication: hybrid approach
-            # R2 = Y - Ȳ_kt for cells with n > 1, else 0
-            logger.debug("SDS 3: R2 = Y - Ybar_kt (n>1), else 0")
-            return calculate_r2_residual_sds3(
-                df, y, df['Ybar_kt'], spec.rsg_var_name, spec.time_var
-            )
+    # Step 5: Calculate R4 (pure algebra given R2)
+    logger.debug("Calculating R4 residual")
+    out['R4'] = calculate_r4_residual(out['Ybar_t'], grand_mean, out['R2'])
 
-        elif sds == 4:
-            # Replicated design: same as SDS 1, 3, 5
-            # R2 = Y - Ȳ_kt (Equation 59)
-            logger.debug("SDS 4: R2 = Y - Ybar_kt")
-            return calculate_r2_residual_sds3(
-                df, y, df['Ybar_kt'], spec.rsg_var_name, spec.time_var
-            )
+    # Step 6: Calculate R5 (pure algebra given R2)
+    logger.debug("Calculating R5 residual")
+    out['R5'] = calculate_r5_residual(out['Ybar_k'], grand_mean, out['R2'])
 
-        elif sds == 5:
-            # Nested: use hybrid approach
-            # R2 = Y - Ȳ_kt (Equation 59)
-            logger.debug("SDS 5: R2 = Y - Ybar_kt (hybrid approach)")
-            return calculate_r2_residual_sds3(
-                df, y, df['Ybar_kt'], spec.rsg_var_name, spec.time_var
-            )
-
-        elif sds == 6:
-            # Sparse design (some N_kt = 0, rest N_kt = 1): moving average method
-            # Same as SDS 2 - R2 = Y - Y_ma (Equations 64-66)
-            logger.debug("SDS 6: R2 = Y - MA2 (moving average method, sparse design)")
-            # Must sort for moving average to work correctly
-            df_sorted = df.sort_values([spec.rsg_var_name, spec.time_var]).copy()
-            r2 = calculate_r2_residual_sds2(df_sorted, y, spec.rsg_var_name)
-            # Re-index to match original order
-            return r2.reindex(df.index)
-
-        else:
-            raise ValueError(f"R2 calculation not defined for SDS {sds}")
-
-    def _calculate_r2(
-        self,
-        df: pd.DataFrame,
-        spec: FormulationSpec,
-        r2_method: R2Method,
-        n_per_cell: pd.Series | None = None
-    ) -> pd.Series:
-        """
-        Calculate R2 using the specified method.
-
-        This is the new structure-driven approach that replaces the SDS-based
-        `_calculate_r2_for_sds` method. R2 method is determined by observed
-        cell sizes, not SDS label.
-
-        Parameters
-        ----------
-        df : pd.DataFrame
-            Prepared data with required columns
-        spec : FormulationSpec
-            Analysis specification
-        r2_method : R2Method
-            'exact', 'ma2', or 'hybrid'
-        n_per_cell : pd.Series, optional
-            Pre-computed observations per cell. Pass from ADS to avoid recomputation.
-
-        Returns
-        -------
-        pd.Series
-            R2 residuals
-        """
-        y = spec.response_var
-
-        if r2_method == "exact":
-            logger.debug("R2 method: exact (Y - Ybar_kt)")
-            return pd.Series(df[y] - df["Ybar_kt"], index=df.index, name="R2")
-
-        elif r2_method == "ma2":
-            logger.debug("R2 method: ma2 (moving average)")
-            df_sorted = df.sort_values("sort_key")
-            r2 = df_sorted.groupby("rsg_key", observed=True)[y].transform(
-                lambda s: (s - s.shift(1)) / 2
-            )
-            return pd.Series(r2.loc[df.index], index=df.index, name="R2")
-
-        else:  # hybrid = exact-else-MA2
-            logger.debug("R2 method: hybrid (exact where n>=2, MA2 where n=1)")
-            return calculate_r2_hybrid(df, y, n_per_cell=n_per_cell)
-
-    def _validate_prerequisites(self, df: pd.DataFrame) -> None:
-        """
-        Ensure required keys exist before computing residuals.
-
-        Parameters
-        ----------
-        df : pd.DataFrame
-            Input data
-
-        Raises
-        ------
-        ValueError
-            If required columns are missing
-        """
-        required = {"rsg_key", "obs_id", "cell_key"}
-        missing = required - set(df.columns)
-        if missing:
-            raise ValueError(
-                f"Missing required columns for VAS residuals: {missing}. "
-                f"Ensure data_preparation.build_keys() was called."
-            )
-
-    def calculate_vas_residuals(
-        self,
-        df: pd.DataFrame,
-        spec: FormulationSpec,
-        r2_method: R2Method,
-        n_per_cell: pd.Series | None = None
-    ) -> pd.DataFrame:
-        """
-        Calculate all VAS residuals using structure-driven R2 method.
-
-        This is the new entry point that uses R2Method instead of SDS.
-        The r2_method should be determined by SDSRegistry.get_r2_method()
-        based on observed cell sizes.
-
-        Parameters
-        ----------
-        df : pd.DataFrame
-            Input data (prepared, with keys: rsg_key, obs_id, cell_key)
-        spec : FormulationSpec
-            Analysis specification
-        r2_method : R2Method
-            'exact', 'ma2', or 'hybrid' - determines R2 calculation
-        n_per_cell : pd.Series, optional
-            Pre-computed observations per cell. Pass from ADS to avoid recomputation.
-
-        Returns
-        -------
-        pd.DataFrame
-            Input data with added columns:
-            - Ybar, Ybar_k, Ybar_t, Ybar_kt (means)
-            - R1, R2, R3, R4, R5 (residuals)
-
-        Raises
-        ------
-        ValueError
-            If required columns are missing
-        """
-        # Validate prerequisites
-        self._validate_prerequisites(df)
-
-        if not spec.has_grouping:
-            raise ValueError(
-                "VAS residuals require grouping structure.\n"
-                "No grouping variables specified in spec."
-            )
-
-        out = df.copy()
-        y = spec.response_var
-
-        # Step 1: Calculate all means
-        logger.debug("Calculating means (Ybar, Ybar_k, Ybar_t, Ybar_kt)")
-
-        grand_mean = calculate_grand_mean(out, y)
-        out['Ybar'] = grand_mean
-
-        out['Ybar_k'] = calculate_factor_means(out, y, spec.rsg_var_name)
-        out['Ybar_t'] = calculate_time_means(out, y, spec.time_var)
-        out['Ybar_kt'] = calculate_cell_means(out, y, spec.rsg_var_name, spec.time_var)
-
-        # Step 2: Calculate R1 (pure algebra)
-        logger.debug("Calculating R1 residual")
-        out['R1'] = calculate_r1_residual(out, y, grand_mean)
-
-        # Step 3: Calculate R2 (structure-dependent)
-        logger.debug(f"Calculating R2 residual (method: {r2_method})")
-        out['R2'] = self._calculate_r2(out, spec, r2_method, n_per_cell=n_per_cell)
-
-        # Step 4: Calculate R3 (pure algebra)
-        logger.debug("Calculating R3 residual")
-        out['R3'] = calculate_r3_residual(
-            out, y, out['Ybar_k'], out['Ybar_t'], grand_mean
-        )
-
-        # Step 5: Calculate R4 (pure algebra given R2)
-        logger.debug("Calculating R4 residual")
-        out['R4'] = calculate_r4_residual(out['Ybar_t'], grand_mean, out['R2'])
-
-        # Step 6: Calculate R5 (pure algebra given R2)
-        logger.debug("Calculating R5 residual")
-        out['R5'] = calculate_r5_residual(out['Ybar_k'], grand_mean, out['R2'])
-
-        logger.debug("VAS residuals calculated successfully")
-        return out
+    logger.debug("VAS residuals calculated successfully")
+    return out
