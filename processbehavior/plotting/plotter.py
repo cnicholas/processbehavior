@@ -16,6 +16,7 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
 from ..data_preparation import encode_rsg
+from ..spc_constants import normalize_chart_name
 from .control_chart import ControlChartFigure
 from .lane_boundaries import add_lane_boundaries
 from .limits import add_stepped_limit_line, format_limit_label
@@ -310,6 +311,10 @@ class Plotter:
             self._theme = get_theme(template)
         else:
             self._theme = template
+
+        # Normalize chart name for case-insensitive lookup
+        if chart:
+            chart = normalize_chart_name(chart)
 
         # Handle effects charts (special chart types not in self.charts)
         effects_charts = {'Effects', 'MainEffects', 'TimeEffects', 'TimeInteraction', 'FactorInteraction'}

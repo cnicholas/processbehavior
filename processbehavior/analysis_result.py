@@ -52,6 +52,7 @@ import pandas as pd
 
 from .data_preparation import encode_rsg
 from .exceptions import ChartNotAvailableError, ProcessBehaviorError
+from .spc_constants import normalize_chart_name
 
 if TYPE_CHECKING:
     from .analysis_dataset import AnalysisDataSet
@@ -506,6 +507,15 @@ class AnalysisResult:
     # Convenience methods for accessing data
     # =========================================================================
 
+    def _resolve_chart_name(self, name: str) -> str:
+        """Resolve chart name with case-insensitive fallback for base charts."""
+        if name in self.charts:
+            return name
+        normalized = normalize_chart_name(name)
+        if normalized in self.charts:
+            return normalized
+        return name  # Return as-is; caller raises the appropriate error
+
     def get_chart(self, name: str) -> pd.DataFrame:
         """
         Get chart data by name.
@@ -530,6 +540,7 @@ class AnalysisResult:
         >>> xbar = result.get_chart('Xbar')
         >>> alice = result.get_chart('Alice')  # For stratified IMR
         """
+        name = self._resolve_chart_name(name)
         if name not in self.charts:
             raise ChartNotAvailableError(
                 f"Chart '{name}' not found. Available charts: {self.all_charts}",
@@ -562,6 +573,7 @@ class AnalysisResult:
         >>> stats = result.get_statistics('Xbar')
         >>> print(f"Mean: {stats['Mean']}, UPL: {stats['upl']}")
         """
+        name = self._resolve_chart_name(name)
         if name not in self.charts:
             raise ChartNotAvailableError(
                 f"Chart '{name}' not found. Available charts: {self.all_charts}",
@@ -784,6 +796,8 @@ class AnalysisResult:
         # Determine which chart to use
         if chart is None:
             chart = self.all_charts[0]
+        else:
+            chart = self._resolve_chart_name(chart)
 
         if chart not in self.charts:
             raise ChartNotAvailableError(
@@ -1148,6 +1162,7 @@ class AnalysisResult:
 
         # Detect on specific chart or all charts
         if chart:
+            chart = self._resolve_chart_name(chart)
             if chart not in self.charts:
                 raise ChartNotAvailableError(
                     f"Chart '{chart}' not found.\n"
@@ -1335,6 +1350,9 @@ class AnalysisResult:
         >>> fig.save_image('chart.png', width=1200, height=800)
         """
         from .plotting import Plotter
+
+        if chart:
+            chart = self._resolve_chart_name(chart)
 
         plotter = Plotter(self)
         return plotter.plot(
