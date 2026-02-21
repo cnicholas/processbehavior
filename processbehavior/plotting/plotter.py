@@ -554,8 +554,13 @@ class Plotter:
 
             # Add annotation when limits vary
             if limits_vary:
+                metadata = chart_info.get('metadata', {})
+                if metadata.get('staged'):
+                    vary_text = "Process limits computed per stage"
+                else:
+                    vary_text = "Process limits vary by subgroup size (n)"
                 fig.add_annotation(
-                    text="Process limits vary by subgroup size (n)",
+                    text=vary_text,
                     xref="paper", yref="paper",
                     x=0.02, y=0.98,
                     showarrow=False,
@@ -567,15 +572,27 @@ class Plotter:
             # Centerline
             center_key = self._get_center_key(stats)
             if center_key and center_key in stats:
-                center_label = format_limit_label('CL', stats[center_key], show_limit_values)
-                fig.add_hline(
-                    y=stats[center_key],
-                    line_color=theme.center_color,
-                    line_width=theme.center_line_width,
-                    annotation_text=center_label,
-                    annotation_position='right',
-                    annotation_font_size=theme.annotation_font_size
-                )
+                if stats[center_key] == 'Varies':
+                    # Stepped center line (staged limits)
+                    if 'center' in data.columns:
+                        add_stepped_limit_line(
+                            fig, data, x_col, 'center',
+                            theme.center_color, 'solid',
+                            theme.center_line_width,
+                            'CL', theme
+                        )
+                else:
+                    center_label = format_limit_label(
+                        'CL', stats[center_key], show_limit_values
+                    )
+                    fig.add_hline(
+                        y=stats[center_key],
+                        line_color=theme.center_color,
+                        line_width=theme.center_line_width,
+                        annotation_text=center_label,
+                        annotation_position='right',
+                        annotation_font_size=theme.annotation_font_size
+                    )
 
         # Highlight signals (Rule 1 - beyond limits)
         # Uses same marker style/size as data, just red color - no legend entry
@@ -601,7 +618,8 @@ class Plotter:
                 ))
 
         # Run rules visualization (Rules 2-8)
-        if show_rules:
+        metadata = chart_info.get('metadata', {})
+        if show_rules and metadata.get('run_rules_applicable', True):
             add_run_rules_visualization(
                 fig, data, stats, chart_name, value_col, x_col, theme,
                 result=self.result

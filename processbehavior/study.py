@@ -1279,7 +1279,8 @@ class Study:
         value: str | None = None,
         recentered: bool = False,
         bins: int | None = None,
-        paired: bool = False
+        paired: bool = False,
+        staged: bool = False
     ) -> AnalysisResult:
         """
         Run the analysis and return results.
@@ -1331,6 +1332,18 @@ class Study:
 
             - paired=False (default): Returns only the requested chart (SRP-compliant)
             - paired=True: Returns both paired charts (Xbar+S or XmR+R)
+
+        staged : bool, default False
+            When True, computes per-stage center lines and control limits.
+            Each stage is a contiguous run of the same collapsed factor
+            combination (the groups demarcated by vertical lane boundaries).
+            Within each stage, the moving range is computed independently.
+
+            - staged=False (default): Global limits across entire chart
+            - staged=True: Per-stage limits (requires by=[])
+
+            Single-point stages yield zero-width limits because mR is
+            imputed as 0; count available in metadata['single_point_stages'].
 
         Returns
         -------
@@ -1402,6 +1415,27 @@ class Study:
                     f"recentered=True requires a residual value (R1-R5), got '{value}'"
                 )
 
+        # Staged limits validation
+        if staged:
+            if base_chart not in ('XmR', 'R'):
+                from .exceptions import ValidationError
+                raise ValidationError(
+                    f"staged=True is only valid for XmR or R charts, "
+                    f"got '{base_chart}'."
+                )
+            if by_validated is None or len(by_validated) > 0:
+                from .exceptions import ValidationError
+                raise ValidationError(
+                    "staged=True requires by=[] "
+                    "(all factors collapsed into a single stream)."
+                )
+            if not self._spec.rsg_vars_list:
+                from .exceptions import ValidationError
+                raise ValidationError(
+                    "staged=True requires factors to define stages (rsg_key). "
+                    "This study has no factors; staged limits do not apply."
+                )
+
         # For Histogram chart, default by=[] if not specified (full distribution)
         if base_chart == 'Histogram' and by is None:
             by_validated = []
@@ -1457,6 +1491,7 @@ class Study:
             recentered=recentered,
             paired=paired,
             bins=bins if bins is not None else 10,
+            staged=staged,
         )
 
         # Create and run analysis using pre-calculated AnalysisDataSet
