@@ -398,7 +398,7 @@ def calculate_r2(
         df_sorted = df.sort_values("sort_key")
         r2 = df_sorted.groupby("rsg_key", observed=True)[y].transform(
             lambda s: (s - s.shift(1)) / 2
-        )
+        ).fillna(0.0)
         return pd.Series(r2.loc[df.index], index=df.index, name="R2")
 
     # hybrid: exact where n >= 2, MA2 where n = 1
@@ -411,7 +411,7 @@ def calculate_r2(
     df_sorted = df.sort_values("sort_key")
     r2_ma2 = df_sorted.groupby("rsg_key", observed=True)[y].transform(
         lambda s: (s - s.shift(1)) / 2
-    )
+    ).fillna(0.0)
     r2_ma2 = r2_ma2.loc[df.index]
 
     out = np.where(n_per_cell >= 2, r2_exact, r2_ma2)
