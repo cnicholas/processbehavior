@@ -1029,6 +1029,7 @@ class Analysis:
                 mr_spec, value_col, plot_col,
                 collapsed_factors,
                 _return_intermediates, _precomputed,
+                staged=self.request.staged,
             )
 
     def _calculate_mr_chart_from_precomputed(
@@ -1300,12 +1301,72 @@ class Analysis:
         collapsed_factors: list[str],
         _return_intermediates: bool,
         _precomputed: dict | None,
+        staged: bool = False,
     ) -> dict:
         """Ungrouped (single-stream) path for _calculate_mr_chart."""
         spec = self.spec
         result = {}
 
         if _precomputed is not None and not _precomputed['is_stratified']:
+            # --- Staged precomputed path (for paired R chart) ---
+            if _precomputed.get('staged'):
+                out = _precomputed['out'].copy()
+                stage_stats = _precomputed['stage_stats']
+                xmr_lane_boundaries = _precomputed['lane_boundaries']
+
+                # Recompute R-specific limits per stage
+                r_stage_stats = stage_stats[['_stage_id', 'mR']].copy()
+                r_lims = r_stage_stats.apply(
+                    lambda row: calculate_limits(
+                        mean=0, sd=0, N=0, mR=row['mR'],
+                        limits_type=mr_spec.limits_type,
+                        round_to=spec.round_to,
+                    ), axis=1,
+                )
+                r_stage_stats = _join_limits(r_stage_stats, r_lims)
+                r_stage_stats['center'] = r_stage_stats['mR']
+
+                # Replace XmR limits with R limits
+                out = out.drop(columns=['center', 'lpl', 'upl'], errors='ignore')
+                out = out.merge(
+                    r_stage_stats[['_stage_id', 'center', 'lpl', 'upl']],
+                    on='_stage_id', how='left', validate='many_to_one',
+                )
+
+                # Re-detect beyond limits
+                out = out.drop(columns=['beyond_limits'], errors='ignore')
+                assert plot_col in out.columns, f"plot_col {plot_col!r} not in DataFrame"
+                out = self._add_beyond_limits_flag(out, value_col=plot_col)
+
+                chart_out = self._build_output_columns(
+                    df=out,
+                    value_cols=[plot_col, 'center', 'lpl', 'upl', 'beyond_limits'],
+                )
+
+                chart_statistics = {
+                    'center': 'Varies',
+                    'lpl': 'Varies',
+                    'upl': 'Varies',
+                }
+
+                # Staged R: no lane boundary offset needed (no rows dropped)
+                r_lane_boundaries = xmr_lane_boundaries
+
+                result[mr_spec.chart_type] = {
+                    'data': chart_out,
+                    'statistics': chart_statistics,
+                    'metadata': {
+                        'chart_type': mr_spec.chart_type,
+                        'value_col': plot_col,
+                        'center_col': 'center',
+                        'lane_boundaries': r_lane_boundaries,
+                        'staged': True,
+                        'run_rules_applicable': False,
+                    },
+                }
+                return result
+
+            # --- Existing non-staged precomputed path ---
             # Reuse intermediates from paired XmR call
             out = _precomputed['out'].copy()
             mR = _precomputed['mR']
@@ -1374,6 +1435,112 @@ class Analysis:
         if collapsed_factors:
             lane_boundaries = self._calculate_lane_boundaries(out, collapsed_factors)
 
+        # === Staged limits path ===
+        if staged and collapsed_factors:
+            # 1. Assign stage_id: contiguous runs of the same rsg_key
+            out['_stage_id'] = (
+                (out['rsg_key'] != out['rsg_key'].shift())
+                .cumsum()
+                .astype('int64')
+            )
+
+            # 2. Per-stage moving range (reset at boundaries)
+            out['mr'] = (
+                out.groupby('_stage_id', sort=False)[value_col]
+                .diff().abs()
+            )
+
+            # 3. Per-stage aggregation
+            stage_stats = (
+                out.groupby('_stage_id', sort=False)
+                .agg(
+                    _n=(value_col, 'size'),
+                    _mean=(value_col, 'mean'),
+                    mR=('mr', 'mean'),
+                )
+                .reset_index()
+            )
+
+            # 4. Handle single-point stages (mR=NaN -> use 0)
+            stage_stats['mR'] = stage_stats['mR'].fillna(0.0)
+
+            # 5. Compute per-stage limits
+            if mr_spec.center_source == 'mean':
+                stage_stats['center'] = stage_stats['_mean']
+                stage_lims = stage_stats.apply(
+                    lambda row: calculate_limits(
+                        mean=row['_mean'], sd=0, N=0, mR=row['mR'],
+                        limits_type=mr_spec.limits_type,
+                        round_to=spec.round_to,
+                    ), axis=1,
+                )
+            else:  # center_source == 'mR' (R chart)
+                stage_stats['center'] = stage_stats['mR']
+                stage_lims = stage_stats.apply(
+                    lambda row: calculate_limits(
+                        mean=0, sd=0, N=0, mR=row['mR'],
+                        limits_type=mr_spec.limits_type,
+                        round_to=spec.round_to,
+                    ), axis=1,
+                )
+            stage_stats = _join_limits(stage_stats, stage_lims)
+
+            # 6. Merge per-stage limits back to row-level data
+            out = out.merge(
+                stage_stats[['_stage_id', 'center', 'mR', 'lpl', 'upl']],
+                on='_stage_id', how='left', validate='many_to_one',
+            )
+
+            # 7. Staged path: NEVER drop rows. NaN mR values at stage boundaries
+            #    stay in the DataFrame. Plotly skips NaN naturally.
+
+            # 8. Signal detection (per-row, uses row-level lpl/upl)
+            assert plot_col in out.columns, f"plot_col {plot_col!r} not in DataFrame"
+            out = self._add_beyond_limits_flag(out, value_col=plot_col)
+
+            # 9. Format output
+            chart_out = self._build_output_columns(
+                df=out,
+                value_cols=[plot_col, 'center', 'lpl', 'upl', 'beyond_limits'],
+            )
+
+            # 10. Statistics: 'Varies' signals stepped rendering
+            chart_statistics = {
+                'center': 'Varies',
+                'lpl': 'Varies',
+                'upl': 'Varies',
+            }
+
+            # 11. Track single-point stages for visibility
+            n_single_point = int((stage_stats['_n'] < 2).sum())
+
+            result[mr_spec.chart_type] = {
+                'data': chart_out,
+                'statistics': chart_statistics,
+                'metadata': {
+                    'chart_type': mr_spec.chart_type,
+                    'value_col': plot_col,
+                    'center_col': 'center',
+                    'lane_boundaries': lane_boundaries,
+                    'staged': True,
+                    'single_point_stages': n_single_point,
+                    'run_rules_applicable': False,
+                },
+            }
+
+            if _return_intermediates:
+                result['_intermediates'] = {
+                    'out': out,
+                    'mR': None,
+                    'lane_boundaries': lane_boundaries,
+                    'is_stratified': False,
+                    'staged': True,
+                    'stage_stats': stage_stats,
+                }
+
+            return result
+
+        # === Global limits path (unchanged) ===
         # Moving range
         out['mr'] = out[value_col].diff().abs()
         mR = out['mr'].mean()

@@ -116,6 +116,8 @@ class ChartRequest:
         Whether to return both paired charts (Xbar+S or XmR+R).
     bins : int
         Number of bins for Histogram chart.
+    staged : bool
+        Whether to compute per-stage limits for collapsed factors.
     """
 
     chart: str
@@ -126,3 +128,4 @@ class ChartRequest:
     recentered: bool = False
     paired: bool = False
     bins: int = 10
+    staged: bool = False
