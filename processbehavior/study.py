@@ -23,7 +23,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from .exceptions import ChartNotAvailableError, FactorNotFoundError
-from .spc_constants import RESIDUAL_ALIASES, VALID_BASE_CHARTS
+from .spc_constants import RESIDUAL_ALIASES, VALID_BASE_CHARTS, normalize_chart_name
 
 if TYPE_CHECKING:
     import pandas as pd
@@ -1485,6 +1485,9 @@ class Study:
         """
         if not chart or not isinstance(chart, str):
             raise ValueError("Chart name must be a non-empty string")
+
+        # Normalize case (e.g. "xmr" -> "XmR", "XBAR" -> "Xbar")
+        chart = normalize_chart_name(chart)
 
         # Base chart - valid
         if chart in VALID_BASE_CHARTS:

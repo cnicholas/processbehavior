@@ -382,6 +382,20 @@ def detect_beyond_limits(x: float, lpl: float, upl: float) -> int:
 # Valid base chart types for syntactic validation
 VALID_BASE_CHARTS = {"Xbar", "S", "XmR", "R", "Histogram"}
 
+# Case-insensitive canonical chart name mapping
+CHART_NAME_CANONICAL: dict[str, str] = {
+    name.lower(): name for name in VALID_BASE_CHARTS
+}
+
+
+def normalize_chart_name(name: str) -> str:
+    """Normalize chart name to canonical form (case-insensitive).
+
+    Returns the canonical name if recognized, otherwise returns input unchanged.
+    This allows stratum names (e.g. 'Alice') to pass through unmodified.
+    """
+    return CHART_NAME_CANONICAL.get(name.lower(), name)
+
 # Human-readable residual aliases
 # Maps alias -> {id, label, description}
 RESIDUAL_ALIASES = {

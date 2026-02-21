@@ -46,6 +46,26 @@ class TestBaseCharts:
         assert base_chart == "R"
 
 
+class TestCaseInsensitiveChartNames:
+    """Test that chart names are resolved case-insensitively."""
+
+    @pytest.mark.parametrize("input_name,expected", [
+        ("xbar", "Xbar"),
+        ("XBAR", "Xbar"),
+        ("Xbar", "Xbar"),
+        ("xmr", "XmR"),
+        ("Xmr", "XmR"),
+        ("XMR", "XmR"),
+        ("XmR", "XmR"),
+        ("s", "S"),
+        ("r", "R"),
+        ("histogram", "Histogram"),
+        ("HISTOGRAM", "Histogram"),
+    ])
+    def test_parse_chart_request_case_insensitive(self, study, input_name, expected):
+        assert study._parse_chart_request(input_name) == expected
+
+
 class TestOldSyntaxRaisesError:
     """Test that old residual chart syntax raises helpful errors."""
 
