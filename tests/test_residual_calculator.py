@@ -171,10 +171,10 @@ def test_calculate_r2_ma2():
     result = calculate_r2(df, 'weight', r2_method='ma2')
 
     # R2_j = (Y_j - Y_{j-1}) / 2
-    # Point 0: NaN (no lag)
+    # Point 0: 0.0 (Bishop §14.2.2: initial R2 residual is set to 0)
     # Point 1: (11-10)/2 = 0.5
     # Point 2: (12-11)/2 = 0.5
-    assert pd.isna(result.iloc[0])
+    assert result.iloc[0] == 0.0
     assert pytest.approx(result.iloc[1], 0.01) == 0.5
     assert pytest.approx(result.iloc[2], 0.01) == 0.5
 
@@ -196,8 +196,8 @@ def test_calculate_r2_hybrid():
     # A rows (n=2): exact = Y - Ybar_kt = [-0.25, 0.25]
     assert pytest.approx(result.iloc[0], 0.01) == -0.25
     assert pytest.approx(result.iloc[1], 0.01) == 0.25
-    # B row 0 (n=1, first in group): MA2 = NaN
-    assert pd.isna(result.iloc[2])
+    # B row 0 (n=1, first in group): MA2 initial = 0.0 (Bishop §14.2.2)
+    assert result.iloc[2] == 0.0
     # B row 1 (n=1): MA2 = (11-9)/2 = 1.0
     assert pytest.approx(result.iloc[3], 0.01) == 1.0
 
@@ -355,8 +355,8 @@ def test_calculate_vas_residuals_sds2_uses_moving_average(spec_sds1):
 
     assert 'R2' in result.columns
     # R2 = (Y_j - Y_{j-1}) / 2
-    # First observation: NaN (no lag)
-    assert pd.isna(result['R2'].iloc[0])
+    # First observation: 0.0 (Bishop §14.2.2: initial R2 residual is set to 0)
+    assert result['R2'].iloc[0] == 0.0
     # Remaining: (11-10)/2=0.5, (12-11)/2=0.5
     assert pytest.approx(result['R2'].iloc[1], 0.01) == 0.5
     assert pytest.approx(result['R2'].iloc[2], 0.01) == 0.5
@@ -380,9 +380,9 @@ def test_calculate_vas_residuals_sds3_hybrid_uses_ma2_for_singletons(spec_sds1):
     a_rows = result[result['rsg'] == 'A']
     assert not (a_rows['R2'] == 0).all()
 
-    # B (n=1): MA2, first in group is NaN, second gets (Y_j - Y_{j-1})/2
+    # B (n=1): MA2, first in group is 0.0 (Bishop §14.2.2), second gets (Y_j - Y_{j-1})/2
     b_rows = result[result['rsg'] == 'B']
-    assert pd.isna(b_rows['R2'].iloc[0])  # First in B group: NaN from MA2
+    assert b_rows['R2'].iloc[0] == 0.0  # First in B group: initial MA2 = 0
     assert b_rows['R2'].iloc[1] != 0  # Second in B group: MA2 value, not zero
 
 
@@ -410,7 +410,7 @@ def test_calculate_vas_residuals_sds6_uses_moving_average(spec_sds1):
     df = _prepare_for_vas(sds6_df, spec_sds1)
     result = calculate_vas_residuals(df, spec_sds1, r2_method='ma2')
 
-    assert pd.isna(result['R2'].iloc[0])
+    assert result['R2'].iloc[0] == 0.0
     assert pytest.approx(result['R2'].iloc[1], 0.01) == 0.5
     assert pytest.approx(result['R2'].iloc[2], 0.01) == 0.5
 
@@ -468,6 +468,56 @@ def test_calculate_vas_residuals_with_single_observation_per_row():
 
 
 # ============================================================================
+# Test: No NaN in any residual for any R2 method
+# ============================================================================
+
+@pytest.fixture
+def sds2_df():
+    """SDS 2 data - all cells have n=1 (uses MA2)."""
+    return pd.DataFrame({
+        'lane': ['A', 'A', 'A', 'B', 'B', 'B'],
+        'time': [1, 2, 3, 1, 2, 3],
+        'weight': [10.0, 11.0, 12.0, 20.0, 21.0, 22.0],
+    })
+
+
+@pytest.fixture
+def sds3_df():
+    """SDS 3 data - mixed cell sizes (uses hybrid)."""
+    return pd.DataFrame({
+        'lane': ['A', 'A', 'A', 'A', 'B', 'B', 'B'],
+        'time': [1, 1, 2, 2, 1, 2, 3],
+        'weight': [10.0, 10.5, 11.0, 11.5, 20.0, 21.0, 22.0],
+    })
+
+
+@pytest.mark.parametrize("r2_method,df_key", [
+    ("exact", "sds1"),
+    ("ma2", "sds2"),
+    ("hybrid", "sds3"),
+])
+def test_no_nan_residuals_all_r2_methods(r2_method, df_key, sds1_df, sds2_df, sds3_df, spec_sds1):
+    """No residual column should contain NaN for any R2 method variant.
+
+    Bishop §14.2.2: the initial MA2 R2 residual is set to 0, not NaN.
+    NaN in R2 would silently propagate into R4 and R5.
+    """
+    dfs = {"sds1": sds1_df, "sds2": sds2_df, "sds3": sds3_df}
+    raw_df = dfs[df_key]
+    df = _prepare_for_vas(raw_df, spec_sds1)
+
+    n_per_cell = df.groupby('cell_key', observed=True)['weight'].transform('size')
+    result = calculate_vas_residuals(
+        df, spec_sds1, r2_method=r2_method, n_per_cell=n_per_cell,
+    )
+
+    for col in ['R1', 'R2', 'R3', 'R4', 'R5']:
+        assert result[col].isna().sum() == 0, (
+            f"{col} has NaN with r2_method={r2_method}"
+        )
+
+
+# ============================================================================
 # Test: Tom Bishop Validation - R2 = MR/2 for MA2
 # ============================================================================
 
@@ -489,12 +539,12 @@ def test_r2_ma2_equals_half_moving_range():
     r2 = calculate_r2(df, 'weight', r2_method='ma2')
 
     # R2_j = (Y_j - Y_{j-1}) / 2
-    # j=1: NaN
+    # j=1: 0.0 (Bishop §14.2.2)
     # j=2: (12-10)/2 = 1.0
     # j=3: (11-12)/2 = -0.5
     # j=4: (13-11)/2 = 1.0
     # j=5: (12.5-13)/2 = -0.25
-    assert pd.isna(r2.iloc[0])
+    assert r2.iloc[0] == 0.0
     assert pytest.approx(r2.iloc[1], 0.01) == 1.0
     assert pytest.approx(r2.iloc[2], 0.01) == -0.5
     assert pytest.approx(r2.iloc[3], 0.01) == 1.0
@@ -522,12 +572,12 @@ def test_r2_ma2_multiple_groups():
     result = calculate_r2(df, 'weight', r2_method='ma2')
 
     # Group A:
-    assert pd.isna(result.iloc[0])
+    assert result.iloc[0] == 0.0  # Bishop §14.2.2: initial R2 = 0
     assert pytest.approx(result.iloc[1], 0.01) == 0.5   # (11-10)/2
     assert pytest.approx(result.iloc[2], 0.01) == 0.5   # (12-11)/2
 
     # Group B:
-    assert pd.isna(result.iloc[3])
+    assert result.iloc[3] == 0.0  # Bishop §14.2.2: initial R2 = 0
     assert pytest.approx(result.iloc[4], 0.01) == 1.0   # (22-20)/2
     assert pytest.approx(result.iloc[5], 0.01) == -0.5  # (21-22)/2
 
@@ -551,7 +601,7 @@ def test_r2_ma2_tom_bishop_example():
 
     result = calculate_r2(df, 'weight', r2_method='ma2')
 
-    assert pd.isna(result.iloc[0])
+    assert result.iloc[0] == 0.0  # Bishop §14.2.2: initial R2 = 0
     for i in range(1, len(result)):
         y_current = df['weight'].iloc[i]
         y_previous = df['weight'].iloc[i-1]
@@ -575,7 +625,7 @@ def test_r2_ma2_handles_single_group():
     result = calculate_r2(df, 'weight', r2_method='ma2')
 
     assert len(result) == 2
-    assert pd.isna(result.iloc[0])
+    assert result.iloc[0] == 0.0  # Bishop §14.2.2: initial R2 = 0
     assert pytest.approx(result.iloc[1], 0.01) == 0.5  # (11-10)/2
 
 
