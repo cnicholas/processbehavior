@@ -1423,11 +1423,10 @@ class Study:
                     f"staged=True is only valid for XmR or R charts, "
                     f"got '{base_chart}'."
                 )
-            if by_validated is None or len(by_validated) > 0:
+            if by_validated is None:
                 from .exceptions import ValidationError
                 raise ValidationError(
-                    "staged=True requires by=[] "
-                    "(all factors collapsed into a single stream)."
+                    "staged=True requires an explicit by= parameter."
                 )
             if not self._spec.rsg_vars_list:
                 from .exceptions import ValidationError
@@ -1435,6 +1434,17 @@ class Study:
                     "staged=True requires factors to define stages (rsg_key). "
                     "This study has no factors; staged limits do not apply."
                 )
+            if len(by_validated) > 0:
+                all_factors = set(self._spec.rsg_vars_list)
+                by_set = set(by_validated)
+                if not (all_factors - by_set):
+                    from .exceptions import ValidationError
+                    raise ValidationError(
+                        "staged=True requires collapsed factors to define stages. "
+                        f"by={list(by_validated)} includes all factors; "
+                        "no factors remain to create stage boundaries. "
+                        "Remove factors from by= or set staged=False."
+                    )
 
         # For Histogram chart, default by=[] if not specified (full distribution)
         if base_chart == 'Histogram' and by is None:

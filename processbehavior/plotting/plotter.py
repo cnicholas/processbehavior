@@ -640,6 +640,9 @@ class Plotter:
             y_range = (y_min - y_padding, y_max + y_padding)
             add_lane_boundaries(fig, lane_boundaries, y_range, theme)
 
+        # Time tick labels (replace integer indices with time values)
+        self._apply_time_tick_labels(fig, data, metadata)
+
         # Layout
         fig.update_layout(
             width=width,
@@ -931,24 +934,34 @@ class Plotter:
                 # Centerline
                 center_key = self._get_center_key(stats)
                 if center_key and center_key in stats:
-                    fig.add_shape(
-                        type='line',
-                        x0=x_range[0], x1=x_range[1],
-                        y0=stats[center_key], y1=stats[center_key],
-                        line=dict(color=theme.center_color, width=theme.center_line_width),
-                        row=row, col=col
-                    )
-                    # Add CL label annotation
-                    cl_label = format_limit_label('CL', stats[center_key], show_limit_values)
-                    fig.add_annotation(
-                        x=x_range[1],
-                        y=stats[center_key],
-                        text=cl_label,
-                        showarrow=False,
-                        xanchor='left',
-                        font=dict(size=theme.annotation_font_size, color=theme.center_color),
-                        row=row, col=col
-                    )
+                    if stats[center_key] == 'Varies':
+                        # Stepped center line (staged limits)
+                        if 'center' in data.columns:
+                            add_stepped_limit_line(
+                                fig, data, x_col, 'center',
+                                theme.center_color, 'solid',
+                                theme.center_line_width,
+                                'CL', theme, row=row, col=col
+                            )
+                    else:
+                        fig.add_shape(
+                            type='line',
+                            x0=x_range[0], x1=x_range[1],
+                            y0=stats[center_key], y1=stats[center_key],
+                            line=dict(color=theme.center_color, width=theme.center_line_width),
+                            row=row, col=col
+                        )
+                        # Add CL label annotation
+                        cl_label = format_limit_label('CL', stats[center_key], show_limit_values)
+                        fig.add_annotation(
+                            x=x_range[1],
+                            y=stats[center_key],
+                            text=cl_label,
+                            showarrow=False,
+                            xanchor='left',
+                            font=dict(size=theme.annotation_font_size, color=theme.center_color),
+                            row=row, col=col
+                        )
 
             # Signals (Rule 1 - beyond limits) - same size as facet data points
             if highlight_signals and 'beyond_limits' in data.columns:
@@ -972,7 +985,7 @@ class Plotter:
                     )
 
             # Run rules visualization (Rules 2-8)
-            if show_rules:
+            if show_rules and metadata.get('run_rules_applicable', True):
                 add_run_rules_visualization(
                     fig, data, stats, chart_name, value_col, x_col, theme,
                     result=self.result, row=row, col=col
@@ -1001,6 +1014,9 @@ class Plotter:
                     add_lane_boundaries(
                         fig, lane_boundaries, y_range, theme, row=row, col=col
                     )
+
+            # Time tick labels for this facet
+            self._apply_time_tick_labels(fig, data, metadata, row=row, col=col)
 
         # Update layout with axis labels
         fig.update_layout(
@@ -1247,6 +1263,66 @@ class Plotter:
 
         # Use index for positioning
         return None
+
+    def _apply_time_tick_labels(
+        self,
+        fig: go.Figure,
+        data: pd.DataFrame,
+        metadata: dict,
+        row: int | None = None,
+        col: int | None = None,
+        max_ticks: int = 30,
+    ) -> None:
+        """Replace integer x-axis positions with time values when applicable.
+
+        Only applies when _get_x_column() returned None (integer index positions)
+        and the time variable exists in the data. Ensures time values are displayed
+        on the x-axis even when positions must be integers (for lane boundary
+        alignment).
+        """
+        time_var = self.summary.get('time_var')
+        if not time_var or time_var not in data.columns:
+            return
+
+        # Only apply when x-axis is using integer positions
+        x_col = self._get_x_column(data)
+        if x_col is not None:
+            return
+
+        n = len(data)
+        if n == 0:
+            return
+
+        # Priority positions: endpoints + lane boundaries (always visible)
+        priority = {0, n - 1}
+        lane_boundaries = metadata.get('lane_boundaries')
+        if lane_boundaries:
+            if isinstance(lane_boundaries, list):
+                priority |= {b['position'] for b in lane_boundaries}
+            elif isinstance(lane_boundaries, dict):
+                for bounds in lane_boundaries.values():
+                    priority |= {b['position'] for b in bounds}
+
+        # Fill remaining budget with evenly spaced regular ticks
+        budget = max(0, max_ticks - len(priority))
+        if budget > 0 and n > len(priority):
+            step = max(1, n // budget)
+            regular = set(range(0, n, step)) - priority
+            if len(regular) > budget:
+                regular = set(sorted(regular)[:budget])
+            tick_positions = sorted(priority | regular)
+        else:
+            tick_positions = sorted(priority)
+
+        # Filter to valid range
+        tick_positions = [p for p in tick_positions if 0 <= p < n]
+
+        tick_labels = data[time_var].iloc[tick_positions].astype(str).tolist()
+
+        kwargs = {}
+        if row is not None and col is not None:
+            kwargs = {'row': row, 'col': col}
+        fig.update_xaxes(tickvals=tick_positions, ticktext=tick_labels, **kwargs)
 
     def _get_center_key(self, stats: dict) -> str | None:
         """Get the centerline statistic key."""

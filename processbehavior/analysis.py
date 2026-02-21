@@ -1023,6 +1023,7 @@ class Analysis:
                 mr_spec, value_col, plot_col,
                 stratify_by, collapsed_factors,
                 _return_intermediates, _precomputed,
+                staged=self.request.staged,
             )
         else:
             return self._calculate_mr_chart_ungrouped(
@@ -1041,12 +1042,72 @@ class Analysis:
         """Build an MR-family chart reusing intermediates from a paired XmR call."""
         spec = self.spec
         out = precomputed['out'].copy()
-        grouped = precomputed['grouped'].copy()
         stratify_col = precomputed['stratify_col']
         stratify_by = precomputed['stratify_by']
         strata = precomputed['strata']
         xmr_lane_boundaries = precomputed['lane_boundaries']
         extra_cols = precomputed['extra_cols']
+
+        # --- Staged precomputed path ---
+        if precomputed.get('staged'):
+            stage_stats = precomputed['stage_stats']
+
+            # Recompute R-specific limits per stage within each stratum
+            r_stage_stats = stage_stats[[stratify_col, '_stage_id', 'mR']].copy()
+            r_lims = r_stage_stats.apply(
+                lambda row: calculate_limits(
+                    mean=0, sd=0, N=0, mR=row['mR'],
+                    limits_type=mr_spec.limits_type,
+                    round_to=spec.round_to,
+                ), axis=1,
+            )
+            r_stage_stats = _join_limits(r_stage_stats, r_lims)
+            r_stage_stats['center'] = r_stage_stats['mR']
+
+            # Replace XmR limits with R limits
+            out = out.drop(columns=['center', 'lpl', 'upl', 'beyond_limits'], errors='ignore')
+            out = out.merge(
+                r_stage_stats[[stratify_col, '_stage_id', 'center', 'lpl', 'upl']],
+                on=[stratify_col, '_stage_id'], how='left', validate='many_to_one',
+            )
+
+            # Re-detect beyond limits
+            assert plot_col in out.columns, f"plot_col {plot_col!r} not in DataFrame"
+            out = self._add_beyond_limits_flag(out, value_col=plot_col)
+
+            # Format output
+            chart_out = self._build_output_columns(
+                df=out,
+                value_cols=extra_cols + [plot_col, 'center', 'lpl', 'upl', 'beyond_limits'],
+            )
+
+            chart_statistics = {}
+            for stratum in strata:
+                chart_statistics[stratum] = {
+                    'center': 'Varies', 'lpl': 'Varies', 'upl': 'Varies',
+                }
+
+            # Staged R: no lane boundary offset (no rows dropped)
+            return {
+                mr_spec.chart_type: {
+                    'data': chart_out,
+                    'statistics': chart_statistics,
+                    'metadata': {
+                        'chart_type': mr_spec.chart_type,
+                        'value_col': plot_col,
+                        'center_col': 'center',
+                        'stratified': True,
+                        'lane_boundaries': xmr_lane_boundaries if xmr_lane_boundaries else None,
+                        'stratify_by': list(stratify_by),
+                        'staged': True,
+                        'run_rules_applicable': False,
+                    },
+                    'strata': strata,
+                },
+            }
+
+        # --- Non-staged precomputed path ---
+        grouped = precomputed['grouped'].copy()
 
         # For R chart: compute R-specific limits from XmR's grouped data
         # grouped has columns: stratify_col, center (=mean), mR, lpl, upl (XmR limits)
@@ -1138,6 +1199,7 @@ class Analysis:
         collapsed_factors: list[str],
         _return_intermediates: bool,
         _precomputed: dict | None,
+        staged: bool = False,
     ) -> dict:
         """Stratified path for _calculate_mr_chart."""
         spec = self.spec
@@ -1163,6 +1225,133 @@ class Analysis:
 
         # Canonical sort
         out = out.sort_values('sort_key', kind='stable')
+
+        # Strata list (needed for both staged and non-staged paths)
+        strata = out[stratify_col].unique().tolist()
+
+        # === Staged limits path (per-stage limits within each stratum) ===
+        if staged and collapsed_factors:
+            # 1. Build stage key from collapsed factors only (vectorized)
+            if len(collapsed_factors) == 1:
+                out['_stage_key'] = out[collapsed_factors[0]]
+            else:
+                out['_stage_key'] = list(map(tuple, out[collapsed_factors].to_numpy()))
+
+            # 2. Assign within-stratum stage IDs via transitions of _stage_key
+            out['_stage_id'] = (
+                out.groupby(stratify_col, sort=False)['_stage_key']
+                .transform(lambda s: (s != s.shift()).cumsum())
+                .astype('int64')
+            )
+
+            # 3. Per-stage mR (reset at stage boundaries within each stratum)
+            out['mr'] = (
+                out.groupby([stratify_col, '_stage_id'], sort=False)[value_col]
+                .diff().abs()
+            )
+
+            # 4. Per-stage aggregation
+            stage_stats = (
+                out.groupby([stratify_col, '_stage_id'], sort=False)
+                .agg(_n=(value_col, 'size'), _mean=(value_col, 'mean'), mR=('mr', 'mean'))
+                .reset_index()
+            )
+            stage_stats['mR'] = stage_stats['mR'].fillna(0.0)
+
+            # 5. Compute per-stage limits
+            if mr_spec.center_source == 'mean':
+                stage_stats['center'] = stage_stats['_mean']
+                stage_lims = stage_stats.apply(
+                    lambda row: calculate_limits(
+                        mean=row['_mean'], sd=0, N=0, mR=row['mR'],
+                        limits_type=mr_spec.limits_type,
+                        round_to=spec.round_to,
+                    ), axis=1,
+                )
+            else:  # center_source == 'mR' (R chart)
+                stage_stats['center'] = stage_stats['mR']
+                stage_lims = stage_stats.apply(
+                    lambda row: calculate_limits(
+                        mean=0, sd=0, N=0, mR=row['mR'],
+                        limits_type=mr_spec.limits_type,
+                        round_to=spec.round_to,
+                    ), axis=1,
+                )
+            stage_stats = _join_limits(stage_stats, stage_lims)
+
+            # 6. Merge per-stage limits back to row-level data
+            out = out.merge(
+                stage_stats[[stratify_col, '_stage_id', 'center', 'mR', 'lpl', 'upl']],
+                on=[stratify_col, '_stage_id'], how='left', validate='many_to_one',
+            )
+
+            # 7. Staged path: NEVER drop rows. NaN mR at stage boundaries preserved.
+
+            # 8. Signal detection (per-row, uses row-level lpl/upl)
+            assert plot_col in out.columns, f"plot_col {plot_col!r} not in DataFrame"
+            out = self._add_beyond_limits_flag(out, value_col=plot_col)
+
+            # 9. Lane boundaries per stratum
+            lane_boundaries = {}
+            if collapsed_factors:
+                for stratum in strata:
+                    stratum_data = out[out[stratify_col] == stratum].reset_index(drop=True)
+                    boundaries = self._calculate_lane_boundaries(stratum_data, collapsed_factors)
+                    if boundaries:
+                        lane_boundaries[stratum] = boundaries
+
+            # 10. Statistics per stratum = 'Varies'
+            chart_statistics = {}
+            for stratum in strata:
+                chart_statistics[stratum] = {
+                    'center': 'Varies', 'lpl': 'Varies', 'upl': 'Varies',
+                }
+
+            # 11. Track single-point stages
+            n_single_point = int((stage_stats['_n'] < 2).sum())
+
+            # Format output
+            extra_cols = [c for c in stratify_by
+                          if c != spec.rsg_var_name and c != spec.time_var]
+            chart_out = self._build_output_columns(
+                df=out,
+                value_cols=extra_cols + [plot_col, 'center', 'lpl', 'upl', 'beyond_limits'],
+            )
+
+            result[mr_spec.chart_type] = {
+                'data': chart_out,
+                'statistics': chart_statistics,
+                'metadata': {
+                    'chart_type': mr_spec.chart_type,
+                    'value_col': plot_col,
+                    'center_col': 'center',
+                    'stratified': True,
+                    'lane_boundaries': lane_boundaries if lane_boundaries else None,
+                    'stratify_by': list(stratify_by),
+                    'staged': True,
+                    'single_point_stages': n_single_point,
+                    'run_rules_applicable': False,
+                },
+                'strata': strata,
+            }
+
+            if _return_intermediates:
+                result['_intermediates'] = {
+                    'out': out,
+                    'stage_stats': stage_stats,
+                    'stratify_col': stratify_col,
+                    'stratify_by': stratify_by,
+                    'strata': strata,
+                    'lane_boundaries': lane_boundaries,
+                    'collapsed_factors': collapsed_factors,
+                    'extra_cols': extra_cols,
+                    'is_stratified': True,
+                    'staged': True,
+                }
+
+            return result
+
+        # === Global limits path (unchanged) ===
 
         # Moving range per stratum
         out['mr'] = out.groupby(stratify_col, sort=False, observed=True)[value_col].diff().abs()
@@ -1233,7 +1422,7 @@ class Analysis:
         # Detect beyond limits
         out = self._add_beyond_limits_flag(out, value_col=plot_col)
 
-        # Strata list
+        # Use strata from grouped for non-staged path (preserves original order)
         strata = grouped[stratify_col].tolist()
 
         # Lane boundaries per stratum
