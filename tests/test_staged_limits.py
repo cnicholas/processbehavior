@@ -183,12 +183,22 @@ class TestStagedValidation:
         with pytest.raises(ValidationError, match="only valid for XmR or R"):
             sds1_study.execute(chart='Xbar', staged=True)
 
-    def test_staged_requires_by_empty(self, sds1_study):
-        """staged=True with by=['factor'] should raise ValidationError."""
-        with pytest.raises(ValidationError, match="requires by=\\[\\]"):
+    def test_staged_stratified_allowed_with_collapsed_factors(self, sds1_study):
+        """staged=True with by=['factor 1'] should work (factor 2 is collapsed)."""
+        # Should NOT raise — factor 2 remains as collapsed factor for stages
+        result = sds1_study.execute(
+            chart='XmR',
+            by=['factor 1'],
+            staged=True
+        )
+        assert result is not None
+
+    def test_staged_requires_collapsed_factors(self, sds1_study):
+        """staged=True with by=all_factors should raise (no collapsed factors)."""
+        with pytest.raises(ValidationError, match="requires collapsed factors"):
             sds1_study.execute(
                 chart='XmR',
-                by=['factor 1'],
+                by=['factor 1', 'factor 2'],
                 staged=True
             )
 
@@ -235,3 +245,167 @@ class TestUnstagedUnchanged:
                 default_data, explicit_data,
                 obj=f"{chart_name} data"
             )
+
+
+# =============================================================================
+# Stratified Staged Limits
+# =============================================================================
+
+class TestStagedStratified:
+    """Test staged limits in stratified (by=['factor']) mode."""
+
+    def test_staged_stratified_limits_vary(self, sds1_study):
+        """Stratified staged: center/lpl/upl columns vary within each stratum."""
+        result = sds1_study.execute(
+            chart='XmR', by=['factor 1'], staged=True
+        )
+        # Get the combined data
+        xmr_data = result.get_chart('XmR')
+
+        # With staged limits, center should vary (not constant per stratum)
+        assert 'center' in xmr_data.columns
+        assert xmr_data['center'].nunique() > 1, \
+            "Center should vary across stages within strata"
+
+    def test_staged_stratified_statistics_are_varies(self, sds1_study):
+        """Per-stratum stats dict has 'Varies' values."""
+        result = sds1_study.execute(
+            chart='XmR', by=['factor 1'], staged=True
+        )
+        stats = result.get_statistics('XmR')
+
+        # Statistics are nested {stratum: {center: 'Varies', ...}}
+        assert isinstance(stats, dict)
+        for stratum, stratum_stats in stats.items():
+            assert stratum_stats['center'] == 'Varies', \
+                f"Stratum {stratum} center should be 'Varies'"
+            assert stratum_stats['lpl'] == 'Varies'
+            assert stratum_stats['upl'] == 'Varies'
+
+    def test_staged_stratified_mr_resets_at_stage_boundaries(self, sds1_study):
+        """mR NaN at start of each stage within stratum (R chart)."""
+        result = sds1_study.execute(
+            chart='XmR', by=['factor 1'], staged=True, paired=True
+        )
+        r_data = result.get_chart('R')
+
+        # R chart should have NaN mr values at stage boundaries
+        mr_values = r_data['mr']
+        assert mr_values.isna().any(), "mR should have NaN at stage boundaries"
+
+    def test_staged_stratified_paired(self, sds1_study):
+        """Paired XmR+R both staged in stratified mode."""
+        result = sds1_study.execute(
+            chart='XmR', by=['factor 1'], staged=True, paired=True
+        )
+
+        xmr_data = result.get_chart('XmR')
+        r_data = result.get_chart('R')
+
+        assert xmr_data is not None
+        assert r_data is not None
+
+        # Both should have 'Varies' statistics for each stratum
+        xmr_stats = result.get_statistics('XmR')
+        r_stats = result.get_statistics('R')
+
+        for stratum in xmr_stats:
+            assert xmr_stats[stratum]['center'] == 'Varies'
+        for stratum in r_stats:
+            assert r_stats[stratum]['center'] == 'Varies'
+
+        # Both should have staged metadata
+        assert result.charts['XmR']['metadata'].get('staged') is True
+        assert result.charts['R']['metadata'].get('staged') is True
+
+    def test_staged_stratified_stage_count(self, sds1_study):
+        """Known data produces expected stage count per stratum."""
+        result = sds1_study.execute(
+            chart='XmR', by=['factor 1'], staged=True
+        )
+        xmr_data = result.get_chart('XmR')
+
+        # Center values change at stage boundaries — count transitions
+        # within each stratum by checking unique center values
+        assert xmr_data['center'].nunique() > 1, \
+            "Should have multiple distinct center values (stages)"
+
+    def test_staged_lane_boundary_positions_valid(self, sds1_study):
+        """All lane boundary positions < len(stratum_df) and strictly increasing."""
+        result = sds1_study.execute(
+            chart='XmR', by=['factor 1'], staged=True
+        )
+        metadata = result.charts['XmR']['metadata']
+        lane_boundaries = metadata.get('lane_boundaries')
+
+        if lane_boundaries:
+            strata = result.charts['XmR'].get('strata', [])
+            xmr_data = result.get_chart('XmR')
+
+            # For stratified charts, lane_boundaries is dict keyed by stratum
+            if isinstance(lane_boundaries, dict):
+                stratify_by = metadata.get('stratify_by', [])
+                if stratify_by and stratify_by[0] in xmr_data.columns:
+                    for stratum, boundaries in lane_boundaries.items():
+                        stratum_len = len(
+                            xmr_data[xmr_data[stratify_by[0]] == stratum]
+                        )
+                        positions = [b['position'] for b in boundaries]
+                        assert positions == sorted(positions), \
+                            f"Boundary positions not sorted for {stratum}"
+                        for p in positions:
+                            assert p < stratum_len, \
+                                f"Position {p} >= stratum len {stratum_len}"
+
+    def test_staged_stratified_metadata(self, sds1_study):
+        """Metadata should include staged=True and run_rules_applicable=False."""
+        result = sds1_study.execute(
+            chart='XmR', by=['factor 1'], staged=True
+        )
+        metadata = result.charts['XmR']['metadata']
+
+        assert metadata.get('staged') is True
+        assert metadata.get('run_rules_applicable') is False
+        assert metadata.get('stratified') is True
+
+
+# =============================================================================
+# Time Tick Labels
+# =============================================================================
+
+class TestTimeTickLabels:
+    """Test that time tick labels are applied when x-axis uses integer indices."""
+
+    def test_time_ticks_apply_when_x_is_index(self, sds1_study):
+        """Tick labels set for by=[] non-staged when _get_x_column() is None."""
+        result = sds1_study.execute(chart='XmR', by=[])
+        fig = result.plot('XmR')
+
+        # The figure should have tick labels set (ticktext/tickvals)
+        xaxis = fig._fig.layout.xaxis
+        assert xaxis.tickvals is not None, "tickvals should be set"
+        assert xaxis.ticktext is not None, "ticktext should be set"
+        assert len(xaxis.ticktext) > 0, "Should have tick labels"
+
+    def test_staged_xmr_has_time_tick_labels(self, sds1_study):
+        """Staged by=[] chart has time values as tick labels."""
+        result = sds1_study.execute(chart='XmR', by=[], staged=True)
+        fig = result.plot('XmR')
+
+        xaxis = fig._fig.layout.xaxis
+        assert xaxis.tickvals is not None, "tickvals should be set for staged"
+        assert xaxis.ticktext is not None, "ticktext should be set for staged"
+
+    def test_time_ticks_applied_in_stratified_with_replication(self, sds1_study):
+        """Stratified with replication: time repeats per stratum, ticks applied."""
+        # SDS 1 has replication, so time values repeat within each stratum
+        result = sds1_study.execute(
+            chart='XmR', by=['factor 1', 'factor 2']
+        )
+        fig = result.plot('XmR')
+
+        # Time values repeat due to replication, so integer positions are used
+        # and _apply_time_tick_labels should add tick labels
+        xaxis = fig._fig.layout.xaxis
+        assert xaxis.tickvals is not None, "tickvals should be set (time repeats)"
+        assert xaxis.ticktext is not None, "ticktext should be set (time repeats)"
