@@ -88,7 +88,7 @@ def c4(n: int) -> float:
     return out
 
 
-def b3(n: int) -> float:
+def b3(n: int, sigma_multiplier: float = 3) -> float:
     """
     Calculate b3 lower control limit constant for S charts.
 
@@ -99,6 +99,8 @@ def b3(n: int) -> float:
     ----------
     n : int
         Subgroup size (must be >= 2)
+    sigma_multiplier : float, default 3
+        Sigma multiplier for control limits (default 3-sigma)
 
     Returns
     -------
@@ -116,7 +118,7 @@ def b3(n: int) -> float:
 
     Notes
     -----
-    Formula: b3(n) = 1 - 3/c4(n) * sqrt(1 - c4(n)²)
+    Formula: b3(n) = 1 - sigma_multiplier/c4(n) * sqrt(1 - c4(n)²)
 
     For small subgroup sizes (n < 6), the raw b3 formula yields negative
     values. Since standard deviations cannot be negative, these values are
@@ -130,12 +132,12 @@ def b3(n: int) -> float:
         raise ValueError(f"Subgroup size must be >= 2, got {n}")
 
     c4_n = c4(n)
-    out = 1 - (SIGMA_MULTIPLIER / c4_n * math.sqrt(1 - math.pow(c4_n, 2)))
+    out = 1 - (sigma_multiplier / c4_n * math.sqrt(1 - math.pow(c4_n, 2)))
 
     return 0 if out < 0 else out
 
 
-def b4(n: int) -> float:
+def b4(n: int, sigma_multiplier: float = 3) -> float:
     """
     Calculate b4 upper control limit constant for S charts.
 
@@ -146,6 +148,8 @@ def b4(n: int) -> float:
     ----------
     n : int
         Subgroup size (must be >= 2)
+    sigma_multiplier : float, default 3
+        Sigma multiplier for control limits (default 3-sigma)
 
     Returns
     -------
@@ -163,7 +167,7 @@ def b4(n: int) -> float:
 
     Notes
     -----
-    Formula: b4(n) = 1 + 3/(c4(n)) * sqrt(1 - c4(n)^2)
+    Formula: b4(n) = 1 + sigma_multiplier/(c4(n)) * sqrt(1 - c4(n)^2)
 
     The b4 constant decreases as subgroup size increases, approaching the
     value of 1 + 3*sqrt(1-1) = 1 for very large subgroups.
@@ -176,7 +180,7 @@ def b4(n: int) -> float:
         raise ValueError(f"Subgroup size must be >= 2, got {n}")
 
     c4_n = c4(n)
-    out = 1 + (SIGMA_MULTIPLIER / c4_n * math.sqrt(1 - math.pow(c4_n, 2)))
+    out = 1 + (sigma_multiplier / c4_n * math.sqrt(1 - math.pow(c4_n, 2)))
 
     return out
 
@@ -191,7 +195,8 @@ def calculate_limits(
     sd: float = None,
     N: int = None,
     mR: float = None,
-    round_to: int = 3
+    round_to: int = 3,
+    sigma_multiplier: float = 3
 ) -> pd.Series:
     """
     Calculate control limits for various chart types.
@@ -271,10 +276,10 @@ def calculate_limits(
         Wd = sd / c4(N)
 
         # Studentized Process Limits for sub-group means
-        # LPLx = X̄ - (3 * Wd) / √n
-        # UPLx = X̄ + (3 * Wd) / √n
-        lpl = mean - ((SIGMA_MULTIPLIER * Wd) / math.sqrt(N))
-        upl = mean + ((SIGMA_MULTIPLIER * Wd) / math.sqrt(N))
+        # LPLx = X̄ - (sigma_multiplier * Wd) / √n
+        # UPLx = X̄ + (sigma_multiplier * Wd) / √n
+        lpl = mean - ((sigma_multiplier * Wd) / math.sqrt(N))
+        upl = mean + ((sigma_multiplier * Wd) / math.sqrt(N))
 
     elif limits_type == "S":
         if None in [sd, N]:
@@ -285,8 +290,8 @@ def calculate_limits(
 
         # LPL = S * b3(N)
         # UPL = S * b4(N)
-        lpl = sd * b3(N)
-        upl = sd * b4(N)
+        lpl = sd * b3(N, sigma_multiplier)
+        upl = sd * b4(N, sigma_multiplier)
 
     elif limits_type == "XmR":
         if None in [mean, mR]:

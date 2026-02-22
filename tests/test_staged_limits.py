@@ -11,7 +11,6 @@ from processbehavior import ProcessBehavior
 from processbehavior.datasets.synthetic import make_sds
 from processbehavior.exceptions import ValidationError
 
-
 # =============================================================================
 # Fixtures
 # =============================================================================
@@ -339,7 +338,7 @@ class TestStagedStratified:
         lane_boundaries = metadata.get('lane_boundaries')
 
         if lane_boundaries:
-            strata = result.charts['XmR'].get('strata', [])
+            _ = result.charts['XmR'].get('strata', [])
             xmr_data = result.get_chart('XmR')
 
             # For stratified charts, lane_boundaries is dict keyed by stratum

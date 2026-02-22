@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import difflib
 import functools
+import math
 import re
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
@@ -1280,7 +1281,9 @@ class Study:
         recentered: bool = False,
         bins: int | None = None,
         paired: bool = False,
-        staged: bool = False
+        staged: bool = False,
+        n_sigma: float = 3.0,
+        n_mode: str = "actual",
     ) -> AnalysisResult:
         """
         Run the analysis and return results.
@@ -1344,6 +1347,22 @@ class Study:
 
             Single-point stages yield zero-width limits because mR is
             imputed as 0; count available in metadata['single_point_stages'].
+
+        n_sigma : float, default 3.0
+            Sigma multiplier for Xbar/S chart control limits. Standard SPC
+            uses 3-sigma limits; smaller values give narrower limits (more
+            sensitive), larger values give wider limits (fewer false signals).
+            Only valid for Xbar/S charts.
+
+        n_mode : str, default "actual"
+            How to determine subgroup size N for Xbar/S limit calculations.
+
+            - "actual": Use each subgroup's actual size N_k (default).
+              When sizes vary, limits vary per subgroup ("Varies" in statistics).
+            - "average": Use the mean subgroup size N-bar for all subgroups.
+              Produces constant limits even when subgroup sizes vary.
+
+            Only valid for Xbar/S charts.
 
         Returns
         -------
@@ -1446,6 +1465,9 @@ class Study:
                         "Remove factors from by= or set staged=False."
                     )
 
+        # n_sigma / n_mode validation
+        self._validate_n_sigma_n_mode(n_sigma, n_mode, base_chart)
+
         # For Histogram chart, default by=[] if not specified (full distribution)
         if base_chart == 'Histogram' and by is None:
             by_validated = []
@@ -1502,6 +1524,8 @@ class Study:
             paired=paired,
             bins=bins if bins is not None else 10,
             staged=staged,
+            n_sigma=n_sigma,
+            n_mode=n_mode,
         )
 
         # Create and run analysis using pre-calculated AnalysisDataSet
@@ -1730,6 +1754,29 @@ class Study:
             )
 
         return list(by)
+
+    @staticmethod
+    def _validate_n_sigma_n_mode(
+        n_sigma: float, n_mode: str, base_chart: str
+    ) -> None:
+        """Validate n_sigma and n_mode parameters for execute()."""
+        from .exceptions import ValidationError
+
+        if (n_sigma != 3.0 or n_mode != "actual") and base_chart not in ('Xbar', 'S'):
+            raise ValidationError(
+                f"n_sigma and n_mode are only supported for Xbar/S charts, "
+                f"got '{base_chart}'."
+            )
+
+        if base_chart in ('Xbar', 'S'):
+            if not (isinstance(n_sigma, (int, float)) and math.isfinite(n_sigma) and n_sigma > 0):
+                raise ValidationError(
+                    f"n_sigma must be a finite number > 0; got {n_sigma!r}"
+                )
+            if n_mode not in ("actual", "average"):
+                raise ValidationError(
+                    f"n_mode must be 'actual' or 'average'; got {n_mode!r}"
+                )
 
     def _get_factor_combinations(self) -> int:
         """Get count of unique factor combinations in the dataset."""

@@ -1,5 +1,7 @@
 {
   "center_col": "center",
   "chart_type": "S",
+  "n_mode": "actual",
+  "n_sigma": 3.0,
   "value_col": "s"
 }
