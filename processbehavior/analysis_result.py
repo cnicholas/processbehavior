@@ -794,10 +794,7 @@ class AnalysisResult:
         >>> result.chart_table('S', signal_symbols=False)
         """
         # Determine which chart to use
-        if chart is None:
-            chart = self.all_charts[0]
-        else:
-            chart = self._resolve_chart_name(chart)
+        chart = self.all_charts[0] if chart is None else self._resolve_chart_name(chart)
 
         if chart not in self.charts:
             raise ChartNotAvailableError(

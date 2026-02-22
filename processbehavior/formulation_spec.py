@@ -129,3 +129,5 @@ class ChartRequest:
     paired: bool = False
     bins: int = 10
     staged: bool = False
+    n_sigma: float = 3.0
+    n_mode: str = "actual"

@@ -706,6 +706,14 @@ class Analysis:
         # Determine if subgroup sizes are constant or variable
         n_to_use, n_max = self._determine_n_to_use(out)
 
+        # Override n_to_use if n_mode="average"
+        n_mode = self.request.n_mode
+        n_avg = None
+        if n_mode == "average":
+            n_avg = out['n'].mean()
+            out['N'] = n_avg      # overwrite N column with average
+            n_to_use = 'N'        # force constant-N path
+
         # CALCULATE XBAR
         xbar = out.copy()
         xbar['center'] = _Xbar  # Add center column for Xbar chart
@@ -715,7 +723,8 @@ class Analysis:
                 sd=_S,
                 N=row[n_to_use],
                 limits_type='Xbar',
-                round_to=spec.round_to
+                round_to=spec.round_to,
+                sigma_multiplier=self.request.n_sigma,
             ), axis=1
         )
 
@@ -762,7 +771,10 @@ class Analysis:
             'metadata': {
                 'chart_type': 'Xbar',
                 'value_col': 'xbar',
-                'center_col': 'center'
+                'center_col': 'center',
+                'n_sigma': self.request.n_sigma,
+                'n_mode': n_mode,
+                **({'n_avg': round(n_avg, spec.round_to)} if n_avg is not None else {}),
             }
         }
 
@@ -775,6 +787,7 @@ class Analysis:
                 'groupby_cols': groupby_cols,
                 'group_col': group_col,
                 'out': out,  # Pre-aggregated DataFrame with s, n, mean columns
+                'n_avg': n_avg,
             }
 
         return result
@@ -817,6 +830,7 @@ class Analysis:
             groupby_cols = _precomputed['groupby_cols']
             group_col = _precomputed['group_col']
             out = _precomputed['out'].copy()
+            n_avg = _precomputed.get('n_avg')
         else:
             # Independent calculation (existing logic)
             df = self.ads.analysis_dataset.copy()
@@ -853,6 +867,14 @@ class Analysis:
             # Determine if subgroup sizes are constant or variable
             n_to_use, n_max = self._determine_n_to_use(out)
 
+            # Override n_to_use if n_mode="average"
+            n_mode = self.request.n_mode
+            n_avg = None
+            if n_mode == "average":
+                n_avg = out['n'].mean()
+                out['N'] = n_avg
+                n_to_use = 'N'
+
             # Determine group_col
             by = self.request.by
             if by is not None and len(by) > 0:
@@ -872,6 +894,7 @@ class Analysis:
         # Calculate S chart (common path for both precomputed and independent)
         out['center'] = _S
         out['groups'] = out["n"].count()
+        n_mode = self.request.n_mode
 
         # Add limits columns
         out[['lpl', 'upl']] = out.apply(
@@ -880,7 +903,8 @@ class Analysis:
                 sd=row['center'],
                 N=row[n_to_use],
                 limits_type="S",
-                round_to=spec.round_to
+                round_to=spec.round_to,
+                sigma_multiplier=self.request.n_sigma,
             ), axis=1
         )
 
@@ -928,7 +952,10 @@ class Analysis:
                 'metadata': {
                     'chart_type': 'S',
                     'value_col': 's',
-                    'center_col': 'center'
+                    'center_col': 'center',
+                    'n_sigma': self.request.n_sigma,
+                    'n_mode': n_mode,
+                    **({'n_avg': round(n_avg, spec.round_to)} if n_avg is not None else {}),
                 }
             }
         }
@@ -1190,7 +1217,7 @@ class Analysis:
             },
         }
 
-    def _calculate_mr_chart_stratified(
+    def _calculate_mr_chart_stratified(  # noqa: C901
         self,
         mr_spec: _MRChartSpec,
         value_col: str,
@@ -1482,7 +1509,7 @@ class Analysis:
 
         return result
 
-    def _calculate_mr_chart_ungrouped(
+    def _calculate_mr_chart_ungrouped(  # noqa: C901
         self,
         mr_spec: _MRChartSpec,
         value_col: str,
