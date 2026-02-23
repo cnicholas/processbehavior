@@ -175,7 +175,7 @@ class Plotter:
 
     >>> fig = plotter.plot(
     ...     chart='Xbar',
-    ...     template='minimal',
+    ...     theme='minimal',
     ...     highlight_signals=True
     ... )
     """
@@ -206,7 +206,7 @@ class Plotter:
         show_zones: bool = False,
         show_rules: bool = False,
         show_stats: bool = False,
-        template: str | ChartTheme = 'processbehavior',
+        theme: str | ChartTheme = 'processbehavior',
         width: int = 1000,
         height: int | None = None,
         aspect_ratio: float | None = None,
@@ -248,7 +248,7 @@ class Plotter:
             Whether to show additional run rules (Western Electric Rules 2-8)
         show_stats : bool, default False
             Whether to show a statistics box with CL, UPL, LPL, and n values
-        template : str or ChartTheme, default 'processbehavior'
+        theme : str or ChartTheme, default 'processbehavior'
             Visual theme. Can be a theme name string ('processbehavior', 'ggplot',
             'minimal', 'dark', 'publication') or a ChartTheme instance for full
             customization of colors, sizes, and fonts.
@@ -301,16 +301,16 @@ class Plotter:
         Custom styling:
 
         >>> fig = plotter.plot(
-        ...     template='dark',
+        ...     theme='dark',
         ...     highlight_signals=True,
         ...     show_rules=True
         ... )
         """
         # Resolve theme
-        if isinstance(template, str):
-            self._theme = get_theme(template)
+        if isinstance(theme, str):
+            self._theme = get_theme(theme)
         else:
-            self._theme = template
+            self._theme = theme
 
         # Normalize chart name for case-insensitive lookup
         if chart:
@@ -1835,7 +1835,7 @@ class Plotter:
         self,
         residual_type: str = 'R1',
         plot_type: str = 'all',
-        template: str | ChartTheme = 'processbehavior',
+        theme: str | ChartTheme = 'processbehavior',
         width: int = 1200,
         height: int = 400
     ) -> ControlChartFigure:
@@ -1860,7 +1860,7 @@ class Plotter:
             - 'qq': Quantile-quantile plot for normality
             - 'sequence': Residuals vs. observation order
             - 'all': All three plots in subplots
-        template : str or ChartTheme, default 'processbehavior'
+        theme : str or ChartTheme, default 'processbehavior'
             Visual theme
         width : int, default 1200
             Figure width in pixels
@@ -1901,7 +1901,7 @@ class Plotter:
             )
 
         # Resolve theme
-        theme = get_theme(template) if isinstance(template, str) else template
+        theme = get_theme(theme) if isinstance(theme, str) else theme
 
         # Get residual data
         r_data = residuals[residual_type].dropna()
@@ -2254,7 +2254,7 @@ class Plotter:
     def plot_effects(  # noqa: C901
         self,
         effect_type: str = 'factor',
-        template: str | ChartTheme = 'processbehavior',
+        theme: str | ChartTheme = 'processbehavior',
         width: int = 800,
         height: int = 500
     ) -> ControlChartFigure:
@@ -2271,7 +2271,7 @@ class Plotter:
             - 'factor': Factor main effects (mean R5 per level)
             - 'time': Time effects (mean R1 per time point)
             - 'all': Both effects in subplots
-        template : str or ChartTheme, default 'processbehavior'
+        theme : str or ChartTheme, default 'processbehavior'
             Visual theme
         width : int, default 800
             Figure width in pixels
@@ -2304,7 +2304,7 @@ class Plotter:
         effects = self.result.effects
 
         # Resolve theme
-        theme = get_theme(template) if isinstance(template, str) else template
+        theme = get_theme(theme) if isinstance(theme, str) else theme
 
         if effect_type == 'all':
             # Find factor and time effects
@@ -2484,7 +2484,7 @@ class Plotter:
         include_residuals: bool = True,
         include_effects: bool = True,
         include_summary: bool = True,
-        template: str | ChartTheme = 'processbehavior',
+        theme: str | ChartTheme = 'processbehavior',
         width: int = 1200,
         title: str | None = None
     ) -> None:
@@ -2510,7 +2510,7 @@ class Plotter:
             Include effects bar charts (if available)
         include_summary : bool, default True
             Include analysis summary section
-        template : str or ChartTheme, default 'processbehavior'
+        theme : str or ChartTheme, default 'processbehavior'
             Visual theme for all charts
         width : int, default 1200
             Width of charts in pixels
@@ -2520,7 +2520,7 @@ class Plotter:
         Examples
         --------
         >>> plotter.generate_report('analysis_report.html')
-        >>> plotter.generate_report('dark_report.html', template='dark')
+        >>> plotter.generate_report('dark_report.html', theme='dark')
 
         Notes
         -----
@@ -2556,7 +2556,7 @@ class Plotter:
 
         # Control charts section
         if include_charts:
-            fig = self.plot(template=template, width=width, height=500)
+            fig = self.plot(theme=theme, width=width, height=500)
             chart_html = fig.figure.to_html(full_html=False, include_plotlyjs=False)
             sections.append(f"""
             <div class="section">
@@ -2567,7 +2567,7 @@ class Plotter:
 
         # Residuals section
         if include_residuals and self.result.has_residuals:
-            fig = self.plot_residuals(template=template, width=width, height=350)
+            fig = self.plot_residuals(theme=theme, width=width, height=350)
             residual_html = fig.figure.to_html(full_html=False, include_plotlyjs=False)
             sections.append(f"""
             <div class="section">
@@ -2580,7 +2580,7 @@ class Plotter:
         # Effects section
         if include_effects and self.result.has_effects:
             try:
-                fig = self.plot_effects(effect_type='all', template=template, width=width, height=400)
+                fig = self.plot_effects(effect_type='all', theme=theme, width=width, height=400)
                 effects_html = fig.figure.to_html(full_html=False, include_plotlyjs=False)
                 sections.append(f"""
                 <div class="section">

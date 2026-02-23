@@ -587,7 +587,7 @@ class ExcelExporter:
                             chart=chart_name,
                             width=1200,
                             height=500,
-                            template='processbehavior'
+                            theme='processbehavior'
                         )
 
                         # Save as image
@@ -658,7 +658,7 @@ class ExcelExporter:
                 fig = plotter.plot(
                     width=1400,
                     height=800,
-                    template='processbehavior',
+                    theme='processbehavior',
                     title=f'Control Charts: {base_name}'
                 )
                 fig.save_html(str(html_file))
@@ -674,7 +674,7 @@ class ExcelExporter:
                 fig = plotter.plot(
                     width=1800,
                     height=1200,
-                    template='processbehavior',
+                    theme='processbehavior',
                     title=f'Stratified Control Charts: {base_name}'
                 )
                 fig.save_html(str(html_file))

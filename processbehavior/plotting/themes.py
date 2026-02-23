@@ -482,13 +482,13 @@ def register_theme(theme: ChartTheme):
     --------
     >>> custom = ChartTheme(name='corporate', data_color='#003366')
     >>> register_theme(custom)
-    >>> fig = plotter.plot(template='corporate')
+    >>> fig = plotter.plot(theme='corporate')
     """
     _ensure_registry()
     _THEME_REGISTRY[theme.name] = theme
 
 
-def apply_theme(fig: go.Figure, template: str | ChartTheme = 'processbehavior') -> go.Figure:
+def apply_theme(fig: go.Figure, theme: str | ChartTheme = 'processbehavior') -> go.Figure:
     """
     Apply a theme to a Plotly figure.
 
@@ -496,7 +496,7 @@ def apply_theme(fig: go.Figure, template: str | ChartTheme = 'processbehavior') 
     ----------
     fig : go.Figure
         Plotly figure to apply theme to
-    template : str or ChartTheme
+    theme : str or ChartTheme
         Theme name or ChartTheme instance
 
     Returns
@@ -512,7 +512,7 @@ def apply_theme(fig: go.Figure, template: str | ChartTheme = 'processbehavior') 
     >>> custom_theme = ChartTheme(name='custom', plot_bgcolor='#F0F0F0')
     >>> fig = apply_theme(fig, custom_theme)
     """
-    theme = get_theme(template) if isinstance(template, str) else template
+    theme = get_theme(theme) if isinstance(theme, str) else theme
 
     fig.update_layout(**theme.to_layout_dict())
 
