@@ -125,7 +125,7 @@ class ChartTheme:
 
     # Data appearance
     data_color: str = 'steelblue'
-    data_marker_size: int = 8
+    data_marker_size: int = 5
     data_line_width: float = 2.0
 
     # Control limits
@@ -137,10 +137,10 @@ class ChartTheme:
     center_line_width: float = 1.5
 
     # Signal markers - Two-tier system:
-    # Both tiers use same marker style/size as data (circle, size 8), differentiated only by color
+    # Both tiers use same marker style/size as data (circle, size 5), differentiated only by color
     # Tier 1 (Rule 1): Red - points outside control limits
     signal_color: str = '#DC143C'  # Crimson - attention-grabbing red
-    signal_marker_size: int = 8    # Same size as data points
+    signal_marker_size: int = 5    # Same size as data points
     signal_marker_symbol: str = 'circle'  # Same as data points
     signal_marker_line_width: float = 1.0
     signal_marker_line_color: str = '#8B0000'  # DarkRed border
@@ -173,7 +173,7 @@ class ChartTheme:
     annotation_font_size: int = 10
 
     # Faceted plot settings
-    facet_marker_size: int = 6
+    facet_marker_size: int = 5
     facet_line_width: float = 1.5
 
     # Lane boundaries (vertical separators for collapsed factors)
@@ -251,7 +251,6 @@ def _create_ggplot_theme() -> ChartTheme:
         name='ggplot',
         # Data - ggplot2's default blue
         data_color='#3366CC',
-        data_marker_size=7,
         data_line_width=1.5,
         # Control limits
         ucl_color='#E31A1C',  # ggplot2 red
@@ -261,7 +260,6 @@ def _create_ggplot_theme() -> ChartTheme:
         center_line_width=1.2,
         # Signals - same marker as data, just red fill
         signal_color='#E31A1C',
-        signal_marker_size=7,   # Same as data_marker_size
         signal_marker_symbol='circle',
         signal_marker_line_color='#B2182B',
         # Zones
@@ -289,7 +287,6 @@ def _create_minimal_theme() -> ChartTheme:
         name='minimal',
         # Data
         data_color='#2C3E50',  # Dark slate
-        data_marker_size=6,
         data_line_width=1.5,
         # Control limits - subtle
         ucl_color='#95A5A6',  # Gray
@@ -300,7 +297,6 @@ def _create_minimal_theme() -> ChartTheme:
         center_line_width=1.0,
         # Signals - same marker as data, just red fill
         signal_color='#E74C3C',  # Flat red
-        signal_marker_size=6,   # Same as data_marker_size
         signal_marker_symbol='circle',
         signal_marker_line_color='#C0392B',
         # Zones - very subtle
@@ -329,7 +325,6 @@ def _create_dark_theme() -> ChartTheme:
         name='dark',
         # Data - bright for contrast
         data_color='#00D4AA',  # Teal/cyan
-        data_marker_size=8,
         data_line_width=2.0,
         # Control limits
         ucl_color='#FF6B6B',  # Soft red
@@ -339,7 +334,6 @@ def _create_dark_theme() -> ChartTheme:
         center_line_width=1.5,
         # Signals - same marker as data, just red fill
         signal_color='#FF4757',  # Bright red
-        signal_marker_size=8,   # Same as data_marker_size
         signal_marker_symbol='circle',
         signal_marker_line_color='#FF6B81',
         # Zones - semi-transparent on dark
@@ -399,8 +393,6 @@ def _create_publication_theme() -> ChartTheme:
         title_font_color='#000000',
         axis_title_font_size=10,
         annotation_font_size=9,
-        # Smaller markers for facets
-        facet_marker_size=4,
         facet_line_width=0.8,
     )
 
