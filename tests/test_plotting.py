@@ -265,13 +265,13 @@ class TestPlotter:
         with pytest.raises(ValueError, match="Chart 'Invalid' not found"):
             plotter.plot(chart='Invalid')
 
-    def test_plot_with_template(self, simple_result):
-        """Test plotting with different templates."""
+    def test_plot_with_theme(self, simple_result):
+        """Test plotting with different themes."""
         plotter = Plotter(simple_result)
 
-        # Test each template
-        for template in ['processbehavior', 'minimal', 'dark']:
-            fig = plotter.plot(chart='XmR', template=template)
+        # Test each theme
+        for theme_name in ['processbehavior', 'minimal', 'dark']:
+            fig = plotter.plot(chart='XmR', theme=theme_name)
             assert isinstance(fig, ControlChartFigure)
 
     def test_plot_with_custom_dimensions(self, simple_result):
@@ -365,7 +365,7 @@ class TestPlotter:
         plotter = Plotter(simple_result)
 
         # Use publication theme which has zone_opacity=0
-        fig = plotter.plot(chart='XmR', show_zones=True, template='publication')
+        fig = plotter.plot(chart='XmR', show_zones=True, theme='publication')
 
         # With opacity=0, no zone shapes should be added (only control limit lines)
         shapes = fig.figure.layout.shapes
@@ -384,7 +384,7 @@ class TestPlotter:
         )
 
         plotter = Plotter(simple_result)
-        fig = plotter.plot(chart='XmR', show_zones=True, template=custom_theme)
+        fig = plotter.plot(chart='XmR', show_zones=True, theme=custom_theme)
 
         assert isinstance(fig, ControlChartFigure)
         shapes = fig.figure.layout.shapes
@@ -447,7 +447,7 @@ class TestAnalysisResultIntegration:
     def test_plot_with_kwargs(self, result):
         """Test that plot() accepts keyword arguments."""
         fig = result.plot(
-            template='minimal',
+            theme='minimal',
             width=800,
             highlight_signals=False
         )
@@ -803,7 +803,7 @@ class TestStatsBox:
         )
 
         plotter = Plotter(simple_result)
-        fig = plotter.plot(chart='Xbar', show_stats=True, template=custom_theme)
+        fig = plotter.plot(chart='Xbar', show_stats=True, theme=custom_theme)
 
         # Find the stats box annotation
         stats_annotation = None

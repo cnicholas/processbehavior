@@ -1263,7 +1263,7 @@ class AnalysisResult:
         show_zones: bool = False,
         show_rules: bool = False,
         show_stats: bool = False,
-        template: str = 'processbehavior',
+        theme: str = 'processbehavior',
         width: int = 1000,
         height: int | None = None,
         title: str | None = None,
@@ -1296,7 +1296,7 @@ class AnalysisResult:
             Whether to show additional run rules (WECO Rules 2-8)
         show_stats : bool, default False
             Whether to show statistics box with CL, UPL, LPL values
-        template : str, default 'processbehavior'
+        theme : str, default 'processbehavior'
             Visual theme ('processbehavior', 'minimal', 'dark', 'ggplot')
         width : int, default 1000
             Figure width in pixels
@@ -1331,7 +1331,7 @@ class AnalysisResult:
         Custom styling:
 
         >>> fig = result.plot(
-        ...     template='dark',
+        ...     theme='dark',
         ...     highlight_signals=True,
         ...     width=1200
         ... )
@@ -1362,7 +1362,7 @@ class AnalysisResult:
             show_zones=show_zones,
             show_rules=show_rules,
             show_stats=show_stats,
-            template=template,
+            theme=theme,
             width=width,
             height=height,
             title=title,
