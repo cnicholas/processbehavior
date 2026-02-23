@@ -126,7 +126,8 @@ class ChartTheme:
     # Data appearance
     data_color: str = 'steelblue'
     data_marker_size: int = 5
-    data_line_width: float = 2.0
+    data_line_width: float = 1.0
+    data_opacity: float = 1.0
 
     # Control limits
     ucl_color: str = 'red'
@@ -139,11 +140,11 @@ class ChartTheme:
     # Signal markers - Two-tier system:
     # Both tiers use same marker style/size as data (circle, size 5), differentiated only by color
     # Tier 1 (Rule 1): Red - points outside control limits
-    signal_color: str = '#DC143C'  # Crimson - attention-grabbing red
+    signal_color: str = 'red'
     signal_marker_size: int = 5    # Same size as data points
     signal_marker_symbol: str = 'circle'  # Same as data points
-    signal_marker_line_width: float = 1.0
-    signal_marker_line_color: str = '#8B0000'  # DarkRed border
+    signal_marker_line_width: float = 0.5
+    signal_marker_line_color: str = 'darkred'
     # Tier 2 (Rules 2-8): Orange - pattern-based signals
     pattern_signal_color: str = '#FF8C00'  # Dark Orange
 
@@ -241,7 +242,7 @@ def _create_processbehavior_theme() -> ChartTheme:
     """Default theme with professional, balanced appearance."""
     return ChartTheme(
         name='processbehavior',
-        # Uses all dataclass defaults
+        data_opacity=0.8,
     )
 
 
@@ -251,7 +252,6 @@ def _create_ggplot_theme() -> ChartTheme:
         name='ggplot',
         # Data - ggplot2's default blue
         data_color='#3366CC',
-        data_line_width=1.5,
         # Control limits
         ucl_color='#E31A1C',  # ggplot2 red
         lcl_color='#E31A1C',
@@ -287,7 +287,6 @@ def _create_minimal_theme() -> ChartTheme:
         name='minimal',
         # Data
         data_color='#2C3E50',  # Dark slate
-        data_line_width=1.5,
         # Control limits - subtle
         ucl_color='#95A5A6',  # Gray
         lcl_color='#95A5A6',
@@ -325,7 +324,6 @@ def _create_dark_theme() -> ChartTheme:
         name='dark',
         # Data - bright for contrast
         data_color='#00D4AA',  # Teal/cyan
-        data_line_width=2.0,
         # Control limits
         ucl_color='#FF6B6B',  # Soft red
         lcl_color='#FF6B6B',
@@ -362,7 +360,6 @@ def _create_publication_theme() -> ChartTheme:
         # Data - high contrast black
         data_color='#000000',
         data_marker_size=5,
-        data_line_width=1.0,
         # Control limits - grayscale for B&W printing
         ucl_color='#666666',
         lcl_color='#666666',
@@ -370,12 +367,12 @@ def _create_publication_theme() -> ChartTheme:
         limit_line_dash='dash',
         limit_line_width=0.8,
         center_line_width=1.0,
-        # Signals - same marker as data, just filled
-        signal_color='#000000',
+        # Signals - red to stand out against black data
+        signal_color='red',
         signal_marker_size=5,   # Same as data_marker_size
         signal_marker_symbol='circle',
-        signal_marker_line_width=2.0,
-        signal_marker_line_color='#000000',
+        signal_marker_line_width=0.5,
+        signal_marker_line_color='darkred',
         # Zones - not used in print (set opacity to 0)
         zone_opacity=0.0,
         # Layout - clean white
