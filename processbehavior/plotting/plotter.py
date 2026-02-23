@@ -1031,13 +1031,19 @@ class Plotter:
             title_text=x_label,
             showline=theme.show_axis_line,
             linecolor=theme.axis_line_color,
-            linewidth=theme.axis_line_width
+            linewidth=theme.axis_line_width,
+            showgrid=theme.show_grid,
+            gridcolor=theme.grid_color,
+            gridwidth=theme.grid_width,
         )
         fig.update_yaxes(
             title_text=y_label,
             showline=theme.show_axis_line,
             linecolor=theme.axis_line_color,
-            linewidth=theme.axis_line_width
+            linewidth=theme.axis_line_width,
+            showgrid=theme.show_grid,
+            gridcolor=theme.grid_color,
+            gridwidth=theme.grid_width,
         )
 
         # Apply shared y-axis range if calculated
