@@ -501,6 +501,7 @@ class Plotter:
             name=self._get_data_legend_name(),
             marker=dict(size=theme.data_marker_size, color=theme.data_color),
             line=dict(color=theme.data_color, width=theme.data_line_width),
+            opacity=theme.data_opacity,
             hovertemplate='%{x}<br>%{y:.3f}<extra></extra>'
         ))
 
@@ -856,6 +857,7 @@ class Plotter:
                     name=chart_name,
                     marker=dict(size=theme.facet_marker_size, color=theme.data_color),
                     line=dict(color=theme.data_color, width=theme.facet_line_width),
+                    opacity=theme.data_opacity,
                     showlegend=False,
                     hovertemplate='%{x}<br>%{y:.3f}<extra></extra>'
                 ),
