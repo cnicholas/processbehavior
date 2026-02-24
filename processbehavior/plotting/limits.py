@@ -65,6 +65,12 @@ def build_stepped_coordinates(
     tuple[list, list]
         (x_stepped, y_stepped) coordinate lists for the stepped line
     """
+    if len(x_vals) != len(limit_vals):
+        raise ValueError(
+            f"x_vals and limit_vals must have equal length: "
+            f"{len(x_vals)} != {len(limit_vals)}"
+        )
+
     x_stepped = []
     y_stepped = []
 

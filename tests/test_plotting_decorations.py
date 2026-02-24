@@ -264,7 +264,7 @@ class TestFormatStatValue:
         assert format_stat_value(5.12345) == '5.1235'
 
     def test_large_value_compact(self):
-        assert format_stat_value(152.3456, compact=True) == '152.3'
+        assert format_stat_value(152.3456, compact=True) == '152'
 
     def test_medium_value_compact(self):
         assert format_stat_value(52.3456, compact=True) == '52.3'

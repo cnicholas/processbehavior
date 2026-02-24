@@ -12,7 +12,8 @@ This module provides chart functions for visualizing main effects and interactio
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING
+from collections.abc import Mapping
+from typing import TYPE_CHECKING, Any
 
 import pandas as pd
 import plotly.graph_objects as go
@@ -21,6 +22,18 @@ if TYPE_CHECKING:
     from .themes import ChartTheme
 
 logger = logging.getLogger(__name__)
+
+_FACTOR_COLORS = [
+    '#FF6B6B',  # Coral
+    '#4ECDC4',  # Teal
+    '#45B7D1',  # Sky blue
+    '#96CEB4',  # Sage
+]
+
+_INTERACTION_COLORS = _FACTOR_COLORS + [
+    '#FFEAA7',  # Soft yellow
+    '#DDA0DD',  # Plum
+]
 
 
 def _is_main_effect_key(name: str) -> bool:
@@ -36,7 +49,7 @@ def _is_main_effect_key(name: str) -> bool:
 
 
 def create_main_effects_chart(
-    effects: dict,
+    effects: Mapping[str, Any],
     theme: ChartTheme,
     factors: list[str] | None = None,
     width: int = 1000,
@@ -67,6 +80,11 @@ def create_main_effects_chart(
     -------
     go.Figure
         Plotly figure with horizontal bar chart
+
+    Raises
+    ------
+    ValueError
+        If no main effects are found in the ``effects`` dictionary.
 
     Examples
     --------
@@ -102,14 +120,7 @@ def create_main_effects_chart(
     all_colors = []
 
     # Color palette for factors
-    factor_colors = [
-        theme.data_color,
-        theme.center_color,
-        '#FF6B6B',  # Coral
-        '#4ECDC4',  # Teal
-        '#45B7D1',  # Sky blue
-        '#96CEB4',  # Sage
-    ]
+    factor_colors = [theme.data_color, theme.center_color] + _FACTOR_COLORS
 
     for i, (factor_name, data) in enumerate(factor_effects):
         factor_col = data.columns[0]
@@ -170,7 +181,7 @@ def create_main_effects_chart(
 
 
 def create_factor_effects_chart(
-    effects: dict,
+    effects: Mapping[str, Any],
     theme: ChartTheme,
     factors: list[str] | None = None,
     width: int = 1000,
@@ -203,6 +214,11 @@ def create_factor_effects_chart(
     go.Figure
         Plotly figure with vertical bar chart
 
+    Raises
+    ------
+    ValueError
+        If no factor main effects are found in the ``effects`` dictionary.
+
     Examples
     --------
     >>> fig = create_factor_effects_chart(result.effects, theme)
@@ -234,14 +250,7 @@ def create_factor_effects_chart(
     all_colors = []
 
     # Color palette for factors
-    factor_colors = [
-        theme.data_color,
-        theme.center_color,
-        '#FF6B6B',  # Coral
-        '#4ECDC4',  # Teal
-        '#45B7D1',  # Sky blue
-        '#96CEB4',  # Sage
-    ]
+    factor_colors = [theme.data_color, theme.center_color] + _FACTOR_COLORS
 
     for i, (factor_name, data) in enumerate(factor_effects):
         factor_col = data.columns[0]
@@ -286,7 +295,7 @@ def create_factor_effects_chart(
 
 
 def create_time_effects_chart(
-    effects: dict,
+    effects: Mapping[str, Any],
     theme: ChartTheme,
     width: int = 1000,
     height: int | None = None
@@ -314,6 +323,12 @@ def create_time_effects_chart(
     -------
     go.Figure
         Plotly figure with horizontal bar chart
+
+    Raises
+    ------
+    ValueError
+        If no time effects (PT_ME — Period-Time Main Effect) are found
+        in the ``effects`` dictionary.
 
     Examples
     --------
@@ -388,8 +403,8 @@ def create_time_effects_chart(
 
 
 def create_time_interaction_chart(
-    interactions: dict,
-    effects: dict,
+    interactions: Mapping[str, Any],
+    effects: Mapping[str, Any],
     factors: list[str],
     time_var: str,
     dataset: pd.DataFrame,
@@ -428,6 +443,14 @@ def create_time_interaction_chart(
     -------
     go.Figure
         Plotly figure with line plot
+
+    Raises
+    ------
+    ValueError
+        If ``'factor_time'`` key is missing from ``interactions``.
+    ValueError
+        If the PDC (Predictable Difference of Cell means) series length
+        does not match the dataset length.
 
     Examples
     --------
@@ -477,16 +500,7 @@ def create_time_interaction_chart(
     fig = go.Figure()
 
     # Color palette for factor levels
-    colors = [
-        theme.data_color,
-        theme.center_color,
-        '#FF6B6B',
-        '#4ECDC4',
-        '#45B7D1',
-        '#96CEB4',
-        '#FFEAA7',
-        '#DDA0DD',
-    ]
+    colors = [theme.data_color, theme.center_color] + _INTERACTION_COLORS
 
     factor_keys = agg_data['_factor_key'].unique()
 
@@ -527,7 +541,7 @@ def create_time_interaction_chart(
 
 
 def create_factor_interaction_chart(
-    interactions: dict,
+    interactions: Mapping[str, Any],
     factors: list[str],
     theme: ChartTheme,
     width: int = 800,
@@ -559,6 +573,15 @@ def create_factor_interaction_chart(
     -------
     go.Figure
         Plotly figure with line chart
+
+    Raises
+    ------
+    ValueError
+        If ``'factor_factor'`` key is missing from ``interactions``.
+    ValueError
+        If fewer than 2 factors are provided.
+    ValueError
+        If expected factor columns are not found in the interaction data.
 
     Examples
     --------
@@ -596,16 +619,7 @@ def create_factor_interaction_chart(
     levels2 = sorted(fi[factor2].unique(), key=str)
 
     # Color palette for factor2 levels
-    colors = [
-        theme.data_color,
-        theme.center_color,
-        '#FF6B6B',
-        '#4ECDC4',
-        '#45B7D1',
-        '#96CEB4',
-        '#FFEAA7',
-        '#DDA0DD',
-    ]
+    colors = [theme.data_color, theme.center_color] + _INTERACTION_COLORS
 
     # Create one line per factor2 level
     for i, level2 in enumerate(levels2):
@@ -613,6 +627,8 @@ def create_factor_interaction_chart(
         subset = fi[mask].set_index(factor1)
 
         x_values = [str(lv) for lv in levels1]
+        # Missing factor combinations are filled with 0: mathematically correct
+        # for interaction residuals (Rx), since absence = no interaction effect.
         y_values = [subset.loc[lv, 'Rx'] if lv in subset.index else 0 for lv in levels1]
 
         fig.add_trace(go.Scatter(

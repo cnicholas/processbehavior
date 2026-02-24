@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING
 import plotly.graph_objects as go
 
 if TYPE_CHECKING:
-    pass
+    from processbehavior.analysis_result import AnalysisResult
 
 logger = logging.getLogger(__name__)
 
@@ -34,7 +34,7 @@ class ControlChartFigure:
     >>> fig.update_layout(title='Custom Title')  # Full Plotly API
     """
 
-    def __init__(self, plotly_fig: go.Figure, analysis_result):
+    def __init__(self, plotly_fig: go.Figure, analysis_result: "AnalysisResult"):
         """
         Wrap a Plotly figure with enhanced functionality.
 
@@ -119,12 +119,20 @@ class ControlChartFigure:
             raise
 
     def add_annotation(self, text: str, x, y, **kwargs) -> ControlChartFigure:
-        """Add text annotation to the figure."""
+        """Add text annotation to the figure.
+
+        Returns self for method chaining:
+        ``fig.add_annotation(...).update_layout(...)``
+        """
         self._fig.add_annotation(text=text, x=x, y=y, **kwargs)
         return self
 
     def update_layout(self, **kwargs) -> ControlChartFigure:
-        """Update figure layout (full Plotly API)."""
+        """Update figure layout (full Plotly API).
+
+        Returns self for method chaining:
+        ``fig.update_layout(title='X').update_layout(width=800)``
+        """
         self._fig.update_layout(**kwargs)
         return self
 

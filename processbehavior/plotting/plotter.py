@@ -6,6 +6,7 @@ Orchestrates chart creation with built-in support for single and faceted charts.
 
 from __future__ import annotations
 
+import html
 import logging
 import math
 from typing import TYPE_CHECKING
@@ -26,9 +27,14 @@ from .themes import ChartTheme, apply_theme, get_theme
 from .zones import add_zone_shading
 
 if TYPE_CHECKING:
-    pass
+    from processbehavior.analysis_result import AnalysisResult
 
 logger = logging.getLogger(__name__)
+
+_EFFECTS_CHART_TYPES = frozenset({
+    'Effects', 'MainEffects', 'TimeEffects',
+    'TimeInteraction', 'FactorInteraction',
+})
 
 
 # ============================================================================
@@ -180,7 +186,7 @@ class Plotter:
     ... )
     """
 
-    def __init__(self, analysis_result):
+    def __init__(self, analysis_result: "AnalysisResult"):
         """
         Initialize plotter with an AnalysisResult.
 
@@ -284,6 +290,12 @@ class Plotter:
         ControlChartFigure
             Interactive figure object with .show(), .save_html(), etc.
 
+        Raises
+        ------
+        ValueError
+            If ``chart`` is specified but not found in available charts.
+            Use ``list_charts()`` to see available options.
+
         Examples
         --------
         Auto-plot everything:
@@ -317,8 +329,7 @@ class Plotter:
             chart = normalize_chart_name(chart)
 
         # Handle effects charts (special chart types not in self.charts)
-        effects_charts = {'Effects', 'MainEffects', 'TimeEffects', 'TimeInteraction', 'FactorInteraction'}
-        if chart in effects_charts:
+        if chart in _EFFECTS_CHART_TYPES:
             return self._plot_effects_chart(
                 chart_type=chart,
                 width=width,
@@ -460,7 +471,25 @@ class Plotter:
         xaxis_title: str | None = None,
         yaxis_title: str | None = None
     ) -> go.Figure:
-        """Create a single control chart."""
+        """Create a single control chart.
+
+        Renders one chart panel with data trace, control limits, optional zone
+        shading, signal highlighting, run-rules markers, and stats box.
+
+        Parameters are grouped by concept:
+        - Data columns: ``chart_info`` carries data, statistics, and metadata
+          including value_col and x_col (auto-detected).
+        - Layout: ``width``, ``height``, ``xaxis_title``, ``yaxis_title``.
+        - Decoration toggles: ``show_limits``, ``show_zones``, ``show_rules``,
+          ``show_stats``, ``highlight_signals``, ``show_limit_values``.
+
+        Edge cases:
+        - When limits vary (stratified stats), stepped lines are drawn instead
+          of horizontal lines, and a text annotation explains the variation.
+        - When ``chart_info`` metadata indicates a histogram, rendering is
+          delegated to ``_plot_histogram()``.
+        - Per-stratum lanes get separate lane boundaries and labels.
+        """
         # Check if this is a histogram - route to histogram-specific rendering
         metadata = chart_info.get('metadata', {})
         if metadata.get('chart_type') == 'Histogram':
@@ -2534,6 +2563,7 @@ class Plotter:
         # Build report sections
         sections = []
         report_title = title or "Process Behavior Analysis Report"
+        esc = html.escape
 
         # Summary section
         if include_summary:
@@ -2544,11 +2574,11 @@ class Plotter:
             <div class="section">
                 <h2>Analysis Summary</h2>
                 <table class="summary-table">
-                    <tr><td><strong>SDS</strong></td><td>{summary['sds']} - {summary['sds_description']}</td></tr>
-                    <tr><td><strong>Response Variable</strong></td><td>{summary['response_var']}</td></tr>
-                    <tr><td><strong>Observations</strong></td><td>{summary['n_observations']}</td></tr>
-                    <tr><td><strong>Charts</strong></td><td>{', '.join(summary['chart_types'])}</td></tr>
-                    <tr><td><strong>Signals Detected</strong></td><td>{summary['n_signals_total']}</td></tr>
+                    <tr><td><strong>SDS</strong></td><td>{esc(str(summary['sds']))} - {esc(str(summary['sds_description']))}</td></tr>
+                    <tr><td><strong>Response Variable</strong></td><td>{esc(str(summary['response_var']))}</td></tr>
+                    <tr><td><strong>Observations</strong></td><td>{esc(str(summary['n_observations']))}</td></tr>
+                    <tr><td><strong>Charts</strong></td><td>{esc(', '.join(str(c) for c in summary['chart_types']))}</td></tr>
+                    <tr><td><strong>Signals Detected</strong></td><td>{esc(str(summary['n_signals_total']))}</td></tr>
                     <tr><td><strong>Has Residuals</strong></td><td>{has_res}</td></tr>
                     <tr><td><strong>Has Effects</strong></td><td>{has_eff}</td></tr>
                 </table>
@@ -2601,7 +2631,7 @@ class Plotter:
 <html>
 <head>
     <meta charset="utf-8">
-    <title>{report_title}</title>
+    <title>{esc(report_title)}</title>
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
     <style>
         body {{
@@ -2650,7 +2680,7 @@ class Plotter:
     </style>
 </head>
 <body>
-    <h1>{report_title}</h1>
+    <h1>{esc(report_title)}</h1>
     {''.join(sections)}
     <div class="footer">
         Generated with ProcessBehavior - Statistical Process Control for Python
