@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
+import logging
 from typing import TYPE_CHECKING
 
 import plotly.graph_objects as go
 
 if TYPE_CHECKING:
     from .themes import ChartTheme
+
+logger = logging.getLogger(__name__)
 
 
 def calculate_zone_boundaries(
@@ -39,6 +42,7 @@ def calculate_zone_boundaries(
         or None if zones cannot be calculated
     """
     if stats.get('upl') == 'Varies' or stats.get('lpl') == 'Varies':
+        logger.debug("Zone shading skipped: limits vary")
         return None
 
     center = stats.get('center')
@@ -46,6 +50,7 @@ def calculate_zone_boundaries(
     lcl = stats.get('lpl')
 
     if center is None or ucl is None or lcl is None:
+        logger.debug("Zone shading skipped: missing center/upl/lpl in stats")
         return None
 
     sigma = (ucl - center) / 3

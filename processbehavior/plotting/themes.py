@@ -102,6 +102,32 @@ class ChartTheme:
         Axis title font size
     annotation_font_size : int
         Annotation (limit labels) font size
+    data_opacity : float
+        Opacity for data points and lines (0-1)
+    show_axis_line : bool
+        Whether to show axis lines
+    facet_col_spacing : float
+        Horizontal spacing between facet columns (fraction of figure width)
+    facet_row_spacing : float
+        Vertical spacing between facet rows (fraction of figure height)
+    lane_boundary_color : str
+        Color for lane boundary lines (vertical separators for collapsed factors)
+    lane_boundary_width : float
+        Width of lane boundary lines
+    lane_label_font_size : int
+        Font size for lane boundary annotations
+    stats_box_bgcolor : str
+        Background color for statistics box annotations
+    stats_box_bordercolor : str
+        Border color for statistics box
+    stats_box_borderwidth : int
+        Border width for statistics box
+    stats_box_font_size : int
+        Font size for statistics box text
+    stats_box_font_color : str
+        Font color for statistics box text
+    pattern_signal_color : str
+        Color for pattern-based signal markers (Rules 2-8)
 
     Examples
     --------

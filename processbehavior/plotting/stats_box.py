@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from typing import TYPE_CHECKING
 
 import plotly.graph_objects as go
@@ -10,6 +11,8 @@ if TYPE_CHECKING:
     import pandas as pd
 
     from .themes import ChartTheme
+
+logger = logging.getLogger(__name__)
 
 
 def format_stat_value(value: float, compact: bool = False) -> str:
@@ -29,7 +32,9 @@ def format_stat_value(value: float, compact: bool = False) -> str:
         Formatted value string
     """
     if compact:
-        if abs(value) >= 100 or abs(value) >= 10:
+        if abs(value) >= 100:
+            return f"{value:.0f}"
+        elif abs(value) >= 10:
             return f"{value:.1f}"
         else:
             return f"{value:.2f}"
@@ -128,6 +133,10 @@ def add_stats_box(
         Total number of columns in the facet grid. Required when row/col are set.
     """
     if row is not None and col is not None:
+        if not ncols or not nrows or ncols <= 0 or nrows <= 0:
+            logger.debug("Invalid grid dimensions (nrows=%s, ncols=%s); skipping stats box", nrows, ncols)
+            return
+
         # Faceted: compact text, subplot-relative position, smaller font
         stats_text = build_stats_text(stats, data, compact=True)
         if stats_text is None:

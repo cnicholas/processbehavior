@@ -5,13 +5,13 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING
 
+import pandas as pd
 import plotly.graph_objects as go
 
 from processbehavior.exceptions import ProcessBehaviorError
 
 if TYPE_CHECKING:
-    import pandas as pd
-
+    from processbehavior.analysis_result import AnalysisResult
     from .themes import ChartTheme
 
 logger = logging.getLogger(__name__)
@@ -35,7 +35,7 @@ def add_run_rules_visualization(
     value_col: str,
     x_col: str,
     theme: ChartTheme,
-    result,
+    result: "AnalysisResult",
     row: int | None = None,
     col: int | None = None
 ) -> go.Figure:
@@ -89,6 +89,9 @@ def add_run_rules_visualization(
         for obs_id, obs_violations in grouped:
             if obs_id in data.index:
                 obs_data = data.loc[obs_id]
+                if isinstance(obs_data, pd.DataFrame):
+                    logger.debug("Skipping obs_id=%s: MultiIndex expanded to DataFrame", obs_id)
+                    continue
             else:
                 continue
 
@@ -96,7 +99,7 @@ def add_run_rules_visualization(
             y_val = obs_data[value_col]
 
             rules = obs_violations['rule_name'].unique().tolist()
-            rule_nums = [r.split('_')[1] for r in rules]
+            rule_nums = [r.split('_')[1] if '_' in r else r for r in rules]
 
             annotated_points.append({
                 'x': x_val,

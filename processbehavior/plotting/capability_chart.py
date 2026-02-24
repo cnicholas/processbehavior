@@ -10,6 +10,7 @@ returns ``go.Figure``.
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Sequence
 from typing import TYPE_CHECKING
 
@@ -21,6 +22,8 @@ if TYPE_CHECKING:
 
     from ..capability import CapabilityResult, SpecLimits
     from .themes import ChartTheme
+
+logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
 # Local constants — spec-specific colors (NOT reused from control limits)
@@ -274,6 +277,7 @@ def _add_npl_lines(
 
     # Guard: skip LNPL/UNPL when sigma is 0 (or negligible)
     if cap.sigma_hat <= 0:
+        logger.warning("sigma_hat <= 0 (sigma_hat=%s); NPL lines omitted from capability chart", cap.sigma_hat)
         return
 
     lnpl = cap.y_bar - 3 * cap.sigma_hat
