@@ -394,3 +394,72 @@ class TestGenerateReportEscapesHtml:
         content = filepath.read_text()
         assert '<img src=x' not in content
         assert '&lt;img src=x' in content
+
+
+# =========================================================================
+# X-axis label: XmR gets "Observation", Xbar gets "Subgroup"
+# =========================================================================
+
+
+class TestXAxisLabel:
+    """XmR charts should label x-axis 'Observation', not 'Subgroup'."""
+
+    def _make_plotter(self, summary_overrides=None):
+        from processbehavior.plotting.plotter import Plotter
+
+        summary = {
+            'sds': 1,
+            'sds_description': 'test',
+            'response_var': 'Y',
+            'n_observations': 10,
+            'chart_types': ['XmR'],
+            'n_signals_total': 0,
+            'has_residuals': False,
+            'has_effects': False,
+            'is_stratified': False,
+        }
+        if summary_overrides:
+            summary.update(summary_overrides)
+
+        mock_result = MagicMock()
+        mock_result.summary = summary
+        mock_result.charts = {'XmR': {'data': pd.DataFrame({'value': [1]}), 'statistics': {}}}
+        mock_result.has_residuals = False
+        mock_result.has_effects = False
+        return Plotter(mock_result)
+
+    def test_xmr_xaxis_label_not_subgroup(self):
+        """XmR chart with 'rsg' column gets 'Observation', not 'Subgroup'."""
+        plotter = self._make_plotter()
+        label = plotter._get_xaxis_label('rsg', 'XmR')
+        assert label == 'Observation'
+
+    def test_xbar_xaxis_label_is_subgroup(self):
+        """Xbar chart with 'rsg' column still gets 'Subgroup'."""
+        plotter = self._make_plotter()
+        label = plotter._get_xaxis_label('rsg', 'Xbar')
+        assert label == 'Subgroup'
+
+    def test_xmr_xaxis_label_uses_time_var(self):
+        """XmR chart with time variable gets the time variable name."""
+        plotter = self._make_plotter({'time_var': 'pull_date'})
+        label = plotter._get_xaxis_label('rsg', 'XmR')
+        assert label == 'Pull Date'
+
+    def test_xmr_residuals_xaxis_label(self):
+        """XmR_residuals chart with 'rsg' gets 'Observation'."""
+        plotter = self._make_plotter()
+        label = plotter._get_xaxis_label('rsg', 'XmR_residuals')
+        assert label == 'Observation'
+
+    def test_r_chart_xaxis_label(self):
+        """R chart with 'rsg' gets 'Observation'."""
+        plotter = self._make_plotter()
+        label = plotter._get_xaxis_label('rsg', 'R')
+        assert label == 'Observation'
+
+    def test_s_chart_xaxis_label_is_subgroup(self):
+        """S chart with 'rsg' gets 'Subgroup'."""
+        plotter = self._make_plotter()
+        label = plotter._get_xaxis_label('rsg', 'S')
+        assert label == 'Subgroup'
