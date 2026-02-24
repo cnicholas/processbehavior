@@ -23,6 +23,18 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
+def _is_main_effect_key(name: str) -> bool:
+    """Check if an effects dict key represents a main effect.
+
+    Convention: main effect keys end with '_MEs' suffix or are
+    exactly 'main_effect'. All other keys are filtered out when
+    building main effects charts.
+
+    See: EffectsCalculator output key naming.
+    """
+    return name.endswith('_MEs') or name == 'main_effect'
+
+
 def create_main_effects_chart(
     effects: dict,
     theme: ChartTheme,
@@ -70,7 +82,7 @@ def create_main_effects_chart(
             continue
 
         # Skip non-effect DataFrames (MEs scores, etc.)
-        if '_MEs' in name or name in ['main_effect']:
+        if _is_main_effect_key(name):
             continue
 
         if 'Main_Effect' in data.columns and (factors is None or name in factors):
@@ -204,7 +216,7 @@ def create_factor_effects_chart(
             continue
 
         # Skip non-effect DataFrames (MEs scores, etc.)
-        if '_MEs' in name or name in ['main_effect']:
+        if _is_main_effect_key(name):
             continue
 
         if 'Main_Effect' in data.columns and (factors is None or name in factors):
@@ -440,16 +452,12 @@ def create_time_interaction_chart(
 
     # Add PDC to dataset for aggregation
     df = dataset.copy()
-    if len(pdc) == len(df):
-        df['_pdc'] = pdc.values
-    else:
-        # PDC might be cell-level, not row-level
-        # Fall back to showing factor means over time
-        logger.warning("PDC length mismatch - using factor means")
-        if 'R3' in df.columns:
-            df['_pdc'] = df['R3']
-        else:
-            raise ValueError("Cannot create interaction chart - R3 not in dataset")
+    if len(pdc) != len(df):
+        raise ValueError(
+            "Interaction chart requires PDC aligned to plotted data: "
+            f"len(pdc)={len(pdc)} != len(df)={len(df)}"
+        )
+    df['_pdc'] = pdc.values
 
     # Aggregate to cell level
     agg_data = df.groupby(agg_cols, observed=True)['_pdc'].mean().reset_index()

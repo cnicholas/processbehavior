@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from typing import TYPE_CHECKING
 
 import plotly.graph_objects as go
@@ -10,6 +11,8 @@ if TYPE_CHECKING:
     import pandas as pd
 
     from .themes import ChartTheme
+
+logger = logging.getLogger(__name__)
 
 
 def format_limit_label(limit_name: str, value: float, show_value: bool) -> str:
@@ -88,7 +91,7 @@ def add_stepped_limit_line(
     theme: ChartTheme,
     row: int | None = None,
     col: int | None = None
-) -> None:
+) -> go.Figure:
     """
     Add a stepped limit line that follows varying per-row limits.
 
@@ -120,9 +123,16 @@ def add_stepped_limit_line(
         Subplot row (1-indexed). None for single charts.
     col : int, optional
         Subplot column (1-indexed). None for single charts.
+
+    Returns
+    -------
+    go.Figure
+        The figure, with the stepped limit line added (or unchanged if
+        ``limit_col`` is not present in the data).
     """
     if limit_col not in data.columns:
-        return
+        logger.debug("Limit column '%s' not found; skipping stepped limit line", limit_col)
+        return fig
 
     x_vals = data[x_col].tolist() if x_col in data.columns else data.index.tolist()
     limit_vals = data[limit_col].tolist()
@@ -143,3 +153,5 @@ def add_stepped_limit_line(
         fig.add_trace(scatter, row=row, col=col)
     else:
         fig.add_trace(scatter)
+
+    return fig

@@ -7,12 +7,24 @@ from typing import TYPE_CHECKING
 
 import plotly.graph_objects as go
 
+from processbehavior.exceptions import ProcessBehaviorError
+
 if TYPE_CHECKING:
     import pandas as pd
 
     from .themes import ChartTheme
 
 logger = logging.getLogger(__name__)
+
+_RULE_SHORT_NAMES = {
+    'rule_2': '2 of 3 in Zone A',
+    'rule_3': '4 of 5 in Zone B+',
+    'rule_4': '8+ same side',
+    'rule_5': 'Trend',
+    'rule_6': 'Oscillation',
+    'rule_7': 'In Zone C',
+    'rule_8': 'Avoiding center',
+}
 
 
 def add_run_rules_visualization(
@@ -26,7 +38,7 @@ def add_run_rules_visualization(
     result,
     row: int | None = None,
     col: int | None = None
-) -> None:
+) -> go.Figure:
     """
     Add visualization for Western Electric run rules (Rules 2-8).
 
@@ -60,7 +72,7 @@ def add_run_rules_visualization(
         signal_result = result.detect_signals(chart=chart_name)
 
         if not signal_result.has_signals:
-            return
+            return fig
 
         violations = signal_result.violations
 
@@ -68,19 +80,9 @@ def add_run_rules_visualization(
         violations = violations[violations['rule_name'] != 'rule_1']
 
         if violations.empty:
-            return
+            return fig
 
         grouped = violations.groupby('obs_id', observed=True)
-
-        rule_short_names = {
-            'rule_2': '2 of 3 in Zone A',
-            'rule_3': '4 of 5 in Zone B+',
-            'rule_4': '8+ same side',
-            'rule_5': 'Trend',
-            'rule_6': 'Oscillation',
-            'rule_7': 'In Zone C',
-            'rule_8': 'Avoiding center',
-        }
 
         annotated_points = []
 
@@ -102,12 +104,12 @@ def add_run_rules_visualization(
                 'rules': rules,
                 'rule_nums': rule_nums,
                 'hover': '<br>'.join([
-                    rule_short_names.get(r, r) for r in rules
+                    _RULE_SHORT_NAMES.get(r, r) for r in rules
                 ])
             })
 
         if not annotated_points:
-            return
+            return fig
 
         x_vals = [p['x'] for p in annotated_points]
         y_vals = [p['y'] for p in annotated_points]
@@ -138,5 +140,10 @@ def add_run_rules_visualization(
         else:
             fig.add_trace(go.Scatter(**scatter_kwargs))
 
-    except Exception as e:
-        logger.warning(f"Could not add run rules visualization: {e}")
+        return fig
+    except (AttributeError, KeyError, ValueError, ProcessBehaviorError) as e:
+        logger.info("Skipping run-rule annotations: %s", e)
+        return fig
+    except Exception:
+        logger.exception("Run-rule annotation failed unexpectedly")
+        raise
