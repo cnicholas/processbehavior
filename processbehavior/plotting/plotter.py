@@ -513,7 +513,7 @@ class Plotter:
         x_col = self._get_x_column(data)
 
         # Determine axis labels
-        x_label = xaxis_title or self._get_xaxis_label(x_col)
+        x_label = xaxis_title or self._get_xaxis_label(x_col, chart_name)
         y_label = yaxis_title or self._get_yaxis_label(value_col)
 
         theme = self._theme
@@ -756,7 +756,8 @@ class Plotter:
         else:
             # For control charts, use standard x-axis label
             x_col = self._get_x_column(first_chart_data)
-            x_label = xaxis_title or self._get_xaxis_label(x_col)
+            first_chart_name = next(iter(charts.keys()))
+            x_label = xaxis_title or self._get_xaxis_label(x_col, first_chart_name)
             y_label = yaxis_title or self._get_yaxis_label(None)
 
         # Calculate global y-range for shared axis
@@ -1787,22 +1788,36 @@ class Plotter:
 
         return result if result != chart_name else None
 
-    def _get_xaxis_label(self, x_col: str | None = None) -> str:
+    def _get_xaxis_label(self, x_col: str | None = None, chart_name: str | None = None) -> str:
         """
         Get intelligent x-axis label.
+
+        For XmR/R charts, 'rsg' is a stratification key, not a subgroup
+        identifier. Only Xbar/S charts should label the x-axis as "Subgroup".
 
         Parameters
         ----------
         x_col : str, optional
-            The x-axis column being used. If 'rsg', returns 'Subgroup'.
+            The x-axis column being used.
+        chart_name : str, optional
+            Chart name (e.g. 'XmR', 'XmR_residuals', 'Xbar'). Used to
+            distinguish individual charts (XmR/R) from subgroup charts
+            (Xbar/S) when x_col is a grouping column.
 
         Returns
         -------
         str
             X-axis label
         """
-        # Subgroup charts (Xbar, S) use 'subgroup', 'rsg', or 'group' column
+        # For grouping columns, the label depends on chart type
         if x_col in ('subgroup', 'rsg', 'group'):
+            base_type = chart_name.split('_')[0] if chart_name else ''
+            if base_type in ('XmR', 'R'):
+                # Individual charts: use time variable name or "Observation"
+                time_var = self.summary.get('time_var')
+                if time_var:
+                    return time_var.replace('_', ' ').title()
+                return 'Observation'
             return 'Subgroup'
 
         # Time series charts use time variable
@@ -1810,11 +1825,11 @@ class Plotter:
         if time_var and (x_col is None or x_col == time_var):
             return time_var.replace('_', ' ').title()
 
-        # Time series charts (XmR, R) without explicit time variable
+        # Fallback for charts without explicit time variable
         if x_col is None:
-            return 'Time'
+            return 'Observation'
 
-        raise ValueError(f"Unknown x_col: {x_col}")
+        return x_col.replace('_', ' ').title()
 
     def _get_yaxis_label(self, value_col: str | None) -> str:
         """
