@@ -38,7 +38,7 @@ def _make_request(spec_dict: dict) -> ChartRequest:
     return ChartRequest(
         chart=spec_dict.get('analysis_type', 'Xbar'),
         by=tuple(spec_dict['by']) if spec_dict.get('by') else None,
-        paired=spec_dict.get('paired', False),
+        companion=spec_dict.get('companion', False),
     )
 
 
@@ -141,7 +141,7 @@ class TestXbarSAnalysis:
             'time_var': 'd',
             'round_to': 2,
             'by': ['a', 'b'],  # Aggregate by factors (not cell level)
-            'paired': True,  # Request both Xbar and S charts
+            'companion': True,  # Request both Xbar and S charts
         }
 
         sds = detect_sds_for_test(df_sds1, spec)
@@ -149,7 +149,7 @@ class TestXbarSAnalysis:
 
         result = Analysis(spec=_make_spec(spec), request=_make_request(spec), sds=sds, df=df_sds1).calculate()
 
-        # Should return both Xbar and S charts (paired=True)
+        # Should return both Xbar and S charts (companion=True)
         assert len(result) == 2
         assert 'Xbar' in result
         assert 'S' in result
@@ -177,7 +177,7 @@ class TestXbarSAnalysis:
             'time_var': 'd',
             'round_to': 2,
             'by': ['a', 'b'],  # Aggregate by factors (not cell level)
-            'paired': True,  # Request both Xbar and S charts
+            'companion': True,  # Request both Xbar and S charts
         }
 
         sds = detect_sds_for_test(df_differing_Ns, spec)
@@ -241,8 +241,8 @@ class TestXmRAnalysis:
         assert xmr_stats['a_c']['upl'] == 4.99
         assert xmr_stats['b_d']['upl'] == 14.32
 
-    def test_xmr_with_grouping_paired(self, df):
-        """Test XmR chart with grouping returns both XmR and R when paired=True."""
+    def test_xmr_with_grouping_companion(self, df):
+        """Test XmR chart with grouping returns both XmR and R when companion=True."""
         spec = {
             'analysis_type': 'XmR',
             'rsg_vars': ['a', 'b'],
@@ -250,12 +250,12 @@ class TestXmRAnalysis:
             'response_var': 'c',
             'rsg_var_name': 'rsg',
             'round_to': 2,
-            'paired': True  # Request bundled XmR+R
+            'companion': True  # Request bundled XmR+R
         }
         sds = detect_sds_for_test(df, spec)
         result = Analysis(spec=_make_spec(spec), request=_make_request(spec), sds=sds, df=df).calculate()
 
-        # Paired mode: XmR and R are bundled together
+        # Companion mode: XmR and R are bundled together
         keys = list(result.keys())
         assert 'XmR' in keys
         assert 'R' in keys

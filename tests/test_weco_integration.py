@@ -86,8 +86,8 @@ class TestWECOIntegration:
             factors=[pdf.cols.factor_1, pdf.cols.factor_2],
             time=pdf.cols.time
         )
-        # Use paired=True to get both Xbar and S charts
-        result = study.execute(paired=True)
+        # Use companion=True to get both Xbar and S charts
+        result = study.execute(companion=True)
 
         # Detect signals on all charts
         # Use config with lower min_observations
@@ -198,8 +198,8 @@ class TestMetadataContract:
             factors=[pdf.cols.factor_1, pdf.cols.factor_2],
             time=pdf.cols.time
         )
-        # Use paired=True to get both Xbar and S charts
-        result = study.execute(paired=True)
+        # Use companion=True to get both Xbar and S charts
+        result = study.execute(companion=True)
 
         # Check Xbar metadata
         xbar_meta = result.charts['Xbar']['metadata']

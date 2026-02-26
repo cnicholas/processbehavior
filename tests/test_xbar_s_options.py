@@ -54,9 +54,9 @@ class TestDefaultBehavior:
 
     def test_explicit_defaults_match_omitted(self, sds1_study):
         """Passing n_sigma=3.0, n_mode='actual' explicitly is identical to omitting."""
-        result_default = sds1_study.execute(chart='Xbar', paired=True)
+        result_default = sds1_study.execute(chart='Xbar', companion=True)
         result_explicit = sds1_study.execute(
-            chart='Xbar', paired=True, n_sigma=3.0, n_mode="actual"
+            chart='Xbar', companion=True, n_sigma=3.0, n_mode="actual"
         )
 
         # Xbar data identical
@@ -79,7 +79,7 @@ class TestDefaultBehavior:
 
     def test_metadata_includes_n_sigma_n_mode(self, sds1_study):
         """Metadata always includes n_sigma and n_mode."""
-        result = sds1_study.execute(chart='Xbar', paired=True)
+        result = sds1_study.execute(chart='Xbar', companion=True)
         xbar_meta = result.charts['Xbar']['metadata']
         s_meta = result.charts['S']['metadata']
 
@@ -90,7 +90,7 @@ class TestDefaultBehavior:
 
     def test_metadata_no_n_avg_when_actual(self, sds1_study):
         """n_avg should NOT appear in metadata when n_mode='actual'."""
-        result = sds1_study.execute(chart='Xbar', paired=True)
+        result = sds1_study.execute(chart='Xbar', companion=True)
         assert 'n_avg' not in result.charts['Xbar']['metadata']
         assert 'n_avg' not in result.charts['S']['metadata']
 
@@ -143,8 +143,8 @@ class TestNSigmaWidth:
 
     def test_s_chart_sigma_affects_limits(self, sds1_study):
         """n_sigma also controls S chart limits via b3/b4."""
-        r2 = sds1_study.execute(chart='Xbar', paired=True, n_sigma=2.0)
-        r3 = sds1_study.execute(chart='Xbar', paired=True, n_sigma=3.0)
+        r2 = sds1_study.execute(chart='Xbar', companion=True, n_sigma=2.0)
+        r3 = sds1_study.execute(chart='Xbar', companion=True, n_sigma=3.0)
 
         s2 = r2.charts['S']['data']
         s3 = r3.charts['S']['data']
@@ -192,7 +192,7 @@ class TestNModeAverage:
     def test_average_mode_s_chart_constant(self, sds1_varying_n_study):
         """S chart also has constant limits with n_mode='average'."""
         result = sds1_varying_n_study.execute(
-            chart='Xbar', paired=True, n_mode="average"
+            chart='Xbar', companion=True, n_mode="average"
         )
         s_data = result.charts['S']['data']
 
@@ -202,7 +202,7 @@ class TestNModeAverage:
     def test_average_mode_metadata_includes_n_avg(self, sds1_varying_n_study):
         """Metadata includes n_avg when n_mode='average'."""
         result = sds1_varying_n_study.execute(
-            chart='Xbar', paired=True, n_mode="average"
+            chart='Xbar', companion=True, n_mode="average"
         )
         xbar_meta = result.charts['Xbar']['metadata']
         s_meta = result.charts['S']['metadata']
@@ -282,25 +282,25 @@ class TestValidation:
 
 
 # =============================================================================
-# Paired Consistency
+# Companion Consistency
 # =============================================================================
 
-class TestPairedConsistency:
-    """Paired Xbar+S should both use the same n_sigma and n_mode."""
+class TestCompanionConsistency:
+    """Companion Xbar+S should both use the same n_sigma and n_mode."""
 
-    def test_paired_n_sigma_applied_to_both(self, sds1_study):
+    def test_companion_n_sigma_applied_to_both(self, sds1_study):
         """Both Xbar and S use the custom n_sigma."""
-        result = sds1_study.execute(chart='Xbar', paired=True, n_sigma=2.5)
+        result = sds1_study.execute(chart='Xbar', companion=True, n_sigma=2.5)
         xbar_meta = result.charts['Xbar']['metadata']
         s_meta = result.charts['S']['metadata']
 
         assert xbar_meta['n_sigma'] == 2.5
         assert s_meta['n_sigma'] == 2.5
 
-    def test_paired_n_mode_applied_to_both(self, sds1_varying_n_study):
+    def test_companion_n_mode_applied_to_both(self, sds1_varying_n_study):
         """Both Xbar and S use n_mode='average'."""
         result = sds1_varying_n_study.execute(
-            chart='Xbar', paired=True, n_mode="average"
+            chart='Xbar', companion=True, n_mode="average"
         )
         xbar_meta = result.charts['Xbar']['metadata']
         s_meta = result.charts['S']['metadata']
@@ -308,10 +308,10 @@ class TestPairedConsistency:
         assert xbar_meta['n_mode'] == 'average'
         assert s_meta['n_mode'] == 'average'
 
-    def test_paired_combined_options(self, sds1_varying_n_study):
-        """Both n_sigma and n_mode applied together in paired mode."""
+    def test_companion_combined_options(self, sds1_varying_n_study):
+        """Both n_sigma and n_mode applied together in companion mode."""
         result = sds1_varying_n_study.execute(
-            chart='Xbar', paired=True, n_sigma=2.5, n_mode="average"
+            chart='Xbar', companion=True, n_sigma=2.5, n_mode="average"
         )
 
         xbar_data = result.charts['Xbar']['data']

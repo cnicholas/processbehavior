@@ -259,8 +259,8 @@ def _make_missing_values():
     return df
 
 
-def _make_paired_mode():
-    """Scenario 5: Paired mode — Xbar+S and XmR+R paired charts."""
+def _make_companion_mode():
+    """Scenario 5: Companion mode — Xbar+S and XmR+R companion charts."""
     return synthetic.make_sds(1, K1=3, K2=2, T=6, n_min=2, n_max=4, seed=42)
 
 
@@ -291,7 +291,7 @@ def _execute_unstratified_small():
     df = _make_unstratified_small()
     pb = ProcessBehavior(df)
     study = pb.formulate(response="y", factors=["factor 1"], time="time")
-    return study.execute(chart="XmR", by=[], paired=True)
+    return study.execute(chart="XmR", by=[], companion=True)
 
 
 def _execute_stratified_balanced():
@@ -299,15 +299,15 @@ def _execute_stratified_balanced():
     df = _make_stratified_balanced()
     pb = ProcessBehavior(df)
     study = pb.formulate(response="y", factors=["factor 1", "factor 2"], time="time")
-    return study.execute(chart="Xbar", paired=True)
+    return study.execute(chart="Xbar", companion=True)
 
 
 def _execute_stratified_uneven():
-    """Execute scenario 3: uneven n, Xbar+S paired."""
+    """Execute scenario 3: uneven n, Xbar+S companion."""
     df = _make_stratified_uneven()
     pb = ProcessBehavior(df)
     study = pb.formulate(response="y", factors=["factor 1", "factor 2"], time="time")
-    return study.execute(chart="Xbar", paired=True)
+    return study.execute(chart="Xbar", companion=True)
 
 
 def _execute_missing_values():
@@ -315,23 +315,23 @@ def _execute_missing_values():
     df = _make_missing_values()
     pb = ProcessBehavior(df)
     study = pb.formulate(response="y", factors=["factor 1", "factor 2"], time="time")
-    return study.execute(chart="XmR", by=[], paired=True)
+    return study.execute(chart="XmR", by=[], companion=True)
 
 
-def _execute_paired_xmr_r():
-    """Execute scenario 5a: paired XmR+R."""
-    df = _make_paired_mode()
+def _execute_companion_xmr_r():
+    """Execute scenario 5a: companion XmR+R."""
+    df = _make_companion_mode()
     pb = ProcessBehavior(df)
     study = pb.formulate(response="y", factors=["factor 1", "factor 2"], time="time")
-    return study.execute(chart="XmR", by=[], paired=True)
+    return study.execute(chart="XmR", by=[], companion=True)
 
 
-def _execute_paired_xbar_s():
-    """Execute scenario 5b: paired Xbar+S."""
-    df = _make_paired_mode()
+def _execute_companion_xbar_s():
+    """Execute scenario 5b: companion Xbar+S."""
+    df = _make_companion_mode()
     pb = ProcessBehavior(df)
     study = pb.formulate(response="y", factors=["factor 1", "factor 2"], time="time")
-    return study.execute(chart="Xbar", paired=True)
+    return study.execute(chart="Xbar", companion=True)
 
 
 def _execute_residual_chart():
@@ -347,15 +347,15 @@ def _execute_single_obs_strata():
     df = _make_single_obs_strata()
     pb = ProcessBehavior(df)
     study = pb.formulate(response="y", factors=["factor 1", "factor 2"], time="time")
-    return study.execute(chart="XmR", by=[], paired=True)
+    return study.execute(chart="XmR", by=[], companion=True)
 
 
 def _execute_pathological_ordering():
-    """Execute scenario 8: reverse-sorted input, XmR paired."""
+    """Execute scenario 8: reverse-sorted input, XmR companion."""
     df = _make_pathological_ordering()
     pb = ProcessBehavior(df)
     study = pb.formulate(response="y", factors=["factor 1", "factor 2"], time="time")
-    return study.execute(chart="XmR", by=[], paired=True)
+    return study.execute(chart="XmR", by=[], companion=True)
 
 
 # ============================================================================
@@ -381,12 +381,12 @@ class TestGoldenMasterSnapshots:
         result = _execute_missing_values()
         _assert_result_matches_snapshot("missing_values", result)
 
-    def test_paired_xmr_r(self):
-        result = _execute_paired_xmr_r()
+    def test_companion_xmr_r(self):
+        result = _execute_companion_xmr_r()
         _assert_result_matches_snapshot("paired_xmr_r", result)
 
-    def test_paired_xbar_s(self):
-        result = _execute_paired_xbar_s()
+    def test_companion_xbar_s(self):
+        result = _execute_companion_xbar_s()
         _assert_result_matches_snapshot("paired_xbar_s", result)
 
     def test_residual_chart(self):
@@ -403,23 +403,23 @@ class TestGoldenMasterSnapshots:
 
 
 # ============================================================================
-# Paired-Mode Equivalence Tests
+# Companion-Mode Equivalence Tests
 # ============================================================================
 
-class TestPairedEquivalence:
-    """Assert paired output == independent output for XmR+R and Xbar+S.
+class TestCompanionEquivalence:
+    """Assert companion output == independent output for XmR+R and Xbar+S.
 
     Checks all three result components: data, statistics, metadata.
     """
 
-    def test_xmr_paired_vs_independent(self):
-        """Paired XmR+R should match independent XmR + independent R."""
-        df = _make_paired_mode()
+    def test_xmr_companion_vs_independent(self):
+        """Companion XmR+R should match independent XmR + independent R."""
+        df = _make_companion_mode()
         pb = ProcessBehavior(df)
         study = pb.formulate(response="y", factors=["factor 1", "factor 2"], time="time")
 
-        # Paired
-        paired = study.execute(chart="XmR", by=[], paired=True)
+        # Companion
+        companion = study.execute(chart="XmR", by=[], companion=True)
 
         # Independent
         xmr_only = study.execute(chart="XmR", by=[])
@@ -427,22 +427,22 @@ class TestPairedEquivalence:
 
         # Compare XmR
         _assert_chart_equivalence(
-            paired.charts["XmR"], xmr_only.charts["XmR"], "XmR paired vs independent"
+            companion.charts["XmR"], xmr_only.charts["XmR"], "XmR companion vs independent"
         )
 
         # Compare R
         _assert_chart_equivalence(
-            paired.charts["R"], r_only.charts["R"], "R paired vs independent"
+            companion.charts["R"], r_only.charts["R"], "R companion vs independent"
         )
 
-    def test_xbar_s_paired_vs_independent(self):
-        """Paired Xbar+S should match independent Xbar + independent S."""
-        df = _make_paired_mode()
+    def test_xbar_s_companion_vs_independent(self):
+        """Companion Xbar+S should match independent Xbar + independent S."""
+        df = _make_companion_mode()
         pb = ProcessBehavior(df)
         study = pb.formulate(response="y", factors=["factor 1", "factor 2"], time="time")
 
-        # Paired
-        paired = study.execute(chart="Xbar", paired=True)
+        # Companion
+        companion = study.execute(chart="Xbar", companion=True)
 
         # Independent
         xbar_only = study.execute(chart="Xbar")
@@ -450,32 +450,32 @@ class TestPairedEquivalence:
 
         # Compare Xbar
         _assert_chart_equivalence(
-            paired.charts["Xbar"], xbar_only.charts["Xbar"], "Xbar paired vs independent"
+            companion.charts["Xbar"], xbar_only.charts["Xbar"], "Xbar companion vs independent"
         )
 
         # Compare S
         _assert_chart_equivalence(
-            paired.charts["S"], s_only.charts["S"], "S paired vs independent"
+            companion.charts["S"], s_only.charts["S"], "S companion vs independent"
         )
 
-    def test_xmr_stratified_paired_vs_independent(self):
-        """Paired stratified XmR+R should match independent stratified XmR + R."""
+    def test_xmr_stratified_companion_vs_independent(self):
+        """Companion stratified XmR+R should match independent stratified XmR + R."""
         df = _make_stratified_balanced()
         pb = ProcessBehavior(df)
         study = pb.formulate(response="y", factors=["factor 1", "factor 2"], time="time")
 
-        # Paired stratified
-        paired = study.execute(chart="XmR", by=["factor 1", "factor 2"], paired=True)
+        # Companion stratified
+        companion = study.execute(chart="XmR", by=["factor 1", "factor 2"], companion=True)
 
         # Independent stratified
         xmr_only = study.execute(chart="XmR", by=["factor 1", "factor 2"])
         r_only = study.execute(chart="R", by=["factor 1", "factor 2"])
 
         _assert_chart_equivalence(
-            paired.charts["XmR"], xmr_only.charts["XmR"], "XmR stratified paired vs independent"
+            companion.charts["XmR"], xmr_only.charts["XmR"], "XmR stratified companion vs independent"
         )
         _assert_chart_equivalence(
-            paired.charts["R"], r_only.charts["R"], "R stratified paired vs independent"
+            companion.charts["R"], r_only.charts["R"], "R stratified companion vs independent"
         )
 
 
@@ -561,7 +561,7 @@ class TestShapeInvariants:
         df = _make_stratified_balanced()
         pb = ProcessBehavior(df)
         study = pb.formulate(response="y", factors=["factor 1", "factor 2"], time="time")
-        result = study.execute(chart="XmR", by=[], paired=True)
+        result = study.execute(chart="XmR", by=[], companion=True)
 
         for chart_key in ("XmR", "R"):
             data = result.charts[chart_key]["data"]
@@ -651,7 +651,7 @@ class TestShapeInvariants:
         study_normal = pb_normal.formulate(
             response="y", factors=["factor 1", "factor 2"], time="time"
         )
-        result_normal = study_normal.execute(chart="XmR", by=[], paired=True)
+        result_normal = study_normal.execute(chart="XmR", by=[], companion=True)
 
         # Reverse ordering
         df_reverse = df_normal.iloc[::-1].reset_index(drop=True)
@@ -659,7 +659,7 @@ class TestShapeInvariants:
         study_reverse = pb_reverse.formulate(
             response="y", factors=["factor 1", "factor 2"], time="time"
         )
-        result_reverse = study_reverse.execute(chart="XmR", by=[], paired=True)
+        result_reverse = study_reverse.execute(chart="XmR", by=[], companion=True)
 
         for chart_key in ("XmR", "R"):
             _assert_chart_equivalence(

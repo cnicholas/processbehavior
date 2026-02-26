@@ -100,7 +100,7 @@ result = study.execute(
     value: str = None,           # What to chart: None (response) or 'R1'-'R5'
     recentered: bool = False,    # Re-center residuals on original scale
     bins: int = None,            # Number of bins for histogram charts
-    paired: bool = False         # Return paired charts (Xbar+S or XmR+R)
+    companion: bool = False      # Return companion charts (Xbar+S or XmR+R)
 ) -> AnalysisResult
 ```
 
@@ -117,7 +117,7 @@ result = study.execute(
   - `'R1'` to `'R5'`: Chart the specified VAS residual
 - `recentered`: If True and using residuals, re-center on original scale
 - `bins`: Number of bins for histogram charts
-- `paired`: If True, returns both charts in a pair (Xbar+S or XmR+R). Either chart in the pair triggers the pair (e.g., `chart='S', paired=True` returns Xbar+S)
+- `companion`: If True, returns both charts in a pair (Xbar+S or XmR+R). Either chart in the pair triggers the pair (e.g., `chart='S', companion=True` returns Xbar+S)
 
 **Examples:**
 

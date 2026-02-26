@@ -172,7 +172,7 @@ def test_chart_request_basic():
     assert req.residual is None
     assert req.residual_chart_type is None
     assert req.recentered is False
-    assert req.paired is False
+    assert req.companion is False
     assert req.bins == 10
 
 
@@ -190,10 +190,10 @@ def test_chart_request_s_chart():
     assert req.by == ('Operator',)
 
 
-def test_chart_request_paired():
-    """Test ChartRequest with paired=True for Xbar+S or XmR+R."""
-    req = ChartRequest(chart='Xbar', paired=True)
-    assert req.paired is True
+def test_chart_request_companion():
+    """Test ChartRequest with companion=True for Xbar+S or XmR+R."""
+    req = ChartRequest(chart='Xbar', companion=True)
+    assert req.companion is True
 
 
 def test_chart_request_residual():
