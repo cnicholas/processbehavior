@@ -236,17 +236,17 @@ class Analysis:
 
         else:
             # Standard chart analysis
-            # Check if paired charts requested (Xbar+S or XmR+R together)
-            paired = self.request.paired
+            # Check if companion charts requested (Xbar+S or XmR+R together)
+            companion = self.request.companion
 
-            if paired:
-                # Paired mode: return both charts regardless of which was requested
+            if companion:
+                # Companion mode: return both charts regardless of which was requested
                 strategies = {
                     'Xbar': self._calculate_xbar_s,
                     'S': self._calculate_xbar_s,
                     'XmR': self._calculate_xmr_r,  # Bundled XmR+R
                     'R': self._calculate_xmr_r,
-                    'Histogram': self._calculate_histogram  # No pairing for Histogram
+                    'Histogram': self._calculate_histogram  # No companion for Histogram
                 }
             else:
                 # SRP-compliant mode: return only the requested chart
@@ -620,7 +620,7 @@ class Analysis:
         _return_intermediates : bool, optional
             If True, includes '_intermediates' key with values needed by
             _calculate_s() to avoid redundant computation. Used internally
-            by _calculate_xbar_s() for paired chart calculation.
+            by _calculate_xbar_s() for companion chart calculation.
 
         Returns
         -------
@@ -778,7 +778,7 @@ class Analysis:
             }
         }
 
-        # Optionally include intermediates for paired calculation
+        # Optionally include intermediates for companion calculation
         if _return_intermediates:
             result['_intermediates'] = {
                 '_S': _S,
@@ -807,7 +807,7 @@ class Analysis:
             Pass a residual column (R2, R5, etc.) for residual charts.
         _precomputed : dict, optional
             Pre-computed values from _calculate_xbar() to avoid redundant
-            computation. Used internally by _calculate_xbar_s() for paired
+            computation. Used internally by _calculate_xbar_s() for companion
             chart calculation. Keys: '_S', 'n_to_use', 'n_max', 'groupby_cols',
             'group_col', 'out'.
 
@@ -964,7 +964,7 @@ class Analysis:
         """
         Calculate Xbar and S charts together (Wheeler methodology).
 
-        This method ensures that when paired=True, both charts are calculated
+        This method ensures that when companion=True, both charts are calculated
         efficiently using shared intermediate values. The S chart uses the
         same aggregated data computed for Xbar, avoiding redundant calculation.
 
@@ -1010,9 +1010,9 @@ class Analysis:
         value_col : str, optional
             Column to use for calculations. Defaults to spec.response_var.
         _return_intermediates : bool, optional
-            If True, includes '_intermediates' key for paired-mode reuse.
+            If True, includes '_intermediates' key for companion-mode reuse.
         _precomputed : dict, optional
-            Pre-computed intermediates from a prior XmR call (paired mode).
+            Pre-computed intermediates from a prior XmR call (companion mode).
             When provided, skips data preparation and uses these values directly.
 
         Returns
@@ -1050,14 +1050,14 @@ class Analysis:
                 mr_spec, value_col, plot_col,
                 stratify_by, collapsed_factors,
                 _return_intermediates, _precomputed,
-                staged=self.request.staged,
+                phased=self.request.phased,
             )
         else:
             return self._calculate_mr_chart_ungrouped(
                 mr_spec, value_col, plot_col,
                 collapsed_factors,
                 _return_intermediates, _precomputed,
-                staged=self.request.staged,
+                phased=self.request.phased,
             )
 
     def _calculate_mr_chart_from_precomputed(
@@ -1066,7 +1066,7 @@ class Analysis:
         plot_col: str,
         precomputed: dict,
     ) -> dict:
-        """Build an MR-family chart reusing intermediates from a paired XmR call."""
+        """Build an MR-family chart reusing intermediates from a companion XmR call."""
         spec = self.spec
         out = precomputed['out'].copy()
         stratify_col = precomputed['stratify_col']
@@ -1075,27 +1075,27 @@ class Analysis:
         xmr_lane_boundaries = precomputed['lane_boundaries']
         extra_cols = precomputed['extra_cols']
 
-        # --- Staged precomputed path ---
-        if precomputed.get('staged'):
-            stage_stats = precomputed['stage_stats']
+        # --- Phased precomputed path ---
+        if precomputed.get('phased'):
+            phase_stats = precomputed['phase_stats']
 
-            # Recompute R-specific limits per stage within each stratum
-            r_stage_stats = stage_stats[[stratify_col, '_stage_id', 'mR']].copy()
-            r_lims = r_stage_stats.apply(
+            # Recompute R-specific limits per phase within each stratum
+            r_phase_stats = phase_stats[[stratify_col, '_phase_id', 'mR']].copy()
+            r_lims = r_phase_stats.apply(
                 lambda row: calculate_limits(
                     mean=0, sd=0, N=0, mR=row['mR'],
                     limits_type=mr_spec.limits_type,
                     round_to=spec.round_to,
                 ), axis=1,
             )
-            r_stage_stats = _join_limits(r_stage_stats, r_lims)
-            r_stage_stats['center'] = r_stage_stats['mR']
+            r_phase_stats = _join_limits(r_phase_stats, r_lims)
+            r_phase_stats['center'] = r_phase_stats['mR']
 
             # Replace XmR limits with R limits
             out = out.drop(columns=['center', 'lpl', 'upl', 'beyond_limits'], errors='ignore')
             out = out.merge(
-                r_stage_stats[[stratify_col, '_stage_id', 'center', 'lpl', 'upl']],
-                on=[stratify_col, '_stage_id'], how='left', validate='many_to_one',
+                r_phase_stats[[stratify_col, '_phase_id', 'center', 'lpl', 'upl']],
+                on=[stratify_col, '_phase_id'], how='left', validate='many_to_one',
             )
 
             # Re-detect beyond limits
@@ -1114,7 +1114,7 @@ class Analysis:
                     'center': 'Varies', 'lpl': 'Varies', 'upl': 'Varies',
                 }
 
-            # Staged R: no lane boundary offset (no rows dropped)
+            # Phased R: no lane boundary offset (no rows dropped)
             return {
                 mr_spec.chart_type: {
                     'data': chart_out,
@@ -1126,14 +1126,14 @@ class Analysis:
                         'stratified': True,
                         'lane_boundaries': xmr_lane_boundaries if xmr_lane_boundaries else None,
                         'stratify_by': list(stratify_by),
-                        'staged': True,
+                        'phased': True,
                         'run_rules_applicable': False,
                     },
                     'strata': strata,
                 },
             }
 
-        # --- Non-staged precomputed path ---
+        # --- Non-phased precomputed path ---
         grouped = precomputed['grouped'].copy()
 
         # For R chart: compute R-specific limits from XmR's grouped data
@@ -1226,7 +1226,7 @@ class Analysis:
         collapsed_factors: list[str],
         _return_intermediates: bool,
         _precomputed: dict | None,
-        staged: bool = False,
+        phased: bool = False,
     ) -> dict:
         """Stratified path for _calculate_mr_chart."""
         spec = self.spec
@@ -1253,42 +1253,42 @@ class Analysis:
         # Canonical sort
         out = out.sort_values('sort_key', kind='stable')
 
-        # Strata list (needed for both staged and non-staged paths)
+        # Strata list (needed for both phased and non-phased paths)
         strata = out[stratify_col].unique().tolist()
 
-        # === Staged limits path (per-stage limits within each stratum) ===
-        if staged and collapsed_factors:
-            # 1. Build stage key from collapsed factors only (vectorized)
+        # === Phased limits path (per-phase limits within each stratum) ===
+        if phased and collapsed_factors:
+            # 1. Build phase key from collapsed factors only (vectorized)
             if len(collapsed_factors) == 1:
-                out['_stage_key'] = out[collapsed_factors[0]]
+                out['_phase_key'] = out[collapsed_factors[0]]
             else:
-                out['_stage_key'] = list(map(tuple, out[collapsed_factors].to_numpy()))
+                out['_phase_key'] = list(map(tuple, out[collapsed_factors].to_numpy()))
 
-            # 2. Assign within-stratum stage IDs via transitions of _stage_key
-            out['_stage_id'] = (
-                out.groupby(stratify_col, sort=False)['_stage_key']
+            # 2. Assign within-stratum phase IDs via transitions of _phase_key
+            out['_phase_id'] = (
+                out.groupby(stratify_col, sort=False)['_phase_key']
                 .transform(lambda s: (s != s.shift()).cumsum())
                 .astype('int64')
             )
 
-            # 3. Per-stage mR (reset at stage boundaries within each stratum)
+            # 3. Per-phase mR (reset at phase boundaries within each stratum)
             out['mr'] = (
-                out.groupby([stratify_col, '_stage_id'], sort=False)[value_col]
+                out.groupby([stratify_col, '_phase_id'], sort=False)[value_col]
                 .diff().abs()
             )
 
-            # 4. Per-stage aggregation
-            stage_stats = (
-                out.groupby([stratify_col, '_stage_id'], sort=False)
+            # 4. Per-phase aggregation
+            phase_stats = (
+                out.groupby([stratify_col, '_phase_id'], sort=False)
                 .agg(_n=(value_col, 'size'), _mean=(value_col, 'mean'), mR=('mr', 'mean'))
                 .reset_index()
             )
-            stage_stats['mR'] = stage_stats['mR'].fillna(0.0)
+            phase_stats['mR'] = phase_stats['mR'].fillna(0.0)
 
-            # 5. Compute per-stage limits
+            # 5. Compute per-phase limits
             if mr_spec.center_source == 'mean':
-                stage_stats['center'] = stage_stats['_mean']
-                stage_lims = stage_stats.apply(
+                phase_stats['center'] = phase_stats['_mean']
+                phase_lims = phase_stats.apply(
                     lambda row: calculate_limits(
                         mean=row['_mean'], sd=0, N=0, mR=row['mR'],
                         limits_type=mr_spec.limits_type,
@@ -1296,23 +1296,23 @@ class Analysis:
                     ), axis=1,
                 )
             else:  # center_source == 'mR' (R chart)
-                stage_stats['center'] = stage_stats['mR']
-                stage_lims = stage_stats.apply(
+                phase_stats['center'] = phase_stats['mR']
+                phase_lims = phase_stats.apply(
                     lambda row: calculate_limits(
                         mean=0, sd=0, N=0, mR=row['mR'],
                         limits_type=mr_spec.limits_type,
                         round_to=spec.round_to,
                     ), axis=1,
                 )
-            stage_stats = _join_limits(stage_stats, stage_lims)
+            phase_stats = _join_limits(phase_stats, phase_lims)
 
-            # 6. Merge per-stage limits back to row-level data
+            # 6. Merge per-phase limits back to row-level data
             out = out.merge(
-                stage_stats[[stratify_col, '_stage_id', 'center', 'mR', 'lpl', 'upl']],
-                on=[stratify_col, '_stage_id'], how='left', validate='many_to_one',
+                phase_stats[[stratify_col, '_phase_id', 'center', 'mR', 'lpl', 'upl']],
+                on=[stratify_col, '_phase_id'], how='left', validate='many_to_one',
             )
 
-            # 7. Staged path: NEVER drop rows. NaN mR at stage boundaries preserved.
+            # 7. Phased path: NEVER drop rows. NaN mR at phase boundaries preserved.
 
             # 8. Signal detection (per-row, uses row-level lpl/upl)
             assert plot_col in out.columns, f"plot_col {plot_col!r} not in DataFrame"
@@ -1334,8 +1334,8 @@ class Analysis:
                     'center': 'Varies', 'lpl': 'Varies', 'upl': 'Varies',
                 }
 
-            # 11. Track single-point stages
-            n_single_point = int((stage_stats['_n'] < 2).sum())
+            # 11. Track single-point phases
+            n_single_point = int((phase_stats['_n'] < 2).sum())
 
             # Format output
             extra_cols = [c for c in stratify_by
@@ -1355,8 +1355,8 @@ class Analysis:
                     'stratified': True,
                     'lane_boundaries': lane_boundaries if lane_boundaries else None,
                     'stratify_by': list(stratify_by),
-                    'staged': True,
-                    'single_point_stages': n_single_point,
+                    'phased': True,
+                    'single_point_phases': n_single_point,
                     'run_rules_applicable': False,
                 },
                 'strata': strata,
@@ -1365,7 +1365,7 @@ class Analysis:
             if _return_intermediates:
                 result['_intermediates'] = {
                     'out': out,
-                    'stage_stats': stage_stats,
+                    'phase_stats': phase_stats,
                     'stratify_col': stratify_col,
                     'stratify_by': stratify_by,
                     'strata': strata,
@@ -1373,7 +1373,7 @@ class Analysis:
                     'collapsed_factors': collapsed_factors,
                     'extra_cols': extra_cols,
                     'is_stratified': True,
-                    'staged': True,
+                    'phased': True,
                 }
 
             return result
@@ -1449,7 +1449,7 @@ class Analysis:
         # Detect beyond limits
         out = self._add_beyond_limits_flag(out, value_col=plot_col)
 
-        # Use strata from grouped for non-staged path (preserves original order)
+        # Use strata from grouped for non-phased path (preserves original order)
         strata = grouped[stratify_col].tolist()
 
         # Lane boundaries per stratum
@@ -1493,7 +1493,7 @@ class Analysis:
             'strata': strata,
         }
 
-        # Optionally include intermediates for paired calculation
+        # Optionally include intermediates for companion calculation
         if _return_intermediates:
             result['_intermediates'] = {
                 'out': out,
@@ -1517,36 +1517,36 @@ class Analysis:
         collapsed_factors: list[str],
         _return_intermediates: bool,
         _precomputed: dict | None,
-        staged: bool = False,
+        phased: bool = False,
     ) -> dict:
         """Ungrouped (single-stream) path for _calculate_mr_chart."""
         spec = self.spec
         result = {}
 
         if _precomputed is not None and not _precomputed['is_stratified']:
-            # --- Staged precomputed path (for paired R chart) ---
-            if _precomputed.get('staged'):
+            # --- Phased precomputed path (for companion R chart) ---
+            if _precomputed.get('phased'):
                 out = _precomputed['out'].copy()
-                stage_stats = _precomputed['stage_stats']
+                phase_stats = _precomputed['phase_stats']
                 xmr_lane_boundaries = _precomputed['lane_boundaries']
 
-                # Recompute R-specific limits per stage
-                r_stage_stats = stage_stats[['_stage_id', 'mR']].copy()
-                r_lims = r_stage_stats.apply(
+                # Recompute R-specific limits per phase
+                r_phase_stats = phase_stats[['_phase_id', 'mR']].copy()
+                r_lims = r_phase_stats.apply(
                     lambda row: calculate_limits(
                         mean=0, sd=0, N=0, mR=row['mR'],
                         limits_type=mr_spec.limits_type,
                         round_to=spec.round_to,
                     ), axis=1,
                 )
-                r_stage_stats = _join_limits(r_stage_stats, r_lims)
-                r_stage_stats['center'] = r_stage_stats['mR']
+                r_phase_stats = _join_limits(r_phase_stats, r_lims)
+                r_phase_stats['center'] = r_phase_stats['mR']
 
                 # Replace XmR limits with R limits
                 out = out.drop(columns=['center', 'lpl', 'upl'], errors='ignore')
                 out = out.merge(
-                    r_stage_stats[['_stage_id', 'center', 'lpl', 'upl']],
-                    on='_stage_id', how='left', validate='many_to_one',
+                    r_phase_stats[['_phase_id', 'center', 'lpl', 'upl']],
+                    on='_phase_id', how='left', validate='many_to_one',
                 )
 
                 # Re-detect beyond limits
@@ -1565,7 +1565,7 @@ class Analysis:
                     'upl': 'Varies',
                 }
 
-                # Staged R: no lane boundary offset needed (no rows dropped)
+                # Phased R: no lane boundary offset needed (no rows dropped)
                 r_lane_boundaries = xmr_lane_boundaries
 
                 result[mr_spec.chart_type] = {
@@ -1576,14 +1576,14 @@ class Analysis:
                         'value_col': plot_col,
                         'center_col': 'center',
                         'lane_boundaries': r_lane_boundaries,
-                        'staged': True,
+                        'phased': True,
                         'run_rules_applicable': False,
                     },
                 }
                 return result
 
-            # --- Existing non-staged precomputed path ---
-            # Reuse intermediates from paired XmR call
+            # --- Existing non-phased precomputed path ---
+            # Reuse intermediates from companion XmR call
             out = _precomputed['out'].copy()
             mR = _precomputed['mR']
             xmr_lane_boundaries = _precomputed['lane_boundaries']
@@ -1651,24 +1651,24 @@ class Analysis:
         if collapsed_factors:
             lane_boundaries = self._calculate_lane_boundaries(out, collapsed_factors)
 
-        # === Staged limits path ===
-        if staged and collapsed_factors:
-            # 1. Assign stage_id: contiguous runs of the same rsg_key
-            out['_stage_id'] = (
+        # === Phased limits path ===
+        if phased and collapsed_factors:
+            # 1. Assign phase_id: contiguous runs of the same rsg_key
+            out['_phase_id'] = (
                 (out['rsg_key'] != out['rsg_key'].shift())
                 .cumsum()
                 .astype('int64')
             )
 
-            # 2. Per-stage moving range (reset at boundaries)
+            # 2. Per-phase moving range (reset at boundaries)
             out['mr'] = (
-                out.groupby('_stage_id', sort=False)[value_col]
+                out.groupby('_phase_id', sort=False)[value_col]
                 .diff().abs()
             )
 
-            # 3. Per-stage aggregation
-            stage_stats = (
-                out.groupby('_stage_id', sort=False)
+            # 3. Per-phase aggregation
+            phase_stats = (
+                out.groupby('_phase_id', sort=False)
                 .agg(
                     _n=(value_col, 'size'),
                     _mean=(value_col, 'mean'),
@@ -1677,13 +1677,13 @@ class Analysis:
                 .reset_index()
             )
 
-            # 4. Handle single-point stages (mR=NaN -> use 0)
-            stage_stats['mR'] = stage_stats['mR'].fillna(0.0)
+            # 4. Handle single-point phases (mR=NaN -> use 0)
+            phase_stats['mR'] = phase_stats['mR'].fillna(0.0)
 
-            # 5. Compute per-stage limits
+            # 5. Compute per-phase limits
             if mr_spec.center_source == 'mean':
-                stage_stats['center'] = stage_stats['_mean']
-                stage_lims = stage_stats.apply(
+                phase_stats['center'] = phase_stats['_mean']
+                phase_lims = phase_stats.apply(
                     lambda row: calculate_limits(
                         mean=row['_mean'], sd=0, N=0, mR=row['mR'],
                         limits_type=mr_spec.limits_type,
@@ -1691,23 +1691,23 @@ class Analysis:
                     ), axis=1,
                 )
             else:  # center_source == 'mR' (R chart)
-                stage_stats['center'] = stage_stats['mR']
-                stage_lims = stage_stats.apply(
+                phase_stats['center'] = phase_stats['mR']
+                phase_lims = phase_stats.apply(
                     lambda row: calculate_limits(
                         mean=0, sd=0, N=0, mR=row['mR'],
                         limits_type=mr_spec.limits_type,
                         round_to=spec.round_to,
                     ), axis=1,
                 )
-            stage_stats = _join_limits(stage_stats, stage_lims)
+            phase_stats = _join_limits(phase_stats, phase_lims)
 
-            # 6. Merge per-stage limits back to row-level data
+            # 6. Merge per-phase limits back to row-level data
             out = out.merge(
-                stage_stats[['_stage_id', 'center', 'mR', 'lpl', 'upl']],
-                on='_stage_id', how='left', validate='many_to_one',
+                phase_stats[['_phase_id', 'center', 'mR', 'lpl', 'upl']],
+                on='_phase_id', how='left', validate='many_to_one',
             )
 
-            # 7. Staged path: NEVER drop rows. NaN mR values at stage boundaries
+            # 7. Phased path: NEVER drop rows. NaN mR values at phase boundaries
             #    stay in the DataFrame. Plotly skips NaN naturally.
 
             # 8. Signal detection (per-row, uses row-level lpl/upl)
@@ -1727,8 +1727,8 @@ class Analysis:
                 'upl': 'Varies',
             }
 
-            # 11. Track single-point stages for visibility
-            n_single_point = int((stage_stats['_n'] < 2).sum())
+            # 11. Track single-point phases for visibility
+            n_single_point = int((phase_stats['_n'] < 2).sum())
 
             result[mr_spec.chart_type] = {
                 'data': chart_out,
@@ -1738,8 +1738,8 @@ class Analysis:
                     'value_col': plot_col,
                     'center_col': 'center',
                     'lane_boundaries': lane_boundaries,
-                    'staged': True,
-                    'single_point_stages': n_single_point,
+                    'phased': True,
+                    'single_point_phases': n_single_point,
                     'run_rules_applicable': False,
                 },
             }
@@ -1750,8 +1750,8 @@ class Analysis:
                     'mR': None,
                     'lane_boundaries': lane_boundaries,
                     'is_stratified': False,
-                    'staged': True,
-                    'stage_stats': stage_stats,
+                    'phased': True,
+                    'phase_stats': phase_stats,
                 }
 
             return result
@@ -1820,7 +1820,7 @@ class Analysis:
             },
         }
 
-        # Optionally include intermediates for paired calculation
+        # Optionally include intermediates for companion calculation
         if _return_intermediates:
             result['_intermediates'] = {
                 'out': out,
@@ -1846,7 +1846,7 @@ class Analysis:
         value_col : str, optional
             Column to use for calculations. Defaults to spec.response_var.
         _return_intermediates : bool, optional
-            If True, includes '_intermediates' key for paired-mode reuse.
+            If True, includes '_intermediates' key for companion-mode reuse.
 
         Returns
         -------
@@ -1873,7 +1873,7 @@ class Analysis:
         value_col : str, optional
             Column to use for calculations. Defaults to spec.response_var.
         _precomputed : dict, optional
-            Pre-computed intermediates from _calculate_xmr() for paired mode.
+            Pre-computed intermediates from _calculate_xmr() for companion mode.
 
         Returns
         -------
@@ -1889,7 +1889,7 @@ class Analysis:
         """
         Calculate XmR and R charts together (Wheeler methodology).
 
-        This method ensures that when paired=True, both charts are calculated
+        This method ensures that when companion=True, both charts are calculated
         efficiently using shared intermediate values. The R chart uses the
         same data computed for XmR, avoiding redundant calculation.
 

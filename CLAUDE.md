@@ -3,7 +3,7 @@
 ## Output format for plans
 - Goal
 - Non-Goals
-- Files to Touch (with why)
+- Files to Touch (with why) - always show the coding changes
 - Behavioral Changes
 - Invariants to Preserve
 - Test Strategy
@@ -59,3 +59,53 @@ The primary user is the analyst. The API must be simple, mirror how analysts thi
 - Process Behavior Chart = Control Chart
 - Natural Process Limits ≠ Specification Limits
 - XmR = IMR (Individual Moving Range)
+
+## Commit Message Template
+## Summary
+- **What:** <!-- one sentence: feature/bugfix -->
+- **Why:** <!-- user value / problem -->
+- **Scope:** <!-- what changed at a high level -->
+
+## Contract / Invariants (must remain true)
+- [ ] **Default behavior unchanged:** `phased=False` (and other defaults) produce byte-for-byte equivalent results
+- [ ] **Residuals unaffected:** no residual/SDS recomputation; charting-only change
+- [ ] **Row/index alignment preserved:** output row count + ordering unchanged (unless explicitly documented)
+- [ ] **Lane boundaries preserved:** boundary positions/semantics unchanged (or explicitly documented)
+- [ ] **Output schema compatible:** column names/types and metadata contract remain compatible with existing consumers
+
+## Behavior Changes (explicit)
+- **New API:** <!-- e.g., study.execute(chart='XmR', by=[], phased=True) -->
+- **New semantics:** <!-- bullet list of intended behavior -->
+
+## Key Design Decisions
+- **Phase definition:** <!-- contiguous runs of rsg_key, etc. -->
+- **NaN policy:** <!-- e.g., NaN points not flagged; plot skips NaNs -->
+- **Run rules policy:** <!-- e.g., disabled when phased -->
+- **Edge cases:** <!-- single-point phases, etc. -->
+
+## Risks & Mitigations
+- **P0 risks:** <!-- silent-wrongness risks -->
+- **Mitigations:** <!-- gating, assertions, metadata flags -->
+
+## Tests
+### Added / Updated
+- [ ] <!-- test name --> — <!-- what it proves -->
+- [ ] <!-- test name --> — <!-- what it proves -->
+
+### Regression Focus (must fail if broken)
+- [ ] <!-- e.g., R lane boundary alignment under phased -->
+- [ ] <!-- e.g., phased=False identical output -->
+- [ ] <!-- e.g., plot_col asserted, correct series used -->
+
+## Manual Verification
+- [ ] `pytest tests/ -x`
+- [ ] `pytest <new_test_file> -v`
+- [ ] Visual check / notebook snippet: <!-- paste minimal repro -->
+
+## Notes
+- **Docs:** <!-- docstring updates / user-facing notes -->
+- **Follow-ups (not in this PR):** <!-- explicitly defer gold plating -->
+
+##Testing
+- Always use the validation dataset for testing.  It is ground truth.
+- File: [text](validation/TABVASTESTDATABASE.csv)
