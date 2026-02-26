@@ -147,7 +147,7 @@ class TestSDSDetection:
         )
 
         # XmR with factors requires explicit 'by' parameter
-        # SRP: XmR only returns XmR (use paired=True for bundled XmR+R)
+        # SRP: XmR only returns XmR (use companion=True for bundled XmR+R)
         result = study.execute(chart='XmR', by=['factor 1', 'factor 2'])
 
         assert result is not None

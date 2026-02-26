@@ -280,23 +280,23 @@ A plan is valuable for documenting experimental intent and catching absent facto
 
 After formulating with `plan`, use `study.design()` to see planned vs observed structure. See [SDS Detection](sds-detection.md) for details on SDS 4-6.
 
-## The `paired` Parameter
+## The `companion` Parameter
 
-Wheeler recommends reading certain charts as pairs: Xbar with S, and XmR with R (the variation chart first, then the location chart). The `paired` parameter in `execute()` returns both charts together.
+Wheeler recommends reading certain charts as pairs: Xbar with S, and XmR with R (the variation chart first, then the location chart). The `companion` parameter in `execute()` returns both charts together.
 
 ```python
 # Returns both Xbar and S charts together
-result = study.execute(chart='Xbar', paired=True)
+result = study.execute(chart='Xbar', companion=True)
 
 # Returns both XmR and R charts together, stratified
-result = study.execute(chart='XmR', by=['lane'], paired=True)
+result = study.execute(chart='XmR', by=['lane'], companion=True)
 ```
 
 Key details:
 
-- Either chart in the pair triggers the pair: `chart='S', paired=True` also returns Xbar+S
-- Default is `paired=False` (returns a single chart)
-- Paired results can be plotted and exported the same way as single-chart results
+- Either chart in the pair triggers the pair: `chart='S', companion=True` also returns Xbar+S
+- Default is `companion=False` (returns a single chart)
+- Companion results can be plotted and exported the same way as single-chart results
 
 ## Study Inspection Methods
 

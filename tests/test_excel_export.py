@@ -40,7 +40,7 @@ def _make_request(spec_dict: dict) -> ChartRequest:
     return ChartRequest(
         chart=spec_dict.get('analysis_type', 'Xbar'),
         by=tuple(spec_dict['by']) if spec_dict.get('by') else None,
-        paired=spec_dict.get('paired', False),
+        companion=spec_dict.get('companion', False),
     )
 
 
@@ -169,8 +169,8 @@ def test_excel_export_stratified_xmr(temp_excel_file):
     assert 'rsg' in xmr_data.columns, "XmR data should have 'rsg' column for stratification"
 
 
-def test_excel_export_stratified_xmr_paired(temp_excel_file):
-    """Test Excel export with stratified XmR charts (paired=True for bundled output)."""
+def test_excel_export_stratified_xmr_companion(temp_excel_file):
+    """Test Excel export with stratified XmR charts (companion=True for bundled output)."""
     df = make_sds(1, K1=3, K2=2, T=5, n_min=2, n_max=3, seed=42)
 
     spec = {
@@ -178,7 +178,7 @@ def test_excel_export_stratified_xmr_paired(temp_excel_file):
         'rsg_vars': ['factor 1'],
         'time_var': 'time',
         'response_var': 'y',
-        'paired': True  # Request bundled XmR+R
+        'companion': True  # Request bundled XmR+R
     }
 
     sds = detect_sds_for_test(df, spec)
@@ -191,12 +191,12 @@ def test_excel_export_stratified_xmr_paired(temp_excel_file):
     # Verify file exists
     assert os.path.exists(temp_excel_file)
 
-    # Read back and verify paired charts are present
+    # Read back and verify companion charts are present
     excel_file = pd.ExcelFile(temp_excel_file, engine='openpyxl')
     chart_tabs = [name for name in excel_file.sheet_names if 'Chart_' in name]
 
-    # Paired mode: XmR+R bundled together
-    assert len(chart_tabs) == 2, f"Expected 2 chart tabs (XmR+R paired), got {len(chart_tabs)}: {chart_tabs}"
+    # Companion mode: XmR+R bundled together
+    assert len(chart_tabs) == 2, f"Expected 2 chart tabs (XmR+R companion), got {len(chart_tabs)}: {chart_tabs}"
     assert 'Chart_XmR' in chart_tabs, f"Expected Chart_XmR tab, got: {chart_tabs}"
     assert 'Chart_R' in chart_tabs, f"Expected Chart_R tab, got: {chart_tabs}"
 

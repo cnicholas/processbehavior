@@ -54,7 +54,7 @@ def _make_request(spec_dict: dict) -> ChartRequest:
     return ChartRequest(
         chart=spec_dict.get('analysis_type', 'Xbar'),
         by=tuple(spec_dict['by']) if spec_dict.get('by') else None,
-        paired=spec_dict.get('paired', False),
+        companion=spec_dict.get('companion', False),
     )
 
 

@@ -142,21 +142,21 @@ print(f"Available residuals: {study.available_residuals}")
 
 **Note on R2**: SDS 2 and 6 use the moving average method; SDS 1, 3, 4, 5 use within-cell deviation (R2 = Y - Ȳ_kt). See [VAS Residuals](residuals.md) for details.
 
-## Paired Charts
+## Companion Charts
 
-Wheeler recommends reading Xbar and S charts together (S first, then Xbar), and similarly for XmR and R. The `paired` parameter returns both charts in one result:
+Wheeler recommends reading Xbar and S charts together (S first, then Xbar), and similarly for XmR and R. The `companion` parameter returns both charts in one result:
 
 ```python
 # Returns both Xbar and S charts
-result = study.execute(chart='Xbar', paired=True)
+result = study.execute(chart='Xbar', companion=True)
 result.plot(chart='Xbar')  # Xbar chart
 result.plot(chart='S')     # S chart
 
 # Returns both XmR and R charts, stratified
-result = study.execute(chart='XmR', by=['lane'], paired=True)
+result = study.execute(chart='XmR', by=['lane'], companion=True)
 ```
 
-Either chart in the pair triggers the pair: `chart='S', paired=True` also returns Xbar+S.
+Either chart in the pair triggers the pair: `chart='S', companion=True` also returns Xbar+S.
 
 ## Effects and Interaction Charts
 
