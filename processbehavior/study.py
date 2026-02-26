@@ -1280,8 +1280,8 @@ class Study:
         value: str | None = None,
         recentered: bool = False,
         bins: int | None = None,
-        paired: bool = False,
-        staged: bool = False,
+        companion: bool = False,
+        phased: bool = False,
         n_sigma: float = 3.0,
         n_mode: str = "actual",
     ) -> AnalysisResult:
@@ -1328,25 +1328,25 @@ class Study:
             (RCR2, RCR3, etc.) which add back the appropriate mean for
             easier interpretation. See Tom Bishop Equation 80.
 
-        paired : bool, default False
+        companion : bool, default False
             When True, returns both Xbar and S charts together (or both XmR
             and R charts) regardless of which chart is requested. This follows
-            Wheeler's methodology of always analyzing paired charts together.
+            Wheeler's methodology of always analyzing companion charts together.
 
-            - paired=False (default): Returns only the requested chart (SRP-compliant)
-            - paired=True: Returns both paired charts (Xbar+S or XmR+R)
+            - companion=False (default): Returns only the requested chart (SRP-compliant)
+            - companion=True: Returns both companion charts (Xbar+S or XmR+R)
 
-        staged : bool, default False
-            When True, computes per-stage center lines and control limits.
-            Each stage is a contiguous run of the same collapsed factor
+        phased : bool, default False
+            When True, computes per-phase center lines and control limits.
+            Each phase is a contiguous run of the same collapsed factor
             combination (the groups demarcated by vertical lane boundaries).
-            Within each stage, the moving range is computed independently.
+            Within each phase, the moving range is computed independently.
 
-            - staged=False (default): Global limits across entire chart
-            - staged=True: Per-stage limits (requires by=[])
+            - phased=False (default): Global limits across entire chart
+            - phased=True: Per-phase limits (requires by=[])
 
-            Single-point stages yield zero-width limits because mR is
-            imputed as 0; count available in metadata['single_point_stages'].
+            Single-point phases yield zero-width limits because mR is
+            imputed as 0; count available in metadata['single_point_phases'].
 
         n_sigma : float, default 3.0
             Sigma multiplier for Xbar/S chart control limits. Standard SPC
@@ -1434,24 +1434,24 @@ class Study:
                     f"recentered=True requires a residual value (R1-R5), got '{value}'"
                 )
 
-        # Staged limits validation
-        if staged:
+        # Phased limits validation
+        if phased:
             if base_chart not in ('XmR', 'R'):
                 from .exceptions import ValidationError
                 raise ValidationError(
-                    f"staged=True is only valid for XmR or R charts, "
+                    f"phased=True is only valid for XmR or R charts, "
                     f"got '{base_chart}'."
                 )
             if by_validated is None:
                 from .exceptions import ValidationError
                 raise ValidationError(
-                    "staged=True requires an explicit by= parameter."
+                    "phased=True requires an explicit by= parameter."
                 )
             if not self._spec.rsg_vars_list:
                 from .exceptions import ValidationError
                 raise ValidationError(
-                    "staged=True requires factors to define stages (rsg_key). "
-                    "This study has no factors; staged limits do not apply."
+                    "phased=True requires factors to define phases (rsg_key). "
+                    "This study has no factors; phased limits do not apply."
                 )
             if len(by_validated) > 0:
                 all_factors = set(self._spec.rsg_vars_list)
@@ -1459,10 +1459,10 @@ class Study:
                 if not (all_factors - by_set):
                     from .exceptions import ValidationError
                     raise ValidationError(
-                        "staged=True requires collapsed factors to define stages. "
+                        "phased=True requires collapsed factors to define phases. "
                         f"by={list(by_validated)} includes all factors; "
-                        "no factors remain to create stage boundaries. "
-                        "Remove factors from by= or set staged=False."
+                        "no factors remain to create phase boundaries. "
+                        "Remove factors from by= or set phased=False."
                     )
 
         # n_sigma / n_mode validation
@@ -1521,9 +1521,9 @@ class Study:
             residual=value.upper() if is_residual else None,
             residual_chart_type=base_chart if is_residual else None,
             recentered=recentered,
-            paired=paired,
+            companion=companion,
             bins=bins if bins is not None else 10,
-            staged=staged,
+            phased=phased,
             n_sigma=n_sigma,
             n_mode=n_mode,
         )

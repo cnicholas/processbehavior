@@ -1,6 +1,6 @@
-"""Tests for staged limits feature (per-stage center lines and control limits).
+"""Tests for phased limits feature (per-phase center lines and control limits).
 
-Staged limits compute independent center lines and control limits for each
+Phased limits compute independent center lines and control limits for each
 contiguous run of the same collapsed factor combination.
 """
 
@@ -32,79 +32,79 @@ def sds1_study():
 # Core Behavior
 # =============================================================================
 
-class TestStagedXmRLimits:
-    """Test per-stage limits computation for XmR charts."""
+class TestPhasedXmRLimits:
+    """Test per-phase limits computation for XmR charts."""
 
-    def test_staged_xmr_limits_vary_across_stages(self, sds1_study):
-        """Center/lpl/upl columns should not be constant across stages."""
-        result = sds1_study.execute(chart='XmR', by=[], staged=True)
+    def test_phased_xmr_limits_vary_across_phases(self, sds1_study):
+        """Center/lpl/upl columns should not be constant across phases."""
+        result = sds1_study.execute(chart='XmR', by=[], phased=True)
         data = result.get_chart('XmR')
 
-        # With multiple stages having different data, limits should vary
-        assert data['center'].nunique() > 1, "Center should vary across stages"
-        assert data['upl'].nunique() > 1, "UPL should vary across stages"
+        # With multiple phases having different data, limits should vary
+        assert data['center'].nunique() > 1, "Center should vary across phases"
+        assert data['upl'].nunique() > 1, "UPL should vary across phases"
 
-    def test_staged_mr_resets_at_boundaries(self, sds1_study):
-        """mR should be NaN at the first point of each new stage in R chart."""
-        result = sds1_study.execute(chart='XmR', by=[], staged=True, paired=True)
+    def test_phased_mr_resets_at_boundaries(self, sds1_study):
+        """mR should be NaN at the first point of each new phase in R chart."""
+        result = sds1_study.execute(chart='XmR', by=[], phased=True, companion=True)
         r_data = result.get_chart('R')
 
-        # R chart data should have NaN mr values at stage boundaries
+        # R chart data should have NaN mr values at phase boundaries
         mr_values = r_data['mr']
-        assert mr_values.isna().any(), "mR should have NaN at stage boundaries"
+        assert mr_values.isna().any(), "mR should have NaN at phase boundaries"
 
-    def test_staged_statistics_are_varies(self, sds1_study):
-        """Statistics should report 'Varies' for staged charts."""
-        result = sds1_study.execute(chart='XmR', by=[], staged=True)
+    def test_phased_statistics_are_varies(self, sds1_study):
+        """Statistics should report 'Varies' for phased charts."""
+        result = sds1_study.execute(chart='XmR', by=[], phased=True)
         stats = result.get_statistics('XmR')
 
         assert stats['center'] == 'Varies'
         assert stats['lpl'] == 'Varies'
         assert stats['upl'] == 'Varies'
 
-    def test_staged_metadata_flag(self, sds1_study):
-        """Metadata should include staged=True."""
-        result = sds1_study.execute(chart='XmR', by=[], staged=True)
+    def test_phased_metadata_flag(self, sds1_study):
+        """Metadata should include phased=True."""
+        result = sds1_study.execute(chart='XmR', by=[], phased=True)
         metadata = result.charts['XmR']['metadata']
 
-        assert metadata['staged'] is True
+        assert metadata['phased'] is True
         assert metadata['run_rules_applicable'] is False
 
-    def test_staged_single_point_stages_metadata(self, sds1_study):
-        """Metadata should include single_point_stages count."""
-        result = sds1_study.execute(chart='XmR', by=[], staged=True)
+    def test_phased_single_point_phases_metadata(self, sds1_study):
+        """Metadata should include single_point_phases count."""
+        result = sds1_study.execute(chart='XmR', by=[], phased=True)
         metadata = result.charts['XmR']['metadata']
 
-        assert 'single_point_stages' in metadata
-        assert isinstance(metadata['single_point_stages'], int)
+        assert 'single_point_phases' in metadata
+        assert isinstance(metadata['single_point_phases'], int)
 
-    def test_staged_signal_detection_per_stage(self, sds1_study):
-        """Beyond_limits uses per-stage lpl/upl, not global."""
-        result_staged = sds1_study.execute(chart='XmR', by=[], staged=True)
-        result_global = sds1_study.execute(chart='XmR', by=[], staged=False)
+    def test_phased_signal_detection_per_phase(self, sds1_study):
+        """Beyond_limits uses per-phase lpl/upl, not global."""
+        result_phased = sds1_study.execute(chart='XmR', by=[], phased=True)
+        result_global = sds1_study.execute(chart='XmR', by=[], phased=False)
 
-        staged_data = result_staged.get_chart('XmR')
+        phased_data = result_phased.get_chart('XmR')
         global_data = result_global.get_chart('XmR')
 
         # The beyond_limits column should exist in both
-        assert 'beyond_limits' in staged_data.columns
+        assert 'beyond_limits' in phased_data.columns
         assert 'beyond_limits' in global_data.columns
 
-        # Staged limits are tighter per-stage, so signals may differ
+        # Phased limits are tighter per-phase, so signals may differ
         # (we just verify the column is populated, not specific values)
-        assert staged_data['beyond_limits'].dtype in ['int64', 'int32', 'float64']
+        assert phased_data['beyond_limits'].dtype in ['int64', 'int32', 'float64']
 
 
 # =============================================================================
-# Paired (XmR + R) with Staged
+# Companion (XmR + R) with Phased
 # =============================================================================
 
-class TestStagedPaired:
-    """Test staged limits with paired=True (XmR + R together)."""
+class TestPhasedCompanion:
+    """Test phased limits with companion=True (XmR + R together)."""
 
-    def test_staged_paired_both_charts(self, sds1_study):
-        """paired=True should produce both XmR and R with staged limits."""
-        result = sds1_study.execute(chart='XmR', by=[], staged=True, paired=True)
+    def test_phased_companion_both_charts(self, sds1_study):
+        """companion=True should produce both XmR and R with phased limits."""
+        result = sds1_study.execute(chart='XmR', by=[], phased=True, companion=True)
 
         xmr_data = result.get_chart('XmR')
         r_data = result.get_chart('R')
@@ -118,25 +118,25 @@ class TestStagedPaired:
         assert xmr_stats['center'] == 'Varies'
         assert r_stats['center'] == 'Varies'
 
-        # Both should have staged metadata
-        assert result.charts['XmR']['metadata'].get('staged') is True
-        assert result.charts['R']['metadata'].get('staged') is True
+        # Both should have phased metadata
+        assert result.charts['XmR']['metadata'].get('phased') is True
+        assert result.charts['R']['metadata'].get('phased') is True
 
-    def test_staged_r_row_count_matches_xmr(self, sds1_study):
-        """Staged R chart row count == XmR chart row count (no rows dropped)."""
-        result = sds1_study.execute(chart='XmR', by=[], staged=True, paired=True)
+    def test_phased_r_row_count_matches_xmr(self, sds1_study):
+        """Phased R chart row count == XmR chart row count (no rows dropped)."""
+        result = sds1_study.execute(chart='XmR', by=[], phased=True, companion=True)
 
         xmr_rows = len(result.get_chart('XmR'))
         r_rows = len(result.get_chart('R'))
 
         assert r_rows == xmr_rows, (
-            f"Staged R chart should have same row count as XmR "
+            f"Phased R chart should have same row count as XmR "
             f"(got R={r_rows}, XmR={xmr_rows})"
         )
 
-    def test_staged_r_lane_boundaries_align(self, sds1_study):
+    def test_phased_r_lane_boundaries_align(self, sds1_study):
         """R chart lane boundaries should match XmR positions (no offset)."""
-        result = sds1_study.execute(chart='XmR', by=[], staged=True, paired=True)
+        result = sds1_study.execute(chart='XmR', by=[], phased=True, companion=True)
 
         xmr_meta = result.charts['XmR']['metadata']
         r_meta = result.charts['R']['metadata']
@@ -158,12 +158,12 @@ class TestStagedPaired:
 # Lane Boundaries
 # =============================================================================
 
-class TestStagedLaneBoundaries:
-    """Test that lane boundaries are preserved with staged limits."""
+class TestPhasedLaneBoundaries:
+    """Test that lane boundaries are preserved with phased limits."""
 
-    def test_staged_lane_boundaries_preserved(self, sds1_study):
-        """Lane boundaries should still be present in staged output."""
-        result = sds1_study.execute(chart='XmR', by=[], staged=True)
+    def test_phased_lane_boundaries_preserved(self, sds1_study):
+        """Lane boundaries should still be present in phased output."""
+        result = sds1_study.execute(chart='XmR', by=[], phased=True)
         metadata = result.charts['XmR']['metadata']
 
         assert metadata.get('lane_boundaries') is not None
@@ -174,50 +174,50 @@ class TestStagedLaneBoundaries:
 # Validation
 # =============================================================================
 
-class TestStagedValidation:
-    """Test that invalid staged configurations raise appropriate errors."""
+class TestPhasedValidation:
+    """Test that invalid phased configurations raise appropriate errors."""
 
-    def test_staged_requires_xmr_or_r(self, sds1_study):
-        """staged=True with Xbar should raise ValidationError."""
+    def test_phased_requires_xmr_or_r(self, sds1_study):
+        """phased=True with Xbar should raise ValidationError."""
         with pytest.raises(ValidationError, match="only valid for XmR or R"):
-            sds1_study.execute(chart='Xbar', staged=True)
+            sds1_study.execute(chart='Xbar', phased=True)
 
-    def test_staged_stratified_allowed_with_collapsed_factors(self, sds1_study):
-        """staged=True with by=['factor 1'] should work (factor 2 is collapsed)."""
-        # Should NOT raise — factor 2 remains as collapsed factor for stages
+    def test_phased_stratified_allowed_with_collapsed_factors(self, sds1_study):
+        """phased=True with by=['factor 1'] should work (factor 2 is collapsed)."""
+        # Should NOT raise — factor 2 remains as collapsed factor for phases
         result = sds1_study.execute(
             chart='XmR',
             by=['factor 1'],
-            staged=True
+            phased=True
         )
         assert result is not None
 
-    def test_staged_requires_collapsed_factors(self, sds1_study):
-        """staged=True with by=all_factors should raise (no collapsed factors)."""
+    def test_phased_requires_collapsed_factors(self, sds1_study):
+        """phased=True with by=all_factors should raise (no collapsed factors)."""
         with pytest.raises(ValidationError, match="requires collapsed factors"):
             sds1_study.execute(
                 chart='XmR',
                 by=['factor 1', 'factor 2'],
-                staged=True
+                phased=True
             )
 
-    def test_staged_requires_by_none_raises(self, sds1_study):
-        """staged=True with by=None should raise (by=None invalid for XmR with factors)."""
+    def test_phased_requires_by_none_raises(self, sds1_study):
+        """phased=True with by=None should raise (by=None invalid for XmR with factors)."""
         with pytest.raises(ValueError):
-            sds1_study.execute(chart='XmR', staged=True)
+            sds1_study.execute(chart='XmR', phased=True)
 
 
 # =============================================================================
-# Regression: Unstaged behavior unchanged
+# Regression: Unphased behavior unchanged
 # =============================================================================
 
-class TestUnstagedUnchanged:
-    """Verify that staged=False (default) produces identical results."""
+class TestUnphasedUnchanged:
+    """Verify that phased=False (default) produces identical results."""
 
-    def test_unstaged_unchanged(self, sds1_study):
-        """staged=False should produce identical results to omitting staged."""
+    def test_unphased_unchanged(self, sds1_study):
+        """phased=False should produce identical results to omitting phased."""
         result_default = sds1_study.execute(chart='XmR', by=[])
-        result_explicit = sds1_study.execute(chart='XmR', by=[], staged=False)
+        result_explicit = sds1_study.execute(chart='XmR', by=[], phased=False)
 
         default_data = result_default.get_chart('XmR')
         explicit_data = result_explicit.get_chart('XmR')
@@ -229,11 +229,11 @@ class TestUnstagedUnchanged:
 
         assert default_stats == explicit_stats
 
-    def test_unstaged_paired_unchanged(self, sds1_study):
-        """staged=False with paired=True should produce identical results."""
-        result_default = sds1_study.execute(chart='XmR', by=[], paired=True)
+    def test_unphased_companion_unchanged(self, sds1_study):
+        """phased=False with companion=True should produce identical results."""
+        result_default = sds1_study.execute(chart='XmR', by=[], companion=True)
         result_explicit = sds1_study.execute(
-            chart='XmR', by=[], paired=True, staged=False
+            chart='XmR', by=[], companion=True, phased=False
         )
 
         for chart_name in ['XmR', 'R']:
@@ -247,29 +247,29 @@ class TestUnstagedUnchanged:
 
 
 # =============================================================================
-# Stratified Staged Limits
+# Stratified Phased Limits
 # =============================================================================
 
-class TestStagedStratified:
-    """Test staged limits in stratified (by=['factor']) mode."""
+class TestPhasedStratified:
+    """Test phased limits in stratified (by=['factor']) mode."""
 
-    def test_staged_stratified_limits_vary(self, sds1_study):
-        """Stratified staged: center/lpl/upl columns vary within each stratum."""
+    def test_phased_stratified_limits_vary(self, sds1_study):
+        """Stratified phased: center/lpl/upl columns vary within each stratum."""
         result = sds1_study.execute(
-            chart='XmR', by=['factor 1'], staged=True
+            chart='XmR', by=['factor 1'], phased=True
         )
         # Get the combined data
         xmr_data = result.get_chart('XmR')
 
-        # With staged limits, center should vary (not constant per stratum)
+        # With phased limits, center should vary (not constant per stratum)
         assert 'center' in xmr_data.columns
         assert xmr_data['center'].nunique() > 1, \
-            "Center should vary across stages within strata"
+            "Center should vary across phases within strata"
 
-    def test_staged_stratified_statistics_are_varies(self, sds1_study):
+    def test_phased_stratified_statistics_are_varies(self, sds1_study):
         """Per-stratum stats dict has 'Varies' values."""
         result = sds1_study.execute(
-            chart='XmR', by=['factor 1'], staged=True
+            chart='XmR', by=['factor 1'], phased=True
         )
         stats = result.get_statistics('XmR')
 
@@ -281,21 +281,21 @@ class TestStagedStratified:
             assert stratum_stats['lpl'] == 'Varies'
             assert stratum_stats['upl'] == 'Varies'
 
-    def test_staged_stratified_mr_resets_at_stage_boundaries(self, sds1_study):
-        """mR NaN at start of each stage within stratum (R chart)."""
+    def test_phased_stratified_mr_resets_at_phase_boundaries(self, sds1_study):
+        """mR NaN at start of each phase within stratum (R chart)."""
         result = sds1_study.execute(
-            chart='XmR', by=['factor 1'], staged=True, paired=True
+            chart='XmR', by=['factor 1'], phased=True, companion=True
         )
         r_data = result.get_chart('R')
 
-        # R chart should have NaN mr values at stage boundaries
+        # R chart should have NaN mr values at phase boundaries
         mr_values = r_data['mr']
-        assert mr_values.isna().any(), "mR should have NaN at stage boundaries"
+        assert mr_values.isna().any(), "mR should have NaN at phase boundaries"
 
-    def test_staged_stratified_paired(self, sds1_study):
-        """Paired XmR+R both staged in stratified mode."""
+    def test_phased_stratified_companion(self, sds1_study):
+        """Companion XmR+R both phased in stratified mode."""
         result = sds1_study.execute(
-            chart='XmR', by=['factor 1'], staged=True, paired=True
+            chart='XmR', by=['factor 1'], phased=True, companion=True
         )
 
         xmr_data = result.get_chart('XmR')
@@ -313,26 +313,26 @@ class TestStagedStratified:
         for stratum in r_stats:
             assert r_stats[stratum]['center'] == 'Varies'
 
-        # Both should have staged metadata
-        assert result.charts['XmR']['metadata'].get('staged') is True
-        assert result.charts['R']['metadata'].get('staged') is True
+        # Both should have phased metadata
+        assert result.charts['XmR']['metadata'].get('phased') is True
+        assert result.charts['R']['metadata'].get('phased') is True
 
-    def test_staged_stratified_stage_count(self, sds1_study):
-        """Known data produces expected stage count per stratum."""
+    def test_phased_stratified_phase_count(self, sds1_study):
+        """Known data produces expected phase count per stratum."""
         result = sds1_study.execute(
-            chart='XmR', by=['factor 1'], staged=True
+            chart='XmR', by=['factor 1'], phased=True
         )
         xmr_data = result.get_chart('XmR')
 
-        # Center values change at stage boundaries — count transitions
+        # Center values change at phase boundaries — count transitions
         # within each stratum by checking unique center values
         assert xmr_data['center'].nunique() > 1, \
-            "Should have multiple distinct center values (stages)"
+            "Should have multiple distinct center values (phases)"
 
-    def test_staged_lane_boundary_positions_valid(self, sds1_study):
+    def test_phased_lane_boundary_positions_valid(self, sds1_study):
         """All lane boundary positions < len(stratum_df) and strictly increasing."""
         result = sds1_study.execute(
-            chart='XmR', by=['factor 1'], staged=True
+            chart='XmR', by=['factor 1'], phased=True
         )
         metadata = result.charts['XmR']['metadata']
         lane_boundaries = metadata.get('lane_boundaries')
@@ -356,14 +356,14 @@ class TestStagedStratified:
                             assert p < stratum_len, \
                                 f"Position {p} >= stratum len {stratum_len}"
 
-    def test_staged_stratified_metadata(self, sds1_study):
-        """Metadata should include staged=True and run_rules_applicable=False."""
+    def test_phased_stratified_metadata(self, sds1_study):
+        """Metadata should include phased=True and run_rules_applicable=False."""
         result = sds1_study.execute(
-            chart='XmR', by=['factor 1'], staged=True
+            chart='XmR', by=['factor 1'], phased=True
         )
         metadata = result.charts['XmR']['metadata']
 
-        assert metadata.get('staged') is True
+        assert metadata.get('phased') is True
         assert metadata.get('run_rules_applicable') is False
         assert metadata.get('stratified') is True
 
@@ -376,7 +376,7 @@ class TestTimeTickLabels:
     """Test that time tick labels are applied when x-axis uses integer indices."""
 
     def test_time_ticks_apply_when_x_is_index(self, sds1_study):
-        """Tick labels set for by=[] non-staged when _get_x_column() is None."""
+        """Tick labels set for by=[] non-phased when _get_x_column() is None."""
         result = sds1_study.execute(chart='XmR', by=[])
         fig = result.plot('XmR')
 
@@ -386,14 +386,14 @@ class TestTimeTickLabels:
         assert xaxis.ticktext is not None, "ticktext should be set"
         assert len(xaxis.ticktext) > 0, "Should have tick labels"
 
-    def test_staged_xmr_has_time_tick_labels(self, sds1_study):
-        """Staged by=[] chart has time values as tick labels."""
-        result = sds1_study.execute(chart='XmR', by=[], staged=True)
+    def test_phased_xmr_has_time_tick_labels(self, sds1_study):
+        """Phased by=[] chart has time values as tick labels."""
+        result = sds1_study.execute(chart='XmR', by=[], phased=True)
         fig = result.plot('XmR')
 
         xaxis = fig._fig.layout.xaxis
-        assert xaxis.tickvals is not None, "tickvals should be set for staged"
-        assert xaxis.ticktext is not None, "ticktext should be set for staged"
+        assert xaxis.tickvals is not None, "tickvals should be set for phased"
+        assert xaxis.ticktext is not None, "ticktext should be set for phased"
 
     def test_time_ticks_applied_in_stratified_with_replication(self, sds1_study):
         """Stratified with replication: time repeats per stratum, ticks applied."""

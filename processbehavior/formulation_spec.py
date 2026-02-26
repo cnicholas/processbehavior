@@ -112,12 +112,12 @@ class ChartRequest:
         Base chart type when charting a residual.
     recentered : bool
         Whether to use re-centered residuals (RCR columns).
-    paired : bool
-        Whether to return both paired charts (Xbar+S or XmR+R).
+    companion : bool
+        Whether to return both companion charts (Xbar+S or XmR+R).
     bins : int
         Number of bins for Histogram chart.
-    staged : bool
-        Whether to compute per-stage limits for collapsed factors.
+    phased : bool
+        Whether to compute per-phase limits for collapsed factors.
     """
 
     chart: str
@@ -126,8 +126,8 @@ class ChartRequest:
     residual: str | None = None
     residual_chart_type: str | None = None
     recentered: bool = False
-    paired: bool = False
+    companion: bool = False
     bins: int = 10
-    staged: bool = False
+    phased: bool = False
     n_sigma: float = 3.0
     n_mode: str = "actual"

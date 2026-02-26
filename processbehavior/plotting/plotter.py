@@ -585,8 +585,8 @@ class Plotter:
             # Add annotation when limits vary
             if limits_vary:
                 metadata = chart_info.get('metadata', {})
-                if metadata.get('staged'):
-                    vary_text = "Process limits computed per stage"
+                if metadata.get('phased'):
+                    vary_text = "Process limits computed per phase"
                 else:
                     vary_text = "Process limits vary by subgroup size (n)"
                 fig.add_annotation(
@@ -603,7 +603,7 @@ class Plotter:
             center_key = self._get_center_key(stats)
             if center_key and center_key in stats:
                 if stats[center_key] == 'Varies':
-                    # Stepped center line (staged limits)
+                    # Stepped center line (phased limits)
                     if 'center' in data.columns:
                         add_stepped_limit_line(
                             fig, data, x_col, 'center',
@@ -967,7 +967,7 @@ class Plotter:
                 center_key = self._get_center_key(stats)
                 if center_key and center_key in stats:
                     if stats[center_key] == 'Varies':
-                        # Stepped center line (staged limits)
+                        # Stepped center line (phased limits)
                         if 'center' in data.columns:
                             add_stepped_limit_line(
                                 fig, data, x_col, 'center',
