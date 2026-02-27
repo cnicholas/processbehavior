@@ -323,7 +323,7 @@ print(f"Valid charts: {study.valid_charts}")
 print(f"Recommended: {study.recommended_chart}")
 
 # VAS residual charts (if available)
-print(f"Residual charts: {study.residual_charts}")
+print(f"Available residuals: {study.residuals}")
 ```
 
 ## Impact on Analysis

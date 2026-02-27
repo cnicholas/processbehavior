@@ -48,9 +48,9 @@ After formulation, the `study.charts` accessor provides auto-completion for vali
 study = pb.formulate(...)
 
 # Type study.charts. and see only valid charts for your SDS
-study.charts.Xbar      # Available if SDS supports it
-study.charts.XmR       # Always available
-study.charts.R4_XmR    # VAS residual chart
+study.charts.Xbar        # Available if SDS supports it
+study.charts.XmR         # Always available
+study.residuals.R4       # VAS residual (pass to value=)
 ```
 
 ## Parameter Details
@@ -130,7 +130,7 @@ print(study.sds_description)  # Detailed explanation
 # Chart recommendations
 print(study.valid_charts)       # ['Xbar', 'S', 'XmR']
 print(study.recommended_chart)  # 'Xbar'
-print(study.residual_charts)    # ['R2_S', 'R3_XmR', 'R4_XmR', 'R5_XmR']
+print(study.residuals)          # StudyResidualAccessor(R1, R2, R3, R4, R5)
 
 # Chart auto-completion
 result = study.execute(study.charts.Xbar)  # IDE suggests valid charts
