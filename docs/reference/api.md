@@ -83,7 +83,9 @@ study = pb.formulate(...)
 **Properties - Charts:**
 - `.valid_charts`: List of valid chart types ('Xbar', 'S', 'XmR', 'R')
 - `.recommended_chart`: Best chart for this SDS
-- `.available_residuals`: List of available residuals ('R1'-'R5')
+- `.charts`: Accessor for valid chart types (e.g., `study.charts.Xbar`)
+- `.residuals`: Accessor for available residuals (e.g., `study.residuals.R2`)
+- `.residual_charts`: List of residual+chart combinations (internal)
 
 **Properties - Data:**
 - `.dataset`: Full prepared DataFrame with residuals

@@ -216,7 +216,7 @@ study = pb.formulate(
 )
 
 # Check available residuals
-print(f"Available residuals: {study.available_residuals}")
+print(f"Available residuals: {study.residuals}")
 
 # Analyze R2 on S chart
 result_r2 = study.execute(chart='S', value='R2')

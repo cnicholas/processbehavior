@@ -52,7 +52,7 @@ result = study.execute(chart='Xbar', by=[])           # Collapse to grand mean
 result = study.execute(chart='XmR', by=['lane'])      # One chart per lane
 ```
 
-Use `study.valid_charts` and `study.available_residuals` to see options.
+Use `study.valid_charts` and `study.residuals` to see options.
 
 ## Chart Selection Guide
 
@@ -133,11 +133,11 @@ Not all charts are valid for all Sampling Design States:
 | XmR | ✅ | ✅ | ✅ | ✅ | ✅ |
 | R | ✅ | ✅ | ✅ | ✅ | ✅ |
 
-**Residual availability** depends on SDS. Use `study.available_residuals` to check:
+**Residual availability** depends on SDS. Use `study.residuals` to check:
 
 ```python
 print(f"Valid charts: {study.valid_charts}")
-print(f"Available residuals: {study.available_residuals}")
+print(f"Available residuals: {study.residuals}")
 ```
 
 **Note on R2**: SDS 2 and 6 use the moving average method; SDS 1, 3, 4, 5 use within-cell deviation (R2 = Y - Ȳ_kt). See [VAS Residuals](residuals.md) for details.
