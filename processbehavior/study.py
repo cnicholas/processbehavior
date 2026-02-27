@@ -1322,9 +1322,12 @@ class Study:
             - 'R1' through 'R5': Chart the specified residual
 
         recentered : bool, default False
-            For residual charts only. If True, uses re-centered residuals
-            (RCR2, RCR3, etc.) which add back the appropriate mean for
-            easier interpretation. See Tom Bishop Equation 80.
+            For residual charts only. If True, charts the re-centered
+            residual RCRk = Rk + baseline_k, shifting from a zero-centered
+            scale to the response scale for easier interpretation. The
+            baseline for each residual is defined by the VAS decomposition
+            (Wheeler/Bishop VAS §15.5). Requires VAS decomposition
+            (factors + time).
 
         bins : int, optional
             Number of bins for Histogram charts. Defaults to 10.
@@ -1424,6 +1427,16 @@ class Study:
 
         # Recentered validation - only R1-R5 allowed with recentered=True
         if recentered:
+            # RCR columns require VAS decomposition (both grouping and time)
+            needs_residuals = self._spec.has_grouping and self._spec.has_time
+            if not needs_residuals:
+                from .exceptions import ValidationError
+                raise ValidationError(
+                    "recentered=True requires VAS decomposition (factors + time). "
+                    "Recentered residuals (RCR) reconstruct values relative to "
+                    "factor and time means, which require both to be specified."
+                )
+
             RECENTERABLE_VALUES = {'R1', 'R2', 'R3', 'R4', 'R5'}
             if value is None:
                 from .exceptions import ValidationError
