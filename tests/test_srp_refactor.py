@@ -259,13 +259,11 @@ class TestDefaultBehavior:
         assert 'XmR' in result.charts
         assert 'R' not in result.charts
 
-    def test_histogram_ignores_companion(self, sds1_study):
-        """Histogram should ignore companion parameter (no companion histogram)."""
-        result = sds1_study.execute(chart='Histogram', companion=True)
-
-        # Should only have Histogram
-        assert 'Histogram' in result.charts
-        assert len(result.charts) == 1
+    def test_histogram_rejects_companion(self, sds1_study):
+        """Histogram should reject companion parameter (no companion histogram)."""
+        from processbehavior.exceptions import ValidationError
+        with pytest.raises(ValidationError, match="companion.*Histogram"):
+            sds1_study.execute(chart='Histogram', companion=True)
 
 
 # =============================================================================

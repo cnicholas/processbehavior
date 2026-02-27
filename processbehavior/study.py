@@ -1300,10 +1300,8 @@ class Study:
         Parameters
         ----------
         chart : str, optional
-            Chart type to use. If None, uses recommended_chart.
-            Can use study.charts.Xbar for IDE auto-completion.
-
-            Valid charts: 'Xbar', 'S', 'XmR', 'R'
+            Chart type. If None, uses recommended_chart.
+            Valid charts: 'Xbar', 'S', 'XmR', 'R', 'Histogram'.
 
         by : list[str], optional
             Factors to group/stratify by. Controls view granularity.
@@ -1328,13 +1326,17 @@ class Study:
             (RCR2, RCR3, etc.) which add back the appropriate mean for
             easier interpretation. See Tom Bishop Equation 80.
 
-        companion : bool, default False
-            When True, returns both Xbar and S charts together (or both XmR
-            and R charts) regardless of which chart is requested. This follows
-            Wheeler's methodology of always analyzing companion charts together.
+        bins : int, optional
+            Number of bins for Histogram charts. Defaults to 10.
+            Only applicable to Histogram; providing bins for other chart types
+            raises ValidationError.
 
-            - companion=False (default): Returns only the requested chart (SRP-compliant)
-            - companion=True: Returns both companion charts (Xbar+S or XmR+R)
+        companion : bool, default False
+            Returns both the location chart and its companion range chart
+            in a single result, regardless of which is requested
+            (e.g., chart='R', companion=True returns both XmR and R).
+            Each chart is accessed separately via get_chart().
+            Not applicable to Histogram.
 
         phased : bool, default False
             When True, computes per-phase center lines and control limits.
@@ -1464,6 +1466,28 @@ class Study:
                         "no factors remain to create phase boundaries. "
                         "Remove factors from by= or set phased=False."
                     )
+
+        # companion + Histogram — no companion chart exists for Histogram
+        if companion and base_chart == 'Histogram':
+            from .exceptions import ValidationError
+            raise ValidationError(
+                "companion is not applicable to Histogram charts."
+            )
+
+        # phased + value (residual/custom) — phased limits only apply to primary response
+        if phased and value is not None:
+            from .exceptions import ValidationError
+            raise ValidationError(
+                "phased=True is not compatible with the value= parameter. "
+                "Phased limits apply to the primary response variable only."
+            )
+
+        # bins + non-Histogram — bins only makes sense for Histogram
+        if bins is not None and base_chart != 'Histogram':
+            from .exceptions import ValidationError
+            raise ValidationError(
+                f"bins is only applicable to Histogram charts, not '{base_chart}'."
+            )
 
         # n_sigma / n_mode validation
         self._validate_n_sigma_n_mode(n_sigma, n_mode, base_chart)

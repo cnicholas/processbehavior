@@ -1982,6 +1982,22 @@ class Analysis:
             output_cols = [value_col] + list(by)
             output_data = data[output_cols].copy()
 
+            # Add rsg column so focus() can filter consistently with other chart types
+            from .data_preparation import encode_rsg
+
+            def _py(v):
+                """Normalize numpy/pandas scalars to python natives."""
+                return v.item() if hasattr(v, 'item') else v
+
+            if len(by) == 1:
+                output_data['rsg'] = output_data[by[0]].apply(
+                    lambda v: encode_rsg(_py(v))
+                )
+            else:
+                output_data['rsg'] = output_data[by].apply(
+                    lambda row: encode_rsg(tuple(_py(v) for v in row)), axis=1
+                )
+
             return {
                 'Histogram': {
                     'data': output_data,
