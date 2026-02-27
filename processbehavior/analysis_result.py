@@ -363,8 +363,10 @@ class AnalysisResult:
         """
         Get list of available subgroups for stratified charts.
 
-        For stratified IMR/R analysis, returns the list of subgroups
+        For stratified XmR/R analysis, returns the list of subgroups
         (e.g., ['Machine1_F2_1', 'Machine2_F2_2', ...]).
+
+        Values returned here are valid inputs to ``focus()``.
 
         Returns
         -------
@@ -373,8 +375,9 @@ class AnalysisResult:
 
         Examples
         --------
+        >>> result = study.execute(chart='XmR', by=['factor 1'])
         >>> result.strata
-        ['Machine1_F2_1', 'Machine1_F2_2', 'Machine2_F2_1', ...]
+        ['level_1', 'level_2', ...]
 
         >>> if result.strata:
         ...     for stratum in result.strata:
@@ -403,7 +406,7 @@ class AnalysisResult:
         """
         Return new AnalysisResult focused on a single stratum.
 
-        For stratified IMR/R analysis, this allows drilling down to
+        For stratified XmR/R analysis, this allows drilling down to
         a specific subgroup. The returned result is immutable - the
         original result is unchanged.
 
@@ -420,21 +423,20 @@ class AnalysisResult:
         Raises
         ------
         ValueError
-            If stratum is not in result.strata
+            If stratum is not in result.strata, if a stratified chart
+            is missing an rsg column, if focus produces empty data,
+            or if statistics keys don't match the stratum.
 
         Examples
         --------
-        >>> result = study.execute()
+        >>> result = study.execute(chart='XmR', by=['factor 1'])
         >>> result.strata
-        ['Machine1_F2_1', 'Machine1_F2_2', 'Machine2_F2_1', ...]
-
-        >>> # Drill down to specific subgroup
-        >>> focused = result.focus('Machine1_F2_1')
+        ['level_1', 'level_2', ...]
+        >>> focused = result.focus('level_1')
         >>> focused.plot()
-        >>> focused.to_excel('machine1_f2_1.xlsx')
 
         >>> # Chaining works
-        >>> result.focus('Machine1_F2_1').plot()
+        >>> result.focus('level_1').plot()
         """
         if not self.strata:
             raise ValueError(
@@ -468,21 +470,36 @@ class AnalysisResult:
                     break
 
             if rsg_col is None:
-                # Can't filter - include as-is
-                focused_charts[chart_name] = chart_info.copy()
-                continue
+                raise ValueError(
+                    f"Cannot focus stratified chart '{chart_name}': no rsg column found. "
+                    f"This is a bug — stratified charts must have an rsg column for filtering."
+                )
 
             # Filter data
             # Note: stratum identity assumes canonical factor ordering defined upstream
             mask = data[rsg_col].astype(str) == encode_rsg(stratum)
             focused_data = data[mask].copy()
 
+            if focused_data.empty:
+                raise ValueError(
+                    f"No data found for stratum '{stratum}' in chart '{chart_name}'. "
+                    f"This may indicate an encoding mismatch between strata keys and rsg values."
+                )
+
             # Extract stratum-specific statistics
             nested_stats = chart_info.get('statistics', {})
             if isinstance(nested_stats, dict) and stratum in nested_stats:
                 focused_stats = nested_stats[stratum]
+            elif isinstance(nested_stats, dict) and encode_rsg(stratum) in nested_stats:
+                focused_stats = nested_stats[encode_rsg(stratum)]
+            elif chart_info.get('strata'):
+                # Stratified chart but key doesn't match — don't silently return the nested dict
+                raise ValueError(
+                    f"Statistics key mismatch for stratum '{stratum}' in chart '{chart_name}'. "
+                    f"Available keys: {list(nested_stats.keys())}"
+                )
             else:
-                focused_stats = nested_stats
+                focused_stats = nested_stats  # flat stats dict — OK
 
             # Build focused chart info
             focused_charts[chart_name] = {
@@ -538,7 +555,7 @@ class AnalysisResult:
         Examples
         --------
         >>> xbar = result.get_chart('Xbar')
-        >>> alice = result.get_chart('Alice')  # For stratified IMR
+        >>> alice = result.get_chart('Alice')  # For stratified XmR
         """
         name = self._resolve_chart_name(name)
         if name not in self.charts:
