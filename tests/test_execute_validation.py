@@ -161,3 +161,46 @@ class TestRecenteredRequiresVAS:
         """recentered=True without time raises clear ValidationError."""
         with pytest.raises(ValidationError, match="factors.*time"):
             no_time_study.execute(chart='XmR', by=[], value='R2', recentered=True)
+
+
+# =============================================================================
+# Residual accessor
+# =============================================================================
+
+
+class TestResidualAccessor:
+    """study.residuals accessor provides IDE-friendly residual access."""
+
+    def test_accessor_has_residual_attributes(self, sds1_study):
+        """Full study exposes R1-R5 as attributes."""
+        r = sds1_study.residuals
+        assert r.R1 == 'R1'
+        assert r.R2 == 'R2'
+        assert r.R3 == 'R3'
+        assert r.R4 == 'R4'
+        assert r.R5 == 'R5'
+
+    def test_accessor_returns_string(self, sds1_study):
+        """Accessor values are strings passable to execute(value=...)."""
+        assert isinstance(sds1_study.residuals.R2, str)
+
+    def test_accessor_empty_without_time(self, no_time_study):
+        """Study without time has empty residuals accessor."""
+        assert len(no_time_study.residuals) == 0
+
+    def test_accessor_no_attribute_without_time(self, no_time_study):
+        """Accessing R2 on factors-only study raises AttributeError."""
+        with pytest.raises(AttributeError):
+            no_time_study.residuals.R2
+
+    def test_residual_charts_empty_without_time(self, no_time_study):
+        """residual_charts also empty when residuals not computed."""
+        assert no_time_study.residual_charts == []
+
+    def test_execute_with_accessor(self, sds1_study):
+        """End-to-end: study.execute(chart=..., value=study.residuals.R5)."""
+        result = sds1_study.execute(
+            chart=sds1_study.charts.Xbar,
+            value=sds1_study.residuals.R5
+        )
+        assert result is not None

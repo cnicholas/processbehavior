@@ -667,6 +667,50 @@ class StudyChartAccessor:
         return [c.replace(':', '_').replace('-', '_') for c in self._valid_charts]
 
 
+class StudyResidualAccessor:
+    """
+    Provides IDE auto-completion for available VAS residuals.
+
+    Dynamically creates attributes for each residual whose columns
+    were actually computed in the analysis dataset.
+
+    Usage:
+        study = pb.formulate(response='y', factors=['lane'], time='t')
+
+        # IDE auto-completes available residuals
+        result = study.execute(chart=study.charts.Xbar, value=study.residuals.R2)
+
+        # With recentered
+        result = study.execute(
+            chart=study.charts.XmR, value=study.residuals.R4, recentered=True
+        )
+
+    Attributes are set dynamically based on which residuals were computed.
+    """
+
+    def __init__(self, available: list[str]):
+        self._available = available
+        for r in available:
+            setattr(self, r, r)
+
+    def __repr__(self) -> str:
+        if not self._available:
+            return "StudyResidualAccessor(none — requires factors + time)"
+        return f"StudyResidualAccessor({', '.join(self._available)})"
+
+    def __dir__(self) -> list[str]:
+        return list(self._available)
+
+    def __iter__(self):
+        return iter(self._available)
+
+    def __len__(self):
+        return len(self._available)
+
+    def __contains__(self, item):
+        return item in self._available
+
+
 @dataclass(frozen=True)
 class Study:
     """
@@ -896,18 +940,20 @@ class Study:
         """
         Available residual chart types for VAS analysis.
 
-        Residual charts help diagnose sources of variation:
-        - R2: Within-subgroup variation (measurement noise)
-        - R3: Interaction effects (factor × time)
-        - R4: Time effects (trends, shifts over time)
-        - R5: Factor effects (differences between levels)
+        Returns the subset of registry-claimed residual charts whose
+        underlying residual column was actually computed in the dataset.
+        Used internally for execute() validation and the support matrix.
 
         Returns
         -------
         list of str
             Available residual chart types (e.g., ['R2_S', 'R3_XmR'])
         """
-        return self._plan.residual_charts
+        ads_cols = set(self._ads.analysis_dataset.columns)
+        return [
+            chart for chart in self._plan.residual_charts
+            if chart.split('_')[0] in ads_cols
+        ]
 
     @property
     def charts(self) -> StudyChartAccessor:
@@ -931,12 +977,13 @@ class Study:
         return StudyChartAccessor(self.valid_charts)
 
     @property
-    def available_residuals(self) -> list[str]:
+    def residuals(self) -> StudyResidualAccessor:
         """
-        Available residual types (R1-R5) for this study.
+        Available VAS residuals for this study.
 
-        Returns unique residual identifiers that can be used with the `value`
-        parameter in execute(). Residuals decompose sources of variation:
+        Provides IDE auto-completion for residual types that can be
+        passed to execute(value=...). Only includes residuals whose
+        columns were actually computed (requires factors + time).
 
         - R1: Total residual (y - grand mean)
         - R2: Within-subgroup variation (measurement noise)
@@ -945,23 +992,23 @@ class Study:
         - R5: Factor effects (differences between levels)
 
         Usage:
-            study.execute(chart='Xbar', value='R5')  # Factor effects
-            study.execute(chart='XmR', value='R4')   # Time effects
+            study.execute(chart=study.charts.Xbar, value=study.residuals.R5)
+            study.execute(chart='XmR', value=study.residuals.R4, recentered=True)
 
         Returns
         -------
-        list[str]
-            Available residual identifiers (e.g., ['R1', 'R2', 'R3', 'R4', 'R5'])
+        StudyResidualAccessor
+            Accessor with available residuals as attributes (e.g., .R2, .R5)
 
         See Also
         --------
-        residual_charts : Full list of residual+chart combinations
+        residual_charts : Full list of residual+chart combinations (internal)
         """
-        # Extract unique residual IDs from residual_charts (e.g., R2_S -> R2)
-        residual_ids = sorted(set(
-            chart.split('_')[0] for chart in self.residual_charts
-        ))
-        return residual_ids
+        ads_cols = set(self._ads.analysis_dataset.columns)
+        available = sorted(
+            r for r in ('R1', 'R2', 'R3', 'R4', 'R5') if r in ads_cols
+        )
+        return StudyResidualAccessor(available)
 
     @property
     def support(self) -> pd.DataFrame:
@@ -1540,7 +1587,7 @@ class Study:
                 raise ChartNotAvailableError(
                     f"Residual chart '{canonical_name}' is not available for SDS {self.sds}.\n"
                     f"Available residual charts: {available_str}\n"
-                    f"Use study.residual_charts to see available options.",
+                    f"Use study.residuals to see available options.",
                     chart=canonical_name,
                     available=available_list
                 )
@@ -1897,8 +1944,8 @@ class Study:
         if self.unit_of_analysis:
             lines.append(f"  Unit of analysis: {self.unit_of_analysis}")
         lines.append(f"  Valid: {', '.join(self.valid_charts)} | Recommended: {self.recommended_chart}")
-        if self.available_residuals:
-            lines.append(f"  Residuals: {', '.join(self.available_residuals)}")
+        if self.residuals:
+            lines.append(f"  Residuals: {', '.join(self.residuals)}")
         lines.append("  → study.execute() or study.support for details")
 
         return '\n'.join(lines)
@@ -1908,7 +1955,7 @@ class Study:
         factors_str = ', '.join(self.factors) if self.factors else 'None'
         time_str = self.time or 'None'
 
-        residuals = self.available_residuals
+        residuals = self.residuals
         residual_html = f"<br><strong>Residuals:</strong> {', '.join(residuals)}" if residuals else ""
         uoa_html = f"<br><strong>Unit of analysis:</strong> {self.unit_of_analysis}" if self.unit_of_analysis else ""
 
