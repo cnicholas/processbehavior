@@ -348,3 +348,16 @@ class TestResidualCalculations:
 
         expected_rcr5 = (ds['Ybar'] + ds['Ybar_kt'] - ds['Ybar_k']) + ds['R5']
         assert (ds['RCR5'] - expected_rcr5).abs().max() <= TOL, "RCR5 formula incorrect"
+
+        # End-to-end reconstruction identity
+        # The fixture is SDS 1 with n_min=2, guaranteeing the exact R2 method
+        # (all cells have n >= 2). Under the exact method:
+        #   R1 = Y - Ybar      → RCR1 = Ybar + R1 = Y
+        #   R2 = Y - Ybar_kt   → RCR2 = Ybar_kt + R2 = Y
+        assert (ds['RCR1'] - ds['y']).abs().max() <= TOL, (
+            "RCR1 must reconstruct Y exactly (RCR1 = Ybar + R1 = Y)"
+        )
+        assert (ds['RCR2'] - ds['y']).abs().max() <= TOL, (
+            "RCR2 must reconstruct Y exactly under exact R2 method "
+            "(SDS 1, n_min=2, all cells replicated)"
+        )

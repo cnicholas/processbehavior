@@ -1,9 +1,11 @@
 """Tests for execute() parameter validation — invalid combinations raise ValidationError.
 
-Covers the three new validation checks:
+Covers validation checks:
 - companion + Histogram
 - phased + value
 - bins + non-Histogram
+- recentered value resolution
+- recentered requires VAS decomposition
 """
 
 import pytest
@@ -100,3 +102,62 @@ class TestValidCombinations:
             chart='XmR', by=[], companion=True
         )
         assert result is not None
+
+
+# =============================================================================
+# Recentered value resolution
+# =============================================================================
+
+
+@pytest.fixture(scope='module')
+def sds2_study():
+    """SDS2 study — supports R2_XmR residual charts."""
+    df = synthetic.make_sds(2, K1=2, K2=2, T=8, seed=42)
+    return ProcessBehavior(df).formulate(
+        response='y', time='time', factors=['factor 1', 'factor 2']
+    )
+
+
+class TestRecenteredValueResolution:
+    """Verify recentered parameter selects the correct data column."""
+
+    def test_recentered_false_uses_r2(self, sds2_study):
+        """value='R2', recentered=False → charts R2 column."""
+        result = sds2_study.execute(chart='XmR', by=[], value='R2', recentered=False)
+        assert result.charts['XmR']['metadata']['value_col'] == 'R2'
+
+    def test_recentered_true_uses_rcr2(self, sds2_study):
+        """value='R2', recentered=True → charts RCR2 column."""
+        result = sds2_study.execute(chart='XmR', by=[], value='R2', recentered=True)
+        assert result.charts['XmR']['metadata']['value_col'] == 'RCR2'
+
+    def test_rcr2_passthrough(self, sds2_study):
+        """value='RCR2' directly selects RCR2 without recentered flag."""
+        result = sds2_study.execute(chart='XmR', by=[], value='RCR2')
+        assert result.charts['XmR']['metadata']['value_col'] == 'RCR2'
+
+    def test_recentered_true_without_value_raises(self, sds1_study):
+        """recentered=True with value=None raises ValidationError."""
+        with pytest.raises(ValidationError, match="recentered.*requires.*residual"):
+            sds1_study.execute(chart='Xbar', recentered=True)
+
+
+# =============================================================================
+# Recentered requires VAS decomposition
+# =============================================================================
+
+
+@pytest.fixture(scope='module')
+def no_time_study():
+    """Study with factors but no time — no VAS residuals."""
+    df = synthetic.make_sds(1, K1=3, K2=2, T=6, n_min=2, n_max=4, seed=42)
+    return ProcessBehavior(df).formulate(
+        response='y', factors=['factor 1', 'factor 2']
+    )
+
+
+class TestRecenteredRequiresVAS:
+    def test_recentered_without_time_raises(self, no_time_study):
+        """recentered=True without time raises clear ValidationError."""
+        with pytest.raises(ValidationError, match="factors.*time"):
+            no_time_study.execute(chart='XmR', by=[], value='R2', recentered=True)
