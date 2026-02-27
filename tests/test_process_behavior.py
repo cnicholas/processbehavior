@@ -790,7 +790,7 @@ def test_r5_xbar_chart_calculation(grouped_for_residuals):
         time='Time'
     )
 
-    assert 'R5' in study.available_residuals
+    assert 'R5' in study.residuals
 
     # Analyze R5 on Xbar chart - aggregate by factor to get factor effects
     result = study.execute(chart='Xbar', value='R5', by=['Factor'])
@@ -814,7 +814,7 @@ def test_r5_s_chart_calculation(grouped_for_residuals):
         time='Time'
     )
 
-    assert 'R5' in study.available_residuals
+    assert 'R5' in study.residuals
 
     # Analyze R5 on S chart - aggregate by factor to get factor effects
     result = study.execute(chart='S', value='R5', by=['Factor'])
@@ -874,7 +874,7 @@ def test_r3_xbar_chart_calculation(grouped_for_residuals):
 
     # Should be SDS 1 (all cells have n≥2)
     assert study.sds == 1
-    assert 'R3' in study.available_residuals
+    assert 'R3' in study.residuals
 
     # Analyze R3 on Xbar chart - aggregate by factor
     result = study.execute(chart='Xbar', value='R3', by=['Factor'])
@@ -898,7 +898,7 @@ def test_r3_s_chart_calculation(grouped_for_residuals):
         time='Time'
     )
 
-    assert 'R3' in study.available_residuals
+    assert 'R3' in study.residuals
 
     # Analyze R3 on S chart - aggregate by factor
     result = study.execute(chart='S', value='R3', by=['Factor'])
