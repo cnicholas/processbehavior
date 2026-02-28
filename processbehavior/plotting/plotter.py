@@ -186,7 +186,7 @@ class Plotter:
     ... )
     """
 
-    def __init__(self, analysis_result: "AnalysisResult"):
+    def __init__(self, analysis_result: AnalysisResult):
         """
         Initialize plotter with an AnalysisResult.
 
@@ -2589,10 +2589,14 @@ class Plotter:
             <div class="section">
                 <h2>Analysis Summary</h2>
                 <table class="summary-table">
-                    <tr><td><strong>SDS</strong></td><td>{esc(str(summary['sds']))} - {esc(str(summary['sds_description']))}</td></tr>
-                    <tr><td><strong>Response Variable</strong></td><td>{esc(str(summary['response_var']))}</td></tr>
-                    <tr><td><strong>Observations</strong></td><td>{esc(str(summary['n_observations']))}</td></tr>
-                    <tr><td><strong>Charts</strong></td><td>{esc(', '.join(str(c) for c in summary['chart_types']))}</td></tr>
+                    <tr><td><strong>SDS</strong></td><td>{esc(str(summary['sds']))} - {
+                        esc(str(summary['sds_description']))}</td></tr>
+                    <tr><td><strong>Response Variable</strong></td><td>{
+                        esc(str(summary['response_var']))}</td></tr>
+                    <tr><td><strong>Observations</strong></td><td>{
+                        esc(str(summary['n_observations']))}</td></tr>
+                    <tr><td><strong>Charts</strong></td><td>{
+                        esc(', '.join(str(c) for c in summary['chart_types']))}</td></tr>
                     <tr><td><strong>Signals Detected</strong></td><td>{esc(str(summary['n_signals_total']))}</td></tr>
                     <tr><td><strong>Has Residuals</strong></td><td>{has_res}</td></tr>
                     <tr><td><strong>Has Effects</strong></td><td>{has_eff}</td></tr>

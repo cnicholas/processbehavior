@@ -12,6 +12,7 @@ from processbehavior.exceptions import ProcessBehaviorError
 
 if TYPE_CHECKING:
     from processbehavior.analysis_result import AnalysisResult
+
     from .themes import ChartTheme
 
 logger = logging.getLogger(__name__)
@@ -35,7 +36,7 @@ def add_run_rules_visualization(
     value_col: str,
     x_col: str,
     theme: ChartTheme,
-    result: "AnalysisResult",
+    result: AnalysisResult,
     row: int | None = None,
     col: int | None = None
 ) -> go.Figure:

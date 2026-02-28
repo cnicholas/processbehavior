@@ -1660,51 +1660,11 @@ class Study:
 
         # Recentered validation - only R1-R5 allowed with recentered=True
         if recentered:
-            # RCR columns require VAS decomposition (both grouping and time)
-            needs_residuals = self._spec.has_grouping and self._spec.has_time
-            if not needs_residuals:
-                raise ValidationError(
-                    "recentered=True requires VAS decomposition (factors + time). "
-                    "Recentered residuals (RCR) reconstruct values relative to "
-                    "factor and time means, which require both to be specified."
-                )
-
-            RECENTERABLE_VALUES = {'R1', 'R2', 'R3', 'R4', 'R5'}
-            if value is None:
-                raise ValidationError(
-                    "recentered=True requires a residual value (R1-R5), got value=None"
-                )
-            if value.upper() not in RECENTERABLE_VALUES:
-                raise ValidationError(
-                    f"recentered=True requires a residual value (R1-R5), got '{value}'"
-                )
+            self._validate_recentered(value)
 
         # Phased limits validation
         if phased:
-            if base_chart not in ('XmR', 'R'):
-                raise ValidationError(
-                    f"phased=True is only valid for XmR or R charts, "
-                    f"got '{base_chart}'."
-                )
-            if by_validated is None:
-                raise ValidationError(
-                    "phased=True requires an explicit by= parameter."
-                )
-            if not self._spec.rsg_vars_list:
-                raise ValidationError(
-                    "phased=True requires factors to define phases (rsg_key). "
-                    "This study has no factors; phased limits do not apply."
-                )
-            if len(by_validated) > 0:
-                all_factors = set(self._spec.rsg_vars_list)
-                by_set = set(by_validated)
-                if not (all_factors - by_set):
-                    raise ValidationError(
-                        "phased=True requires collapsed factors to define phases. "
-                        f"by={list(by_validated)} includes all factors; "
-                        "no factors remain to create phase boundaries. "
-                        "Remove factors from by= or set phased=False."
-                    )
+            self._validate_phased(base_chart, by_validated)
 
         # companion + Histogram — no companion chart exists for Histogram
         if companion and base_chart == 'Histogram':
@@ -1792,6 +1752,52 @@ class Study:
         # This makes execute() cheap - the expensive residual calculation was done in formulate()
         analysis = Analysis(self._spec, request, analysis_dataset=self._ads)
         return analysis.calculate()
+
+    def _validate_recentered(self, value: str | None) -> None:
+        """Validate recentered=True requirements."""
+        needs_residuals = self._spec.has_grouping and self._spec.has_time
+        if not needs_residuals:
+            raise ValidationError(
+                "recentered=True requires VAS decomposition (factors + time). "
+                "Recentered residuals (RCR) reconstruct values relative to "
+                "factor and time means, which require both to be specified."
+            )
+        recenterable = {'R1', 'R2', 'R3', 'R4', 'R5'}
+        if value is None:
+            raise ValidationError(
+                "recentered=True requires a residual value (R1-R5), got value=None"
+            )
+        if value.upper() not in recenterable:
+            raise ValidationError(
+                f"recentered=True requires a residual value (R1-R5), got '{value}'"
+            )
+
+    def _validate_phased(self, base_chart: str, by_validated: list[str] | None) -> None:
+        """Validate phased=True requirements."""
+        if base_chart not in ('XmR', 'R'):
+            raise ValidationError(
+                f"phased=True is only valid for XmR or R charts, "
+                f"got '{base_chart}'."
+            )
+        if by_validated is None:
+            raise ValidationError(
+                "phased=True requires an explicit by= parameter."
+            )
+        if not self._spec.rsg_vars_list:
+            raise ValidationError(
+                "phased=True requires factors to define phases (rsg_key). "
+                "This study has no factors; phased limits do not apply."
+            )
+        if len(by_validated) > 0:
+            all_factors = set(self._spec.rsg_vars_list)
+            by_set = set(by_validated)
+            if not (all_factors - by_set):
+                raise ValidationError(
+                    "phased=True requires collapsed factors to define phases. "
+                    f"by={list(by_validated)} includes all factors; "
+                    "no factors remain to create phase boundaries. "
+                    "Remove factors from by= or set phased=False."
+                )
 
     def _parse_chart_request(self, chart: str) -> str:
         """

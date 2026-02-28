@@ -15,12 +15,7 @@ import pytest
 
 from processbehavior import ProcessBehavior
 from processbehavior.datasets import synthetic
-from processbehavior.exceptions import (
-    ChartNotAvailableError,
-    ProcessBehaviorError,
-    ValidationError,
-)
-
+from processbehavior.exceptions import ProcessBehaviorError, ValidationError
 
 # ============================================================================
 # Helpers / fixtures

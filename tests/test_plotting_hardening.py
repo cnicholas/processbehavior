@@ -17,7 +17,7 @@ P1 tests verify:
 """
 
 import logging
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pandas as pd
 import plotly.graph_objects as go
@@ -47,12 +47,11 @@ class TestRunRulesUnexpectedErrorPropagates:
         mock_result = MagicMock()
         mock_result.detect_signals.side_effect = RuntimeError("boom")
 
-        with pytest.raises(RuntimeError, match="boom"):
-            with caplog.at_level(logging.ERROR):
-                add_run_rules_visualization(
-                    fig, data, stats, 'X', 'value', 'x',
-                    theme, result=mock_result
-                )
+        with pytest.raises(RuntimeError, match="boom"), caplog.at_level(logging.ERROR):
+            add_run_rules_visualization(
+                fig, data, stats, 'X', 'value', 'x',
+                theme, result=mock_result
+            )
 
         assert "failed unexpectedly" in caplog.text
 

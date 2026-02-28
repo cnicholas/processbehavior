@@ -14,7 +14,6 @@ from processbehavior import ProcessBehavior
 from processbehavior.datasets import synthetic
 from processbehavior.exceptions import ValidationError
 
-
 # =============================================================================
 # Fixtures
 # =============================================================================
@@ -191,7 +190,7 @@ class TestResidualAccessor:
     def test_accessor_no_attribute_without_time(self, no_time_study):
         """Accessing R2 on factors-only study raises AttributeError."""
         with pytest.raises(AttributeError):
-            no_time_study.residuals.R2
+            _ = no_time_study.residuals.R2
 
     def test_residual_charts_empty_without_time(self, no_time_study):
         """residual_charts also empty when residuals not computed."""
