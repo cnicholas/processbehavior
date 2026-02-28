@@ -311,7 +311,7 @@ class TestIntegrationWithAnalysis:
         )
 
         # SDS 6 detected due to empty cells (NA responses)
-        assert study.sds == 6
+        assert study.observed_design_state.sds == 6
 
         # Use XmR chart (valid for SDS 6) with explicit stratification
         result = study.execute(chart='XmR', by=['FACTOR'])

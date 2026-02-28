@@ -76,9 +76,11 @@ study = pb.formulate(...)
 - `.precision`: Decimal precision
 
 **Properties - SDS:**
-- `.sds`: Sampling Design State (0-6)
-- `.sds_name`: Human-readable SDS name
-- `.sds_description`: Detailed SDS explanation
+- `.plan_design_state`: `SDSResult | None` -- what was planned (None if no plan)
+- `.observed_design_state`: `SDSResult` -- what was observed in raw data
+- `.analytical_design_state`: `SDSResult` -- what is analyzable after tidying
+- `.sds_reason`: ADS-derived machine token (e.g., `'full_replication'`)
+- `.sds_description`: ADS-derived human prose description
 
 **Properties - Charts:**
 - `.valid_charts`: List of valid chart types ('Xbar', 'S', 'XmR', 'R')
@@ -179,6 +181,10 @@ Returned by `study.design()`. Compares sampling plan to observed data structure.
 - `.extra_levels`: Dict of factor -> list of levels observed but not in plan
 - `.missing_combos`: List of RSG groups in plan but not observed
 - `.extra_combos`: List of RSG groups observed but not in plan
+- `.min_cell_size`: Minimum observations per cell (from SDS detection)
+- `.n_empty_cells`: Count of cells with zero observations
+- `.coverage`: Ratio of observed to planned cells (0.0-1.0, None without plan)
+- `.remediation`: Actionable hint for improving design (or None)
 - `.plan_adherence`: Summary of how well data matches plan
 - `.structure_summary`: Summary of structure discrepancies
 - `.has_plan`: Boolean -- whether a sampling plan was provided
@@ -211,8 +217,8 @@ result = study.execute()
 - `.has_interactions`: Boolean
 
 **Properties - SDS:**
-- `.sds`: Sampling Design State
-- `.sds_info`: Complete SDS details
+- `.analytical_sds`: Analytical Sampling Design State (int)
+- `.analytical_sds_info`: Complete analytical SDS details
 
 **Properties - Summary:**
 - `.summary`: Dict with all metadata
@@ -448,7 +454,7 @@ plan = detector.detect(
 Complete specification for an SDS.
 
 **Properties:**
-- `.sds`: State number (0-6)
+- `.sds`: State number (0-6) (on SDSAnalysisPlan objects)
 - `.name`: Human-readable name
 - `.description`: Detailed explanation
 - `.has_factors`: Boolean

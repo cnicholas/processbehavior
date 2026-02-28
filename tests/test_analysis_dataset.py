@@ -434,7 +434,7 @@ class TestCanonicalOrdering:
 
         sds = detect_sds_for_test(df, spec)
         a_spec = _make_spec(spec)
-        dataset = ad.AnalysisDataSet(df=df, spec=a_spec, sds=sds)
+        dataset = ad.AnalysisDataSet(df=df, spec=a_spec, observed_sds=sds)
 
         ads = dataset.analysis_dataset
 
@@ -465,7 +465,7 @@ class TestCanonicalOrdering:
 
         sds = detect_sds_for_test(df, spec)
         a_spec = _make_spec(spec)
-        dataset = ad.AnalysisDataSet(df=df, spec=a_spec, sds=sds)
+        dataset = ad.AnalysisDataSet(df=df, spec=a_spec, observed_sds=sds)
 
         ads = dataset.analysis_dataset
 
@@ -499,7 +499,7 @@ class TestCanonicalOrdering:
 
         sds = detect_sds_for_test(df, spec)
         a_spec = _make_spec(spec)
-        dataset = ad.AnalysisDataSet(df=df, spec=a_spec, sds=sds)
+        dataset = ad.AnalysisDataSet(df=df, spec=a_spec, observed_sds=sds)
 
         ads = dataset.analysis_dataset
 

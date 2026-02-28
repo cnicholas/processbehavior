@@ -529,7 +529,7 @@ class TestEffectsPottingDifferentSDS:
         )
         result = study.execute(chart='XmR', by=['factor1', 'factor2'])
 
-        assert result.sds == 2
+        assert result.analytical_sds == 2
         assert result.has_effects
 
         # Effects should still be plottable

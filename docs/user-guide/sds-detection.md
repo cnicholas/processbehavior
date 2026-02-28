@@ -46,8 +46,8 @@ study = pb.formulate(
     time='batch'
 )
 
-print(f"SDS: {study.sds}")
-print(f"Name: {study.sds_name}")
+print(f"SDS: {study.observed_design_state.sds}")
+print(f"Reason: {study.sds_reason}")
 print(f"Description: {study.sds_description}")
 ```
 
@@ -72,7 +72,7 @@ study = pb.formulate(
     time='batch'
 )
 
-print(f"SDS: {study.sds}")
+print(f"SDS: {study.observed_design_state.sds}")
 print(f"Charts: {study.valid_charts}")
 ```
 
@@ -313,10 +313,10 @@ study = pb.formulate(
 )
 
 # Quick check
-print(f"SDS {study.sds}: {study.sds_name}")
+print(f"SDS {study.observed_design_state.sds}: {study.sds_reason}")
 
 # Detailed information
-print(study.sds_description)
+print(study.sds_description)  # ADS-derived human prose
 
 # What's valid for this SDS?
 print(f"Valid charts: {study.valid_charts}")

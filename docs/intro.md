@@ -80,7 +80,7 @@ study = pb.formulate(
 )
 
 # ProcessBehavior automatically detects SDS and recommends charts
-print(f"Detected: SDS {study.sds}")
+print(f"Detected: SDS {study.observed_design_state.sds}")
 print(f"Recommended: {study.recommended_chart}")
 
 # Analyze and visualize

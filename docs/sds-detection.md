@@ -279,9 +279,10 @@ The key results are exposed through the `Study` and `DesignReport` APIs:
 
 ```python
 # Via Study
-study.sds              # The SDS number (1-6)
-study.sds_name         # Human-readable name
-study.sds_description  # Detailed description
+study.observed_design_state   # SDSResult for observed raw data
+study.analytical_design_state # SDSResult for analyzable data after tidying
+study.sds_reason              # ADS-derived machine token (e.g., 'full_replication')
+study.sds_description         # ADS-derived human prose description
 
 # Via DesignReport
 design = study.design()
@@ -346,8 +347,8 @@ study = pb.formulate(
 )
 
 # SDS result is accessible via Study
-print(study.sds)           # 1-6
-print(study.sds_name)      # Human-readable name
+print(study.observed_design_state.sds)  # 1-6
+print(study.sds_reason)                # Machine token (e.g., 'full_replication')
 print(study.design().sds_reason)  # Classification reason
 ```
 
@@ -379,8 +380,8 @@ study = pb.formulate(
     factors=['Lane']
 )
 
-print(f"SDS: {study.sds}")                      # SDS: 1
-print(f"Reason: {study.design().sds_reason}")  # Reason: full_replication
+print(f"SDS: {study.observed_design_state.sds}")   # SDS: 1
+print(f"Reason: {study.design().sds_reason}")    # Reason: full_replication
 ```
 
 N_kt distribution: All cells have n = 2 → `min(N_kt) ≥ 2` → SDS 1
@@ -401,8 +402,8 @@ study = pb.formulate(
     factors=['Lane']
 )
 
-print(f"SDS: {study.sds}")                      # SDS: 3
-print(f"Reason: {study.design().sds_reason}")  # Reason: partial_replication
+print(f"SDS: {study.observed_design_state.sds}")   # SDS: 3
+print(f"Reason: {study.design().sds_reason}")    # Reason: partial_replication
 ```
 
 N_kt distribution: Lane=1 has n=2, Lane=2 has n=1 → mixed → SDS 3
@@ -423,8 +424,8 @@ study = pb.formulate(
     plan={'factors': {'Lane': [1, 2, 3]}}  # Lane 3 expected but missing
 )
 
-print(f"SDS: {study.sds}")                      # SDS: 4
-print(f"Reason: {study.design().sds_reason}")  # Reason: incomplete_with_singletons
+print(f"SDS: {study.observed_design_state.sds}")   # SDS: 4
+print(f"Reason: {study.design().sds_reason}")    # Reason: incomplete_with_singletons
 ```
 
 N_kt distribution: Lane=1 has n=2, Lane=2 has n=1, Lane=3 has n=0 → SDS 4
@@ -445,8 +446,8 @@ study = pb.formulate(
     plan={'factors': {'Lane': [1, 2, 3]}}  # Lane 3 expected but missing
 )
 
-print(f"SDS: {study.sds}")                      # SDS: 5
-print(f"Reason: {study.design().sds_reason}")  # Reason: incomplete_no_singletons
+print(f"SDS: {study.observed_design_state.sds}")   # SDS: 5
+print(f"Reason: {study.design().sds_reason}")    # Reason: incomplete_no_singletons
 ```
 
 N_kt distribution: Lane=1 has n=2, Lane=2 has n=2, Lane=3 has n=0 → SDS 5

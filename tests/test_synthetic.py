@@ -75,7 +75,7 @@ class TestSDSDetection:
             factors=[pdf.cols.factor_1, pdf.cols.factor_2],
             time=pdf.cols.time
         )
-        assert study.sds == 1, f"Expected SDS 1, got SDS {study.sds}"
+        assert study.observed_design_state.sds == 1, f"Expected SDS 1, got SDS {study.observed_design_state.sds}"
 
     def test_sds2_detected(self):
         """SDS2 should be detected as SDS 2."""
@@ -86,7 +86,7 @@ class TestSDSDetection:
             factors=[pdf.cols.factor_1, pdf.cols.factor_2],
             time=pdf.cols.time
         )
-        assert study.sds == 2, f"Expected SDS 2, got SDS {study.sds}"
+        assert study.observed_design_state.sds == 2, f"Expected SDS 2, got SDS {study.observed_design_state.sds}"
 
     def test_sds4_data_classifies_by_replication(self):
         """make_sds(4) generates K=1 data, classifies by N_kt pattern.
@@ -102,7 +102,7 @@ class TestSDSDetection:
             time=pdf.cols.time
         )
         # K=1, all N_kt=1 → SDS 2 (no replication)
-        assert study.sds == 2, f"Expected SDS 2 (no replication), got SDS {study.sds}"
+        assert study.observed_design_state.sds == 2, f"Expected SDS 2 (no replication), got SDS {study.observed_design_state.sds}"
 
     def test_sds5_data_classifies_by_nkt_pattern(self):
         """make_sds(5) generates nested data, classifies by N_kt pattern.
@@ -119,7 +119,7 @@ class TestSDSDetection:
         )
         # Without a plan, classifies based on observed N_kt pattern
         # Nested structure with n=1 per cell typically → SDS 2
-        assert study.sds in [1, 2, 3], f"Expected SDS 1/2/3, got SDS {study.sds}"
+        assert study.observed_design_state.sds in [1, 2, 3], f"Expected SDS 1/2/3, got SDS {study.observed_design_state.sds}"
 
     def test_sds6_detected_with_plan(self):
         """SDS6 requires plan to detect incomplete grid."""
@@ -140,10 +140,11 @@ class TestSDSDetection:
                     pdf.cols.factor_1: factor1_levels,
                     pdf.cols.factor_2: factor2_levels
                 },
-                'T': 40
+                'T': 40,
+                'N': 2
             }
         )
-        assert study.sds == 6, f"Expected SDS 6, got SDS {study.sds}"
+        assert study.observed_design_state.sds == 6, f"Expected SDS 6, got SDS {study.observed_design_state.sds}"
 
 
 class TestFullPipeline:

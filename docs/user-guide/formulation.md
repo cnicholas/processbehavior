@@ -123,9 +123,10 @@ study = pb.formulate(
 )
 
 # SDS information
-print(study.sds)              # 1, 2, 3, 4, 5, or 6
-print(study.sds_name)         # "Full Replication"
-print(study.sds_description)  # Detailed explanation
+print(study.observed_design_state)    # SDSResult(sds=1, reason='full_replication', ...)
+print(study.analytical_design_state) # SDSResult (what is analyzable after tidying)
+print(study.sds_reason)              # "full_replication" (ADS-derived machine token)
+print(study.sds_description)         # Detailed explanation (ADS-derived human prose)
 
 # Chart recommendations
 print(study.valid_charts)       # ['Xbar', 'S', 'XmR']

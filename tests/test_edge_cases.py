@@ -51,7 +51,7 @@ class TestDegenerateCases:
         study = pb.formulate(response='Value', factors=['Factor'], time='Time')
         # Single factor level should still work
         assert study is not None
-        assert study.sds >= 0
+        assert study.observed_design_state.sds >= 0
 
     def test_single_time_point(self):
         """Only one time point with multiple factors - requires replication for Xbar."""
@@ -316,7 +316,7 @@ class TestUnbalancedData:
         # Each (Factor, Time) cell has exactly n=1, so this is SDS 2
         # Note: Analysis subgrouping uses factor-only (A:3, B:3) for chart selection
         study = pb.formulate(response='Value', factors=['Factor'], time='Time')
-        assert study.sds == 2  # Wheeler/Bishop: all N_kt = 1 → SDS 2
+        assert study.observed_design_state.sds == 2  # Wheeler/Bishop: all N_kt = 1 → SDS 2
         assert 'Xbar' in study.valid_charts  # Still valid due to factor-level subgrouping
 
     def test_unbalanced_time_points(self):
@@ -466,7 +466,7 @@ class TestChartGeneration:
         study = pb.formulate(response='Value', factors=['Factor'], time='Time')
 
         # Should be SDS 1
-        assert study.sds == 1
+        assert study.observed_design_state.sds == 1
 
         # Should have residual charts available
         assert len(study.residual_charts) > 0
@@ -495,7 +495,7 @@ class TestPartialReplication:
         study = pb.formulate(response='y', factors=['factor 1', 'factor 2'], time='time')
 
         # Verify we have SDS 3
-        assert study.sds == 3
+        assert study.observed_design_state.sds == 3
 
         # Should NOT raise ValueError - n=1 groups are filtered
         result = study.execute(chart='Xbar')

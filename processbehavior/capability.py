@@ -540,7 +540,7 @@ def assess_capability(
             )
     else:
         potential_unavailable_reason = (
-            f"R2 residuals not available (SDS {ads.sampling_design_state}); "
+            f"R2 residuals not available (SDS {ads.observed_design_state}); "
             f"Cp/Cpk require VAS residuals from a factorial+time design"
         )
 

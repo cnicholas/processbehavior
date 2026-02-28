@@ -43,8 +43,8 @@ The SDS determines:
 
 ```python
 study = pb.formulate(response='weight', factors=['lane'], time='batch')
-print(f"SDS: {study.sds}")           # e.g., 3
-print(f"Name: {study.sds_name}")     # e.g., "Partial Replication"
+print(f"SDS: {study.observed_design_state.sds}")   # e.g., 3
+print(f"Reason: {study.sds_reason}")             # e.g., "partial_replication"
 print(f"Valid: {study.valid_charts}") # e.g., ['Xbar', 'S', 'XmR']
 ```
 
@@ -163,7 +163,7 @@ ProcessBehavior uses Wheeler's terminology consistently:
 | Response Variable | Y, measurement | `response` |
 | Rational Subgroup | Factor, group | `factors` |
 | Time Sequence | Period, batch | `time` |
-| Sampling Design State | - | `sds` |
+| Sampling Design State | - | `observed_design_state` / `analytical_design_state` |
 | Process Behavior Chart | Control Chart | Chart |
 
 ## Philosophy

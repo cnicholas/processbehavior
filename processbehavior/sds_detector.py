@@ -992,6 +992,38 @@ class SDSRegistry:
 
         return canonicalized
 
+    def classify_from_plan(self, K: int, T: int, N: int) -> SDSResult:
+        """
+        Compute the Plan Design State (PDS) from plan parameters.
+
+        PDS represents what the user *intended* to collect. Since a plan
+        specifies all K×T cells with uniform N, the result is always
+        SDS 1 (N >= 2) or SDS 2 (N == 1) — no empty cells, no mixed sizes.
+
+        Parameters
+        ----------
+        K : int
+            Number of factor-level combinations (product of factor counts)
+        T : int
+            Planned number of time periods
+        N : int
+            Planned observations per cell
+
+        Returns
+        -------
+        SDSResult
+            PDS classification with synthetic N_kt
+        """
+        import numpy as np
+
+        # Synthetic N_kt: all K×T cells exist with uniform N
+        n_cells = K * T
+        nkt_counts = pd.Series(np.full(n_cells, N))
+        has_empty_cells = False
+
+        sds, reason = self._classify_by_nkt(nkt_counts, has_empty_cells)
+        return SDSResult(sds=sds, min_cell_size=N, reason=reason, n_empty_cells=0)
+
     def _classify_by_nkt(
         self,
         nkt_counts: pd.Series,

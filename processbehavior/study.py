@@ -24,6 +24,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from .exceptions import ChartNotAvailableError, FactorNotFoundError
+from .sds_detector import SDSRegistry
 from .spc_constants import RESIDUAL_ALIASES, VALID_BASE_CHARTS, normalize_chart_name
 
 if TYPE_CHECKING:
@@ -98,7 +99,7 @@ class DesignReport:
     >>> design = study.design()
     >>> design
     DesignReport(2 factors, with plan)
-      SDS reason: incomplete_with_replication
+      SDS reason: incomplete_no_singletons
       K: planned=12, observed=8, missing=4
       T: planned=10, observed=8, missing=2
       R: planned=120, observed=64, missing=56
@@ -138,6 +139,11 @@ class DesignReport:
     _sds_reason: str | None = None  # From SDSResult.reason
     _unit_of_analysis: str | None = None  # Fundamental entity being measured
     _R_observed: int | None = None  # Count of unique (rsg, time) cells
+    _min_cell_size: int | None = None  # From SDSResult (raw data, pre-filtering)
+    _n_empty_cells: int | None = None  # From SDSResult (raw data, pre-filtering)
+    _pds_result: SDSResult | None = None  # Plan Design State
+    _ods_result: SDSResult | None = None  # Observed Design State
+    _ads_result: SDSResult | None = None  # Analytical Design State
 
     @property
     def factors(self) -> pd.DataFrame:
@@ -357,9 +363,13 @@ class DesignReport:
         """
         SDS classification reason from detector.
 
-        Possible values: 'no_structure', 'full_replication', 'no_replication',
-        'partial_replication', 'single_condition', 'nested',
-        'incomplete_with_replication', 'incomplete_no_replication'.
+        Possible values (per SDSReasonType):
+        - 'full_replication': SDS 1 (all N_kt >= 2)
+        - 'no_replication': SDS 2 (all N_kt = 1)
+        - 'partial_replication': SDS 3 (mixed N_kt)
+        - 'incomplete_with_singletons': SDS 4 (empty cells + mixed)
+        - 'incomplete_no_singletons': SDS 5 (empty cells, all observed replicated)
+        - 'incomplete_no_replication': SDS 6 (empty cells, all observed n=1)
         """
         return self._sds_reason
 
@@ -388,17 +398,89 @@ class DesignReport:
             'full_replication': f'min n = {min_n} >= 2',
             'no_replication': 'all cells n = 1',
             'partial_replication': f'cell sizes range {min_n} to {max_n}',
-            'single_condition': 'single factor level over time',
-            'implicit_single_condition': 'no factors defined',
-            'nested': 'hierarchical factor structure',
-            'incomplete_with_replication': f'coverage < 95%, has replication (min n = {min_n})',
-            'incomplete_no_replication': 'coverage < 95%, all cells n = 1',
+            'incomplete_with_singletons': f'empty cells, mixed replication (min n = {min_n})',
+            'incomplete_no_singletons': f'empty cells, all observed cells replicated (min n = {min_n})',
+            'incomplete_no_replication': 'empty cells, all observed cells n = 1',
         }
 
         explanation = explanations.get(self._sds_reason, '')
         if explanation:
             return f"{self._sds_reason} ({explanation})"
         return self._sds_reason
+
+    @property
+    def min_cell_size(self) -> int | None:
+        """
+        Minimum observations per cell from SDS detection (on raw data).
+
+        This is the structural gate input that determines SDS classification.
+        Note: this may differ from N_observed (which is computed from the
+        analysis dataset after NA filtering).
+        """
+        return self._min_cell_size
+
+    @property
+    def n_empty_cells(self) -> int | None:
+        """
+        Count of factor x time cells with zero observations (from SDS detection).
+
+        Cells where all response values are NA or garbage are counted as empty.
+        A value > 0 triggers SDS 4-6 classification.
+        """
+        return self._n_empty_cells
+
+    @property
+    def coverage(self) -> float | None:
+        """
+        Ratio of observed cells to planned cells (0.0 to 1.0).
+
+        Only meaningful when a sampling plan is provided and time is specified.
+        Returns None if no plan, no time variable, or planned R is zero.
+        """
+        if not self.has_plan or self._T is None:
+            return None
+        r = self.R
+        r_obs = self.R_observed
+        if r is None or r_obs is None or r == 0:
+            return None
+        return r_obs / r
+
+    @property
+    def remediation(self) -> str | None:
+        """
+        Actionable guidance for improving the sampling design.
+
+        Returns a deterministic sentence based on SDS classification
+        describing what to change to enable richer analysis.
+        Returns None when no remediation is needed (SDS 1 / full replication)
+        or when the reason is not recognized.
+        """
+        if not self._sds_reason:
+            return None
+
+        hints: dict[str, str | None] = {
+            'full_replication': None,
+            'no_replication': (
+                "To enable within-cell variance estimation, "
+                "collect >= 2 observations per factor x time cell."
+            ),
+            'partial_replication': (
+                "To enable consistent variance estimation, "
+                "ensure all cells have >= 2 observations."
+            ),
+            'incomplete_with_singletons': (
+                "To complete the design, fill missing factor x time cells "
+                "and ensure >= 2 observations per cell."
+            ),
+            'incomplete_no_singletons': (
+                "To complete the design, fill missing factor x time cells."
+            ),
+            'incomplete_no_replication': (
+                "To enable Xbar/S charts and within-cell residuals, "
+                "collect >= 2 observations per cell and fill missing cells."
+            ),
+        }
+        return hints.get(self._sds_reason)
 
     @property
     def plan_adherence(self) -> str | None:
@@ -576,15 +658,33 @@ class DesignReport:
 
     def __repr__(self) -> str:
         """Nice summary showing plan vs observed per factor with K/T/N."""
-        plan_status = "with plan" if self.has_plan else "observed only"
+        plan_status = "with plan" if self.has_plan else "no plan"
         lines = [f"DesignReport({len(self._factors)} factors, {plan_status})"]
 
         # Unit of analysis (if specified)
         if self._unit_of_analysis:
             lines.append(f"  Unit of analysis: {self._unit_of_analysis}")
 
-        # SDS classification reason with detail
-        if self.sds_reason_detail:
+        # Design lineage
+        ods = self._ods_result
+        ads = self._ads_result
+        pds = self._pds_result
+
+        if ods and ads:
+            all_agree = (
+                (pds is None or pds.sds == ods.sds)
+                and ods.sds == ads.sds
+            )
+            if all_agree:
+                lines.append(f"  Design state: SDS {ods.sds} ({ods.reason})")
+            else:
+                lines.append("  Design lineage:")
+                if pds is not None:
+                    lines.append(f"    Plan:       SDS {pds.sds} ({pds.reason})")
+                empty_detail = f" — {ods.n_empty_cells} empty cells in raw data" if ods.n_empty_cells > 0 else ""
+                lines.append(f"    Observed:   SDS {ods.sds} ({ods.reason}){empty_detail}")
+                lines.append(f"    Analytical: SDS {ads.sds} ({ads.reason})")
+        elif self.sds_reason_detail:
             lines.append(f"  SDS reason: {self.sds_reason_detail}")
         elif self._sds_reason:
             lines.append(f"  SDS reason: {self._sds_reason}")
@@ -592,6 +692,14 @@ class DesignReport:
         # Plan adherence (only shown when plan is provided)
         if self.plan_adherence:
             lines.append(f"  Plan adherence: {self.plan_adherence}")
+
+        # Gate metrics (only show meaningful values)
+        if self._min_cell_size is not None and self._min_cell_size > 0:
+            lines.append(f"  Min cell size: {self._min_cell_size}")
+        if self._n_empty_cells is not None and self._n_empty_cells > 0:
+            lines.append(f"  Empty cells: {self._n_empty_cells}")
+        if self.coverage is not None and self.coverage < 1.0:
+            lines.append(f"  Coverage: {self.coverage:.0%}")
 
         # K/T/R/N summary
         lines.extend(self._repr_ktrn_lines())
@@ -618,6 +726,10 @@ class DesignReport:
         # Structure summary (discrepancy details)
         lines.append("")
         lines.append(f"  Structure: {self.structure_summary}")
+
+        # Remediation hint
+        if self.remediation:
+            lines.append(f"  Hint: {self.remediation}")
 
         return '\n'.join(lines)
 
@@ -748,7 +860,7 @@ class Study:
 
     Check what's available:
 
-    >>> study.sds  # 1-6
+    >>> study.observed_design_state.sds  # 1-6
     >>> study.valid_charts  # ['Xbar', 'S', ...]
     >>> study.recommended_chart  # 'Xbar'
 
@@ -775,7 +887,8 @@ class Study:
     _factor_order: list[str] | None = None
     _T: int | None = None  # Planned time points
     _N: int | None = None  # Planned observations per cell
-    _sds_result: SDSResult | None = None  # For accessing .reason in DesignReport
+    _sds_result: SDSResult | None = None  # ODS result for accessing .reason in DesignReport
+    _pds_result: SDSResult | None = None  # PDS result (None when no plan)
 
     # =========================================================================
     # User-Facing Properties (Clean Names)
@@ -860,51 +973,74 @@ class Study:
         return self._ads.analysis_dataset.copy()
 
     # =========================================================================
-    # SDS Properties (Sampling Design State)
+    # Design State Properties (PDS / ODS / ADS)
     # =========================================================================
 
     @property
-    def sds(self) -> int:
+    def plan_design_state(self) -> SDSResult | None:
         """
-        Sampling Design State (0-6).
+        Plan Design State (PDS) — what the user intended to collect.
 
-        The SDS classifies your data structure based on:
-        - Whether you have grouping factors
-        - Whether you have a time variable
-        - Whether you have replication (multiple observations per cell)
-
-        SDS determines which charts are valid and how residuals are calculated.
+        Computed from plan parameters (K×T×N). Always SDS 1 (N>=2) or
+        SDS 2 (N==1). Returns None when no plan is provided.
 
         Returns
         -------
-        int
-            SDS value from 0 to 6
-
-        See Also
-        --------
-        sds_name : Human-readable name for the SDS
-        sds_description : Detailed explanation
+        SDSResult or None
         """
-        return self._plan.sds
+        return self._pds_result
 
     @property
-    def sds_name(self) -> str:
+    def observed_design_state(self) -> SDSResult:
         """
-        Human-readable name for the detected Sampling Design State.
+        Observed Design State (ODS) — what was actually collected.
 
-        Examples: "Full Factorial with Replication", "Time Series Only"
+        Detected on raw data (before NA filtering). Diagnostic/lineage only;
+        the ADS drives analysis decisions.
+
+        Returns
+        -------
+        SDSResult
         """
-        return self._plan.name
+        return self._sds_result
+
+    @property
+    def analytical_design_state(self) -> SDSResult:
+        """
+        Analytical Design State (ADS) — what is fit for analysis.
+
+        Computed on tidy data (after NA filtering). Drives valid charts,
+        residual availability, R2 method, and interaction method selection.
+
+        Returns
+        -------
+        SDSResult
+        """
+        return self._ads.analytical_design_state
+
+    @property
+    def sds_reason(self) -> str | None:
+        """
+        Machine-readable reason token for the analytical design state.
+
+        Returns SDSReasonType value, e.g. 'full_replication', 'no_replication'.
+        Returns None when ADS=0 (no valid observations after data cleaning).
+        """
+        return self.analytical_design_state.reason
 
     @property
     def sds_description(self) -> str:
         """
-        Detailed description of the detected data structure.
+        Human-readable description of the analytical design state.
 
-        Explains what the SDS means in terms of your data structure
-        and what analysis approaches are appropriate.
+        Returns prose from SDSRegistry, e.g.
+        'Full replication (all cells n>=2)'.
+
+        Note: This is ADS-derived (not ODS-derived). The description
+        reflects the analyzable structure after data cleaning.
         """
-        return self._plan.description
+        chars = SDSRegistry().get_sds_characteristics(self.analytical_design_state.sds)
+        return chars['description']
 
     # =========================================================================
     # Chart Properties
@@ -916,23 +1052,29 @@ class Study:
         Chart types that are valid for this data structure.
 
         These are the primary control charts that can be created
-        based on the detected SDS.
+        based on the Analytical Design State (ADS).
 
         Returns
         -------
         list of str
-            Valid chart types (e.g., ['Xbar', 'S', 'XmR'])
+            Valid chart types (e.g., ['Xbar', 'S', 'XmR']).
+            Empty list when ADS=0 (no valid observations after cleaning).
         """
+        if self.analytical_design_state.sds == 0:
+            return []
         return self._plan.valid_charts
 
     @property
-    def recommended_chart(self) -> str:
+    def recommended_chart(self) -> str | None:
         """
         The recommended chart type for this data structure.
 
         This is the chart type that best suits your data based on
-        Wheeler & Bishop methodology.
+        Wheeler & Bishop methodology. Returns None when ADS=0
+        (no valid observations after data cleaning).
         """
+        if self.analytical_design_state.sds == 0:
+            return None
         return self._plan.recommended_chart
 
     @property
@@ -1043,6 +1185,34 @@ class Study:
         # All possible primary charts
         ALL_PRIMARY = ['Xbar', 'S', 'XmR', 'R']
 
+        # ADS=0 guard: all charts unavailable
+        if self.analytical_design_state.sds == 0:
+            for chart in ALL_PRIMARY:
+                rows.append({
+                    'chart': chart,
+                    'category': 'primary',
+                    'available': False,
+                    'recommended': False,
+                    'reason': 'No valid observations after data cleaning',
+                    'question': SDSAnalysisPlan.CHART_QUESTIONS.get(chart, '')
+                })
+            ALL_RESIDUALS = [
+                'R2_S', 'R2_XmR',
+                'R3_Xbar', 'R3_S', 'R3_XmR',
+                'R4_Xbar', 'R4_S', 'R4_XmR',
+                'R5_Xbar', 'R5_S', 'R5_XmR'
+            ]
+            for chart in ALL_RESIDUALS:
+                rows.append({
+                    'chart': chart,
+                    'category': 'residual',
+                    'available': False,
+                    'recommended': False,
+                    'reason': 'No valid observations after data cleaning',
+                    'question': SDSAnalysisPlan.CHART_QUESTIONS.get(chart, '')
+                })
+            return pd.DataFrame(rows)
+
         # Build invalid_reasons dict from _plan.invalid_charts
         invalid_reasons = self._parse_invalid_charts()
 
@@ -1123,6 +1293,10 @@ class Study:
         >>> study.why_not('Xbar')
         "'Xbar' IS available. Are subgroup means stable over time?"
         """
+        # ADS=0: no valid observations after cleaning
+        if self.analytical_design_state.sds == 0:
+            return f"'{chart}' unavailable: no valid observations after data cleaning"
+
         df = self.support
         row = df[df['chart'] == chart]
 
@@ -1182,7 +1356,7 @@ class Study:
         >>> design = study.design()
         >>> design
         DesignReport(2 factors, with plan)
-          SDS reason: incomplete_with_replication
+          SDS reason: incomplete_no_singletons
           K: planned=12, observed=8, missing=4
           T: planned=10, observed=8, missing=2
           N: planned=2, observed=(min=1, median=2.0, max=3)
@@ -1274,6 +1448,11 @@ class Study:
             _sds_reason=self._sds_result.reason if self._sds_result else None,
             _unit_of_analysis=self._spec.unit_of_analysis,
             _R_observed=R_observed,
+            _min_cell_size=self._sds_result.min_cell_size if self._sds_result else None,
+            _n_empty_cells=self._sds_result.n_empty_cells if self._sds_result else None,
+            _pds_result=self._pds_result,
+            _ods_result=self._sds_result,
+            _ads_result=self._ads.analytical_design_state,
         )
 
     def capability(
@@ -1464,6 +1643,12 @@ class Study:
         from .analysis import Analysis
 
         # Determine chart type
+        if chart is None and self.recommended_chart is None:
+            from .exceptions import ValidationError
+            raise ValidationError(
+                "No charts available: no valid observations after data cleaning. "
+                "Check your data for missing or invalid response values."
+            )
         chart_request = chart or self.recommended_chart
 
         # Parse and validate chart request (returns base chart type only)
@@ -1560,7 +1745,7 @@ class Study:
         if base_chart not in self.valid_charts:
             available_list = list(self.valid_charts)
             raise ChartNotAvailableError(
-                f"Chart type '{base_chart}' is not valid for SDS {self.sds}.\n"
+                f"Chart type '{base_chart}' is not valid for SDS {self.analytical_design_state.sds}.\n"
                 f"Valid charts: {', '.join(available_list)}\n"
                 f"Recommended: {self.recommended_chart}\n"
                 f"Use study.why_not('{base_chart}') for explanation.",
@@ -1585,7 +1770,7 @@ class Study:
                 available_list = list(self.residual_charts) if self.residual_charts else []
                 available_str = ', '.join(available_list) if available_list else 'None'
                 raise ChartNotAvailableError(
-                    f"Residual chart '{canonical_name}' is not available for SDS {self.sds}.\n"
+                    f"Residual chart '{canonical_name}' is not available for SDS {self.analytical_design_state.sds}.\n"
                     f"Available residual charts: {available_str}\n"
                     f"Use study.residuals to see available options.",
                     chart=canonical_name,
@@ -1917,7 +2102,7 @@ class Study:
             available = [c for c in self._ads.analysis_dataset.columns
                         if c.startswith('R') and len(c) == 2 and c[1].isdigit()]
             raise ValueError(
-                f"Residual column '{col_name}' not available for SDS {self.sds}. "
+                f"Residual column '{col_name}' not available for SDS {self.analytical_design_state.sds}. "
                 f"Available: {available}"
             )
 
@@ -1938,12 +2123,17 @@ class Study:
         factors_str = ', '.join(self.factors) if self.factors else 'None'
         time_str = self.time or 'None'
 
+        ads_sds = self.analytical_design_state.sds
+        ods_sds = self.observed_design_state.sds
+        sds_display = f"sds={ads_sds}" if ads_sds == ods_sds else f"ods={ods_sds}, ads={ads_sds}"
         lines = [
-            f"Study(response='{self.response}', factors=[{factors_str}], time='{time_str}', sds={self.sds})",
+            f"Study(response='{self.response}', factors=[{factors_str}], time='{time_str}', {sds_display})",
         ]
         if self.unit_of_analysis:
             lines.append(f"  Unit of analysis: {self.unit_of_analysis}")
-        lines.append(f"  Valid: {', '.join(self.valid_charts)} | Recommended: {self.recommended_chart}")
+        valid_str = ', '.join(self.valid_charts) if self.valid_charts else 'None'
+        rec_str = self.recommended_chart or 'None'
+        lines.append(f"  Valid: {valid_str} | Recommended: {rec_str}")
         if self.residuals:
             lines.append(f"  Residuals: {', '.join(self.residuals)}")
         lines.append("  → study.execute() or study.support for details")
@@ -1959,13 +2149,18 @@ class Study:
         residual_html = f"<br><strong>Residuals:</strong> {', '.join(residuals)}" if residuals else ""
         uoa_html = f"<br><strong>Unit of analysis:</strong> {self.unit_of_analysis}" if self.unit_of_analysis else ""
 
+        ads_sds = self.analytical_design_state.sds
+        ods_sds = self.observed_design_state.sds
+        sds_display = f"sds={ads_sds}" if ads_sds == ods_sds else f"ods={ods_sds}, ads={ads_sds}"
+
         style = "font-family: monospace; padding: 8px; border: 1px solid #ccc; background: #f9f9f9"
-        valid_charts_str = ', '.join(self.valid_charts)
+        valid_charts_str = ', '.join(self.valid_charts) if self.valid_charts else 'None'
+        rec_str = self.recommended_chart or 'None'
         html = f"""
         <div style="{style}">
-            <code>Study(response='{self.response}', factors=[{factors_str}], time='{time_str}', sds={self.sds})</code>
+            <code>Study(response='{self.response}', factors=[{factors_str}], time='{time_str}', {sds_display})</code>
             {uoa_html}
-            <br><strong>Valid:</strong> {valid_charts_str} | <strong>Recommended:</strong> {self.recommended_chart}
+            <br><strong>Valid:</strong> {valid_charts_str} | <strong>Recommended:</strong> {rec_str}
             {residual_html}
             <br><em>→ study.execute() or study.support for details</em>
         </div>

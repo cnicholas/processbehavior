@@ -316,7 +316,7 @@ Essential references:
 | Average Chart | `study.charts.Xbar` |
 | s Chart | `study.charts.S` |
 | R1-R5 Residuals | `result.residuals` |
-| SDS Detection | `study.sds` |
+| SDS Detection | `study.observed_design_state` / `study.analytical_design_state` |
 | Natural Process Limits | `result.get_statistics()` |
 
 ---
