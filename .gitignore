@@ -62,6 +62,7 @@ coverage.xml
 *.xls
 *.csv
 !processbehavior/datasets/data/*.csv  # Keep test datasets
+!validation/*.csv  # Keep validation reference data
 *.pdf
 *.png
 *.jpg
