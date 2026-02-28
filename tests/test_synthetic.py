@@ -102,7 +102,8 @@ class TestSDSDetection:
             time=pdf.cols.time
         )
         # K=1, all N_kt=1 → SDS 2 (no replication)
-        assert study.observed_design_state.sds == 2, f"Expected SDS 2 (no replication), got SDS {study.observed_design_state.sds}"
+        obs_sds = study.observed_design_state.sds
+        assert obs_sds == 2, f"Expected SDS 2 (no replication), got SDS {obs_sds}"
 
     def test_sds5_data_classifies_by_nkt_pattern(self):
         """make_sds(5) generates nested data, classifies by N_kt pattern.
@@ -119,7 +120,8 @@ class TestSDSDetection:
         )
         # Without a plan, classifies based on observed N_kt pattern
         # Nested structure with n=1 per cell typically → SDS 2
-        assert study.observed_design_state.sds in [1, 2, 3], f"Expected SDS 1/2/3, got SDS {study.observed_design_state.sds}"
+        obs_sds = study.observed_design_state.sds
+        assert obs_sds in [1, 2, 3], f"Expected SDS 1/2/3, got SDS {obs_sds}"
 
     def test_sds6_detected_with_plan(self):
         """SDS6 requires plan to detect incomplete grid."""

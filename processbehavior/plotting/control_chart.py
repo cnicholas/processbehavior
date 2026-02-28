@@ -34,7 +34,7 @@ class ControlChartFigure:
     >>> fig.update_layout(title='Custom Title')  # Full Plotly API
     """
 
-    def __init__(self, plotly_fig: go.Figure, analysis_result: "AnalysisResult"):
+    def __init__(self, plotly_fig: go.Figure, analysis_result: AnalysisResult):
         """
         Wrap a Plotly figure with enhanced functionality.
 

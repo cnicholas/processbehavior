@@ -1532,7 +1532,8 @@ class TestSDS6Divergence:
         # Xbar is valid under ADS 2
         explanation = study.why_not('Xbar')
         # Should indicate it IS available (not blocked)
-        assert 'available' in explanation.lower() or 'supported' in explanation.lower() or 'valid' in explanation.lower()
+        msg = explanation.lower()
+        assert 'available' in msg or 'supported' in msg or 'valid' in msg
 
     def test_no_drift_sds_1(self, pb_validation):
         """SDS 1 data: ODS and ADS should agree."""

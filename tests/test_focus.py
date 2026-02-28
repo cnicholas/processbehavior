@@ -12,7 +12,6 @@ from processbehavior import ProcessBehavior, ValidationError
 from processbehavior.data_preparation import encode_rsg
 from processbehavior.datasets import synthetic
 
-
 # =============================================================================
 # Fixtures
 # =============================================================================
