@@ -8,7 +8,7 @@ single-stratum data with flat statistics.
 
 import pytest
 
-from processbehavior import ProcessBehavior
+from processbehavior import ProcessBehavior, ValidationError
 from processbehavior.data_preparation import encode_rsg
 from processbehavior.datasets import synthetic
 
@@ -175,13 +175,13 @@ class TestFocusErrors:
     """focus() error cases."""
 
     def test_focus_non_stratified_raises(self, non_stratified_xmr_result):
-        """focus on non-stratified result (by=[]) raises ValueError."""
-        with pytest.raises(ValueError, match="not stratified"):
+        """focus on non-stratified result (by=[]) raises ValidationError."""
+        with pytest.raises(ValidationError, match="not stratified"):
             non_stratified_xmr_result.focus('anything')
 
     def test_focus_invalid_stratum_raises(self, single_factor_xmr_result):
-        """focus with nonexistent stratum raises ValueError."""
-        with pytest.raises(ValueError, match="not found"):
+        """focus with nonexistent stratum raises ValidationError."""
+        with pytest.raises(ValidationError, match="not found"):
             single_factor_xmr_result.focus('nonexistent_stratum')
 
     def test_focus_encoding_equivalence(self, single_factor_xmr_result):

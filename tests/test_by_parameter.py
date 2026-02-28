@@ -9,7 +9,7 @@ Key invariant: Residuals are NEVER recomputed - `by` creates views, not recomput
 import pandas as pd
 import pytest
 
-from processbehavior import FactorNotFoundError, ProcessBehavior
+from processbehavior import FactorNotFoundError, ProcessBehavior, ValidationError
 from processbehavior.datasets import synthetic
 
 # =============================================================================
@@ -87,7 +87,7 @@ class TestByParameterValidation:
 
     def test_xmr_with_factors_requires_by(self, sds1_study):
         """XmR charts with factors should require explicit `by` parameter."""
-        with pytest.raises(ValueError, match="require.*by"):
+        with pytest.raises(ValidationError, match="require.*by"):
             sds1_study.execute(chart='XmR')
 
     def test_by_must_be_subset_of_factors(self, sds1_study):

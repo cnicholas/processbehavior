@@ -23,7 +23,7 @@ import re
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-from .exceptions import ChartNotAvailableError, FactorNotFoundError
+from .exceptions import ChartNotAvailableError, FactorNotFoundError, ValidationError
 from .sds_detector import SDSRegistry
 from .spc_constants import RESIDUAL_ALIASES, VALID_BASE_CHARTS, normalize_chart_name
 
@@ -1644,11 +1644,12 @@ class Study:
 
         # Determine chart type
         if chart is None and self.recommended_chart is None:
-            from .exceptions import ValidationError
             raise ValidationError(
                 "No charts available: no valid observations after data cleaning. "
                 "Check your data for missing or invalid response values."
             )
+        if chart is not None and (not isinstance(chart, str) or chart == ''):
+            raise ValidationError("Chart name must be a non-empty string")
         chart_request = chart or self.recommended_chart
 
         # Parse and validate chart request (returns base chart type only)
@@ -1662,7 +1663,6 @@ class Study:
             # RCR columns require VAS decomposition (both grouping and time)
             needs_residuals = self._spec.has_grouping and self._spec.has_time
             if not needs_residuals:
-                from .exceptions import ValidationError
                 raise ValidationError(
                     "recentered=True requires VAS decomposition (factors + time). "
                     "Recentered residuals (RCR) reconstruct values relative to "
@@ -1671,12 +1671,10 @@ class Study:
 
             RECENTERABLE_VALUES = {'R1', 'R2', 'R3', 'R4', 'R5'}
             if value is None:
-                from .exceptions import ValidationError
                 raise ValidationError(
                     "recentered=True requires a residual value (R1-R5), got value=None"
                 )
             if value.upper() not in RECENTERABLE_VALUES:
-                from .exceptions import ValidationError
                 raise ValidationError(
                     f"recentered=True requires a residual value (R1-R5), got '{value}'"
                 )
@@ -1684,18 +1682,15 @@ class Study:
         # Phased limits validation
         if phased:
             if base_chart not in ('XmR', 'R'):
-                from .exceptions import ValidationError
                 raise ValidationError(
                     f"phased=True is only valid for XmR or R charts, "
                     f"got '{base_chart}'."
                 )
             if by_validated is None:
-                from .exceptions import ValidationError
                 raise ValidationError(
                     "phased=True requires an explicit by= parameter."
                 )
             if not self._spec.rsg_vars_list:
-                from .exceptions import ValidationError
                 raise ValidationError(
                     "phased=True requires factors to define phases (rsg_key). "
                     "This study has no factors; phased limits do not apply."
@@ -1704,7 +1699,6 @@ class Study:
                 all_factors = set(self._spec.rsg_vars_list)
                 by_set = set(by_validated)
                 if not (all_factors - by_set):
-                    from .exceptions import ValidationError
                     raise ValidationError(
                         "phased=True requires collapsed factors to define phases. "
                         f"by={list(by_validated)} includes all factors; "
@@ -1714,14 +1708,12 @@ class Study:
 
         # companion + Histogram — no companion chart exists for Histogram
         if companion and base_chart == 'Histogram':
-            from .exceptions import ValidationError
             raise ValidationError(
                 "companion is not applicable to Histogram charts."
             )
 
         # phased + value (residual/custom) — phased limits only apply to primary response
         if phased and value is not None:
-            from .exceptions import ValidationError
             raise ValidationError(
                 "phased=True is not compatible with the value= parameter. "
                 "Phased limits apply to the primary response variable only."
@@ -1729,7 +1721,6 @@ class Study:
 
         # bins + non-Histogram — bins only makes sense for Histogram
         if bins is not None and base_chart != 'Histogram':
-            from .exceptions import ValidationError
             raise ValidationError(
                 f"bins is only applicable to Histogram charts, not '{base_chart}'."
             )
@@ -1818,11 +1809,11 @@ class Study:
 
         Raises
         ------
-        ValueError
+        ValidationError
             For invalid chart types or old residual chart syntax
         """
         if not chart or not isinstance(chart, str):
-            raise ValueError("Chart name must be a non-empty string")
+            raise ValidationError("Chart name must be a non-empty string")
 
         # Normalize case (e.g. "xmr" -> "XmR", "XBAR" -> "Xbar")
         chart = normalize_chart_name(chart)
@@ -1838,7 +1829,7 @@ class Study:
 
         # R1-R5 without base chart
         if re.match(r'^R\d+$', chart) or re.match(r'^RCR\d+$', chart):
-            raise ValueError(
+            raise ValidationError(
                 f"'{chart}' is a residual identifier, not a chart type.\n"
                 f"Use: study.execute(chart='Xbar', value='{chart}')\n"
                 f"Or: study.execute(chart='XmR', value='{chart}')"
@@ -1847,13 +1838,13 @@ class Study:
         # Alias without base chart
         if chart in RESIDUAL_ALIASES:
             residual_id = RESIDUAL_ALIASES[chart]["id"]
-            raise ValueError(
+            raise ValidationError(
                 f"'{chart}' is a residual alias for {residual_id}, not a chart type.\n"
                 f"Use: study.execute(chart='Xbar', value='{residual_id}')\n"
                 f"Or: study.execute(chart='XmR', value='{residual_id}')"
             )
 
-        raise ValueError(
+        raise ValidationError(
             f"Unknown chart '{chart}'. "
             f"Valid chart types: {', '.join(sorted(VALID_BASE_CHARTS))}"
         )
@@ -1884,12 +1875,12 @@ class Study:
 
             if base_chart in VALID_BASE_CHARTS:
                 recentered_hint = ", recentered=True" if recentered else ""
-                raise ValueError(
+                raise ValidationError(
                     f"Old residual chart syntax '{chart}' is no longer supported.\n"
                     f"Use: study.execute(chart='{base_chart}', value='{residual_id}'{recentered_hint})"
                 )
 
-        raise ValueError(
+        raise ValidationError(
             f"Invalid chart name '{chart}'. "
             f"Valid chart types: {', '.join(sorted(VALID_BASE_CHARTS))}"
         )
@@ -1916,7 +1907,7 @@ class Study:
 
         Raises
         ------
-        ValueError
+        ValidationError
             If by contains factors not in rsg_vars
             If by=None for IMR/R with factors (must be explicit)
             If by contains time variable for IMR/R charts
@@ -1928,7 +1919,7 @@ class Study:
         # No factors case: by=None is fine, by=[] is also fine
         if not factors:
             if by is not None and by != []:
-                raise ValueError(
+                raise ValidationError(
                     f"Invalid by={by}. No factors defined in this study. "
                     f"Use by=None or by=[] for single stream."
                 )
@@ -1939,7 +1930,7 @@ class Study:
             if is_time_series_chart:
                 # IMR/R with factors requires explicit by
                 factor_str = ', '.join(f"'{f}'" for f in factors)
-                raise ValueError(
+                raise ValidationError(
                     f"IMR/R charts with factors require explicit 'by' parameter.\n"
                     f"Specify how to stratify:\n"
                     f"  by=[{factor_str}] for {self._get_factor_combinations()} charts (one per factor combination)\n"
@@ -1963,7 +1954,7 @@ class Study:
         if invalid and time_var and time_var in invalid:  # noqa: SIM102
             # Check if user tried to use time
                 if is_time_series_chart:
-                    raise ValueError(
+                    raise ValidationError(
                         f"Cannot use time variable '{time_var}' in by for {base_chart} charts. "
                         f"Time is the x-axis for {base_chart} charts, not a stratification dimension. "
                         f"Valid by dimensions: {sorted(factors)}"
