@@ -9,7 +9,7 @@ from .data_preparation import DataPreparation
 from .effects_calculator import EffectsCalculator
 from .formulation_spec import FormulationSpec
 from .residual_calculator import calculate_vas_residuals
-from .sds_detector import SDSRegistry, StructureStats
+from .sds_detector import SDSRegistry, SDSResult, StructureStats
 
 # Configure module logger
 logger = logging.getLogger(__name__)
@@ -34,7 +34,7 @@ class AnalysisDataSet:
         self,
         df: pd.DataFrame,
         spec: FormulationSpec,
-        sds: int
+        observed_sds: int
     ):
         """
         Initialize analysis with data and specification.
@@ -45,15 +45,16 @@ class AnalysisDataSet:
             Raw input data
         spec : FormulationSpec
             Structural configuration for the analysis
-        sds : int
-            Sampling Design State (0-6). This is required because SDS is the
-            driver of the analysis system - it determines which calculations
-            are performed. SDS should be detected once at the entry point
-            (ProcessBehavior) and passed through the system.
+        observed_sds : int
+            Observed Design State detected on raw data (ODS). This is the
+            SDS detected at the entry point (ProcessBehavior) on raw data
+            before NA filtering. Used for diagnostic logging.
+            The Analytical Design State (ADS) is computed internally on
+            tidy data and drives analysis decisions.
         """
         # Store inputs
         self.spec = spec
-        self.sampling_design_state = sds
+        self.observed_design_state: int = observed_sds
 
         # Initialize output containers
         self.interactions = {}
@@ -63,6 +64,9 @@ class AnalysisDataSet:
         self._structure_stats: StructureStats | None = None
         self._n_per_cell: pd.Series | None = None
         self._ybar_kt: pd.Series | None = None
+
+        # ADS result (computed in _initialize on tidy data)
+        self._ads_result: SDSResult | None = None
 
         # Composition - each component has one job (Single Responsibility Principle)
         # SDS detection was done on raw data by ProcessBehavior. Here we only use
@@ -93,13 +97,13 @@ class AnalysisDataSet:
         self.analysis_dataset = self._prep.prepare_dataset(raw_df, self.spec)
         self.analysis_dataset = self._prep.build_keys(self.analysis_dataset, self.spec)
 
-        # Step 2: Use the provided SDS (required - detected at entry point)
-        logger.debug(f"Using SDS: {self.sampling_design_state}")
+        # Step 2: Use the provided ODS (detected at entry point on raw data)
+        logger.debug(f"Using ODS: {self.observed_design_state}")
         self.raw_sds_characteristics = self._sds_registry.get_sds_characteristics(
-            self.sampling_design_state
+            self.observed_design_state
         )
         logger.debug(
-            f"Raw SDS {self.sampling_design_state} - "
+            f"ODS {self.observed_design_state} - "
             f"{self.raw_sds_characteristics['description']}"
         )
 
@@ -109,6 +113,9 @@ class AnalysisDataSet:
         # replication) on raw data can become structurally equivalent to SDS 1
         # (full replication) after NA rows are dropped.
         self._compute_structure_stats()
+
+        # Step 3b: Compute Analytical Design State (ADS) on tidy data
+        self._compute_ads()
 
         # Step 4: Calculate VAS residuals when we have both grouping AND time
         # (need Ybar_k for factor effects and Ybar_t for time effects)
@@ -131,12 +138,13 @@ class AnalysisDataSet:
             self._calculate_centered_residuals()
 
             # Step 5: Calculate effects and interactions
+            # ADS drives method selection (not ODS)
             logger.debug("Calculating effects and interactions")
             self.effects = self._effects_calc.calculate_all_effects(
                 self.analysis_dataset, self.spec
             )
             self.interactions = self._effects_calc.calculate_interactions(
-                self.analysis_dataset, self.spec, self.sampling_design_state,
+                self.analysis_dataset, self.spec, self._ads_result.sds,
                 effects=self.effects
             )
         else:
@@ -239,6 +247,58 @@ class AnalysisDataSet:
             f"effective R2 method: {r2_method}"
         )
 
+    def _compute_ads(self) -> None:
+        """
+        Compute Analytical Design State (ADS) on tidy data.
+
+        The ADS reflects the structure of data that is fit for analysis,
+        after NA filtering and tidying. It may differ from the ODS when
+        tidying removes empty or singleton cells.
+        """
+        df = self.analysis_dataset
+        y = self.spec.response_var
+
+        # Compute N_kt from tidy data grouped by cell_key
+        if "cell_key" in df.columns and len(df) > 0:
+            tidy_nkt = df.groupby("cell_key", observed=True)[y].size()
+        else:
+            tidy_nkt = pd.Series(dtype=int)
+
+        # Guard: empty tidy data → ADS 0
+        if len(tidy_nkt) == 0:
+            self._ads_result = SDSResult(sds=0, reason=None, min_cell_size=0, n_empty_cells=0)
+            logger.debug("ADS 0: no valid observations after tidying")
+            return
+
+        has_empty_cells = (tidy_nkt == 0).any()
+        n_empty = int((tidy_nkt == 0).sum())
+        valid_nkt = tidy_nkt[tidy_nkt > 0]
+        min_cell_size = int(valid_nkt.min()) if len(valid_nkt) > 0 else 0
+
+        sds, reason = self._sds_registry._classify_by_nkt(tidy_nkt, has_empty_cells)
+        self._ads_result = SDSResult(
+            sds=sds, min_cell_size=min_cell_size,
+            reason=reason, n_empty_cells=n_empty
+        )
+
+        if self._ads_result.sds != self.observed_design_state:
+            logger.info(
+                f"Design state drift: ODS {self.observed_design_state} → "
+                f"ADS {self._ads_result.sds} ({self._ads_result.reason})"
+            )
+        else:
+            logger.debug(f"ADS {self._ads_result.sds} ({self._ads_result.reason})")
+
+    @property
+    def analytical_design_state(self) -> SDSResult:
+        """
+        Analytical Design State (ADS) computed on tidy data.
+
+        The ADS drives analysis decisions: valid charts, residual
+        availability, R2 method, and interaction method selection.
+        """
+        return self._ads_result
+
     @property
     def analysis_summary(self) -> dict:
         """
@@ -255,7 +315,8 @@ class AnalysisDataSet:
             - analysis_type: Type of analysis being performed
         """
         summary = {
-            'sds': self.sampling_design_state,
+            'observed_sds': self.observed_design_state,
+            'analytical_sds': self._ads_result.sds if self._ads_result else self.observed_design_state,
             'sds_info': self.raw_sds_characteristics,
             'has_vas_residuals': self.has_vas_residuals,
             'n_observations': len(self.analysis_dataset),

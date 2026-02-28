@@ -1480,8 +1480,8 @@ def validate_sds_detection(
     try:
         from ..analysis_dataset import AnalysisDataSet
 
-        ads = AnalysisDataSet(df=df, spec=spec, sds=expected_sds)
-        detected_sds = ads.sampling_design_state
+        ads = AnalysisDataSet(df=df, spec=spec, observed_sds=expected_sds)
+        detected_sds = ads.observed_design_state
         
         if detected_sds == expected_sds:
             logger.info(f"✓ Correctly detected SDS {expected_sds}")

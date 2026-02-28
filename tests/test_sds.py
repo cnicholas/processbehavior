@@ -63,7 +63,7 @@ class TestSDSDetection:
             time=pdf.cols.time
         )
 
-        assert study.sds == 1, f"Expected SDS=1, got {study.sds}"
+        assert study.observed_design_state.sds == 1, f"Expected SDS=1, got {study.observed_design_state.sds}"
         assert 'Xbar' in study.valid_charts
         assert 'S' in study.valid_charts
 
@@ -173,7 +173,7 @@ class TestVASCalculationDecisions:
 
         sds = detect_sds_for_test(df, spec)
         aspec = _make_spec(spec)
-        ads = ad.AnalysisDataSet(df, aspec, sds=sds)
+        ads = ad.AnalysisDataSet(df, aspec, observed_sds=sds)
 
         assert 'R1' in ads.analysis_dataset.columns, "SDS1 + Xbar should have VAS residuals"
         assert 'R2' in ads.analysis_dataset.columns
@@ -196,7 +196,7 @@ class TestVASCalculationDecisions:
 
         sds = detect_sds_for_test(df, spec)
         aspec = _make_spec(spec)
-        ads = ad.AnalysisDataSet(df, aspec, sds=sds)
+        ads = ad.AnalysisDataSet(df, aspec, observed_sds=sds)
 
         # VAS is computed for any SDS with grouping and time
         assert 'R1' in ads.analysis_dataset.columns, \
@@ -240,7 +240,7 @@ class TestVASCalculationDecisions:
 
             detected_sds = detect_sds_for_test(df, spec)
             aspec = _make_spec(spec)
-            ads = ad.AnalysisDataSet(df, aspec, sds=detected_sds)
+            ads = ad.AnalysisDataSet(df, aspec, observed_sds=detected_sds)
 
             actual_vas = 'R1' in ads.analysis_dataset.columns
 
@@ -266,7 +266,7 @@ class TestResidualCalculations:
 
         sds = detect_sds_for_test(df, spec)
         aspec = _make_spec(spec)
-        ads = ad.AnalysisDataSet(df=df, spec=aspec, sds=sds)
+        ads = ad.AnalysisDataSet(df=df, spec=aspec, observed_sds=sds)
 
         # R2 should be y - Ybar_kt (within-cell residual)
         # Verify by checking correlation with expected calculation
@@ -291,7 +291,7 @@ class TestResidualCalculations:
 
         sds = detect_sds_for_test(df, spec)
         aspec = _make_spec(spec)
-        ads = ad.AnalysisDataSet(df=df, spec=aspec, sds=sds)
+        ads = ad.AnalysisDataSet(df=df, spec=aspec, observed_sds=sds)
 
         ds = ads.analysis_dataset
         TOL = 1e-10
@@ -322,7 +322,7 @@ class TestResidualCalculations:
 
         sds = detect_sds_for_test(df, spec)
         aspec = _make_spec(spec)
-        ads = ad.AnalysisDataSet(df=df, spec=aspec, sds=sds)
+        ads = ad.AnalysisDataSet(df=df, spec=aspec, observed_sds=sds)
 
         ds = ads.analysis_dataset
         TOL = 1e-10

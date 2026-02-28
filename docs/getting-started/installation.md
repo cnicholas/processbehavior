@@ -67,7 +67,7 @@ pb = pb.ProcessBehavior(df)
 study = pb.formulate(response=pb.cols.value, time=pb.cols.time)
 result = study.execute()
 
-print(f"SDS detected: {study.sds}")
+print(f"SDS detected: {study.observed_design_state.sds}")
 print(f"Charts available: {result.all_charts}")
 print("Installation verified!")
 ```
@@ -75,7 +75,7 @@ print("Installation verified!")
 Expected output:
 ```
 ProcessBehavior version: 0.1.0
-SDS detected: 4
+SDS detected: SDSResult(sds=4, reason='single_stream', ...)
 Charts available: ['XmR', 'R']
 Installation verified!
 ```

@@ -52,7 +52,7 @@ This is where the API shines. The "understand before analyze" philosophy is exce
 
 | Feature | Grade | Notes |
 |---------|-------|-------|
-| `study.sds` / `sds_name` / `sds_description` | A+ | Progressive disclosure of SDS concept |
+| `study.observed_design_state` / `analytical_design_state` / `sds_reason` / `sds_description` | A+ | Progressive disclosure of SDS concept |
 | `study.valid_charts` / `recommended_chart` | A+ | Guides users to correct choices |
 | `study.why_not('S')` | A+ | Explains unavailability - rare in libraries |
 | `study.support` DataFrame | A | Full matrix view for advanced users |
@@ -162,7 +162,7 @@ This is where the API shines. The "understand before analyze" philosophy is exce
 
 1. **Two-step workflow** (`formulate → execute`) forces users to understand their data structure before analysis - pedagogically excellent
 
-2. **Progressive disclosure**: `study.sds` (number) → `sds_name` (label) → `sds_description` (explanation) → `design()` (full details)
+2. **Progressive disclosure**: `study.observed_design_state` (SDSResult) → `sds_reason` (machine token) → `sds_description` (explanation) → `design()` (full details)
 
 3. **Guardrails without constraints**: Invalid charts are explained, not just rejected
 

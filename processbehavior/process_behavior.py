@@ -30,7 +30,7 @@ import pandas as pd
 
 from .exceptions import ColumnNotFoundError, ValidationError
 from .formulation_spec import FormulationSpec
-from .sds_detector import SDSRegistry
+from .sds_detector import SDSRegistry, SDSResult
 
 if TYPE_CHECKING:
     from .study import Study
@@ -235,7 +235,7 @@ class ProcessBehavior:
         )
 
         # Inspect the study
-        print(study.sds)  # Detected SDS
+        print(study.observed_design_state.sds)  # Detected ODS
         print(study.valid_charts)  # What's available
         print(study.recommended_chart)  # Best choice
 
@@ -472,7 +472,7 @@ class ProcessBehavior:
     def _validate_plan(
         self,
         plan: dict
-    ) -> tuple[dict[str, list], list[str], int | None, int | None]:
+    ) -> tuple[dict[str, list], list[str], int, int]:
         """
         Validate and normalize sampling plan.
 
@@ -511,6 +511,17 @@ class ProcessBehavior:
             )
         T_planned = plan.get('T')
         N_planned = plan.get('N')
+
+        if T_planned is None:
+            raise ValidationError(
+                "Sampling plan must include 'T' (planned number of time periods).\n"
+                "Example: plan={'factors': {'Lane': [1,2,3,4], 'Phase': [1,2,3]}, 'T': 10, 'N': 2}"
+            )
+        if N_planned is None:
+            raise ValidationError(
+                "Sampling plan must include 'N' (planned observations per cell).\n"
+                "Example: plan={'factors': {'Lane': [1,2,3,4], 'Phase': [1,2,3]}, 'T': 10, 'N': 2}"
+            )
 
         normalized: dict[str, list] = {}
         factor_order: list[str] = []
@@ -750,16 +761,25 @@ class ProcessBehavior:
             T_planned=T_planned
         )
 
-        # Get SDS analysis plan with all metadata
-        analysis_plan = SDSRegistry.get_analysis_plan(
-            sds_result.sds, min_cell_size=sds_result.min_cell_size
-        )
+        # Compute Plan Design State (PDS) if a plan was provided
+        pds_result: SDSResult | None = None
+        if sampling_plan is not None and T_planned is not None and N_planned is not None:
+            from math import prod
+            K = prod(len(v) for v in sampling_plan.values())
+            pds_result = detector.classify_from_plan(K, T_planned, N_planned)
+            logger.debug(f"PDS: SDS {pds_result.sds} ({pds_result.reason})")
 
         # Calculate full dataset with residuals (R1-R5, RCR1-RCR5)
         # ADS is chart-agnostic — chart-specific params live in ChartRequest at execute() time
-        # Pass SDS to avoid redundant detection (SDS is the driver of the system)
+        # Pass ODS for diagnostic logging; ADS is computed internally on tidy data
         from .analysis_dataset import AnalysisDataSet
-        ads = AnalysisDataSet(self.data, spec, sds=sds_result.sds)
+        ads = AnalysisDataSet(self.data, spec, observed_sds=sds_result.sds)
+
+        # ADS drives analysis: build analysis_plan from ADS (not ODS)
+        analysis_plan = SDSRegistry.get_analysis_plan(
+            ads.analytical_design_state.sds,
+            min_cell_size=ads.analytical_design_state.min_cell_size
+        )
 
         # Create and return Study object with pre-calculated AnalysisDataSet
         # This enables execute() to reuse the expensive calculation
@@ -772,7 +792,8 @@ class ProcessBehavior:
             _factor_order=factor_order,
             _T=T_planned,
             _N=N_planned,
-            _sds_result=sds_result
+            _sds_result=sds_result,
+            _pds_result=pds_result,
         )
 
     def __repr__(self) -> str:

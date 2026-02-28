@@ -441,7 +441,7 @@ design.extra_levels
 # design.extra_combos    # []
 
 # SDS reflects missing data
-study.sds  # Could be SDS 5 or 6 depending on structure
+study.observed_design_state.sds  # Could be SDS 5 or 6 depending on structure
 ```
 
 ---

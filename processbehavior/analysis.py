@@ -155,7 +155,7 @@ class Analysis:
                 raise ValueError(
                     "df is required when analysis_dataset is not provided."
                 )
-            self.ads = AnalysisDataSet(df, spec, sds=sds)
+            self.ads = AnalysisDataSet(df, spec, observed_sds=sds)
 
     def calculate(self) -> AnalysisResult:
         """

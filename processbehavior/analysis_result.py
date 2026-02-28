@@ -52,6 +52,7 @@ import pandas as pd
 
 from .data_preparation import encode_rsg
 from .exceptions import ChartNotAvailableError, ProcessBehaviorError
+from .sds_detector import SDSRegistry
 from .spc_constants import normalize_chart_name
 
 if TYPE_CHECKING:
@@ -160,8 +161,14 @@ class AnalysisResult:
         self._analysis_type = analysis_type
 
         # Extract SDS information
-        self.sds = analysis_dataset_obj.sampling_design_state
-        self.sds_info = analysis_dataset_obj.raw_sds_characteristics
+        self.observed_sds: int = analysis_dataset_obj.observed_design_state
+        self.analytical_sds: int = analysis_dataset_obj.analytical_design_state.sds
+        self.observed_sds_info: dict = analysis_dataset_obj.raw_sds_characteristics
+        self.analytical_sds_info: dict = SDSRegistry().get_sds_characteristics(self.analytical_sds)
+
+        # Backward-compatible aliases (point to ADS since ADS drives analysis)
+        self.sds = self.analytical_sds
+        self.sds_info = self.analytical_sds_info
 
         # Extract residuals if calculated
         self._residuals = None
@@ -209,10 +216,12 @@ class AnalysisResult:
 
         summary = {
             # SDS information
-            'sds': self.sds,
-            'sds_description': self.sds_info.get('description', 'Unknown'),
-            'sds_capabilities': self.sds_info.get('capabilities', []),
-            'replication_type': self.sds_info.get('replication_type', 'unknown'),
+            'observed_sds': self.observed_sds,
+            'analytical_sds': self.analytical_sds,
+            'sds': self.analytical_sds,  # backward compat
+            'sds_description': self.analytical_sds_info.get('description', 'Unknown'),
+            'sds_capabilities': self.analytical_sds_info.get('capabilities', []),
+            'replication_type': self.analytical_sds_info.get('replication_type', 'unknown'),
 
             # Analysis configuration
             'analysis_type': self._analysis_type,
@@ -960,7 +969,7 @@ class AnalysisResult:
         charts_str = ', '.join(self.all_charts)
         return (
             f"AnalysisResult(\n"
-            f"  sds={self.sds} ({self.sds_info['description']}),\n"
+            f"  analytical_sds={self.analytical_sds} ({self.analytical_sds_info['description']}),\n"
             f"  charts=[{charts_str}],\n"
             f"  n_obs={len(self.dataset)},\n"
             f"  has_residuals={self.has_residuals},\n"
@@ -975,8 +984,8 @@ class AnalysisResult:
             "="*70,
             "ANALYSIS RESULT SUMMARY",
             "="*70,
-            f"\nSampling Design State: SDS {self.sds}",
-            f"Description: {self.sds_info['description']}",
+            f"\nAnalytical Design State: SDS {self.analytical_sds}",
+            f"Description: {self.analytical_sds_info['description']}",
             f"\nAnalysis Type: {self.summary['analysis_type']}",
             f"Response Variable: {self.summary['response_var']}",
         ]
@@ -1440,6 +1449,10 @@ class FocusedAnalysisResult(AnalysisResult):
             self.dataset = original_result.dataset.copy()
 
         # Copy SDS information
+        self.observed_sds = original_result.observed_sds
+        self.analytical_sds = original_result.analytical_sds
+        self.observed_sds_info = original_result.observed_sds_info.copy()
+        self.analytical_sds_info = original_result.analytical_sds_info.copy()
         self.sds = original_result.sds
         self.sds_info = original_result.sds_info.copy()
 
@@ -1510,7 +1523,7 @@ class FocusedAnalysisResult(AnalysisResult):
         return (
             f"FocusedAnalysisResult(\n"
             f"  stratum='{self._focused_stratum}',\n"
-            f"  sds={self.sds} ({self.sds_info['description']}),\n"
+            f"  analytical_sds={self.analytical_sds} ({self.analytical_sds_info['description']}),\n"
             f"  charts=[{charts_str}],\n"
             f"  n_obs={len(self.dataset)},\n"
             f"  has_residuals={self.has_residuals},\n"

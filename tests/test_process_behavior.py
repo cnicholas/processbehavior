@@ -188,7 +188,7 @@ def test_formulate_with_grouping():
     )
 
     # Should detect grouped structure and recommend Xbar
-    assert study.sds == 1  # Full replication
+    assert study.observed_design_state.sds == 1  # Full replication
     assert study.recommended_chart == 'Xbar'
     assert 'Xbar' in study.valid_charts
     assert 'S' in study.valid_charts
@@ -225,7 +225,7 @@ def test_formulate_with_single_grouping():
         factors=[pdata.cols.Batch]
     )
 
-    assert study.sds == 1
+    assert study.observed_design_state.sds == 1
     assert study.recommended_chart == 'Xbar'
 
 
@@ -281,13 +281,14 @@ def test_formulate_validates_response_column():
 # ============================================================================
 
 def test_study_has_sds(simple_values):
-    """Study should expose detected SDS."""
+    """Study should expose detected SDS via design state properties."""
     pdata = ProcessBehavior(simple_values)
 
     study = pdata.formulate(response='Value', factors=['Factor'], time='Time')
 
-    assert hasattr(study, 'sds')
-    assert isinstance(study.sds, int)
+    assert hasattr(study, 'observed_design_state')
+    assert hasattr(study, 'analytical_design_state')
+    assert isinstance(study.observed_design_state.sds, int)
 
 
 def test_study_has_valid_charts(simple_values):
@@ -393,7 +394,7 @@ def test_full_workflow_grouped_data():
     )
 
     # Verify study
-    assert study.sds == 1  # Full replication
+    assert study.observed_design_state.sds == 1  # Full replication
     assert study.recommended_chart == 'Xbar'
 
     # Analyze
@@ -488,9 +489,9 @@ def test_study_sds_name():
     })
     study = ProcessBehavior(df).formulate(response='Value', factors=['Factor'], time='Time')
 
-    assert hasattr(study, 'sds_name')
-    assert isinstance(study.sds_name, str)
-    assert len(study.sds_name) > 0
+    assert hasattr(study, 'sds_reason')
+    assert isinstance(study.sds_reason, str)
+    assert len(study.sds_reason) > 0
 
 
 def test_study_sds_description():
@@ -873,7 +874,7 @@ def test_r3_xbar_chart_calculation(grouped_for_residuals):
     )
 
     # Should be SDS 1 (all cells have n≥2)
-    assert study.sds == 1
+    assert study.observed_design_state.sds == 1
     assert 'R3' in study.residuals
 
     # Analyze R3 on Xbar chart - aggregate by factor
