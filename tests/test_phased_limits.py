@@ -203,7 +203,7 @@ class TestPhasedValidation:
 
     def test_phased_requires_by_none_raises(self, sds1_study):
         """phased=True with by=None should raise (by=None invalid for XmR with factors)."""
-        with pytest.raises(ValueError):
+        with pytest.raises(ValidationError):
             sds1_study.execute(chart='XmR', phased=True)
 
 

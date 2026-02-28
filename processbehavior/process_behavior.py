@@ -133,7 +133,8 @@ class ColumnAccessor:
             df: The DataFrame whose columns will be accessible
         """
         self._df = df
-        self._columns = sorted(df.columns)  # Sort alphabetically for consistent ordering
+        # Sort by string representation to handle mixed-type column names
+        self._columns = sorted(df.columns, key=str)
         self._attr_to_col = {}  # Track sanitized_name → original_column
 
         # Dynamically add each column as a ColumnRef attribute
@@ -150,6 +151,13 @@ class ColumnAccessor:
                     f"'{col}' will only be accessible via pb.cols['{col}']."
                 )
             else:
+                # Avoid overwriting internal attributes (e.g., _df, _columns)
+                if hasattr(self, attr_name):
+                    logger.warning(
+                        f"Column '{col}' sanitizes to '{attr_name}' which conflicts "
+                        f"with an internal attribute. Use pb.cols['{col}'] to access."
+                    )
+                    continue
                 self._attr_to_col[attr_name] = col
                 setattr(self, attr_name, ColumnRef(col, df))
 
@@ -165,11 +173,18 @@ class ColumnAccessor:
         Returns:
             Sanitized name safe for use as Python attribute
         """
+        # Normalize non-string column names (e.g., integers)
+        col_name = str(col_name)
+
         # Replace spaces and special chars with underscores
         safe_name = col_name.replace(' ', '_').replace('-', '_')
 
         # Remove other special characters
         safe_name = ''.join(c if c.isalnum() or c == '_' else '_' for c in safe_name)
+
+        # Handle empty names
+        if not safe_name:
+            return '_empty'
 
         # Ensure doesn't start with number
         if safe_name[0].isdigit():
@@ -197,7 +212,15 @@ class ColumnAccessor:
         Raises:
             ColumnNotFoundError: If column doesn't exist
         """
-        if col_name not in self._df.columns:
+        resolved_name = col_name
+
+        # Support string lookup for non-string column labels (e.g., 123 -> "123")
+        if resolved_name not in self._df.columns and isinstance(resolved_name, str):
+            matching = [c for c in self._df.columns if str(c) == resolved_name]
+            if len(matching) == 1:
+                resolved_name = matching[0]
+
+        if resolved_name not in self._df.columns:
             available = list(self._df.columns)
             raise ColumnNotFoundError(
                 f"Column '{col_name}' not found. "
@@ -205,7 +228,7 @@ class ColumnAccessor:
                 column=col_name,
                 available=available
             )
-        return ColumnRef(col_name, self._df)
+        return ColumnRef(resolved_name, self._df)
 
     def __dir__(self):
         """Support for tab-completion in IPython/Jupyter."""

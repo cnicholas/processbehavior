@@ -431,10 +431,10 @@ class AnalysisResult:
 
         Raises
         ------
-        ValueError
-            If stratum is not in result.strata, if a stratified chart
-            is missing an rsg column, if focus produces empty data,
-            or if statistics keys don't match the stratum.
+        ValidationError
+            If stratum is not in result.strata or focus produces empty data.
+        ProcessBehaviorError
+            If required stratification metadata/columns are inconsistent.
 
         Examples
         --------
@@ -447,14 +447,16 @@ class AnalysisResult:
         >>> # Chaining works
         >>> result.focus('level_1').plot()
         """
+        from .exceptions import ValidationError
+
         if not self.strata:
-            raise ValueError(
+            raise ValidationError(
                 "Cannot focus: this result is not stratified. "
                 "Use result.strata to check available subgroups."
             )
 
         if stratum not in self.strata:
-            raise ValueError(
+            raise ValidationError(
                 f"Stratum '{stratum}' not found. "
                 f"Available strata: {self.strata}"
             )
@@ -470,27 +472,33 @@ class AnalysisResult:
 
             # Filter data to this stratum
             data = chart_info['data']
-            rsg_col = None
+            metadata = chart_info.get('metadata', {})
+            stratify_col = metadata.get('stratify_col')
 
-            # Find the RSG column
-            for col in data.columns:
-                if col in ['rsg', 'RSG'] or 'rsg' in col.lower():
-                    rsg_col = col
-                    break
+            # Preferred path: filter by explicit stratification column from metadata
+            if stratify_col and stratify_col in data.columns:
+                mask = data[stratify_col] == stratum
+            else:
+                # Legacy fallback: find an rsg-like column
+                rsg_col = None
+                for col in data.columns:
+                    if col in ['rsg', 'RSG'] or 'rsg' in col.lower():
+                        rsg_col = col
+                        break
 
-            if rsg_col is None:
-                raise ValueError(
-                    f"Cannot focus stratified chart '{chart_name}': no rsg column found. "
-                    f"This is a bug — stratified charts must have an rsg column for filtering."
-                )
+                if rsg_col is None:
+                    raise ProcessBehaviorError(
+                        f"Cannot focus stratified chart '{chart_name}': "
+                        "missing stratification column metadata and no rsg column found. "
+                        "This indicates a bug in chart construction."
+                    )
 
-            # Filter data
-            # Note: stratum identity assumes canonical factor ordering defined upstream
-            mask = data[rsg_col].astype(str) == encode_rsg(stratum)
+                # Note: stratum identity assumes canonical factor ordering defined upstream
+                mask = data[rsg_col].astype(str) == encode_rsg(stratum)
             focused_data = data[mask].copy()
 
             if focused_data.empty:
-                raise ValueError(
+                raise ValidationError(
                     f"No data found for stratum '{stratum}' in chart '{chart_name}'. "
                     f"This may indicate an encoding mismatch between strata keys and rsg values."
                 )
@@ -503,7 +511,7 @@ class AnalysisResult:
                 focused_stats = nested_stats[encode_rsg(stratum)]
             elif chart_info.get('strata'):
                 # Stratified chart but key doesn't match — don't silently return the nested dict
-                raise ValueError(
+                raise ProcessBehaviorError(
                     f"Statistics key mismatch for stratum '{stratum}' in chart '{chart_name}'. "
                     f"Available keys: {list(nested_stats.keys())}"
                 )
