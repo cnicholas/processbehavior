@@ -1294,52 +1294,67 @@ class AnalysisResult:
         ncols: int = 2,
         highlight_signals: bool = True,
         show_limits: bool = True,
+        show_limit_values: bool = True,
         show_zones: bool = False,
         show_rules: bool = False,
         show_stats: bool = False,
         theme: str = 'processbehavior',
         width: int = 1000,
         height: int | None = None,
+        aspect_ratio: float | None = None,
         title: str | None = None,
-        **kwargs
+        xaxis_title: str | None = None,
+        yaxis_title: str | None = None,
+        shared_yaxis: bool = True,
+        yaxis_padding: float = 0.05,
+        vertical_spacing: float = 0.15,
     ) -> ControlChartFigure:
-        """
-        Create interactive control chart visualization.
-
-        This is the main plotting method. It automatically determines
-        the best visualization for your data and chart type.
+        """Create interactive control chart visualisation.
 
         Parameters
         ----------
         chart : str, optional
-            Specific chart to plot ('Xbar', 'S', 'XmR', etc.)
-            If None, plots all available charts
+            Specific chart to plot ('Xbar', 'S', 'XmR', etc.).
+            Also accepts 'Effects', 'MainEffects', 'TimeEffects',
+            'TimeInteraction', 'FactorInteraction'.
+            If None, plots all available charts.
         facet : bool, default False
-            Whether to create faceted plot for stratified data
+            Whether to create faceted plot for stratified data.
         facet_by : str, optional
-            Variable to facet by (overrides auto-detection)
+            Variable to facet by (overrides auto-detection).
         ncols : int, default 2
-            Number of columns in faceted layout
+            Number of columns in faceted layout.
         highlight_signals : bool, default True
-            Whether to highlight points beyond control limits
+            Highlight points beyond control limits.
         show_limits : bool, default True
-            Whether to show control limit lines
+            Show control limit lines.
+        show_limit_values : bool, default True
+            Show numeric values in limit labels.
         show_zones : bool, default False
-            Whether to show zone shading (A/B/C zones at 1-2-3 sigma)
+            Show zone shading (A/B/C zones at 1-2-3 sigma).
         show_rules : bool, default False
-            Whether to show additional run rules (WECO Rules 2-8)
+            Show additional run rules (WECO Rules 2-8).
         show_stats : bool, default False
-            Whether to show statistics box with CL, UPL, LPL values
+            Show statistics box with CL, UPL, LPL values.
         theme : str, default 'processbehavior'
-            Visual theme ('processbehavior', 'minimal', 'dark', 'ggplot')
+            Visual theme ('processbehavior', 'minimal', 'dark', 'ggplot',
+            'publication') or a ChartTheme instance.
         width : int, default 1000
-            Figure width in pixels
+            Figure width in pixels.
         height : int, optional
-            Figure height in pixels (auto-calculated if None)
+            Figure height in pixels (auto-calculated if None).
+        aspect_ratio : float, optional
+            Width-to-height ratio (overrides height if specified).
         title : str, optional
-            Custom title for the figure
-        **kwargs
-            Additional parameters passed to Plotter.plot()
+            Custom title for the figure.
+        xaxis_title, yaxis_title : str, optional
+            Custom axis labels.
+        shared_yaxis : bool, default True
+            Whether faceted charts share y-axis range.
+        yaxis_padding : float, default 0.05
+            Padding fraction for y-axis range.
+        vertical_spacing : float, default 0.15
+            Vertical spacing between rows in faceted layouts.
 
         Returns
         -------
@@ -1348,37 +1363,9 @@ class AnalysisResult:
 
         Examples
         --------
-        Simple plotting:
-
-        >>> result = study.execute()
         >>> fig = result.plot()
-        >>> fig.show()
-
-        Specific chart with zones:
-
         >>> fig = result.plot(chart='Xbar', show_zones=True, show_stats=True)
-
-        Faceted by operator:
-
         >>> fig = result.plot(facet_by='Operator', ncols=3)
-
-        Custom styling:
-
-        >>> fig = result.plot(
-        ...     theme='dark',
-        ...     highlight_signals=True,
-        ...     width=1200
-        ... )
-
-        Save as HTML:
-
-        >>> fig = result.plot()
-        >>> fig.save_html('report.html')
-
-        Save as image (requires kaleido):
-
-        >>> fig = result.plot()
-        >>> fig.save_image('chart.png', width=1200, height=800)
         """
         from .plotting import Plotter
 
@@ -1393,14 +1380,125 @@ class AnalysisResult:
             ncols=ncols,
             highlight_signals=highlight_signals,
             show_limits=show_limits,
+            show_limit_values=show_limit_values,
             show_zones=show_zones,
             show_rules=show_rules,
             show_stats=show_stats,
             theme=theme,
             width=width,
             height=height,
+            aspect_ratio=aspect_ratio,
             title=title,
-            **kwargs
+            xaxis_title=xaxis_title,
+            yaxis_title=yaxis_title,
+            shared_yaxis=shared_yaxis,
+            yaxis_padding=yaxis_padding,
+            vertical_spacing=vertical_spacing,
+        )
+
+    def plot_residuals(
+        self,
+        residual_type: str = 'R1',
+        plot_type: str = 'all',
+        theme: str = 'processbehavior',
+        width: int = 1200,
+        height: int = 400,
+    ) -> ControlChartFigure:
+        """Create residual diagnostic plots.
+
+        Parameters
+        ----------
+        residual_type : str, default 'R1'
+            Which residual ('R1'-'R5').
+        plot_type : str, default 'all'
+            'histogram', 'qq', 'sequence', or 'all'.
+        theme : str, default 'processbehavior'
+            Visual theme.
+        width, height : int
+            Figure dimensions.
+
+        Returns
+        -------
+        ControlChartFigure
+        """
+        from .plotting.residuals import plot_residuals as _plot_residuals
+
+        return _plot_residuals(
+            self,
+            residual_type=residual_type,
+            plot_type=plot_type,
+            theme=theme,
+            width=width,
+            height=height,
+        )
+
+    def plot_effects(
+        self,
+        effect_type: str = 'factor',
+        theme: str = 'processbehavior',
+        width: int = 800,
+        height: int = 500,
+    ) -> ControlChartFigure:
+        """Create bar chart of main effects.
+
+        Parameters
+        ----------
+        effect_type : str, default 'factor'
+            'factor', 'time', or 'all'.
+        theme : str, default 'processbehavior'
+            Visual theme.
+        width, height : int
+            Figure dimensions.
+
+        Returns
+        -------
+        ControlChartFigure
+        """
+        from .plotting import Plotter
+
+        plotter = Plotter(self)
+        return plotter.plot_effects(
+            effect_type=effect_type, theme=theme, width=width, height=height,
+        )
+
+    def report(
+        self,
+        filepath: str,
+        include_charts: bool = True,
+        include_residuals: bool = True,
+        include_effects: bool = True,
+        include_summary: bool = True,
+        theme: str = 'processbehavior',
+        width: int = 1200,
+        title: str | None = None,
+    ) -> None:
+        """Generate comprehensive HTML report.
+
+        Parameters
+        ----------
+        filepath : str
+            Output HTML file path.
+        include_charts, include_residuals, include_effects, include_summary : bool
+            Sections to include.
+        theme : str, default 'processbehavior'
+            Visual theme.
+        width : int, default 1200
+            Chart width in pixels.
+        title : str, optional
+            Report title.
+        """
+        from .plotting.report import generate_report
+
+        generate_report(
+            self,
+            filepath=filepath,
+            include_charts=include_charts,
+            include_residuals=include_residuals,
+            include_effects=include_effects,
+            include_summary=include_summary,
+            theme=theme,
+            width=width,
+            title=title,
         )
 
 

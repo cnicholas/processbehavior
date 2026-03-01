@@ -8,6 +8,7 @@ with built-in support for faceting, interactivity, and export.
 from __future__ import annotations
 
 from .capability_chart import create_capability_chart
+from .contracts import PlotError
 from .control_chart import ControlChartFigure
 from .effects_charts import (
     create_factor_effects_chart,
@@ -20,7 +21,7 @@ from .plotter import Plotter
 from .themes import ChartTheme, get_theme, list_themes, register_theme
 
 __all__ = [
-    'Plotter',
+    'PlotError',
     'ControlChartFigure',
     'ChartTheme',
     'get_theme',
@@ -32,4 +33,6 @@ __all__ = [
     'create_time_effects_chart',
     'create_time_interaction_chart',
     'create_factor_interaction_chart',
+    # Internal — kept importable for library internals; not part of public API
+    'Plotter',
 ]
