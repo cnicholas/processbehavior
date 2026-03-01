@@ -929,7 +929,7 @@ class Plotter:
         kwargs = {}
         if row is not None and col is not None:
             kwargs = {'row': row, 'col': col}
-        fig.update_xaxes(tickvals=tick_positions, ticktext=tick_labels, **kwargs)
+        fig.update_xaxes(tickvals=tick_positions, ticktext=tick_labels, tickangle=0, **kwargs)
 
     # ---- Y-range / histogram helpers ----
 
