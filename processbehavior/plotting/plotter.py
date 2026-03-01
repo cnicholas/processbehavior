@@ -34,6 +34,14 @@ _EFFECTS_CHART_TYPES = frozenset({
     'TimeInteraction', 'FactorInteraction',
 })
 
+_RESIDUAL_LABELS = {
+    'R1': 'Within-Subgroup',
+    'R2': 'Within-Subgroup Variation',
+    'R3': 'Interaction',
+    'R4': 'Time Effects',
+    'R5': 'Factor Effects',
+}
+
 
 class Plotter:
     """Unified plotting interface for ProcessBehavior analysis results.
@@ -229,7 +237,8 @@ class Plotter:
             fig.update_layout(title=title)
         elif len(charts_to_plot) == 1:
             chart_name = list(charts_to_plot.keys())[0]
-            fig.update_layout(title=self._generate_title(chart_name))
+            chart_info = list(charts_to_plot.values())[0]
+            fig.update_layout(title=self._generate_title(chart_name, chart_info))
 
         return ControlChartFigure(fig, self.result)
 
@@ -1003,14 +1012,26 @@ class Plotter:
 
     # ---- Title / label generation ----
 
-    def _generate_title(self, chart_name: str) -> str:
+    def _generate_title(self, chart_name: str, chart_info: dict | None = None) -> str:
         response_var = self.summary.get('response_var', '')
         grouping_vars = self.summary.get('grouping_vars', [])
         chart_type = self._get_chart_type_display(chart_name)
 
         parts = [f"{chart_type} Chart"]
-        if response_var:
+
+        # Use residual label if this is a residual chart
+        metadata = chart_info.get('metadata', {}) if chart_info else {}
+        residual_type = metadata.get('residual_type')
+        if residual_type:
+            recentered = metadata.get('recentered', False)
+            label = _RESIDUAL_LABELS.get(residual_type, residual_type)
+            suffix = f"{residual_type} ({label})"
+            if recentered:
+                suffix += " Recentered"
+            parts.append(f"of {suffix}")
+        elif response_var:
             parts.append(f"of {response_var}")
+
         if grouping_vars and len(grouping_vars) == 1:
             parts.append(f"by {grouping_vars[0]}")
         if '_' in chart_name and chart_name not in ['Xbar', 'S', 'XmR']:
