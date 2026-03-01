@@ -247,8 +247,8 @@ def _add_fixed_limit(
     for both single and faceted charts.
     """
     subplot_kw = _subplot_kwargs(row, col)
-    x_min = x_data.min()
-    x_max = x_data.max()
+    x_min = x_data.iloc[0] if hasattr(x_data, 'iloc') else x_data[0]
+    x_max = x_data.iloc[-1] if hasattr(x_data, 'iloc') else x_data[-1]
 
     fig.add_shape(
         type='line',

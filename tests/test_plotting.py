@@ -405,6 +405,33 @@ class TestPlotter:
         # Figure should render without errors
         assert fig.figure is not None
 
+    def test_fixed_limit_lines_span_full_xaxis_with_string_categories(self):
+        """Regression: limit lines must span all categories, not just '1'-'9'.
+
+        When subgroup values are converted to strings, lexicographic min/max
+        returns '9' instead of '51'. Limit lines must use positional
+        first/last to span the full chart width.
+        """
+        pb = ProcessBehavior.read_csv('validation/electrical_resistance_in_megohms_204.csv')
+        study = pb.formulate(
+            response=pb.cols.resistance_megohms,
+            time=pb.cols.obs,
+            factors=[pb.cols.subgroup],
+        )
+        result = study.execute(chart='Xbar', by=['subgroup'])
+        fig = result.plot(chart='Xbar')
+
+        # Extract horizontal limit lines (UPL, LPL, centerline)
+        hlines = [
+            s for s in fig._fig.layout.shapes
+            if s.type == 'line' and s.y0 == s.y1
+        ]
+        assert len(hlines) == 3, f"Expected 3 limit lines, got {len(hlines)}"
+
+        for line in hlines:
+            assert line.x0 == '1', f"Limit line starts at {line.x0!r}, expected '1'"
+            assert line.x1 == '51', f"Limit line ends at {line.x1!r}, expected '51'"
+
     def test_plot_with_rules_and_zones(self, simple_result):
         """Test plotting with both show_rules and show_zones enabled."""
         plotter = Plotter(simple_result)
