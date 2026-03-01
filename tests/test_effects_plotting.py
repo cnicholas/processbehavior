@@ -11,6 +11,7 @@ import plotly.graph_objects as go
 import pytest
 
 from processbehavior import ProcessBehavior
+from processbehavior.exceptions import ValidationError
 from processbehavior.plotting import ControlChartFigure
 from processbehavior.plotting.effects_charts import (
     create_factor_effects_chart,
@@ -470,23 +471,31 @@ class TestEffectsPlottingErrors:
 
     def test_time_interaction_requires_time(self, result_no_time):
         """Should raise error when time interaction not available."""
-        with pytest.raises(ValueError, match="Time interaction not available"):
+        with pytest.raises(
+            (ValueError, ValidationError), match="Time interaction not available",
+        ):
             result_no_time.plot(chart='TimeInteraction')
 
     def test_factor_interaction_requires_two_factors(self, result_single_factor):
         """Should raise error when factor interaction not available."""
-        with pytest.raises(ValueError, match="Factor interaction not available"):
+        with pytest.raises(
+            (ValueError, ValidationError), match="Factor interaction not available",
+        ):
             result_single_factor.plot(chart='FactorInteraction')
 
     def test_time_effects_requires_time_variable(self, result_no_time):
         """Should raise error when time effects not available."""
-        with pytest.raises(ValueError, match="Time effects not available"):
+        with pytest.raises(
+            (ValueError, ValidationError), match="Time effects not available",
+        ):
             result_no_time.plot(chart='TimeEffects')
 
     def test_main_effects_requires_effects(self, result_no_time):
         """MainEffects should raise error when effects not computed."""
         # result_no_time has factors but has_effects=False (XmR chart with by param)
-        with pytest.raises(ValueError, match="Effects not available"):
+        with pytest.raises(
+            (ValueError, ValidationError), match="Effects not available",
+        ):
             result_no_time.plot(chart='MainEffects')
 
 

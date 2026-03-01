@@ -14,8 +14,9 @@ import plotly.graph_objects as go
 import pytest
 
 from processbehavior import ProcessBehavior
+from processbehavior.exceptions import ChartNotAvailableError
 from processbehavior.plotting import ChartTheme, ControlChartFigure, Plotter, get_theme, list_themes, register_theme
-from processbehavior.plotting.themes import THEMES, apply_theme
+from processbehavior.plotting.themes import apply_theme
 
 
 class TestThemes:
@@ -23,9 +24,10 @@ class TestThemes:
 
     def test_theme_registry(self):
         """Test that all required themes are registered."""
-        assert 'processbehavior' in THEMES
-        assert 'minimal' in THEMES
-        assert 'dark' in THEMES
+        available = list_themes()
+        assert 'processbehavior' in available
+        assert 'minimal' in available
+        assert 'dark' in available
 
     def test_apply_theme_processbehavior(self):
         """Test applying processbehavior theme."""
@@ -262,7 +264,10 @@ class TestPlotter:
     def test_plot_invalid_chart(self, simple_result):
         """Test error handling for invalid chart name."""
         plotter = Plotter(simple_result)
-        with pytest.raises(ValueError, match="Chart 'Invalid' not found"):
+        with pytest.raises(
+            (ValueError, ChartNotAvailableError),
+            match="Chart 'Invalid' not found",
+        ):
             plotter.plot(chart='Invalid')
 
     def test_plot_with_theme(self, simple_result):

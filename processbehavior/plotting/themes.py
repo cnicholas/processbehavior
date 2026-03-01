@@ -542,26 +542,3 @@ def apply_theme(fig: go.Figure, theme: str | ChartTheme = 'processbehavior') -> 
     return fig
 
 
-# =============================================================================
-# Backward Compatibility
-# =============================================================================
-
-# Legacy theme dictionaries for backward compatibility
-PROCESSBEHAVIOR_THEME = {
-    'layout': _create_processbehavior_theme().to_layout_dict()
-}
-
-MINIMAL_THEME = {
-    'layout': _create_minimal_theme().to_layout_dict()
-}
-
-DARK_THEME = {
-    'layout': _create_dark_theme().to_layout_dict()
-}
-
-# Legacy registry
-THEMES = {
-    'processbehavior': PROCESSBEHAVIOR_THEME,
-    'minimal': MINIMAL_THEME,
-    'dark': DARK_THEME
-}
