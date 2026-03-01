@@ -31,9 +31,9 @@ SDSReasonType = Literal[
     "no_replication",              # SDS 2: all N_kt = 1
     "partial_replication",         # SDS 3: mixed N_kt (some 1, some >=2)
     # Incomplete (SDS 4, 5, 6) - has empty cells (N_kt = 0)
-    "incomplete_with_singletons",  # SDS 4: has 0s, has 1s, has >=2s
-    "incomplete_no_singletons",    # SDS 5: has 0s, no 1s, has >=2s
-    "incomplete_no_replication",   # SDS 6: has 0s, max = 1
+    "incomplete_no_singletons",    # SDS 4: has 0s, no 1s, has >=2s
+    "incomplete_no_replication",   # SDS 5: has 0s, max = 1
+    "incomplete_with_singletons",  # SDS 6: has 0s, has 1s, has >=2s
 ]
 
 # R2 calculation method - structure-driven, not SDS-driven
@@ -350,17 +350,17 @@ class SDSRegistry:
 
     **Incomplete** (has empty cells, requires sampling plan to detect):
 
-    **SDS 4**: Incomplete with singletons
-        - Has empty cells (N_kt = 0), singletons (N_kt = 1), and replicated (N_kt ≥ 2)
-        - Mixed everything
-
-    **SDS 5**: Incomplete without singletons
+    **SDS 4**: Incomplete without singletons
         - Has empty cells (N_kt = 0) and replicated (N_kt ≥ 2), but NO singletons
         - Can estimate variance from replicated cells
 
-    **SDS 6**: Incomplete without replication
+    **SDS 5**: Incomplete without replication
         - Has empty cells (N_kt = 0) and Max N_kt = 1
         - Cannot estimate within-cell variance
+
+    **SDS 6**: Incomplete with singletons
+        - Has empty cells (N_kt = 0), singletons (N_kt = 1), and replicated (N_kt ≥ 2)
+        - Mixed everything
 
     Examples
     --------
@@ -546,9 +546,9 @@ class SDSRegistry:
         - SDS 3: Min = 1, Max ≥ 2 (mixed)
 
         Incomplete (has empty cells, requires plan):
-        - SDS 4: Has 0s, has 1s, has ≥2s (mixed everything)
-        - SDS 5: Has 0s, NO 1s, has ≥2s (no singletons)
-        - SDS 6: Has 0s, Max = 1 (no replication)
+        - SDS 4: Has 0s, NO 1s, has ≥2s (no singletons)
+        - SDS 5: Has 0s, Max = 1 (no replication)
+        - SDS 6: Has 0s, has 1s, has ≥2s (mixed everything)
 
         Examples
         --------
@@ -648,14 +648,6 @@ class SDSRegistry:
                 'variance_decomposition': True
             },
             4: {
-                'description': 'Incomplete grid with singletons (has 0s, 1s, and ≥2s)',
-                'replication_type': 'partial',
-                'r2_method': 'hybrid',
-                'capabilities': ['partial_vas', 'main_effects', 'stratification'],
-                'interaction_analysis': False,
-                'variance_decomposition': True
-            },
-            5: {
                 'description': 'Incomplete grid without singletons (has 0s and ≥2s, no 1s)',
                 'replication_type': 'partial',
                 'r2_method': 'exact',  # All observed cells have replication
@@ -663,13 +655,21 @@ class SDSRegistry:
                 'interaction_analysis': False,  # Incomplete grid limits this
                 'variance_decomposition': True
             },
-            6: {
-                'description': 'Unstructured/irregular grid',
-                'replication_type': 'irregular',
-                'r2_method': 'adaptive',
-                'capabilities': ['regime_detection', 'adaptive_limits', 'sparse_analysis'],
+            5: {
+                'description': 'Incomplete grid without replication (has 0s, max=1)',
+                'replication_type': 'none',
+                'r2_method': 'ma2',  # No replication, use moving average
+                'capabilities': ['partial_vas', 'stratification'],
                 'interaction_analysis': False,
                 'variance_decomposition': True  # VAS supported via moving average
+            },
+            6: {
+                'description': 'Incomplete grid with singletons (has 0s, 1s, and ≥2s)',
+                'replication_type': 'partial',
+                'r2_method': 'hybrid',
+                'capabilities': ['partial_vas', 'main_effects', 'stratification'],
+                'interaction_analysis': False,
+                'variance_decomposition': True
             }
         }
 
@@ -745,26 +745,26 @@ class SDSRegistry:
 
         Examples
         --------
-        >>> # SDS 4 with Xbar - valid (incomplete grid with mixed replication)
-        >>> detector.validate_sds_for_analysis(sds=4, analysis_type='Xbar')
+        >>> # SDS 6 with Xbar - valid (incomplete grid with mixed replication)
+        >>> detector.validate_sds_for_analysis(sds=6, analysis_type='Xbar')
         True
 
-        >>> # SDS 6 with Xbar - warning (no replication)
-        >>> detector.validate_sds_for_analysis(sds=6, analysis_type='Xbar')
+        >>> # SDS 5 with Xbar - warning (no replication)
+        >>> detector.validate_sds_for_analysis(sds=5, analysis_type='Xbar')
         # Logs warning about incomplete grid
         True
         """
-        # SDS 4 or 5: Incomplete grid
-        if sds in [4, 5]:
+        # SDS 4 or 6: Incomplete grid
+        if sds in [4, 6]:
             logger.info(
                 f"SDS {sds} detected: Incomplete grid.\n"
                 f"Some factor×time combinations are missing from the data."
             )
 
-        # SDS 6: Incomplete without replication
-        if sds == 6:
+        # SDS 5: Incomplete without replication
+        if sds == 5:
             logger.warning(
-                "SDS 6 detected: Incomplete grid without replication.\n"
+                "SDS 5 detected: Incomplete grid without replication.\n"
                 "Analysis results may be limited - no within-cell variance estimation.\n"
                 "Consider using 'XmR' analysis for this data structure."
             )
@@ -788,11 +788,11 @@ class SDSRegistry:
 
         **Calculate VAS when:**
         1. User requests Xbar or S chart (cell-level analysis)
-        2. AND we have factorial structure (SDS 1-5)
+        2. AND we have factorial structure (SDS 1-4, 6)
 
         **Don't calculate VAS when:**
         1. User requests XmR or R chart (individual-level analysis)
-        2. OR SDS 6 (incomplete without replication - very limited structure)
+        2. OR SDS 5 (incomplete without replication - very limited structure)
 
         Parameters
         ----------
@@ -816,9 +816,9 @@ class SDSRegistry:
         >>> detector.should_calculate_vas_residuals(sds=1, analysis_type='XmR')
         False
         """
-        # SDS 6: Incomplete without replication - very limited analysis possible
-        if sds == 6:
-            logger.debug("No VAS: SDS 6 (incomplete without replication)")
+        # SDS 5: Incomplete without replication - very limited analysis possible
+        if sds == 5:
+            logger.debug("No VAS: SDS 5 (incomplete without replication)")
             return False
 
         # XmR/R use moving ranges, not factorial decomposition
@@ -831,8 +831,8 @@ class SDSRegistry:
             )
             return False
 
-        # Xbar/S with factorial structure (SDS 1-5)
-        if sds in [1, 2, 3, 4, 5]:
+        # Xbar/S with factorial structure (SDS 1-4, 6)
+        if sds in [1, 2, 3, 4, 6]:
             logger.debug(
                 f"Calculate VAS: SDS {sds} with {analysis_type} analysis "
                 f"supports decomposition"
@@ -1057,9 +1057,9 @@ class SDSRegistry:
         - SDS 3: Min = 1, Max ≥ 2 (mixed)
 
         Incomplete (has empty cells):
-        - SDS 4: Has 1s AND has ≥2s (mixed with singletons)
-        - SDS 5: NO 1s, has ≥2s (no singletons)
-        - SDS 6: Max = 1 (no replication)
+        - SDS 4: NO 1s, has ≥2s (no singletons)
+        - SDS 5: Max = 1 (no replication)
+        - SDS 6: Has 1s AND has ≥2s (mixed with singletons)
         """
         min_n = nkt_counts.min()
         max_n = nkt_counts.max()
@@ -1091,20 +1091,20 @@ class SDSRegistry:
         else:
             # Incomplete (SDS 4, 5, 6) - has empty cells
             if max_n == 1:
-                logger.debug("SDS 6: Incomplete - no replication (max=1)")
-                return (6, "incomplete_no_replication")
+                logger.debug("SDS 5: Incomplete - no replication (max=1)")
+                return (5, "incomplete_no_replication")
             elif has_singletons:
                 logger.debug(
-                    f"SDS 4: Incomplete with singletons "
+                    f"SDS 6: Incomplete with singletons "
                     f"({cells_with_n1} singletons, {cells_with_n2_plus} replicated)"
                 )
-                return (4, "incomplete_with_singletons")
+                return (6, "incomplete_with_singletons")
             else:
                 logger.debug(
-                    f"SDS 5: Incomplete without singletons "
+                    f"SDS 4: Incomplete without singletons "
                     f"({cells_with_n2_plus} replicated cells)"
                 )
-                return (5, "incomplete_no_singletons")
+                return (4, "incomplete_no_singletons")
 
     def _calculate_coverage_ratio(
         self,
@@ -1232,7 +1232,7 @@ class SDSRegistry:
         >>> plan = detector.get_analysis_plan(sds, min_cell_size=min_n)
         >>> print(f"Your data supports: {', '.join(plan.valid_charts)}")
         """
-        # Note: SDS 0 was consolidated into SDS 4. Response-only data (no factors,
+        # Note: SDS 0 was consolidated into SDS 6. Response-only data (no factors,
         # no time) is now treated as SDS 4 with implicit time ordering via obs_id.
         # See detect_sds() for rationale.
         plans = {
@@ -1323,36 +1323,6 @@ class SDSRegistry:
 
             4: SDSAnalysisPlan(
                 sds=4,
-                name="Incomplete Grid with Singletons",
-                description="Incomplete factor × time grid with mixed replication",
-                has_factors=True,
-                has_time=True,
-                has_replication='partial',  # Mixed: some n=1, some n≥2
-                valid_charts=['Xbar', 'S', 'R', 'XmR', 'Histogram'],
-                recommended_chart='Xbar',
-                invalid_charts=[],
-                vas_residuals_supported=True,
-                residuals_available=['R1', 'R2', 'R3', 'R4', 'R5'],
-                residual_calculation_method='hybrid',  # Exact where n≥2, MA where n=1
-                main_effects_supported=True,
-                interaction_effects_supported=False,  # Incomplete grid limits this
-                supports_stratification=True,
-                typical_use_cases=[
-                    'Incomplete sampling with mixed replication',
-                    'Production data with gaps and variable sample sizes',
-                    'Opportunistic data collection',
-                    'Partial factorial experiments'
-                ],
-                limitations=[
-                    'Incomplete grid - some factor×time combinations missing',
-                    'Mixed variance estimation (hybrid R2)',
-                    'Cannot analyze all interactions due to missing cells'
-                ],
-                bishop_reference="Wheeler/Bishop Methodology: Incomplete with Singletons (SDS 4)"
-            ),
-
-            5: SDSAnalysisPlan(
-                sds=5,
                 name="Incomplete Grid without Singletons",
                 description="Incomplete factor × time grid with full replication in observed cells",
                 has_factors=True,
@@ -1378,11 +1348,11 @@ class SDSRegistry:
                     'Cannot analyze all interactions due to missing cells',
                     'Effect estimates may be biased by missing data pattern'
                 ],
-                bishop_reference="Wheeler/Bishop Methodology: Incomplete without Singletons (SDS 5)"
+                bishop_reference="Wheeler/Bishop Methodology: Incomplete without Singletons (SDS 4)"
             ),
 
-            6: SDSAnalysisPlan(
-                sds=6,
+            5: SDSAnalysisPlan(
+                sds=5,
                 name="Incomplete Grid Without Replication",
                 description="Incomplete factor × time grid with no replication (all n=1)",
                 has_factors=True,
@@ -1409,14 +1379,44 @@ class SDSRegistry:
                     'Cannot analyze interactions',
                     'More limited than complete grid designs'
                 ],
-                bishop_reference="Wheeler/Bishop Methodology: Irregular/No Replication (SDS 6)"
+                bishop_reference="Wheeler/Bishop Methodology: Incomplete without Replication (SDS 5)"
+            ),
+
+            6: SDSAnalysisPlan(
+                sds=6,
+                name="Incomplete Grid with Singletons",
+                description="Incomplete factor × time grid with mixed replication",
+                has_factors=True,
+                has_time=True,
+                has_replication='partial',  # Mixed: some n=1, some n≥2
+                valid_charts=['Xbar', 'S', 'R', 'XmR', 'Histogram'],
+                recommended_chart='Xbar',
+                invalid_charts=[],
+                vas_residuals_supported=True,
+                residuals_available=['R1', 'R2', 'R3', 'R4', 'R5'],
+                residual_calculation_method='hybrid',  # Exact where n≥2, MA where n=1
+                main_effects_supported=True,
+                interaction_effects_supported=False,  # Incomplete grid limits this
+                supports_stratification=True,
+                typical_use_cases=[
+                    'Incomplete sampling with mixed replication',
+                    'Production data with gaps and variable sample sizes',
+                    'Opportunistic data collection',
+                    'Partial factorial experiments'
+                ],
+                limitations=[
+                    'Incomplete grid - some factor×time combinations missing',
+                    'Mixed variance estimation (hybrid R2)',
+                    'Cannot analyze all interactions due to missing cells'
+                ],
+                bishop_reference="Wheeler/Bishop Methodology: Incomplete with Singletons (SDS 6)"
             ),
         }
 
         if sds not in plans:
             raise ValueError(
                 f"Invalid SDS: {sds}. Must be 1-6. "
-                f"(Note: SDS 0 was consolidated into SDS 4) "
+                f"(Note: SDS 0 was consolidated into SDS 6) "
                 f"Available: {list(plans.keys())}"
             )
 
@@ -1447,7 +1447,7 @@ class SDSRegistry:
         print("=" * 70)
         print()
 
-        for sds in range(1, 7):  # SDS 1-6 (SDS 0 was consolidated into SDS 4)
+        for sds in range(1, 7):  # SDS 1-6 (SDS 0 was consolidated into SDS 6)
             plan = SDSRegistry.get_analysis_plan(sds)
             print(plan)
             print()
@@ -1473,7 +1473,7 @@ class SDSRegistry:
         >>> matrix.to_excel('sds_capabilities.xlsx')
         """
         data = []
-        for sds in range(1, 7):  # SDS 1-6 (SDS 0 was consolidated into SDS 4)
+        for sds in range(1, 7):  # SDS 1-6 (SDS 0 was consolidated into SDS 6)
             plan = SDSRegistry.get_analysis_plan(sds)
             data.append({
                 'SDS': sds,

@@ -25,9 +25,9 @@ SDS detection runs on raw data before NA rows are dropped, so cells where all re
 | 1 | Full Replication | All cells n >= 2 | Xbar-S |
 | 2 | No Replication | All cells n = 1 | Xbar-S (MR-based) |
 | 3 | Partial Replication | Mixed n=1 and n>=2 | Xbar-S (hybrid) |
-| 4 | Single Stream | One factor, multiple times | Stratified XmR |
-| 5 | Nested Design | Hierarchical structure | XmR |
-| 6 | Unstructured | Irregular collection | XmR |
+| 4 | Nested Design | Hierarchical structure | XmR |
+| 5 | Unstructured | Irregular collection | XmR |
+| 6 | Single Stream | One factor, multiple times | Stratified XmR |
 
 ## How SDS is Detected
 
@@ -188,9 +188,9 @@ The design report shows:
 | 1 - Full Replication | No | Design comparison, coverage reports |
 | 2 - No Replication | No | Design comparison, coverage reports |
 | 3 - Partial Replication | No | Design comparison, shows sparse cells |
-| 4 - Incomplete with Singletons | No | Catches entirely absent factor levels |
-| 5 - Incomplete without Singletons | No | Catches entirely absent factor levels |
-| 6 - Incomplete without Replication | No | Catches entirely absent factor levels |
+| 4 - Incomplete without Singletons | No | Catches entirely absent factor levels |
+| 5 - Incomplete without Replication | No | Catches entirely absent factor levels |
+| 6 - Incomplete with Singletons | No | Catches entirely absent factor levels |
 
 **Best practice:** Always use a plan for rigorous VAS analysis. While not required for SDS detection, plans document your experimental design, catch entirely absent factor levels, and enable rich design reports.
 
@@ -256,7 +256,31 @@ The design report shows:
 
 **Valid Charts**: Xbar, S, XmR
 
-## SDS 4: Single Stream Over Time
+## SDS 4: Nested Design
+
+**Structure**: Hierarchical factor structure with incomplete temporal coverage.
+
+**Example**: Different operators work different shifts on different days
+
+**Capabilities**:
+- ⚠️ Limited to XmR analysis
+- ⚠️ Stratified analysis recommended
+
+**Valid Charts**: XmR, R
+
+## SDS 5: Unstructured
+
+**Structure**: Irregular or sporadic data collection.
+
+**Example**: Measurements taken whenever convenient, no regular schedule
+
+**Capabilities**:
+- ⚠️ Most limited analysis options
+- ⚠️ XmR with adaptive limits
+
+**Valid Charts**: XmR, R
+
+## SDS 6: Single Stream Over Time
 
 **Structure**: One factor level (or no factors), multiple time points.
 
@@ -274,30 +298,6 @@ The design report shows:
 - ✅ Perfect for time series monitoring
 - ✅ All 8 WECO rules applicable
 - ❌ No factor comparisons (only one level)
-
-**Valid Charts**: XmR, R
-
-## SDS 5: Nested Design
-
-**Structure**: Hierarchical factor structure with incomplete temporal coverage.
-
-**Example**: Different operators work different shifts on different days
-
-**Capabilities**:
-- ⚠️ Limited to XmR analysis
-- ⚠️ Stratified analysis recommended
-
-**Valid Charts**: XmR, R
-
-## SDS 6: Unstructured
-
-**Structure**: Irregular or sporadic data collection.
-
-**Example**: Measurements taken whenever convenient, no regular schedule
-
-**Capabilities**:
-- ⚠️ Most limited analysis options
-- ⚠️ XmR with adaptive limits
 
 **Valid Charts**: XmR, R
 
@@ -337,8 +337,9 @@ The SDS affects three key aspects:
 | 1 | Within-cell standard deviation (exact) |
 | 2 | 2-point backward moving average |
 | 3 | Hybrid: exact for n>1, zero for n=1 |
-| 4-5 | Hybrid: exact for n>1, zero for n=1 |
-| 6 | 2-point backward moving average |
+| 4 | Within-cell standard deviation (exact for present cells) |
+| 5 | 2-point backward moving average |
+| 6 | Hybrid: exact for n>1, zero for n=1 |
 
 ### 2. Available Charts
 
@@ -359,12 +360,12 @@ The available chart types for each residual depend on the **rational subgrouping
 
 | Residual | Subgrouping | Xbar/S Available | XmR Available |
 |----------|-------------|------------------|---------------|
-| **R2** | By cell (k,t) | SDS 1, 3, 4, 5* | All SDS |
-| **R3** | By cell (k,t) | SDS 1, 3, 4, 5* | All SDS |
+| **R2** | By cell (k,t) | SDS 1, 3, 4, 6* | All SDS |
+| **R3** | By cell (k,t) | SDS 1, 3, 4, 6* | All SDS |
 | **R4** | By time (aggregate across factors) | All SDS | All SDS |
 | **R5** | By factor (aggregate across time) | All SDS | All SDS |
 
-*When cells have n≥2. SDS 2 and 6 use XmR only.
+*When cells have n≥2. SDS 2 and 5 use XmR only.
 
 **Key insight**: R4 and R5 use different rational subgrouping than R2/R3:
 - **R4**: Aggregates observations across factor levels for each time point (N_.t = Σ_k N_kt)
@@ -374,8 +375,8 @@ This enables Xbar/S analysis for R4 and R5 even when individual cells have n=1, 
 
 **Note on R2 calculation**: R2 adapts to your sampling structure:
 - **SDS 1**: Within-cell deviation (`R2 = Y - Ȳ_kt`)
-- **SDS 2, 6**: Moving average method (`R2 = Y - MA2`) for unreplicated/sparse designs
-- **SDS 3, 4, 5**: Within-cell deviation (R2=0 for cells with n=1)
+- **SDS 2, 5**: Moving average method (`R2 = Y - MA2`) for unreplicated/sparse designs
+- **SDS 3, 4, 6**: Within-cell deviation (R2=0 for cells with n=1)
 
 ### 3. Signal Detection Rules
 
@@ -404,7 +405,7 @@ Ensure all cells have the same number of replicates:
 # Every lane-batch combination gets exactly n measurements
 ```
 
-### Move from SDS 4 → SDS 1-3
+### Move from SDS 6 → SDS 1-3
 
 Add factor levels:
 ```python
@@ -446,9 +447,9 @@ print(cell_counts['n'].value_counts())
 | Full replication (n>=2 per cell) | 1 | Xbar-S with full VAS |
 | One observation per cell | 2 | Xbar-S with MR limits |
 | Mixed replication | 3 | Xbar-S with hybrid limits |
-| Single stream over time | 4 | XmR with full WECO rules |
-| Nested/hierarchical | 5 | Stratified XmR |
-| Irregular collection | 6 | XmR with caution |
+| Nested/hierarchical | 4 | Stratified XmR |
+| Irregular collection | 5 | XmR with caution |
+| Single stream over time | 6 | XmR with full WECO rules |
 
 ## Next Steps
 

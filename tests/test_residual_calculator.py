@@ -386,8 +386,8 @@ def test_calculate_vas_residuals_sds3_hybrid_uses_ma2_for_singletons(spec_sds1):
     assert b_rows['R2'].iloc[1] != 0  # Second in B group: MA2 value, not zero
 
 
-def test_calculate_vas_residuals_sds4_exact(spec_sds1):
-    """SDS 4 (full replication) should use exact R2 = Y - Ybar_kt."""
+def test_calculate_vas_residuals_sds1_exact_replicated(spec_sds1):
+    """Full replication should use exact R2 = Y - Ybar_kt."""
     sds4_df = pd.DataFrame({
         'lane': ['A', 'A', 'B', 'B'] * 2,
         'time': [1, 1, 1, 1, 2, 2, 2, 2],
@@ -400,8 +400,8 @@ def test_calculate_vas_residuals_sds4_exact(spec_sds1):
     pd.testing.assert_series_equal(result['R2'], expected_r2, check_names=False)
 
 
-def test_calculate_vas_residuals_sds6_uses_moving_average(spec_sds1):
-    """SDS 6 (sparse, all n=1) should use MA2 for R2."""
+def test_calculate_vas_residuals_sparse_uses_moving_average(spec_sds1):
+    """Sparse data (all n=1) should use MA2 for R2."""
     sds6_df = pd.DataFrame({
         'lane': ['A', 'A', 'A'],
         'time': [1, 2, 3],

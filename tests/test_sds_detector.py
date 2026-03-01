@@ -276,31 +276,31 @@ def test_get_sds_characteristics_sds3(detector):
 
 
 def test_get_sds_characteristics_sds4(detector):
-    """Should return correct characteristics for SDS 4 (incomplete with singletons)."""
+    """Should return correct characteristics for SDS 4 (incomplete without singletons)."""
     info = detector.get_sds_characteristics(4)
 
     assert info['sds'] == 4
-    assert 'Incomplete' in info['description'] or 'singletons' in info['description']
-    assert info['r2_method'] == 'hybrid'
-    assert info['replication_type'] == 'partial'
-
-
-def test_get_sds_characteristics_sds5(detector):
-    """Should return correct characteristics for SDS 5 (incomplete without singletons)."""
-    info = detector.get_sds_characteristics(5)
-
-    assert info['sds'] == 5
     assert 'Incomplete' in info['description'] or 'singletons' in info['description']
     assert info['r2_method'] == 'exact'  # All observed cells are replicated
     assert info['interaction_analysis'] is False  # Incomplete grid limits this
 
 
+def test_get_sds_characteristics_sds5(detector):
+    """Should return correct characteristics for SDS 5 (incomplete without replication)."""
+    info = detector.get_sds_characteristics(5)
+
+    assert info['sds'] == 5
+    assert 'Incomplete' in info['description'] or 'replication' in info['description']
+    assert info['r2_method'] == 'ma2'  # No replication, use moving average
+    assert info['interaction_analysis'] is False
+
+
 def test_get_sds_characteristics_sds6(detector):
-    """Should return correct characteristics for SDS 6 (incomplete without replication)."""
+    """Should return correct characteristics for SDS 6 (incomplete with singletons)."""
     info = detector.get_sds_characteristics(6)
 
     assert info['sds'] == 6
-    assert 'Incomplete' in info['description'] or 'irregular' in info['description']
+    assert 'Incomplete' in info['description'] or 'singletons' in info['description']
     assert info['interaction_analysis'] is False
 
 
@@ -342,10 +342,10 @@ def test_validate_sds_for_analysis_sds4_with_xbar_logs_info(detector, caplog):
     assert 'Incomplete' in caplog.text
 
 
-def test_validate_sds_for_analysis_sds6_warns(detector, caplog):
-    """Should warn for SDS 6 (incomplete without replication)."""
+def test_validate_sds_for_analysis_sds5_warns(detector, caplog):
+    """Should warn for SDS 5 (incomplete without replication)."""
     with caplog.at_level('WARNING'):
-        detector.validate_sds_for_analysis(sds=6, analysis_type='Xbar')
+        detector.validate_sds_for_analysis(sds=5, analysis_type='Xbar')
 
     assert 'Incomplete' in caplog.text or 'replication' in caplog.text
 
@@ -366,16 +366,16 @@ def test_should_calculate_vas_sds4_returns_true(detector):
     assert result is True
 
 
-def test_should_calculate_vas_sds5_returns_true(detector):
-    """SDS 5 has factorial structure (incomplete without singletons) - supports VAS."""
+def test_should_calculate_vas_sds5_returns_false(detector):
+    """SDS 5 (incomplete without replication) - no VAS."""
     result = detector.should_calculate_vas_residuals(sds=5, analysis_type='Xbar')
-    assert result is True
-
-
-def test_should_calculate_vas_sds6_returns_false(detector):
-    """SDS 6 (incomplete without replication) - no VAS."""
-    result = detector.should_calculate_vas_residuals(sds=6, analysis_type='Xbar')
     assert result is False
+
+
+def test_should_calculate_vas_sds6_returns_true(detector):
+    """SDS 6 has factorial structure (incomplete with singletons) - supports VAS."""
+    result = detector.should_calculate_vas_residuals(sds=6, analysis_type='Xbar')
+    assert result is True
 
 
 def test_should_calculate_vas_xmr_returns_false(detector):
@@ -414,13 +414,13 @@ def test_should_calculate_vas_sds3_with_xbar_returns_true(detector):
     assert result is True
 
 
-def test_should_calculate_vas_sds5_with_xbar_returns_true(detector, caplog):
-    """SDS 5 (incomplete without singletons) with Xbar - supports VAS.
+def test_should_calculate_vas_sds4_with_xbar_returns_true(detector, caplog):
+    """SDS 4 (incomplete without singletons) with Xbar - supports VAS.
 
-    SDS 5 has all observed cells replicated, so exact R2 calculation works.
+    SDS 4 has all observed cells replicated, so exact R2 calculation works.
     """
     with caplog.at_level('DEBUG'):
-        result = detector.should_calculate_vas_residuals(sds=5, analysis_type='Xbar')
+        result = detector.should_calculate_vas_residuals(sds=4, analysis_type='Xbar')
 
     assert result is True
 
@@ -676,7 +676,7 @@ class TestR2ChartAvailability:
         assert 'R2_S' not in plan.residual_charts
 
     def test_sds4_with_replication_has_r2_s(self):
-        """SDS 4 with min_cell_size≥2 should have R2_S available.
+        """SDS 4 (incomplete without singletons) with min_cell_size≥2 should have R2_S.
 
         This is the main fix from GitHub Issue #49 - SDS 4 can
         have R2_S when cells have replication.
@@ -698,20 +698,19 @@ class TestR2ChartAvailability:
         assert 'R2_S' not in plan.residual_charts
 
     def test_sds5_with_replication_has_r2_s(self):
-        """SDS 5 (nested) with min_cell_size≥2 should have R2_S available.
+        """SDS 5 (incomplete without replication) with replication can have R2_S.
 
-        Another key fix from GitHub Issue #49 - nested designs can
-        have R2_S when cells have replication.
+        Even no-replication grids can use S chart for R2 if cells have n≥2.
         """
-        plan = SDSRegistry.get_analysis_plan(sds=5, min_cell_size=2)
+        plan = SDSRegistry.get_analysis_plan(sds=5, min_cell_size=5)
 
+        # SDS 5 supports VAS residuals (with moving average method)
         assert plan.vas_residuals_supported is True
-        assert plan.min_cell_size == 2
+        assert plan.min_cell_size == 5
         assert 'R2_S' in plan.residual_charts
-        assert 'R2_XmR' not in plan.residual_charts
 
     def test_sds5_without_replication_has_r2_xmr(self):
-        """SDS 5 with min_cell_size=1 should use R2_XmR."""
+        """SDS 5 without replication uses R2_XmR."""
         plan = SDSRegistry.get_analysis_plan(sds=5, min_cell_size=1)
 
         assert plan.vas_residuals_supported is True
@@ -720,19 +719,20 @@ class TestR2ChartAvailability:
         assert 'R2_S' not in plan.residual_charts
 
     def test_sds6_with_replication_has_r2_s(self):
-        """SDS 6 (irregular) with replication can have R2_S.
+        """SDS 6 (incomplete with singletons) with min_cell_size≥2 should have R2_S.
 
-        Even irregular grids can use S chart for R2 if cells have n≥2.
+        Another key fix from GitHub Issue #49 - mixed designs can
+        have R2_S when cells have replication.
         """
-        plan = SDSRegistry.get_analysis_plan(sds=6, min_cell_size=5)
+        plan = SDSRegistry.get_analysis_plan(sds=6, min_cell_size=2)
 
-        # SDS 6 supports VAS residuals (with moving average method)
         assert plan.vas_residuals_supported is True
-        assert plan.min_cell_size == 5
+        assert plan.min_cell_size == 2
         assert 'R2_S' in plan.residual_charts
+        assert 'R2_XmR' not in plan.residual_charts
 
     def test_sds6_without_replication_has_r2_xmr(self):
-        """SDS 6 (irregular) without replication uses R2_XmR."""
+        """SDS 6 with min_cell_size=1 should use R2_XmR."""
         plan = SDSRegistry.get_analysis_plan(sds=6, min_cell_size=1)
 
         assert plan.vas_residuals_supported is True
@@ -742,7 +742,7 @@ class TestR2ChartAvailability:
 
     def test_all_r2_supporting_sds_have_other_residuals(self):
         """All SDS types with R2 should also have R3, R4, R5 charts."""
-        for sds in [1, 2, 3, 4, 5]:
+        for sds in [1, 2, 3, 4, 6]:
             plan = SDSRegistry.get_analysis_plan(sds=sds, min_cell_size=2)
 
             if plan.vas_residuals_supported:
@@ -882,14 +882,14 @@ class TestTPlannedCoverage:
         # Without T_planned: coverage = 8/8 = 100%
         result_no_T = detector.detect_sds(df, spec, plan=plan, T_planned=None)
 
-        # With T_planned=8: coverage = 8/16 = 50% → should trigger SDS 5 or 6
+        # With T_planned=8: coverage = 8/16 = 50% → should trigger SDS 4 or 5
         result_with_T = detector.detect_sds(df, spec, plan=plan, T_planned=8)
 
         # Without T_planned, should be SDS 2 (no replication, complete)
         assert result_no_T.sds == 2
 
-        # With T_planned=8, coverage drops to 50% → SDS 6 (incomplete, no replication)
-        assert result_with_T.sds == 6
+        # With T_planned=8, coverage drops to 50% → SDS 5 (incomplete, no replication)
+        assert result_with_T.sds == 5
 
     def test_T_planned_none_uses_observed(self, detector):
         """When T_planned is None, should use observed time count."""
@@ -917,7 +917,7 @@ class TestTPlannedCoverage:
         """Coverage calculation should not explode for large K."""
         # This should NOT cause memory issues with large factor spaces
 
-        # Create data with 2 groups (required to avoid SDS 4) across many factors
+        # Create data with 2 groups (required to avoid SDS 6) across many factors
         n_factors = 5
         n_levels = 10
         # Two rows: one for group A, one for group B
@@ -949,8 +949,8 @@ class TestTPlannedCoverage:
         result = detector.detect_sds(df, spec, plan=plan, T_planned=10)
 
         # Only 2 observed cells out of 100,000 × 10 = 1M expected
-        # Coverage ~0.0002% → SDS 6 (severely incomplete, no replication)
-        assert result.sds == 6
+        # Coverage ~0.0002% → SDS 5 (severely incomplete, no replication)
+        assert result.sds == 5
 
 
 # ============================================================================
@@ -1163,7 +1163,7 @@ class TestStructureDetection:
         # Expected: 2 lanes × 4 times = 8 cells
         # Observed: only 2 cells (1,1) and (2,1)
         assert result.n_empty_cells == 6  # 8 - 2 = 6 empty cells
-        assert result.sds == 6  # Incomplete, no replication
+        assert result.sds == 5  # Incomplete, no replication
 
     def test_canonicalization_matches_data_types(self, detector):
         """Plan canonicalization should match data canonicalization for numeric types.

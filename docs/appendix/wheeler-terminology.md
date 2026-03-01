@@ -98,17 +98,7 @@ Wheeler identifies six sampling design states that determine valid analysis appr
 
 ---
 
-### SDS 4: Single Stream
-
-**Definition**: One factor level measured over time.
-
-**ProcessBehavior Detection**: No factors, or single factor level
-
-**Capabilities**: XmR analysis, full WECO rules
-
----
-
-### SDS 5: Nested Design
+### SDS 4: Nested Design
 
 **Definition**: Hierarchical factor structure.
 
@@ -116,11 +106,21 @@ Wheeler identifies six sampling design states that determine valid analysis appr
 
 ---
 
-### SDS 6: Unstructured
+### SDS 5: Unstructured
 
 **Definition**: Irregular or sporadic collection.
 
 **Capabilities**: Most limited analysis
+
+---
+
+### SDS 6: Single Stream
+
+**Definition**: One factor level measured over time.
+
+**ProcessBehavior Detection**: No factors, or single factor level
+
+**Capabilities**: XmR analysis, full WECO rules
 
 ---
 

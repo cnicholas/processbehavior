@@ -146,7 +146,7 @@ class TestSDSDetection:
                 'N': 2
             }
         )
-        assert study.observed_design_state.sds == 6, f"Expected SDS 6, got SDS {study.observed_design_state.sds}"
+        assert study.observed_design_state.sds == 5, f"Expected SDS 5, got SDS {study.observed_design_state.sds}"
 
 
 class TestFullPipeline:

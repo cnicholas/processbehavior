@@ -292,8 +292,8 @@ class TestIntegrationWithAnalysis:
         - Cell (TIME=2, FACTOR=A): Y='*' → NA → N_kt=0
         - Cell (TIME=3, FACTOR=B): Y='ND' → NA → N_kt=0
 
-        This creates an incomplete structure (SDS 6: incomplete, no replication).
-        SDS 6 supports XmR chart, not Xbar.
+        This creates an incomplete structure (SDS 5: incomplete, no replication).
+        SDS 5 supports XmR chart, not Xbar.
         """
         df = pd.DataFrame({
             'TIME': [1, 1, 2, 2, 3, 3, 4, 4],
@@ -310,10 +310,10 @@ class TestIntegrationWithAnalysis:
             time=pdf.cols.TIME
         )
 
-        # SDS 6 detected due to empty cells (NA responses)
-        assert study.observed_design_state.sds == 6
+        # SDS 5 detected due to empty cells (NA responses, no replication)
+        assert study.observed_design_state.sds == 5
 
-        # Use XmR chart (valid for SDS 6) with explicit stratification
+        # Use XmR chart (valid for SDS 5) with explicit stratification
         result = study.execute(chart='XmR', by=['FACTOR'])
 
         # Should complete successfully

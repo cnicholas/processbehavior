@@ -532,12 +532,12 @@ class TestSDSIntegration:
         # Should detect some SDS
         assert study.observed_design_state.sds in [0, 1, 2, 3, 4, 5, 6]
 
-    def test_sds_5_detected_with_incomplete_plan_and_replication(self):
-        """Incomplete grid WITH replication should detect SDS 5."""
+    def test_sds_4_detected_with_incomplete_plan_and_replication(self):
+        """Incomplete grid WITH replication should detect SDS 4."""
         # Data has Lane=[1,2] and Phase=[1,2] (4 combinations), each with n=2
         # Plan says Lane=[1,2,3,4] and Phase=[1,2,3] (12 combinations)
         # → Only 4 of 12 expected cells present → coverage ~33% < 95%
-        # → Has replication (n=2 per cell) → SDS 5
+        # → Has replication (n=2 per cell) → SDS 4
         df = pd.DataFrame({
             'Weight': [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0],
             'Lane': [1, 1, 2, 2, 1, 1, 2, 2],
@@ -555,15 +555,15 @@ class TestSDSIntegration:
                 plan={'factors': {'Lane': [1, 2, 3, 4], 'Phase': [1, 2, 3]}, 'T': 2, 'N': 2}
             )
 
-        assert study.observed_design_state.sds == 5  # Incomplete grid WITH replication
+        assert study.observed_design_state.sds == 4  # Incomplete grid WITH replication
 
-    def test_sds_6_detected_with_incomplete_plan_no_replication(self):
-        """Incomplete grid with NO replication should detect SDS 6."""
+    def test_sds_5_detected_with_incomplete_plan_no_replication(self):
+        """Incomplete grid with NO replication should detect SDS 5."""
         # Data has Lane=[1,2] and Phase=[1,2] (4 factor combinations)
         # Each cell has multiple time points but n=1 per (factor, time) cell
         # Plan says Lane=[1,2,3,4] and Phase=[1,2,3] (12 combinations)
         # → Only 4 of 12 expected factor combos × 4 time points = 16 of 48 cells
-        # → Coverage ~33% < 95%, no replication (n=1 per cell) → SDS 6
+        # → Coverage ~33% < 95%, no replication (n=1 per cell) → SDS 5
         df = pd.DataFrame({
             'Weight': [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0,
                        9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0],
@@ -582,14 +582,14 @@ class TestSDSIntegration:
                 plan={'factors': {'Lane': [1, 2, 3, 4], 'Phase': [1, 2, 3]}, 'T': 4, 'N': 1}
             )
 
-        assert study.observed_design_state.sds == 6  # Incomplete grid with NO replication
+        assert study.observed_design_state.sds == 5  # Incomplete grid with NO replication
 
-    def test_sds_4_detected_with_incomplete_plan_mixed_replication(self):
-        """Incomplete grid with MIXED replication should detect SDS 4 (per Table 1)."""
+    def test_sds_6_detected_with_incomplete_plan_mixed_replication(self):
+        """Incomplete grid with MIXED replication should detect SDS 6 (per Table 1)."""
         # Data has Lane=[1,2] and Phase=[1,2] (4 factor combinations)
         # Some cells have n=2 (replication), some have n=1 (singleton)
         # Plan says Lane=[1,2,3,4] and Phase=[1,2,3] (12 combinations)
-        # → Incomplete (has empty cells) + has singletons + has replicated → SDS 4
+        # → Incomplete (has empty cells) + has singletons + has replicated → SDS 6
         df = pd.DataFrame({
             # (Lane=1, Phase=1): n=2 at Pull=1, n=2 at Pull=2 (replicated)
             # (Lane=2, Phase=2): n=1 at Pull=1, n=1 at Pull=2 (singletons)
@@ -612,8 +612,8 @@ class TestSDSIntegration:
                 plan={'factors': {'Lane': [1, 2, 3, 4], 'Phase': [1, 2, 3]}, 'T': 2, 'N': 2}
             )
 
-        # Per Table 1: Incomplete + has singletons + has replicated → SDS 4
-        assert study.observed_design_state.sds == 4
+        # Per Table 1: Incomplete + has singletons + has replicated → SDS 6
+        assert study.observed_design_state.sds == 6
 
 
 # =============================================================================
@@ -751,8 +751,8 @@ class TestCoverageRatioEdgeCases:
             )
 
         # Lane=2 is missing from plan, so grid is incomplete
-        # Should be SDS 5 or 6 (incomplete), NOT SDS 1/2/3 (complete)
-        assert study.observed_design_state.sds in [5, 6]
+        # Should be SDS 4 or 5 (incomplete), NOT SDS 1/2/3 (complete)
+        assert study.observed_design_state.sds in [4, 5]
 
 
 # =============================================================================
@@ -795,7 +795,7 @@ class TestSDSResultReason:
         if result.sds == 5:
             assert result.reason == 'nested'
 
-    def test_sds_5_reason_incomplete_no_singletons(self):
+    def test_sds_4_reason_incomplete_no_singletons(self):
         """Incomplete grid with replication should return reason='incomplete_no_singletons'."""
         from processbehavior.data_preparation import DataPreparation
         from processbehavior.formulation_spec import FormulationSpec
@@ -825,11 +825,11 @@ class TestSDSResultReason:
             plan={'Lane': [1, 2, 3], 'Phase': [1, 2]}
         )
 
-        assert result.sds == 5
-        # SDS 5: Incomplete grid without singletons (all observed cells replicated)
+        assert result.sds == 4
+        # SDS 4: Incomplete grid without singletons (all observed cells replicated)
         assert result.reason == 'incomplete_no_singletons'
 
-    def test_sds_6_reason_incomplete_no_replication(self):
+    def test_sds_5_reason_incomplete_no_replication(self):
         """Incomplete grid without replication should return reason='incomplete_no_replication'."""
         from processbehavior.data_preparation import DataPreparation
         from processbehavior.formulation_spec import FormulationSpec
@@ -859,7 +859,7 @@ class TestSDSResultReason:
             plan={'Lane': [1, 2, 3], 'Phase': [1, 2]}
         )
 
-        assert result.sds == 6
+        assert result.sds == 5
         assert result.reason == 'incomplete_no_replication'
 
 
@@ -874,7 +874,7 @@ class TestDocsAlignment:
         """get_sds_characteristics and get_analysis_plan should agree on key properties."""
         from processbehavior.sds_detector import SDSRegistry
 
-        # SDS 1-6 (SDS 0 was consolidated into SDS 4)
+        # SDS 1-6 (SDS 0 was consolidated into SDS 6)
         for sds in range(1, 7):
             chars = SDSRegistry().get_sds_characteristics(sds)
             plan = SDSRegistry.get_analysis_plan(sds, min_cell_size=2)
@@ -885,40 +885,40 @@ class TestDocsAlignment:
             # Both should agree on VAS support
             assert chars['variance_decomposition'] == plan.vas_residuals_supported
 
-    def test_sds_4_is_incomplete_with_singletons(self):
-        """SDS 4 should be 'Incomplete Grid with Singletons' per Table 1."""
+    def test_sds_4_is_incomplete_without_singletons(self):
+        """SDS 4 should be 'Incomplete Grid without Singletons' per Table 1."""
         from processbehavior.sds_detector import SDSRegistry
 
         chars = SDSRegistry().get_sds_characteristics(4)
         plan = SDSRegistry.get_analysis_plan(4)
 
-        # SDS 4 per Table 1: Incomplete grid with mixed replication (has 0s, 1s, and ≥2s)
-        assert 'Incomplete' in chars['description'] and 'singletons' in chars['description'].lower()
-        assert plan.name == 'Incomplete Grid with Singletons'
-        assert plan.has_time is True
-        assert plan.has_factors is True
-
-    def test_sds_5_is_incomplete_without_singletons(self):
-        """SDS 5 should be 'Incomplete Grid without Singletons' per Table 1."""
-        from processbehavior.sds_detector import SDSRegistry
-
-        chars = SDSRegistry().get_sds_characteristics(5)
-        plan = SDSRegistry.get_analysis_plan(5)
-
-        # SDS 5 per Table 1: Incomplete grid with full replication (has 0s and ≥2s, no 1s)
+        # SDS 4 per Table 1: Incomplete grid with full replication (has 0s and ≥2s, no 1s)
         assert 'Incomplete' in chars['description'] and 'without singletons' in chars['description'].lower()
         assert plan.name == 'Incomplete Grid without Singletons'
         assert plan.has_replication == 'full'  # All observed cells are replicated
 
-    def test_sds_6_is_incomplete_without_replication(self):
-        """SDS 6 should be 'Incomplete Without Replication' everywhere."""
+    def test_sds_5_is_incomplete_without_replication(self):
+        """SDS 5 should be 'Incomplete Without Replication' everywhere."""
         from processbehavior.sds_detector import SDSRegistry
 
-        SDSRegistry().get_sds_characteristics(6)
-        plan = SDSRegistry.get_analysis_plan(6)
+        SDSRegistry().get_sds_characteristics(5)
+        plan = SDSRegistry.get_analysis_plan(5)
 
         assert plan.name == 'Incomplete Grid Without Replication'
         assert plan.has_replication == 'none'
+
+    def test_sds_6_is_incomplete_with_singletons(self):
+        """SDS 6 should be 'Incomplete Grid with Singletons' per Table 1."""
+        from processbehavior.sds_detector import SDSRegistry
+
+        chars = SDSRegistry().get_sds_characteristics(6)
+        plan = SDSRegistry.get_analysis_plan(6)
+
+        # SDS 6 per Table 1: Incomplete grid with mixed replication (has 0s, 1s, and ≥2s)
+        assert 'Incomplete' in chars['description'] and 'singletons' in chars['description'].lower()
+        assert plan.name == 'Incomplete Grid with Singletons'
+        assert plan.has_time is True
+        assert plan.has_factors is True
 
 
 # =============================================================================
@@ -1489,41 +1489,41 @@ class TestDesignReportGateMetrics:
 # =============================================================================
 
 class TestSDS6Divergence:
-    """ODS 6 → ADS 2: the biggest behavioral shift from ADS-driven analysis."""
+    """ODS→ADS divergence: incomplete states tidy to complete counterparts."""
 
     @pytest.fixture
     def pb_validation(self):
         return ProcessBehavior.read_csv('validation/TABVASTESTDATABASE.csv')
 
-    def test_ods_6_ads_2_chart_unlock(self, pb_validation):
-        """ADS 2 unlocks Xbar/S that ODS 6 would have blocked."""
+    def test_ods_5_ads_2_chart_unlock(self, pb_validation):
+        """ADS 2 unlocks Xbar/S that ODS 5 would have blocked."""
         study = pb_validation.formulate(
             response='PM SDS 6', factors=['FACTOR 1', 'FACTOR 2'],
             time='PRODUCTION TIME'
         )
-        assert study.observed_design_state.sds == 6
+        assert study.observed_design_state.sds == 5
         assert study.analytical_design_state.sds == 2
         assert 'Xbar' in study.valid_charts
 
-    def test_ods_5_ads_1_interactions_enabled(self, pb_validation):
-        """ADS 1 enables interaction effects that ODS 5 would have blocked."""
+    def test_ods_4_ads_1_interactions_enabled(self, pb_validation):
+        """ADS 1 enables interaction effects that ODS 4 would have blocked."""
         study = pb_validation.formulate(
             response='PM SDS 5', factors=['FACTOR 1', 'FACTOR 2'],
             time='PRODUCTION TIME'
         )
-        assert study.observed_design_state.sds == 5
+        assert study.observed_design_state.sds == 4
         assert study.analytical_design_state.sds == 1
 
-    def test_ods_4_ads_3_min_cell_size(self, pb_validation):
+    def test_ods_6_ads_3_min_cell_size(self, pb_validation):
         """ADS 3 reflects tidy min_cell_size, not raw incomplete structure."""
         study = pb_validation.formulate(
             response='PM SDS 4', factors=['FACTOR 1', 'FACTOR 2'],
             time='PRODUCTION TIME'
         )
-        assert study.observed_design_state.sds == 4
+        assert study.observed_design_state.sds == 6
         assert study.analytical_design_state.sds == 3
 
-    def test_ods_6_why_not_reflects_ads(self, pb_validation):
+    def test_ods_5_why_not_reflects_ads(self, pb_validation):
         """why_not() reasoning must reflect ADS capability, not ODS limitations."""
         study = pb_validation.formulate(
             response='PM SDS 6', factors=['FACTOR 1', 'FACTOR 2'],
@@ -1778,7 +1778,7 @@ class TestDesignReportRemediation:
         assert "all cells" in design.remediation
 
     def test_remediation_for_incomplete_with_singletons(self):
-        """SDS 4 → contains 'fill missing'."""
+        """SDS 6 → contains 'fill missing'."""
         df = pd.DataFrame({
             'Weight': [1.0, 1.1, 2.0, 2.1, 3.0, 4.0],
             'Lane': [1, 1, 1, 1, 2, 2],
@@ -1793,12 +1793,12 @@ class TestDesignReportRemediation:
                 plan={'factors': {'Lane': [1, 2, 3, 4], 'Phase': [1, 2, 3]}, 'T': 2, 'N': 2}
             )
         design = study.design()
-        assert study.observed_design_state.sds == 4
+        assert study.observed_design_state.sds == 6
         assert design.remediation is not None
         assert "fill missing" in design.remediation
 
     def test_remediation_for_incomplete_no_singletons(self):
-        """SDS 5 → contains 'fill missing'."""
+        """SDS 4 → contains 'fill missing'."""
         df = pd.DataFrame({
             'Weight': [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0],
             'Lane': [1, 1, 2, 2, 1, 1, 2, 2],
@@ -1813,12 +1813,12 @@ class TestDesignReportRemediation:
                 plan={'factors': {'Lane': [1, 2, 3, 4], 'Phase': [1, 2, 3]}, 'T': 2, 'N': 2}
             )
         design = study.design()
-        assert study.observed_design_state.sds == 5
+        assert study.observed_design_state.sds == 4
         assert design.remediation is not None
         assert "fill missing" in design.remediation
 
     def test_remediation_for_incomplete_no_replication(self):
-        """SDS 6 → contains 'Xbar/S'."""
+        """SDS 5 → contains 'Xbar/S'."""
         df = pd.DataFrame({
             'Weight': [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0,
                        9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0],
@@ -1834,7 +1834,7 @@ class TestDesignReportRemediation:
                 plan={'factors': {'Lane': [1, 2, 3, 4], 'Phase': [1, 2, 3]}, 'T': 4, 'N': 1}
             )
         design = study.design()
-        assert study.observed_design_state.sds == 6
+        assert study.observed_design_state.sds == 5
         assert design.remediation is not None
         assert "Xbar/S" in design.remediation
 
@@ -1874,8 +1874,8 @@ class TestDesignReportRemediation:
 class TestSdsReasonDetailFix:
     """Tests for sds_reason_detail after fixing stale keys."""
 
-    def test_sds_reason_detail_sds4(self):
-        """SDS 4 fixture → sds_reason_detail contains 'empty cells' and 'mixed'."""
+    def test_sds_reason_detail_sds6(self):
+        """SDS 6 (incomplete_with_singletons) fixture → sds_reason_detail contains 'empty cells' and 'mixed'."""
         df = pd.DataFrame({
             'Weight': [1.0, 1.1, 2.0, 2.1, 3.0, 4.0],
             'Lane': [1, 1, 1, 1, 2, 2],
@@ -1890,14 +1890,14 @@ class TestSdsReasonDetailFix:
                 plan={'factors': {'Lane': [1, 2, 3, 4], 'Phase': [1, 2, 3]}, 'T': 2, 'N': 2}
             )
         design = study.design()
-        assert study.observed_design_state.sds == 4
+        assert study.observed_design_state.sds == 6
         detail = design.sds_reason_detail
         assert detail is not None
         assert "empty cells" in detail
         assert "mixed" in detail
 
-    def test_sds_reason_detail_sds5(self):
-        """SDS 5 fixture → sds_reason_detail contains 'all observed cells replicated'."""
+    def test_sds_reason_detail_sds4(self):
+        """SDS 4 (incomplete_no_singletons) fixture → sds_reason_detail contains 'all observed cells replicated'."""
         df = pd.DataFrame({
             'Weight': [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0],
             'Lane': [1, 1, 2, 2, 1, 1, 2, 2],
@@ -1912,13 +1912,13 @@ class TestSdsReasonDetailFix:
                 plan={'factors': {'Lane': [1, 2, 3, 4], 'Phase': [1, 2, 3]}, 'T': 2, 'N': 2}
             )
         design = study.design()
-        assert study.observed_design_state.sds == 5
+        assert study.observed_design_state.sds == 4
         detail = design.sds_reason_detail
         assert detail is not None
         assert "all observed cells replicated" in detail
 
-    def test_sds_reason_detail_sds6(self):
-        """SDS 6 fixture → sds_reason_detail contains 'all observed cells n = 1'."""
+    def test_sds_reason_detail_sds5(self):
+        """SDS 5 (incomplete_no_replication) fixture → sds_reason_detail contains 'all observed cells n = 1'."""
         df = pd.DataFrame({
             'Weight': [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0,
                        9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0],
@@ -1934,7 +1934,68 @@ class TestSdsReasonDetailFix:
                 plan={'factors': {'Lane': [1, 2, 3, 4], 'Phase': [1, 2, 3]}, 'T': 4, 'N': 1}
             )
         design = study.design()
-        assert study.observed_design_state.sds == 6
+        assert study.observed_design_state.sds == 5
         detail = design.sds_reason_detail
         assert detail is not None
         assert "all observed cells n = 1" in detail
+
+
+# =============================================================================
+# TDD: Drift-Invariant Tests for SDS Renumbering
+# =============================================================================
+
+class TestSDSRenumberDrift:
+    """Prove ODS N (incomplete) -> ADS N-3 (complete) after renumbering.
+
+    Uses Bishop's validation CSV. Column names (PM SDS 4/5/6) are Bishop's
+    labels -- they don't change. Our detector's ODS output changes.
+    """
+
+    @pytest.fixture
+    def pb_validation(self):
+        return ProcessBehavior.read_csv('validation/TABVASTESTDATABASE.csv')
+
+    @pytest.fixture
+    def _formulate(self, pb_validation):
+        def _f(col):
+            return pb_validation.formulate(
+                response=col, factors=['FACTOR 1', 'FACTOR 2'],
+                time='PRODUCTION TIME',
+            )
+        return _f
+
+    def test_pm_sds5_column_detects_as_ods4_ads1(self, _formulate):
+        """PM SDS 5 data = incomplete_no_singletons -> ODS 4, ADS 1 (4-3=1)."""
+        study = _formulate('PM SDS 5')
+        assert study.observed_design_state.sds == 4
+        assert study.observed_design_state.reason == 'incomplete_no_singletons'
+        assert study.analytical_design_state.sds == 1
+        assert study.observed_design_state.sds - 3 == study.analytical_design_state.sds
+
+    def test_pm_sds6_column_detects_as_ods5_ads2(self, _formulate):
+        """PM SDS 6 data = incomplete_no_replication -> ODS 5, ADS 2 (5-3=2)."""
+        study = _formulate('PM SDS 6')
+        assert study.observed_design_state.sds == 5
+        assert study.observed_design_state.reason == 'incomplete_no_replication'
+        assert study.analytical_design_state.sds == 2
+        assert study.observed_design_state.sds - 3 == study.analytical_design_state.sds
+
+    def test_pm_sds4_column_detects_as_ods6_ads3(self, _formulate):
+        """PM SDS 4 data = incomplete_with_singletons -> ODS 6, ADS 3 (6-3=3)."""
+        study = _formulate('PM SDS 4')
+        assert study.observed_design_state.sds == 6
+        assert study.observed_design_state.reason == 'incomplete_with_singletons'
+        assert study.analytical_design_state.sds == 3
+        assert study.observed_design_state.sds - 3 == study.analytical_design_state.sds
+
+    @pytest.mark.parametrize("col,expected_ods,expected_ads", [
+        ('PM SDS 4', 6, 3),
+        ('PM SDS 5', 4, 1),
+        ('PM SDS 6', 5, 2),
+    ])
+    def test_n_minus_3_invariant(self, _formulate, col, expected_ods, expected_ads):
+        """The universal invariant: ODS - 3 = ADS for all incomplete states."""
+        study = _formulate(col)
+        assert study.observed_design_state.sds == expected_ods
+        assert study.analytical_design_state.sds == expected_ads
+        assert expected_ods - 3 == expected_ads
