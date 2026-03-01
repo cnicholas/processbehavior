@@ -367,9 +367,9 @@ class DesignReport:
         - 'full_replication': SDS 1 (all N_kt >= 2)
         - 'no_replication': SDS 2 (all N_kt = 1)
         - 'partial_replication': SDS 3 (mixed N_kt)
-        - 'incomplete_with_singletons': SDS 4 (empty cells + mixed)
-        - 'incomplete_no_singletons': SDS 5 (empty cells, all observed replicated)
-        - 'incomplete_no_replication': SDS 6 (empty cells, all observed n=1)
+        - 'incomplete_no_singletons': SDS 4 (empty cells, all observed replicated)
+        - 'incomplete_no_replication': SDS 5 (empty cells, all observed n=1)
+        - 'incomplete_with_singletons': SDS 6 (empty cells + mixed)
         """
         return self._sds_reason
 
@@ -671,19 +671,12 @@ class DesignReport:
         pds = self._pds_result
 
         if ods and ads:
-            all_agree = (
-                (pds is None or pds.sds == ods.sds)
-                and ods.sds == ads.sds
-            )
-            if all_agree:
-                lines.append(f"  Design state: SDS {ods.sds} ({ods.reason})")
-            else:
-                lines.append("  Design lineage:")
-                if pds is not None:
-                    lines.append(f"    Plan:       SDS {pds.sds} ({pds.reason})")
-                empty_detail = f" — {ods.n_empty_cells} empty cells in raw data" if ods.n_empty_cells > 0 else ""
-                lines.append(f"    Observed:   SDS {ods.sds} ({ods.reason}){empty_detail}")
-                lines.append(f"    Analytical: SDS {ads.sds} ({ads.reason})")
+            lines.append("  Design lineage:")
+            if pds is not None:
+                lines.append(f"    Plan:       SDS {pds.sds} ({pds.reason})")
+            empty_detail = f" — {ods.n_empty_cells} empty cells in raw data" if ods.n_empty_cells > 0 else ""
+            lines.append(f"    Observed:   SDS {ods.sds} ({ods.reason}){empty_detail}")
+            lines.append(f"    Analytical: SDS {ads.sds} ({ads.reason})")
         elif self.sds_reason_detail:
             lines.append(f"  SDS reason: {self.sds_reason_detail}")
         elif self._sds_reason:

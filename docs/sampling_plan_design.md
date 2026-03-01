@@ -290,7 +290,7 @@ def _classify_with_plan(
     Example:
         plan = {'Phase': [1, 2, 3]}
         observed = {'Phase': [1, 2]}  # Phase 3 missing
-        → Grid is incomplete → may classify as SDS 5 or 6
+        → Grid is incomplete → may classify as SDS 4 or 5
     """
 ```
 
@@ -338,7 +338,7 @@ Column-not-found still uses existing `ColumnNotFoundError`.
 **SDS integration tests:**
 
 *Mode 1: Observed only (no plan) → SDS 1-3:*
-- `test_sds_4_no_factors_no_plan`
+- `test_sds_6_no_factors_no_plan`
 - `test_sds_1_full_replication_no_plan`
 - `test_sds_2_no_replication_no_plan`
 - `test_sds_3_partial_replication_no_plan`
@@ -352,13 +352,13 @@ Column-not-found still uses existing `ColumnNotFoundError`.
   # → Phase 3 is missing → incomplete grid
   plan = {'Lane': [1,2,3,4], 'Phase': [1,2,3]}
   # Data has all Lanes but only Phase 1,2
-  assert sds in [5, 6]  # Incomplete structure
+  assert sds in [4, 5]  # Incomplete structure
   ```
 - `test_sds_with_plan_missing_multiple_factor_levels`
 - `test_sds_with_plan_missing_all_levels_of_one_factor`
-- `test_sds_4_single_condition_detected_via_plan`
-- `test_sds_5_nested_detected_via_plan`
-- `test_sds_6_irregular_detected_via_plan`
+- `test_sds_4_nested_detected_via_plan`
+- `test_sds_5_irregular_detected_via_plan`
+- `test_sds_6_single_condition_detected_via_plan`
 
 *Backward compatibility:*
 - `test_sds_detection_without_plan_unchanged` (existing behavior preserved)
@@ -441,7 +441,7 @@ design.extra_levels
 # design.extra_combos    # []
 
 # SDS reflects missing data
-study.observed_design_state.sds  # Could be SDS 5 or 6 depending on structure
+study.observed_design_state.sds  # Could be SDS 4 or 5 depending on structure
 ```
 
 ---

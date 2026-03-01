@@ -16,9 +16,9 @@ This document provides the formal definitions of Sampling Design States (SDS) as
 | **1** | Min N_kt ≥ 2 | Complete | Multiple observations in each of the rational subgroups |
 | **2** | Min N_kt = 1 and Max N_kt = 1 | Semi-Complete | A single observation in each of the rational subgroups |
 | **3** | Min N_kt = 1 and Max N_kt ≥ 2 | Semi-Complete | Multiple observations in some rational subgroups and a single observation in some rational subgroups |
-| **4** | Min N_kt = 0, N_kt = 1 and Max N_kt ≥ 2 | Incomplete | Multiple observations in some rational subgroups, a single observation in some rational subgroups and no data in some rational subgroups |
-| **5** | Min N_kt = 0, N_kt ≠ 1 and Max N_kt ≥ 2 | Incomplete | Multiple observations in some rational subgroups and no data in some subgroups |
-| **6** | Min N_kt = 0 and Max N_kt = 1 | Incomplete | A single observation in some rational subgroups and no data in some rational subgroups |
+| **4** | Min N_kt = 0, N_kt ≠ 1 and Max N_kt ≥ 2 | Incomplete | Multiple observations in some rational subgroups and no data in some subgroups |
+| **5** | Min N_kt = 0 and Max N_kt = 1 | Incomplete | A single observation in some rational subgroups and no data in some rational subgroups |
+| **6** | Min N_kt = 0, N_kt = 1 and Max N_kt ≥ 2 | Incomplete | Multiple observations in some rational subgroups, a single observation in some rational subgroups and no data in some rational subgroups |
 
 ## Detailed Definitions
 
@@ -55,18 +55,7 @@ This document provides the formal definitions of Sampling Design States (SDS) as
   - Partial interaction effect estimation
   - Requires careful handling of mixed replication
 
-### SDS 4: Incomplete with Mixed Replication
-
-- **Condition**: Min N_kt = 0 AND some N_kt = 1 AND Max N_kt ≥ 2
-- **Grid Status**: Incomplete
-- **Description**: Missing cells, plus mix of n=1 and n≥2 in present cells
-- **Implications**:
-  - Incomplete (factor × time) grid
-  - Some cells have no data at all
-  - Present cells have mixed replication
-  - Complex variance estimation required
-
-### SDS 5: Incomplete with Replication Only
+### SDS 4: Incomplete with Replication Only
 
 - **Condition**: Min N_kt = 0 AND N_kt ≠ 1 (no cells with exactly 1) AND Max N_kt ≥ 2
 - **Grid Status**: Incomplete
@@ -77,7 +66,7 @@ This document provides the formal definitions of Sampling Design States (SDS) as
   - Can estimate within-cell variance for present cells
   - Common in nested/hierarchical designs with asynchronous coverage
 
-### SDS 6: Incomplete with No Replication
+### SDS 5: Incomplete with No Replication
 
 - **Condition**: Min N_kt = 0 AND Max N_kt = 1
 - **Grid Status**: Incomplete
@@ -87,6 +76,17 @@ This document provides the formal definitions of Sampling Design States (SDS) as
   - Sparse, irregular data structure
   - No within-cell variance estimation possible
   - Moving average methods required throughout
+
+### SDS 6: Incomplete with Mixed Replication
+
+- **Condition**: Min N_kt = 0 AND some N_kt = 1 AND Max N_kt ≥ 2
+- **Grid Status**: Incomplete
+- **Description**: Missing cells, plus mix of n=1 and n≥2 in present cells
+- **Implications**:
+  - Incomplete (factor × time) grid
+  - Some cells have no data at all
+  - Present cells have mixed replication
+  - Complex variance estimation required
 
 ## Detection Algorithm
 
@@ -107,9 +107,9 @@ To determine the SDS for a dataset:
      - If min_n = 1 AND max_n = 1 → SDS 2
      - If min_n = 1 AND max_n ≥ 2 → SDS 3
    - If has_missing (Incomplete grid):
-     - If has_singles AND has_multiples → SDS 4
-     - If NOT has_singles AND has_multiples → SDS 5
-     - If has_singles AND NOT has_multiples → SDS 6
+     - If NOT has_singles AND has_multiples → SDS 4
+     - If has_singles AND NOT has_multiples → SDS 5
+     - If has_singles AND has_multiples → SDS 6
 ```
 
 ## R2 Calculation Methods by SDS
@@ -120,9 +120,9 @@ To determine the SDS for a dataset:
 | 1 | Exact (within-cell) | Pooled within-cell variance |
 | 2 | Moving Average | Approximate via sequential differences |
 | 3 | Hybrid | Exact where n≥2, moving average where n=1 |
-| 4 | Hybrid | Complex handling of missing + mixed |
-| 5 | Exact (present cells) | Within-cell for available data |
-| 6 | Moving Average | All present cells are unreplicated |
+| 4 | Exact (present cells) | Within-cell for available data |
+| 5 | Moving Average | All present cells are unreplicated |
+| 6 | Hybrid | Complex handling of missing + mixed |
 
 ## References
 

@@ -26,9 +26,9 @@ Per Wheeler/Bishop Table 1, there are six distinct sampling design states:
 | 1 | Complete | All N_kt ≥ 2 | Full replication in every cell |
 | 2 | Semi-Complete | All N_kt = 1 | No replication (all singletons) |
 | 3 | Semi-Complete | Mixed (1s and ≥2s) | Partial replication |
-| 4 | Incomplete | Has 0s, 1s, and ≥2s | Incomplete with singletons |
-| 5 | Incomplete | Has 0s and ≥2s, no 1s | Incomplete without singletons |
-| 6 | Incomplete | Has 0s, max = 1 | Incomplete without replication |
+| 4 | Incomplete | Has 0s and ≥2s, no 1s | Incomplete without singletons |
+| 5 | Incomplete | Has 0s, max = 1 | Incomplete without replication |
+| 6 | Incomplete | Has 0s, 1s, and ≥2s | Incomplete with singletons |
 
 **Complete/Semi-Complete** (SDS 1-3): No empty cells (all cells have N_kt ≥ 1)
 **Incomplete** (SDS 4-6): Has empty cells (some N_kt = 0)
@@ -113,9 +113,9 @@ Without a plan, the same classification logic applies - SDS 1-6 are all possible
 
 | Condition | SDS | Reason |
 |-----------|-----|--------|
-| Has 0s AND `max(N_kt) = 1` | 6 | `incomplete_no_replication` |
-| Has 0s AND has 1s AND has ≥2s | 4 | `incomplete_with_singletons` |
-| Has 0s AND no 1s AND has ≥2s | 5 | `incomplete_no_singletons` |
+| Has 0s AND no 1s AND has ≥2s | 4 | `incomplete_no_singletons` |
+| Has 0s AND `max(N_kt) = 1` | 5 | `incomplete_no_replication` |
+| Has 0s AND has 1s AND has ≥2s | 6 | `incomplete_with_singletons` |
 
 Empty cells (N_kt = 0) can appear without a plan when a cell exists in the data but all its responses are NA. For example, if Lane=2, Pull=1 has two rows but both have `Weight = NA`, that cell has N_kt = 0.
 
@@ -219,9 +219,9 @@ The same classification rules apply with or without a plan. The plan simply adds
 
 | Condition | SDS | Reason |
 |-----------|-----|--------|
-| Has 0s AND `max(N_kt) = 1` | 6 | `incomplete_no_replication` |
-| Has 0s AND has 1s AND has ≥2s | 4 | `incomplete_with_singletons` |
-| Has 0s AND no 1s AND has ≥2s | 5 | `incomplete_no_singletons` |
+| Has 0s AND no 1s AND has ≥2s | 4 | `incomplete_no_singletons` |
+| Has 0s AND `max(N_kt) = 1` | 5 | `incomplete_no_replication` |
+| Has 0s AND has 1s AND has ≥2s | 6 | `incomplete_with_singletons` |
 
 ## Classification Decision Tree
 
@@ -244,13 +244,13 @@ START with N_kt distribution
 │  └─ YES (Incomplete)
 │     │
 │     ├─ max(N_kt) = 1?
-│     │  └─ YES → SDS 6 (incomplete_no_replication)
+│     │  └─ YES → SDS 5 (incomplete_no_replication)
 │     │
 │     ├─ has N_kt = 1 cells?
-│     │  └─ YES → SDS 4 (incomplete_with_singletons)
+│     │  └─ YES → SDS 6 (incomplete_with_singletons)
 │     │
 │     └─ no singletons
-│        └─ SDS 5 (incomplete_no_singletons)
+│        └─ SDS 4 (incomplete_no_singletons)
 ```
 
 ## Output: SDSResult
@@ -408,7 +408,7 @@ print(f"Reason: {study.design().sds_reason}")    # Reason: partial_replication
 
 N_kt distribution: Lane=1 has n=2, Lane=2 has n=1 → mixed → SDS 3
 
-### Example 3: SDS 4 (Incomplete with Singletons, With Plan)
+### Example 3: SDS 6 (Incomplete with Singletons, With Plan)
 
 ```python
 df = pd.DataFrame({
@@ -424,13 +424,13 @@ study = pb.formulate(
     plan={'factors': {'Lane': [1, 2, 3]}}  # Lane 3 expected but missing
 )
 
-print(f"SDS: {study.observed_design_state.sds}")   # SDS: 4
+print(f"SDS: {study.observed_design_state.sds}")   # SDS: 6
 print(f"Reason: {study.design().sds_reason}")    # Reason: incomplete_with_singletons
 ```
 
-N_kt distribution: Lane=1 has n=2, Lane=2 has n=1, Lane=3 has n=0 → SDS 4
+N_kt distribution: Lane=1 has n=2, Lane=2 has n=1, Lane=3 has n=0 → SDS 6
 
-### Example 4: SDS 5 (Incomplete without Singletons, With Plan)
+### Example 4: SDS 4 (Incomplete without Singletons, With Plan)
 
 ```python
 df = pd.DataFrame({
@@ -446,11 +446,11 @@ study = pb.formulate(
     plan={'factors': {'Lane': [1, 2, 3]}}  # Lane 3 expected but missing
 )
 
-print(f"SDS: {study.observed_design_state.sds}")   # SDS: 5
+print(f"SDS: {study.observed_design_state.sds}")   # SDS: 4
 print(f"Reason: {study.design().sds_reason}")    # Reason: incomplete_no_singletons
 ```
 
-N_kt distribution: Lane=1 has n=2, Lane=2 has n=2, Lane=3 has n=0 → SDS 5
+N_kt distribution: Lane=1 has n=2, Lane=2 has n=2, Lane=3 has n=0 → SDS 4
 
 ## SDS Reason Types
 
@@ -461,9 +461,9 @@ The `reason` field provides a semantic explanation of why a particular SDS was c
 | `full_replication` | 1 | All N_kt ≥ 2 | Every cell has multiple observations |
 | `no_replication` | 2 | All N_kt = 1 | Every cell is a singleton |
 | `partial_replication` | 3 | Mixed 1s and ≥2s | Some cells replicated, some singleton |
-| `incomplete_with_singletons` | 4 | Has 0s, 1s, and ≥2s | Empty cells with mixed replication |
-| `incomplete_no_singletons` | 5 | Has 0s and ≥2s, no 1s | Empty cells, all observed cells replicated |
-| `incomplete_no_replication` | 6 | Has 0s, max = 1 | Empty cells, no replication |
+| `incomplete_no_singletons` | 4 | Has 0s and ≥2s, no 1s | Empty cells, all observed cells replicated |
+| `incomplete_no_replication` | 5 | Has 0s, max = 1 | Empty cells, no replication |
+| `incomplete_with_singletons` | 6 | Has 0s, 1s, and ≥2s | Empty cells with mixed replication |
 
 ## Edge Cases
 
@@ -496,7 +496,7 @@ ValueError: No valid response values found after filtering
 
 ### Nested/Hierarchical Designs
 
-Nested designs (where factor B only exists within certain levels of factor A) may classify as SDS 4 or 5 depending on how the plan is specified:
+Nested designs (where factor B only exists within certain levels of factor A) may classify as SDS 4 or 6 depending on how the plan is specified:
 - If the plan expects a full crossing, missing combinations show as empty cells
 - If the plan reflects the nested structure, only truly missing combinations appear empty
 

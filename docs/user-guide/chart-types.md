@@ -140,7 +140,7 @@ print(f"Valid charts: {study.valid_charts}")
 print(f"Available residuals: {study.residuals}")
 ```
 
-**Note on R2**: SDS 2 and 6 use the moving average method; SDS 1, 3, 4, 5 use within-cell deviation (R2 = Y - Ȳ_kt). See [VAS Residuals](residuals.md) for details.
+**Note on R2**: SDS 2 and 5 use the moving average method; SDS 1, 3, 4, 6 use within-cell deviation (R2 = Y - Ȳ_kt). See [VAS Residuals](residuals.md) for details.
 
 ## Companion Charts
 
@@ -291,7 +291,7 @@ Re-centering uses:
 ```
 Do you have factors?
 ├── No → Do you have time?
-│   └── Yes → SDS 4: Use XmR
+│   └── Yes → SDS 6: Use XmR
 └── Yes → Do you have time?
     ├── No → Use Xbar to compare factors
     └── Yes → Do you have replication (n>=2 per cell)?
