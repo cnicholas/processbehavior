@@ -887,7 +887,7 @@ class Plotter:
         metadata: dict,
         row: int | None = None,
         col: int | None = None,
-        max_ticks: int = 30,
+        max_ticks: int = 20,
     ) -> None:
         """Replace integer x-axis positions with time values."""
         time_var = self.summary.get('time_var')
@@ -929,10 +929,11 @@ class Plotter:
         tick_positions = [p for p in tick_positions if 0 <= p < n]
         tick_labels = data[time_var].iloc[tick_positions].astype(str).tolist()
 
-        # Adaptive angle: rotate labels when dense or labels are long
+        # Adaptive angle: rotate labels when total label footprint is large
         n_ticks = len(tick_positions)
         max_label_len = max((len(lbl) for lbl in tick_labels), default=1)
-        angle = -45 if n_ticks > 20 or (n_ticks > 10 and max_label_len > 6) else 0
+        label_footprint = n_ticks * max_label_len
+        angle = -45 if label_footprint > 80 else 0
 
         kwargs = {}
         if row is not None and col is not None:

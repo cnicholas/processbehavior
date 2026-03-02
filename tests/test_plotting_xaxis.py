@@ -144,9 +144,26 @@ class TestAdaptiveTickAngle:
         # All x-axes should have tickangle=0
         assert all(a == 0 for a in angles), f"Expected tickangle=0, got {angles}"
 
-    def test_tick_angle_rotated_for_dense_charts(self):
-        """Charts with many time points should auto-rotate to -45 degrees."""
-        result = self._make_result(100)
+    def test_tick_angle_rotated_for_dense_long_labels(self):
+        """Charts with many time points and long labels should auto-rotate to -45 degrees."""
+        # Use long date-like labels so label_footprint exceeds 80
+        n_time = 100
+        n_combos = 4
+        n_total = n_time * n_combos
+        long_labels = [f"2024-01-{i:02d}-extra" for i in range(1, n_time + 1)]
+        df = pd.DataFrame({
+            'value': np.random.default_rng(42).normal(100, 5, n_total),
+            'factor 1': [1, 1, 2, 2] * n_time,
+            'factor 2': [1, 2, 1, 2] * n_time,
+            'time': sorted(long_labels * n_combos),
+        })
+        pb = ProcessBehavior(df)
+        study = pb.formulate(
+            response=pb.cols.value,
+            factors=[pb.cols.factor_1, pb.cols.factor_2],
+            time=pb.cols.time,
+        )
+        result = study.execute(chart='XmR', by=[])
         fig = result.plot(chart='XmR')
 
         layout = fig._fig.layout
@@ -159,3 +176,19 @@ class TestAdaptiveTickAngle:
 
         # At least one x-axis should have tickangle=-45
         assert any(a == -45 for a in angles), f"Expected tickangle=-45, got {angles}"
+
+    def test_tick_angle_horizontal_for_dense_short_labels(self):
+        """Charts with many time points but short numeric labels stay horizontal."""
+        result = self._make_result(100)  # 100 time × 4 combos = 400 obs, labels "1"-"100"
+        fig = result.plot(chart='XmR')
+
+        layout = fig._fig.layout
+        angles = []
+        for attr_name in dir(layout):
+            if attr_name.startswith('xaxis'):
+                ax = getattr(layout, attr_name)
+                if hasattr(ax, 'tickangle') and ax.tickangle is not None:
+                    angles.append(ax.tickangle)
+
+        # Short numeric labels should remain horizontal
+        assert all(a == 0 for a in angles), f"Expected tickangle=0, got {angles}"
