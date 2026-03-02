@@ -201,6 +201,13 @@ class TestControlChartFigure:
         assert 'ControlChartFigure' in repr_str
         assert 'charts=' in repr_str
 
+    def test_repr_html_returns_html_string(self, sample_figure):
+        """Test _repr_html_() returns an HTML fragment for Jupyter/nbconvert."""
+        html = sample_figure._repr_html_()
+        assert isinstance(html, str)
+        assert '<div' in html
+        assert 'plotly' in html.lower()
+
 
 class TestPlotter:
     """Test Plotter class."""

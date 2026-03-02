@@ -143,3 +143,7 @@ class ControlChartFigure:
 
     def __repr__(self):
         return f"ControlChartFigure(charts={list(self._result.charts.keys())})"
+
+    def _repr_html_(self) -> str:
+        """Rich HTML display for Jupyter notebooks and nbconvert."""
+        return self._fig.to_html(full_html=False, include_plotlyjs="cdn")
