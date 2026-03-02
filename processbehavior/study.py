@@ -172,10 +172,10 @@ class DesignReport:
 
             rows.append({
                 'factor': factor,
-                'planned': planned,
-                'observed': observed,
-                'missing_levels': missing,
-                'extra_levels': extra
+                'planned': ', '.join(str(v) for v in planned),
+                'observed': ', '.join(str(v) for v in observed),
+                'missing_levels': ', '.join(str(v) for v in missing) if missing else '',
+                'extra_levels': ', '.join(str(v) for v in extra) if extra else '',
             })
 
         return pd.DataFrame(rows)
