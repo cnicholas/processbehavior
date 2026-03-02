@@ -932,10 +932,7 @@ class Plotter:
         # Adaptive angle: rotate labels when dense or labels are long
         n_ticks = len(tick_positions)
         max_label_len = max((len(lbl) for lbl in tick_labels), default=1)
-        if n_ticks > 20 or (n_ticks > 10 and max_label_len > 6):
-            angle = -45
-        else:
-            angle = 0
+        angle = -45 if n_ticks > 20 or (n_ticks > 10 and max_label_len > 6) else 0
 
         kwargs = {}
         if row is not None and col is not None:
