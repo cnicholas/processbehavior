@@ -803,12 +803,9 @@ class Plotter:
             if not data[time_var].is_unique:
                 return None
             return time_var
-        if 'subgroup' in data.columns:
-            return 'subgroup'
-        if 'rsg' in data.columns:
-            return 'rsg'
-        if 'group' in data.columns:
-            return 'group'
+        for col in ('subgroup', 'rsg', 'group'):
+            if col in data.columns and data[col].is_unique:
+                return col
         return None
 
     @staticmethod
@@ -913,7 +910,13 @@ class Plotter:
                 for bounds in lane_boundaries.values():
                     priority |= {b['position'] for b in bounds}
 
-        budget = max(0, max_ticks - len(priority))
+        # Adaptive tick budget: reduce regular ticks when lane boundaries
+        # consume many priority slots to avoid overcrowding
+        effective_max = max_ticks
+        if len(priority) > max_ticks // 2:
+            effective_max = len(priority) + min(10, max_ticks // 3)
+
+        budget = max(0, effective_max - len(priority))
         if budget > 0 and n > len(priority):
             step = max(1, n // budget)
             regular = set(range(0, n, step)) - priority
@@ -926,10 +929,24 @@ class Plotter:
         tick_positions = [p for p in tick_positions if 0 <= p < n]
         tick_labels = data[time_var].iloc[tick_positions].astype(str).tolist()
 
+        # Adaptive angle: rotate labels when dense or labels are long
+        n_ticks = len(tick_positions)
+        max_label_len = max((len(lbl) for lbl in tick_labels), default=1)
+        if n_ticks > 20 or (n_ticks > 10 and max_label_len > 6):
+            angle = -45
+        else:
+            angle = 0
+
         kwargs = {}
         if row is not None and col is not None:
             kwargs = {'row': row, 'col': col}
-        fig.update_xaxes(tickvals=tick_positions, ticktext=tick_labels, tickangle=0, **kwargs)
+        fig.update_xaxes(
+            tickvals=tick_positions,
+            ticktext=tick_labels,
+            tickangle=angle,
+            automargin=True,
+            **kwargs,
+        )
 
     # ---- Y-range / histogram helpers ----
 
