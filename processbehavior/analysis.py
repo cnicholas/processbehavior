@@ -734,7 +734,7 @@ class Analysis:
 
         statistics['center'] = round(_Xbar, spec.round_to)
         if n_to_use == "N":
-            statistics['N'] = _N
+            statistics['N'] = round(n_avg, spec.round_to) if n_avg is not None else _N
             statistics['upl'] = xbar['upl'].max()
             statistics['lpl'] = xbar['lpl'].max()
         else:
@@ -859,6 +859,10 @@ class Analysis:
                 mask = out['n'].eq(1)
                 out = out[~mask]
 
+                # Handle case where no subgroups have >1 observation
+                if out.shape[0] == 0:
+                    raise ValueError("All subgroups have 1 or less observations!")
+
                 out['N'] = out['n'].max()
 
             # Calculate center line (mean of subgroup std devs)
@@ -934,9 +938,9 @@ class Analysis:
         # Build statistics
         _S_stat = out['center'].iloc[0] if len(out) > 0 else None
 
-        statistics = {'center': round(_S_stat, spec.round_to) if _S_stat else None}
+        statistics = {'center': round(_S_stat, spec.round_to) if _S_stat is not None else None}
         if n_to_use == "N":
-            statistics['N'] = n_max
+            statistics['N'] = round(n_avg, spec.round_to) if n_avg is not None else n_max
             statistics['upl'] = out['upl'].max()
             statistics['lpl'] = out['lpl'].max()
         else:
@@ -1202,6 +1206,12 @@ class Analysis:
                 if adjusted:
                     lane_boundaries[stratum] = adjusted
 
+        # Identify strata with insufficient data (< 2 observations)
+        insufficient_strata = [
+            s for s in strata
+            if len(r_out[r_out[stratify_col] == s]) < 2
+        ]
+
         return {
             mr_spec.chart_type: {
                 'data': chart_out,
@@ -1214,6 +1224,7 @@ class Analysis:
                     'lane_boundaries': lane_boundaries if lane_boundaries else None,
                     'stratify_col': stratify_col,
                     'stratify_by': list(stratify_by),
+                    'insufficient_strata': insufficient_strata if insufficient_strata else None,
                 },
                 'strata': strata,
             },
@@ -1482,6 +1493,12 @@ class Analysis:
             value_cols=extra_cols + [plot_col, 'center', 'lpl', 'upl', 'beyond_limits'],
         )
 
+        # Identify strata with insufficient data (< 2 observations)
+        insufficient_strata = [
+            s for s in strata
+            if len(out[out[stratify_col] == s]) < 2
+        ]
+
         result[mr_spec.chart_type] = {
             'data': chart_out,
             'statistics': chart_statistics,
@@ -1493,6 +1510,7 @@ class Analysis:
                 'lane_boundaries': lane_boundaries if lane_boundaries else None,
                 'stratify_col': stratify_col,
                 'stratify_by': list(stratify_by),
+                'insufficient_strata': insufficient_strata if insufficient_strata else None,
             },
             'strata': strata,
         }
