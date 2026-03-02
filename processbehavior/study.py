@@ -2012,6 +2012,22 @@ class Study:
                 available=valid_dims
             )
 
+        # Deduplicate while preserving order (first occurrence wins)
+        seen = set()
+        deduped = []
+        for v in by:
+            if v not in seen:
+                seen.add(v)
+                deduped.append(v)
+        if len(deduped) < len(by):
+            import warnings
+            warnings.warn(
+                f"Duplicate values in by={list(by)} were removed. Using by={deduped}.",
+                UserWarning,
+                stacklevel=4,
+            )
+            by = deduped
+
         return list(by)
 
     @staticmethod
