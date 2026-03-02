@@ -332,3 +332,120 @@ class TestLaneBoundaryContent:
         boundaries = result.charts['XmR']['metadata']['lane_boundaries']
         positions = [b['position'] for b in boundaries]
         assert positions == sorted(positions)
+
+
+# =============================================================================
+# THREE-FACTOR LANE BOUNDARY TESTS
+# =============================================================================
+
+@pytest.fixture
+def three_factor_study():
+    """SDS1 study with three factors — machine, shift, operator."""
+    import numpy as np
+    rng = np.random.default_rng(42)
+    rows = []
+    for t in [1, 2]:
+        for m in ['M1', 'M2']:
+            for s in ['S1', 'S2']:
+                for o in ['O1', 'O2']:
+                    for _ in range(2):  # n=2 per cell
+                        rows.append({
+                            'time': t,
+                            'machine': m,
+                            'shift': s,
+                            'operator': o,
+                            'y': rng.normal(50, 1),
+                        })
+    df = pd.DataFrame(rows)
+    return ProcessBehavior(df).formulate(
+        response='y',
+        time='time',
+        factors=['machine', 'shift', 'operator'],
+    )
+
+
+class TestThreeFactorLaneBoundaries:
+    """Test lane boundaries with 3 factors — covers N-element tuple code paths."""
+
+    def test_by_empty_single_chart_with_three_factor_boundaries(self, three_factor_study):
+        """by=[] collapses all 3 factors into a single XmR stream with lane boundaries."""
+        result = three_factor_study.execute(chart='XmR', by=[])
+
+        # Single chart, no strata
+        assert result.charts['XmR'].get('strata') is None
+
+        # Lane boundaries are a list (not dict)
+        boundaries = result.charts['XmR']['metadata']['lane_boundaries']
+        assert isinstance(boundaries, list)
+        assert len(boundaries) > 0
+
+        # variables field lists all 3 factor names
+        for b in boundaries:
+            assert b['variables'] == ['machine', 'shift', 'operator']
+
+        # Labels are 3-part joined strings (e.g. "M1_S1_O2")
+        for b in boundaries:
+            parts = b['label'].split('_')
+            assert len(parts) == 3, f"Expected 3-part label, got {b['label']!r}"
+
+        # Positions are ordered
+        positions = [b['position'] for b in boundaries]
+        assert positions == sorted(positions)
+
+    def test_by_one_factor_stratifies_with_two_collapsed(self, three_factor_study):
+        """by=['machine'] stratifies by machine, collapses shift+operator."""
+        result = three_factor_study.execute(chart='XmR', by=['machine'])
+
+        # Stratified: 2 strata (M1, M2)
+        strata = result.charts['XmR'].get('strata')
+        assert strata is not None
+        assert len(strata) == 2
+
+        # Lane boundaries are a dict keyed by stratum
+        boundaries = result.charts['XmR']['metadata']['lane_boundaries']
+        assert isinstance(boundaries, dict)
+
+        for stratum_key, stratum_bounds in boundaries.items():
+            # Each boundary reflects the 2 collapsed factors
+            for b in stratum_bounds:
+                assert b['variables'] == ['shift', 'operator']
+
+            # Labels are 2-part joined strings (e.g. "S1_O2")
+            for b in stratum_bounds:
+                parts = b['label'].split('_')
+                assert len(parts) == 2, f"Expected 2-part label, got {b['label']!r}"
+
+    def test_by_two_factors_stratifies_with_one_collapsed(self, three_factor_study):
+        """by=['machine', 'shift'] stratifies by both, collapses operator."""
+        result = three_factor_study.execute(chart='XmR', by=['machine', 'shift'])
+
+        # Stratified: 2x2 = 4 strata as tuples
+        strata = result.charts['XmR'].get('strata')
+        assert strata is not None
+        assert len(strata) == 4
+
+        # Strata keys are tuples (multi-key stratification)
+        for s in strata:
+            assert isinstance(s, tuple), f"Expected tuple stratum key, got {type(s).__name__}"
+
+        # Lane boundaries dict uses tuple keys
+        boundaries = result.charts['XmR']['metadata']['lane_boundaries']
+        assert isinstance(boundaries, dict)
+
+        for stratum_key, stratum_bounds in boundaries.items():
+            assert isinstance(stratum_key, tuple)
+
+            # Each boundary reflects the single collapsed factor
+            for b in stratum_bounds:
+                assert b['variables'] == ['operator']
+
+            # Labels are single values (no joining needed)
+            for b in stratum_bounds:
+                assert '_' not in b['label'] or b['label'] in ('O1', 'O2'), \
+                    f"Expected single-factor label, got {b['label']!r}"
+
+    def test_by_empty_three_factor_plot_renders(self, three_factor_study):
+        """Smoke test: plotting a 3-factor by=[] chart does not raise."""
+        result = three_factor_study.execute(chart='XmR', by=[])
+        fig = result.plot('XmR')
+        assert fig is not None
