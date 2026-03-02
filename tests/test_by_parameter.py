@@ -405,7 +405,7 @@ class TestThreeFactorLaneBoundaries:
         boundaries = result.charts['XmR']['metadata']['lane_boundaries']
         assert isinstance(boundaries, dict)
 
-        for stratum_key, stratum_bounds in boundaries.items():
+        for _stratum_key, stratum_bounds in boundaries.items():
             # Each boundary reflects the 2 collapsed factors
             for b in stratum_bounds:
                 assert b['variables'] == ['shift', 'operator']

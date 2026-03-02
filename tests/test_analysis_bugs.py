@@ -10,7 +10,6 @@ import pytest
 
 from processbehavior import ProcessBehavior
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -36,7 +35,7 @@ class TestBug1_SChartAllN1:
         S chart requires n >= 2 for std dev; should raise, not crash."""
         from processbehavior.datasets.synthetic import make_sds
         df = make_sds(2, K1=3, K2=2, T=6, seed=42)
-        study = ProcessBehavior(df).formulate(
+        ProcessBehavior(df).formulate(
             response='y', time='time', factors=['factor 1', 'factor 2'],
         )
         # SDS 2 normally doesn't include S in valid_charts,
