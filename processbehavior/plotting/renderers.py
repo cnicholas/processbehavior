@@ -90,7 +90,7 @@ def render_control_chart(
 
     # 3. Control limits and centerline
     if ctx.show_limits:
-        _add_limits(fig, ctx, x_data, row, col)
+        _add_limits(fig, ctx, x_data, row, col, ncols)
 
     # 4. Signal highlighting (Rule 1 — beyond limits)
     if ctx.highlight_signals and 'beyond_limits' in data.columns:
@@ -231,7 +231,6 @@ def _add_trace(
 
 def _add_fixed_limit(
     fig: go.Figure,
-    x_data,
     y: float,
     label: str,
     color: str,
@@ -240,25 +239,34 @@ def _add_fixed_limit(
     font_size: int,
     row: int | None,
     col: int | None,
+    ncols: int | None = None,
 ) -> None:
     """Draw a fixed horizontal limit line using add_shape + add_annotation.
 
-    Uses ``add_shape`` instead of ``add_hline`` so it works identically
-    for both single and faceted charts.
+    Uses domain-relative x-coordinates (0–1) so the line always spans the
+    full subplot width regardless of x-data type.  This matches the pattern
+    used by ``add_zone_shading``.
     """
     subplot_kw = _subplot_kwargs(row, col)
-    x_min = x_data.iloc[0] if hasattr(x_data, 'iloc') else x_data[0]
-    x_max = x_data.iloc[-1] if hasattr(x_data, 'iloc') else x_data[-1]
+
+    # Build domain-relative xref (same logic as zones.py)
+    if row is not None and col is not None:
+        subplot_idx = (row - 1) * (ncols or 1) + col
+        xref = 'x domain' if subplot_idx == 1 else f'x{subplot_idx} domain'
+    else:
+        xref = 'x domain'
 
     fig.add_shape(
         type='line',
-        x0=x_min, x1=x_max,
+        x0=0, x1=1,
+        xref=xref,
         y0=y, y1=y,
         line=dict(color=color, dash=dash, width=width),
         **subplot_kw,
     )
     fig.add_annotation(
-        x=x_max, y=y,
+        x=1, xref=xref,
+        y=y,
         text=label,
         showarrow=False,
         xanchor='left',
@@ -273,6 +281,7 @@ def _add_limits(
     x_data,
     row: int | None,
     col: int | None,
+    ncols: int | None = None,
 ) -> None:
     """Add UPL, LPL, centerline (fixed or stepped) and vary annotation."""
     stats = ctx.stats
@@ -287,9 +296,9 @@ def _add_limits(
         if stats['upl'] != 'Varies':
             label = format_limit_label('UPL', stats['upl'], ctx.show_limit_values)
             _add_fixed_limit(
-                fig, x_data, stats['upl'], label,
+                fig, stats['upl'], label,
                 theme.ucl_color, theme.limit_line_dash, theme.limit_line_width,
-                font_size, row, col,
+                font_size, row, col, ncols,
             )
         elif 'upl' in data.columns:
             add_stepped_limit_line(
@@ -303,9 +312,9 @@ def _add_limits(
         if stats['lpl'] != 'Varies':
             label = format_limit_label('LPL', stats['lpl'], ctx.show_limit_values)
             _add_fixed_limit(
-                fig, x_data, stats['lpl'], label,
+                fig, stats['lpl'], label,
                 theme.lcl_color, theme.limit_line_dash, theme.limit_line_width,
-                font_size, row, col,
+                font_size, row, col, ncols,
             )
         elif 'lpl' in data.columns:
             add_stepped_limit_line(
@@ -340,9 +349,9 @@ def _add_limits(
         else:
             label = format_limit_label('CL', stats[center_key], ctx.show_limit_values)
             _add_fixed_limit(
-                fig, x_data, stats[center_key], label,
+                fig, stats[center_key], label,
                 theme.center_color, 'solid', theme.center_line_width,
-                font_size, row, col,
+                font_size, row, col, ncols,
             )
 
 
