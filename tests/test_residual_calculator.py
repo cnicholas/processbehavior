@@ -654,19 +654,17 @@ def test_r1_rcr1_invariants():
 
     ds = result.dataset
     y_mean = np.mean(ds['y'].values)
+    ybar = ds['Ybar'].iloc[0]  # unweighted grand mean (mean of cell means)
 
-    # R1 = Y - Ȳ, so mean(R1) ≈ 0 (tight tolerance for mean)
-    assert np.isclose(np.mean(ds['R1'].values), 0.0, atol=1e-10)
-
-    # RCR1 = R1 + Ȳ = Y, so mean(RCR1) ≈ mean(Y) (tight tolerance)
-    assert np.isclose(np.mean(ds['RCR1'].values), y_mean, atol=1e-10)
-
-    # RCR1 - R1 = Ȳ (constant for all rows, looser tolerance for row-wise)
-    diff = ds['RCR1'].values - ds['R1'].values
-    assert np.allclose(diff, y_mean, atol=1e-8)
-
-    # RCR1 should equal Y (looser tolerance if computed via R1 + y_mean)
+    # RCR1 = Ybar + R1 = Y (always true regardless of how Ybar is computed)
     assert np.allclose(ds['RCR1'].values, ds['y'].values, atol=1e-8)
+
+    # RCR1 - R1 = Ȳ (constant for all rows)
+    diff = ds['RCR1'].values - ds['R1'].values
+    assert np.allclose(diff, ybar, atol=1e-8)
+
+    # mean(RCR1) = mean(Y) (since RCR1 = Y)
+    assert np.isclose(np.mean(ds['RCR1'].values), y_mean, atol=1e-10)
 
 
 # ============================================================================
@@ -719,3 +717,82 @@ def test_residual_chart_uses_correct_column():
     # This catches the bug where residual charts used Y instead of R5
     assert not np.isclose(r5_xbar_stats['center'], y_mean, atol=0.1), \
         f"R5 Xbar center {r5_xbar_stats['center']} should NOT equal Y mean {y_mean}"
+
+
+# ============================================================================
+# Test: Unweighted Means (mean of cell means) for unbalanced data
+# ============================================================================
+
+def test_unweighted_means_with_unbalanced_cells():
+    """
+    VAS marginal means must be unweighted (mean of cell means), not
+    observation-weighted. This matters when cell sizes vary.
+
+    With unbalanced data, observation-weighted averages give more weight to
+    larger cells. Wheeler/Bishop VAS treats each experimental condition equally.
+    """
+    import numpy as np
+
+    # Unbalanced: cell (A,1) has 3 obs, cell (A,2) has 2 obs,
+    # cell (B,1) has 2 obs, cell (B,2) has 3 obs
+    df = pd.DataFrame({
+        'lane': ['A', 'A', 'A', 'A', 'A', 'B', 'B', 'B', 'B', 'B'],
+        'time': [1, 1, 1, 2, 2, 1, 1, 2, 2, 2],
+        'weight': [10.0, 11.0, 12.0, 20.0, 21.0, 30.0, 31.0, 40.0, 41.0, 42.0],
+    })
+    spec = FormulationSpec(
+        response_var='weight',
+        rsg_vars=('lane',),
+        rsg_var_name='rsg',
+        time_var='time',
+    )
+    prepared = _prepare_for_vas(df, spec)
+    result = calculate_vas_residuals(prepared, spec, r2_method='exact')
+
+    # Cell means (observation-weighted within each cell):
+    # (A,1): mean(10,11,12) = 11.0
+    # (A,2): mean(20,21) = 20.5
+    # (B,1): mean(30,31) = 30.5
+    # (B,2): mean(40,41,42) = 41.0
+    cell_means = [11.0, 20.5, 30.5, 41.0]
+
+    # Unweighted grand mean = mean of cell means
+    expected_grand = np.mean(cell_means)  # 25.75
+    assert np.isclose(result['Ybar'].iloc[0], expected_grand, atol=1e-10), \
+        f"Grand mean {result['Ybar'].iloc[0]} != expected {expected_grand}"
+
+    # Observation-weighted grand mean would be different
+    obs_weighted_grand = df['weight'].mean()  # 25.8
+    assert not np.isclose(expected_grand, obs_weighted_grand, atol=1e-10), \
+        "Test data should produce different weighted vs unweighted grand means"
+
+    # Unweighted factor means = mean of cell means per factor
+    expected_factor_A = np.mean([11.0, 20.5])  # 15.75
+    expected_factor_B = np.mean([30.5, 41.0])  # 35.75
+    a_rows = result[result['rsg'] == 'A']
+    b_rows = result[result['rsg'] == 'B']
+    assert np.isclose(a_rows['Ybar_k'].iloc[0], expected_factor_A, atol=1e-10)
+    assert np.isclose(b_rows['Ybar_k'].iloc[0], expected_factor_B, atol=1e-10)
+
+    # Unweighted time means = mean of cell means per time
+    expected_time_1 = np.mean([11.0, 30.5])  # 20.75
+    expected_time_2 = np.mean([20.5, 41.0])  # 30.75
+    t1_rows = result[result['time'] == 1]
+    t2_rows = result[result['time'] == 2]
+    assert np.isclose(t1_rows['Ybar_t'].iloc[0], expected_time_1, atol=1e-10)
+    assert np.isclose(t2_rows['Ybar_t'].iloc[0], expected_time_2, atol=1e-10)
+
+    # Verify residual algebra still holds
+    assert np.allclose(result['R1'], result['weight'] - result['Ybar'], atol=1e-10)
+    assert np.allclose(result['R2'], result['weight'] - result['Ybar_kt'], atol=1e-10)
+    assert np.allclose(
+        result['R3'],
+        result['weight'] - result['Ybar_k'] - result['Ybar_t'] + result['Ybar'],
+        atol=1e-10,
+    )
+    assert np.allclose(
+        result['R4'], result['Ybar_t'] - result['Ybar'] + result['R2'], atol=1e-10
+    )
+    assert np.allclose(
+        result['R5'], result['Ybar_k'] - result['Ybar'] + result['R2'], atol=1e-10
+    )
