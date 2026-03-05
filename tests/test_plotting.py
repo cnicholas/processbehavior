@@ -412,12 +412,13 @@ class TestPlotter:
         # Figure should render without errors
         assert fig.figure is not None
 
-    def test_fixed_limit_lines_span_full_xaxis_with_string_categories(self):
-        """Regression: limit lines must span all categories, not just '1'-'9'.
+    def test_fixed_limit_lines_use_domain_coordinates(self):
+        """Regression: limit lines must use domain-relative coordinates.
 
-        When subgroup values are converted to strings, lexicographic min/max
-        returns '9' instead of '51'. Limit lines must use positional
-        first/last to span the full chart width.
+        Using x-data values for shape positioning causes Plotly to
+        misinterpret numeric-looking category strings as numeric positions,
+        compressing data to one side of the chart.  Domain coordinates
+        (x0=0, x1=1 with xref='x domain') avoid this entirely.
         """
         pb = ProcessBehavior.read_csv('validation/electrical_resistance_in_megohms_204.csv')
         study = pb.formulate(
@@ -436,8 +437,9 @@ class TestPlotter:
         assert len(hlines) == 3, f"Expected 3 limit lines, got {len(hlines)}"
 
         for line in hlines:
-            assert line.x0 == '1', f"Limit line starts at {line.x0!r}, expected '1'"
-            assert line.x1 == '51', f"Limit line ends at {line.x1!r}, expected '51'"
+            assert line.x0 == 0, f"Limit line x0={line.x0!r}, expected 0"
+            assert line.x1 == 1, f"Limit line x1={line.x1!r}, expected 1"
+            assert 'domain' in line.xref, f"Expected domain xref, got {line.xref!r}"
 
     def test_plot_with_rules_and_zones(self, simple_result):
         """Test plotting with both show_rules and show_zones enabled."""
