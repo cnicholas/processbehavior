@@ -494,35 +494,47 @@ def calculate_vas_residuals(
     out = df.copy()
     y = spec.response_var
 
-    # Step 1: Calculate all means
-    logger.debug("Calculating means (Ybar, Ybar_k, Ybar_t, Ybar_kt)")
+    # Step 1: Compute cell means FIRST (foundation for everything)
+    logger.debug("Calculating means (Ybar_kt, then unweighted Ybar, Ybar_k, Ybar_t)")
+    out['Ybar_kt'] = ybar_kt if ybar_kt is not None else calculate_cell_means(
+        out, y, spec.rsg_var_name, spec.time_var
+    )
 
-    grand_mean = calculate_grand_mean(out, y)
+    # Step 2: Derive marginal means from cell means (unweighted means analysis)
+    # Wheeler/Bishop VAS uses mean of cell means, giving each experimental
+    # condition equal weight regardless of sample size within cells.
+    cell_means_unique = out.groupby(
+        [spec.rsg_var_name, spec.time_var], observed=True
+    )['Ybar_kt'].first()
+
+    grand_mean = cell_means_unique.mean()
     out['Ybar'] = grand_mean
 
-    out['Ybar_k'] = calculate_factor_means(out, y, spec.rsg_var_name)
-    out['Ybar_t'] = calculate_time_means(out, y, spec.time_var)
-    out['Ybar_kt'] = ybar_kt if ybar_kt is not None else calculate_cell_means(out, y, spec.rsg_var_name, spec.time_var)
+    factor_means = cell_means_unique.groupby(level=0, observed=True).mean()
+    out['Ybar_k'] = out[spec.rsg_var_name].map(factor_means).astype(float)
 
-    # Step 2: Calculate R1 (pure algebra)
+    time_means = cell_means_unique.groupby(level=1, observed=True).mean()
+    out['Ybar_t'] = out[spec.time_var].map(time_means).astype(float)
+
+    # Step 3: Calculate R1 (pure algebra)
     logger.debug("Calculating R1 residual")
     out['R1'] = calculate_r1_residual(out, y, grand_mean)
 
-    # Step 3: Calculate R2 (structure-dependent)
+    # Step 4: Calculate R2 (structure-dependent)
     logger.debug(f"Calculating R2 residual (method: {r2_method})")
     out['R2'] = calculate_r2(out, y, r2_method, n_per_cell=n_per_cell)
 
-    # Step 4: Calculate R3 (pure algebra)
+    # Step 5: Calculate R3 (pure algebra)
     logger.debug("Calculating R3 residual")
     out['R3'] = calculate_r3_residual(
         out, y, out['Ybar_k'], out['Ybar_t'], grand_mean
     )
 
-    # Step 5: Calculate R4 (pure algebra given R2)
+    # Step 6: Calculate R4 (pure algebra given R2)
     logger.debug("Calculating R4 residual")
     out['R4'] = calculate_r4_residual(out['Ybar_t'], grand_mean, out['R2'])
 
-    # Step 6: Calculate R5 (pure algebra given R2)
+    # Step 7: Calculate R5 (pure algebra given R2)
     logger.debug("Calculating R5 residual")
     out['R5'] = calculate_r5_residual(out['Ybar_k'], grand_mean, out['R2'])
 
