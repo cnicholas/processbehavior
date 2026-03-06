@@ -171,10 +171,10 @@ def test_calculate_r2_ma2():
     result = calculate_r2(df, 'weight', r2_method='ma2')
 
     # R2_j = (Y_j - Y_{j-1}) / 2
-    # Point 0: 0.0 (Bishop §14.2.2: initial R2 residual is set to 0)
+    # Point 0: NaN (no predecessor — Bishop leaves j=1 blank)
     # Point 1: (11-10)/2 = 0.5
     # Point 2: (12-11)/2 = 0.5
-    assert result.iloc[0] == 0.0
+    assert pd.isna(result.iloc[0])
     assert pytest.approx(result.iloc[1], 0.01) == 0.5
     assert pytest.approx(result.iloc[2], 0.01) == 0.5
 
@@ -200,11 +200,11 @@ def test_calculate_r2_hybrid():
     result = calculate_r2(df, 'weight', r2_method='hybrid', n_per_cell=n_per_cell)
 
     # MA2 across full sorted stream (no grouping):
-    # j=0 (10.0): first obs → 0.0
+    # j=0 (10.0): first obs → NaN (no predecessor)
     # j=1 (10.5): (10.5 - 10.0)/2 = 0.25
     # j=2 (9.0):  (9.0 - 10.5)/2 = -0.75
     # j=3 (11.0): (11.0 - 9.0)/2 = 1.0
-    assert result.iloc[0] == 0.0
+    assert pd.isna(result.iloc[0])
     assert pytest.approx(result.iloc[1], 0.01) == 0.25
     assert pytest.approx(result.iloc[2], 0.01) == -0.75
     assert pytest.approx(result.iloc[3], 0.01) == 1.0
@@ -363,8 +363,8 @@ def test_calculate_vas_residuals_sds2_uses_moving_average(spec_sds1):
 
     assert 'R2' in result.columns
     # R2 = (Y_j - Y_{j-1}) / 2
-    # First observation: 0.0 (Bishop §14.2.2: initial R2 residual is set to 0)
-    assert result['R2'].iloc[0] == 0.0
+    # First observation: NaN (no predecessor — Bishop leaves j=1 blank)
+    assert pd.isna(result['R2'].iloc[0])
     # Remaining: (11-10)/2=0.5, (12-11)/2=0.5
     assert pytest.approx(result['R2'].iloc[1], 0.01) == 0.5
     assert pytest.approx(result['R2'].iloc[2], 0.01) == 0.5
@@ -375,7 +375,7 @@ def test_calculate_vas_residuals_sds3_hybrid_uses_ma2_for_all(spec_sds1):
 
     When any cell has n=1, ALL observations use MA2 on the full
     canonical-sorted stream — no per-cell exact/MA2 selection.
-    Only j=1 gets R2=0.
+    Only j=1 gets R2=NaN (no predecessor).
     """
     # A has n=2 at time=1, B has n=1 at time=1 and n=1 at time=2
     sds3_df = pd.DataFrame({
@@ -390,10 +390,10 @@ def test_calculate_vas_residuals_sds3_hybrid_uses_ma2_for_all(spec_sds1):
     )
 
     # MA2 across full sorted stream (A×1(0), A×1(1), B×1(0), B×2(0)):
-    # Only the very first observation in the entire stream gets R2=0
+    # Only the very first observation in the entire stream gets R2=NaN
     # All others get (Y_j - Y_{j-1})/2
     a_rows = result[result['rsg'] == 'A']
-    assert a_rows['R2'].iloc[0] == 0.0  # j=1: first in stream
+    assert pd.isna(a_rows['R2'].iloc[0])  # j=1: first in stream → NaN
 
     b_rows = result[result['rsg'] == 'B']
     assert b_rows['R2'].iloc[0] != 0  # Not first in stream — gets MA2 value
@@ -424,7 +424,7 @@ def test_calculate_vas_residuals_sparse_uses_moving_average(spec_sds1):
     df = _prepare_for_vas(sds6_df, spec_sds1)
     result = calculate_vas_residuals(df, spec_sds1, r2_method='ma2')
 
-    assert result['R2'].iloc[0] == 0.0
+    assert pd.isna(result['R2'].iloc[0])  # j=1: no predecessor → NaN
     assert pytest.approx(result['R2'].iloc[1], 0.01) == 0.5
     assert pytest.approx(result['R2'].iloc[2], 0.01) == 0.5
 
@@ -511,10 +511,11 @@ def sds3_df():
     ("hybrid", "sds3"),
 ])
 def test_no_nan_residuals_all_r2_methods(r2_method, df_key, sds1_df, sds2_df, sds3_df, spec_sds1):
-    """No residual column should contain NaN for any R2 method variant.
+    """Exact method has no NaN residuals. MA2 methods have NaN at j=1.
 
-    Bishop §14.2.2: the initial MA2 R2 residual is set to 0, not NaN.
-    NaN in R2 would silently propagate into R4 and R5.
+    Bishop leaves the j=1 MA2 residual blank (no predecessor for the
+    moving average). R3-R5 inherit NaN from R2 via arithmetic propagation.
+    R1 is always defined (Y - Ybar).
     """
     dfs = {"sds1": sds1_df, "sds2": sds2_df, "sds3": sds3_df}
     raw_df = dfs[df_key]
@@ -525,10 +526,22 @@ def test_no_nan_residuals_all_r2_methods(r2_method, df_key, sds1_df, sds2_df, sd
         df, spec_sds1, r2_method=r2_method, n_per_cell=n_per_cell,
     )
 
-    for col in ['R1', 'R2', 'R3', 'R4', 'R5']:
-        assert result[col].isna().sum() == 0, (
-            f"{col} has NaN with r2_method={r2_method}"
-        )
+    # R1 is always NaN-free (Y - Ybar is always defined)
+    assert result['R1'].isna().sum() == 0, "R1 should never have NaN"
+
+    if r2_method == "exact":
+        # Exact method: all cells n≥2, no MA2 → no NaN
+        for col in ['R2', 'R3', 'R4', 'R5']:
+            assert result[col].isna().sum() == 0, (
+                f"{col} has NaN with r2_method=exact"
+            )
+    else:
+        # MA2 methods (ma2, hybrid): j=1 has no predecessor → exactly 1 NaN
+        for col in ['R2', 'R3', 'R4', 'R5']:
+            assert result[col].isna().sum() == 1, (
+                f"{col} should have exactly 1 NaN (j=1) with r2_method={r2_method}, "
+                f"got {result[col].isna().sum()}"
+            )
 
 
 # ============================================================================
@@ -553,12 +566,12 @@ def test_r2_ma2_equals_half_moving_range():
     r2 = calculate_r2(df, 'weight', r2_method='ma2')
 
     # R2_j = (Y_j - Y_{j-1}) / 2
-    # j=1: 0.0 (Bishop §14.2.2)
+    # j=1: NaN (no predecessor)
     # j=2: (12-10)/2 = 1.0
     # j=3: (11-12)/2 = -0.5
     # j=4: (13-11)/2 = 1.0
     # j=5: (12.5-13)/2 = -0.25
-    assert r2.iloc[0] == 0.0
+    assert pd.isna(r2.iloc[0])
     assert pytest.approx(r2.iloc[1], 0.01) == 1.0
     assert pytest.approx(r2.iloc[2], 0.01) == -0.5
     assert pytest.approx(r2.iloc[3], 0.01) == 1.0
@@ -569,7 +582,7 @@ def test_r2_ma2_multiple_groups():
     """
     MA2 R2 runs across the entire canonical-sorted stream, not per group.
 
-    Wheeler Eq 13.7-13.9: j=2,...,J with no grouping. Only j=1 gets R2=0.
+    Wheeler Eq 13.7-13.9: j=2,...,J with no grouping. Only j=1 gets R2=NaN.
     The MA2 continues across rsg_key boundaries.
     """
     df = pd.DataFrame({
@@ -586,13 +599,13 @@ def test_r2_ma2_multiple_groups():
     result = calculate_r2(df, 'weight', r2_method='ma2')
 
     # Full stream MA2 (no grouping):
-    # j=0 (10.0): first obs → 0.0
+    # j=0 (10.0): first obs → NaN (no predecessor)
     # j=1 (11.0): (11-10)/2 = 0.5
     # j=2 (12.0): (12-11)/2 = 0.5
     # j=3 (20.0): (20-12)/2 = 4.0  (crosses A→B boundary)
     # j=4 (22.0): (22-20)/2 = 1.0
     # j=5 (21.0): (21-22)/2 = -0.5
-    assert result.iloc[0] == 0.0
+    assert pd.isna(result.iloc[0])
     assert pytest.approx(result.iloc[1], 0.01) == 0.5
     assert pytest.approx(result.iloc[2], 0.01) == 0.5
     assert pytest.approx(result.iloc[3], 0.01) == 4.0
@@ -619,7 +632,7 @@ def test_r2_ma2_tom_bishop_example():
 
     result = calculate_r2(df, 'weight', r2_method='ma2')
 
-    assert result.iloc[0] == 0.0  # Bishop §14.2.2: initial R2 = 0
+    assert pd.isna(result.iloc[0])  # j=1: no predecessor → NaN
     for i in range(1, len(result)):
         y_current = df['weight'].iloc[i]
         y_previous = df['weight'].iloc[i-1]
@@ -627,7 +640,7 @@ def test_r2_ma2_tom_bishop_example():
         assert pytest.approx(result.iloc[i], 0.01) == expected_r2
 
     # R2 values should be smaller than original variation (trend removed)
-    assert result[1:].abs().max() < df['weight'].std()
+    assert result.iloc[1:].abs().max() < df['weight'].std()
 
 
 def test_r2_ma2_handles_single_group():
@@ -643,7 +656,7 @@ def test_r2_ma2_handles_single_group():
     result = calculate_r2(df, 'weight', r2_method='ma2')
 
     assert len(result) == 2
-    assert result.iloc[0] == 0.0  # Bishop §14.2.2: initial R2 = 0
+    assert pd.isna(result.iloc[0])  # j=1: no predecessor → NaN
     assert pytest.approx(result.iloc[1], 0.01) == 0.5  # (11-10)/2
 
 
