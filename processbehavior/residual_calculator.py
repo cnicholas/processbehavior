@@ -400,10 +400,10 @@ def calculate_r2(
 
     # States 2 & 3: any singletons → MA2 for ALL observations (Eq 13.8-13.9)
     # MA2 runs across the entire canonical-sorted stream — no grouping.
-    # Only j=1 gets R2=0 per Wheeler's specification.
+    # j=1 has no predecessor → R2 is NaN (Bishop leaves it blank).
     df_sorted = df.sort_values("sort_key")
     y_sorted = df_sorted[y]
-    r2 = ((y_sorted - y_sorted.shift(1)) / 2).fillna(0.0)
+    r2 = (y_sorted - y_sorted.shift(1)) / 2
     return pd.Series(r2.loc[df.index], index=df.index, name="R2")
 
 
