@@ -180,8 +180,14 @@ def test_calculate_r2_ma2():
 
 
 def test_calculate_r2_hybrid():
-    """R2 hybrid uses exact for n>=2 and MA2 for singletons."""
-    # A×1 has n=2 (exact), B×1 has n=1 (MA2), B×2 has n=1 (MA2)
+    """R2 with any singletons uses MA2 across entire sorted stream.
+
+    When any cell has n=1, ALL observations use MA2 on the full
+    canonical-sorted stream — no per-cell exact/MA2 selection.
+    Wheeler Eq 13.7-13.9: j=2,...,J with no grouping; only j=1 gets 0.
+    """
+    # A×1 has n=2, B×1 has n=1, B×2 has n=1
+    # sort_key order: A×1(0), A×1(1), B×1(0), B×2(0)
     df = pd.DataFrame({
         'weight': [10.0, 10.5, 9.0, 11.0],
         'Ybar_kt': [10.25, 10.25, 9.0, 11.0],
@@ -193,12 +199,14 @@ def test_calculate_r2_hybrid():
 
     result = calculate_r2(df, 'weight', r2_method='hybrid', n_per_cell=n_per_cell)
 
-    # A rows (n=2): exact = Y - Ybar_kt = [-0.25, 0.25]
-    assert pytest.approx(result.iloc[0], 0.01) == -0.25
+    # MA2 across full sorted stream (no grouping):
+    # j=0 (10.0): first obs → 0.0
+    # j=1 (10.5): (10.5 - 10.0)/2 = 0.25
+    # j=2 (9.0):  (9.0 - 10.5)/2 = -0.75
+    # j=3 (11.0): (11.0 - 9.0)/2 = 1.0
+    assert result.iloc[0] == 0.0
     assert pytest.approx(result.iloc[1], 0.01) == 0.25
-    # B row 0 (n=1, first in group): MA2 initial = 0.0 (Bishop §14.2.2)
-    assert result.iloc[2] == 0.0
-    # B row 1 (n=1): MA2 = (11-9)/2 = 1.0
+    assert pytest.approx(result.iloc[2], 0.01) == -0.75
     assert pytest.approx(result.iloc[3], 0.01) == 1.0
 
 
@@ -362,8 +370,13 @@ def test_calculate_vas_residuals_sds2_uses_moving_average(spec_sds1):
     assert pytest.approx(result['R2'].iloc[2], 0.01) == 0.5
 
 
-def test_calculate_vas_residuals_sds3_hybrid_uses_ma2_for_singletons(spec_sds1):
-    """SDS 3 (hybrid) should use MA2 for singleton cells, not zero."""
+def test_calculate_vas_residuals_sds3_hybrid_uses_ma2_for_all(spec_sds1):
+    """SDS 3 (any singletons) uses MA2 across entire sorted stream.
+
+    When any cell has n=1, ALL observations use MA2 on the full
+    canonical-sorted stream — no per-cell exact/MA2 selection.
+    Only j=1 gets R2=0.
+    """
     # A has n=2 at time=1, B has n=1 at time=1 and n=1 at time=2
     sds3_df = pd.DataFrame({
         'lane': ['A', 'A', 'B', 'B'],
@@ -376,14 +389,15 @@ def test_calculate_vas_residuals_sds3_hybrid_uses_ma2_for_singletons(spec_sds1):
         df, spec_sds1, r2_method='hybrid', n_per_cell=n_per_cell
     )
 
-    # A (n=2): exact, should have non-zero R2
+    # MA2 across full sorted stream (A×1(0), A×1(1), B×1(0), B×2(0)):
+    # Only the very first observation in the entire stream gets R2=0
+    # All others get (Y_j - Y_{j-1})/2
     a_rows = result[result['rsg'] == 'A']
-    assert not (a_rows['R2'] == 0).all()
+    assert a_rows['R2'].iloc[0] == 0.0  # j=1: first in stream
 
-    # B (n=1): MA2, first in group is 0.0 (Bishop §14.2.2), second gets (Y_j - Y_{j-1})/2
     b_rows = result[result['rsg'] == 'B']
-    assert b_rows['R2'].iloc[0] == 0.0  # First in B group: initial MA2 = 0
-    assert b_rows['R2'].iloc[1] != 0  # Second in B group: MA2 value, not zero
+    assert b_rows['R2'].iloc[0] != 0  # Not first in stream — gets MA2 value
+    assert b_rows['R2'].iloc[1] != 0  # Also gets MA2 value
 
 
 def test_calculate_vas_residuals_sds1_exact_replicated(spec_sds1):
@@ -553,10 +567,10 @@ def test_r2_ma2_equals_half_moving_range():
 
 def test_r2_ma2_multiple_groups():
     """
-    MA2 R2 should work independently per rsg_key group.
+    MA2 R2 runs across the entire canonical-sorted stream, not per group.
 
-    Validates that the backward MA is calculated within each group
-    (process design condition), not across groups.
+    Wheeler Eq 13.7-13.9: j=2,...,J with no grouping. Only j=1 gets R2=0.
+    The MA2 continues across rsg_key boundaries.
     """
     df = pd.DataFrame({
         'weight': [10.0, 11.0, 12.0, 20.0, 22.0, 21.0],
@@ -571,15 +585,19 @@ def test_r2_ma2_multiple_groups():
 
     result = calculate_r2(df, 'weight', r2_method='ma2')
 
-    # Group A:
-    assert result.iloc[0] == 0.0  # Bishop §14.2.2: initial R2 = 0
-    assert pytest.approx(result.iloc[1], 0.01) == 0.5   # (11-10)/2
-    assert pytest.approx(result.iloc[2], 0.01) == 0.5   # (12-11)/2
-
-    # Group B:
-    assert result.iloc[3] == 0.0  # Bishop §14.2.2: initial R2 = 0
-    assert pytest.approx(result.iloc[4], 0.01) == 1.0   # (22-20)/2
-    assert pytest.approx(result.iloc[5], 0.01) == -0.5  # (21-22)/2
+    # Full stream MA2 (no grouping):
+    # j=0 (10.0): first obs → 0.0
+    # j=1 (11.0): (11-10)/2 = 0.5
+    # j=2 (12.0): (12-11)/2 = 0.5
+    # j=3 (20.0): (20-12)/2 = 4.0  (crosses A→B boundary)
+    # j=4 (22.0): (22-20)/2 = 1.0
+    # j=5 (21.0): (21-22)/2 = -0.5
+    assert result.iloc[0] == 0.0
+    assert pytest.approx(result.iloc[1], 0.01) == 0.5
+    assert pytest.approx(result.iloc[2], 0.01) == 0.5
+    assert pytest.approx(result.iloc[3], 0.01) == 4.0
+    assert pytest.approx(result.iloc[4], 0.01) == 1.0
+    assert pytest.approx(result.iloc[5], 0.01) == -0.5
 
 
 def test_r2_ma2_tom_bishop_example():
