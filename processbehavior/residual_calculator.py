@@ -11,9 +11,10 @@ total variation into interpretable components:
 - R5: Factor effects + unexplained (pure algebra given R2)
 
 R2 is the ONLY residual whose calculation varies by structure:
-- exact: R2 = Y - Ȳ_kt (Eq 59), when all cells have n >= 2
-- ma2: R2 = (Y_j - Y_{j-1}) / 2 (Eq 66), when all cells have n = 1
-- hybrid: exact where n >= 2, MA2 where n = 1
+- exact (state 1): R2 = Y - Ȳ_kt (Eq 59), when all cells have n >= 2
+- ma2 (states 2 & 3): R2 = (Y_j - Y_{j-1}) / 2 (Eq 13.8-13.9),
+  when any cell has n = 1 — applied to ALL observations across the
+  entire sorted stream, no grouping
 
 All other residuals (R1, R3, R4, R5) are pure algebraic transformations
 that don't depend on structure once the means are defined.
@@ -364,18 +365,24 @@ def calculate_r2(
     R2 is the ONLY structure-dependent residual. The method is determined by
     observed cell sizes (via SDSRegistry.get_r2_method()):
 
-    - exact: R2 = Y - Ȳ_kt (Eq 59), all cells have n >= 2
-    - ma2: R2 = (Y_j - Y_{j-1}) / 2 (Eq 66), all cells have n = 1
-    - hybrid: exact where n >= 2, MA2 where n = 1
+    - exact (state 1): R2 = Y - Ȳ_kt (Eq 59), all cells have n >= 2
+    - ma2 (states 2 & 3): R2 = (Y_j - Y_{j-1}) / 2 (Eq 13.8-13.9),
+      any cell has n = 1
+
+    When any cell has n=1, MA2 is applied to ALL observations across the
+    entire canonical-sorted stream — no grouping by rsg_key, no hybrid
+    per-cell selection. Wheeler Eq 13.7-13.9 specify j=2,...,J with no
+    grouping; only j=1 gets R2=0.
 
     Parameters
     ----------
     df : pd.DataFrame
-        Input data with 'cell_key', 'rsg_key', 'sort_key', 'Ybar_kt' columns
+        Input data with 'cell_key', 'sort_key', 'Ybar_kt' columns
     y : str
         Name of response variable
     r2_method : R2Method
-        'exact', 'ma2', or 'hybrid'
+        'exact', 'ma2', or 'hybrid' — retained for API compatibility.
+        Branching is driven by n_per_cell.
     n_per_cell : pd.Series, optional
         Pre-computed observations per cell. Pass from ADS to avoid recomputation.
 
@@ -383,39 +390,21 @@ def calculate_r2(
     -------
     pd.Series
         R2 residuals with name="R2"
-
-    Notes
-    -----
-    For hybrid: MA2 is computed on the FULL ordered stream within each rsg_key,
-    then selected only for singleton cells. This is methodologically required —
-    filtering to singletons first would break the consecutive-observation
-    assumption in Wheeler's (Y_j - Y_{j-1})/2 formula.
     """
-    if r2_method == "exact":
-        return pd.Series(df[y] - df["Ybar_kt"], index=df.index, name="R2")
-
-    if r2_method == "ma2":
-        df_sorted = df.sort_values("sort_key")
-        r2 = df_sorted.groupby("rsg_key", observed=True)[y].transform(
-            lambda s: (s - s.shift(1)) / 2
-        ).fillna(0.0)
-        return pd.Series(r2.loc[df.index], index=df.index, name="R2")
-
-    # hybrid: exact where n >= 2, MA2 where n = 1
     if n_per_cell is None:
         n_per_cell = df.groupby("cell_key", observed=True)[y].transform("size")
 
-    r2_exact = df[y] - df["Ybar_kt"]
+    # State 1: all cells replicated → exact (Eq 59)
+    if (n_per_cell >= 2).all():
+        return pd.Series(df[y] - df["Ybar_kt"], index=df.index, name="R2")
 
-    # MA2 on full ordered stream (not filtered to singletons)
+    # States 2 & 3: any singletons → MA2 for ALL observations (Eq 13.8-13.9)
+    # MA2 runs across the entire canonical-sorted stream — no grouping.
+    # Only j=1 gets R2=0 per Wheeler's specification.
     df_sorted = df.sort_values("sort_key")
-    r2_ma2 = df_sorted.groupby("rsg_key", observed=True)[y].transform(
-        lambda s: (s - s.shift(1)) / 2
-    ).fillna(0.0)
-    r2_ma2 = r2_ma2.loc[df.index]
-
-    out = np.where(n_per_cell >= 2, r2_exact, r2_ma2)
-    return pd.Series(out, index=df.index, name="R2")
+    y_sorted = df_sorted[y]
+    r2 = ((y_sorted - y_sorted.shift(1)) / 2).fillna(0.0)
+    return pd.Series(r2.loc[df.index], index=df.index, name="R2")
 
 
 # ============================================================================
@@ -524,11 +513,13 @@ def calculate_vas_residuals(
     logger.debug(f"Calculating R2 residual (method: {r2_method})")
     out['R2'] = calculate_r2(out, y, r2_method, n_per_cell=n_per_cell)
 
-    # Step 5: Calculate R3 (pure algebra)
+    # Step 5: Calculate R3 (interaction effects)
+    # Unified formula: Ybar_kt - Ybar_k - Ybar_t + Ybar + R2
+    # For exact (state 1): R2 = Y - Ybar_kt, so this simplifies to
+    #   Y - Ybar_k - Ybar_t + Ybar (algebraically identical to old formula).
+    # For MA2 (states 2-3): adds R2 to each row per Wheeler/Bishop.
     logger.debug("Calculating R3 residual")
-    out['R3'] = calculate_r3_residual(
-        out, y, out['Ybar_k'], out['Ybar_t'], grand_mean
-    )
+    out['R3'] = out['Ybar_kt'] - out['Ybar_k'] - out['Ybar_t'] + grand_mean + out['R2']
 
     # Step 6: Calculate R4 (pure algebra given R2)
     logger.debug("Calculating R4 residual")
