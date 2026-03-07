@@ -1702,15 +1702,17 @@ class Study:
 
         # Validate residual availability if charting a residual
         # Skip validation for Histogram - histograms can plot any available numeric column
-        if value is not None and value.upper().startswith('R') and base_chart != 'Histogram':
-            # Gate on whether the resolved residual column exists in the dataset
-            if value_col not in self._ads.analysis_dataset.columns:
+        if (value is not None
+                and value.upper().startswith('R')
+                and base_chart != 'Histogram'
+                and value_col not in self._ads.analysis_dataset.columns):
                 available_residuals = [
                     c for c in self._ads.analysis_dataset.columns
                     if c.upper().startswith('R') and c[1:2].isdigit()
                 ]
                 raise ChartNotAvailableError(
-                    f"Residual column '{value_col}' not found in the dataset for SDS {self.analytical_design_state.sds}.\n"
+                    f"Residual column '{value_col}' not found in the dataset "
+                    f"for SDS {self.analytical_design_state.sds}.\n"
                     f"Available residual columns: {', '.join(available_residuals) if available_residuals else 'None'}\n"
                     f"Use study.residuals to see available options.",
                     chart=value_col,

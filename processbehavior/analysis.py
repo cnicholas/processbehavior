@@ -372,6 +372,23 @@ class Analysis:
 
         return n_to_use, n_max
 
+    @staticmethod
+    def _resolve_limits_column(value_col: str, df: pd.DataFrame) -> str:
+        """Return the column to use for within-group std in limit calculations.
+
+        For effect-carrying residuals (R4/R5/RCR4/RCR5), use R2/RCR2 instead.
+        At collapsed groupings, R5's within-group std includes between-cell
+        variance from the collapsed dimension, inflating limits. R2 (within-cell
+        noise) is the correct basis per Wheeler/Bishop.
+        """
+        _EFFECT_RESIDUALS = {'R4', 'R5', 'RCR4', 'RCR5'}
+        if value_col is not None and value_col.upper() in _EFFECT_RESIDUALS:
+            _rcr = value_col.upper().startswith('RCR')
+            _candidate = 'RCR2' if _rcr else 'R2'
+            if _candidate in df.columns:
+                return _candidate
+        return value_col
+
     def _resolve_by_grouping(
         self,
         value_col: str
@@ -645,18 +662,7 @@ class Analysis:
         # Resolve grouping based on `by` parameter
         groupby_cols, ybar_col = self._resolve_by_grouping(value_col)
 
-        # For effect-carrying residuals (R4/R5/RCR4/RCR5), compute within-group
-        # std from R2/RCR2 instead. At collapsed groupings, R5's within-group std
-        # includes between-cell variance from the collapsed dimension, inflating
-        # limits. R2 (within-cell noise) is the correct basis per Wheeler/Bishop.
-        _EFFECT_RESIDUALS = {'R4', 'R5', 'RCR4', 'RCR5'}
-        _is_effect_residual = value_col is not None and value_col.upper() in _EFFECT_RESIDUALS
-        _limits_col = value_col
-        if _is_effect_residual:
-            _rcr = value_col.upper().startswith('RCR')
-            _candidate = 'RCR2' if _rcr else 'R2'
-            if _candidate in df.columns:
-                _limits_col = _candidate
+        _limits_col = self._resolve_limits_column(value_col, df)
 
         # Calculate grand mean (center line) - use pre-calculated if available
         _Ybar = df['Ybar'].iloc[0] if ybar_col == 'Ybar' and 'Ybar' in df.columns else df[value_col].mean()
