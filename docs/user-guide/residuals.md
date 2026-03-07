@@ -88,12 +88,19 @@ fig = result.plot(show_zones=True, title='Factor × Time Interactions')
 
 This combines the time effect with within-cell variation.
 
-**Chart**: XmR with `value='R4'`
+**Chart**: XmR with `value='R4'` (stratified by factor), or Xbar with `value='R4'` (aggregated across factors).
 
 ```python
+# Stratified XmR — one chart per factor level
 result = study.execute(chart='XmR', by=['lane'], value='R4')
 fig = result.plot(show_zones=True, show_rules=True, title='Time Effects')
+
+# Xbar — subgroup means across factor levels
+result = study.execute(chart='Xbar', value='R4')
+fig = result.plot(show_zones=True, title='Time Effects (Xbar)')
 ```
+
+When charting R4 on Xbar, limits use R2's Sbar (within-cell noise), not R4's own within-group std. See [Chart Types: Xbar limits note](chart-types.md#the-xbar-chart) for details.
 
 **Interpretation**:
 - Signals in R4 → Process is changing over time
@@ -109,12 +116,19 @@ fig = result.plot(show_zones=True, show_rules=True, title='Time Effects')
 
 This combines the factor effect with within-cell variation.
 
-**Chart**: XmR with `value='R5'`
+**Chart**: XmR with `value='R5'` (stratified by factor), or Xbar with `value='R5'` (aggregated by factor).
 
 ```python
+# Stratified XmR — one chart per factor level
 result = study.execute(chart='XmR', by=['lane'], value='R5')
 fig = result.plot(show_zones=True, title='Factor Effects')
+
+# Xbar — subgroup means by factor
+result = study.execute(chart='Xbar', value='R5')
+fig = result.plot(show_zones=True, title='Factor Effects (Xbar)')
 ```
+
+When charting R5 on Xbar, limits use R2's Sbar (within-cell noise), not R5's own within-group std. This prevents between-cell variance from collapsed dimensions from inflating limits. See [Chart Types: Xbar limits note](chart-types.md#the-xbar-chart) for details.
 
 **Interpretation**:
 - Signals in R5 → Factors truly differ from each other

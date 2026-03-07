@@ -19,6 +19,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Improved signal detection for S charts (rule-based minimum observations)
 
 ### Fixed
+- Xbar limits for effect-carrying residuals (R4/R5/RCR4/RCR5) now use R2's within-group Sbar when `by` collapses factors, preventing between-cell variance from inflating limits
+- Time main effects (PT_ME) center line uses mean(R4) instead of mean(R1)
+- Validation gate column-existence check now verifies columns exist in the dataset before accessing them
 - R2_S chart signal detection no longer requires 20 observations
 - Residual plot tests now properly exercise `plot_residuals()`
 
