@@ -33,7 +33,6 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING
 
-import numpy as np
 import pandas as pd
 
 from .sds_detector import R2Method

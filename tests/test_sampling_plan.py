@@ -887,8 +887,9 @@ class TestDocsAlignment:
 
     def test_sds_4_characteristics_still_exist(self):
         """SDS 4 characteristics exist (observed state) but no analysis plan."""
-        from processbehavior.sds_detector import SDSRegistry
         import pytest
+
+        from processbehavior.sds_detector import SDSRegistry
 
         chars = SDSRegistry().get_sds_characteristics(4)
         assert 'Incomplete' in chars['description'] and 'without singletons' in chars['description'].lower()
@@ -898,8 +899,9 @@ class TestDocsAlignment:
 
     def test_sds_5_characteristics_still_exist(self):
         """SDS 5 characteristics exist (observed state) but no analysis plan."""
-        from processbehavior.sds_detector import SDSRegistry
         import pytest
+
+        from processbehavior.sds_detector import SDSRegistry
 
         chars = SDSRegistry().get_sds_characteristics(5)
         assert 'without replication' in chars['description'].lower()
@@ -909,8 +911,9 @@ class TestDocsAlignment:
 
     def test_sds_6_characteristics_still_exist(self):
         """SDS 6 characteristics exist (observed state) but no analysis plan."""
-        from processbehavior.sds_detector import SDSRegistry
         import pytest
+
+        from processbehavior.sds_detector import SDSRegistry
 
         chars = SDSRegistry().get_sds_characteristics(6)
         assert 'Incomplete' in chars['description'] and 'singletons' in chars['description'].lower()
