@@ -1188,19 +1188,17 @@ class SDSRegistry:
     @staticmethod
     def get_analysis_plan(sds: int, min_cell_size: int = 0) -> SDSAnalysisPlan:
         """
-        Get comprehensive analysis plan for a Sampling Design State.
+        Get comprehensive analysis plan for an analytical Sampling Design State.
 
         This is the authoritative specification of what the system will do
-        when it encounters a particular SDS. Use this to:
-        - Validate implementation against Bishop's methodology
-        - Understand system capabilities and limitations
-        - Generate documentation
-        - Debug unexpected behavior
+        when it encounters a particular SDS. Only analytical SDS (1-3) are
+        supported — SDS 4-6 are observed/planned design states that always
+        collapse to 1-3 after tidying (dropping NA response rows).
 
         Parameters
         ----------
         sds : int
-            Sampling Design State (0-6)
+            Analytical Sampling Design State (1-3)
         min_cell_size : int, optional
             Actual minimum cell size from the data. If provided, enables
             data-driven R2 chart selection (R2_S when min_cell_size >= 2).
@@ -1214,7 +1212,7 @@ class SDSRegistry:
         Raises
         ------
         ValueError
-            If sds is not in range 0-6
+            If sds is not in range 1-3
 
         Examples
         --------
@@ -1224,7 +1222,7 @@ class SDSRegistry:
         >>> print(plan.vas_residuals_supported)
         True
         >>> print(plan.valid_charts)
-        ['Xbar', 'S', 'XmR']
+        ['Xbar', 'S', 'R', 'XmR', 'Histogram']
 
         >>> # Check what your data structure supports
         >>> detector = SDSRegistry()
@@ -1232,9 +1230,6 @@ class SDSRegistry:
         >>> plan = detector.get_analysis_plan(sds, min_cell_size=min_n)
         >>> print(f"Your data supports: {', '.join(plan.valid_charts)}")
         """
-        # Note: SDS 0 was consolidated into SDS 6. Response-only data (no factors,
-        # no time) is now treated as SDS 4 with implicit time ordering via obs_id.
-        # See detect_sds() for rationale.
         plans = {
             1: SDSAnalysisPlan(
                 sds=1,
@@ -1243,7 +1238,7 @@ class SDSRegistry:
                 has_factors=True,
                 has_time=True,
                 has_replication='full',
-                valid_charts=['Xbar', 'S', 'R', 'XmR', 'Histogram'],
+                valid_charts=['Histogram', 'Xbar', 'S', 'XmR', 'R'],
                 recommended_chart='Xbar',
                 invalid_charts=[],
                 vas_residuals_supported=True,
@@ -1269,8 +1264,8 @@ class SDSRegistry:
                 has_factors=True,
                 has_time=True,
                 has_replication='none',
-                valid_charts=['Xbar', 'S', 'XmR', 'R', 'Histogram'],
-                recommended_chart='Xbar',
+                valid_charts=['Histogram', 'Xbar', 'S', 'XmR', 'R'],
+                recommended_chart='XmR',
                 invalid_charts=[],
                 vas_residuals_supported=True,
                 residuals_available=['R1', 'R2', 'R3', 'R4', 'R5'],
@@ -1298,8 +1293,8 @@ class SDSRegistry:
                 has_factors=True,
                 has_time=True,
                 has_replication='partial',
-                valid_charts=['Xbar', 'S', 'R', 'XmR', 'Histogram'],
-                recommended_chart='Xbar',
+                valid_charts=['Histogram', 'Xbar', 'S', 'XmR', 'R'],
+                recommended_chart='XmR',
                 invalid_charts=[],
                 vas_residuals_supported=True,
                 residuals_available=['R1', 'R2', 'R3', 'R4', 'R5'],
@@ -1321,103 +1316,17 @@ class SDSRegistry:
                 bishop_reference="Wheeler/Bishop Methodology: Partial Replication (SDS 3)"
             ),
 
-            4: SDSAnalysisPlan(
-                sds=4,
-                name="Incomplete Grid without Singletons",
-                description="Incomplete factor × time grid with full replication in observed cells",
-                has_factors=True,
-                has_time=True,
-                has_replication='full',  # All observed cells have n≥2
-                valid_charts=['Xbar', 'S', 'R', 'XmR', 'Histogram'],
-                recommended_chart='Xbar',
-                invalid_charts=[],
-                vas_residuals_supported=True,
-                residuals_available=['R1', 'R2', 'R3', 'R4', 'R5'],
-                residual_calculation_method='exact',  # All observed cells are replicated
-                main_effects_supported=True,
-                interaction_effects_supported=False,  # Incomplete grid limits this
-                supports_stratification=True,
-                typical_use_cases=[
-                    'Incomplete sampling with consistent replication',
-                    'Designed experiments with missing runs',
-                    'Production data with gaps but replicated measurements',
-                    'Partial factorial with replication'
-                ],
-                limitations=[
-                    'Incomplete grid - some factor×time combinations missing',
-                    'Cannot analyze all interactions due to missing cells',
-                    'Effect estimates may be biased by missing data pattern'
-                ],
-                bishop_reference="Wheeler/Bishop Methodology: Incomplete without Singletons (SDS 4)"
-            ),
-
-            5: SDSAnalysisPlan(
-                sds=5,
-                name="Incomplete Grid Without Replication",
-                description="Incomplete factor × time grid with no replication (all n=1)",
-                has_factors=True,
-                has_time=True,
-                has_replication='none',  # Cannot estimate within-cell variance
-                valid_charts=['XmR', 'R', 'Histogram'],
-                recommended_chart='XmR',
-                invalid_charts=['Xbar (no within-cell variance)', 'S (no within-cell variance)'],
-                vas_residuals_supported=True,  # VAS works via moving average (like SDS 2)
-                residuals_available=['R1', 'R2', 'R3', 'R4', 'R5'],
-                residual_calculation_method='moving_average',  # Approximate variance estimation
-                main_effects_supported=False,  # Incomplete grid limits this
-                interaction_effects_supported=False,
-                supports_stratification=True,
-                typical_use_cases=[
-                    'Opportunistic data collection without replication',
-                    'Sparse monitoring with single measurements',
-                    'Incomplete sampling plans',
-                    'Ad-hoc measurements with irregular sampling'
-                ],
-                limitations=[
-                    'Cannot estimate within-cell variance directly (no replication)',
-                    'R2 estimated via moving average (approximate)',
-                    'Cannot analyze interactions',
-                    'More limited than complete grid designs'
-                ],
-                bishop_reference="Wheeler/Bishop Methodology: Incomplete without Replication (SDS 5)"
-            ),
-
-            6: SDSAnalysisPlan(
-                sds=6,
-                name="Incomplete Grid with Singletons",
-                description="Incomplete factor × time grid with mixed replication",
-                has_factors=True,
-                has_time=True,
-                has_replication='partial',  # Mixed: some n=1, some n≥2
-                valid_charts=['Xbar', 'S', 'R', 'XmR', 'Histogram'],
-                recommended_chart='Xbar',
-                invalid_charts=[],
-                vas_residuals_supported=True,
-                residuals_available=['R1', 'R2', 'R3', 'R4', 'R5'],
-                residual_calculation_method='hybrid',  # Exact where n≥2, MA where n=1
-                main_effects_supported=True,
-                interaction_effects_supported=False,  # Incomplete grid limits this
-                supports_stratification=True,
-                typical_use_cases=[
-                    'Incomplete sampling with mixed replication',
-                    'Production data with gaps and variable sample sizes',
-                    'Opportunistic data collection',
-                    'Partial factorial experiments'
-                ],
-                limitations=[
-                    'Incomplete grid - some factor×time combinations missing',
-                    'Mixed variance estimation (hybrid R2)',
-                    'Cannot analyze all interactions due to missing cells'
-                ],
-                bishop_reference="Wheeler/Bishop Methodology: Incomplete with Singletons (SDS 6)"
-            ),
+            # SDS 4-6 (incomplete grids) are observed/planned design states only.
+            # After tidying (dropping NA response rows), they always collapse to
+            # SDS 1-3: 4→1, 5→2, 6→3. The analytical design state (ADS) drives
+            # analysis plans, so only 1-3 need entries here.
         }
 
         if sds not in plans:
             raise ValueError(
-                f"Invalid SDS: {sds}. Must be 1-6. "
-                f"(Note: SDS 0 was consolidated into SDS 6) "
-                f"Available: {list(plans.keys())}"
+                f"Invalid analytical SDS: {sds}. Must be 1-3. "
+                f"SDS 4-6 are observed/planned design states that collapse to "
+                f"1-3 after tidying. Available: {list(plans.keys())}"
             )
 
         plan = plans[sds]
@@ -1427,7 +1336,7 @@ class SDSRegistry:
     @staticmethod
     def print_all_analysis_plans() -> None:
         """
-        Print comprehensive analysis plans for all SDS (1-6).
+        Print comprehensive analysis plans for all analytical SDS (1-3).
 
         This generates a complete reference guide showing what the system
         will do for each Sampling Design State. Useful for:
@@ -1436,10 +1345,13 @@ class SDSRegistry:
         - Training and education
         - Understanding system capabilities
 
+        Note: SDS 4-6 are observed/planned design states that collapse
+        to 1-3 after tidying. Only analytical SDS have analysis plans.
+
         Examples
         --------
         >>> SDSRegistry.print_all_analysis_plans()
-        # Prints complete analysis plan for SDS 0-6
+        # Prints complete analysis plan for SDS 1-3
         """
         print("=" * 70)
         print("SAMPLING DESIGN STATE (SDS) ANALYSIS PLANS")
@@ -1447,7 +1359,7 @@ class SDSRegistry:
         print("=" * 70)
         print()
 
-        for sds in range(1, 7):  # SDS 1-6 (SDS 0 was consolidated into SDS 6)
+        for sds in range(1, 4):  # Analytical SDS 1-3
             plan = SDSRegistry.get_analysis_plan(sds)
             print(plan)
             print()
@@ -1473,7 +1385,7 @@ class SDSRegistry:
         >>> matrix.to_excel('sds_capabilities.xlsx')
         """
         data = []
-        for sds in range(1, 7):  # SDS 1-6 (SDS 0 was consolidated into SDS 6)
+        for sds in range(1, 4):  # Analytical SDS 1-3
             plan = SDSRegistry.get_analysis_plan(sds)
             data.append({
                 'SDS': sds,
