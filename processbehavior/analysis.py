@@ -765,9 +765,9 @@ class Analysis:
         # Determine the grouping column for output
         by = self.request.by
         if by is not None and len(by) > 0:
-            # Explicit by list - create 'subgroup' column
-            if len(groupby_cols) == 1:
-                # Preserve the original grouping column name for axis labeling.
+            # Explicit by list
+            if len(by) == 1:
+                # Single factor: preserve original column name for axis labeling.
                 # Cast to string so Plotly treats coded factors (e.g., 1,2,3) as categories.
                 xbar[groupby_cols[0]] = xbar[groupby_cols[0]].astype(str)
                 group_col = groupby_cols[0]
@@ -904,7 +904,7 @@ class Analysis:
             # Determine group_col
             by = self.request.by
             if by is not None and len(by) > 0:
-                if len(groupby_cols) == 1:
+                if len(by) == 1:
                     out[groupby_cols[0]] = out[groupby_cols[0]].astype(str)
                     group_col = groupby_cols[0]
                 else:
@@ -946,7 +946,7 @@ class Analysis:
             # For precomputed path, apply group_col transformation
             by = self.request.by
             if by is not None and len(by) > 0 and 'subgroup' not in out.columns:
-                if len(groupby_cols) == 1:
+                if len(by) == 1:
                     out[groupby_cols[0]] = out[groupby_cols[0]].astype(str)
                     group_col = groupby_cols[0]
                 else:
