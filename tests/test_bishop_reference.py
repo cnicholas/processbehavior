@@ -9,6 +9,8 @@ This is the only way to catch formula-level bugs — external ground truth,
 not self-referential identity checks.
 """
 
+import os
+
 import numpy as np
 import pandas as pd
 import pytest
@@ -28,14 +30,19 @@ REF_RESIDUAL_COLS = [
 ]
 
 
+def _ref_path(sds_num: int) -> str:
+    return f"{VALIDATION_DIR}/cn-tab comparison sds {sds_num} (3-5-26).xlsx"
+
+
 def _load_reference(sds_num: int) -> pd.DataFrame:
     """Load the cn-tab comparison file for a given SDS type."""
-    path = f"{VALIDATION_DIR}/cn-tab comparison sds {sds_num} (3-5-26).xlsx"
-    return pd.read_excel(path, sheet_name=SHEET_NAME)
+    return pd.read_excel(_ref_path(sds_num), sheet_name=SHEET_NAME)
 
 
 @pytest.mark.parametrize("sds_num", [1, 2, 3, 6])
 def test_residuals_match_bishop_reference(sds_num: int) -> None:
+    if not os.path.exists(_ref_path(sds_num)):
+        pytest.skip(f"Reference file not found: {_ref_path(sds_num)}")
     ref = _load_reference(sds_num)
 
     # --- Run our pipeline fresh ---
