@@ -208,6 +208,9 @@ Plots the **mean** of each subgroup (factor level at each time point).
 - **Control Limits**: Based on within-subgroup variation
 - **Interpretation**: Points beyond limits indicate subgroups with unusual means
 
+!!! note "Limits for effect-carrying residuals (R4/R5)"
+    When charting R4, R5, or their recentered variants (RCR4, RCR5) on Xbar, limits are based on **R2's within-group standard deviation** (Sbar), not the plotted residual's own standard deviation. This matters when `by` collapses factors — e.g., `by=['factor 1']` in a two-factor study. At collapsed groupings, R5's within-group std would include between-cell variance from the collapsed dimension, inflating limits. Using R2's Sbar isolates within-cell noise as the limit basis. At the full RSG level (all factors in `by`), R5's within-group std equals R2's, so there is no difference. This follows Dr. Tom Bishop's VAS methodology.
+
 ### The S Chart
 
 Plots the **standard deviation** of each subgroup.
