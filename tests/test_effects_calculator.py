@@ -67,6 +67,7 @@ def multi_factor_df():
         'R1': [0.1, 0.2, 0.3, 0.4, -0.1, -0.2, -0.3, -0.4],
         'R2': [0.05, 0.05, 0.1, 0.1, -0.05, -0.05, -0.1, -0.1],
         'R3': [0.02, -0.02, 0.03, -0.03, 0.01, -0.01, 0.015, -0.015],
+        'R4': [0.15, 0.25, 0.35, 0.45, -0.15, -0.25, -0.35, -0.45],
         'R5': [0.3, 0.3, 0.4, 0.4, -0.2, -0.2, -0.3, -0.3]
     })
     # Add composite rsg column (for backward compatibility)
@@ -167,10 +168,10 @@ def test_calculate_factor_main_effects_multiple_levels():
 # ============================================================================
 
 def test_calculate_time_main_effects_basic():
-    """Should calculate mean of R1 per time point."""
+    """Should calculate mean of R4 per time point."""
     df = pd.DataFrame({
         'pull': [1, 1, 2, 2],
-        'R1': [0.1, 0.2, -0.1, -0.2]
+        'R4': [0.1, 0.2, -0.1, -0.2]
     })
 
     result = calculate_time_main_effects(df, 'pull')
@@ -186,14 +187,14 @@ def test_calculate_time_main_effects_basic():
     assert abs(t2_effect - (-0.15)) < 0.01
 
 
-def test_calculate_time_main_effects_raises_if_no_r1():
-    """Should raise helpful error if R1 missing."""
+def test_calculate_time_main_effects_raises_if_no_r4():
+    """Should raise helpful error if R4 missing."""
     df = pd.DataFrame({
         'pull': [1, 2],
         'weight': [10.0, 9.0]
     })
 
-    with pytest.raises(ValueError, match="R1 column missing"):
+    with pytest.raises(ValueError, match="R4 column missing"):
         calculate_time_main_effects(df, 'pull')
 
 
