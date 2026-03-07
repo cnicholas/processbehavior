@@ -464,7 +464,7 @@ class TestDesignReport:
         design = study.design()
         repr_str = repr(design)
 
-        assert 'DesignReport' in repr_str
+        assert 'Design Report' in repr_str
         assert '2 factors' in repr_str
 
     def test_design_report_empty_when_plan_matches_observed(self, simple_df):
@@ -1839,8 +1839,8 @@ class TestDesignReportRemediation:
         assert design.remediation is not None
         assert "Xbar/S" in design.remediation
 
-    def test_remediation_in_repr(self):
-        """Non-None remediation appears in repr as 'Hint:'."""
+    def test_remediation_not_in_repr(self):
+        """Remediation hint is not shown in repr (accessible via property only)."""
         # SDS 2 has a remediation hint
         df = pd.DataFrame({
             'Lane': [1, 2, 1, 2],
@@ -1854,7 +1854,8 @@ class TestDesignReportRemediation:
             plan={'factors': {'Lane': [1, 2], 'Phase': [1, 2]}, 'T': 2, 'N': 1}
         )
         design = study.design()
-        assert "Hint:" in repr(design)
+        assert "Hint:" not in repr(design)
+        assert design.remediation is not None
 
     def test_remediation_unknown_reason_returns_none(self):
         """DesignReport with unknown sds_reason → remediation is None."""
