@@ -192,3 +192,25 @@ class TestAdaptiveTickAngle:
 
         # Short numeric labels should remain horizontal
         assert all(a == 0 for a in angles), f"Expected tickangle=0, got {angles}"
+
+
+class TestSingleFactorByAxisLabel:
+    """Ensure Xbar/S keep factor labels on x-axis for single-factor by views."""
+
+    @staticmethod
+    def _study():
+        df = pd.read_csv("data/TABVASTESTDATABASE.csv")
+        pb = ProcessBehavior(df)
+        return pb.formulate(response="PM SDS 1", factors=["FACTOR 1", "FACTOR 2"])
+
+    def test_xbar_by_factor_uses_factor_label(self):
+        study = self._study()
+        result = study.execute(chart="Xbar", by=["FACTOR 1"])
+        fig = result.plot(chart="Xbar")
+        assert fig._fig.layout.xaxis.title.text == "Factor 1"
+
+    def test_s_by_factor_uses_factor_label(self):
+        study = self._study()
+        result = study.execute(chart="S", by=["FACTOR 1"])
+        fig = result.plot(chart="S")
+        assert fig._fig.layout.xaxis.title.text == "Factor 1"
