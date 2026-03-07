@@ -675,74 +675,16 @@ class TestR2ChartAvailability:
         assert 'R2_XmR' in plan.residual_charts
         assert 'R2_S' not in plan.residual_charts
 
-    def test_sds4_with_replication_has_r2_s(self):
-        """SDS 4 (incomplete without singletons) with min_cell_size≥2 should have R2_S.
-
-        This is the main fix from GitHub Issue #49 - SDS 4 can
-        have R2_S when cells have replication.
-        """
-        plan = SDSRegistry.get_analysis_plan(sds=4, min_cell_size=3)
-
-        assert plan.vas_residuals_supported is True
-        assert plan.min_cell_size == 3
-        assert 'R2_S' in plan.residual_charts
-        assert 'R2_XmR' not in plan.residual_charts
-
-    def test_sds4_without_replication_has_r2_xmr(self):
-        """SDS 4 with min_cell_size=1 should use R2_XmR."""
-        plan = SDSRegistry.get_analysis_plan(sds=4, min_cell_size=1)
-
-        assert plan.vas_residuals_supported is True
-        assert plan.min_cell_size == 1
-        assert 'R2_XmR' in plan.residual_charts
-        assert 'R2_S' not in plan.residual_charts
-
-    def test_sds5_with_replication_has_r2_s(self):
-        """SDS 5 (incomplete without replication) with replication can have R2_S.
-
-        Even no-replication grids can use S chart for R2 if cells have n≥2.
-        """
-        plan = SDSRegistry.get_analysis_plan(sds=5, min_cell_size=5)
-
-        # SDS 5 supports VAS residuals (with moving average method)
-        assert plan.vas_residuals_supported is True
-        assert plan.min_cell_size == 5
-        assert 'R2_S' in plan.residual_charts
-
-    def test_sds5_without_replication_has_r2_xmr(self):
-        """SDS 5 without replication uses R2_XmR."""
-        plan = SDSRegistry.get_analysis_plan(sds=5, min_cell_size=1)
-
-        assert plan.vas_residuals_supported is True
-        assert plan.min_cell_size == 1
-        assert 'R2_XmR' in plan.residual_charts
-        assert 'R2_S' not in plan.residual_charts
-
-    def test_sds6_with_replication_has_r2_s(self):
-        """SDS 6 (incomplete with singletons) with min_cell_size≥2 should have R2_S.
-
-        Another key fix from GitHub Issue #49 - mixed designs can
-        have R2_S when cells have replication.
-        """
-        plan = SDSRegistry.get_analysis_plan(sds=6, min_cell_size=2)
-
-        assert plan.vas_residuals_supported is True
-        assert plan.min_cell_size == 2
-        assert 'R2_S' in plan.residual_charts
-        assert 'R2_XmR' not in plan.residual_charts
-
-    def test_sds6_without_replication_has_r2_xmr(self):
-        """SDS 6 with min_cell_size=1 should use R2_XmR."""
-        plan = SDSRegistry.get_analysis_plan(sds=6, min_cell_size=1)
-
-        assert plan.vas_residuals_supported is True
-        assert plan.min_cell_size == 1
-        assert 'R2_XmR' in plan.residual_charts
-        assert 'R2_S' not in plan.residual_charts
+    def test_sds4_5_6_raise_valueerror(self):
+        """SDS 4-6 are observed/planned states, not analytical — no analysis plan."""
+        import pytest
+        for sds in [4, 5, 6]:
+            with pytest.raises(ValueError, match="analytical SDS"):
+                SDSRegistry.get_analysis_plan(sds=sds)
 
     def test_all_r2_supporting_sds_have_other_residuals(self):
-        """All SDS types with R2 should also have R3, R4, R5 charts."""
-        for sds in [1, 2, 3, 4, 6]:
+        """All analytical SDS types with R2 should also have R3, R4, R5 charts."""
+        for sds in [1, 2, 3]:
             plan = SDSRegistry.get_analysis_plan(sds=sds, min_cell_size=2)
 
             if plan.vas_residuals_supported:
@@ -777,17 +719,12 @@ class TestR4R5XbarSAvailability:
         assert 'R4_S' in plan.residual_charts
         assert 'R4_XmR' not in plan.residual_charts
 
-    def test_r4_xmr_when_no_factors(self):
-        """R4_XmR fallback when has_factors=False."""
-        # SDS 4 has_factors=False (single condition over time)
-        plan = SDSRegistry.get_analysis_plan(sds=4, min_cell_size=2)
-
-        # SDS 4 actually has has_factors=True (single factor level)
-        # Let's check what the plan says
-        if plan.has_factors:
+    def test_r4_xbar_s_all_analytical_sds(self):
+        """All analytical SDS (1-3) have factors, so R4_Xbar is always available."""
+        for sds in [1, 2, 3]:
+            plan = SDSRegistry.get_analysis_plan(sds=sds, min_cell_size=2)
+            assert plan.has_factors is True
             assert 'R4_Xbar' in plan.residual_charts
-        else:
-            assert 'R4_XmR' in plan.residual_charts
 
     def test_r5_xbar_s_when_has_time(self):
         """R5_Xbar and R5_S available when has_time=True."""
@@ -799,16 +736,12 @@ class TestR4R5XbarSAvailability:
         assert 'R5_S' in plan.residual_charts
         assert 'R5_XmR' not in plan.residual_charts
 
-    def test_r5_xmr_when_no_time(self):
-        """R5_XmR fallback when has_time=False."""
-        # Check SDS configurations - SDS 1-6 only (SDS 0 consolidated into SDS 4)
-        for sds in range(1, 7):
+    def test_r5_xbar_s_all_analytical_sds(self):
+        """All analytical SDS (1-3) have time, so R5_Xbar is always available."""
+        for sds in [1, 2, 3]:
             plan = SDSRegistry.get_analysis_plan(sds=sds, min_cell_size=2)
-            if plan.vas_residuals_supported and not plan.has_time:
-                assert 'R5_XmR' in plan.residual_charts
-                assert 'R5_Xbar' not in plan.residual_charts
-                return
-        # If all VAS-supporting SDS have time, that's fine
+            assert plan.has_time is True
+            assert 'R5_Xbar' in plan.residual_charts
 
     def test_sds1_full_residual_charts(self):
         """SDS 1 should have full Xbar/S charts for R3, R4 and R5."""

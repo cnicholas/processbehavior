@@ -874,8 +874,8 @@ class TestDocsAlignment:
         """get_sds_characteristics and get_analysis_plan should agree on key properties."""
         from processbehavior.sds_detector import SDSRegistry
 
-        # SDS 1-6 (SDS 0 was consolidated into SDS 6)
-        for sds in range(1, 7):
+        # Only analytical SDS 1-3 have analysis plans
+        for sds in range(1, 4):
             chars = SDSRegistry().get_sds_characteristics(sds)
             plan = SDSRegistry.get_analysis_plan(sds, min_cell_size=2)
 
@@ -885,40 +885,38 @@ class TestDocsAlignment:
             # Both should agree on VAS support
             assert chars['variance_decomposition'] == plan.vas_residuals_supported
 
-    def test_sds_4_is_incomplete_without_singletons(self):
-        """SDS 4 should be 'Incomplete Grid without Singletons' per Table 1."""
+    def test_sds_4_characteristics_still_exist(self):
+        """SDS 4 characteristics exist (observed state) but no analysis plan."""
         from processbehavior.sds_detector import SDSRegistry
+        import pytest
 
         chars = SDSRegistry().get_sds_characteristics(4)
-        plan = SDSRegistry.get_analysis_plan(4)
-
-        # SDS 4 per Table 1: Incomplete grid with full replication (has 0s and ≥2s, no 1s)
         assert 'Incomplete' in chars['description'] and 'without singletons' in chars['description'].lower()
-        assert plan.name == 'Incomplete Grid without Singletons'
-        assert plan.has_replication == 'full'  # All observed cells are replicated
 
-    def test_sds_5_is_incomplete_without_replication(self):
-        """SDS 5 should be 'Incomplete Without Replication' everywhere."""
+        with pytest.raises(ValueError, match="analytical SDS"):
+            SDSRegistry.get_analysis_plan(4)
+
+    def test_sds_5_characteristics_still_exist(self):
+        """SDS 5 characteristics exist (observed state) but no analysis plan."""
         from processbehavior.sds_detector import SDSRegistry
+        import pytest
 
-        SDSRegistry().get_sds_characteristics(5)
-        plan = SDSRegistry.get_analysis_plan(5)
+        chars = SDSRegistry().get_sds_characteristics(5)
+        assert 'without replication' in chars['description'].lower()
 
-        assert plan.name == 'Incomplete Grid Without Replication'
-        assert plan.has_replication == 'none'
+        with pytest.raises(ValueError, match="analytical SDS"):
+            SDSRegistry.get_analysis_plan(5)
 
-    def test_sds_6_is_incomplete_with_singletons(self):
-        """SDS 6 should be 'Incomplete Grid with Singletons' per Table 1."""
+    def test_sds_6_characteristics_still_exist(self):
+        """SDS 6 characteristics exist (observed state) but no analysis plan."""
         from processbehavior.sds_detector import SDSRegistry
+        import pytest
 
         chars = SDSRegistry().get_sds_characteristics(6)
-        plan = SDSRegistry.get_analysis_plan(6)
-
-        # SDS 6 per Table 1: Incomplete grid with mixed replication (has 0s, 1s, and ≥2s)
         assert 'Incomplete' in chars['description'] and 'singletons' in chars['description'].lower()
-        assert plan.name == 'Incomplete Grid with Singletons'
-        assert plan.has_time is True
-        assert plan.has_factors is True
+
+        with pytest.raises(ValueError, match="analytical SDS"):
+            SDSRegistry.get_analysis_plan(6)
 
 
 # =============================================================================
