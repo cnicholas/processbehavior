@@ -623,43 +623,59 @@ class DesignReport:
             return "Complete structure"
         return "Incomplete: " + "; ".join(issues)
 
-    def _repr_ktrn_lines(self) -> list[str]:
-        """Build K/T/R/N summary lines for __repr__."""
-        lines = []
+    def _repr_metrics_line(self) -> str:
+        """Build compact K/T/R/N metrics line for __repr__."""
+        parts = []
+
+        # Min cell size
+        if self._min_cell_size is not None and self._min_cell_size > 0:
+            parts.append(f"Min cell size: {self._min_cell_size}")
 
         # K summary
         if self.has_plan:
-            lines.append(f"  K: planned={self.K}, observed={self.K_observed}, missing={self.K_missing}")
+            parts.append(f"K: planned={self.K}, observed={self.K_observed}")
         else:
-            lines.append(f"  K: observed={self.K_observed}")
+            parts.append(f"K: {self.K_observed}")
 
         # T summary
         if self._T is not None:
-            lines.append(f"  T: planned={self._T}, observed={self._T_observed}, missing={self.T_missing}")
+            parts.append(f"T: planned={self._T}, observed={self._T_observed}")
         elif self._T_observed is not None:
-            lines.append(f"  T: observed={self._T_observed}")
+            parts.append(f"T: {self._T_observed}")
 
         # R = K × T (total cells)
         if self.R is not None:
             if self.has_plan and self._T is not None:
-                lines.append(f"  R: planned={self.R}, observed={self.R_observed}, missing={self.R_missing}")
+                parts.append(f"R: planned={self.R}, observed={self.R_observed}")
             elif self.R_observed is not None:
-                lines.append(f"  R: observed={self.R_observed}")
+                parts.append(f"R: {self.R_observed}")
 
         # N summary
         if self._N is not None and self._N_observed is not None:
             min_n, med_n, max_n = self._N_observed
-            lines.append(f"  N: planned={self._N}, observed=(min={min_n}, median={med_n}, max={max_n})")
+            parts.append(f"N: planned={self._N}, observed=(min={min_n}, median={med_n}, max={max_n})")
         elif self._N_observed is not None:
             min_n, med_n, max_n = self._N_observed
-            lines.append(f"  N: observed=(min={min_n}, median={med_n}, max={max_n})")
+            parts.append(f"N: (min={min_n}, median={med_n}, max={max_n})")
 
-        return lines
+        return "  " + " | ".join(parts)
+
+    _REASON_DISPLAY = {
+        'full_replication': 'Full Replication',
+        'no_replication': 'No Replication',
+        'partial_replication': 'Partial Replication',
+        'incomplete_no_singletons': 'Incomplete, No Singletons',
+        'incomplete_no_replication': 'Incomplete, No Replication',
+        'incomplete_with_singletons': 'Incomplete, With Singletons',
+    }
+
+    def _humanize_reason(self, reason: str) -> str:
+        """Convert machine reason token to human-readable label."""
+        return self._REASON_DISPLAY.get(reason, reason)
 
     def __repr__(self) -> str:
         """Nice summary showing plan vs observed per factor with K/T/N."""
-        plan_status = "with plan" if self.has_plan else "no plan"
-        lines = [f"DesignReport({len(self._factors)} factors, {plan_status})"]
+        lines = [f"Design Report ({len(self._factors)} factors)"]
 
         # Unit of analysis (if specified)
         if self._unit_of_analysis:
@@ -673,10 +689,12 @@ class DesignReport:
         if ods and ads:
             lines.append("  Design lineage:")
             if pds is not None:
-                lines.append(f"    Plan:       SDS {pds.sds} ({pds.reason})")
-            empty_detail = f" — {ods.n_empty_cells} empty cells in raw data" if ods.n_empty_cells > 0 else ""
-            lines.append(f"    Observed:   SDS {ods.sds} ({ods.reason}){empty_detail}")
-            lines.append(f"    Analytical: SDS {ads.sds} ({ads.reason})")
+                lines.append(f"    Planned Design State:    SDS {pds.sds} ({self._humanize_reason(pds.reason)})")
+            else:
+                lines.append("    Planned Design State:    No plan")
+            empty_detail = f" — {ods.n_empty_cells} empty cells" if ods.n_empty_cells > 0 else ""
+            lines.append(f"    Observed Design State:   SDS {ods.sds} ({self._humanize_reason(ods.reason)}){empty_detail}")
+            lines.append(f"    Analytical Design State: SDS {ads.sds} ({self._humanize_reason(ads.reason)})")
         elif self.sds_reason_detail:
             lines.append(f"  SDS reason: {self.sds_reason_detail}")
         elif self._sds_reason:
@@ -686,16 +704,8 @@ class DesignReport:
         if self.plan_adherence:
             lines.append(f"  Plan adherence: {self.plan_adherence}")
 
-        # Gate metrics (only show meaningful values)
-        if self._min_cell_size is not None and self._min_cell_size > 0:
-            lines.append(f"  Min cell size: {self._min_cell_size}")
-        if self._n_empty_cells is not None and self._n_empty_cells > 0:
-            lines.append(f"  Empty cells: {self._n_empty_cells}")
-        if self.coverage is not None and self.coverage < 1.0:
-            lines.append(f"  Coverage: {self.coverage:.0%}")
-
-        # K/T/R/N summary
-        lines.extend(self._repr_ktrn_lines())
+        # Compact metrics line (includes min cell size)
+        lines.append(self._repr_metrics_line())
 
         # Factor details
         lines.append("")
@@ -719,10 +729,6 @@ class DesignReport:
         # Structure summary (discrepancy details)
         lines.append("")
         lines.append(f"  Structure: {self.structure_summary}")
-
-        # Remediation hint
-        if self.remediation:
-            lines.append(f"  Hint: {self.remediation}")
 
         return '\n'.join(lines)
 
