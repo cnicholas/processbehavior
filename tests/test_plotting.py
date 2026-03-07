@@ -338,7 +338,8 @@ class TestPlotter:
         plotter = Plotter(simple_result)
 
         # No time_var or rsg column → None (use index)
-        data = pd.DataFrame({'value': [1, 2, 3]})
+        # Use non-unique values so the fallback scan doesn't pick 'value' as x-axis
+        data = pd.DataFrame({'value': [1, 2, 1]})
         x_col = plotter._get_x_column(data)
         assert x_col is None
 

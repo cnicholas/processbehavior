@@ -199,8 +199,7 @@ class TestSingleFactorByAxisLabel:
 
     @staticmethod
     def _study():
-        df = pd.read_csv("data/TABVASTESTDATABASE.csv")
-        pb = ProcessBehavior(df)
+        pb = ProcessBehavior.read_csv("validation/TABVASTESTDATABASE.csv")
         return pb.formulate(response="PM SDS 1", factors=["FACTOR 1", "FACTOR 2"])
 
     def test_xbar_by_factor_uses_factor_label(self):

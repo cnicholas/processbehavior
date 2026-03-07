@@ -285,9 +285,9 @@ class TestEdgeCases:
         xbar_cols = result.charts['Xbar']['data'].columns.tolist()
         s_cols = result.charts['S']['data'].columns.tolist()
 
-        # Both should have subgroup column (from by parameter)
-        assert 'subgroup' in xbar_cols
-        assert 'subgroup' in s_cols
+        # Single-factor by preserves the original column name
+        assert 'factor 1' in xbar_cols
+        assert 'factor 1' in s_cols
 
     def test_companion_with_sds3(self, sds3_study):
         """Companion should work with different SDS types."""
