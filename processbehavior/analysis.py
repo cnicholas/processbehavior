@@ -767,10 +767,13 @@ class Analysis:
         if by is not None and len(by) > 0:
             # Explicit by list - create 'subgroup' column
             if len(groupby_cols) == 1:
-                xbar['subgroup'] = xbar[groupby_cols[0]].astype(str)
+                # Preserve the original grouping column name for axis labeling.
+                # Cast to string so Plotly treats coded factors (e.g., 1,2,3) as categories.
+                xbar[groupby_cols[0]] = xbar[groupby_cols[0]].astype(str)
+                group_col = groupby_cols[0]
             else:
                 xbar['subgroup'] = xbar[groupby_cols].astype(str).agg('_'.join, axis=1)
-            group_col = 'subgroup'
+                group_col = 'subgroup'
         elif len(groupby_cols) > 1:
             # by=None - create 'group' from multiple columns (original behavior)
             xbar['group'] = xbar[groupby_cols].astype(str).agg('_'.join, axis=1)
@@ -902,10 +905,11 @@ class Analysis:
             by = self.request.by
             if by is not None and len(by) > 0:
                 if len(groupby_cols) == 1:
-                    out['subgroup'] = out[groupby_cols[0]].astype(str)
+                    out[groupby_cols[0]] = out[groupby_cols[0]].astype(str)
+                    group_col = groupby_cols[0]
                 else:
                     out['subgroup'] = out[groupby_cols].astype(str).agg('_'.join, axis=1)
-                group_col = 'subgroup'
+                    group_col = 'subgroup'
             elif len(groupby_cols) > 1:
                 out['group'] = out[groupby_cols].astype(str).agg('_'.join, axis=1)
                 group_col = 'group'
@@ -943,9 +947,11 @@ class Analysis:
             by = self.request.by
             if by is not None and len(by) > 0 and 'subgroup' not in out.columns:
                 if len(groupby_cols) == 1:
-                    out['subgroup'] = out[groupby_cols[0]].astype(str)
+                    out[groupby_cols[0]] = out[groupby_cols[0]].astype(str)
+                    group_col = groupby_cols[0]
                 else:
                     out['subgroup'] = out[groupby_cols].astype(str).agg('_'.join, axis=1)
+                    group_col = 'subgroup'
             elif len(groupby_cols) > 1 and group_col == 'group' and 'group' not in out.columns:
                 out['group'] = out[groupby_cols].astype(str).agg('_'.join, axis=1)
 

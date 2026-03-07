@@ -806,6 +806,17 @@ class Plotter:
         for col in ('subgroup', 'rsg', 'group'):
             if col in data.columns and data[col].is_unique:
                 return col
+        # For explicit by=[single factor] in Xbar/S paths, the grouping
+        # column may be the original factor name (e.g., "FACTOR 1").
+        metric_cols = {
+            'xbar', 's', 'mr', 'center', 'lpl', 'upl',
+            'beyond_limits', 'obs_id', 'groups', 'n', 'N',
+        }
+        for col in data.columns:
+            if col in metric_cols:
+                continue
+            if data[col].is_unique:
+                return col
         return None
 
     @staticmethod
