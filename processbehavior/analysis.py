@@ -645,13 +645,26 @@ class Analysis:
         # Resolve grouping based on `by` parameter
         groupby_cols, ybar_col = self._resolve_by_grouping(value_col)
 
+        # For effect-carrying residuals (R4/R5/RCR4/RCR5), compute within-group
+        # std from R2/RCR2 instead. At collapsed groupings, R5's within-group std
+        # includes between-cell variance from the collapsed dimension, inflating
+        # limits. R2 (within-cell noise) is the correct basis per Wheeler/Bishop.
+        _EFFECT_RESIDUALS = {'R4', 'R5', 'RCR4', 'RCR5'}
+        _is_effect_residual = value_col is not None and value_col.upper() in _EFFECT_RESIDUALS
+        _limits_col = value_col
+        if _is_effect_residual:
+            _rcr = value_col.upper().startswith('RCR')
+            _candidate = 'RCR2' if _rcr else 'R2'
+            if _candidate in df.columns:
+                _limits_col = _candidate
+
         # Calculate grand mean (center line) - use pre-calculated if available
         _Ybar = df['Ybar'].iloc[0] if ybar_col == 'Ybar' and 'Ybar' in df.columns else df[value_col].mean()
 
         # Handle by=[] (collapse all) - single point chart
         if groupby_cols == []:
             # Single aggregation across all data
-            _S = df[value_col].std()
+            _S = df[_limits_col].std()
             _N = len(df)
             out = pd.DataFrame({
                 'group': ['All'],
@@ -663,7 +676,7 @@ class Analysis:
         else:
             # Group by specified columns
             out = df.groupby(groupby_cols, as_index=False, observed=True).agg(
-                s=pd.NamedAgg(column=value_col, aggfunc="std"),
+                s=pd.NamedAgg(column=_limits_col, aggfunc="std"),
                 mean=pd.NamedAgg(column=value_col, aggfunc="mean"),
                 # Count on response_var (not value_col) to avoid NaN issues with residuals
                 n=pd.NamedAgg(column=spec.response_var, aggfunc="count")

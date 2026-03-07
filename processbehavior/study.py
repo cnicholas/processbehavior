@@ -1703,22 +1703,18 @@ class Study:
         # Validate residual availability if charting a residual
         # Skip validation for Histogram - histograms can plot any available numeric column
         if value is not None and value.upper().startswith('R') and base_chart != 'Histogram':
-            # Extract residual identifier (R1-R5, RCR1-RCR5)
-            residual_id = value.upper()
-            if residual_id.startswith('RCR'):
-                residual_id = f"R{residual_id[3:]}"
-
-            # Check availability using canonical name
-            canonical_name = f"{residual_id}_{base_chart}"
-            if canonical_name not in self.residual_charts:
-                available_list = list(self.residual_charts) if self.residual_charts else []
-                available_str = ', '.join(available_list) if available_list else 'None'
+            # Gate on whether the resolved residual column exists in the dataset
+            if value_col not in self._ads.analysis_dataset.columns:
+                available_residuals = [
+                    c for c in self._ads.analysis_dataset.columns
+                    if c.upper().startswith('R') and c[1:2].isdigit()
+                ]
                 raise ChartNotAvailableError(
-                    f"Residual chart '{canonical_name}' is not available for SDS {self.analytical_design_state.sds}.\n"
-                    f"Available residual charts: {available_str}\n"
+                    f"Residual column '{value_col}' not found in the dataset for SDS {self.analytical_design_state.sds}.\n"
+                    f"Available residual columns: {', '.join(available_residuals) if available_residuals else 'None'}\n"
                     f"Use study.residuals to see available options.",
-                    chart=canonical_name,
-                    available=available_list
+                    chart=value_col,
+                    available=available_residuals
                 )
 
         # Determine if this is a residual chart

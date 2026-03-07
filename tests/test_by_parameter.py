@@ -449,3 +449,107 @@ class TestThreeFactorLaneBoundaries:
         result = three_factor_study.execute(chart='XmR', by=[])
         fig = result.plot('XmR')
         assert fig is not None
+
+
+# =============================================================================
+# XBAR R2-BASED LIMITS FOR EFFECT-CARRYING RESIDUALS
+# =============================================================================
+
+class TestXbarEffectResidualLimits:
+    """Test that Xbar limits for R4/R5 use R2's within-group std.
+
+    At collapsed groupings (by single factor), R5's within-group std includes
+    between-cell variance from the collapsed dimension, inflating limits.
+    R2 (within-cell noise) is the correct basis per Wheeler/Bishop.
+
+    At RSG level, R5 std = R2 std within cells, so limits are unchanged.
+    """
+
+    def test_xbar_r5_by_factor_uses_r2_sbar(self, sds1_study):
+        """Xbar R5 by single factor: Sbar should come from R2, not R5."""
+        # Get R2-based limits (what we test)
+        result_r5 = sds1_study.execute(chart='Xbar', value='R5', by=['factor 1'])
+        # Get R2's own limits (reference)
+        result_r2 = sds1_study.execute(chart='Xbar', value='R2', by=['factor 1'])
+
+        r5_data = result_r5.charts['Xbar']['data']
+        r2_data = result_r2.charts['Xbar']['data']
+
+        # R5 limits should match R2 limits (same Sbar, same N)
+        # They differ only in center line (CL), so limit WIDTH should match
+        r5_width = (r5_data['upl'] - r5_data['lpl']).iloc[0]
+        r2_width = (r2_data['upl'] - r2_data['lpl']).iloc[0]
+        assert abs(r5_width - r2_width) < 0.01, (
+            f"R5 limit width {r5_width:.4f} should match R2 width {r2_width:.4f}"
+        )
+
+    def test_xbar_r5_by_rsg_unchanged(self, sds1_study):
+        """Xbar R5 by RSG: limits unchanged (R5 std = R2 std within cells)."""
+        result = sds1_study.execute(
+            chart='Xbar', value='R5', by=['factor 1', 'factor 2']
+        )
+        result_r2 = sds1_study.execute(
+            chart='Xbar', value='R2', by=['factor 1', 'factor 2']
+        )
+
+        r5_data = result.charts['Xbar']['data']
+        r2_data = result_r2.charts['Xbar']['data']
+
+        # At RSG level, R5 std = R2 std, so widths should be equal
+        r5_width = (r5_data['upl'] - r5_data['lpl']).iloc[0]
+        r2_width = (r2_data['upl'] - r2_data['lpl']).iloc[0]
+        assert abs(r5_width - r2_width) < 0.01
+
+    def test_xbar_r4_by_factor_uses_r2_sbar(self, sds1_study):
+        """Xbar R4 by single factor: Sbar should come from R2, not R4."""
+        result_r4 = sds1_study.execute(chart='Xbar', value='R4', by=['factor 1'])
+        result_r2 = sds1_study.execute(chart='Xbar', value='R2', by=['factor 1'])
+
+        r4_data = result_r4.charts['Xbar']['data']
+        r2_data = result_r2.charts['Xbar']['data']
+
+        r4_width = (r4_data['upl'] - r4_data['lpl']).iloc[0]
+        r2_width = (r2_data['upl'] - r2_data['lpl']).iloc[0]
+        assert abs(r4_width - r2_width) < 0.01, (
+            f"R4 limit width {r4_width:.4f} should match R2 width {r2_width:.4f}"
+        )
+
+    def test_xbar_r2_not_substituted(self, sds1_study):
+        """Xbar R2 by factor: R2 is NOT an effect-carrying residual, no substitution."""
+        result = sds1_study.execute(chart='Xbar', value='R2', by=['factor 1'])
+        data = result.charts['Xbar']['data']
+        # Just verify it runs and produces limits
+        assert data['upl'].iloc[0] > data['lpl'].iloc[0]
+
+    def test_xbar_r5_collapsed_narrower_than_without_fix(self, sds1_study):
+        """Verify R5 by factor limits are narrower than R5's own variability would give.
+
+        If R5 has between-cell variance from collapsed F2, using R5's std directly
+        would produce wider limits than using R2's std. This test confirms the fix
+        by checking R5 limit width < what R5's raw within-group std would give.
+        """
+        ds = sds1_study.dataset
+        # R5's within-group std by factor 1 (includes between-cell F2 variance)
+        r5_group_stds = ds.groupby('factor 1')['R5'].std()
+        # R2's within-group std by factor 1 (pure within-cell noise)
+        r2_group_stds = ds.groupby('factor 1')['R2'].std()
+
+        # R5 std >= R2 std at collapsed levels (between-cell variance adds up)
+        assert r5_group_stds.mean() >= r2_group_stds.mean() - 0.001, (
+            "R5 within-group std should be >= R2 within-group std at collapsed level"
+        )
+
+        # The Xbar chart should use R2's (tighter) std
+        result = sds1_study.execute(chart='Xbar', value='R5', by=['factor 1'])
+        actual_width = (
+            result.charts['Xbar']['data']['upl']
+            - result.charts['Xbar']['data']['lpl']
+        ).iloc[0]
+
+        result_r2 = sds1_study.execute(chart='Xbar', value='R2', by=['factor 1'])
+        r2_width = (
+            result_r2.charts['Xbar']['data']['upl']
+            - result_r2.charts['Xbar']['data']['lpl']
+        ).iloc[0]
+
+        assert abs(actual_width - r2_width) < 0.01

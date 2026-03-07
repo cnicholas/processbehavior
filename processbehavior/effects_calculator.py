@@ -110,14 +110,16 @@ def calculate_time_main_effects(
     """
     Calculate main effect for time.
 
-    Time Effect = mean(R1) per time point
+    Time Effect = mean(R4) per time point
 
-    Shows the average deviation at each time point from the grand mean.
+    R4 = Ȳ_t - Ȳ + R2 preserves the time effect plus within-cell noise,
+    so mean(R4) per time point gives the time main effect (analogous to
+    mean(R5) per factor level for factor main effects).
 
     Parameters
     ----------
     df : DataFrame
-        Data with R1 column
+        Data with R4 column
     time_var : str
         Time variable name
 
@@ -131,7 +133,7 @@ def calculate_time_main_effects(
     --------
     >>> df = pd.DataFrame({
     ...     'pull': [1, 1, 2, 2],
-    ...     'R1': [0.1, 0.2, -0.1, -0.2]
+    ...     'R4': [0.1, 0.2, -0.1, -0.2]
     ... })
     >>> te = calculate_time_main_effects(df, 'pull')
     >>> te
@@ -139,14 +141,14 @@ def calculate_time_main_effects(
     0     1   0.15
     1     2  -0.15
     """
-    if 'R1' not in df.columns:
+    if 'R4' not in df.columns:
         raise ValueError(
-            "Cannot calculate time effects - R1 column missing.\n"
+            "Cannot calculate time effects - R4 column missing.\n"
             "Calculate VAS residuals first."
         )
 
     te = (
-        df.groupby(time_var, sort=False, observed=True)['R1']
+        df.groupby(time_var, sort=False, observed=True)['R4']
         .mean()
         .rename('PT_ME')
         .reset_index()
