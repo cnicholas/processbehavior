@@ -223,12 +223,21 @@ class Analysis:
             }
 
             # Calculate using base method with value_col
-            residual_strategies = {
-                'Xbar': self._calculate_xbar,
-                'S': self._calculate_s,
-                'XmR': self._calculate_xmr,
-                'Histogram': self._calculate_histogram,
-            }
+            companion = self.request.companion
+            if companion:
+                residual_strategies = {
+                    'Xbar': self._calculate_xbar_s,
+                    'S': self._calculate_xbar_s,
+                    'XmR': self._calculate_xmr_r,
+                    'Histogram': self._calculate_histogram,
+                }
+            else:
+                residual_strategies = {
+                    'Xbar': self._calculate_xbar,
+                    'S': self._calculate_s,
+                    'XmR': self._calculate_xmr,
+                    'Histogram': self._calculate_histogram,
+                }
             chart_data = residual_strategies[chart_type](value_col=col_name)
             chart_data = self._add_residual_metadata(
                 chart_data, residual, recentered, questions
