@@ -104,6 +104,44 @@ class TestValidCombinations:
 
 
 # =============================================================================
+# Companion charts with residual values
+# =============================================================================
+
+
+class TestCompanionWithResiduals:
+    """companion=True should return both charts when charting residuals."""
+
+    def test_xmr_companion_with_residual_returns_both(self, sds1_single_factor_study):
+        """XmR + companion + value='R5' → both XmR and R."""
+        result = sds1_single_factor_study.execute(
+            chart='XmR', by=[], companion=True, value='R5'
+        )
+        assert 'XmR' in result.charts
+        assert 'R' in result.charts
+
+    def test_xbar_companion_with_residual_returns_both(self, sds1_study):
+        """Xbar + companion + value='R5' → both Xbar and S."""
+        result = sds1_study.execute(chart='Xbar', companion=True, value='R5')
+        assert 'Xbar' in result.charts
+        assert 'S' in result.charts
+
+    def test_xmr_no_companion_with_residual_returns_single(self, sds1_single_factor_study):
+        """XmR + companion=False + value='R5' → only XmR."""
+        result = sds1_single_factor_study.execute(
+            chart='XmR', by=[], companion=False, value='R5'
+        )
+        assert 'XmR' in result.charts
+        assert 'R' not in result.charts
+
+    def test_companion_residual_preserves_metadata(self, sds1_study):
+        """Companion residual charts should have residual metadata on both."""
+        result = sds1_study.execute(chart='Xbar', companion=True, value='R5')
+        for chart_name in ('Xbar', 'S'):
+            metadata = result.charts[chart_name]['metadata']
+            assert metadata.get('residual_type') == 'R5'
+
+
+# =============================================================================
 # Recentered value resolution
 # =============================================================================
 
