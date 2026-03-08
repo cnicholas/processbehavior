@@ -213,3 +213,30 @@ class TestSingleFactorByAxisLabel:
         result = study.execute(chart="S", by=["FACTOR 1"])
         fig = result.plot(chart="S")
         assert fig._fig.layout.xaxis.title.text == "Factor 1"
+
+
+class TestNumericFactorCategoryAxis:
+    """Numeric-looking factor levels must produce a categorical x-axis."""
+
+    @staticmethod
+    def _study():
+        pb = ProcessBehavior.read_csv("validation/TABVASTESTDATABASE.csv")
+        return pb.formulate(response="PM SDS 1", factors=["FACTOR 1", "FACTOR 2"])
+
+    def test_xbar_by_numeric_factor_is_categorical(self):
+        """Xbar by=['FACTOR 1'] with integer levels → category axis."""
+        study = self._study()
+        result = study.execute(chart="Xbar", by=["FACTOR 1"])
+        fig = result.plot(chart="Xbar")
+        assert fig._fig.layout.xaxis.type == "category", (
+            f"Expected category axis, got {fig._fig.layout.xaxis.type}"
+        )
+
+    def test_s_by_numeric_factor_is_categorical(self):
+        """S by=['FACTOR 1'] with integer levels → category axis."""
+        study = self._study()
+        result = study.execute(chart="S", by=["FACTOR 1"])
+        fig = result.plot(chart="S")
+        assert fig._fig.layout.xaxis.type == "category", (
+            f"Expected category axis, got {fig._fig.layout.xaxis.type}"
+        )

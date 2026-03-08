@@ -294,6 +294,11 @@ class Plotter:
         # Time tick labels
         self._apply_time_tick_labels(fig, chart_info['data'], metadata)
 
+        # Force categorical axis when x_col is a factor column (not time/index)
+        time_var = self.summary.get('time_var')
+        if x_col and x_col not in ('subgroup', 'rsg', 'group') and x_col != time_var:
+            fig.update_xaxes(type='category')
+
         # Layout
         x_label = xaxis_title or self._get_xaxis_label(x_col, chart_name)
         y_label = yaxis_title or self._get_yaxis_label(value_col)
@@ -422,6 +427,13 @@ class Plotter:
         # Layout
         fig.update_layout(width=width, height=height, hovermode='closest')
 
+        # Force categorical axis when x_col is a factor column (not time/index)
+        time_var = self.summary.get('time_var')
+        is_factor_axis = (
+            x_col and x_col not in ('subgroup', 'rsg', 'group')
+            and x_col != time_var
+        )
+
         fig.update_xaxes(
             title_text=x_label,
             showline=theme.show_axis_line,
@@ -430,6 +442,7 @@ class Plotter:
             showgrid=theme.show_grid,
             gridcolor=theme.grid_color,
             gridwidth=theme.grid_width,
+            **({"type": "category"} if is_factor_axis else {}),
         )
         fig.update_yaxes(
             title_text=y_label,
