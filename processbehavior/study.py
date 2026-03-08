@@ -1671,13 +1671,6 @@ class Study:
                 "companion is not applicable to Histogram charts."
             )
 
-        # phased + value (residual/custom) — phased limits only apply to primary response
-        if phased and value is not None:
-            raise ValidationError(
-                "phased=True is not compatible with the value= parameter. "
-                "Phased limits apply to the primary response variable only."
-            )
-
         # bins + non-Histogram — bins only makes sense for Histogram
         if bins is not None and base_chart != 'Histogram':
             raise ValidationError(

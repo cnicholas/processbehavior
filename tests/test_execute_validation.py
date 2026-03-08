@@ -54,12 +54,12 @@ class TestInvalidCombinations:
         with pytest.raises(ValidationError, match="companion.*Histogram"):
             sds1_study.execute(chart='Histogram', companion=True)
 
-    def test_phased_with_value_raises(self, sds1_study):
-        """phased=True with value= raises ValidationError."""
-        with pytest.raises(ValidationError, match="phased.*value"):
-            sds1_study.execute(
-                chart='XmR', by=[], phased=True, value='R2'
-            )
+    def test_phased_with_value_allowed(self, sds1_study):
+        """phased=True with value= (residual) is allowed."""
+        result = sds1_study.execute(
+            chart='XmR', by=[], phased=True, value='R2'
+        )
+        assert len(result.get_chart('XmR')) > 0
 
     def test_bins_non_histogram_raises(self, sds1_single_factor_study):
         """bins with non-Histogram chart raises ValidationError."""
