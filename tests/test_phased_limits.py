@@ -408,3 +408,37 @@ class TestTimeTickLabels:
         xaxis = fig._fig.layout.xaxis
         assert xaxis.tickvals is not None, "tickvals should be set (time repeats)"
         assert xaxis.ticktext is not None, "ticktext should be set (time repeats)"
+
+
+# =============================================================================
+# Phased + Residual Value
+# =============================================================================
+
+class TestPhasedWithResidualValue:
+    """Phased limits work with residual value= parameter."""
+
+    def test_phased_residual_chart(self, sds1_study):
+        """phased=True with value='R1' produces a valid chart."""
+        result = sds1_study.execute(
+            chart='XmR', by=[], phased=True, value='R1'
+        )
+        data = result.get_chart('XmR')
+        assert len(data) > 0
+        assert result.charts['XmR']['metadata']['phased'] is True
+
+    def test_phased_recentered_residual_chart(self, sds1_study):
+        """phased=True with value='R1' and recentered=True succeeds."""
+        result = sds1_study.execute(
+            chart='XmR', by=[], phased=True, value='R1', recentered=True
+        )
+        data = result.get_chart('XmR')
+        assert len(data) > 0
+        assert result.charts['XmR']['metadata']['phased'] is True
+
+    def test_phased_residual_limits_vary(self, sds1_study):
+        """Phased residual chart has per-phase limits (not constant)."""
+        result = sds1_study.execute(
+            chart='XmR', by=[], phased=True, value='R2'
+        )
+        data = result.get_chart('XmR')
+        assert data['center'].nunique() > 1 or data['upl'].nunique() > 1
