@@ -1537,7 +1537,10 @@ class Study:
             - by=['factor']: Stratify/aggregate by single factor
             - by=['f1', 'f2']: Stratify/aggregate by factor combination
 
-            For Xbar/S: by controls aggregation (groups on x-axis)
+            For Xbar/S: by controls aggregation (groups on x-axis).
+              Special case: by=[time_var] with factors stratifies by
+              factor combinations, producing one chart per combo with
+              time on x-axis. Only applies to response (not residuals).
             For XmR/R: by controls stratification (separate charts)
 
         value : str, optional
@@ -1628,6 +1631,9 @@ class Study:
 
         >>> # IMR single overall chart
         >>> result = study.execute(chart='XmR', by=[])
+
+        >>> # Stratified Xbar by time (one chart per factor combination)
+        >>> result = study.execute(chart='Xbar', by=['PRODUCTION TIME'])
 
         Chart residuals:
 

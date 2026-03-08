@@ -401,7 +401,7 @@ class Analysis:
     def _resolve_by_grouping(
         self,
         value_col: str
-    ) -> tuple[list[str], str | None]:
+    ) -> tuple[list[str], str | None, list[str]]:
         """
         Resolve groupby columns and pre-calculated Ybar column based on `by` parameter.
 
@@ -415,16 +415,19 @@ class Analysis:
 
         Returns
         -------
-        tuple[list[str], str | None]
-            (groupby_cols, ybar_col) where:
+        tuple[list[str], str | None, list[str]]
+            (groupby_cols, ybar_col, stratify_by) where:
             - groupby_cols: columns to group by (empty list for collapse all)
             - ybar_col: pre-calculated Ybar column to use, or None if must aggregate
+            - stratify_by: columns to stratify by (separate charts per combo),
+              empty list if no stratification
 
         Examples
         --------
-        >>> groupby_cols, ybar_col = self._resolve_by_grouping('y')
-        >>> # by=[] -> ([], 'Ybar') - collapse all, use grand mean
-        >>> # by=['factor1','factor2'] -> (['rsg'], 'Ybar_k') - use factor means
+        >>> groupby_cols, ybar_col, stratify_by = self._resolve_by_grouping('y')
+        >>> # by=[] -> ([], 'Ybar', []) - collapse all, use grand mean
+        >>> # by=['factor1','factor2'] -> (['rsg'], 'Ybar_k', []) - use factor means
+        >>> # by=['time_var'] with factors -> ([time_var], 'Ybar_t', [rsg_var_name])
         """
         spec = self.spec
         by = self.request.by
@@ -461,7 +464,7 @@ class Analysis:
                 # No grouping
                 groupby_cols = []
                 ybar_col = None
-            return groupby_cols, ybar_col
+            return groupby_cols, ybar_col, []
 
         # Check if by matches known aggregation levels for Ybar optimization
         by_set = set(by)
@@ -472,13 +475,15 @@ class Analysis:
         if by_set == rsg_set and list(by) == rsg_vars:
             groupby_cols = [spec.rsg_var_name]
             ybar_col = 'Ybar_k' if is_response else None
-            return groupby_cols, ybar_col
+            return groupby_cols, ybar_col, []
 
         # by == [time_var] only -> use Ybar_t
+        # When factors exist and charting response, also stratify by factor combos
         if by_set == {time_var}:
             groupby_cols = [time_var]
             ybar_col = 'Ybar_t' if is_response else None
-            return groupby_cols, ybar_col
+            stratify_by = [spec.rsg_var_name] if (rsg_vars and is_response) else []
+            return groupby_cols, ybar_col, stratify_by
 
         # by == all factors + time (cell_key level) -> use Ybar_kt
         cell_key_vars = rsg_set | ({time_var} if time_var else set())
@@ -486,12 +491,12 @@ class Analysis:
             # Group by all factors + time
             groupby_cols = rsg_vars + [time_var] if time_var else rsg_vars
             ybar_col = 'Ybar_kt' if is_response else None
-            return groupby_cols, ybar_col
+            return groupby_cols, ybar_col, []
 
         # Partial subset - must aggregate at runtime
         # Use the by columns directly
         groupby_cols = list(by)
-        return groupby_cols, None
+        return groupby_cols, None, []
 
     def _calculate_lane_boundaries(
         self,
@@ -669,7 +674,14 @@ class Analysis:
         logger.debug('Dataframe head:\n%s', df.head(10))
 
         # Resolve grouping based on `by` parameter
-        groupby_cols, ybar_col = self._resolve_by_grouping(value_col)
+        groupby_cols, ybar_col, stratify_by = self._resolve_by_grouping(value_col)
+
+        # Stratified path: separate chart per factor combination
+        if stratify_by:
+            return self._calculate_xbar_stratified(
+                value_col, groupby_cols, stratify_by,
+                _return_intermediates=_return_intermediates,
+            )
 
         _limits_col = self._resolve_limits_column(value_col, df)
 
@@ -823,6 +835,293 @@ class Analysis:
 
         return result
 
+    def _calculate_xbar_stratified(
+        self,
+        value_col: str,
+        groupby_cols: list[str],
+        stratify_by: list[str],
+        _return_intermediates: bool = False,
+    ) -> dict:
+        """
+        Stratified Xbar chart: one chart per factor combination, time on x-axis.
+
+        Each stratum computes its own Sbar and limits independently.
+
+        Parameters
+        ----------
+        value_col : str
+            Column to chart (response variable).
+        groupby_cols : list[str]
+            Columns to group by within each stratum (typically [time_var]).
+        stratify_by : list[str]
+            Columns defining strata (typically [rsg_var_name]).
+        _return_intermediates : bool
+            If True, include intermediates for companion S chart.
+
+        Returns
+        -------
+        dict
+            Chart data with 'strata' key for stratified output.
+        """
+        spec = self.spec
+        df = self.ads.analysis_dataset.copy()
+        result = {}
+
+        # Determine stratification column
+        if len(stratify_by) == 1:
+            stratify_col = stratify_by[0]
+        else:
+            df['_stratify_key'] = df[stratify_by].apply(tuple, axis=1)
+            stratify_col = '_stratify_key'
+
+        _limits_col = self._resolve_limits_column(value_col, df)
+
+        strata = df[stratify_col].unique().tolist()
+        all_xbar_frames = []
+        chart_statistics = {}
+        intermediates_per_stratum = {}
+
+        for stratum in strata:
+            sdf = df[df[stratify_col] == stratum].copy()
+
+            # Group by time within this stratum
+            # Note: we always compute mean directly from filtered data, NOT using
+            # Ybar_t (which is the marginal time mean across ALL factors).
+            out = sdf.groupby(groupby_cols, as_index=False, observed=True).agg(
+                s=pd.NamedAgg(column=_limits_col, aggfunc="std"),
+                xbar=pd.NamedAgg(column=value_col, aggfunc="mean"),
+                n=pd.NamedAgg(column=spec.response_var, aggfunc="count"),
+            )
+
+            out['N'] = out['n'].max()
+
+            # Filter subgroups with n=1
+            mask_n1 = out['n'].eq(1)
+            if mask_n1.any():
+                out = out[~mask_n1].copy()
+
+            if out.shape[0] == 0:
+                continue
+
+            # Per-stratum statistics
+            _Xbar = out['xbar'].mean()
+            _S = out['s'].mean()
+            n_to_use, n_max = self._determine_n_to_use(out)
+
+            n_mode = self.request.n_mode
+            n_avg = None
+            if n_mode == "average":
+                n_avg = out['n'].mean()
+                out['N'] = n_avg
+                n_to_use = 'N'
+
+            out['center'] = _Xbar
+            out[['lpl', 'upl']] = out.apply(
+                lambda row: calculate_limits(
+                    mean=row['center'],
+                    sd=_S,
+                    N=row[n_to_use],
+                    limits_type='Xbar',
+                    round_to=spec.round_to,
+                    sigma_multiplier=self.request.n_sigma,
+                ), axis=1
+            )
+
+            out = self._add_beyond_limits_flag(out, value_col='xbar')
+            out = out.round(spec.round_to)
+
+            # Add stratum identifier
+            out[stratify_col] = stratum
+
+            # Cast time column to string for categorical x-axis
+            if groupby_cols:
+                out[groupby_cols[0]] = out[groupby_cols[0]].astype(str)
+
+            all_xbar_frames.append(out)
+
+            chart_statistics[stratum] = {
+                'center': round(_Xbar, spec.round_to),
+                'N': round(n_avg, spec.round_to) if n_avg is not None else (
+                    out['N'].iloc[0] if n_to_use == 'N' else 'Varies'
+                ),
+                'lpl': round(out['lpl'].iloc[0], spec.round_to) if n_to_use == 'N' else 'Varies',
+                'upl': round(out['upl'].iloc[0], spec.round_to) if n_to_use == 'N' else 'Varies',
+            }
+
+            if _return_intermediates:
+                intermediates_per_stratum[stratum] = {
+                    '_S': _S,
+                    'n_to_use': n_to_use,
+                    'n_max': n_max,
+                    'out': out,
+                    'n_avg': n_avg,
+                }
+
+        chart_out = pd.concat(all_xbar_frames, ignore_index=True)
+
+        # Select output columns
+        group_col = groupby_cols[0] if groupby_cols else None
+        cols_to_keep = [stratify_col, group_col, 'xbar', 'center', 'lpl', 'upl', 'beyond_limits']
+        cols_to_keep = [c for c in cols_to_keep if c is not None and c in chart_out.columns]
+        chart_out = chart_out[cols_to_keep]
+
+        result['Xbar'] = {
+            'data': chart_out,
+            'statistics': chart_statistics,
+            'metadata': {
+                'chart_type': 'Xbar',
+                'value_col': 'xbar',
+                'center_col': 'center',
+                'stratified': True,
+                'stratify_col': stratify_col,
+                'stratify_by': list(stratify_by),
+                'n_sigma': self.request.n_sigma,
+                'n_mode': self.request.n_mode,
+            },
+            'strata': strata,
+        }
+
+        if _return_intermediates:
+            result['_intermediates'] = {
+                'stratify_col': stratify_col,
+                'stratify_by': stratify_by,
+                'strata': strata,
+                'groupby_cols': groupby_cols,
+                'per_stratum': intermediates_per_stratum,
+                'is_stratified': True,
+            }
+
+        return result
+
+    def _calculate_s_stratified(
+        self,
+        value_col: str,
+        groupby_cols: list[str],
+        stratify_by: list[str],
+        _precomputed: dict | None = None,
+    ) -> dict:
+        """
+        Stratified S chart: one chart per factor combination, time on x-axis.
+
+        Parameters
+        ----------
+        value_col : str
+            Column to chart.
+        groupby_cols : list[str]
+            Columns to group by within each stratum.
+        stratify_by : list[str]
+            Columns defining strata.
+        _precomputed : dict, optional
+            Pre-computed intermediates from _calculate_xbar_stratified().
+
+        Returns
+        -------
+        dict
+            Chart data with 'strata' key for stratified output.
+        """
+        spec = self.spec
+
+        if _precomputed is not None:
+            stratify_col = _precomputed['stratify_col']
+            strata = _precomputed['strata']
+            per_stratum = _precomputed['per_stratum']
+        else:
+            df = self.ads.analysis_dataset.copy()
+            if len(stratify_by) == 1:
+                stratify_col = stratify_by[0]
+            else:
+                df['_stratify_key'] = df[stratify_by].apply(tuple, axis=1)
+                stratify_col = '_stratify_key'
+            strata = df[stratify_col].unique().tolist()
+            per_stratum = None
+
+        all_s_frames = []
+        chart_statistics = {}
+
+        for stratum in strata:
+            if per_stratum is not None:
+                # Use precomputed data from Xbar stratified
+                inter = per_stratum[stratum]
+                out = inter['out'].copy()
+                _S = inter['_S']
+                n_to_use = inter['n_to_use']
+                n_max = inter['n_max']
+                n_avg = inter['n_avg']
+            else:
+                sdf = df[df[stratify_col] == stratum].copy()
+                out = sdf.groupby(groupby_cols, as_index=False, observed=True).agg(
+                    s=pd.NamedAgg(column=value_col, aggfunc="std"),
+                    n=pd.NamedAgg(column=spec.response_var, aggfunc="count"),
+                )
+                mask = out['n'].eq(1)
+                out = out[~mask]
+                if out.shape[0] == 0:
+                    continue
+                out['N'] = out['n'].max()
+                _S = out['s'].mean()
+                n_to_use, n_max = self._determine_n_to_use(out)
+                n_avg = None
+                if self.request.n_mode == "average":
+                    n_avg = out['n'].mean()
+                    out['N'] = n_avg
+                    n_to_use = 'N'
+
+                # Cast time column to string for categorical x-axis
+                if groupby_cols:
+                    out[groupby_cols[0]] = out[groupby_cols[0]].astype(str)
+
+            out['center'] = _S
+            out[['lpl', 'upl']] = out.apply(
+                lambda row: calculate_limits(
+                    mean=0,
+                    sd=row['center'],
+                    N=row[n_to_use],
+                    limits_type='S',
+                    round_to=spec.round_to,
+                    sigma_multiplier=self.request.n_sigma,
+                ), axis=1
+            )
+
+            out = self._add_beyond_limits_flag(out, value_col='s')
+            out = out.round(spec.round_to)
+            out[stratify_col] = stratum
+
+            all_s_frames.append(out)
+
+            chart_statistics[stratum] = {
+                'center': round(_S, spec.round_to),
+                'N': round(n_avg, spec.round_to) if n_avg is not None else (
+                    out['N'].iloc[0] if n_to_use == 'N' else 'Varies'
+                ),
+                'lpl': round(out['lpl'].iloc[0], spec.round_to) if n_to_use == 'N' else 'Varies',
+                'upl': round(out['upl'].iloc[0], spec.round_to) if n_to_use == 'N' else 'Varies',
+            }
+
+        chart_out = pd.concat(all_s_frames, ignore_index=True)
+
+        group_col = groupby_cols[0] if groupby_cols else None
+        cols_to_keep = [stratify_col, group_col, 's', 'center', 'lpl', 'upl', 'beyond_limits']
+        cols_to_keep = [c for c in cols_to_keep if c is not None and c in chart_out.columns]
+        chart_out = chart_out[cols_to_keep]
+
+        return {
+            'S': {
+                'data': chart_out,
+                'statistics': chart_statistics,
+                'metadata': {
+                    'chart_type': 'S',
+                    'value_col': 's',
+                    'center_col': 'center',
+                    'stratified': True,
+                    'stratify_col': stratify_col,
+                    'stratify_by': list(stratify_by),
+                    'n_sigma': self.request.n_sigma,
+                    'n_mode': self.request.n_mode,
+                },
+                'strata': strata,
+            }
+        }
+
     def _calculate_s(
         self,
         value_col: str = None,
@@ -867,7 +1166,14 @@ class Analysis:
             df = self.ads.analysis_dataset.copy()
 
             # Resolve grouping based on `by` parameter
-            groupby_cols, _ = self._resolve_by_grouping(value_col)
+            groupby_cols, _, stratify_by = self._resolve_by_grouping(value_col)
+
+            # Stratified path: separate chart per factor combination
+            if stratify_by:
+                return self._calculate_s_stratified(
+                    value_col, groupby_cols, stratify_by,
+                )
+
 
             # Handle by=[] (collapse all) - single point chart
             if groupby_cols == []:
@@ -1021,6 +1327,16 @@ class Analysis:
 
         # Extract intermediates and remove from result
         intermediates = xbar_result.pop('_intermediates')
+
+        # Stratified companion path
+        if intermediates.get('is_stratified'):
+            s_result = self._calculate_s_stratified(
+                value_col,
+                intermediates['groupby_cols'],
+                intermediates['stratify_by'],
+                _precomputed=intermediates,
+            )
+            return {**xbar_result, **s_result}
 
         # Calculate S using precomputed values
         s_result = self._calculate_s(value_col, _precomputed=intermediates)
