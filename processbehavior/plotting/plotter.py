@@ -214,10 +214,12 @@ class Plotter:
             )
         else:
             effective_shared = shared_yaxis
+            per_type_shared = False
             if shared_yaxis:
                 base_types = {self._get_base_chart_type(n) for n in charts_to_plot}
                 if len(base_types) > 1:
                     effective_shared = False
+                    per_type_shared = True
 
             fig = self._plot_faceted(
                 charts_to_plot, ncols=ncols,
@@ -226,6 +228,7 @@ class Plotter:
                 shared_yaxis=effective_shared,
                 yaxis_padding=yaxis_padding,
                 vertical_spacing=vertical_spacing,
+                per_type_shared=per_type_shared,
                 **display_opts,
             )
 
@@ -331,6 +334,7 @@ class Plotter:
         shared_yaxis: bool = True,
         yaxis_padding: float = 0.05,
         vertical_spacing: float = 0.15,
+        per_type_shared: bool = False,
     ) -> go.Figure:
         """Create faceted control charts."""
         n_charts = len(charts)
@@ -455,9 +459,32 @@ class Plotter:
         )
 
         if histogram_y_range is not None:
-            fig.update_yaxes(range=histogram_y_range)
+            fig.update_yaxes(range=histogram_y_range, autorange=False)
         elif global_y_range is not None:
-            fig.update_yaxes(range=global_y_range)
+            fig.update_yaxes(range=global_y_range, autorange=False)
+        elif per_type_shared:
+            # Group charts by base type and share y-range within each group
+            type_groups: dict[str, dict] = {}
+            for chart_name, chart_info in charts.items():
+                base = self._get_base_chart_type(chart_name)
+                type_groups.setdefault(base, {})[chart_name] = chart_info
+
+            chart_names_list = list(charts.keys())
+            for base_type, group_charts in type_groups.items():
+                if all(
+                    c.get('metadata', {}).get('chart_type') == 'Histogram'
+                    for c in group_charts.values()
+                ):
+                    continue
+                y_range = self._calculate_global_yrange(group_charts, yaxis_padding)
+                if y_range is not None:
+                    for cn in group_charts:
+                        idx = chart_names_list.index(cn)
+                        r = idx // ncols + 1
+                        c = idx % ncols + 1
+                        fig.update_yaxes(
+                            range=y_range, autorange=False, row=r, col=c,
+                        )
 
         return fig
 
@@ -784,8 +811,10 @@ class Plotter:
     ) -> tuple[float, float]:
         """Calculate dynamic subplot spacing."""
         if nrows > 1:
-            max_v = 1.0 / (nrows - 1) - 0.01
-            desired_v = 0.20 if nrows <= 3 else 0.18
+            # Cap total gap fraction to preserve plot area
+            max_total_gap = 0.4  # at most 40% of figure for gaps
+            max_v = max_total_gap / (nrows - 1)
+            desired_v = 0.20 if nrows <= 3 else 0.12
             v_spacing = min(max(vertical_spacing, desired_v), max_v)
         else:
             v_spacing = vertical_spacing

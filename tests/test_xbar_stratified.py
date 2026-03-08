@@ -4,6 +4,7 @@ import pandas as pd
 import pytest
 
 from processbehavior import ProcessBehavior
+from processbehavior.plotting.plotter import Plotter
 
 
 @pytest.fixture
@@ -128,3 +129,134 @@ class TestResidualNotStratified:
         xbar = result.charts['Xbar']
         assert 'strata' not in xbar
         assert xbar['metadata'].get('stratified') is None
+
+
+class TestSharedYAxis:
+    """Stratified charts must share y-axis range within each chart type."""
+
+    def test_stratified_xbar_subplots_share_yaxis(self, sds1_study):
+        """All Xbar facets should have identical y-axis range."""
+        result = sds1_study.execute(chart='Xbar', by=['PRODUCTION TIME'])
+        plotter = Plotter(result)
+        fig = plotter.plot(chart='Xbar').figure
+        ranges = [
+            fig.layout[k].range
+            for k in fig.layout
+            if k.startswith('yaxis') and fig.layout[k].range
+        ]
+        assert len(ranges) > 1
+        assert all(r == ranges[0] for r in ranges), \
+            "All Xbar subplots should share y-axis range"
+
+    def test_stratified_xbar_autorange_disabled(self, sds1_study):
+        """autorange must be False when shared range is set."""
+        result = sds1_study.execute(chart='Xbar', by=['PRODUCTION TIME'])
+        plotter = Plotter(result)
+        fig = plotter.plot(chart='Xbar').figure
+        for k in fig.layout:
+            if k.startswith('yaxis') and fig.layout[k].range:
+                assert fig.layout[k].autorange is False
+
+    def test_companion_xbar_s_share_within_type(self, sds1_study):
+        """Companion: Xbar facets share one range, S facets share another."""
+        result = sds1_study.execute(
+            chart='Xbar', by=['PRODUCTION TIME'], companion=True,
+        )
+        plotter = Plotter(result)
+        fig = plotter.plot().figure
+        all_ranges = []
+        for k in sorted(fig.layout):
+            if k.startswith('yaxis') and fig.layout[k].range:
+                all_ranges.append(tuple(fig.layout[k].range))
+        unique_ranges = set(all_ranges)
+        assert len(unique_ranges) == 2, \
+            "Xbar and S should have different y-axis ranges"
+        for r in unique_ranges:
+            count = all_ranges.count(r)
+            assert count > 1, f"Range {r} should appear in multiple subplots"
+
+    def test_companion_autorange_disabled(self, sds1_study):
+        """All companion subplots must have autorange=False."""
+        result = sds1_study.execute(
+            chart='Xbar', by=['PRODUCTION TIME'], companion=True,
+        )
+        plotter = Plotter(result)
+        fig = plotter.plot().figure
+        for k in fig.layout:
+            if k.startswith('yaxis') and fig.layout[k].range:
+                assert fig.layout[k].autorange is False
+
+    def test_companion_subplot_minimum_height(self, sds1_study):
+        """Each subplot in companion chart must get reasonable vertical space."""
+        result = sds1_study.execute(
+            chart='Xbar', by=['PRODUCTION TIME'], companion=True,
+        )
+        plotter = Plotter(result)
+        fig = plotter.plot().figure
+        # Collect all y-axis domains
+        domains = []
+        for k in sorted(fig.layout):
+            if k.startswith('yaxis'):
+                domain = fig.layout[k].domain
+                if domain:
+                    domains.append(domain)
+        assert len(domains) > 0, "Should have y-axis domains"
+        for domain in domains:
+            height = domain[1] - domain[0]
+            assert height >= 0.03, (
+                f"Subplot domain height {height:.4f} is too small; "
+                f"domain={domain}"
+            )
+
+    def test_companion_all_axes_have_range(self, sds1_study):
+        """Every yaxis in companion figure must have an explicit range."""
+        result = sds1_study.execute(
+            chart='Xbar', by=['PRODUCTION TIME'], companion=True,
+        )
+        plotter = Plotter(result)
+        fig = plotter.plot().figure
+        yaxis_keys = [k for k in fig.layout if k.startswith('yaxis')]
+        assert len(yaxis_keys) > 0
+        for k in yaxis_keys:
+            assert fig.layout[k].range is not None, (
+                f"{k} has no explicit range set"
+            )
+
+    def test_companion_ranges_match_standalone(self, sds1_study):
+        """Per-type companion ranges should match standalone chart ranges."""
+        companion_result = sds1_study.execute(
+            chart='Xbar', by=['PRODUCTION TIME'], companion=True,
+        )
+        standalone_result = sds1_study.execute(
+            chart='Xbar', by=['PRODUCTION TIME'],
+        )
+        # Get standalone Xbar range
+        standalone_fig = Plotter(standalone_result).plot(chart='Xbar').figure
+        standalone_ranges = [
+            standalone_fig.layout[k].range
+            for k in standalone_fig.layout
+            if k.startswith('yaxis') and standalone_fig.layout[k].range
+        ]
+        assert len(standalone_ranges) > 0
+        standalone_xbar_range = standalone_ranges[0]
+
+        # Get companion Xbar ranges
+        companion_fig = Plotter(companion_result).plot().figure
+        companion_ranges = []
+        for k in sorted(companion_fig.layout):
+            if k.startswith('yaxis') and companion_fig.layout[k].range:
+                companion_ranges.append(tuple(companion_fig.layout[k].range))
+        # Xbar range should appear in the companion
+        assert tuple(standalone_xbar_range) in set(companion_ranges), (
+            f"Standalone Xbar range {standalone_xbar_range} not found in "
+            f"companion ranges {set(companion_ranges)}"
+        )
+
+    def test_non_shared_yaxis_keeps_autorange(self, sds1_study):
+        """shared_yaxis=False should NOT set autorange=False."""
+        result = sds1_study.execute(chart='Xbar', by=['PRODUCTION TIME'])
+        plotter = Plotter(result)
+        fig = plotter.plot(chart='Xbar', shared_yaxis=False).figure
+        for k in fig.layout:
+            if k.startswith('yaxis'):
+                assert fig.layout[k].autorange is not False
