@@ -693,21 +693,27 @@ class Analysis:
             # Single aggregation across all data
             _S = df[_limits_col].std()
             _N = len(df)
-            out = pd.DataFrame({
+            out_dict = {
                 'group': ['All'],
                 'xbar': [_Ybar],
                 's': [_S],
                 'n': [_N],
                 'N': [_N]
-            })
+            }
+            if _limits_col != value_col:
+                out_dict['s_value'] = [df[value_col].std()]
+            out = pd.DataFrame(out_dict)
         else:
             # Group by specified columns
-            out = df.groupby(groupby_cols, as_index=False, observed=True).agg(
-                s=pd.NamedAgg(column=_limits_col, aggfunc="std"),
-                mean=pd.NamedAgg(column=value_col, aggfunc="mean"),
+            agg_dict = {
+                's': pd.NamedAgg(column=_limits_col, aggfunc="std"),
+                'mean': pd.NamedAgg(column=value_col, aggfunc="mean"),
                 # Count on response_var (not value_col) to avoid NaN issues with residuals
-                n=pd.NamedAgg(column=spec.response_var, aggfunc="count")
-            )
+                'n': pd.NamedAgg(column=spec.response_var, aggfunc="count"),
+            }
+            if _limits_col != value_col:
+                agg_dict['s_value'] = pd.NamedAgg(column=value_col, aggfunc="std")
+            out = df.groupby(groupby_cols, as_index=False, observed=True).agg(**agg_dict)
 
             # If we have pre-calculated Ybar, use it for xbar values
             if ybar_col and ybar_col in df.columns:
@@ -887,11 +893,14 @@ class Analysis:
             # Group by time within this stratum
             # Note: we always compute mean directly from filtered data, NOT using
             # Ybar_t (which is the marginal time mean across ALL factors).
-            out = sdf.groupby(groupby_cols, as_index=False, observed=True).agg(
-                s=pd.NamedAgg(column=_limits_col, aggfunc="std"),
-                xbar=pd.NamedAgg(column=value_col, aggfunc="mean"),
-                n=pd.NamedAgg(column=spec.response_var, aggfunc="count"),
-            )
+            agg_dict = {
+                's': pd.NamedAgg(column=_limits_col, aggfunc="std"),
+                'xbar': pd.NamedAgg(column=value_col, aggfunc="mean"),
+                'n': pd.NamedAgg(column=spec.response_var, aggfunc="count"),
+            }
+            if _limits_col != value_col:
+                agg_dict['s_value'] = pd.NamedAgg(column=value_col, aggfunc="std")
+            out = sdf.groupby(groupby_cols, as_index=False, observed=True).agg(**agg_dict)
 
             out['N'] = out['n'].max()
 
@@ -1043,7 +1052,14 @@ class Analysis:
                 # Use precomputed data from Xbar stratified
                 inter = per_stratum[stratum]
                 out = inter['out'].copy()
-                _S = inter['_S']
+                # Swap in s_value (std of value_col) if Xbar used a different
+                # _limits_col for its own S calculations.
+                if 's_value' in out.columns:
+                    out['s'] = out['s_value']
+                    out = out.drop(columns=['s_value'])
+                    _S = out['s'].mean()
+                else:
+                    _S = inter['_S']
                 n_to_use = inter['n_to_use']
                 n_max = inter['n_max']
                 n_avg = inter['n_avg']
@@ -1154,13 +1170,20 @@ class Analysis:
 
         # Use precomputed values if available (from _calculate_xbar_s)
         if _precomputed is not None:
-            _S = _precomputed['_S']
             n_to_use = _precomputed['n_to_use']
             n_max = _precomputed['n_max']
             groupby_cols = _precomputed['groupby_cols']
             group_col = _precomputed['group_col']
             out = _precomputed['out'].copy()
             n_avg = _precomputed.get('n_avg')
+            # Swap in s_value (std of value_col) if Xbar used a different
+            # _limits_col for its own S calculations.
+            if 's_value' in out.columns:
+                out['s'] = out['s_value']
+                out = out.drop(columns=['s_value'])
+                _S = out['s'].mean()
+            else:
+                _S = _precomputed['_S']
         else:
             # Independent calculation (existing logic)
             df = self.ads.analysis_dataset.copy()
