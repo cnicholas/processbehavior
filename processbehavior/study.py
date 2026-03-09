@@ -1149,6 +1149,8 @@ class Study:
         available = sorted(
             r for r in ('R1', 'R2', 'R3', 'R4', 'R5') if r in ads_cols
         )
+        if self._spec.rsg_vars_list and 'R5' in ads_cols:
+            available.append('R6')
         return StudyResidualAccessor(available)
 
     @property
@@ -1703,7 +1705,10 @@ class Study:
             )
 
         # Resolve value column (response or residual)
-        value_col = self._resolve_value_column(value, recentered)
+        if value is not None and value.upper() == 'R6':
+            value_col = self._compute_r6(by_validated, recentered)
+        else:
+            value_col = self._resolve_value_column(value, recentered)
 
         # Validate residual availability if charting a residual
         # Skip validation for Histogram - histograms can plot any available numeric column
@@ -1758,15 +1763,60 @@ class Study:
                 "Recentered residuals (RCR) reconstruct values relative to "
                 "factor and time means, which require both to be specified."
             )
-        recenterable = {'R1', 'R2', 'R3', 'R4', 'R5'}
+        recenterable = {'R1', 'R2', 'R3', 'R4', 'R5', 'R6'}
         if value is None:
             raise ValidationError(
-                "recentered=True requires a residual value (R1-R5), got value=None"
+                "recentered=True requires a residual value (R1-R6), got value=None"
             )
         if value.upper() not in recenterable:
             raise ValidationError(
-                f"recentered=True requires a residual value (R1-R5), got '{value}'"
+                f"recentered=True requires a residual value (R1-R6), got '{value}'"
             )
+
+    def _compute_r6(
+        self,
+        by: list[str] | None,
+        recentered: bool
+    ) -> str:
+        """Compute R6 (factor main effect residual) on the fly.
+
+        R6 = α_i + R2 where α_i = mean(R5 | factor level(s)).
+        Accepts one or more factors via ``by``.
+        """
+        factors = self._spec.rsg_vars_list
+        if not factors:
+            raise ValueError(
+                "R6 requires factors. No factors defined in this study."
+            )
+
+        # Determine which factor(s) from by
+        if by is not None:
+            by_factors = [b for b in by if b in factors]
+            if not by_factors:
+                raise ValueError(
+                    f"R6 requires at least one factor in by=.\n"
+                    f"Available factors: {factors}\n"
+                    f"Example: study.execute(chart='Xbar', value='R6', by=['{factors[0]}'])"
+                )
+            groupby_key = by_factors if len(by_factors) > 1 else by_factors[0]
+        elif len(factors) == 1:
+            groupby_key = factors[0]
+        else:
+            raise ValueError(
+                f"R6 requires by=[factor(s)] to specify which factor(s).\n"
+                f"Available factors: {factors}\n"
+                f"Example: study.execute(chart='Xbar', value='R6', by=['{factors[0]}'])"
+            )
+
+        df = self._ads.analysis_dataset
+        alpha = df.groupby(groupby_key)['R5'].transform('mean')
+
+        if recentered:
+            df['RCR6'] = df['Ybar'] + alpha + df['R2']
+            return 'RCR6'
+        else:
+            df['R6'] = alpha + df['R2']
+            return 'R6'
 
     def _validate_phased(self, base_chart: str, by_validated: list[str] | None) -> None:
         """Validate phased=True requirements."""
@@ -2102,8 +2152,8 @@ class Study:
         else:
             raise ValueError(
                 f"Invalid value '{value}'. "
-                f"Valid options: 'response', 'R1', 'R2', 'R3', 'R4', 'R5' "
-                f"(or 'RCR1'-'RCR5' for recentered)."
+                f"Valid options: 'response', 'R1', 'R2', 'R3', 'R4', 'R5', 'R6' "
+                f"(or 'RCR1'-'RCR5' for recentered, 'R6' with recentered=True)."
             )
 
         # Validate column exists in analysis dataset
