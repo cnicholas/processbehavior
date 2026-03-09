@@ -176,6 +176,7 @@ class ChartTheme:
 
     # Limit summary annotation (above subplot)
     limit_summary_color: str = '#333333'
+    limit_summary_bgcolor: str = 'rgba(255,255,255,0.7)'
 
     # Zone shading
     zone_a_color: str = '#FFB3B3'  # Light red
@@ -258,7 +259,8 @@ class ChartTheme:
                 'gridwidth': self.grid_width,
                 'showline': self.show_axis_line,
                 'linecolor': self.axis_line_color,
-                'linewidth': self.axis_line_width
+                'linewidth': self.axis_line_width,
+                'zeroline': False
             }
         }
 
@@ -381,6 +383,7 @@ def _create_dark_theme() -> ChartTheme:
         title_font_color='#FFFFFF',
         # Limit summary
         limit_summary_color='#FFFFFF',
+        limit_summary_bgcolor='rgba(30,30,30,0.7)',
     )
 
 
