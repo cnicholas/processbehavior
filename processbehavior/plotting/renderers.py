@@ -323,7 +323,7 @@ def _add_limit_summary_annotation(
             size=theme.annotation_font_size,
             color=theme.limit_summary_color,
         ),
-        bgcolor='rgba(255,255,255,0.7)',
+        bgcolor=theme.limit_summary_bgcolor,
         **subplot_kw,
     )
 
