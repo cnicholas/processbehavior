@@ -174,6 +174,9 @@ class ChartTheme:
     # Tier 2 (Rules 2-8): Orange - pattern-based signals
     pattern_signal_color: str = '#FF8C00'  # Dark Orange
 
+    # Limit summary annotation (above subplot)
+    limit_summary_color: str = '#333333'
+
     # Zone shading
     zone_a_color: str = '#FFB3B3'  # Light red
     zone_b_color: str = '#FFFFB3'  # Light yellow
@@ -376,6 +379,8 @@ def _create_dark_theme() -> ChartTheme:
         font_color='#E0E0E0',
         title_font_size=16,
         title_font_color='#FFFFFF',
+        # Limit summary
+        limit_summary_color='#FFFFFF',
     )
 
 

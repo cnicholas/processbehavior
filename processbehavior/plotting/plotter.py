@@ -188,6 +188,11 @@ class Plotter:
                 "Hint: Check result.charts to see available charts"
             )
 
+        # Reorder stratified companion pairs for side-by-side layout
+        charts_to_plot, forced_ncols = self._reorder_companion_pairs(charts_to_plot)
+        if forced_ncols is not None:
+            ncols = forced_ncols
+
         # Calculate height
         height = self._resolve_height(
             height, width, aspect_ratio, len(charts_to_plot), ncols,
@@ -438,8 +443,9 @@ class Plotter:
             and x_col != time_var
         )
 
-        fig.update_xaxes(
-            title_text=x_label,
+        # Apply axis styling to all subplots, but only show titles on
+        # leftmost column (y-axis) and bottom row (x-axis) to avoid clutter.
+        axis_style_x = dict(
             showline=theme.show_axis_line,
             linecolor=theme.axis_line_color,
             linewidth=theme.axis_line_width,
@@ -448,8 +454,7 @@ class Plotter:
             gridwidth=theme.grid_width,
             **({"type": "category"} if is_factor_axis else {}),
         )
-        fig.update_yaxes(
-            title_text=y_label,
+        axis_style_y = dict(
             showline=theme.show_axis_line,
             linecolor=theme.axis_line_color,
             linewidth=theme.axis_line_width,
@@ -457,6 +462,23 @@ class Plotter:
             gridcolor=theme.grid_color,
             gridwidth=theme.grid_width,
         )
+
+        for idx in range(n_charts):
+            r = idx // ncols + 1
+            c = idx % ncols + 1
+            # Bottom row: last full row, or incomplete last row
+            is_bottom = (r == nrows) or (idx + ncols >= n_charts)
+            is_leftmost = (c == 1)
+            fig.update_xaxes(
+                title_text=x_label if is_bottom else None,
+                **axis_style_x,
+                row=r, col=c,
+            )
+            fig.update_yaxes(
+                title_text=y_label if is_leftmost else None,
+                **axis_style_y,
+                row=r, col=c,
+            )
 
         if histogram_y_range is not None:
             fig.update_yaxes(range=histogram_y_range, autorange=False)
@@ -838,6 +860,66 @@ class Plotter:
     @staticmethod
     def _get_base_chart_type(chart_name: str) -> str:
         return chart_name.split('_')[0]
+
+    @staticmethod
+    def _reorder_companion_pairs(
+        charts: dict,
+    ) -> tuple[dict, int | None]:
+        """Reorder stratified companion charts into paired rows.
+
+        Detects stratified companion pairs (Xbar+S or XmR+R with ≥ 4 charts)
+        and interleaves them so each stratum's pair is side-by-side:
+        ``[Xbar_1_1, S_1_1, Xbar_1_2, S_1_2, ...]``
+
+        Returns ``(reordered_dict, 2)`` to force ncols=2, or
+        ``(charts, None)`` if not applicable.
+        """
+        if len(charts) < 4:
+            return charts, None
+
+        # Determine base types present
+        base_types: dict[str, list[str]] = {}
+        for name in charts:
+            base = name.split('_')[0]
+            base_types.setdefault(base, []).append(name)
+
+        if len(base_types) != 2:
+            return charts, None
+
+        type_set = set(base_types.keys())
+        if type_set not in ({'Xbar', 'S'}, {'XmR', 'R'}):
+            return charts, None
+
+        # Extract stratum suffixes: everything after the first '_'
+        # e.g. "Xbar_1_2" -> "1_2"
+        def suffix(name: str) -> str:
+            return name.split('_', 1)[1] if '_' in name else ''
+
+        # Determine primary/secondary order
+        if 'Xbar' in type_set:
+            primary, secondary = 'Xbar', 'S'
+        else:
+            primary, secondary = 'XmR', 'R'
+
+        # Build lookup by suffix for each type
+        primary_by_suffix = {suffix(n): n for n in base_types[primary]}
+        secondary_by_suffix = {suffix(n): n for n in base_types[secondary]}
+
+        # Interleave using primary order (preserves original stratum ordering)
+        reordered: dict = {}
+        for name in base_types[primary]:
+            sfx = suffix(name)
+            reordered[name] = charts[name]
+            sec_name = secondary_by_suffix.get(sfx)
+            if sec_name:
+                reordered[sec_name] = charts[sec_name]
+
+        # Append any secondary keys without matching primary (shouldn't happen)
+        for name in base_types[secondary]:
+            if name not in reordered:
+                reordered[name] = charts[name]
+
+        return reordered, 2
 
     def _get_x_column(self, data: pd.DataFrame) -> str | None:
         time_var = self.summary.get('time_var')

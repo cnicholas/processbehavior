@@ -264,13 +264,66 @@ def _add_fixed_limit(
         line=dict(color=color, dash=dash, width=width),
         **subplot_kw,
     )
+
+
+def _add_limit_summary_annotation(
+    fig: go.Figure,
+    ctx: RenderContext,
+    row: int | None,
+    col: int | None,
+    ncols: int | None = None,
+) -> None:
+    """Place a single summary annotation above a subplot with UPL/CL/LPL values.
+
+    Replaces the per-line right-side annotations with a compact pipe-delimited
+    string like ``UPL = 238.6 | CL = 237.4 | LPL = 236.2``.
+    """
+    stats = ctx.stats
+    spec = ctx.spec
+    theme = ctx.theme
+
+    parts: list[str] = []
+
+    # UPL
+    if 'upl' in stats and stats['upl'] != 'Varies':
+        parts.append(format_limit_label('UPL', stats['upl'], True))
+
+    # CL
+    center_key = spec.center_key
+    if center_key and center_key in stats and stats[center_key] != 'Varies':
+        parts.append(format_limit_label('CL', stats[center_key], True))
+
+    # LPL
+    if 'lpl' in stats and stats['lpl'] != 'Varies':
+        parts.append(format_limit_label('LPL', stats['lpl'], True))
+
+    if not parts:
+        return
+
+    text = ' | '.join(parts)
+
+    # Build domain-relative refs
+    subplot_kw = _subplot_kwargs(row, col)
+    if row is not None and col is not None:
+        subplot_idx = (row - 1) * (ncols or 1) + col
+        xref = 'x domain' if subplot_idx == 1 else f'x{subplot_idx} domain'
+        yref = 'y domain' if subplot_idx == 1 else f'y{subplot_idx} domain'
+    else:
+        xref = 'x domain'
+        yref = 'y domain'
+
     fig.add_annotation(
-        x=1, xref=xref,
-        y=y,
-        text=label,
+        x=1.0, xref=xref,
+        y=1.0, yref=yref,
+        yanchor='top',
+        xanchor='right',
+        text=text,
         showarrow=False,
-        xanchor='left',
-        font=dict(size=font_size, color=color),
+        font=dict(
+            size=theme.annotation_font_size,
+            color=theme.limit_summary_color,
+        ),
+        bgcolor='rgba(255,255,255,0.7)',
         **subplot_kw,
     )
 
@@ -353,6 +406,10 @@ def _add_limits(
                 theme.center_color, 'solid', theme.center_line_width,
                 font_size, row, col, ncols,
             )
+
+    # ---- Limit summary annotation ----
+    if ctx.show_limit_values:
+        _add_limit_summary_annotation(fig, ctx, row, col, ncols)
 
 
 def _add_signals(

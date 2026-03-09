@@ -260,3 +260,135 @@ class TestSharedYAxis:
         for k in fig.layout:
             if k.startswith('yaxis'):
                 assert fig.layout[k].autorange is not False
+
+
+class TestLimitSummaryAnnotation:
+    """Limit values should appear as a summary above each subplot."""
+
+    def test_limit_summary_annotation_present(self, sds1_study):
+        """Summary annotation text contains UPL, CL, LPL with pipes."""
+        result = sds1_study.execute(chart='Xbar', by=['PRODUCTION TIME'])
+        plotter = Plotter(result)
+        fig = plotter.plot(chart='Xbar').figure
+        annotations = [a for a in fig.layout.annotations
+                       if a.text and 'UPL' in a.text and '|' in a.text]
+        assert len(annotations) > 0, "Should have limit summary annotations"
+        for ann in annotations:
+            assert 'CL' in ann.text
+            assert 'LPL' in ann.text
+            assert ann.xanchor == 'right'
+            assert ann.yanchor == 'top'
+
+    def test_no_right_side_limit_annotations(self, sds1_study):
+        """No annotations with xanchor='left' at x=1 (old per-line labels)."""
+        result = sds1_study.execute(chart='Xbar', by=['PRODUCTION TIME'])
+        plotter = Plotter(result)
+        fig = plotter.plot(chart='Xbar').figure
+        right_side = [a for a in fig.layout.annotations
+                      if getattr(a, 'xanchor', None) == 'left'
+                      and getattr(a, 'x', None) == 1]
+        assert len(right_side) == 0, \
+            f"Found {len(right_side)} old right-side limit annotations"
+
+    def test_limit_summary_hidden_when_values_off(self, sds1_study):
+        """show_limit_values=False suppresses the summary annotation."""
+        result = sds1_study.execute(chart='Xbar', by=['PRODUCTION TIME'])
+        plotter = Plotter(result)
+        fig = plotter.plot(chart='Xbar', show_limit_values=False).figure
+        annotations = [a for a in fig.layout.annotations
+                       if a.text and 'UPL' in a.text and '|' in a.text]
+        assert len(annotations) == 0
+
+    def test_limit_summary_hidden_when_limits_off(self, sds1_study):
+        """show_limits=False suppresses lines AND summary."""
+        result = sds1_study.execute(chart='Xbar', by=['PRODUCTION TIME'])
+        plotter = Plotter(result)
+        fig = plotter.plot(chart='Xbar', show_limits=False).figure
+        annotations = [a for a in fig.layout.annotations
+                       if a.text and 'UPL' in a.text and '|' in a.text]
+        assert len(annotations) == 0
+
+
+class TestFacetedAxisLabels:
+    """Y-axis title only on leftmost column, x-axis title only on bottom row."""
+
+    def test_faceted_ylabel_only_leftmost_column(self, sds1_study):
+        result = sds1_study.execute(chart='Xbar', by=['PRODUCTION TIME'])
+        plotter = Plotter(result)
+        fig = plotter.plot(chart='Xbar', ncols=2).figure
+        # Check yaxis titles: only odd-indexed subplots (col 1) should have title
+        n_charts = len([k for k in fig.layout if k.startswith('yaxis')])
+        for idx in range(n_charts):
+            r = idx // 2 + 1
+            c = idx % 2 + 1
+            axis_key = 'yaxis' if idx == 0 else f'yaxis{idx + 1}'
+            title = fig.layout[axis_key].title
+            if c == 1:
+                assert title and title.text, \
+                    f"{axis_key} (col 1) should have y-axis title"
+            else:
+                assert not (title and title.text), \
+                    f"{axis_key} (col {c}) should NOT have y-axis title"
+
+    def test_faceted_xlabel_only_bottom_row(self, sds1_study):
+        result = sds1_study.execute(chart='Xbar', by=['PRODUCTION TIME'])
+        plotter = Plotter(result)
+        fig = plotter.plot(chart='Xbar', ncols=2).figure
+        n_charts = 8  # 8 strata
+        ncols = 2
+        nrows = 4
+        for idx in range(n_charts):
+            r = idx // ncols + 1
+            c = idx % ncols + 1
+            axis_key = 'xaxis' if idx == 0 else f'xaxis{idx + 1}'
+            title = fig.layout[axis_key].title
+            is_bottom = (r == nrows) or (idx + ncols >= n_charts)
+            if is_bottom:
+                assert title and title.text, \
+                    f"{axis_key} (row {r}) should have x-axis title"
+            else:
+                assert not (title and title.text), \
+                    f"{axis_key} (row {r}) should NOT have x-axis title"
+
+
+class TestCompanionPairedLayout:
+    """Stratified companion charts should pair Xbar/S per stratum."""
+
+    def test_companion_paired_layout_ordering(self, sds1_study):
+        """Keys should alternate Xbar/S per stratum."""
+        result = sds1_study.execute(
+            chart='Xbar', by=['PRODUCTION TIME'], companion=True,
+        )
+        plotter = Plotter(result)
+        fig_wrapper = plotter.plot()
+        # Access the resolved charts via internal path
+        charts = plotter._resolve_charts('Xbar', False, None)
+        # Merge companion
+        companion = plotter._resolve_charts(None, False, None)
+        reordered, forced_ncols = plotter._reorder_companion_pairs(companion)
+        assert forced_ncols == 2
+        keys = list(reordered.keys())
+        # Should alternate: Xbar_X, S_X, Xbar_Y, S_Y, ...
+        for i in range(0, len(keys), 2):
+            assert keys[i].startswith('Xbar'), \
+                f"Even index {i} should be Xbar, got {keys[i]}"
+            if i + 1 < len(keys):
+                assert keys[i + 1].startswith('S'), \
+                    f"Odd index {i+1} should be S, got {keys[i+1]}"
+
+    def test_non_companion_stratified_unchanged(self, sds1_study):
+        """Xbar-only stratified (no companion) should not be reordered."""
+        result = sds1_study.execute(chart='Xbar', by=['PRODUCTION TIME'])
+        plotter = Plotter(result)
+        charts = plotter._resolve_charts('Xbar', False, None)
+        reordered, forced_ncols = plotter._reorder_companion_pairs(charts)
+        assert forced_ncols is None
+        assert list(reordered.keys()) == list(charts.keys())
+
+    def test_simple_companion_unchanged(self, sds1_study):
+        """Non-stratified companion (Xbar+S, 2 charts) is not reordered."""
+        result = sds1_study.execute(chart='Xbar', companion=True)
+        plotter = Plotter(result)
+        charts = plotter._resolve_charts(None, False, None)
+        reordered, forced_ncols = plotter._reorder_companion_pairs(charts)
+        assert forced_ncols is None
