@@ -130,6 +130,12 @@ class LossResult:
         plotly.graph_objects.Figure
         """
         import plotly.graph_objects as go
+        from .plotting.themes import ChartTheme, get_theme
+
+        if theme is None:
+            theme = ChartTheme()
+        elif isinstance(theme, str):
+            theme = get_theme(theme)
 
         # Build (label, pct) pairs
         if structured and self.pdc_by_factor and len(self.pdc_by_factor) >= 2:
@@ -164,6 +170,10 @@ class LossResult:
         r = self.round_to
         text = [f"{round(v, r)}%" for v in values]
         horizontal = orientation.startswith('h')
+        axis_max = max(values) * 1.1 if values else 100
+
+        value_label = "Contribution to Average Loss (%)"
+        component_label = "Components Contributing to Average Loss"
 
         if horizontal:
             fig = go.Figure(go.Bar(
@@ -174,8 +184,9 @@ class LossResult:
                 textposition='outside',
             ))
             fig.update_layout(
-                title=title or "Taguchi Loss Function Analysis",
-                xaxis_title="% of Expected Loss",
+                xaxis_title=value_label,
+                yaxis_title=component_label,
+                xaxis_range=[0, axis_max],
                 width=width,
                 height=height,
                 margin=dict(l=120),
@@ -189,12 +200,17 @@ class LossResult:
                 textposition='outside',
             ))
             fig.update_layout(
-                title=title or "Taguchi Loss Function Analysis",
-                yaxis_title="% of Expected Loss",
+                yaxis_title=value_label,
+                xaxis_title=component_label,
+                yaxis_range=[0, axis_max],
                 width=width,
                 height=height,
                 margin=dict(b=80),
             )
+
+        layout = theme.to_layout_dict()
+        layout['title']['text'] = title or "Taguchi Loss Function Analysis"
+        fig.update_layout(**layout)
 
         return fig
 
