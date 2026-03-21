@@ -499,3 +499,123 @@ class TestEdgeCases:
         fig = create_capability_chart(cap, sample_values, width=1200, height=700)
         assert fig.layout.width == 1200
         assert fig.layout.height == 700
+
+
+# ============================================================================
+# View Parameter
+# ============================================================================
+
+
+class TestViewParameter:
+    """Tests for the view='current'|'potential' parameter."""
+
+    def test_view_current_is_default(self, sample_values):
+        """cap.plot(values) produces same output as cap.plot(values, view='current')."""
+        cap = _make_cap_two_sided(with_r2=True)
+        fig_default = create_capability_chart(cap, sample_values)
+        fig_explicit = create_capability_chart(cap, sample_values, view="current")
+        # Same annotation text
+        assert _get_annotation_text(fig_default) == _get_annotation_text(fig_explicit)
+        # Same number of shapes (vlines)
+        assert len(fig_default.layout.shapes) == len(fig_explicit.layout.shapes)
+
+    def test_view_potential_uses_r2_sigma(self, sample_values):
+        """view='potential' → NPL lines use σ̂_R2, not σ̂."""
+        cap = _make_cap_two_sided(with_r2=True)
+        fig = create_capability_chart(cap, sample_values, view="potential")
+        vlines = _get_vline_shapes(fig)
+        x_values = [s.x0 for s in vlines]
+
+        lnpl_r2 = cap.y_bar - 3 * cap.sigma_hat_r2
+        unpl_r2 = cap.y_bar + 3 * cap.sigma_hat_r2
+        assert lnpl_r2 in x_values
+        assert unpl_r2 in x_values
+
+        # Should NOT have the overall-sigma NPL positions
+        lnpl_overall = cap.y_bar - 3 * cap.sigma_hat
+        unpl_overall = cap.y_bar + 3 * cap.sigma_hat
+        assert lnpl_overall not in x_values
+        assert unpl_overall not in x_values
+
+    def test_view_potential_annotation_shows_cp_cpk(self, sample_values):
+        """view='potential' → annotation has Cp/Cpk, not Pp/Ppk."""
+        cap = _make_cap_two_sided(with_r2=True)
+        fig = create_capability_chart(cap, sample_values, view="potential")
+        text = _get_annotation_text(fig)
+        assert "Cp " in text or "Cp<br>" in text or "Cp " in text
+        assert "Cpk" in text
+        assert "Pp " not in text
+        assert "Ppk" not in text
+        assert "sigma(R2)" in text
+
+    def test_view_potential_without_r2_raises(self, sample_values):
+        """SDS without R2 → ValidationError with helpful message."""
+        from processbehavior.exceptions import ValidationError
+
+        cap = _make_cap_two_sided(with_r2=False)
+        with pytest.raises(ValidationError, match="Cannot plot potential capability"):
+            create_capability_chart(cap, sample_values, view="potential")
+
+    def test_invalid_view_raises(self, sample_values):
+        """view='foo' → ValueError."""
+        cap = _make_cap_two_sided()
+        with pytest.raises(ValueError, match="view must be"):
+            create_capability_chart(cap, sample_values, view="foo")
+
+    def test_view_potential_title(self, sample_values):
+        """view='potential' auto-title says 'Potential Capability'."""
+        cap = _make_cap_two_sided(with_r2=True)
+        fig = create_capability_chart(cap, sample_values, view="potential")
+        assert "Potential Capability" in fig.layout.title.text
+
+
+# ============================================================================
+# Paired Parameter
+# ============================================================================
+
+
+class TestPairedParameter:
+    """Tests for the paired=True two-panel facet."""
+
+    def test_paired_creates_two_panels(self, sample_values):
+        """paired=True → figure has 2 subplots (xaxis and xaxis2)."""
+        cap = _make_cap_two_sided(with_r2=True)
+        fig = create_capability_chart(cap, sample_values, paired=True)
+        assert isinstance(fig, go.Figure)
+        # Subplots create xaxis2
+        assert fig.layout.xaxis2 is not None
+        assert fig.layout.yaxis2 is not None
+
+    def test_paired_has_two_histograms(self, sample_values):
+        """paired=True → two histogram traces."""
+        cap = _make_cap_two_sided(with_r2=True)
+        fig = create_capability_chart(cap, sample_values, paired=True)
+        histograms = [t for t in fig.data if isinstance(t, go.Histogram)]
+        assert len(histograms) == 2
+
+    def test_paired_has_two_annotations(self, sample_values):
+        """paired=True → two annotation boxes (one per panel)."""
+        cap = _make_cap_two_sided(with_r2=True)
+        fig = create_capability_chart(cap, sample_values, paired=True)
+        mono_annotations = [
+            a for a in fig.layout.annotations
+            if hasattr(a, "font") and a.font and a.font.family == "monospace"
+        ]
+        assert len(mono_annotations) == 2
+
+    def test_paired_without_r2_warns_and_falls_back(self, sample_values):
+        """No R2 → warning + single current panel."""
+        cap = _make_cap_two_sided(with_r2=False)
+        with pytest.warns(UserWarning, match="Potential capability unavailable"):
+            fig = create_capability_chart(cap, sample_values, paired=True)
+        # Falls back to single chart — only one histogram
+        histograms = [t for t in fig.data if isinstance(t, go.Histogram)]
+        assert len(histograms) == 1
+
+    def test_paired_subplot_titles(self, sample_values):
+        """paired=True → subplot titles include 'Current' and 'Potential'."""
+        cap = _make_cap_two_sided(with_r2=True)
+        fig = create_capability_chart(cap, sample_values, paired=True)
+        annotation_texts = [a.text for a in fig.layout.annotations]
+        assert "Current Capability" in annotation_texts
+        assert "Potential Capability" in annotation_texts

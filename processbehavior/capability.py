@@ -178,6 +178,7 @@ class CapabilityResult:
     # ------------------------------------------------------------------
 
     def plot(self, values, *, theme=None, show_potential=True,
+             view="current", paired=False,
              x_label=None, nbins=None, histnorm="", width=900, height=500,
              title=None):
         """
@@ -191,6 +192,11 @@ class CapabilityResult:
             Visual theme (default: processbehavior theme).
         show_potential : bool, default True
             Show Cp/Cpk in the annotation box when available.
+        view : str, default ``'current'``
+            ``'current'`` for NPLs from overall σ̂ (Pp/Ppk), or
+            ``'potential'`` for NPLs from R2 σ̂_R2 (Cp/Cpk).
+        paired : bool, default False
+            Two-panel facet: Current (left) | Potential (right).
         x_label, nbins, histnorm, width, height, title
             Passed through to ``create_capability_chart()``.
 
@@ -202,6 +208,7 @@ class CapabilityResult:
 
         return create_capability_chart(
             self, values, theme=theme, show_potential=show_potential,
+            view=view, paired=paired,
             x_label=x_label, nbins=nbins, histnorm=histnorm,
             width=width, height=height, title=title,
         )
