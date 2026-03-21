@@ -32,6 +32,7 @@ def _make_cap_two_sided(*, with_r2: bool = True, sigma_hat: float = 1.5) -> Capa
     ppk = min(ppk_lower, ppk_upper)
 
     cp = cpk = cpk_lower = cpk_upper = sigma_hat_r2 = None
+    potential_values = None
     reason = "no R2" if not with_r2 else None
     if with_r2:
         sigma_hat_r2 = 0.8
@@ -39,6 +40,9 @@ def _make_cap_two_sided(*, with_r2: bool = True, sigma_hat: float = 1.5) -> Capa
         cpk_lower = (y_bar - 233) / (3 * sigma_hat_r2)
         cpk_upper = (243 - y_bar) / (3 * sigma_hat_r2)
         cpk = min(cpk_lower, cpk_upper)
+        # Synthetic R2 recentered to y_bar: tight distribution around y_bar
+        rng = np.random.default_rng(123)
+        potential_values = y_bar + rng.normal(0, 0.8, size=n)
 
     return CapabilityResult(
         specs=specs, n=n, y_bar=y_bar, s=sigma_hat * 0.99, sigma_hat=sigma_hat,
@@ -46,6 +50,7 @@ def _make_cap_two_sided(*, with_r2: bool = True, sigma_hat: float = 1.5) -> Capa
         sigma_hat_r2=sigma_hat_r2, cp=cp, cpk_lower=cpk_lower,
         cpk_upper=cpk_upper, cpk=cpk,
         potential_unavailable_reason=reason,
+        potential_values=potential_values,
         z_lower=(y_bar - 233) / sigma_hat, z_upper=(243 - y_bar) / sigma_hat,
         n_below_lsl=2, n_above_usl=3, n_outside=5,
         pct_below_lsl=2.0, pct_above_usl=3.0, pct_outside=5.0,
@@ -519,23 +524,55 @@ class TestViewParameter:
         # Same number of shapes (vlines)
         assert len(fig_default.layout.shapes) == len(fig_explicit.layout.shapes)
 
-    def test_view_potential_uses_r2_sigma(self, sample_values):
-        """view='potential' → NPL lines use σ̂_R2, not σ̂."""
+    def test_view_potential_histograms_recentered_r2(self, sample_values):
+        """view='potential' → histogram uses y_bar + R2, not raw Y values."""
+        cap = _make_cap_two_sided(with_r2=True)
+        fig = create_capability_chart(cap, sample_values, view="potential")
+        hist = [t for t in fig.data if isinstance(t, go.Histogram)][0]
+        # Histogram x-data should be potential_values, not raw sample_values
+        np.testing.assert_array_equal(hist.x, cap.potential_values)
+
+    def test_view_potential_no_npl_lines(self, sample_values):
+        """view='potential' → no NPL vlines (only spec lines + mean)."""
         cap = _make_cap_two_sided(with_r2=True)
         fig = create_capability_chart(cap, sample_values, view="potential")
         vlines = _get_vline_shapes(fig)
         x_values = [s.x0 for s in vlines]
 
+        # NPL lines should NOT be present
         lnpl_r2 = cap.y_bar - 3 * cap.sigma_hat_r2
         unpl_r2 = cap.y_bar + 3 * cap.sigma_hat_r2
-        assert lnpl_r2 in x_values
-        assert unpl_r2 in x_values
+        assert lnpl_r2 not in x_values
+        assert unpl_r2 not in x_values
 
-        # Should NOT have the overall-sigma NPL positions
-        lnpl_overall = cap.y_bar - 3 * cap.sigma_hat
-        unpl_overall = cap.y_bar + 3 * cap.sigma_hat
-        assert lnpl_overall not in x_values
-        assert unpl_overall not in x_values
+        # Mean line should still be present
+        assert cap.y_bar in x_values
+
+    def test_view_potential_default_percent_yaxis(self, sample_values):
+        """view='potential' defaults y-axis to 'Percent' when histnorm not overridden."""
+        cap = _make_cap_two_sided(with_r2=True)
+        fig = create_capability_chart(cap, sample_values, view="potential")
+        assert fig.layout.yaxis.title.text == "Percent"
+
+    def test_view_potential_histnorm_override(self, sample_values):
+        """Caller can override the default percent histnorm for potential view."""
+        cap = _make_cap_two_sided(with_r2=True)
+        fig = create_capability_chart(
+            cap, sample_values, view="potential", histnorm="probability density"
+        )
+        assert fig.layout.yaxis.title.text == "Probability Density"
+
+    def test_view_current_still_shows_npl_lines(self, sample_values):
+        """Regression: current view still has NPL lines."""
+        cap = _make_cap_two_sided(with_r2=True)
+        fig = create_capability_chart(cap, sample_values, view="current")
+        vlines = _get_vline_shapes(fig)
+        x_values = [s.x0 for s in vlines]
+
+        lnpl = cap.y_bar - 3 * cap.sigma_hat
+        unpl = cap.y_bar + 3 * cap.sigma_hat
+        assert lnpl in x_values
+        assert unpl in x_values
 
     def test_view_potential_annotation_shows_cp_cpk(self, sample_values):
         """view='potential' → annotation has Cp/Cpk, not Pp/Ppk."""

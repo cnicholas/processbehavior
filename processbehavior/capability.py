@@ -166,6 +166,9 @@ class CapabilityResult:
     pct_above_usl: float | None
     pct_outside: float | None
 
+    # Potential view data
+    potential_values: np.ndarray | None = None
+
     # Stability context
     stability_evaluated: bool = False
     stability_warning: str | None = None
@@ -528,6 +531,7 @@ def assess_capability(
     cpk_upper = None
     cpk = None
     potential_unavailable_reason = None
+    potential_values = None
 
     if ads.has_vas_residuals and "R2" in df.columns:
         r2_values = df["R2"].dropna().to_numpy(dtype=float)
@@ -540,6 +544,7 @@ def assess_capability(
             cpk_lower = pot["ppk_lower"]
             cpk_upper = pot["ppk_upper"]
             cpk = pot["ppk"]
+            potential_values = y_bar + r2_values
         else:
             potential_unavailable_reason = (
                 f"Too few R2 residual values ({n_r2}) for potential capability; "
@@ -567,6 +572,7 @@ def assess_capability(
         cpk_upper=cpk_upper,
         cpk=cpk,
         potential_unavailable_reason=potential_unavailable_reason,
+        potential_values=potential_values,
         z_lower=current["z_lower"],
         z_upper=current["z_upper"],
         n_below_lsl=outside["n_below_lsl"],
