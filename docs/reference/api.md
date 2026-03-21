@@ -274,7 +274,6 @@ Returns a new `AnalysisResult` containing only data for the specified stratum. E
 fig = result.plot(
     chart: str = None,
     facet: bool = False,
-    facet_by: str = None,
     ncols: int = 2,
     show_limits: bool = True,
     show_zones: bool = False,

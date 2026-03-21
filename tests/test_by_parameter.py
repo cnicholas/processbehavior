@@ -135,7 +135,7 @@ class TestXbarAggregation:
         assert len(xbar_data) == 3
 
     def test_xbar_by_empty_equals_by_none(self, sds1_study):
-        """Xbar with by=[] should behave identically to by=None (Kt level)."""
+        """Xbar with by=[] is equivalent to by=None (cell-level grouping, not collapse)."""
         result_empty = sds1_study.execute(chart='Xbar', by=[])
         result_none = sds1_study.execute(chart='Xbar')
         # Both should have same number of rows (Kt level)

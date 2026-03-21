@@ -1563,7 +1563,8 @@ class Study:
 
             - by=None: Default for chart type (full rsg_key for Xbar/S,
               ERROR for XmR/R with factors - must be explicit)
-            - by=[]: Collapse all factors (single overall chart/group)
+            - by=[]: For XmR/R: single overall chart (collapse all factors).
+              For Xbar/S: equivalent to by=None (cell-level grouping).
             - by=['factor']: Stratify/aggregate by single factor
             - by=['f1', 'f2']: Stratify/aggregate by factor combination
 
@@ -1760,6 +1761,13 @@ class Study:
         # Determine if this is a residual chart
         is_residual = value is not None and value.upper().startswith('R')
 
+        if is_residual and base_chart == 'R':
+            raise ValidationError(
+                f"Chart type 'R' (moving range) is not supported for residual charts.\n"
+                f"Residual charts support: Xbar, S, XmR, Histogram.\n"
+                f"Use: study.execute(chart='XmR', value='{value}')"
+            )
+
         # Build chart request (ephemeral, per-execute)
         from .formulation_spec import ChartRequest
 
@@ -1836,14 +1844,14 @@ class Study:
                 f"Example: study.execute(chart='Xbar', value='R6', by=['{factors[0]}'])"
             )
 
-        df = self._ads.analysis_dataset
+        df = self._ads.analysis_dataset.copy()
         alpha = df.groupby(groupby_key)['R5'].transform('mean')
 
         df['R6'] = alpha + df['R2']
         if recentered:
             df['RCR6'] = df['Ybar'] + alpha + df['R2']
-            return 'RCR6'
-        return 'R6'
+        self._ads.analysis_dataset = df
+        return 'RCR6' if recentered else 'R6'
 
     def _validate_phased(self, base_chart: str, by_validated: list[str] | None) -> None:
         """Validate phased=True requirements."""

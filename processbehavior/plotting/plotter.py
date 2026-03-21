@@ -60,7 +60,7 @@ class Plotter:
 
     Faceted charts::
 
-        fig = plotter.plot(facet_by='Operator')
+        fig = plotter.plot(facet=True)
 
     Customize appearance::
 
@@ -82,7 +82,6 @@ class Plotter:
         self,
         chart: str | None = None,
         facet: bool = False,
-        facet_by: str | None = None,
         ncols: int = 2,
         highlight_signals: bool = True,
         show_limits: bool = True,
@@ -112,8 +111,6 @@ class Plotter:
             If None, plots all available charts.
         facet : bool, default False
             Whether to create faceted plot for stratified data.
-        facet_by : str, optional
-            Variable to facet by (overrides auto-detection).
         ncols : int, default 2
             Number of columns in faceted layout.
         highlight_signals : bool, default True
@@ -180,7 +177,7 @@ class Plotter:
             )
 
         # Determine what to plot
-        charts_to_plot = self._resolve_charts(chart, facet, facet_by)
+        charts_to_plot = self._resolve_charts(chart, facet)
 
         if not charts_to_plot:
             raise PlotError(
@@ -436,25 +433,28 @@ class Plotter:
         # Layout
         fig.update_layout(width=width, height=height, hovermode='closest')
 
-        # Force categorical axis when x_col is a factor column (not time/index)
+        # Collect per-panel x_col to determine axis type per subplot
         time_var = self.summary.get('time_var')
-        is_factor_axis = (
-            x_col and x_col not in ('subgroup', 'rsg', 'group')
-            and x_col != time_var
-        )
+        panel_x_cols: dict[int, str | None] = {}
+        for idx, (chart_name, chart_info) in enumerate(charts.items()):
+            metadata = chart_info.get('metadata', {})
+            if metadata.get('chart_type') == 'Histogram':
+                panel_x_cols[idx] = None
+            else:
+                panel_x_cols[idx] = self._get_x_column(chart_info['data'])
 
         # Apply axis styling to all subplots, but only show titles on
         # leftmost column (y-axis) and bottom row (x-axis) to avoid clutter.
-        axis_style_x = dict(
+        axis_style_y = dict(
             showline=theme.show_axis_line,
             linecolor=theme.axis_line_color,
             linewidth=theme.axis_line_width,
             showgrid=theme.show_grid,
             gridcolor=theme.grid_color,
             gridwidth=theme.grid_width,
-            **({"type": "category"} if is_factor_axis else {}),
         )
-        axis_style_y = dict(
+
+        axis_style_x_base = dict(
             showline=theme.show_axis_line,
             linecolor=theme.axis_line_color,
             linewidth=theme.axis_line_width,
@@ -469,9 +469,15 @@ class Plotter:
             # Bottom row: last full row, or incomplete last row
             is_bottom = (r == nrows) or (idx + ncols >= n_charts)
             is_leftmost = (c == 1)
+            panel_xcol = panel_x_cols.get(idx)
+            is_factor_axis = (
+                panel_xcol and panel_xcol not in ('subgroup', 'rsg', 'group')
+                and panel_xcol != time_var
+            )
             fig.update_xaxes(
                 title_text=x_label if is_bottom else None,
-                **axis_style_x,
+                **axis_style_x_base,
+                **({"type": "category"} if is_factor_axis else {}),
                 row=r, col=c,
             )
             fig.update_yaxes(
@@ -783,7 +789,7 @@ class Plotter:
     # =================================================================
 
     def _resolve_charts(
-        self, chart: str | None, facet: bool, facet_by: str | None,
+        self, chart: str | None, facet: bool,
     ) -> dict:
         """Determine which charts to plot."""
         if chart:
@@ -796,7 +802,7 @@ class Plotter:
                 }
             return {chart: chart_info}
 
-        if facet or facet_by or self.summary.get('is_stratified', False):
+        if facet or self.summary.get('is_stratified', False):
             return self._get_stratified_charts()
 
         # Standard charts

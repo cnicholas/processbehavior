@@ -22,7 +22,6 @@ The `plot()` method accepts many customization options:
 fig = result.plot(
     chart=None,              # Specific chart or None for default/all
     facet=False,             # Create faceted plot for stratified data
-    facet_by=None,           # Variable to facet by
     ncols=2,                 # Columns in faceted layout
     show_limits=True,        # Show control limits (UCL, LCL)
     show_zones=False,        # Show zone shading (A, B, C)

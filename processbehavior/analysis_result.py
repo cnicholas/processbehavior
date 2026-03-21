@@ -1290,7 +1290,6 @@ class AnalysisResult:
         self,
         chart: str | None = None,
         facet: bool = False,
-        facet_by: str | None = None,
         ncols: int = 2,
         highlight_signals: bool = True,
         show_limits: bool = True,
@@ -1320,8 +1319,6 @@ class AnalysisResult:
             If None, plots all available charts.
         facet : bool, default False
             Whether to create faceted plot for stratified data.
-        facet_by : str, optional
-            Variable to facet by (overrides auto-detection).
         ncols : int, default 2
             Number of columns in faceted layout.
         highlight_signals : bool, default True
@@ -1365,7 +1362,7 @@ class AnalysisResult:
         --------
         >>> fig = result.plot()
         >>> fig = result.plot(chart='Xbar', show_zones=True, show_stats=True)
-        >>> fig = result.plot(facet_by='Operator', ncols=3)
+        >>> fig = result.plot(facet=True, ncols=3)
         """
         from .plotting import Plotter
 
@@ -1376,7 +1373,6 @@ class AnalysisResult:
         return plotter.plot(
             chart=chart,
             facet=facet,
-            facet_by=facet_by,
             ncols=ncols,
             highlight_signals=highlight_signals,
             show_limits=show_limits,
