@@ -319,12 +319,12 @@ def _compute_unexplained_replicated(df, response_var: str) -> float:
 
 def _compute_unexplained_pooled(df) -> float:
     """
-    Eq 15.18/15.19: pooled sigma from R2 for designs with singleton cells.
+    Eq 15.18/15.19: pooled sigma from R2 for ADS 2/3.
 
-    Uses std(R2, ddof=1) / c4(n_R2) then squares.
+    Uses std(R2, ddof=1) / 0.7 then squares (Wheeler/Bishop Eq 15.18).
     """
     r2 = df['R2'].dropna().to_numpy(dtype=float)
-    sigma_hat = np.std(r2, ddof=1) / c4(len(r2))
+    sigma_hat = np.std(r2, ddof=1) / 0.7
     return float(sigma_hat ** 2)
 
 
