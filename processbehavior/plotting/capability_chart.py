@@ -120,6 +120,9 @@ def create_capability_chart(
     if theme is None:
         theme = get_theme("processbehavior")
 
+    # Track whether caller explicitly set histnorm
+    caller_histnorm = histnorm
+
     vals = _normalize_values(values)
     specs = cap.specs
 
@@ -133,11 +136,15 @@ def create_capability_chart(
         )
 
         for col, v in enumerate(("current", "potential"), start=1):
+            # Default to "percent" for potential panel when caller didn't specify
+            panel_histnorm = caller_histnorm
+            if v == "potential" and not caller_histnorm:
+                panel_histnorm = "percent"
             _render_single_capability(
                 fig, cap, vals, specs, theme,
                 view=v,
                 show_potential_text=show_potential,
-                nbins=nbins, histnorm=histnorm, x_label=x_label,
+                nbins=nbins, histnorm=panel_histnorm, x_label=x_label,
                 row=1, col=col,
             )
 
@@ -157,16 +164,21 @@ def create_capability_chart(
             bargap=0.05,
         )
 
-        y_label = "Count" if not histnorm else histnorm.title()
         x_lab = x_label or "Value"
         fig.update_xaxes(title_text=x_lab, row=1, col=1)
         fig.update_xaxes(title_text=x_lab, row=1, col=2)
-        fig.update_yaxes(title_text=y_label, row=1, col=1)
-        fig.update_yaxes(title_text=y_label, row=1, col=2)
+        y_label_left = "Count" if not caller_histnorm else caller_histnorm.title()
+        y_label_right = "Percent" if not caller_histnorm else caller_histnorm.title()
+        fig.update_yaxes(title_text=y_label_left, row=1, col=1)
+        fig.update_yaxes(title_text=y_label_right, row=1, col=2)
 
         return fig
 
     # --- Single chart mode ---
+    # Default to "percent" for potential view when caller didn't specify
+    if view == "potential" and not caller_histnorm:
+        histnorm = "percent"
+
     fig = go.Figure()
 
     _render_single_capability(
@@ -224,9 +236,10 @@ def _render_single_capability(
     """
     is_subplot = row is not None and col is not None
 
-    # 1. Histogram
+    # 1. Histogram — potential view uses recentered R2 values
+    hist_data = cap.potential_values if view == "potential" and cap.potential_values is not None else vals
     hist_kwargs: dict = dict(
-        x=vals,
+        x=hist_data,
         marker_color=theme.data_color,
         opacity=0.75,
         histnorm=histnorm if histnorm else None,
@@ -246,8 +259,12 @@ def _render_single_capability(
     # 3. Spec limit lines
     _add_spec_lines(fig, specs, row=row, col=col)
 
-    # 4. NPL lines — view-dependent sigma
-    _add_npl_lines(fig, cap, theme, view=view, row=row, col=col)
+    # 4. NPL lines — skip for potential view (only spec lines + mean)
+    if view != "potential":
+        _add_npl_lines(fig, cap, theme, view=view, row=row, col=col)
+    else:
+        # Still draw the mean line for potential view
+        _add_mean_line(fig, cap, theme, row=row, col=col)
 
     # 5. Legend traces
     _add_legend_traces(fig, cap, theme, view=view, row=row, col=col)
@@ -551,6 +568,32 @@ def _add_npl_lines(
         )
 
 
+def _add_mean_line(
+    fig: go.Figure, cap: CapabilityResult, theme: ChartTheme,
+    *, row: int | None = None, col: int | None = None,
+) -> None:
+    """Add only the mean (Y-bar) vertical line — used by potential view."""
+    center_color = theme.center_color
+    is_subplot = row is not None and col is not None
+
+    if is_subplot:
+        xref, yref = _get_axis_ref(row, col)
+        fig.add_shape(
+            type="line", x0=cap.y_bar, x1=cap.y_bar, y0=0, y1=1,
+            xref=xref, yref=f"{yref} domain",
+            line=dict(color=center_color, width=2, dash="solid"),
+            layer="above",
+        )
+    else:
+        fig.add_vline(
+            x=cap.y_bar,
+            line_color=center_color,
+            line_width=2,
+            line_dash="solid",
+            layer="above",
+        )
+
+
 def _add_legend_traces(
     fig: go.Figure, cap: CapabilityResult, theme: ChartTheme,
     *, view: str = "current",
@@ -612,8 +655,8 @@ def _add_legend_traces(
     else:
         fig.add_trace(go.Scatter(**trace_kwargs))
 
-    # NPL (dashed green) — uses view-dependent sigma
-    if sigma is not None and sigma > 0:
+    # NPL (dashed green) — uses view-dependent sigma; skip for potential view
+    if view != "potential" and sigma is not None and sigma > 0:
         lnpl = round(cap.y_bar - 3 * sigma, cap.round_to)
         unpl = round(cap.y_bar + 3 * sigma, cap.round_to)
         trace_kwargs = dict(
