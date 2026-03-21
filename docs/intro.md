@@ -104,11 +104,11 @@ ProcessBehavior identifies six distinct sampling design states (SDS 1-6) and con
 
 ### Wheeler's Variance Analysis System (VAS)
 For replicated designs, ProcessBehavior computes the complete residual decomposition:
-- **R1**: Within-cell residuals (pure measurement variation)
-- **R2**: Time-level residuals (unexplained variation after removing time effects)
-- **R3**: Factor-level residuals
-- **R4**: Interaction residuals
-- **R5**: Main effect residuals
+- **R1**: Total deviation (Y - grand mean)
+- **R2**: Within-cell variation (unexplained noise)
+- **R3**: Interaction residual (factor × time)
+- **R4**: Time effect + within-cell variation
+- **R5**: Factor effect + within-cell variation
 
 ### Western Electric Rules
 Built-in signal detection with configurable rules:

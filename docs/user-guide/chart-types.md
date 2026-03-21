@@ -20,9 +20,9 @@ Use the `value` parameter to chart residuals instead of the response:
 | Residual | Chart | Purpose |
 |----------|-------|---------|
 | **R2** | S or XmR | Check within-group variation stability |
-| **R3** | XmR | Detect factor × time interactions |
-| **R4** | XmR | Detect time effects |
-| **R5** | Xbar or XmR | Detect factor effects |
+| **R3** | Xbar, S, or XmR | Detect factor × time interactions |
+| **R4** | Xbar, S, or XmR | Detect time effects |
+| **R5** | Xbar, S, or XmR | Detect factor effects |
 
 ```python
 # Chart R5 residuals on Xbar
@@ -218,6 +218,12 @@ Plots the **standard deviation** of each subgroup.
 - **Centerline**: Pooled within-subgroup standard deviation
 - **Control Limits**: Based on chi-square distribution
 - **Interpretation**: Points beyond limits indicate subgroups with unusual variation
+
+!!! note "S chart with effect residuals (R3/R4/R5)"
+    When charting an effect residual on S, the data points show R2's
+    within-group standard deviation, not the requested residual's. The S chart always
+    measures within-cell noise stability. See [How Effect Residuals Are
+    Charted](residuals.md#how-effect-residuals-are-charted).
 
 ### Reading Order
 

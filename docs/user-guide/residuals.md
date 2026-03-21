@@ -135,6 +135,32 @@ When charting R5 on Xbar, limits use R2's Sbar (within-cell noise), not R5's own
 - No signals → Factor differences are within normal variation
 - Use for equipment comparison, operator comparison, etc.
 
+## How Effect Residuals Are Charted
+
+When you chart an effect-carrying residual (R3, R4, or R5) on Xbar or S, the system substitutes **R2** as the dispersion basis. Understanding this substitution is key to interpreting these charts correctly.
+
+### Why R2 sets the limits
+
+R3, R4, and R5 contain structural effects by design — that's what makes them useful. But if R4's own standard deviation set the Xbar limits, the time effect would widen them, defeating the purpose of looking for signals *beyond* the expected variation. By substituting R2 (pure within-cell noise), the limits reflect only unexplained variation, making structural effects visible as signals.
+
+### Chart-by-chart behavior
+
+| Chart | What is plotted | What sets the limits |
+|-------|----------------|---------------------|
+| **Xbar** | Subgroup means of the requested residual | R2's within-group Sbar |
+| **S** | R2's within-group std (**not** the requested residual's) | R2's Sbar for CL and limits |
+| **XmR** | Individual residual values | Moving range of the residual itself (no R2 substitution) |
+
+### The S chart surprise
+
+This is the most counterintuitive behavior: `execute(chart='S', value='R3')` plots R2's within-group standard deviation, not R3's. The S chart always answers "is within-cell noise stable?" regardless of which residual you request. This is correct — the S chart's job is to verify that the dispersion basis (R2) is stable before you interpret the Xbar chart above it.
+
+### When does this matter?
+
+The R2 substitution only matters when `by` collapses factors. At the full RSG level (all factors in `by`), the residual's within-group standard deviation equals R2's, so there is no visible difference. When you collapse — e.g., `by=['factor1']` in a two-factor study — R2 correctly isolates within-cell noise while the residual's own std would include between-cell variance from the collapsed dimension.
+
+For XmR charts, there is no substitution. The moving range is always computed from the requested residual's own values.
+
 ## Re-centered Residuals
 
 By default, residual charts are centered at zero. Use `recentered=True` to show on the original measurement scale:
@@ -150,8 +176,11 @@ result = study.execute(chart='XmR', by=['lane'], value='R4', recentered=True)
 ```
 
 Re-centering formulas:
+- RCR3 = R3 + (Y̅<sub>k</sub> + Y̅<sub>t</sub> - Y̅) — adds back factor and time main effects
 - RCR4 = R4 + Y̅<sub>t</sub>
 - RCR5 = R5 + Y̅<sub>k</sub>
+
+**Note on recentered moving ranges**: For recentered residuals on XmR, the moving range is computed from the non-recentered version (e.g., RCR3 uses MR from R3). This avoids structural jumps between factor levels inflating the moving ranges.
 
 ## Residual Availability by SDS
 

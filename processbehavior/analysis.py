@@ -385,17 +385,19 @@ class Analysis:
     def _resolve_limits_column(value_col: str, df: pd.DataFrame) -> str:
         """Return the column to use for within-group std in limit calculations.
 
-        For effect-carrying residuals (R4/R5/RCR4/RCR5), use R2/RCR2 instead.
-        At collapsed groupings, R5's within-group std includes between-cell
-        variance from the collapsed dimension, inflating limits. R2 (within-cell
-        noise) is the correct basis per Wheeler/Bishop.
+        For effect-carrying residuals (R1/R3/R4/R5 and RCR variants), use R2 instead.
+        Non-R2 residuals retain structural effects (factor, time, interaction)
+        whose within-group std inflates limits. R2 (within-cell noise) is the
+        correct dispersion basis per Wheeler/Bishop.
+
+        Always uses plain R2 (not RCR2) because recentered residuals add
+        cell-specific offsets that inflate within-group std when groups span
+        multiple cells.
         """
-        _EFFECT_RESIDUALS = {'R4', 'R5', 'RCR4', 'RCR5'}
+        _EFFECT_RESIDUALS = {'R1', 'R3', 'R4', 'R5', 'RCR1', 'RCR3', 'RCR4', 'RCR5'}
         if value_col is not None and value_col.upper() in _EFFECT_RESIDUALS:
-            _rcr = value_col.upper().startswith('RCR')
-            _candidate = 'RCR2' if _rcr else 'R2'
-            if _candidate in df.columns:
-                return _candidate
+            if 'R2' in df.columns:
+                return 'R2'
         return value_col
 
     def _resolve_by_grouping(
@@ -1052,28 +1054,28 @@ class Analysis:
                 # Use precomputed data from Xbar stratified
                 inter = per_stratum[stratum]
                 out = inter['out'].copy()
-                # Swap in s_value (std of value_col) if Xbar used a different
-                # _limits_col for its own S calculations.
+                # Always use Xbar's _S (R2-based for residuals) for CL and limits
+                _S = inter['_S']
+                # Drop s_value — S chart plots R2 std (same basis as CL/limits)
                 if 's_value' in out.columns:
-                    out['s'] = out['s_value']
                     out = out.drop(columns=['s_value'])
-                    _S = out['s'].mean()
-                else:
-                    _S = inter['_S']
                 n_to_use = inter['n_to_use']
                 n_max = inter['n_max']
                 n_avg = inter['n_avg']
             else:
                 sdf = df[df[stratify_col] == stratum].copy()
-                out = sdf.groupby(groupby_cols, as_index=False, observed=True).agg(
-                    s=pd.NamedAgg(column=value_col, aggfunc="std"),
-                    n=pd.NamedAgg(column=spec.response_var, aggfunc="count"),
-                )
+                _limits_col = self._resolve_limits_column(value_col, sdf)
+                agg_dict = {
+                    's': pd.NamedAgg(column=_limits_col, aggfunc="std"),
+                    'n': pd.NamedAgg(column=spec.response_var, aggfunc="count"),
+                }
+                out = sdf.groupby(groupby_cols, as_index=False, observed=True).agg(**agg_dict)
                 mask = out['n'].eq(1)
                 out = out[~mask]
                 if out.shape[0] == 0:
                     continue
                 out['N'] = out['n'].max()
+                # CL from R2-based std — S chart plots same basis
                 _S = out['s'].mean()
                 n_to_use, n_max = self._determine_n_to_use(out)
                 n_avg = None
@@ -1176,14 +1178,11 @@ class Analysis:
             group_col = _precomputed['group_col']
             out = _precomputed['out'].copy()
             n_avg = _precomputed.get('n_avg')
-            # Swap in s_value (std of value_col) if Xbar used a different
-            # _limits_col for its own S calculations.
+            # Always use Xbar's _S (R2-based for residuals) for CL and limits
+            _S = _precomputed['_S']
+            # Drop s_value — S chart plots R2 std (same basis as CL/limits)
             if 's_value' in out.columns:
-                out['s'] = out['s_value']
                 out = out.drop(columns=['s_value'])
-                _S = out['s'].mean()
-            else:
-                _S = _precomputed['_S']
         else:
             # Independent calculation (existing logic)
             df = self.ads.analysis_dataset.copy()
@@ -1198,9 +1197,11 @@ class Analysis:
                 )
 
 
+            _limits_col = self._resolve_limits_column(value_col, df)
+
             # Handle by=[] (collapse all) - single point chart
             if groupby_cols == []:
-                _S = df[value_col].std()
+                _S = df[_limits_col].std()
                 _N = len(df)
                 out = pd.DataFrame({
                     'group': ['All'],
@@ -1209,11 +1210,12 @@ class Analysis:
                     'N': [_N]
                 })
             else:
-                out = df.groupby(groupby_cols, as_index=False, observed=True).agg(
-                    s=pd.NamedAgg(column=value_col, aggfunc="std"),
+                agg_dict = {
+                    's': pd.NamedAgg(column=_limits_col, aggfunc="std"),
                     # Count on response_var (not value_col) to avoid NaN issues with residuals
-                    n=pd.NamedAgg(column=spec.response_var, aggfunc="count"),
-                )
+                    'n': pd.NamedAgg(column=spec.response_var, aggfunc="count"),
+                }
+                out = df.groupby(groupby_cols, as_index=False, observed=True).agg(**agg_dict)
 
                 # remove groups with a single observation
                 mask = out['n'].eq(1)
@@ -1225,7 +1227,7 @@ class Analysis:
 
                 out['N'] = out['n'].max()
 
-            # Calculate center line (mean of subgroup std devs)
+            # CL from R2-based std — S chart plots same basis
             _S = out["s"].mean()
 
             # Determine if subgroup sizes are constant or variable
@@ -1367,6 +1369,18 @@ class Analysis:
         # Combine results
         return {**xbar_result, **s_result}
 
+    @staticmethod
+    def _resolve_mr_source_column(value_col: str) -> str:
+        """Map recentered column (RCR*) to its non-recentered residual (R*).
+
+        Moving ranges must be computed from non-recentered residuals to avoid
+        inflating mR with structural jumps between cells. Returns value_col
+        unchanged if it is not a recentered column.
+        """
+        if value_col.startswith('RCR'):
+            return value_col[2:]  # RCR3 -> R3, RCR6 -> R6, etc.
+        return value_col
+
     def _calculate_mr_chart(
         self,
         mr_spec: _MRChartSpec,
@@ -1422,16 +1436,21 @@ class Analysis:
         # --- Resolve plot column ---
         plot_col = value_col if mr_spec.plot_col == 'raw' else 'mr'
 
+        # --- Resolve mR source column ---
+        # When recentered (value_col is RCR*), compute mR from the non-recentered
+        # residual (R*) to avoid inflating moving ranges with structural jumps.
+        mr_source_col = self._resolve_mr_source_column(value_col)
+
         if is_stratified:
             return self._calculate_mr_chart_stratified(
-                mr_spec, value_col, plot_col,
+                mr_spec, value_col, plot_col, mr_source_col,
                 stratify_by, collapsed_factors,
                 _return_intermediates, _precomputed,
                 phased=self.request.phased,
             )
         else:
             return self._calculate_mr_chart_ungrouped(
-                mr_spec, value_col, plot_col,
+                mr_spec, value_col, plot_col, mr_source_col,
                 collapsed_factors,
                 _return_intermediates, _precomputed,
                 phased=self.request.phased,
@@ -1608,6 +1627,7 @@ class Analysis:
         mr_spec: _MRChartSpec,
         value_col: str,
         plot_col: str,
+        mr_source_col: str,
         stratify_by: list[str],
         collapsed_factors: list[str],
         _return_intermediates: bool,
@@ -1659,7 +1679,7 @@ class Analysis:
 
             # 3. Per-phase mR (reset at phase boundaries within each stratum)
             out['mr'] = (
-                out.groupby([stratify_col, '_phase_id'], sort=False)[value_col]
+                out.groupby([stratify_col, '_phase_id'], sort=False)[mr_source_col]
                 .diff().abs()
             )
 
@@ -1768,7 +1788,7 @@ class Analysis:
         # === Global limits path (unchanged) ===
 
         # Moving range per stratum
-        out['mr'] = out.groupby(stratify_col, sort=False, observed=True)[value_col].diff().abs()
+        out['mr'] = out.groupby(stratify_col, sort=False, observed=True)[mr_source_col].diff().abs()
 
         # Aggregate per stratum
         agg = {}
@@ -1909,6 +1929,7 @@ class Analysis:
         mr_spec: _MRChartSpec,
         value_col: str,
         plot_col: str,
+        mr_source_col: str,
         collapsed_factors: list[str],
         _return_intermediates: bool,
         _precomputed: dict | None,
@@ -2057,7 +2078,7 @@ class Analysis:
 
             # 2. Per-phase moving range (reset at boundaries)
             out['mr'] = (
-                out.groupby('_phase_id', sort=False)[value_col]
+                out.groupby('_phase_id', sort=False)[mr_source_col]
                 .diff().abs()
             )
 
@@ -2153,7 +2174,7 @@ class Analysis:
 
         # === Global limits path (unchanged) ===
         # Moving range
-        out['mr'] = out[value_col].diff().abs()
+        out['mr'] = out[mr_source_col].diff().abs()
         mR = out['mr'].mean()
         mean_ = out[value_col].mean()
 
