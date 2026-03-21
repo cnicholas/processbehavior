@@ -362,9 +362,9 @@ class TestCompanionPairedLayout:
         plotter = Plotter(result)
         fig_wrapper = plotter.plot()
         # Access the resolved charts via internal path
-        charts = plotter._resolve_charts('Xbar', False, None)
+        charts = plotter._resolve_charts('Xbar', False)
         # Merge companion
-        companion = plotter._resolve_charts(None, False, None)
+        companion = plotter._resolve_charts(None, False)
         reordered, forced_ncols = plotter._reorder_companion_pairs(companion)
         assert forced_ncols == 2
         keys = list(reordered.keys())
@@ -380,7 +380,7 @@ class TestCompanionPairedLayout:
         """Xbar-only stratified (no companion) should not be reordered."""
         result = sds1_study.execute(chart='Xbar', by=['PRODUCTION TIME'])
         plotter = Plotter(result)
-        charts = plotter._resolve_charts('Xbar', False, None)
+        charts = plotter._resolve_charts('Xbar', False)
         reordered, forced_ncols = plotter._reorder_companion_pairs(charts)
         assert forced_ncols is None
         assert list(reordered.keys()) == list(charts.keys())
@@ -389,6 +389,6 @@ class TestCompanionPairedLayout:
         """Non-stratified companion (Xbar+S, 2 charts) is not reordered."""
         result = sds1_study.execute(chart='Xbar', companion=True)
         plotter = Plotter(result)
-        charts = plotter._resolve_charts(None, False, None)
+        charts = plotter._resolve_charts(None, False)
         reordered, forced_ncols = plotter._reorder_companion_pairs(charts)
         assert forced_ncols is None
