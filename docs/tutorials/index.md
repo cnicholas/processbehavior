@@ -11,6 +11,7 @@ These tutorials walk through ProcessBehavior from first chart to full factorial 
 | 5 | [Process Capability](process-capability.ipynb) | Pp/Ppk, Cp/Cpk, one-sided specs, comparing scenarios |
 | 6 | [SDS Validation](sds-validation.ipynb) | All 6 Sampling Design States, `plan` vs `factors`, TABVASTESTDATABASE validation |
 | 7 | [Complete SDS 1 Analysis](sds1-complete-analysis.ipynb) | Full deep dive: companion charts, effects/interactions, study inspection |
+| 8 | [Taguchi Loss Function](loss-function.ipynb) | Loss decomposition: 5 components, Pareto charts, PDC breakdown |
 
 ## Prerequisites
 

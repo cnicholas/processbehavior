@@ -47,6 +47,7 @@ from processbehavior.analysis_dataset import AnalysisDataSet
 # Result object
 from processbehavior.analysis_result import AnalysisResult
 from processbehavior.capability import CapabilityResult, SpecLimits
+from processbehavior.loss_function import LossResult
 from processbehavior.data_preparation import DataPreparation, encode_rsg, natural_sort_key
 from processbehavior.effects_calculator import EffectsCalculator
 
@@ -80,6 +81,7 @@ __all__ = [
     'AnalysisResult',
     'SpecLimits',
     'CapabilityResult',
+    'LossResult',
 
     # Exceptions
     'ProcessBehaviorError',

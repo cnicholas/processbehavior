@@ -33,6 +33,7 @@ if TYPE_CHECKING:
     from .analysis_dataset import AnalysisDataSet
     from .analysis_result import AnalysisResult
     from .capability import CapabilityResult, SpecLimits
+    from .loss_function import LossResult
     from .formulation_spec import FormulationSpec
     from .process_behavior import ProcessBehavior
     from .sds_detector import SDSAnalysisPlan, SDSResult
@@ -1500,6 +1501,33 @@ class Study:
             specs = _SpecLimits(usl=usl, lsl=lsl, target=target)
         return assess_capability(self._ads, specs, round_to=self._spec.round_to)
 
+    def loss_function(self, target: float | None = None) -> LossResult:
+        """
+        Assess Taguchi Loss Function decomposition (Ch. 15).
+
+        Decomposes expected loss into 5 components: centering, unexplained,
+        PDC, time, and PDC×time interaction.
+
+        Parameters
+        ----------
+        target : float, optional
+            Target value. Defaults to grand mean (centering = 0).
+
+        Returns
+        -------
+        LossResult
+            Frozen dataclass with loss decomposition and Pareto percentages.
+
+        Examples
+        --------
+        >>> result = study.loss_function(target=237.0)
+        >>> result.pct_interaction  # largest driver?
+        43.3
+        """
+        from .loss_function import assess_loss
+
+        return assess_loss(self._ads, target=target, round_to=self._spec.round_to)
+
     def execute(
         self,
         chart: str | None = None,
@@ -1811,12 +1839,11 @@ class Study:
         df = self._ads.analysis_dataset
         alpha = df.groupby(groupby_key)['R5'].transform('mean')
 
+        df['R6'] = alpha + df['R2']
         if recentered:
             df['RCR6'] = df['Ybar'] + alpha + df['R2']
             return 'RCR6'
-        else:
-            df['R6'] = alpha + df['R2']
-            return 'R6'
+        return 'R6'
 
     def _validate_phased(self, base_chart: str, by_validated: list[str] | None) -> None:
         """Validate phased=True requirements."""
