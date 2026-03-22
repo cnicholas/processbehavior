@@ -140,6 +140,7 @@ def render_histogram(
     col: int | None = None,
     shared_bin_edges: np.ndarray | None = None,
     is_faceted: bool = False,
+    histnorm: str = "",
 ) -> None:
     """Render one histogram panel onto *fig*.
 
@@ -162,6 +163,10 @@ def render_histogram(
         Pre-computed bin edges for consistent cross-facet binning.
     is_faceted : bool
         Whether this is part of a faceted layout.
+    histnorm : str, default ""
+        Histogram normalization mode (``""`` for counts,
+        ``"percent"`` for percentages). Also checked in
+        ``chart_info['metadata']['histnorm']`` as fallback.
     """
     metadata = chart_info.get('metadata', {})
     stats = chart_info.get('statistics', {})
@@ -170,6 +175,9 @@ def render_histogram(
     value_col = metadata.get('value_col')
     bins = metadata.get('bins', 10)
     chart_name = metadata.get('chart_type', 'Histogram')
+
+    # Resolve histnorm: explicit parameter wins, then metadata fallback
+    effective_histnorm = histnorm or metadata.get('histnorm', '')
 
     # Histogram trace
     if shared_bin_edges is not None:
@@ -185,6 +193,7 @@ def render_histogram(
             marker_color=theme.data_color,
             opacity=0.75,
             showlegend=False,
+            histnorm=effective_histnorm if effective_histnorm else None,
         )
     else:
         hist_trace = go.Histogram(
@@ -194,6 +203,7 @@ def render_histogram(
             marker_color=theme.data_color,
             opacity=0.75,
             showlegend=is_faceted is False,  # standalone shows legend default
+            histnorm=effective_histnorm if effective_histnorm else None,
         )
     _add_trace(fig, hist_trace, row, col)
 

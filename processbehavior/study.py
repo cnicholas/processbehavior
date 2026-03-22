@@ -34,6 +34,7 @@ if TYPE_CHECKING:
     from .analysis_result import AnalysisResult
     from .capability import CapabilityResult, SpecLimits
     from .loss_function import LossResult
+    from .maximum_information import MaximumInformationResult
     from .formulation_spec import FormulationSpec
     from .process_behavior import ProcessBehavior
     from .sds_detector import SDSAnalysisPlan, SDSResult
@@ -1527,6 +1528,27 @@ class Study:
         from .loss_function import assess_loss
 
         return assess_loss(self._ads, target=target, round_to=self._spec.round_to)
+
+    def maximum_information(self) -> MaximumInformationResult:
+        """
+        Maximum information analysis of R2 residuals (Wheeler/Bishop).
+
+        Examines the noise floor via an XmR chart and percentage histogram.
+
+        Returns
+        -------
+        MaximumInformationResult
+            Frozen dataclass with noise-floor statistics and ``.plot()`` method.
+
+        Examples
+        --------
+        >>> mi = study.maximum_information()
+        >>> mi.plot()                    # Combined XmR + histogram
+        >>> mi.plot(view='histogram')    # Percentage histogram only
+        """
+        from .maximum_information import assess_maximum_information
+
+        return assess_maximum_information(self._ads, round_to=self._spec.round_to)
 
     def execute(
         self,
