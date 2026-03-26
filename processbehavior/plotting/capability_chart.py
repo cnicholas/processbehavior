@@ -119,6 +119,8 @@ def create_capability_chart(
 
     if theme is None:
         theme = get_theme("processbehavior")
+    elif isinstance(theme, str):
+        theme = get_theme(theme)
 
     # Track whether caller explicitly set histnorm
     caller_histnorm = histnorm
