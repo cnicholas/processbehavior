@@ -37,6 +37,71 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+# Threshold for auto-converting object columns to numeric.
+# If >= this fraction of non-NA values convert successfully, apply the conversion.
+_NUMERIC_CONVERSION_THRESHOLD = 0.8
+
+
+def _try_clean_numeric_strings(series: pd.Series) -> pd.Series | None:
+    """Try to clean formatted numeric strings (currency, thousands sep, etc.).
+
+    Returns a numeric Series if cleaning succeeds for >= 80% of non-NA values,
+    or None if the column doesn't look numeric after cleaning.
+
+    Handles: $, EUR, GBP, JPY, unicode currency symbols, thousands commas,
+    accounting negatives like (1,234.56), percentage signs, and whitespace.
+    """
+    from pandas.api.types import is_numeric_dtype
+
+    if is_numeric_dtype(series):
+        return None
+
+    # Only process object columns with actual data
+    non_na = series.dropna()
+    if len(non_na) == 0:
+        return None
+
+    # Fast path: try direct pd.to_numeric first (handles plain numeric strings)
+    direct = pd.to_numeric(series, errors='coerce')
+    direct_success = direct.notna().sum()
+    original_non_na = non_na.shape[0]
+    if direct_success >= original_non_na * _NUMERIC_CONVERSION_THRESHOLD:
+        return direct
+
+    # Convert to string for .str operations (handles mixed float/str columns)
+    s = series.astype(str)
+    # Preserve original NAs
+    original_na_mask = series.isna()
+    # Also treat the string 'nan' (from astype) as NA
+    str_nan_mask = s == 'nan'
+
+    # Strip whitespace
+    cleaned = s.str.strip()
+    # Accounting negatives: (xxx) -> -xxx
+    cleaned = cleaned.str.replace(r'^\((.*)\)$', r'-\1', regex=True)
+    # Remove currency symbols and optional adjacent whitespace
+    cleaned = cleaned.str.replace(
+        r'[$\u20ac\u00a3\u00a5]\s*', '', regex=True
+    )
+    # Remove thousands separators (commas)
+    cleaned = cleaned.str.replace(',', '', regex=False)
+    # Remove percentage signs
+    cleaned = cleaned.str.replace('%', '', regex=False)
+    # Final strip (catches residual whitespace after symbol removal)
+    cleaned = cleaned.str.strip()
+
+    result = pd.to_numeric(cleaned, errors='coerce')
+
+    # Restore original NAs (don't count astype('str') artifacts as conversions)
+    result[original_na_mask | str_nan_mask] = pd.NA
+
+    # Check success rate against non-NA values only
+    converted_count = result.notna().sum()
+    if converted_count >= original_non_na * _NUMERIC_CONVERSION_THRESHOLD:
+        return result
+
+    return None
+
 
 @dataclass
 class ColumnRef:
@@ -346,6 +411,26 @@ class ProcessBehavior:
                 f"Found {total_na} garbage/NA values across {len(columns_with_na)} column(s):\n"
                 + "\n".join([f"  • {col}: {count} values" for col, count in na_counts.items()])
                 + "\n\nThese values were converted to NA and will be excluded from analysis."
+            )
+
+        # Phase 2: Clean numeric formatting (currency symbols, thousands
+        # separators, accounting negatives, percentages) in object columns
+        formatting_cleaned = {}
+        for col in cleaned_df.columns:
+            result = _try_clean_numeric_strings(cleaned_df[col])
+            if result is not None:
+                formatting_cleaned[col] = int(result.notna().sum())
+                cleaned_df[col] = result
+
+        if formatting_cleaned:
+            logger.warning(
+                f"Cleaned numeric formatting in {len(formatting_cleaned)} column(s):\n"
+                + "\n".join(
+                    [f"  • {col}: {count} values converted"
+                     for col, count in formatting_cleaned.items()]
+                )
+                + "\n\nCurrency symbols, thousands separators, and "
+                "accounting negatives were removed."
             )
 
         self.data = cleaned_df
