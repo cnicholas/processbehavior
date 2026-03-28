@@ -299,9 +299,9 @@ class Plotter:
         # Time tick labels
         self._apply_time_tick_labels(fig, chart_info['data'], metadata)
 
-        # Force categorical axis when x_col is a factor column (not time/index)
-        time_var = self.summary.get('time_var')
-        if x_col and x_col not in ('subgroup', 'rsg', 'group') and x_col != time_var:
+        # Force categorical axis — control chart x-axes are always ordinal
+        # (evenly spaced in sequence order), never continuous numeric
+        if x_col:
             fig.update_xaxes(type='category')
 
         # Layout
@@ -470,14 +470,10 @@ class Plotter:
             is_bottom = (r == nrows) or (idx + ncols >= n_charts)
             is_leftmost = (c == 1)
             panel_xcol = panel_x_cols.get(idx)
-            is_factor_axis = (
-                panel_xcol and panel_xcol not in ('subgroup', 'rsg', 'group')
-                and panel_xcol != time_var
-            )
             fig.update_xaxes(
                 title_text=x_label if is_bottom else None,
                 **axis_style_x_base,
-                **({"type": "category"} if is_factor_axis else {}),
+                **({"type": "category"} if panel_xcol else {}),
                 row=r, col=c,
             )
             fig.update_yaxes(
