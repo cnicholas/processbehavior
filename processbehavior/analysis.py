@@ -742,7 +742,13 @@ class Analysis:
 
         # Handle case where no subgroups have >1 observation
         if out.shape[0] == 0:
-            raise ValueError("All subgroups have 1 or less observations!")
+            sds = self.ads._ads_result.sds if self.ads._ads_result else '?'
+            raise ValueError(
+                f"No subgroups with n > 1 found — Xbar chart requires replicated observations.\n"
+                f"This data has Analytical Design State {sds}.\n"
+                f"Use chart='XmR' for individual values, or chart='Xbar' with value='R6' "
+                f"for effects analysis."
+            )
 
         # Use grand mean as center line (not mean of subgroup means)
         _Xbar = _Ybar
@@ -968,6 +974,15 @@ class Analysis:
                     'n_avg': n_avg,
                 }
 
+        if not all_xbar_frames:
+            sds = self.ads._ads_result.sds if self.ads._ads_result else '?'
+            raise ValueError(
+                f"No subgroups with n > 1 found — Xbar chart requires replicated observations.\n"
+                f"This data has Analytical Design State {sds} "
+                f"({'no replication' if sds == 2 else 'partial replication' if sds == 3 else ''}).\n"
+                f"Use chart='XmR' for individual values, or chart='Xbar' with value='R6' "
+                f"for effects analysis."
+            )
         chart_out = pd.concat(all_xbar_frames, ignore_index=True)
 
         # Select output columns
@@ -1223,7 +1238,12 @@ class Analysis:
 
                 # Handle case where no subgroups have >1 observation
                 if out.shape[0] == 0:
-                    raise ValueError("All subgroups have 1 or less observations!")
+                    sds = self.ads._ads_result.sds if self.ads._ads_result else '?'
+                    raise ValueError(
+                        f"No subgroups with n > 1 found — S chart requires replicated observations.\n"
+                        f"This data has Analytical Design State {sds}.\n"
+                        f"Use chart='XmR' for individual values."
+                    )
 
                 out['N'] = out['n'].max()
 
