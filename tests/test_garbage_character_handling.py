@@ -437,7 +437,7 @@ class TestNumericStringDataIntegrity:
     def test_pure_text_column_unchanged(self):
         df = pd.DataFrame({'LABEL': ['Red', 'Blue', 'Green']})
         pdf = ProcessBehavior(df)
-        assert pdf.data['LABEL'].dtype == 'object'
+        assert pd.api.types.is_string_dtype(pdf.data['LABEL'])
         assert list(pdf.data['LABEL']) == ['Red', 'Blue', 'Green']
 
     def test_numeric_column_unchanged(self):
@@ -459,14 +459,14 @@ class TestNumericStringDataIntegrity:
                        'Yellow', 'Purple', 'Pink', 'Brown', 'Black']
         })
         pdf = ProcessBehavior(df)
-        assert pdf.data['LABEL'].dtype == 'object'
+        assert pd.api.types.is_string_dtype(pdf.data['LABEL'])
 
     def test_original_dataframe_not_modified(self):
         df = pd.DataFrame({'Y': ['$1.50', '$2.00', '$3.50']})
         original_values = list(df['Y'])
         ProcessBehavior(df)
         assert list(df['Y']) == original_values
-        assert df['Y'].dtype == 'object'
+        assert pd.api.types.is_string_dtype(df['Y'])
 
     def test_na_values_preserved(self):
         df = pd.DataFrame({'Y': ['$1.50', pd.NA, '$3.00']})
@@ -560,9 +560,9 @@ class TestGrossRevenueDatabase:
 
     def test_text_columns_not_mangled(self, gross_rev_df):
         pdf = ProcessBehavior(gross_rev_df)
-        assert pdf.data['EVENT DOW'].dtype == 'object'
-        assert pdf.data['PRIMARY PARTNER'].dtype == 'object'
-        assert pdf.data['HOME TEAM'].dtype == 'object'
+        assert pd.api.types.is_string_dtype(pdf.data['EVENT DOW'])
+        assert pd.api.types.is_string_dtype(pdf.data['PRIMARY PARTNER'])
+        assert pd.api.types.is_string_dtype(pdf.data['HOME TEAM'])
 
     def test_integer_columns_untouched(self, gross_rev_df):
         pdf = ProcessBehavior(gross_rev_df)
