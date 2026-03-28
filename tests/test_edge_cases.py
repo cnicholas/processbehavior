@@ -68,7 +68,7 @@ class TestDegenerateCases:
 
         # execute(chart='Xbar') fails because can't calculate within-group variance
         # when all subgroups have n=1 (filtered out, leaving no valid groups)
-        with pytest.raises(ValueError, match="All subgroups have 1 or less observations"):
+        with pytest.raises(ValueError, match="No subgroups with n > 1 found"):
             study.execute(chart='Xbar')
 
     def test_constant_response(self):

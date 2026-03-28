@@ -55,7 +55,7 @@ class TestBug1_SChartAllN1:
 
         # If S is in valid_charts, executing it should raise ValueError
         if 'S' in study_manual.valid_charts:
-            with pytest.raises(ValueError, match="All subgroups have 1 or less"):
+            with pytest.raises(ValueError, match="No subgroups with n > 1 found"):
                 study_manual.execute(chart='S')
         else:
             # S is not valid for this data — confirm it's rejected upstream
@@ -77,7 +77,7 @@ class TestBug1_SChartAllN1:
 
         # n=1 per cell → S chart should detect all-n==1 and raise
         if 'S' in study.valid_charts:
-            with pytest.raises(ValueError, match="All subgroups have 1 or less"):
+            with pytest.raises(ValueError, match="No subgroups with n > 1 found"):
                 study.execute(chart='S')
         else:
             pytest.skip("S chart not in valid_charts after dedup")
