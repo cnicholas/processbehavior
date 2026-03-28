@@ -1783,11 +1783,12 @@ class Study:
         # Determine if this is a residual chart
         is_residual = value is not None and value.upper().startswith('R')
 
-        if is_residual and base_chart == 'R':
+        if is_residual and base_chart == 'R' and not companion:
             raise ValidationError(
                 f"Chart type 'R' (moving range) is not supported for residual charts.\n"
                 f"Residual charts support: Xbar, S, XmR, Histogram.\n"
-                f"Use: study.execute(chart='XmR', value='{value}')"
+                f"Use: study.execute(chart='XmR', value='{value}') or "
+                f"study.execute(chart='R', value='{value}', companion=True)"
             )
 
         # Build chart request (ephemeral, per-execute)

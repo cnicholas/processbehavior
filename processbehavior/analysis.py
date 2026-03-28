@@ -207,7 +207,7 @@ class Analysis:
                 )
 
             # Validate chart type
-            valid_chart_types = {'Xbar', 'S', 'XmR', 'Histogram'}
+            valid_chart_types = {'Xbar', 'S', 'XmR', 'R', 'Histogram'}
             if chart_type not in valid_chart_types:
                 raise ValueError(
                     f"Chart type '{chart_type}' not supported for residual charts.\n"
@@ -229,6 +229,7 @@ class Analysis:
                     'Xbar': self._calculate_xbar_s,
                     'S': self._calculate_xbar_s,
                     'XmR': self._calculate_xmr_r,
+                    'R': self._calculate_xmr_r,
                     'Histogram': self._calculate_histogram,
                 }
             else:
