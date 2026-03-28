@@ -1,0 +1,789 @@
+{
+  "source_file": "vassds2analysis.pptm",
+  "extraction_method": "Structured extraction from PDF text generated from the PowerPoint; the deck appears to use embedded chart images/vector content rather than native PowerPoint chart objects. Missing values visible as placeholders or omitted in the source were preserved as null.",
+  "pages_extracted": 34,
+  "items": [
+    {
+      "page_number": 1,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "PM Individuals Chart",
+      "chart_subtitle": "PM2 in Grams",
+      "context_subtitle": null,
+      "variable": "PM2",
+      "CL": 237.78,
+      "LBL": 235.47,
+      "UBL": 240.09,
+      "axis_labels": {
+        "x": "PDCxPT RSG",
+        "y": "Individual Value"
+      },
+      "package": {
+        "package_name": "VASTESTDATABASE.MWX",
+        "package_path": "G:\\My Drive\\VAS\\DATA-FILES\\VASTESTDATABASE.MWX",
+        "prepared_by": "Bishop & Associates",
+        "analysis_design_state": "ANALYTIC DESIGN STATE 2: N = 1 COMPLETE",
+        "timestamp_from_footer": "2026-03-09 08:29:58 AM"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 2,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "Moving Range Chart",
+      "chart_subtitle": "PM2 in Grams",
+      "context_subtitle": null,
+      "variable": "MOVING RANGE",
+      "CL": 0.87,
+      "LBL": 0.0,
+      "UBL": 2.83,
+      "axis_labels": {
+        "x": "PDCxPT RSG",
+        "y": "Moving Range"
+      },
+      "package": {
+        "package_name": "VASTESTDATABASE.MWX",
+        "package_path": "G:\\My Drive\\VAS\\DATA-FILES\\VASTESTDATABASE.MWX",
+        "prepared_by": "Bishop & Associates",
+        "analysis_design_state": "ANALYTIC DESIGN STATE 2: N = 1 COMPLETE",
+        "timestamp_from_footer": "2026-03-09 08:29:58 AM"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 3,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "PM Individuals Chart",
+      "chart_subtitle": "PM2 in Grams",
+      "context_subtitle": "PDC RSG - 1-1",
+      "variable": "PM2",
+      "CL": 238.11,
+      "LBL": 235.62,
+      "UBL": 240.6,
+      "axis_labels": {
+        "x": "PT RSG",
+        "y": "Individual Value"
+      },
+      "package": {
+        "package_name": "VASTESTDATABASE.MWX",
+        "package_path": "G:\\My Drive\\VAS\\DATA-FILES\\VASTESTDATABASE.MWX",
+        "prepared_by": "Bishop & Associates",
+        "analysis_design_state": "ANALYTIC DESIGN STATE 2: N = 1 COMPLETE",
+        "timestamp_from_footer": "2026-03-09 08:29:58 AM"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 4,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "Moving Range Chart",
+      "chart_subtitle": "PM2 in Grams",
+      "context_subtitle": "PDC RSG - 1-1",
+      "variable": "MOVING RANGE",
+      "CL": 0.94,
+      "LBL": 0.0,
+      "UBL": 3.06,
+      "axis_labels": {
+        "x": "PT RSG",
+        "y": "Moving Range"
+      },
+      "package": {
+        "package_name": "VASTESTDATABASE.MWX",
+        "package_path": "G:\\My Drive\\VAS\\DATA-FILES\\VASTESTDATABASE.MWX",
+        "prepared_by": "Bishop & Associates",
+        "analysis_design_state": "ANALYTIC DESIGN STATE 2: N = 1 COMPLETE",
+        "timestamp_from_footer": "2026-03-09 08:29:58 AM"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 5,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "PM Individuals Chart",
+      "chart_subtitle": "PM2 in Grams",
+      "context_subtitle": "PDC RSG - 1-2",
+      "variable": "PM2",
+      "CL": 238.67,
+      "LBL": 236.77,
+      "UBL": 240.57,
+      "axis_labels": {
+        "x": "PT RSG",
+        "y": "Individual Value"
+      },
+      "package": {
+        "package_name": "VASTESTDATABASE.MWX",
+        "package_path": "G:\\My Drive\\VAS\\DATA-FILES\\VASTESTDATABASE.MWX",
+        "prepared_by": "Bishop & Associates",
+        "analysis_design_state": "ANALYTIC DESIGN STATE 2: N = 1 COMPLETE",
+        "timestamp_from_footer": "2026-03-09 08:29:58 AM"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 6,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "Moving Range Chart",
+      "chart_subtitle": "PM2 in Grams",
+      "context_subtitle": "PDC RSG - 1-2",
+      "variable": "MOVING RANGE",
+      "CL": 0.72,
+      "LBL": 0.0,
+      "UBL": 2.34,
+      "axis_labels": {
+        "x": "PT RSG",
+        "y": "Moving Range"
+      },
+      "package": {
+        "package_name": "VASTESTDATABASE.MWX",
+        "package_path": "G:\\My Drive\\VAS\\DATA-FILES\\VASTESTDATABASE.MWX",
+        "prepared_by": "Bishop & Associates",
+        "analysis_design_state": "ANALYTIC DESIGN STATE 2: N = 1 COMPLETE",
+        "timestamp_from_footer": "2026-03-09 08:29:58 AM"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 7,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "PM Individuals Chart",
+      "chart_subtitle": "PM2 in Grams",
+      "context_subtitle": "PDC RSG - 2-1",
+      "variable": "PM2",
+      "CL": 237.39,
+      "LBL": 235.66,
+      "UBL": 239.13,
+      "axis_labels": {
+        "x": "PT RSG",
+        "y": "Individual Value"
+      },
+      "package": {
+        "package_name": "VASTESTDATABASE.MWX",
+        "package_path": "G:\\My Drive\\VAS\\DATA-FILES\\VASTESTDATABASE.MWX",
+        "prepared_by": "Bishop & Associates",
+        "analysis_design_state": "ANALYTIC DESIGN STATE 2: N = 1 COMPLETE",
+        "timestamp_from_footer": "2026-03-09 08:29:58 AM"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 8,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "Moving Range Chart",
+      "chart_subtitle": "PM2 in Grams",
+      "context_subtitle": "PDC RSG - 2-1",
+      "variable": "MOVING RANGE",
+      "CL": 0.65,
+      "LBL": 0.0,
+      "UBL": 2.13,
+      "axis_labels": {
+        "x": "PT RSG",
+        "y": "Moving Range"
+      },
+      "package": {
+        "package_name": "VASTESTDATABASE.MWX",
+        "package_path": "G:\\My Drive\\VAS\\DATA-FILES\\VASTESTDATABASE.MWX",
+        "prepared_by": "Bishop & Associates",
+        "analysis_design_state": "ANALYTIC DESIGN STATE 2: N = 1 COMPLETE",
+        "timestamp_from_footer": "2026-03-09 08:29:58 AM"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 9,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "PM Individuals Chart",
+      "chart_subtitle": "PM2 in Grams",
+      "context_subtitle": "PDC RSG - 2-2",
+      "variable": "PM2",
+      "CL": 238.92,
+      "LBL": 237.28,
+      "UBL": 240.56,
+      "axis_labels": {
+        "x": "PT RSG",
+        "y": "Individual Value"
+      },
+      "package": {
+        "package_name": "VASTESTDATABASE.MWX",
+        "package_path": "G:\\My Drive\\VAS\\DATA-FILES\\VASTESTDATABASE.MWX",
+        "prepared_by": "Bishop & Associates",
+        "analysis_design_state": "ANALYTIC DESIGN STATE 2: N = 1 COMPLETE",
+        "timestamp_from_footer": "2026-03-09 08:29:58 AM"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 10,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "Moving Range Chart",
+      "chart_subtitle": "PM2 in Grams",
+      "context_subtitle": "PDC RSG - 2-2",
+      "variable": "MOVING RANGE",
+      "CL": 0.62,
+      "LBL": 0.0,
+      "UBL": 2.01,
+      "axis_labels": {
+        "x": "PT RSG",
+        "y": "Moving Range"
+      },
+      "package": {
+        "package_name": "VASTESTDATABASE.MWX",
+        "package_path": "G:\\My Drive\\VAS\\DATA-FILES\\VASTESTDATABASE.MWX",
+        "prepared_by": "Bishop & Associates",
+        "analysis_design_state": "ANALYTIC DESIGN STATE 2: N = 1 COMPLETE",
+        "timestamp_from_footer": "2026-03-09 08:29:58 AM"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 11,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "PM Individuals Chart",
+      "chart_subtitle": "PM2 in Grams",
+      "context_subtitle": "PDC RSG - 3-1",
+      "variable": "PM2",
+      "CL": 236.51,
+      "LBL": 233.62,
+      "UBL": 239.41,
+      "axis_labels": {
+        "x": "PT RSG",
+        "y": "Individual Value"
+      },
+      "package": {
+        "package_name": "VASTESTDATABASE.MWX",
+        "package_path": "G:\\My Drive\\VAS\\DATA-FILES\\VASTESTDATABASE.MWX",
+        "prepared_by": "Bishop & Associates",
+        "analysis_design_state": "ANALYTIC DESIGN STATE 2: N = 1 COMPLETE",
+        "timestamp_from_footer": "2026-03-09 08:29:58 AM"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 12,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "Moving Range Chart",
+      "chart_subtitle": "PM2 in Grams",
+      "context_subtitle": "PDC RSG - 3-1",
+      "variable": "MOVING RANGE",
+      "CL": 1.09,
+      "LBL": 0.0,
+      "UBL": 3.56,
+      "axis_labels": {
+        "x": "PT RSG",
+        "y": "Moving Range"
+      },
+      "package": {
+        "package_name": "VASTESTDATABASE.MWX",
+        "package_path": "G:\\My Drive\\VAS\\DATA-FILES\\VASTESTDATABASE.MWX",
+        "prepared_by": "Bishop & Associates",
+        "analysis_design_state": "ANALYTIC DESIGN STATE 2: N = 1 COMPLETE",
+        "timestamp_from_footer": "2026-03-09 08:29:58 AM"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 13,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "PM Individuals Chart",
+      "chart_subtitle": "PM2 in Grams",
+      "context_subtitle": "PDC RSG - 3-2",
+      "variable": "PM2",
+      "CL": 236.98,
+      "LBL": 234.1,
+      "UBL": 239.85,
+      "axis_labels": {
+        "x": "PT RSG",
+        "y": "Individual Value"
+      },
+      "package": {
+        "package_name": "VASTESTDATABASE.MWX",
+        "package_path": "G:\\My Drive\\VAS\\DATA-FILES\\VASTESTDATABASE.MWX",
+        "prepared_by": "Bishop & Associates",
+        "analysis_design_state": "ANALYTIC DESIGN STATE 2: N = 1 COMPLETE",
+        "timestamp_from_footer": "2026-03-09 08:29:58 AM"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 14,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "Moving Range Chart",
+      "chart_subtitle": "PM2 in Grams",
+      "context_subtitle": "PDC RSG - 3-2",
+      "variable": "MOVING RANGE",
+      "CL": 1.08,
+      "LBL": 0.0,
+      "UBL": 3.53,
+      "axis_labels": {
+        "x": "PT RSG",
+        "y": "Moving Range"
+      },
+      "package": {
+        "package_name": "VASTESTDATABASE.MWX",
+        "package_path": "G:\\My Drive\\VAS\\DATA-FILES\\VASTESTDATABASE.MWX",
+        "prepared_by": "Bishop & Associates",
+        "analysis_design_state": "ANALYTIC DESIGN STATE 2: N = 1 COMPLETE",
+        "timestamp_from_footer": "2026-03-09 08:29:58 AM"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 15,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "PM Individuals Chart",
+      "chart_subtitle": "PM2 in Grams",
+      "context_subtitle": "PDC RSG - 4-1",
+      "variable": "PM2",
+      "CL": 237.59,
+      "LBL": 235.34,
+      "UBL": 239.83,
+      "axis_labels": {
+        "x": "PT RSG",
+        "y": "Individual Value"
+      },
+      "package": {
+        "package_name": "VASTESTDATABASE.MWX",
+        "package_path": "G:\\My Drive\\VAS\\DATA-FILES\\VASTESTDATABASE.MWX",
+        "prepared_by": "Bishop & Associates",
+        "analysis_design_state": "ANALYTIC DESIGN STATE 2: N = 1 COMPLETE",
+        "timestamp_from_footer": "2026-03-09 08:29:58 AM"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 16,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "Moving Range Chart",
+      "chart_subtitle": "PM2 in Grams",
+      "context_subtitle": "PDC RSG - 4-1",
+      "variable": "MOVING RANGE",
+      "CL": 0.84,
+      "LBL": 0.0,
+      "UBL": 2.76,
+      "axis_labels": {
+        "x": "PT RSG",
+        "y": "Moving Range"
+      },
+      "package": {
+        "package_name": "VASTESTDATABASE.MWX",
+        "package_path": "G:\\My Drive\\VAS\\DATA-FILES\\VASTESTDATABASE.MWX",
+        "prepared_by": "Bishop & Associates",
+        "analysis_design_state": "ANALYTIC DESIGN STATE 2: N = 1 COMPLETE",
+        "timestamp_from_footer": "2026-03-09 08:29:58 AM"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 17,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "PM Individuals Chart",
+      "chart_subtitle": "PM2 in Grams",
+      "context_subtitle": "PDC RSG - 4-2",
+      "variable": "PM2",
+      "CL": 238.09,
+      "LBL": 235.98,
+      "UBL": 240.2,
+      "axis_labels": {
+        "x": "PT RSG",
+        "y": "Individual Value"
+      },
+      "package": {
+        "package_name": "VASTESTDATABASE.MWX",
+        "package_path": "G:\\My Drive\\VAS\\DATA-FILES\\VASTESTDATABASE.MWX",
+        "prepared_by": "Bishop & Associates",
+        "analysis_design_state": "ANALYTIC DESIGN STATE 2: N = 1 COMPLETE",
+        "timestamp_from_footer": "2026-03-09 08:29:58 AM"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 18,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "Moving Range Chart",
+      "chart_subtitle": "PM2 in Grams",
+      "context_subtitle": "PDC RSG - 4-2",
+      "variable": "MOVING RANGE",
+      "CL": 0.8,
+      "LBL": 0.0,
+      "UBL": 2.6,
+      "axis_labels": {
+        "x": "PT RSG",
+        "y": "Moving Range"
+      },
+      "package": {
+        "package_name": "VASTESTDATABASE.MWX",
+        "package_path": "G:\\My Drive\\VAS\\DATA-FILES\\VASTESTDATABASE.MWX",
+        "prepared_by": "Bishop & Associates",
+        "analysis_design_state": "ANALYTIC DESIGN STATE 2: N = 1 COMPLETE",
+        "timestamp_from_footer": "2026-03-09 08:29:58 AM"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 19,
+      "analysis_title": "Current Process Capability",
+      "chart_title": "PM2 H TITLE 1",
+      "chart_subtitle": "PM2 H TITLE 2",
+      "context_subtitle": null,
+      "variable": null,
+      "CL": null,
+      "LBL": null,
+      "UBL": null,
+      "axis_labels": {
+        "x": "PM2 in Grams",
+        "y": "Percent"
+      },
+      "package": {
+        "package_name": "VASTESTDATABASE.MWX",
+        "package_path": "G:\\My Drive\\VAS\\DATA-FILES\\VASTESTDATABASE.MWX",
+        "prepared_by": "Bishop & Associates",
+        "analysis_design_state": "ANALYTIC DESIGN STATE 2: N = 1 COMPLETE",
+        "timestamp_from_footer": "2026-03-09 08:29:58 AM"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 20,
+      "analysis_title": "Process Design Condition Main Effects Analysis",
+      "chart_title": "Analysis of PDC RSG Sample Averages",
+      "chart_subtitle": "PM2 in Grams",
+      "context_subtitle": null,
+      "variable": "RSG AVG",
+      "CL": 237.78,
+      "LBL": null,
+      "UBL": null,
+      "axis_labels": {
+        "x": "PDC RSG",
+        "y": "Sample Average"
+      },
+      "package": {
+        "package_name": "VASTESTDATABASE.MWX",
+        "package_path": "G:\\My Drive\\VAS\\DATA-FILES\\VASTESTDATABASE.MWX",
+        "prepared_by": "Bishop & Associates",
+        "analysis_design_state": "ANALYTIC DESIGN STATE 2: N = 1 COMPLETE",
+        "timestamp_from_footer": "2026-03-09 08:29:58 AM"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 21,
+      "analysis_title": "Process Design Condition Main Effects Analysis",
+      "chart_title": "Analysis of PDC RSG Sample Standard Deviations",
+      "chart_subtitle": "PM2 in Grams",
+      "context_subtitle": null,
+      "variable": "RSG STDEV",
+      "CL": 0.64,
+      "LBL": null,
+      "UBL": null,
+      "axis_labels": {
+        "x": "PDC RSG",
+        "y": "Sample Standard Deviation"
+      },
+      "package": {
+        "package_name": "VASTESTDATABASE.MWX",
+        "package_path": "G:\\My Drive\\VAS\\DATA-FILES\\VASTESTDATABASE.MWX",
+        "prepared_by": "Bishop & Associates",
+        "analysis_design_state": "ANALYTIC DESIGN STATE 2: N = 1 COMPLETE",
+        "timestamp_from_footer": "2026-03-09 08:29:58 AM"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 22,
+      "analysis_title": "Production Time Main Effects Analysis",
+      "chart_title": "Analysis of PT RSG Sample Averages",
+      "chart_subtitle": "PM2 in Grams",
+      "context_subtitle": null,
+      "variable": "RSG AVG",
+      "CL": 237.78,
+      "LBL": null,
+      "UBL": null,
+      "axis_labels": {
+        "x": "PT RSG",
+        "y": "Sample Average"
+      },
+      "package": {
+        "package_name": "VASTESTDATABASE.MWX",
+        "package_path": "G:\\My Drive\\VAS\\DATA-FILES\\VASTESTDATABASE.MWX",
+        "prepared_by": "Bishop & Associates",
+        "analysis_design_state": "ANALYTIC DESIGN STATE 2: N = 1 COMPLETE",
+        "timestamp_from_footer": "2026-03-09 08:29:58 AM"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 23,
+      "analysis_title": "Production Time Main Effects Analysis",
+      "chart_title": "Analysis of PT RSG Sample Standard Deviations",
+      "chart_subtitle": "PM2 in Grams",
+      "context_subtitle": null,
+      "variable": "RSG STDEV",
+      "CL": 0.56,
+      "LBL": null,
+      "UBL": null,
+      "axis_labels": {
+        "x": "PT RSG",
+        "y": "Sample Standard Deviation"
+      },
+      "package": {
+        "package_name": "VASTESTDATABASE.MWX",
+        "package_path": "G:\\My Drive\\VAS\\DATA-FILES\\VASTESTDATABASE.MWX",
+        "prepared_by": "Bishop & Associates",
+        "analysis_design_state": "ANALYTIC DESIGN STATE 2: N = 1 COMPLETE",
+        "timestamp_from_footer": "2026-03-09 08:29:58 AM"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 24,
+      "analysis_title": "Process Design Factor Main Effects Analysis",
+      "chart_title": "Analysis of PD Factor Sample Averages",
+      "chart_subtitle": "PM2 in Grams",
+      "context_subtitle": "PD Factor - F1",
+      "variable": "RSG AVG",
+      "CL": 237.79,
+      "LBL": null,
+      "UBL": null,
+      "axis_labels": {
+        "x": "PD Factor RSG",
+        "y": "Sample Average"
+      },
+      "package": {
+        "package_name": "VASTESTDATABASE.MWX",
+        "package_path": "G:\\My Drive\\VAS\\DATA-FILES\\VASTESTDATABASE.MWX",
+        "prepared_by": "Bishop & Associates",
+        "analysis_design_state": "ANALYTIC DESIGN STATE 2: N = 1 COMPLETE",
+        "timestamp_from_footer": "2026-03-09 08:29:58 AM"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 25,
+      "analysis_title": "Process Design Condition Main Effects Analysis",
+      "chart_title": "Analysis of PDC RSG Sample Standard Deviations",
+      "chart_subtitle": "PM2 in Grams",
+      "context_subtitle": "PD Factor - F1",
+      "variable": "RSG STDEV",
+      "CL": 0.64,
+      "LBL": null,
+      "UBL": null,
+      "axis_labels": {
+        "x": "PD Factor RSG",
+        "y": "Sample Standard Deviation"
+      },
+      "package": {
+        "package_name": "VASTESTDATABASE.MWX",
+        "package_path": "G:\\My Drive\\VAS\\DATA-FILES\\VASTESTDATABASE.MWX",
+        "prepared_by": "Bishop & Associates",
+        "analysis_design_state": "ANALYTIC DESIGN STATE 2: N = 1 COMPLETE",
+        "timestamp_from_footer": "2026-03-09 08:29:58 AM"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 26,
+      "analysis_title": "Process Design Factor Main Effects Analysis",
+      "chart_title": "Analysis of PD Factor Sample Averages",
+      "chart_subtitle": "PM2 in Grams",
+      "context_subtitle": "PD Factor - F2",
+      "variable": "RSG AVG",
+      "CL": 237.79,
+      "LBL": null,
+      "UBL": null,
+      "axis_labels": {
+        "x": "PD Factor RSG",
+        "y": "Sample Average"
+      },
+      "package": {
+        "package_name": "VASTESTDATABASE.MWX",
+        "package_path": "G:\\My Drive\\VAS\\DATA-FILES\\VASTESTDATABASE.MWX",
+        "prepared_by": "Bishop & Associates",
+        "analysis_design_state": "ANALYTIC DESIGN STATE 2: N = 1 COMPLETE",
+        "timestamp_from_footer": "2026-03-09 08:29:58 AM"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 27,
+      "analysis_title": "Process Design Condition Main Effects Analysis",
+      "chart_title": "Analysis of PDC RSG Sample Standard Deviations",
+      "chart_subtitle": "PM2 in Grams",
+      "context_subtitle": "PD Factor - F2",
+      "variable": "RSG STDEV",
+      "CL": 0.66,
+      "LBL": null,
+      "UBL": null,
+      "axis_labels": {
+        "x": "PD Factor RSG",
+        "y": "Sample Standard Deviation"
+      },
+      "package": {
+        "package_name": "VASTESTDATABASE.MWX",
+        "package_path": "G:\\My Drive\\VAS\\DATA-FILES\\VASTESTDATABASE.MWX",
+        "prepared_by": "Bishop & Associates",
+        "analysis_design_state": "ANALYTIC DESIGN STATE 2: N = 1 COMPLETE",
+        "timestamp_from_footer": "2026-03-09 08:29:58 AM"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 28,
+      "analysis_title": "Analysis of PDCxPT Interaction",
+      "chart_title": "R3 Residuals Individuals Chart",
+      "chart_subtitle": "PM2 in Grams",
+      "context_subtitle": null,
+      "variable": "R3 RESIDUALS",
+      "CL": 237.79,
+      "LBL": 233.94,
+      "UBL": 241.63,
+      "axis_labels": {
+        "x": "PDCxPT RSG",
+        "y": "Individual Value"
+      },
+      "package": {
+        "package_name": "VASTESTDATABASE.MWX",
+        "package_path": "G:\\My Drive\\VAS\\DATA-FILES\\VASTESTDATABASE.MWX",
+        "prepared_by": "Bishop & Associates",
+        "analysis_design_state": "ANALYTIC DESIGN STATE 2: N = 1 COMPLETE",
+        "timestamp_from_footer": "2026-03-09 08:29:58 AM"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 29,
+      "analysis_title": "Analysis of R3 Residuals",
+      "chart_title": "Moving Range Chart",
+      "chart_subtitle": "PM2 in Grams",
+      "context_subtitle": null,
+      "variable": "MOVING RANGE",
+      "CL": 1.44,
+      "LBL": 0.0,
+      "UBL": 4.72,
+      "axis_labels": {
+        "x": "PDCxPT RSG",
+        "y": "Moving Range"
+      },
+      "package": {
+        "package_name": "VASTESTDATABASE.MWX",
+        "package_path": "G:\\My Drive\\VAS\\DATA-FILES\\VASTESTDATABASE.MWX",
+        "prepared_by": "Bishop & Associates",
+        "analysis_design_state": "ANALYTIC DESIGN STATE 2: N = 1 COMPLETE",
+        "timestamp_from_footer": "2026-03-09 08:29:58 AM"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 30,
+      "analysis_title": "Taguchi Loss Function Analysis",
+      "chart_title": "PM2 in Grams",
+      "chart_subtitle": "Contribution to Average Loss",
+      "context_subtitle": null,
+      "variable": null,
+      "CL": null,
+      "LBL": null,
+      "UBL": null,
+      "axis_labels": {
+        "x": "Components Contributing to Average Loss",
+        "y": "Contribution to Average Loss"
+      },
+      "package": {
+        "package_name": "VASTESTDATABASE.MWX",
+        "package_path": "G:\\My Drive\\VAS\\DATA-FILES\\VASTESTDATABASE.MWX",
+        "prepared_by": "Bishop & Associates",
+        "analysis_design_state": "ANALYTIC DESIGN STATE 2: N = 1 COMPLETE",
+        "timestamp_from_footer": "2026-03-09 08:29:58 AM"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 31,
+      "analysis_title": "Taguchi Loss Function Analysis",
+      "chart_title": "PM2 in Grams",
+      "chart_subtitle": "Contribution to Average Loss",
+      "context_subtitle": null,
+      "variable": null,
+      "CL": null,
+      "LBL": null,
+      "UBL": null,
+      "axis_labels": {
+        "x": "Components Contributing to Average Loss",
+        "y": "Contribution to Average Loss"
+      },
+      "package": {
+        "package_name": "VASTESTDATABASE.MWX",
+        "package_path": "G:\\My Drive\\VAS\\DATA-FILES\\VASTESTDATABASE.MWX",
+        "prepared_by": "Bishop & Associates",
+        "analysis_design_state": "ANALYTIC DESIGN STATE 2: N = 1 COMPLETE",
+        "timestamp_from_footer": "2026-03-09 08:29:58 AM"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 32,
+      "analysis_title": "Potential Process Capability",
+      "chart_title": "PM2 H TITLE 1",
+      "chart_subtitle": null,
+      "context_subtitle": null,
+      "variable": null,
+      "CL": null,
+      "LBL": null,
+      "UBL": null,
+      "axis_labels": {
+        "x": "PM2 in Grams",
+        "y": "Percent"
+      },
+      "package": {
+        "package_name": "VASTESTDATABASE.MWX",
+        "package_path": "G:\\My Drive\\VAS\\DATA-FILES\\VASTESTDATABASE.MWX",
+        "prepared_by": "Bishop & Associates",
+        "analysis_design_state": "ANALYTIC DESIGN STATE 2: N = 1 COMPLETE",
+        "timestamp_from_footer": "2026-03-09 08:29:58 AM"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 33,
+      "analysis_title": "Test of Maximum Information",
+      "chart_title": "R2 Residuals Individuals Chart",
+      "chart_subtitle": "PM2 in Grams",
+      "context_subtitle": null,
+      "variable": "R2 RESIDUALS",
+      "CL": 0.0,
+      "LBL": -1.94,
+      "UBL": 1.94,
+      "axis_labels": {
+        "x": "PDCxPT RSG",
+        "y": "Individual Value"
+      },
+      "package": {
+        "package_name": "VASTESTDATABASE.MWX",
+        "package_path": "G:\\My Drive\\VAS\\DATA-FILES\\VASTESTDATABASE.MWX",
+        "prepared_by": "Bishop & Associates",
+        "analysis_design_state": "ANALYTIC DESIGN STATE 2: N = 1 COMPLETE",
+        "timestamp_from_footer": "2026-03-09 08:29:58 AM"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 34,
+      "analysis_title": "Maximum Information Analysis",
+      "chart_title": "PM2 in Grams",
+      "chart_subtitle": null,
+      "context_subtitle": null,
+      "variable": null,
+      "CL": null,
+      "LBL": null,
+      "UBL": null,
+      "axis_labels": {
+        "x": "PM2 in Grams",
+        "y": "Percent"
+      },
+      "package": {
+        "package_name": "VASTESTDATABASE.MWX",
+        "package_path": "G:\\My Drive\\VAS\\DATA-FILES\\VASTESTDATABASE.MWX",
+        "prepared_by": "Bishop & Associates",
+        "analysis_design_state": "ANALYTIC DESIGN STATE 2: N = 1 COMPLETE",
+        "timestamp_from_footer": "2026-03-09 08:29:58 AM"
+      },
+      "notes": null
+    }
+  ]
+}

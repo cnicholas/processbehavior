@@ -1,0 +1,789 @@
+{
+  "source_file": "vassds1analysis.pptm",
+  "extraction_method": "Structured extraction from PDF text generated from the PowerPoint; this deck exposes chart text in the rendered PDF, which allowed direct parsing of page titles, chart text, limits, axis labels, and package footer metadata. Missing values were preserved as null when not present on the slide.",
+  "pages_extracted": 34,
+  "items": [
+    {
+      "page_number": 1,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "Analysis of PM Sample Averages",
+      "chart_subtitle": "PM1",
+      "context_subtitle": null,
+      "variable": "RSG AVG",
+      "CL": 237.82,
+      "LBL": 236.63,
+      "UBL": 239,
+      "axis_labels": {
+        "x": "PDCxPT RSG",
+        "y": "Sample Average"
+      },
+      "package": {
+        "package_name": "VASTESTDATABASE.MWX",
+        "package_path": "G:\\My Drive\\VAS\\DATA-FILES\\VASTESTDATABASE.MWX",
+        "prepared_by": "Bishop & Associates",
+        "analysis_design_state": "ANALYTIC DESIGN STATE 1: N > 1 COMPLETE",
+        "timestamp_from_footer": "2026-03-08 9:29:39 AM"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 2,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "Analysis of PM Sample Standard Deviations",
+      "chart_subtitle": "PM1",
+      "context_subtitle": null,
+      "variable": "RSG STDEV",
+      "CL": 0.83,
+      "LBL": 0,
+      "UBL": 1.74,
+      "axis_labels": {
+        "x": "PDCxPT RSG",
+        "y": "Sample Standard Deviation"
+      },
+      "package": {
+        "package_name": "VASTESTDATABASE.MWX",
+        "package_path": "G:\\My Drive\\VAS\\DATA-FILES\\VASTESTDATABASE.MWX",
+        "prepared_by": "Bishop & Associates",
+        "analysis_design_state": "ANALYTIC DESIGN STATE 1: N > 1 COMPLETE",
+        "timestamp_from_footer": "2026-03-08 9:29:39 AM"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 3,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "Analysis of PM Sample Averages",
+      "chart_subtitle": "PM1",
+      "context_subtitle": "PDC RSG - 1-1",
+      "variable": "RSG AVG",
+      "CL": 238.2,
+      "LBL": 237.09,
+      "UBL": 239.31,
+      "axis_labels": {
+        "x": "PT RSG",
+        "y": "Sample Average"
+      },
+      "package": {
+        "package_name": "VASTESTDATABASE.MWX",
+        "package_path": "G:\\My Drive\\VAS\\DATA-FILES\\VASTESTDATABASE.MWX",
+        "prepared_by": "Bishop & Associates",
+        "analysis_design_state": "ANALYTIC DESIGN STATE 1: N > 1 COMPLETE",
+        "timestamp_from_footer": "2026-03-08 9:22:31 AM"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 4,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "Analysis of PM Sample Standard Deviations",
+      "chart_subtitle": "PM1",
+      "context_subtitle": "PDC RSG - 1-1",
+      "variable": "RSG STDEV",
+      "CL": 0.78,
+      "LBL": 0,
+      "UBL": 1.62,
+      "axis_labels": {
+        "x": "PT RSG",
+        "y": "Sample Standard Deviation"
+      },
+      "package": {
+        "package_name": "VASTESTDATABASE.MWX",
+        "package_path": "G:\\My Drive\\VAS\\DATA-FILES\\VASTESTDATABASE.MWX",
+        "prepared_by": "Bishop & Associates",
+        "analysis_design_state": "ANALYTIC DESIGN STATE 1: N > 1 COMPLETE",
+        "timestamp_from_footer": "2026-03-08 9:22:31 AM"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 5,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "Analysis of PM Sample Averages",
+      "chart_subtitle": "PM1",
+      "context_subtitle": "PDC RSG - 1-2",
+      "variable": "RSG AVG",
+      "CL": 238.61,
+      "LBL": 237.47,
+      "UBL": 239.76,
+      "axis_labels": {
+        "x": "PT RSG",
+        "y": "Sample Average"
+      },
+      "package": {
+        "package_name": "VASTESTDATABASE.MWX",
+        "package_path": "G:\\My Drive\\VAS\\DATA-FILES\\VASTESTDATABASE.MWX",
+        "prepared_by": "Bishop & Associates",
+        "analysis_design_state": "ANALYTIC DESIGN STATE 1: N > 1 COMPLETE",
+        "timestamp_from_footer": "2026-03-08 9:22:31 AM"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 6,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "Analysis of PM Sample Standard Deviations",
+      "chart_subtitle": "PM1",
+      "context_subtitle": "PDC RSG - 1-2",
+      "variable": "RSG STDEV",
+      "CL": 0.8,
+      "LBL": 0,
+      "UBL": 1.68,
+      "axis_labels": {
+        "x": "PT RSG",
+        "y": "Sample Standard Deviation"
+      },
+      "package": {
+        "package_name": "VASTESTDATABASE.MWX",
+        "package_path": "G:\\My Drive\\VAS\\DATA-FILES\\VASTESTDATABASE.MWX",
+        "prepared_by": "Bishop & Associates",
+        "analysis_design_state": "ANALYTIC DESIGN STATE 1: N > 1 COMPLETE",
+        "timestamp_from_footer": "2026-03-08 9:22:31 AM"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 7,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "Analysis of PM Sample Averages",
+      "chart_subtitle": "PM1",
+      "context_subtitle": "PDC RSG - 2-1",
+      "variable": "RSG AVG",
+      "CL": 237.37,
+      "LBL": 236.16,
+      "UBL": 238.59,
+      "axis_labels": {
+        "x": "PT RSG",
+        "y": "Sample Average"
+      },
+      "package": {
+        "package_name": "VASTESTDATABASE.MWX",
+        "package_path": "G:\\My Drive\\VAS\\DATA-FILES\\VASTESTDATABASE.MWX",
+        "prepared_by": "Bishop & Associates",
+        "analysis_design_state": "ANALYTIC DESIGN STATE 1: N > 1 COMPLETE",
+        "timestamp_from_footer": "2026-03-08 9:22:31 AM"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 8,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "Analysis of PM Sample Standard Deviations",
+      "chart_subtitle": "PM1",
+      "context_subtitle": "PDC RSG - 2-1",
+      "variable": "RSG STDEV",
+      "CL": 0.85,
+      "LBL": 0,
+      "UBL": 1.78,
+      "axis_labels": {
+        "x": "PT RSG",
+        "y": "Sample Standard Deviation"
+      },
+      "package": {
+        "package_name": "VASTESTDATABASE.MWX",
+        "package_path": "G:\\My Drive\\VAS\\DATA-FILES\\VASTESTDATABASE.MWX",
+        "prepared_by": "Bishop & Associates",
+        "analysis_design_state": "ANALYTIC DESIGN STATE 1: N > 1 COMPLETE",
+        "timestamp_from_footer": "2026-03-08 9:22:31 AM"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 9,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "Analysis of PM Sample Averages",
+      "chart_subtitle": "PM1",
+      "context_subtitle": "PDC RSG - 2-2",
+      "variable": "RSG AVG",
+      "CL": 238.98,
+      "LBL": 237.78,
+      "UBL": 240.18,
+      "axis_labels": {
+        "x": "PT RSG",
+        "y": "Sample Average"
+      },
+      "package": {
+        "package_name": "VASTESTDATABASE.MWX",
+        "package_path": "G:\\My Drive\\VAS\\DATA-FILES\\VASTESTDATABASE.MWX",
+        "prepared_by": "Bishop & Associates",
+        "analysis_design_state": "ANALYTIC DESIGN STATE 1: N > 1 COMPLETE",
+        "timestamp_from_footer": "2026-03-08 9:22:31 AM"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 10,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "Analysis of PM Sample Standard Deviations",
+      "chart_subtitle": "PM1",
+      "context_subtitle": "PDC RSG - 2-2",
+      "variable": "RSG STDEV",
+      "CL": 0.84,
+      "LBL": 0,
+      "UBL": 1.76,
+      "axis_labels": {
+        "x": "PT RSG",
+        "y": "Sample Standard Deviation"
+      },
+      "package": {
+        "package_name": "VASTESTDATABASE.MWX",
+        "package_path": "G:\\My Drive\\VAS\\DATA-FILES\\VASTESTDATABASE.MWX",
+        "prepared_by": "Bishop & Associates",
+        "analysis_design_state": "ANALYTIC DESIGN STATE 1: N > 1 COMPLETE",
+        "timestamp_from_footer": "2026-03-08 9:22:31 AM"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 11,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "Analysis of PM Sample Averages",
+      "chart_subtitle": "PM1",
+      "context_subtitle": "PDC RSG - 3-1",
+      "variable": "RSG AVG",
+      "CL": 236.62,
+      "LBL": 235.37,
+      "UBL": 237.86,
+      "axis_labels": {
+        "x": "PT RSG",
+        "y": "Sample Average"
+      },
+      "package": {
+        "package_name": "VASTESTDATABASE.MWX",
+        "package_path": "G:\\My Drive\\VAS\\DATA-FILES\\VASTESTDATABASE.MWX",
+        "prepared_by": "Bishop & Associates",
+        "analysis_design_state": "ANALYTIC DESIGN STATE 1: N > 1 COMPLETE",
+        "timestamp_from_footer": "2026-03-08 9:22:31 AM"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 12,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "Analysis of PM Sample Standard Deviations",
+      "chart_subtitle": "PM1",
+      "context_subtitle": "PDC RSG - 3-1",
+      "variable": "RSG STDEV",
+      "CL": 0.87,
+      "LBL": 0,
+      "UBL": 1.82,
+      "axis_labels": {
+        "x": "PT RSG",
+        "y": "Sample Standard Deviation"
+      },
+      "package": {
+        "package_name": "VASTESTDATABASE.MWX",
+        "package_path": "G:\\My Drive\\VAS\\DATA-FILES\\VASTESTDATABASE.MWX",
+        "prepared_by": "Bishop & Associates",
+        "analysis_design_state": "ANALYTIC DESIGN STATE 1: N > 1 COMPLETE",
+        "timestamp_from_footer": "2026-03-08 9:22:31 AM"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 13,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "Analysis of PM Sample Averages",
+      "chart_subtitle": "PM1",
+      "context_subtitle": "PDC RSG - 3-2",
+      "variable": "RSG AVG",
+      "CL": 237.08,
+      "LBL": 235.94,
+      "UBL": 238.22,
+      "axis_labels": {
+        "x": "PT RSG",
+        "y": "Sample Average"
+      },
+      "package": {
+        "package_name": "VASTESTDATABASE.MWX",
+        "package_path": "G:\\My Drive\\VAS\\DATA-FILES\\VASTESTDATABASE.MWX",
+        "prepared_by": "Bishop & Associates",
+        "analysis_design_state": "ANALYTIC DESIGN STATE 1: N > 1 COMPLETE",
+        "timestamp_from_footer": "2026-03-08 9:22:31 AM"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 14,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "Analysis of PM Sample Standard Deviations",
+      "chart_subtitle": "PM1",
+      "context_subtitle": "PDC RSG - 3-2",
+      "variable": "RSG STDEV",
+      "CL": 0.8,
+      "LBL": 0,
+      "UBL": 1.67,
+      "axis_labels": {
+        "x": "PT RSG",
+        "y": "Sample Standard Deviation"
+      },
+      "package": {
+        "package_name": "VASTESTDATABASE.MWX",
+        "package_path": "G:\\My Drive\\VAS\\DATA-FILES\\VASTESTDATABASE.MWX",
+        "prepared_by": "Bishop & Associates",
+        "analysis_design_state": "ANALYTIC DESIGN STATE 1: N > 1 COMPLETE",
+        "timestamp_from_footer": "2026-03-08 9:22:31 AM"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 15,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "Analysis of PM Sample Averages",
+      "chart_subtitle": "PM1",
+      "context_subtitle": "PDC RSG - 4-1",
+      "variable": "RSG AVG",
+      "CL": 237.54,
+      "LBL": 236.31,
+      "UBL": 238.77,
+      "axis_labels": {
+        "x": "PT RSG",
+        "y": "Sample Average"
+      },
+      "package": {
+        "package_name": "VASTESTDATABASE.MWX",
+        "package_path": "G:\\My Drive\\VAS\\DATA-FILES\\VASTESTDATABASE.MWX",
+        "prepared_by": "Bishop & Associates",
+        "analysis_design_state": "ANALYTIC DESIGN STATE 1: N > 1 COMPLETE",
+        "timestamp_from_footer": "2026-03-08 9:22:31 AM"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 16,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "Analysis of PM Sample Standard Deviations",
+      "chart_subtitle": "PM1",
+      "context_subtitle": "PDC RSG - 4-1",
+      "variable": "RSG STDEV",
+      "CL": 0.86,
+      "LBL": 0,
+      "UBL": 1.8,
+      "axis_labels": {
+        "x": "PT RSG",
+        "y": "Sample Standard Deviation"
+      },
+      "package": {
+        "package_name": "VASTESTDATABASE.MWX",
+        "package_path": "G:\\My Drive\\VAS\\DATA-FILES\\VASTESTDATABASE.MWX",
+        "prepared_by": "Bishop & Associates",
+        "analysis_design_state": "ANALYTIC DESIGN STATE 1: N > 1 COMPLETE",
+        "timestamp_from_footer": "2026-03-08 9:22:31 AM"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 17,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "Analysis of PM Sample Averages",
+      "chart_subtitle": "PM1",
+      "context_subtitle": "PDC RSG - 4-2",
+      "variable": "RSG AVG",
+      "CL": 238.13,
+      "LBL": 236.91,
+      "UBL": 239.34,
+      "axis_labels": {
+        "x": "PT RSG",
+        "y": "Sample Average"
+      },
+      "package": {
+        "package_name": "VASTESTDATABASE.MWX",
+        "package_path": "G:\\My Drive\\VAS\\DATA-FILES\\VASTESTDATABASE.MWX",
+        "prepared_by": "Bishop & Associates",
+        "analysis_design_state": "ANALYTIC DESIGN STATE 1: N > 1 COMPLETE",
+        "timestamp_from_footer": "2026-03-08 9:22:31 AM"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 18,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "Analysis of PM Sample Standard Deviations",
+      "chart_subtitle": "PM1",
+      "context_subtitle": "PDC RSG - 4-2",
+      "variable": "RSG STDEV",
+      "CL": 0.85,
+      "LBL": 0,
+      "UBL": 1.77,
+      "axis_labels": {
+        "x": "PT RSG",
+        "y": "Sample Standard Deviation"
+      },
+      "package": {
+        "package_name": "VASTESTDATABASE.MWX",
+        "package_path": "G:\\My Drive\\VAS\\DATA-FILES\\VASTESTDATABASE.MWX",
+        "prepared_by": "Bishop & Associates",
+        "analysis_design_state": "ANALYTIC DESIGN STATE 1: N > 1 COMPLETE",
+        "timestamp_from_footer": "2026-03-08 9:22:31 AM"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 19,
+      "analysis_title": "Current Process Capability",
+      "chart_title": "PM1 H TITLE 1",
+      "chart_subtitle": "PM1 H TITLE 2",
+      "context_subtitle": null,
+      "variable": null,
+      "CL": null,
+      "LBL": null,
+      "UBL": null,
+      "axis_labels": {
+        "x": "PM1",
+        "y": "Percent"
+      },
+      "package": {
+        "package_name": "VASTESTDATABASE.MWX",
+        "package_path": "G:\\My Drive\\VAS\\DATA-FILES\\VASTESTDATABASE.MWX",
+        "prepared_by": "Bishop & Associates",
+        "analysis_design_state": "ANALYTIC DESIGN STATE 1: N > 1 COMPLETE",
+        "timestamp_from_footer": "2026-03-08 9:29:39 AM"
+      },
+      "notes": "Chart title placeholders 'H TITLE 1/2' appear unreplaced in source slide."
+    },
+    {
+      "page_number": 20,
+      "analysis_title": "Process Design Condition Main Effects Analysis",
+      "chart_title": "Analysis of PDC RSG Sample Averages",
+      "chart_subtitle": "PM1",
+      "context_subtitle": null,
+      "variable": "RSG AVG",
+      "CL": 237.82,
+      "LBL": 237.71,
+      "UBL": 237.92,
+      "axis_labels": {
+        "x": "PDC RSG",
+        "y": "Sample Average"
+      },
+      "package": {
+        "package_name": "VASTESTDATABASE.MWX",
+        "package_path": "G:\\My Drive\\VAS\\DATA-FILES\\VASTESTDATABASE.MWX",
+        "prepared_by": "Bishop & Associates",
+        "analysis_design_state": "ANALYTIC DESIGN STATE 1: N > 1 COMPLETE",
+        "timestamp_from_footer": "2026-03-08 9:29:39 AM"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 21,
+      "analysis_title": "Process Design Condition Main Effects Analysis",
+      "chart_title": "Analysis of PDC RSG Sample Standard Deviations",
+      "chart_subtitle": "PM1",
+      "context_subtitle": null,
+      "variable": "RSG STDEV",
+      "CL": 0.8,
+      "LBL": 0.73,
+      "UBL": 0.88,
+      "axis_labels": {
+        "x": "PDC RSG",
+        "y": "Sample Standard Deviation"
+      },
+      "package": {
+        "package_name": "VASTESTDATABASE.MWX",
+        "package_path": "G:\\My Drive\\VAS\\DATA-FILES\\VASTESTDATABASE.MWX",
+        "prepared_by": "Bishop & Associates",
+        "analysis_design_state": "ANALYTIC DESIGN STATE 1: N > 1 COMPLETE",
+        "timestamp_from_footer": "2026-03-08 9:29:39 AM"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 22,
+      "analysis_title": "Production Time Main Effects Analysis",
+      "chart_title": "Analysis of PT RSG Sample Averages",
+      "chart_subtitle": "PM1",
+      "context_subtitle": null,
+      "variable": "RSG AVG",
+      "CL": 237.82,
+      "LBL": 237.43,
+      "UBL": 238.2,
+      "axis_labels": {
+        "x": "PT RSG",
+        "y": "Sample Average"
+      },
+      "package": {
+        "package_name": "VASTESTDATABASE.MWX",
+        "package_path": "G:\\My Drive\\VAS\\DATA-FILES\\VASTESTDATABASE.MWX",
+        "prepared_by": "Bishop & Associates",
+        "analysis_design_state": "ANALYTIC DESIGN STATE 1: N > 1 COMPLETE",
+        "timestamp_from_footer": "2026-03-08 9:29:39 AM"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 23,
+      "analysis_title": "Production Time Main Effects Analysis",
+      "chart_title": "Analysis of PT RSG Sample Standard Deviations",
+      "chart_subtitle": "PM1",
+      "context_subtitle": null,
+      "variable": "RSG STDEV",
+      "CL": 0.8,
+      "LBL": 0.53,
+      "UBL": 1.08,
+      "axis_labels": {
+        "x": "PT RSG",
+        "y": "Sample Standard Deviation"
+      },
+      "package": {
+        "package_name": "VASTESTDATABASE.MWX",
+        "package_path": "G:\\My Drive\\VAS\\DATA-FILES\\VASTESTDATABASE.MWX",
+        "prepared_by": "Bishop & Associates",
+        "analysis_design_state": "ANALYTIC DESIGN STATE 1: N > 1 COMPLETE",
+        "timestamp_from_footer": "2026-03-08 9:29:39 AM"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 24,
+      "analysis_title": "Process Design Factor Main Effects Analysis",
+      "chart_title": "Analysis of PD Factor Sample Averages",
+      "chart_subtitle": "PM1",
+      "context_subtitle": "PD Factor - F1",
+      "variable": "RSG AVG",
+      "CL": 237.82,
+      "LBL": 237.74,
+      "UBL": 237.89,
+      "axis_labels": {
+        "x": "PD Factor RSG",
+        "y": "Sample Average"
+      },
+      "package": {
+        "package_name": "VASTESTDATABASE.MWX",
+        "package_path": "G:\\My Drive\\VAS\\DATA-FILES\\VASTESTDATABASE.MWX",
+        "prepared_by": "Bishop & Associates",
+        "analysis_design_state": "ANALYTIC DESIGN STATE 1: N > 1 COMPLETE",
+        "timestamp_from_footer": "2026-03-08 9:29:39 AM"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 25,
+      "analysis_title": "Process Design Condition Main Effects Analysis",
+      "chart_title": "Analysis of PDC RSG Sample Standard Deviations",
+      "chart_subtitle": "PM1",
+      "context_subtitle": "PD Factor - F1",
+      "variable": "RSG STDEV",
+      "CL": 0.8,
+      "LBL": 0.75,
+      "UBL": 0.86,
+      "axis_labels": {
+        "x": "PD Factor RSG",
+        "y": "Sample Standard Deviation"
+      },
+      "package": {
+        "package_name": "VASTESTDATABASE.MWX",
+        "package_path": "G:\\My Drive\\VAS\\DATA-FILES\\VASTESTDATABASE.MWX",
+        "prepared_by": "Bishop & Associates",
+        "analysis_design_state": "ANALYTIC DESIGN STATE 1: N > 1 COMPLETE",
+        "timestamp_from_footer": "2026-03-08 9:29:39 AM"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 26,
+      "analysis_title": "Process Design Factor Main Effects Analysis",
+      "chart_title": "Analysis of PD Factor Sample Averages",
+      "chart_subtitle": "PM1",
+      "context_subtitle": "PD Factor - F2",
+      "variable": "RSG AVG",
+      "CL": 237.82,
+      "LBL": 237.76,
+      "UBL": 237.87,
+      "axis_labels": {
+        "x": "PD Factor RSG",
+        "y": "Sample Average"
+      },
+      "package": {
+        "package_name": "VASTESTDATABASE.MWX",
+        "package_path": "G:\\My Drive\\VAS\\DATA-FILES\\VASTESTDATABASE.MWX",
+        "prepared_by": "Bishop & Associates",
+        "analysis_design_state": "ANALYTIC DESIGN STATE 1: N > 1 COMPLETE",
+        "timestamp_from_footer": "2026-03-08 9:29:39 AM"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 27,
+      "analysis_title": "Process Design Condition Main Effects Analysis",
+      "chart_title": "Analysis of PDC RSG Sample Standard Deviations",
+      "chart_subtitle": "PM1",
+      "context_subtitle": "PD Factor - F2",
+      "variable": "RSG STDEV",
+      "CL": 0.8,
+      "LBL": 0.76,
+      "UBL": 0.84,
+      "axis_labels": {
+        "x": "PD Factor RSG",
+        "y": "Sample Standard Deviation"
+      },
+      "package": {
+        "package_name": "VASTESTDATABASE.MWX",
+        "package_path": "G:\\My Drive\\VAS\\DATA-FILES\\VASTESTDATABASE.MWX",
+        "prepared_by": "Bishop & Associates",
+        "analysis_design_state": "ANALYTIC DESIGN STATE 1: N > 1 COMPLETE",
+        "timestamp_from_footer": "2026-03-08 9:29:39 AM"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 28,
+      "analysis_title": "Process Design Condition by Production Time Interaction Effects",
+      "chart_title": "Analysis of PDCxPT RSG Sample Averages",
+      "chart_subtitle": "PM1",
+      "context_subtitle": null,
+      "variable": "RSG AVG",
+      "CL": 237.82,
+      "LBL": 236.63,
+      "UBL": 239,
+      "axis_labels": {
+        "x": "PDCxPT RSG",
+        "y": "Sample Average"
+      },
+      "package": {
+        "package_name": "VASTESTDATABASE.MWX",
+        "package_path": "G:\\My Drive\\VAS\\DATA-FILES\\VASTESTDATABASE.MWX",
+        "prepared_by": "Bishop & Associates",
+        "analysis_design_state": "ANALYTIC DESIGN STATE 1: N > 1 COMPLETE",
+        "timestamp_from_footer": "2026-03-08 9:29:39 AM"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 29,
+      "analysis_title": "Process Design Condition by Production Time Interaction Effects",
+      "chart_title": "Analysis of PDCxPT RSG Sample Standard Deviations",
+      "chart_subtitle": "PM1",
+      "context_subtitle": null,
+      "variable": "RSG STDEV",
+      "CL": 0.83,
+      "LBL": 0,
+      "UBL": 1.74,
+      "axis_labels": {
+        "x": "PDCxPT RSG",
+        "y": "Sample Standard Deviation"
+      },
+      "package": {
+        "package_name": "VASTESTDATABASE.MWX",
+        "package_path": "G:\\My Drive\\VAS\\DATA-FILES\\VASTESTDATABASE.MWX",
+        "prepared_by": "Bishop & Associates",
+        "analysis_design_state": "ANALYTIC DESIGN STATE 1: N > 1 COMPLETE",
+        "timestamp_from_footer": "2026-03-08 9:29:39 AM"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 30,
+      "analysis_title": "Taguchi Loss Function Analysis",
+      "chart_title": "PM1",
+      "chart_subtitle": null,
+      "context_subtitle": null,
+      "variable": null,
+      "CL": null,
+      "LBL": null,
+      "UBL": null,
+      "axis_labels": {
+        "x": "Components Contributing to Average Loss",
+        "y": "Contribution to Average Loss"
+      },
+      "package": {
+        "package_name": "VASTESTDATABASE.MWX",
+        "package_path": "G:\\My Drive\\VAS\\DATA-FILES\\VASTESTDATABASE.MWX",
+        "prepared_by": "Bishop & Associates",
+        "analysis_design_state": "ANALYTIC DESIGN STATE 1: N > 1 COMPLETE",
+        "timestamp_from_footer": "2026-03-08 9:29:39 AM"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 31,
+      "analysis_title": "Taguchi Loss Function Analysis",
+      "chart_title": "PM1",
+      "chart_subtitle": null,
+      "context_subtitle": null,
+      "variable": null,
+      "CL": null,
+      "LBL": null,
+      "UBL": null,
+      "axis_labels": {
+        "x": "Components Contributing to Average Loss",
+        "y": "Contribution to Average Loss"
+      },
+      "package": {
+        "package_name": "VASTESTDATABASE.MWX",
+        "package_path": "G:\\My Drive\\VAS\\DATA-FILES\\VASTESTDATABASE.MWX",
+        "prepared_by": "Bishop & Associates",
+        "analysis_design_state": "ANALYTIC DESIGN STATE 1: N > 1 COMPLETE",
+        "timestamp_from_footer": "2026-03-08 9:29:39 AM"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 32,
+      "analysis_title": "Potential Process Capability",
+      "chart_title": "PM1 H TITLE 1",
+      "chart_subtitle": "PM1 H TITLE 2",
+      "context_subtitle": null,
+      "variable": null,
+      "CL": null,
+      "LBL": null,
+      "UBL": null,
+      "axis_labels": {
+        "x": "PM1",
+        "y": "Percent"
+      },
+      "package": {
+        "package_name": "VASTESTDATABASE.MWX",
+        "package_path": "G:\\My Drive\\VAS\\DATA-FILES\\VASTESTDATABASE.MWX",
+        "prepared_by": "Bishop & Associates",
+        "analysis_design_state": "ANALYTIC DESIGN STATE 1: N > 1 COMPLETE",
+        "timestamp_from_footer": "2026-03-08 9:29:39 AM"
+      },
+      "notes": "Chart title placeholders 'H TITLE 1/2' appear unreplaced in source slide."
+    },
+    {
+      "page_number": 33,
+      "analysis_title": "Test of Maximum Information",
+      "chart_title": "R2 Residuals Individuals Chart",
+      "chart_subtitle": "PM1",
+      "context_subtitle": null,
+      "variable": "R2 RESIDUALS",
+      "CL": 0,
+      "LBL": -2.63,
+      "UBL": 2.63,
+      "axis_labels": {
+        "x": "PDCxPT RSG",
+        "y": "Individual Value"
+      },
+      "package": {
+        "package_name": "VASTESTDATABASE.MWX",
+        "package_path": "G:\\My Drive\\VAS\\DATA-FILES\\VASTESTDATABASE.MWX",
+        "prepared_by": "Bishop & Associates",
+        "analysis_design_state": "ANALYTIC DESIGN STATE 1: N > 1 COMPLETE",
+        "timestamp_from_footer": "2026-03-08 9:34:20 AM"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 34,
+      "analysis_title": "Maximum Information Analysis",
+      "chart_title": "PM1",
+      "chart_subtitle": null,
+      "context_subtitle": null,
+      "variable": null,
+      "CL": null,
+      "LBL": null,
+      "UBL": null,
+      "axis_labels": {
+        "x": "PM1",
+        "y": "Percent"
+      },
+      "package": {
+        "package_name": "VASTESTDATABASE.MWX",
+        "package_path": "G:\\My Drive\\VAS\\DATA-FILES\\VASTESTDATABASE.MWX",
+        "prepared_by": "Bishop & Associates",
+        "analysis_design_state": "ANALYTIC DESIGN STATE 1: N > 1 COMPLETE",
+        "timestamp_from_footer": "2026-03-08 9:34:20 AM"
+      },
+      "notes": null
+    }
+  ]
+}
