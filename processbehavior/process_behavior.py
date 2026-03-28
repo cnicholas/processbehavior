@@ -80,8 +80,9 @@ def _try_clean_numeric_strings(series: pd.Series) -> pd.Series | None:
     # Accounting negatives: (xxx) -> -xxx
     cleaned = cleaned.str.replace(r'^\((.*)\)$', r'-\1', regex=True)
     # Remove currency symbols and optional adjacent whitespace
+    # Use literal Unicode chars (€£¥) — raw string \u escapes aren't valid in pyarrow regex
     cleaned = cleaned.str.replace(
-        r'[$\u20ac\u00a3\u00a5]\s*', '', regex=True
+        r'[$€£¥]\s*', '', regex=True
     )
     # Remove thousands separators (commas)
     cleaned = cleaned.str.replace(',', '', regex=False)
