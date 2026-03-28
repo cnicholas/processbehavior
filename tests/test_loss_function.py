@@ -5,10 +5,8 @@ Uses validation dataset (TABVASTESTDATABASE.csv) as ground truth.
 """
 
 import pytest
-import pandas as pd
 
-from processbehavior import ProcessBehavior, ValidationError, LossResult
-
+from processbehavior import LossResult, ProcessBehavior, ValidationError
 
 # ============================================================================
 # Fixtures

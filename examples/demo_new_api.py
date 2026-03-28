@@ -195,7 +195,7 @@ def example5_chart_type_selection():
 
     # Or specify chart explicitly using auto-completion
     result2 = study.execute(chart=study.charts.XmR)
-    print(f"\nWith chart=study.charts.XmR:")
+    print("\nWith chart=study.charts.XmR:")
     print(result2.summary)
 
 

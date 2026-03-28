@@ -33,9 +33,9 @@ if TYPE_CHECKING:
     from .analysis_dataset import AnalysisDataSet
     from .analysis_result import AnalysisResult
     from .capability import CapabilityResult, SpecLimits
+    from .formulation_spec import FormulationSpec
     from .loss_function import LossResult
     from .maximum_information import MaximumInformationResult
-    from .formulation_spec import FormulationSpec
     from .process_behavior import ProcessBehavior
     from .sds_detector import SDSAnalysisPlan, SDSResult
 
@@ -695,7 +695,8 @@ class DesignReport:
             else:
                 lines.append("    Planned Design State:    No plan")
             empty_detail = f" — {ods.n_empty_cells} empty cells" if ods.n_empty_cells > 0 else ""
-            lines.append(f"    Observed Design State:   SDS {ods.sds} ({self._humanize_reason(ods.reason)}){empty_detail}")
+            ods_reason = self._humanize_reason(ods.reason)
+            lines.append(f"    Observed Design State:   SDS {ods.sds} ({ods_reason}){empty_detail}")
             lines.append(f"    Analytical Design State: SDS {ads.sds} ({self._humanize_reason(ads.reason)})")
         elif self.sds_reason_detail:
             lines.append(f"  SDS reason: {self.sds_reason_detail}")

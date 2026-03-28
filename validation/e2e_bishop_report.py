@@ -56,32 +56,24 @@ def close(actual, expected, tol=TOLERANCE):
 def classify_page(item):
     """Classify a JSON page item into a test category."""
     title = item.get('analysis_title', '')
-    variable = item.get('variable')
     context = item.get('context_subtitle')
 
     if title == 'Analysis of Original Performance Measurement Behavior':
-        if context is None:
-            return 'overall'
+        return 'overall' if context is None else 'stratified'
+    elif 'Main Effects' in title:
+        if 'Production Time' in title:
+            return 'pt_effects'
+        elif context is not None:
+            return 'factor_effects'
         else:
-            return 'stratified'
-    elif 'Process Design Condition Main Effects' in title and context is None:
-        return 'pdc_effects'
-    elif 'Process Design Factor Main Effects' in title and context is None:
-        # PDC-level S chart (same as pdc_effects) when no factor context
-        return 'pdc_effects'
-    elif 'Process Design Factor Main Effects' in title and context is not None:
-        return 'factor_effects'
-    elif 'Process Design Condition Main Effects' in title and context is not None:
-        return 'factor_effects'
-    elif 'Production Time Main Effects' in title:
-        return 'pt_effects'
+            return 'pdc_effects'
     elif 'Interaction' in title or 'Analysis of R3 Residuals' in title:
         return 'interaction'
     elif title == 'Test of Maximum Information':
         return 'max_info'
     elif 'Taguchi Loss' in title:
         return 'loss_function'
-    elif 'Process Capability' in title or 'Current Process Capability' in title or 'Potential Process Capability' in title:
+    elif 'Capability' in title:
         return 'capability'
     elif 'Maximum Information Analysis' in title:
         return 'max_info_histogram'
@@ -99,12 +91,10 @@ def is_location_chart(item):
         return False
     if 'Standard Deviation' in chart_title:
         return False
-    if 'Moving Range' in chart_title:
-        return False
-    return True
+    return 'Moving Range' not in chart_title
 
 
-def run_sds_validation(sds_num, pb, study, json_data):
+def run_sds_validation(sds_num, pb, study, json_data):  # noqa: C901
     """Run all validations for one SDS type. Returns list of result dicts."""
     results = []
     items = json_data['items']
@@ -188,22 +178,25 @@ def run_sds_validation(sds_num, pb, study, json_data):
             'category': category,
         }
 
-        def append_result(chart_type, by_str, value, recentered, actual_cl, actual_lpl, actual_upl, table, **extra):
+        def append_result(
+            chart_type, by_str, value, recentered, actual_cl, actual_lpl, actual_upl, table,
+            _base=base, _ecl=expected_cl, _elbl=expected_lbl, _eubl=expected_ubl, **extra
+        ):
             results.append({
-                **base,
+                **_base,
                 'chart_type': chart_type,
                 'by': by_str,
                 'value': value,
                 'recentered': recentered,
-                'expected_cl': expected_cl,
-                'expected_lbl': expected_lbl,
-                'expected_ubl': expected_ubl,
+                'expected_cl': _ecl,
+                'expected_lbl': _elbl,
+                'expected_ubl': _eubl,
                 'actual_cl': actual_cl,
                 'actual_lpl': actual_lpl,
                 'actual_upl': actual_upl,
-                'match_cl': close(actual_cl, expected_cl) if expected_cl is not None else None,
-                'match_lpl': close(actual_lpl, expected_lbl) if expected_lbl is not None else None,
-                'match_upl': close(actual_upl, expected_ubl) if expected_ubl is not None else None,
+                'match_cl': close(actual_cl, _ecl) if _ecl is not None else None,
+                'match_lpl': close(actual_lpl, _elbl) if _elbl is not None else None,
+                'match_upl': close(actual_upl, _eubl) if _eubl is not None else None,
                 'chart_table': table,
                 **extra,
             })
@@ -217,22 +210,21 @@ def run_sds_validation(sds_num, pb, study, json_data):
             upl = float(upl_val) if upl_val != 'Varies' else None
             return cl, lpl, upl
 
+        def primary_chart_type(_loc=is_location):
+            if sds_num == 1:
+                return 'Xbar' if _loc else 'S'
+            return 'XmR' if _loc else 'R'
+
         if category == 'overall':
             overall = computed['overall']
-            if sds_num == 1:
-                chart_type = 'Xbar' if is_location else 'S'
-            else:
-                chart_type = 'XmR' if is_location else 'R'
+            chart_type = primary_chart_type()
             cl, lpl, upl = stats_from(overall, chart_type)
             append_result(chart_type, '[]', 'response', False, cl, lpl, upl, safe_chart_table(overall, chart_type))
 
         elif category == 'stratified':
             stratum = context_to_stratum(context, sds_num)
             focused = computed['stratified'].focus(stratum)
-            if sds_num == 1:
-                chart_type = 'Xbar' if is_location else 'S'
-            else:
-                chart_type = 'XmR' if is_location else 'R'
+            chart_type = primary_chart_type()
             cl, lpl, upl = stats_from(focused, chart_type)
             by_str = '[PRODUCTION_TIME]' if sds_num == 1 else '[FACTOR_1, FACTOR_2]'
             append_result(chart_type, by_str, 'response', False, cl, lpl, upl,
@@ -347,7 +339,7 @@ def render_chart_table_html(table):
     return html
 
 
-def generate_html(all_results):
+def generate_html(all_results):  # noqa: C901
     """Generate the full HTML report."""
     html = """<!DOCTYPE html>
 <html>
@@ -362,8 +354,10 @@ h2 { color: #555; margin-top: 40px; border-bottom: 2px solid #ddd; padding-botto
 .summary .pass-count { color: #2e7d32; font-weight: bold; }
 .summary .fail-count { color: #c62828; font-weight: bold; }
 .summary .skip-count { color: #757575; }
-table.main { border-collapse: collapse; width: 100%; margin: 10px 0; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-table.main th { background: #f5f5f5; padding: 8px 12px; text-align: left; font-size: 13px; border-bottom: 2px solid #ddd; }
+table.main { border-collapse: collapse; width: 100%; margin: 10px 0;
+  background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+table.main th { background: #f5f5f5; padding: 8px 12px; text-align: left;
+  font-size: 13px; border-bottom: 2px solid #ddd; }
 table.main td { padding: 6px 12px; border-bottom: 1px solid #eee; font-size: 13px; }
 table.main tr.pass td { background: #e8f5e9; }
 table.main tr.fail td { background: #ffebee; }
@@ -464,10 +458,9 @@ out of {total_checks + total_skip} total checks
                 act = r.get(act_key)
                 m = r.get(match_key)
                 if exp is not None or act is not None:
-                    mc = match_class(m)
                     mark = 'PASS' if m is True else ('FAIL' if m is False else '-')
                     if stats_html:
-                        stats_html += f'<br>'
+                        stats_html += '<br>'
                     stats_html += f'{stat_name}'
 
             # For the first stat line, build the full row
@@ -548,7 +541,7 @@ def main():
         fails = sum(1 for r in results for k in ('match_cl', 'match_lpl', 'match_upl') if r.get(k) is False)
         print(f'  Results: {passes} passed, {fails} failed')
 
-    print(f'\nGenerating HTML report...')
+    print('\nGenerating HTML report...')
     html = generate_html(all_results)
     OUTPUT_HTML.write_text(html)
     print(f'Report written to: {OUTPUT_HTML}')

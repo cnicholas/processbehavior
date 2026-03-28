@@ -21,7 +21,7 @@ import numpy as np
 import pandas as pd
 
 from .exceptions import ValidationError
-from .spc_constants import XMR_LIMIT_MULTIPLIER, R_UPPER_LIMIT_MULTIPLIER
+from .spc_constants import R_UPPER_LIMIT_MULTIPLIER, XMR_LIMIT_MULTIPLIER
 
 if TYPE_CHECKING:
     from .analysis_dataset import AnalysisDataSet

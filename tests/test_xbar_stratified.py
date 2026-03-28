@@ -319,7 +319,6 @@ class TestFacetedAxisLabels:
         # Check yaxis titles: only odd-indexed subplots (col 1) should have title
         n_charts = len([k for k in fig.layout if k.startswith('yaxis')])
         for idx in range(n_charts):
-            r = idx // 2 + 1
             c = idx % 2 + 1
             axis_key = 'yaxis' if idx == 0 else f'yaxis{idx + 1}'
             title = fig.layout[axis_key].title
@@ -339,7 +338,6 @@ class TestFacetedAxisLabels:
         nrows = 4
         for idx in range(n_charts):
             r = idx // ncols + 1
-            c = idx % ncols + 1
             axis_key = 'xaxis' if idx == 0 else f'xaxis{idx + 1}'
             title = fig.layout[axis_key].title
             is_bottom = (r == nrows) or (idx + ncols >= n_charts)
@@ -360,9 +358,9 @@ class TestCompanionPairedLayout:
             chart='Xbar', by=['PRODUCTION TIME'], companion=True,
         )
         plotter = Plotter(result)
-        fig_wrapper = plotter.plot()
+        plotter.plot()
         # Access the resolved charts via internal path
-        charts = plotter._resolve_charts('Xbar', False)
+        plotter._resolve_charts('Xbar', False)
         # Merge companion
         companion = plotter._resolve_charts(None, False)
         reordered, forced_ncols = plotter._reorder_companion_pairs(companion)

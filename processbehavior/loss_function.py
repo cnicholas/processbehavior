@@ -14,7 +14,7 @@ Wheeler, D.J. & Bishop, T.  *Variance Analysis System* — Chapter 15.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -130,6 +130,7 @@ class LossResult:
         plotly.graph_objects.Figure
         """
         import plotly.graph_objects as go
+
         from .plotting.themes import ChartTheme, get_theme
 
         if theme is None:

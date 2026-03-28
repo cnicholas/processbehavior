@@ -11,15 +11,15 @@ import tempfile
 import pandas as pd
 import pytest
 
-# Import analysis components
-from processbehavior import analysis_dataset as ad
 from processbehavior import Analysis
-from processbehavior.formulation_spec import ChartRequest, FormulationSpec
-from processbehavior.sds_detector import SDSRegistry
+
+# Import analysis components
 from processbehavior.data_preparation import DataPreparation
 
 # Import test data generators
 from processbehavior.datasets.synthetic import make_sds
+from processbehavior.formulation_spec import ChartRequest, FormulationSpec
+from processbehavior.sds_detector import SDSRegistry
 
 
 def _make_spec(spec_dict: dict) -> FormulationSpec:
@@ -387,7 +387,7 @@ def test_excel_export_invalid_path():
     result = analysis.calculate()
 
     # Try to export to invalid path
-    with pytest.raises(Exception):  # Could be OSError, FileNotFoundError, etc.
+    with pytest.raises(OSError):
         result.to_excel('/nonexistent_directory/output.xlsx')
 
 
