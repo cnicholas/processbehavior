@@ -5,8 +5,7 @@ import pandas as pd
 import plotly.graph_objects as go
 import pytest
 
-from processbehavior import ProcessBehavior, ValidationError, MaximumInformationResult
-
+from processbehavior import MaximumInformationResult, ProcessBehavior, ValidationError
 
 # ---------------------------------------------------------------------------
 # Helpers

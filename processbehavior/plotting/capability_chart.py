@@ -494,10 +494,7 @@ def _add_npl_lines(
     center_color = theme.center_color
 
     # Select sigma based on view
-    if view == "potential":
-        sigma = cap.sigma_hat_r2
-    else:
-        sigma = cap.sigma_hat
+    sigma = cap.sigma_hat_r2 if view == "potential" else cap.sigma_hat
 
     is_subplot = row is not None and col is not None
 
@@ -611,10 +608,7 @@ def _add_legend_traces(
         return
 
     # Select sigma based on view
-    if view == "potential":
-        sigma = cap.sigma_hat_r2
-    else:
-        sigma = cap.sigma_hat
+    sigma = cap.sigma_hat_r2 if view == "potential" else cap.sigma_hat
 
     # Spec limits (solid crimson)
     has_specs = specs.lsl is not None or specs.usl is not None

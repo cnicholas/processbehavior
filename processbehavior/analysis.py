@@ -396,9 +396,8 @@ class Analysis:
         multiple cells.
         """
         _EFFECT_RESIDUALS = {'R1', 'R3', 'R4', 'R5', 'RCR1', 'RCR3', 'RCR4', 'RCR5'}
-        if value_col is not None and value_col.upper() in _EFFECT_RESIDUALS:
-            if 'R2' in df.columns:
-                return 'R2'
+        if value_col is not None and value_col.upper() in _EFFECT_RESIDUALS and 'R2' in df.columns:
+            return 'R2'
         return value_col
 
     def _resolve_by_grouping(
@@ -638,7 +637,7 @@ class Analysis:
     # Chart Calculation Methods (Strategy Pattern)
     # =========================================================================
 
-    def _calculate_xbar(
+    def _calculate_xbar(  # noqa: C901
         self,
         value_col: str = None,
         _return_intermediates: bool = False
@@ -929,10 +928,10 @@ class Analysis:
 
             out['center'] = _Xbar
             out[['lpl', 'upl']] = out.apply(
-                lambda row: calculate_limits(
+                lambda row, _sd=_S, _n_col=n_to_use: calculate_limits(
                     mean=row['center'],
-                    sd=_S,
-                    N=row[n_to_use],
+                    sd=_sd,
+                    N=row[_n_col],
                     limits_type='Xbar',
                     round_to=spec.round_to,
                     sigma_multiplier=self.request.n_sigma,
@@ -1091,10 +1090,10 @@ class Analysis:
 
             out['center'] = _S
             out[['lpl', 'upl']] = out.apply(
-                lambda row: calculate_limits(
+                lambda row, _n_col=n_to_use: calculate_limits(
                     mean=0,
                     sd=row['center'],
-                    N=row[n_to_use],
+                    N=row[_n_col],
                     limits_type='S',
                     round_to=spec.round_to,
                     sigma_multiplier=self.request.n_sigma,
@@ -1141,7 +1140,7 @@ class Analysis:
             }
         }
 
-    def _calculate_s(
+    def _calculate_s(  # noqa: C901
         self,
         value_col: str = None,
         _precomputed: dict = None

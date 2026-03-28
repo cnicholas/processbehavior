@@ -47,8 +47,6 @@ from processbehavior.analysis_dataset import AnalysisDataSet
 # Result object
 from processbehavior.analysis_result import AnalysisResult
 from processbehavior.capability import CapabilityResult, SpecLimits
-from processbehavior.loss_function import LossResult
-from processbehavior.maximum_information import MaximumInformationResult
 from processbehavior.data_preparation import DataPreparation, encode_rsg, natural_sort_key
 from processbehavior.effects_calculator import EffectsCalculator
 
@@ -61,6 +59,8 @@ from processbehavior.exceptions import (
     ValidationError,
 )
 from processbehavior.formulation_spec import ChartRequest, FormulationSpec
+from processbehavior.loss_function import LossResult
+from processbehavior.maximum_information import MaximumInformationResult
 
 # Plotting/theming
 from processbehavior.plotting import ChartTheme, get_theme, list_themes, register_theme

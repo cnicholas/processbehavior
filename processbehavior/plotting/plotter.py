@@ -436,7 +436,7 @@ class Plotter:
         # Collect per-panel x_col to determine axis type per subplot
         time_var = self.summary.get('time_var')
         panel_x_cols: dict[int, str | None] = {}
-        for idx, (chart_name, chart_info) in enumerate(charts.items()):
+        for idx, (_chart_name, chart_info) in enumerate(charts.items()):
             metadata = chart_info.get('metadata', {})
             if metadata.get('chart_type') == 'Histogram':
                 panel_x_cols[idx] = None
@@ -498,7 +498,7 @@ class Plotter:
                 type_groups.setdefault(base, {})[chart_name] = chart_info
 
             chart_names_list = list(charts.keys())
-            for base_type, group_charts in type_groups.items():
+            for _base_type, group_charts in type_groups.items():
                 if all(
                     c.get('metadata', {}).get('chart_type') == 'Histogram'
                     for c in group_charts.values()
@@ -908,7 +908,6 @@ class Plotter:
             primary, secondary = 'XmR', 'R'
 
         # Build lookup by suffix for each type
-        primary_by_suffix = {suffix(n): n for n in base_types[primary]}
         secondary_by_suffix = {suffix(n): n for n in base_types[secondary]}
 
         # Interleave using primary order (preserves original stratum ordering)
