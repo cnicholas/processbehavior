@@ -55,6 +55,23 @@ class TestRChartResidualValidation:
         with pytest.raises(ValidationError, match="not supported for residual"):
             sds1_study.execute(chart='R', value='R5', by=[])
 
+    def test_r_chart_with_residual_no_companion_still_raises(self, sds1_study):
+        """execute(chart='R', value='R3', companion=False) must still raise."""
+        with pytest.raises(ValidationError, match="not supported for residual"):
+            sds1_study.execute(chart='R', value='R3', by=[], companion=False)
+
+    def test_r_chart_with_residual_companion_works(self, sds1_study):
+        """execute(chart='R', value='R3', companion=True) returns both XmR and R."""
+        result = sds1_study.execute(chart='R', value='R3', by=[], companion=True)
+        assert 'XmR' in result.charts
+        assert 'R' in result.charts
+
+    def test_r_chart_with_residual_companion_recentered_works(self, sds1_study):
+        """execute(chart='R', value='R3', companion=True, recentered=True) works."""
+        result = sds1_study.execute(chart='R', value='R3', by=[], companion=True, recentered=True)
+        assert 'XmR' in result.charts
+        assert 'R' in result.charts
+
     def test_xmr_with_residual_still_works(self, sds1_study):
         """XmR + residual must still work (no false positive)."""
         result = sds1_study.execute(chart='XmR', value='R3', by=[])
