@@ -1025,42 +1025,33 @@ class Plotter:
         col: int | None = None,
         max_ticks: int = 20,
     ) -> None:
-        """Replace integer x-axis positions with time values."""
+        """Apply and thin x-axis tick labels to avoid overcrowding."""
         time_var = self.summary.get('time_var')
         if not time_var or time_var not in data.columns:
-            return
-        x_col = self._get_x_column(data)
-        if x_col is not None:
             return
 
         n = len(data)
         if n == 0:
             return
 
-        priority = {0, n - 1}
-        lane_boundaries = metadata.get('lane_boundaries')
-        if lane_boundaries:
-            if isinstance(lane_boundaries, list):
-                priority |= {b['position'] for b in lane_boundaries}
-            elif isinstance(lane_boundaries, dict):
-                for bounds in lane_boundaries.values():
-                    priority |= {b['position'] for b in bounds}
+        # Determine if x-axis uses the time column directly (categorical)
+        # or integer positions (time repeats across strata)
+        x_col = self._get_x_column(data)
+        is_categorical = x_col is not None
 
-        # Adaptive tick budget: reduce regular ticks when lane boundaries
-        # consume many priority slots to avoid overcrowding
-        effective_max = max_ticks
-        if len(priority) > max_ticks // 2:
-            effective_max = len(priority) + min(10, max_ticks // 3)
+        # For categorical axes with few enough points, no thinning needed
+        if is_categorical and n <= max_ticks:
+            return
 
-        budget = max(0, effective_max - len(priority))
-        if budget > 0 and n > len(priority):
-            step = max(1, n // budget)
-            regular = set(range(0, n, step)) - priority
-            if len(regular) > budget:
-                regular = set(sorted(regular)[:budget])
-            tick_positions = sorted(priority | regular)
+        # Select evenly-spaced time ticks (first, last, and regular interval)
+        # Lane boundaries are visual separators rendered separately — they
+        # should not inflate the time tick set.
+        if n <= max_ticks:
+            tick_positions = list(range(n))
         else:
-            tick_positions = sorted(priority)
+            step = max(1, n // max_ticks)
+            tick_positions = sorted({0, n - 1} | set(range(0, n, step)))
+            tick_positions = tick_positions[:max_ticks]
 
         tick_positions = [p for p in tick_positions if 0 <= p < n]
         tick_labels = data[time_var].iloc[tick_positions].astype(str).tolist()
@@ -1074,13 +1065,26 @@ class Plotter:
         kwargs = {}
         if row is not None and col is not None:
             kwargs = {'row': row, 'col': col}
-        fig.update_xaxes(
-            tickvals=tick_positions,
-            ticktext=tick_labels,
-            tickangle=angle,
-            automargin=True,
-            **kwargs,
-        )
+
+        if is_categorical:
+            # Categorical axis: tickvals are the actual category values
+            tick_categories = data[x_col].iloc[tick_positions].tolist()
+            fig.update_xaxes(
+                tickvals=tick_categories,
+                ticktext=tick_labels,
+                tickangle=angle,
+                automargin=True,
+                **kwargs,
+            )
+        else:
+            # Integer-position axis: tickvals are row indices
+            fig.update_xaxes(
+                tickvals=tick_positions,
+                ticktext=tick_labels,
+                tickangle=angle,
+                automargin=True,
+                **kwargs,
+            )
 
     # ---- Y-range / histogram helpers ----
 
