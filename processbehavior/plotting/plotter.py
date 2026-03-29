@@ -1049,9 +1049,8 @@ class Plotter:
         if n <= max_ticks:
             tick_positions = list(range(n))
         else:
-            step = max(1, n // max_ticks)
+            step = max(2, (n - 1) // (max_ticks - 1))
             tick_positions = sorted({0, n - 1} | set(range(0, n, step)))
-            tick_positions = tick_positions[:max_ticks]
 
         tick_positions = [p for p in tick_positions if 0 <= p < n]
         tick_labels = data[time_var].iloc[tick_positions].astype(str).tolist()
