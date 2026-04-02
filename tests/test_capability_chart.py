@@ -44,6 +44,14 @@ def _make_cap_two_sided(*, with_r2: bool = True, sigma_hat: float = 1.5) -> Capa
         rng = np.random.default_rng(123)
         potential_values = y_bar + rng.normal(0, 0.8, size=n)
 
+    # Potential outside: computed from potential_values if available
+    pot_n_below = pot_n_above = pot_pct_below = pot_pct_above = None
+    if potential_values is not None:
+        pot_n_below = int(np.sum(potential_values < specs.lsl))
+        pot_n_above = int(np.sum(potential_values > specs.usl))
+        pot_pct_below = pot_n_below / n * 100
+        pot_pct_above = pot_n_above / n * 100
+
     return CapabilityResult(
         specs=specs, n=n, y_bar=y_bar, s=sigma_hat * 0.99, sigma_hat=sigma_hat,
         pp=pp, ppk_lower=ppk_lower, ppk_upper=ppk_upper, ppk=ppk,
@@ -54,6 +62,8 @@ def _make_cap_two_sided(*, with_r2: bool = True, sigma_hat: float = 1.5) -> Capa
         z_lower=(y_bar - 233) / sigma_hat, z_upper=(243 - y_bar) / sigma_hat,
         n_below_lsl=2, n_above_usl=3, n_outside=5,
         pct_below_lsl=2.0, pct_above_usl=3.0, pct_outside=5.0,
+        potential_n_below_lsl=pot_n_below, potential_n_above_usl=pot_n_above,
+        potential_pct_below_lsl=pot_pct_below, potential_pct_above_usl=pot_pct_above,
         round_to=3,
     )
 
@@ -576,16 +586,20 @@ class TestViewParameter:
         assert lnpl in x_values
         assert unpl in x_values
 
-    def test_view_potential_annotation_shows_cp_cpk(self, sample_values):
-        """view='potential' → annotation has Cp/Cpk, not Pp/Ppk."""
+    def test_view_potential_annotation_shows_cp_cpl_cpu(self, sample_values):
+        """view='potential' → annotation has CP/CPL/CPU Index, not PP/PPL/PPU."""
         cap = _make_cap_two_sided(with_r2=True)
         fig = create_capability_chart(cap, sample_values, view="potential")
         text = _get_annotation_text(fig)
-        assert "Cp " in text or "Cp<br>" in text or "Cp " in text
-        assert "Cpk" in text
-        assert "Pp " not in text
-        assert "Ppk" not in text
-        assert "sigma(R2)" in text
+        assert "CP  Index" in text
+        assert "CPL Index" in text
+        assert "CPU Index" in text
+        assert "PP  Index" not in text
+        assert "PPL Index" not in text
+        assert "PPU Index" not in text
+        assert "\u03c3\u0302(R2)" in text
+        assert "Pct Below LSL" in text
+        assert "Pct Above USL" in text
 
     def test_view_potential_without_r2_raises(self, sample_values):
         """SDS without R2 → ValidationError with helpful message."""
