@@ -324,28 +324,30 @@ def _get_annotation_text(fig: go.Figure) -> str:
 class TestAnnotationBox:
     """Verify capability index annotation content."""
 
-    def test_two_sided_shows_pp_ppk(self, sample_values):
+    def test_two_sided_shows_pp_ppl_ppu(self, sample_values):
         cap = _make_cap_two_sided()
         fig = create_capability_chart(cap, sample_values)
         text = _get_annotation_text(fig)
-        assert "Pp" in text
-        assert "Ppk" in text
+        assert "PP  Index" in text
+        assert "PPL Index" in text
+        assert "PPU Index" in text
 
-    def test_two_sided_shows_cp_cpk_with_r2(self, sample_values):
+    def test_two_sided_current_view_omits_cp_cpk(self, sample_values):
+        """Current view never shows Cp/Cpk, even with R2 available."""
         cap = _make_cap_two_sided(with_r2=True)
         fig = create_capability_chart(cap, sample_values)
         text = _get_annotation_text(fig)
-        assert "Cp" in text
-        assert "Cpk" in text
+        assert "PP  Index" in text
+        assert "Cp " not in text
+        assert "Cpk" not in text
 
     def test_no_r2_omits_cp_cpk(self, sample_values):
         cap = _make_cap_two_sided(with_r2=False)
         fig = create_capability_chart(cap, sample_values)
         text = _get_annotation_text(fig)
-        # Pp and Ppk should be there
-        assert "Pp" in text
-        # Cp should NOT be there (only appears with R2)
-        # Must check carefully: "Cp" substring of "Cpk" — check for "Cp " or "Cp="
+        assert "PP  Index" in text
+        assert "PPL Index" in text
+        assert "PPU Index" in text
         assert "Cp " not in text
         assert "Cpk" not in text
 
@@ -353,47 +355,47 @@ class TestAnnotationBox:
         cap = _make_cap_two_sided(with_r2=True)
         fig = create_capability_chart(cap, sample_values, show_potential=False)
         text = _get_annotation_text(fig)
-        assert "Pp" in text
-        # Cp/Cpk should be suppressed
+        assert "PP  Index" in text
         assert "Cp " not in text
         assert "Cpk" not in text
 
-    def test_usl_only_shows_ppk_usl(self, sample_values):
+    def test_usl_only_shows_ppu(self, sample_values):
         cap = _make_cap_usl_only()
         fig = create_capability_chart(cap, sample_values)
         text = _get_annotation_text(fig)
-        assert "Ppk(USL)" in text
+        assert "PPU Index" in text
 
-    def test_lsl_only_shows_ppk_lsl(self, sample_values):
+    def test_lsl_only_shows_ppl(self, sample_values):
         cap = _make_cap_lsl_only()
         fig = create_capability_chart(cap, sample_values)
         text = _get_annotation_text(fig)
-        assert "Ppk(LSL)" in text
+        assert "PPL Index" in text
 
     def test_shows_n_and_sigma(self, sample_values):
         cap = _make_cap_two_sided()
         fig = create_capability_chart(cap, sample_values)
         text = _get_annotation_text(fig)
         assert "n = 100" in text
-        assert "sigma" in text
+        assert "\u03c3\u0302" in text
 
-    def test_two_sided_outside_count(self, sample_values):
+    def test_two_sided_shows_pct_below_and_above(self, sample_values):
         cap = _make_cap_two_sided()
         fig = create_capability_chart(cap, sample_values)
         text = _get_annotation_text(fig)
-        assert "Outside:" in text
+        assert "Pct Below LSL" in text
+        assert "Pct Above USL" in text
 
     def test_usl_only_above_usl_count(self, sample_values):
         cap = _make_cap_usl_only()
         fig = create_capability_chart(cap, sample_values)
         text = _get_annotation_text(fig)
-        assert "Above USL:" in text
+        assert "Pct Above USL" in text
 
     def test_lsl_only_below_lsl_count(self, sample_values):
         cap = _make_cap_lsl_only()
         fig = create_capability_chart(cap, sample_values)
         text = _get_annotation_text(fig)
-        assert "Below LSL:" in text
+        assert "Pct Below LSL" in text
 
 
 # ============================================================================
