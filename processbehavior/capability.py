@@ -122,9 +122,13 @@ class CapabilityResult:
     z_lower, z_upper : float | None
         Distance to spec in sigma units.
     n_below_lsl, n_above_usl, n_outside : int | None
-        Empirical counts outside specs.
+        Empirical counts outside specs (from raw observations).
     pct_below_lsl, pct_above_usl, pct_outside : float | None
-        Empirical percents outside specs.
+        Empirical percents outside specs (from raw observations).
+    potential_n_below_lsl, potential_n_above_usl : int | None
+        Empirical counts outside specs (from recentered R2 values).
+    potential_pct_below_lsl, potential_pct_above_usl : float | None
+        Empirical percents outside specs (from recentered R2 values).
     stability_evaluated : bool
         Always False in v1 — stability integration deferred.
     stability_warning : str | None
@@ -158,7 +162,7 @@ class CapabilityResult:
     z_lower: float | None
     z_upper: float | None
 
-    # Empirical percent outside
+    # Empirical percent outside (from raw y_values)
     n_below_lsl: int | None
     n_above_usl: int | None
     n_outside: int | None
@@ -168,6 +172,15 @@ class CapabilityResult:
 
     # Potential view data
     potential_values: np.ndarray | None = None
+
+    # Response variable name (for axis labels)
+    response_var: str | None = None
+
+    # Potential empirical percent outside (from recentered R2 values)
+    potential_n_below_lsl: int | None = None
+    potential_n_above_usl: int | None = None
+    potential_pct_below_lsl: float | None = None
+    potential_pct_above_usl: float | None = None
 
     # Stability context
     stability_evaluated: bool = False
@@ -257,6 +270,10 @@ class CapabilityResult:
             "pct_below_lsl": _r(self.pct_below_lsl),
             "pct_above_usl": _r(self.pct_above_usl),
             "pct_outside": _r(self.pct_outside),
+            "potential_n_below_lsl": self.potential_n_below_lsl,
+            "potential_n_above_usl": self.potential_n_above_usl,
+            "potential_pct_below_lsl": _r(self.potential_pct_below_lsl),
+            "potential_pct_above_usl": _r(self.potential_pct_above_usl),
         }
 
     def __repr__(self) -> str:
@@ -285,12 +302,18 @@ class CapabilityResult:
         lines.append(f"    Z_lower={d['z_lower']}, Z_upper={d['z_upper']}")
 
         lines.append("")
-        lines.append("  Empirical:")
+        lines.append("  Empirical (current):")
         lines.append(
             f"    Below LSL: {d['n_below_lsl']} ({d['pct_below_lsl']}%)"
             f"  Above USL: {d['n_above_usl']} ({d['pct_above_usl']}%)"
             f"  Total outside: {d['n_outside']} ({d['pct_outside']}%)"
         )
+        if self.potential_pct_below_lsl is not None or self.potential_pct_above_usl is not None:
+            lines.append("  Empirical (potential):")
+            lines.append(
+                f"    Below LSL: {d['potential_n_below_lsl']} ({d['potential_pct_below_lsl']}%)"
+                f"  Above USL: {d['potential_n_above_usl']} ({d['potential_pct_above_usl']}%)"
+            )
 
         if not self.stability_evaluated:
             lines.append("")
@@ -532,6 +555,7 @@ def assess_capability(
     cpk = None
     potential_unavailable_reason = None
     potential_values = None
+    potential_outside = {}
 
     if ads.has_vas_residuals and "R2" in df.columns:
         r2_values = df["R2"].dropna().to_numpy(dtype=float)
@@ -545,6 +569,7 @@ def assess_capability(
             cpk_upper = pot["ppk_upper"]
             cpk = pot["ppk"]
             potential_values = y_bar + r2_values
+            potential_outside = compute_pct_outside(potential_values, specs)
         else:
             potential_unavailable_reason = (
                 f"Too few R2 residual values ({n_r2}) for potential capability; "
@@ -581,5 +606,10 @@ def assess_capability(
         pct_below_lsl=outside["pct_below_lsl"],
         pct_above_usl=outside["pct_above_usl"],
         pct_outside=outside["pct_outside"],
+        potential_n_below_lsl=potential_outside.get("n_below_lsl"),
+        potential_n_above_usl=potential_outside.get("n_above_usl"),
+        potential_pct_below_lsl=potential_outside.get("pct_below_lsl"),
+        potential_pct_above_usl=potential_outside.get("pct_above_usl"),
+        response_var=response_var,
         round_to=round_to,
     )

@@ -166,7 +166,7 @@ def create_capability_chart(
             bargap=0.05,
         )
 
-        x_lab = x_label or "Value"
+        x_lab = x_label or _default_x_label(cap)
         fig.update_xaxes(title_text=x_lab, row=1, col=1)
         fig.update_xaxes(title_text=x_lab, row=1, col=2)
         y_label_left = "Count" if not caller_histnorm else caller_histnorm.title()
@@ -193,7 +193,7 @@ def create_capability_chart(
     fig.update_layout(**theme.to_layout_dict())
     fig.update_layout(
         title=title if title is not None else _auto_title(specs, view=view),
-        xaxis_title=x_label or "Value",
+        xaxis_title=x_label or _default_x_label(cap),
         yaxis_title="Count" if not histnorm else histnorm.title(),
         width=width,
         height=height,
@@ -323,6 +323,13 @@ def _render_single_capability(
 # ---------------------------------------------------------------------------
 
 
+def _default_x_label(cap: CapabilityResult) -> str:
+    """Return response variable name (title-cased) or 'Value' as fallback."""
+    if cap.response_var:
+        return cap.response_var.replace('_', ' ').title()
+    return "Value"
+
+
 def _normalize_values(
     values: Sequence[float] | np.ndarray | pd.Series,
 ) -> np.ndarray:
@@ -340,31 +347,30 @@ def _build_index_text(
     specs = cap.specs
 
     if view == "potential":
-        # Potential view: show σ̂_R2 and Cp/Cpk as primary indices
+        # Potential view: show σ̂(R2) and CP/CPL/CPU indices
         lines: list[str] = []
         lines.append(f"n = {cap.n}")
-        lines.append(f"Y-bar = {round(cap.y_bar, r)}")
-        lines.append(f"sigma(R2) = {round(cap.sigma_hat_r2, r)}")
+        lines.append(f"\u0232 = {round(cap.y_bar, r)}")
+        lines.append(f"\u03c3\u0302(R2) = {round(cap.sigma_hat_r2, r)}")
 
         if specs.is_two_sided:
             lines.append("")
-            lines.append(f"Cp  = {_fmt(cap.cp, r)}")
-            lines.append(f"Cpk = {_fmt(cap.cpk, r)}")
+            lines.append(f"CP  Index = {_fmt(cap.cp, r)}")
+            lines.append(f"CPL Index = {_fmt(cap.cpk_lower, r)}")
+            lines.append(f"CPU Index = {_fmt(cap.cpk_upper, r)}")
+            lines.append("")
+            lines.append(f"Pct Below LSL = {_fmt(cap.potential_pct_below_lsl, 2)}%")
+            lines.append(f"Pct Above USL = {_fmt(cap.potential_pct_above_usl, 2)}%")
         elif specs.usl is not None:
             lines.append("")
-            lines.append(f"Cpk(USL) = {_fmt(cap.cpk, r)}")
+            lines.append(f"CPU Index = {_fmt(cap.cpk_upper, r)}")
+            lines.append("")
+            lines.append(f"Pct Above USL = {_fmt(cap.potential_pct_above_usl, 2)}%")
         else:
             lines.append("")
-            lines.append(f"Cpk(LSL) = {_fmt(cap.cpk, r)}")
-
-        # Empirical outside (same as current — it's the same data)
-        lines.append("")
-        if specs.is_two_sided:
-            lines.append(f"Outside: {cap.n_outside} ({_fmt(cap.pct_outside, 2)}%)")
-        elif specs.usl is not None:
-            lines.append(f"Above USL: {cap.n_above_usl} ({_fmt(cap.pct_above_usl, 2)}%)")
-        else:
-            lines.append(f"Below LSL: {cap.n_below_lsl} ({_fmt(cap.pct_below_lsl, 2)}%)")
+            lines.append(f"CPL Index = {_fmt(cap.cpk_lower, r)}")
+            lines.append("")
+            lines.append(f"Pct Below LSL = {_fmt(cap.potential_pct_below_lsl, 2)}%")
 
         return "<br>".join(lines)
 

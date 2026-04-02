@@ -561,6 +561,27 @@ class TestIntegrationSDS1:
         cap = sds1_study.capability(usl=120, lsl=80)
         assert cap.round_to == sds1_study.precision
 
+    def test_potential_pct_outside_computed_from_potential_values(self, sds1_study):
+        """Potential pct outside is derived from recentered R2 values, not raw Y."""
+        cap = sds1_study.capability(usl=120, lsl=80)
+        assert cap.potential_values is not None
+        # Recompute expected from potential_values directly
+        expected = compute_pct_outside(cap.potential_values, cap.specs)
+        assert cap.potential_n_below_lsl == expected["n_below_lsl"]
+        assert cap.potential_n_above_usl == expected["n_above_usl"]
+        assert cap.potential_pct_below_lsl == pytest.approx(expected["pct_below_lsl"])
+        assert cap.potential_pct_above_usl == pytest.approx(expected["pct_above_usl"])
+
+    def test_potential_pct_outside_less_than_current(self, sds1_study):
+        """Potential distribution (σ_R2 < σ_overall) has fewer values outside specs."""
+        # Specs tight enough that raw y_values have some outside, but
+        # the tighter potential distribution (σ_R2=0.25 vs σ=1.63) does not
+        cap = sds1_study.capability(usl=52, lsl=48)
+        assert cap.pct_below_lsl > 0
+        assert cap.pct_above_usl > 0
+        assert cap.potential_pct_below_lsl == 0.0
+        assert cap.potential_pct_above_usl == 0.0
+
 
 class TestIntegrationNoR2:
     """Integration: factors without time → no VAS residuals → Cp/Cpk unavailable."""
@@ -589,6 +610,14 @@ class TestIntegrationNoR2:
         assert cap.pp is not None
         assert cap.ppk is not None
         assert cap.sigma_hat > 0
+
+    def test_potential_pct_outside_none_without_r2(self, no_r2_study):
+        """Without R2, potential outside fields are None."""
+        cap = no_r2_study.capability(usl=120, lsl=80)
+        assert cap.potential_n_below_lsl is None
+        assert cap.potential_n_above_usl is None
+        assert cap.potential_pct_below_lsl is None
+        assert cap.potential_pct_above_usl is None
 
 
 # ============================================================================
