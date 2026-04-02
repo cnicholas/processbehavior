@@ -368,44 +368,30 @@ def _build_index_text(
 
         return "<br>".join(lines)
 
-    # Current view: existing behavior
+    # Current view
     lines = []
     lines.append(f"n = {cap.n}")
-    lines.append(f"Y-bar = {round(cap.y_bar, r)}")
-    lines.append(f"sigma = {round(cap.sigma_hat, r)}")
+    lines.append(f"\u0232 = {round(cap.y_bar, r)}")
+    lines.append(f"\u03c3\u0302 = {round(cap.sigma_hat, r)}")
 
     if specs.is_two_sided:
         lines.append("")
-        lines.append(f"Pp  = {_fmt(cap.pp, r)}")
-        lines.append(f"Ppk = {_fmt(cap.ppk, r)}")
+        lines.append(f"PP  Index = {_fmt(cap.pp, r)}")
+        lines.append(f"PPL Index = {_fmt(cap.ppk_lower, r)}")
+        lines.append(f"PPU Index = {_fmt(cap.ppk_upper, r)}")
+        lines.append("")
+        lines.append(f"Pct Below LSL = {_fmt(cap.pct_below_lsl, 2)}%")
+        lines.append(f"Pct Above USL = {_fmt(cap.pct_above_usl, 2)}%")
     elif specs.usl is not None:
         lines.append("")
-        lines.append(f"Ppk(USL) = {_fmt(cap.ppk, r)}")
+        lines.append(f"PPU Index = {_fmt(cap.ppk_upper, r)}")
+        lines.append("")
+        lines.append(f"Pct Above USL = {_fmt(cap.pct_above_usl, 2)}%")
     else:
         lines.append("")
-        lines.append(f"Ppk(LSL) = {_fmt(cap.ppk, r)}")
-
-    # Potential capability
-    if show_potential and cap.cp is not None:
-        if specs.is_two_sided:
-            lines.append("")
-            lines.append(f"Cp  = {_fmt(cap.cp, r)}")
-            lines.append(f"Cpk = {_fmt(cap.cpk, r)}")
-        elif specs.usl is not None:
-            lines.append("")
-            lines.append(f"Cpk(USL) = {_fmt(cap.cpk, r)}")
-        else:
-            lines.append("")
-            lines.append(f"Cpk(LSL) = {_fmt(cap.cpk, r)}")
-
-    # Empirical outside
-    lines.append("")
-    if specs.is_two_sided:
-        lines.append(f"Outside: {cap.n_outside} ({_fmt(cap.pct_outside, 2)}%)")
-    elif specs.usl is not None:
-        lines.append(f"Above USL: {cap.n_above_usl} ({_fmt(cap.pct_above_usl, 2)}%)")
-    else:
-        lines.append(f"Below LSL: {cap.n_below_lsl} ({_fmt(cap.pct_below_lsl, 2)}%)")
+        lines.append(f"PPL Index = {_fmt(cap.ppk_lower, r)}")
+        lines.append("")
+        lines.append(f"Pct Below LSL = {_fmt(cap.pct_below_lsl, 2)}%")
 
     return "<br>".join(lines)
 
