@@ -306,7 +306,7 @@ class Plotter:
 
         # Layout
         x_label = xaxis_title or self._get_xaxis_label(x_col, chart_name)
-        y_label = yaxis_title or self._get_yaxis_label(value_col)
+        y_label = yaxis_title or self._get_yaxis_label(value_col, metadata.get('chart_type'))
         fig.update_layout(
             width=width, height=height,
             xaxis_title=x_label, yaxis_title=y_label,
@@ -376,7 +376,7 @@ class Plotter:
             x_col = self._get_x_column(first_data)
             first_name = next(iter(charts.keys()))
             x_label = xaxis_title or self._get_xaxis_label(x_col, first_name)
-            y_label = yaxis_title or self._get_yaxis_label(None)
+            y_label = yaxis_title or self._get_yaxis_label(None, first_info.get('metadata', {}).get('chart_type'))
 
         # Shared binning / y-range
         global_y_range = None
@@ -1250,7 +1250,11 @@ class Plotter:
             return 'Observation'
         return x_col.replace('_', ' ').title()
 
-    def _get_yaxis_label(self, value_col: str | None) -> str:
+    def _get_yaxis_label(self, value_col: str | None, chart_type: str | None = None) -> str:
+        if chart_type == 'Xbar':
+            return 'Sample Average'
+        if chart_type == 'S':
+            return 'Sample Standard Deviation'
         response_var = self.summary.get('response_var')
         if response_var:
             return response_var.replace('_', ' ').title()
