@@ -326,8 +326,8 @@ study.support[study.support['available']]
 Explains why a specific chart is unavailable:
 
 ```python
-study.why_not('R2_XmR')
-# "Not available for this SDS"
+study.why_not('XmR', value='R2')
+# "'XmR' (R2) unavailable: Not available for this SDS"
 ```
 
 ### `study.design()`

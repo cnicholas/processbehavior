@@ -170,64 +170,62 @@ class SDSAnalysisPlan:
     min_cell_size: int = 0  # Minimum observations per cell from actual data
 
     # Class constant: questions each chart type answers
-    CHART_QUESTIONS: ClassVar[dict[str, str]] = {
+    # Primary charts keyed by str, residual charts keyed by (chart_type, residual) tuple
+    CHART_QUESTIONS: ClassVar[dict[str | tuple[str, str], str]] = {
         # Primary charts
         'Xbar': 'Are subgroup means stable over time?',
         'S': 'Is within-subgroup variation stable?',
         'XmR': 'Is individual variation stable over time?',
         'R': 'Is range variation stable over time?',
-        # Residual charts
-        'R2_S': 'Is within-subgroup variation stable?',
-        'R2_XmR': 'Is within-subgroup variation stable?',
-        'R3_XmR': 'Is there factor×time interaction?',
-        'R3_Xbar': 'Is there factor×time interaction affecting the mean?',
-        'R3_S': 'Is there factor×time interaction affecting variation?',
-        'R4_XmR': 'Does time have a significant effect?',
-        'R4_Xbar': 'Does time have a significant effect on the mean?',
-        'R4_S': 'Does time have a significant effect on variation?',
-        'R5_XmR': 'Does the factor have a significant effect?',
-        'R5_Xbar': 'Do factors have a significant effect on the mean?',
-        'R5_S': 'Do factors have a significant effect on variation?',
+        # Residual charts — keyed by (chart_type, residual)
+        ('S', 'R2'): 'Is within-subgroup variation stable?',
+        ('XmR', 'R2'): 'Is within-subgroup variation stable?',
+        ('XmR', 'R3'): 'Is there factor×time interaction?',
+        ('Xbar', 'R3'): 'Is there factor×time interaction affecting the mean?',
+        ('S', 'R3'): 'Is there factor×time interaction affecting variation?',
+        ('XmR', 'R4'): 'Does time have a significant effect?',
+        ('Xbar', 'R4'): 'Does time have a significant effect on the mean?',
+        ('S', 'R4'): 'Does time have a significant effect on variation?',
+        ('XmR', 'R5'): 'Does the factor have a significant effect?',
+        ('Xbar', 'R5'): 'Do factors have a significant effect on the mean?',
+        ('S', 'R5'): 'Do factors have a significant effect on variation?',
     }
 
     @property
-    def residual_charts(self) -> list[str]:
+    def residual_charts(self) -> list[tuple[str, str]]:
         """
         Residual chart types available for this SDS.
 
-        Returns the appropriate residual charts based on VAS support
-        and data structure:
+        Returns (chart_type, residual) tuples matching the ``execute()``
+        signature: ``study.execute(chart=chart_type, value=residual)``.
 
         - R2: S chart when cells have n>=2, otherwise XmR
-        - R3: Xbar/S when cells have n>=2, otherwise XmR (same subgrouping as R2)
+        - R3: Xbar/S when cells have n>=2, otherwise XmR
         - R4: Xbar/S when has_factors (aggregate across factors by time)
         - R5: Xbar/S when has_time (aggregate across time by factor)
 
         Per Wheeler/Bishop Sections 20.6.1-4:
         - R2 uses (k,t) cell subgrouping - S when n>=2
         - R3 uses (k,t) cell subgrouping - Xbar/S when n>=2
-        - R4_Xbar/S use time-based subgrouping (N_.t = Σ_k N_kt)
-        - R5_Xbar/S use factor-based subgrouping (N_k. = Σ_t N_kt)
+        - R4 Xbar/S use time-based subgrouping (N_.t = Σ_k N_kt)
+        - R5 Xbar/S use factor-based subgrouping (N_k. = Σ_t N_kt)
         """
         if not self.vas_residuals_supported:
             return []
 
         # R2: S chart when cells have replication (min_cell_size >= 2)
-        r2_chart = 'R2_S' if self.min_cell_size >= 2 else 'R2_XmR'
+        r2 = [('S', 'R2')] if self.min_cell_size >= 2 else [('XmR', 'R2')]
 
         # R3: Same subgrouping as R2 - Xbar/S when min_cell_size >= 2
-        # Per Wheeler Section 20.6.2: "Xbar and S charts can be used for SDS 1, 3, 4, 5"
-        r3_charts = ['R3_Xbar', 'R3_S'] if self.min_cell_size >= 2 else ['R3_XmR']
+        r3 = [('Xbar', 'R3'), ('S', 'R3')] if self.min_cell_size >= 2 else [('XmR', 'R3')]
 
         # R4: Xbar/S when aggregating across factors gives n>=2 per time subgroup
-        # Requires has_factors=True (multiple factors to aggregate)
-        r4_charts = ['R4_Xbar', 'R4_S'] if self.has_factors else ['R4_XmR']
+        r4 = [('Xbar', 'R4'), ('S', 'R4')] if self.has_factors else [('XmR', 'R4')]
 
         # R5: Xbar/S when aggregating across time gives n>=2 per factor subgroup
-        # Requires has_time=True (multiple time points to aggregate)
-        r5_charts = ['R5_Xbar', 'R5_S'] if self.has_time else ['R5_XmR']
+        r5 = [('Xbar', 'R5'), ('S', 'R5')] if self.has_time else [('XmR', 'R5')]
 
-        return [r2_chart] + r3_charts + r4_charts + r5_charts
+        return r2 + r3 + r4 + r5
 
     def __str__(self) -> str:
         """Pretty print the analysis plan."""

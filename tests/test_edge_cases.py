@@ -473,7 +473,7 @@ class TestChartGeneration:
         assert len(study.residual_charts) > 0
 
         # Execute a residual chart using new syntax
-        if 'R2_S' in study.residual_charts:
+        if ('S', 'R2') in study.residual_charts:
             result = study.execute(chart='S', value='R2')
             assert result is not None
 
