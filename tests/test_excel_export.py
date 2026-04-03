@@ -21,6 +21,8 @@ from processbehavior.datasets.synthetic import make_sds
 from processbehavior.formulation_spec import ChartRequest, FormulationSpec
 from processbehavior.sds_detector import SDSRegistry
 
+pytestmark = pytest.mark.io
+
 
 def _make_spec(spec_dict: dict) -> FormulationSpec:
     """Convert old-style spec dict to FormulationSpec."""
@@ -479,3 +481,87 @@ def test_excel_export_preserves_statistics(temp_excel_file):
 
     # If no stat columns found, that's also ok (they might be in statistics dict)
     assert True
+
+
+# ============================================================================
+# Additional coverage tests
+# ============================================================================
+
+def test_excel_export_stratified_multifactor(temp_excel_file):
+    """Test export with multi-factor stratification."""
+    from processbehavior import ProcessBehavior
+
+    df = make_sds(1, K1=2, K2=2, T=4, n_min=3, n_max=3, seed=42)
+    study = ProcessBehavior(df).formulate(
+        response='y', time='time', factors=['factor 1', 'factor 2'],
+    )
+    result = study.execute(chart='XmR', by=['factor 1', 'factor 2'])
+    result.to_excel(temp_excel_file)
+
+    assert os.path.exists(temp_excel_file)
+    xls = pd.ExcelFile(temp_excel_file)
+    # Should have at least Summary and a chart sheet
+    assert len(xls.sheet_names) >= 2
+
+
+def test_excel_export_sds4_minimal(temp_excel_file):
+    """Test export with minimal SDS 4-like data (single factor level)."""
+    from processbehavior import ProcessBehavior
+
+    import numpy as np
+    df = pd.DataFrame({
+        'y': np.random.default_rng(42).normal(50, 5, 20),
+        'time': range(1, 21),
+        'group': ['A'] * 20,
+    })
+    study = ProcessBehavior(df).formulate(
+        response='y', time='time', factors=['group'],
+    )
+    result = study.execute(chart='XmR', by=['group'])
+    result.to_excel(temp_excel_file)
+
+    assert os.path.exists(temp_excel_file)
+    xls = pd.ExcelFile(temp_excel_file)
+    assert 'Summary' in xls.sheet_names
+
+
+def test_excel_export_s_chart(temp_excel_file):
+    """Test export with S chart (different chart type than Xbar/XmR)."""
+    df = make_sds(1, K1=3, K2=2, T=4, n_min=3, n_max=3, seed=42)
+
+    spec = {
+        'analysis_type': 'S',
+        'rsg_vars': ['factor 1'],
+        'time_var': 'time',
+        'response_var': 'y'
+    }
+
+    sds = detect_sds_for_test(df, spec)
+    analysis = Analysis(spec=_make_spec(spec), request=_make_request(spec), sds=sds, df=df)
+    result = analysis.calculate()
+    result.to_excel(temp_excel_file)
+
+    assert os.path.exists(temp_excel_file)
+    xls = pd.ExcelFile(temp_excel_file)
+    # Should have chart sheet for S
+    chart_sheets = [s for s in xls.sheet_names if 'Chart' in s]
+    assert len(chart_sheets) >= 1
+
+
+def test_excel_export_round_trip_summary(temp_excel_file):
+    """Test that exported Summary sheet contains expected metadata."""
+    from processbehavior import ProcessBehavior
+
+    df = make_sds(1, K1=2, K2=2, T=4, n_min=3, n_max=3, seed=42)
+    study = ProcessBehavior(df).formulate(
+        response='y', time='time', factors=['factor 1', 'factor 2'],
+    )
+    result = study.execute(chart='Xbar')
+    result.to_excel(temp_excel_file)
+
+    summary_df = pd.read_excel(temp_excel_file, sheet_name='Summary')
+    # Summary should have Attribute and Value columns
+    assert 'Attribute' in summary_df.columns or len(summary_df.columns) >= 2
+    # Should contain key metadata
+    text = summary_df.to_string()
+    assert 'SDS' in text or 'sds' in text.lower()

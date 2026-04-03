@@ -54,13 +54,8 @@ class TestBug1_SChartAllN1:
             response='y', time='time', factors=['factor 1'],
         )
 
-        # If S is in valid_charts, executing it should raise ValueError
-        if 'S' in study_manual.valid_charts:
-            with pytest.raises(ValidationError, match="No subgroups with n > 1 found"):
-                study_manual.execute(chart='S')
-        else:
-            # S is not valid for this data — confirm it's rejected upstream
-            pytest.skip("S chart not in valid_charts for this data structure")
+        with pytest.raises(ValidationError, match="No subgroups with n > 1 found"):
+            study_manual.execute(chart='S')
 
     def test_s_chart_raises_with_forced_single_obs_subgroups(self):
         """Direct test: build SDS 1 data then strip to 1 obs per subgroup.
@@ -77,11 +72,8 @@ class TestBug1_SChartAllN1:
         )
 
         # n=1 per cell → S chart should detect all-n==1 and raise
-        if 'S' in study.valid_charts:
-            with pytest.raises(ValidationError, match="No subgroups with n > 1 found"):
-                study.execute(chart='S')
-        else:
-            pytest.skip("S chart not in valid_charts after dedup")
+        with pytest.raises(ValidationError, match="No subgroups with n > 1 found"):
+            study.execute(chart='S')
 
 
 # ---------------------------------------------------------------------------
@@ -149,9 +141,6 @@ class TestBug3_SChartCenterZero:
             response='y', time='time', factors=['factor 1'],
         )
 
-        if 'S' not in study.valid_charts:
-            pytest.skip("S chart not valid for this data")
-
         result = study.execute(chart='S')
         stats = result.charts['S']['statistics']
         assert stats['center'] is not None, "S chart center should be 0.0, not None"
@@ -189,10 +178,6 @@ class TestBug4_NModeAverageStatistics:
 
     def test_xbar_n_mode_average_reports_average_n(self):
         study = self._make_variable_n_study()
-
-        if 'Xbar' not in study.valid_charts:
-            pytest.skip("Xbar not valid for this data")
-
         result = study.execute(chart='Xbar', n_mode='average')
         stats = result.charts['Xbar']['statistics']
 
@@ -204,10 +189,6 @@ class TestBug4_NModeAverageStatistics:
 
     def test_s_n_mode_average_reports_average_n(self):
         study = self._make_variable_n_study()
-
-        if 'S' not in study.valid_charts:
-            pytest.skip("S not valid for this data")
-
         result = study.execute(chart='S', n_mode='average')
         stats = result.charts['S']['statistics']
 
@@ -219,10 +200,6 @@ class TestBug4_NModeAverageStatistics:
     def test_n_mode_actual_still_reports_max_n(self):
         """Regression: n_mode='actual' (default) still shows max N."""
         study = self._make_variable_n_study()
-
-        if 'Xbar' not in study.valid_charts:
-            pytest.skip("Xbar not valid for this data")
-
         result = study.execute(chart='Xbar')
         stats = result.charts['Xbar']['statistics']
 

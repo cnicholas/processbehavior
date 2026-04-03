@@ -11,6 +11,8 @@ from processbehavior import ProcessBehavior
 from processbehavior.datasets import synthetic
 from processbehavior.signals.config import SignalConfig
 
+pytestmark = pytest.mark.integration
+
 
 class TestWECOIntegration:
     """Test WECO rules integration with metadata-based column resolution."""

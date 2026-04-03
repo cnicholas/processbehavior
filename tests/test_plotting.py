@@ -18,6 +18,8 @@ from processbehavior.exceptions import ChartNotAvailableError
 from processbehavior.plotting import ChartTheme, ControlChartFigure, Plotter, get_theme, list_themes, register_theme
 from processbehavior.plotting.themes import apply_theme
 
+pytestmark = pytest.mark.plotting
+
 
 class TestThemes:
     """Test theme definitions and application."""
