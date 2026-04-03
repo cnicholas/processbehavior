@@ -8,8 +8,9 @@ script makes that drift visible for each PM SDS variable in TABVASTESTDATABASE.
 
 import pandas as pd
 
-from processbehavior import DataPreparation, SDSRegistry
+from processbehavior.data_preparation import DataPreparation
 from processbehavior.formulation_spec import FormulationSpec
+from processbehavior.sds_detector import SDSRegistry
 
 # ---------------------------------------------------------------------------
 # Load raw data

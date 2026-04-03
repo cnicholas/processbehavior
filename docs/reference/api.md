@@ -13,8 +13,8 @@ from processbehavior import ProcessBehavior
 
 pb = ProcessBehavior(
     df: pd.DataFrame,
-    na_values: list[str] = ['*', '?', 'ND', 'BDL', 'NA', 'N/A', 'n/a',
-                            '<LOD', '>LOQ', 'TNTC', 'QNS', '--']
+    na_values: list[str] = ['*', '?', '--', 'ND', 'BDL', 'BQL',
+                            '<LOD', '>ULQ', 'N/D', 'n/d', 'MISSING', 'missing']
 )
 ```
 
@@ -24,7 +24,7 @@ pb = ProcessBehavior(
 
 **Attributes:**
 - `.data`: The underlying pandas DataFrame
-- `.columns`: Accessor for column auto-completion
+- `.cols`: Accessor for column auto-completion
 
 **Methods:**
 
@@ -245,14 +245,11 @@ signals = result.get_signals(chart_name: str) -> pd.DataFrame
 **Methods - Stratified Analysis:**
 
 ```python
-# List available strata
+# List available strata (equivalent to result.strata)
 strata = result.list_strata() -> list[str]
 
-# Get stratified chart
-data = result.get_stratified_chart(stratum: str) -> pd.DataFrame
-
-# Get all stratified charts
-charts = result.get_stratified_charts() -> dict[str, pd.DataFrame]
+# Focus on a single stratum for drill-down
+focused = result.focus(stratum: str) -> AnalysisResult
 
 # Iterate through charts
 for name, data, stats in result.iter_charts():
@@ -438,7 +435,7 @@ theme = get_theme('dark')
 Automatic SDS detection (used internally).
 
 ```python
-from processbehavior import SDSRegistry
+from processbehavior.sds_detector import SDSRegistry
 
 detector = SDSRegistry()
 plan = detector.detect(
@@ -481,7 +478,7 @@ Complete specification for an SDS.
 Handles data cleaning and preparation (used internally).
 
 ```python
-from processbehavior import DataPreparation, DataPrepConfig
+from processbehavior.data_preparation import DataPreparation, DataPrepConfig
 
 config = DataPrepConfig({
     'response_var': 'weight',
@@ -503,7 +500,7 @@ prepared_df = prep.prepare(df)
 Calculates VAS residuals.
 
 ```python
-from processbehavior import ResidualCalculator
+from processbehavior.residual_calculator import ResidualCalculator
 
 calc = ResidualCalculator()
 df_with_residuals = calc.calculate(df, factors, time, response)
@@ -514,7 +511,7 @@ df_with_residuals = calc.calculate(df, factors, time, response)
 Calculates main effects for factorial designs.
 
 ```python
-from processbehavior import EffectsCalculator
+from processbehavior.effects_calculator import EffectsCalculator
 
 calc = EffectsCalculator()
 effects = calc.calculate(df, factors, time, response)

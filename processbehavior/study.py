@@ -1845,7 +1845,7 @@ class Study:
         """
         factors = self._spec.rsg_vars_list
         if not factors:
-            raise ValueError(
+            raise ValidationError(
                 "R6 requires factors. No factors defined in this study."
             )
 
@@ -1853,7 +1853,7 @@ class Study:
         if by is not None:
             by_factors = [b for b in by if b in factors]
             if not by_factors:
-                raise ValueError(
+                raise ValidationError(
                     f"R6 requires at least one factor in by=.\n"
                     f"Available factors: {factors}\n"
                     f"Example: study.execute(chart='Xbar', value='R6', by=['{factors[0]}'])"
@@ -1862,7 +1862,7 @@ class Study:
         elif len(factors) == 1:
             groupby_key = factors[0]
         else:
-            raise ValueError(
+            raise ValidationError(
                 f"R6 requires by=[factor(s)] to specify which factor(s).\n"
                 f"Available factors: {factors}\n"
                 f"Example: study.execute(chart='Xbar', value='R6', by=['{factors[0]}'])"
@@ -2209,7 +2209,7 @@ class Study:
             prefix = 'RCR' if recentered else 'R'
             col_name = f'{prefix}{residual_num}'
         else:
-            raise ValueError(
+            raise ValidationError(
                 f"Invalid value '{value}'. "
                 f"Valid options: 'response', 'R1', 'R2', 'R3', 'R4', 'R5', 'R6' "
                 f"(or 'RCR1'-'RCR5' for recentered, 'R6' with recentered=True)."
@@ -2219,7 +2219,7 @@ class Study:
         if col_name not in self._ads.analysis_dataset.columns:
             available = [c for c in self._ads.analysis_dataset.columns
                         if c.startswith('R') and len(c) == 2 and c[1].isdigit()]
-            raise ValueError(
+            raise ValidationError(
                 f"Residual column '{col_name}' not available for SDS {self.analytical_design_state.sds}. "
                 f"Available: {available}"
             )

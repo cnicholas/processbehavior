@@ -11,7 +11,7 @@ import tempfile
 import pandas as pd
 import pytest
 
-from processbehavior import Analysis
+from processbehavior.analysis import Analysis
 
 # Import analysis components
 from processbehavior.data_preparation import DataPreparation

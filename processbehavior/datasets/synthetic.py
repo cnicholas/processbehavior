@@ -20,7 +20,7 @@ Quick Start:
     >>> df = synthetic.make_sds1(K1=3, K2=2, T=8, n_min=2, n_max=4)
     >>> 
     >>> # Use with analysis
-    >>> from processbehavior import Analysis
+    >>> from processbehavior.analysis import Analysis
     >>> spec = {'analysis_type': 'Xbar', 'rsg_vars': ['factor 1'],
     ...         'response_var': 'y', 'time_var': 'time'}
     >>> results = Analysis(df, spec).calculate()

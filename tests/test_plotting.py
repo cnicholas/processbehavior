@@ -272,7 +272,7 @@ class TestPlotter:
         """Test error handling for invalid chart name."""
         plotter = Plotter(simple_result)
         with pytest.raises(
-            (ValueError, ChartNotAvailableError),
+            ChartNotAvailableError,
             match="Chart 'Invalid' not found",
         ):
             plotter.plot(chart='Invalid')

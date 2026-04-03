@@ -434,7 +434,6 @@ class Plotter:
         fig.update_layout(width=width, height=height, hovermode='closest')
 
         # Collect per-panel x_col to determine axis type per subplot
-        time_var = self.summary.get('time_var')
         panel_x_cols: dict[int, str | None] = {}
         for idx, (_chart_name, chart_info) in enumerate(charts.items()):
             metadata = chart_info.get('metadata', {})

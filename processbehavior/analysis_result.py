@@ -648,88 +648,12 @@ class AnalysisResult:
 
         return self._residuals[residual_type].copy()
 
-    def get_stratified_charts(self) -> dict[str, dict[str, Any]]:
-        """
-        Get all stratified charts (if stratification was used).
-
-        Returns
-        -------
-        dict
-            Dictionary of stratified charts with full chart names as keys
-
-        Examples
-        --------
-        >>> if result.summary['is_stratified']:
-        ...     strat_charts = result.get_stratified_charts()
-        ...     for name, chart in strat_charts.items():
-        ...         print(f"{name}: {len(chart['data'])} observations")
-        """
-        if not self.summary['is_stratified']:
-            return {}
-
-        # Filter out standard chart names
-        standard_chart_names = STANDARD_CHART_NAMES
-        stratified = {
-            name: chart
-            for name, chart in self.charts.items()
-            if name not in standard_chart_names
-        }
-
-        return stratified
-
-    def get_stratified_chart(self, stratum: str) -> pd.DataFrame:
-        """
-        Get chart data for a specific stratum.
-
-        Convenience method that searches for chart names containing the stratum.
-
-        Parameters
-        ----------
-        stratum : str
-            Stratum identifier (e.g., 'Operator_A', 'A', etc.)
-
-        Returns
-        -------
-        DataFrame
-            Chart data for the stratum
-
-        Raises
-        ------
-        KeyError
-            If no chart found for stratum
-
-        Examples
-        --------
-        >>> # If stratified by Operator with levels A, B, C
-        >>> chart_a = result.get_stratified_chart('A')
-        >>> chart_b = result.get_stratified_chart('Operator_B')
-        """
-        # Find charts containing the stratum identifier
-        matching_charts = [
-            name for name in self.charts
-            if stratum in name
-        ]
-
-        if not matching_charts:
-            raise ChartNotAvailableError(
-                f"No chart found for stratum '{stratum}'. "
-                f"Available charts: {self.all_charts}",
-                chart=stratum,
-                available=self.all_charts
-            )
-
-        if len(matching_charts) > 1:
-            logger.warning(
-                f"Multiple charts match '{stratum}': {matching_charts}. "
-                f"Returning first match: {matching_charts[0]}"
-            )
-
-        chart_name = matching_charts[0]
-        return self.charts[chart_name]['data'].copy()
-
     def list_strata(self) -> list[str]:
         """
         List all strata in stratified analysis.
+
+        Equivalent to accessing the ``strata`` property. Values returned
+        here are valid inputs to ``focus()``.
 
         Returns
         -------
@@ -739,23 +663,10 @@ class AnalysisResult:
         Examples
         --------
         >>> strata = result.list_strata()
-        >>> print(f"Strata: {strata}")
-        ['Operator_A', 'Operator_B', 'Operator_C']
+        >>> for s in strata:
+        ...     focused = result.focus(s)
         """
-        if not self.summary['is_stratified']:
-            return []
-
-        # Extract stratum names from chart names
-        # Format: "XmR_Operator_A" -> "Operator_A"
-        strata = []
-        for chart_name in self.get_stratified_charts():
-            # Split by underscore and take last 2 parts (variable_level)
-            parts = chart_name.split('_')
-            if len(parts) >= 2:
-                stratum = '_'.join(parts[1:])  # Skip chart type
-                strata.append(stratum)
-
-        return sorted(set(strata))
+        return self.strata
 
     def iter_charts(self):
         """
@@ -1614,7 +1525,8 @@ class FocusedAnalysisResult(AnalysisResult):
 
     def focus(self, stratum: str) -> AnalysisResult:
         """Cannot focus further - already focused on single stratum."""
-        raise ValueError(
+        from .exceptions import ValidationError
+        raise ValidationError(
             f"Cannot focus: this result is already focused on '{self._focused_stratum}'. "
             "Use the original result to focus on a different stratum."
         )

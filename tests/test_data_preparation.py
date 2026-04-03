@@ -14,6 +14,7 @@ import pandas as pd
 import pytest
 
 from processbehavior.data_preparation import DataPreparation
+from processbehavior.exceptions import ColumnNotFoundError, FactorNotFoundError, ValidationError
 from processbehavior.formulation_spec import FormulationSpec
 
 # ============================================================================
@@ -111,7 +112,7 @@ def test_validate_columns_raises_on_missing_response(prep, simple_df):
         rsg_vars=('lane',),
     )
 
-    with pytest.raises(ValueError, match="Response variable 'missing_column' not found"):
+    with pytest.raises(ColumnNotFoundError, match="Response variable 'missing_column' not found"):
         prep.validate_columns(simple_df, spec)
 
 
@@ -122,7 +123,7 @@ def test_validate_columns_raises_on_missing_grouping_var(prep, simple_df):
         rsg_vars=('missing_lane',),
     )
 
-    with pytest.raises(ValueError, match="grouping variables not found"):
+    with pytest.raises(FactorNotFoundError, match="grouping variables not found"):
         prep.validate_columns(simple_df, spec)
 
 
@@ -134,7 +135,7 @@ def test_validate_columns_raises_on_missing_time(prep, simple_df):
         time_var='missing_time',
     )
 
-    with pytest.raises(ValueError, match="Time variable 'missing_time' not found"):
+    with pytest.raises(ColumnNotFoundError, match="Time variable 'missing_time' not found"):
         prep.validate_columns(simple_df, spec)
 
 
@@ -148,7 +149,7 @@ def test_validate_columns_raises_on_non_numeric_response(prep):
         response_var='weight',
     )
 
-    with pytest.raises(ValueError, match="must be numeric"):
+    with pytest.raises(ValidationError, match="must be numeric"):
         prep.validate_columns(df, spec)
 
 
@@ -159,7 +160,7 @@ def test_validate_columns_error_suggests_fix(prep, simple_df):
         rsg_vars=('lane',),
     )
 
-    with pytest.raises(ValueError, match="Fix:"):
+    with pytest.raises(ColumnNotFoundError, match="Fix:"):
         prep.validate_columns(simple_df, spec)
 
 

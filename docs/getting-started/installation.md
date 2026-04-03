@@ -4,14 +4,14 @@
 
 ProcessBehavior requires Python 3.9 or later.
 
-### Core Dependencies
+### Dependencies (installed automatically)
 - **pandas** >= 2.0 - Data manipulation
 - **natsort** >= 8.0 - Natural sorting for factor levels
-
-### Optional Dependencies
 - **plotly** >= 5.18 - Interactive visualization
 - **openpyxl** >= 3.1 - Excel export
-- **kaleido** >= 0.2 - Static image export
+
+### Optional Dependencies
+- **kaleido** >= 0.2 - Static image export (install via `pip install processbehavior[images]`)
 
 ## Installation Methods
 
@@ -21,13 +21,7 @@ ProcessBehavior requires Python 3.9 or later.
 pip install processbehavior
 ```
 
-### With Plotting Support
-
-```bash
-pip install processbehavior[plotting]
-```
-
-### With All Optional Features
+### With Static Image Export
 
 ```bash
 pip install processbehavior[images]
@@ -80,9 +74,9 @@ Charts available: ['XmR', 'R']
 Installation verified!
 ```
 
-## Optional: Verify Plotting
+## Verify Plotting
 
-If you installed with plotting support:
+Plotting is included by default:
 
 ```python
 # Test plotting
@@ -91,20 +85,6 @@ fig.show()  # Opens interactive chart in browser
 ```
 
 ## Troubleshooting
-
-### ImportError: No module named 'plotly'
-
-You need to install plotting dependencies:
-```bash
-pip install processbehavior[plotting]
-```
-
-### ImportError: No module named 'openpyxl'
-
-For Excel export functionality:
-```bash
-pip install processbehavior[excel]
-```
 
 ### Jupyter Notebook Display Issues
 
