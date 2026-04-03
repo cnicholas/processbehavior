@@ -661,12 +661,11 @@ def test_study_residual_charts_sds1_has_all(grouped_single_factor):
         time='Time'
     )
 
-    # SDS 1 should have R2_S, R3_XmR, R4_XmR, R5_XmR
     residual_charts = study.residual_charts
-    assert 'R2_S' in residual_charts or 'R2_XmR' in residual_charts
-    assert any('R3' in r for r in residual_charts)
-    assert any('R4' in r for r in residual_charts)
-    assert any('R5' in r for r in residual_charts)
+    assert ('S', 'R2') in residual_charts or ('XmR', 'R2') in residual_charts
+    assert any(v == 'R3' for _, v in residual_charts)
+    assert any(v == 'R4' for _, v in residual_charts)
+    assert any(v == 'R5' for _, v in residual_charts)
 
 
 # ============================================================================
@@ -757,11 +756,9 @@ def test_study_analyze_residual_chart(grouped_single_factor):
         time='Time'
     )
 
-    # Get first available residual chart and parse it
+    # Get first available residual chart and execute it
     if study.residual_charts:
-        # residual_charts returns ['R2_S', 'R3_Xbar', ...] format
-        residual_chart = study.residual_charts[0]
-        residual_id, chart_type = residual_chart.split('_')
+        chart_type, residual_id = study.residual_charts[0]
         result = study.execute(chart=chart_type, value=residual_id)
         assert result is not None
 

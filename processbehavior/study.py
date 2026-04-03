@@ -1080,23 +1080,27 @@ class Study:
         return self._plan.recommended_chart
 
     @property
-    def residual_charts(self) -> list[str]:
+    def residual_charts(self) -> list[tuple[str, str]]:
         """
         Available residual chart types for VAS analysis.
 
-        Returns the subset of registry-claimed residual charts whose
-        underlying residual column was actually computed in the dataset.
-        Used internally for execute() validation and the support matrix.
+        Returns (chart_type, residual) tuples matching the ``execute()``
+        signature: ``study.execute(chart=chart_type, value=residual)``.
 
         Returns
         -------
-        list of str
-            Available residual chart types (e.g., ['R2_S', 'R3_XmR'])
+        list of tuple[str, str]
+            Available residual charts, e.g. ``[('S', 'R2'), ('Xbar', 'R5')]``
+
+        Examples
+        --------
+        >>> for chart, value in study.residual_charts:
+        ...     result = study.execute(chart=chart, value=value)
         """
         ads_cols = set(self._ads.analysis_dataset.columns)
         return [
-            chart for chart in self._plan.residual_charts
-            if chart.split('_')[0] in ads_cols
+            (chart, value) for chart, value in self._plan.residual_charts
+            if value in ads_cols
         ]
 
     @property
@@ -1168,14 +1172,18 @@ class Study:
         Returns
         -------
         pd.DataFrame
-            Columns: chart, category, available, recommended, reason, question
+            Columns: chart, value, category, available, recommended, reason, question
+
+            For primary charts, ``value`` is None. For residual charts,
+            ``value`` is the residual name (e.g. 'R2', 'R5').
 
         Examples
         --------
         >>> study.support
-               chart  category  available  recommended  ...
-        0       Xbar   primary       True         True  ...
-        1          S   primary       True        False  ...
+               chart value  category  available  recommended  ...
+        0       Xbar  None   primary       True         True  ...
+        1          S  None   primary       True        False  ...
+        2       Xbar    R5  residual       True        False  ...
 
         >>> study.support[study.support['available']]  # Filter to available
         >>> study.support.query("category == 'residual'")  # Residual charts
@@ -1189,31 +1197,35 @@ class Study:
         # All possible primary charts
         ALL_PRIMARY = ['Xbar', 'S', 'XmR', 'R']
 
+        # All possible residual charts as (chart_type, residual) tuples
+        ALL_RESIDUALS = [
+            ('S', 'R2'), ('XmR', 'R2'),
+            ('Xbar', 'R3'), ('S', 'R3'), ('XmR', 'R3'),
+            ('Xbar', 'R4'), ('S', 'R4'), ('XmR', 'R4'),
+            ('Xbar', 'R5'), ('S', 'R5'), ('XmR', 'R5'),
+        ]
+
         # ADS=0 guard: all charts unavailable
         if self.analytical_design_state.sds == 0:
             for chart in ALL_PRIMARY:
                 rows.append({
                     'chart': chart,
+                    'value': None,
                     'category': 'primary',
                     'available': False,
                     'recommended': False,
                     'reason': 'No valid observations after data cleaning',
                     'question': SDSAnalysisPlan.CHART_QUESTIONS.get(chart, '')
                 })
-            ALL_RESIDUALS = [
-                'R2_S', 'R2_XmR',
-                'R3_Xbar', 'R3_S', 'R3_XmR',
-                'R4_Xbar', 'R4_S', 'R4_XmR',
-                'R5_Xbar', 'R5_S', 'R5_XmR'
-            ]
-            for chart in ALL_RESIDUALS:
+            for chart, value in ALL_RESIDUALS:
                 rows.append({
                     'chart': chart,
+                    'value': value,
                     'category': 'residual',
                     'available': False,
                     'recommended': False,
                     'reason': 'No valid observations after data cleaning',
-                    'question': SDSAnalysisPlan.CHART_QUESTIONS.get(chart, '')
+                    'question': SDSAnalysisPlan.CHART_QUESTIONS.get((chart, value), '')
                 })
             return pd.DataFrame(rows)
 
@@ -1223,6 +1235,7 @@ class Study:
         for chart in ALL_PRIMARY:
             rows.append({
                 'chart': chart,
+                'value': None,
                 'category': 'primary',
                 'available': chart in self.valid_charts,
                 'recommended': chart == self.recommended_chart,
@@ -1230,23 +1243,16 @@ class Study:
                 'question': SDSAnalysisPlan.CHART_QUESTIONS.get(chart, '')
             })
 
-        # All possible residual charts
-        ALL_RESIDUALS = [
-            'R2_S', 'R2_XmR',
-            'R3_Xbar', 'R3_S', 'R3_XmR',
-            'R4_Xbar', 'R4_S', 'R4_XmR',
-            'R5_Xbar', 'R5_S', 'R5_XmR'
-        ]
-
-        for chart in ALL_RESIDUALS:
-            available = chart in self.residual_charts
+        for chart, value in ALL_RESIDUALS:
+            available = (chart, value) in self.residual_charts
             rows.append({
                 'chart': chart,
+                'value': value,
                 'category': 'residual',
                 'available': available,
                 'recommended': False,
                 'reason': None if available else 'Not available for this SDS',
-                'question': SDSAnalysisPlan.CHART_QUESTIONS.get(chart, '')
+                'question': SDSAnalysisPlan.CHART_QUESTIONS.get((chart, value), '')
             })
 
         return pd.DataFrame(rows)
@@ -1271,7 +1277,7 @@ class Study:
     # Guidance Methods
     # =========================================================================
 
-    def why_not(self, chart: str) -> str:
+    def why_not(self, chart: str, value: str | None = None) -> str:
         """
         Explain why a chart type is or isn't available for this study.
 
@@ -1282,7 +1288,10 @@ class Study:
         Parameters
         ----------
         chart : str
-            Chart type to check (e.g., 'XmR', 'S', 'R2_S')
+            Chart type to check (e.g., 'XmR', 'S', 'Xbar')
+        value : str, optional
+            Residual to check (e.g., 'R2', 'R5'). Required for residual
+            chart queries.
 
         Returns
         -------
@@ -1296,22 +1305,37 @@ class Study:
 
         >>> study.why_not('Xbar')
         "'Xbar' IS available. Are subgroup means stable over time?"
+
+        >>> study.why_not('Xbar', value='R5')
+        "'Xbar' (R5) IS available. Do factors have a significant effect on the mean?"
         """
+        # Handle old fused syntax: why_not('R5_Xbar') -> why_not('Xbar', value='R5')
+        if '_' in chart and value is None:
+            parts = chart.split('_', 1)
+            if parts[0].startswith('R') and len(parts[0]) >= 2 and parts[0][1:].isdigit():
+                value, chart = parts[0], parts[1]
+
         # ADS=0: no valid observations after cleaning
         if self.analytical_design_state.sds == 0:
-            return f"'{chart}' unavailable: no valid observations after data cleaning"
+            label = f"'{chart}'" if value is None else f"'{chart}' ({value})"
+            return f"{label} unavailable: no valid observations after data cleaning"
 
         df = self.support
-        row = df[df['chart'] == chart]
+        if value is not None:
+            row = df[(df['chart'] == chart) & (df['value'] == value)]
+        else:
+            row = df[(df['chart'] == chart) & (df['value'].isna())]
+
+        label = f"'{chart}'" if value is None else f"'{chart}' ({value})"
 
         if row.empty:
-            return f"'{chart}' is not a recognized chart type. Use study.support to see all options."
+            return f"{label} is not a recognized chart type. Use study.support to see all options."
 
         row = row.iloc[0]
         if row['available']:
-            return f"'{chart}' IS available. {row['question']}"
+            return f"{label} IS available. {row['question']}"
         else:
-            return f"'{chart}' unavailable: {row['reason']}"
+            return f"{label} unavailable: {row['reason']}"
 
     def design(self) -> DesignReport:
         """

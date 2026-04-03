@@ -213,7 +213,7 @@ The design report shows:
 - ✅ Full interaction analysis
 - ✅ Most powerful statistical tests
 
-**Valid Charts**: Xbar, S, XmR, R2_S, R3_XmR, R4_XmR, R5_XmR
+**Valid Charts**: Xbar, S, XmR + residual charts (R2 via S, R3-R5 via Xbar/S)
 
 ## SDS 2: No Replication
 
