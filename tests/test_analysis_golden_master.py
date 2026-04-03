@@ -24,9 +24,12 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+import pytest
 
 from processbehavior import ProcessBehavior
 from processbehavior.datasets import synthetic
+
+pytestmark = pytest.mark.golden
 
 # ============================================================================
 # Configuration

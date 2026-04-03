@@ -30,6 +30,8 @@ from processbehavior.plotting.stats_box import add_stats_box, format_stat_value
 from processbehavior.plotting.themes import get_theme
 from processbehavior.plotting.zones import calculate_zone_boundaries
 
+pytestmark = pytest.mark.plotting
+
 
 @pytest.fixture
 def theme():

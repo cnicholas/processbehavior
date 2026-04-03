@@ -22,6 +22,8 @@ from processbehavior.plotting.effects_charts import (
 )
 from processbehavior.plotting.themes import get_theme
 
+pytestmark = pytest.mark.plotting
+
 # ============================================================================
 # Fixtures
 # ============================================================================

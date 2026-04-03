@@ -17,6 +17,8 @@ import pytest
 
 from processbehavior import ProcessBehavior
 
+pytestmark = pytest.mark.integration
+
 VALIDATION_DIR = "validation"
 SHEET_NAME = "VAS-ANALYSIS-DATABASE.mwx"
 

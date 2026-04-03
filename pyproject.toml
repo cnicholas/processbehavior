@@ -59,6 +59,10 @@ testpaths = ["tests"]
 markers = [
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",
     "benchmark: performance benchmark tests",
+    "integration: end-to-end tests through full pipeline",
+    "plotting: tests that create plotly figures",
+    "io: tests that read/write files (Excel, Parquet, etc.)",
+    "golden: golden master snapshot tests",
 ]
 
 [tool.ruff]
