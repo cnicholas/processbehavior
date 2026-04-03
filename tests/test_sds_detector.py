@@ -236,7 +236,7 @@ def test_get_sds_characteristics_sds0(detector):
     info = detector.get_sds_characteristics(0)
 
     assert info['sds'] == 0
-    assert info['description'] == 'No grouping or time structure'
+    assert info['description'] == 'No analyzable observations after data cleaning'
     assert info['replication_type'] == 'none'
     assert info['interaction_analysis'] is False
     assert info['variance_decomposition'] is False
@@ -310,7 +310,7 @@ def test_get_sds_characteristics_unknown_defaults_to_sds0(detector):
 
     assert info['sds'] == 99  # But includes the passed SDS number
     # Gets SDS 0 characteristics
-    assert info['description'] == 'No grouping or time structure'
+    assert info['description'] == 'No analyzable observations after data cleaning'
 
 
 # ============================================================================

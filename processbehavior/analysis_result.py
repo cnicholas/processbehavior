@@ -160,15 +160,11 @@ class AnalysisResult:
         # Store the executed analysis type (passed from Analysis)
         self._analysis_type = analysis_type
 
-        # Extract SDS information
+        # Design state information
         self.observed_sds: int = analysis_dataset_obj.observed_design_state
         self.analytical_sds: int = analysis_dataset_obj.analytical_design_state.sds
         self.observed_sds_info: dict = analysis_dataset_obj.raw_sds_characteristics
         self.analytical_sds_info: dict = SDSRegistry().get_sds_characteristics(self.analytical_sds)
-
-        # Backward-compatible aliases (point to ADS since ADS drives analysis)
-        self.sds = self.analytical_sds
-        self.sds_info = self.analytical_sds_info
 
         # Extract residuals if calculated
         self._residuals = None
@@ -218,7 +214,7 @@ class AnalysisResult:
             # SDS information
             'observed_sds': self.observed_sds,
             'analytical_sds': self.analytical_sds,
-            'sds': self.analytical_sds,  # backward compat
+            'sds': self.analytical_sds,  # alias for analytical_sds
             'sds_description': self.analytical_sds_info.get('description', 'Unknown'),
             'sds_capabilities': self.analytical_sds_info.get('capabilities', []),
             'replication_type': self.analytical_sds_info.get('replication_type', 'unknown'),
@@ -238,8 +234,8 @@ class AnalysisResult:
             'has_residuals': self.has_residuals,
             'has_effects': self.has_effects,
             'has_interactions': self.has_interactions,
-            'variance_decomposition': self.sds_info.get('variance_decomposition', False),
-            'interaction_analysis': self.sds_info.get('interaction_analysis', False),
+            'variance_decomposition': self.analytical_sds_info.get('variance_decomposition', False),
+            'interaction_analysis': self.analytical_sds_info.get('interaction_analysis', False),
 
             # Signals
             'n_signals_total': int(n_signals),
@@ -1461,13 +1457,11 @@ class FocusedAnalysisResult(AnalysisResult):
         else:
             self.dataset = original_result.dataset.copy()
 
-        # Copy SDS information
+        # Copy design state information
         self.observed_sds = original_result.observed_sds
         self.analytical_sds = original_result.analytical_sds
         self.observed_sds_info = original_result.observed_sds_info.copy()
         self.analytical_sds_info = original_result.analytical_sds_info.copy()
-        self.sds = original_result.sds
-        self.sds_info = original_result.sds_info.copy()
 
         # Copy residuals/effects (filtered if possible)
         self._residuals = None
