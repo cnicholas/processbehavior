@@ -173,7 +173,7 @@ def render_histogram(
     data = chart_info['data']
 
     value_col = metadata.get('value_col')
-    bins = metadata.get('bins', 10)
+    bins = metadata.get('bins')
     chart_name = metadata.get('chart_type', 'Histogram')
 
     # Resolve histnorm: explicit parameter wins, then metadata fallback

@@ -1803,7 +1803,7 @@ class Study:
             residual_chart_type=base_chart if is_residual else None,
             recentered=recentered,
             companion=companion,
-            bins=bins if bins is not None else 10,
+            bins=bins,
             phased=phased,
             n_sigma=n_sigma,
             n_mode=n_mode,

@@ -1117,7 +1117,8 @@ class Plotter:
         """Shared bin edges across all histogram facets."""
         global_min = float('inf')
         global_max = float('-inf')
-        n_bins = 10
+        n_bins = None
+        total_n = 0
 
         for chart_info in charts.values():
             metadata = chart_info.get('metadata', {})
@@ -1125,14 +1126,20 @@ class Plotter:
                 continue
             data = chart_info['data']
             value_col = metadata.get('value_col')
-            n_bins = metadata.get('bins', 10)
+            n_bins = metadata.get('bins')
             if value_col is None or value_col not in data.columns:
                 continue
             values = data[value_col].dropna()
             if len(values) == 0:
                 continue
+            total_n += len(values)
             global_min = min(global_min, values.min())
             global_max = max(global_max, values.max())
+
+        # Auto-bin via Sturges' rule when bins is None
+        if n_bins is None:
+            import math
+            n_bins = max(5, int(math.ceil(1 + math.log2(total_n)))) if total_n > 0 else 10
 
         if global_min == float('inf') or global_max == float('-inf'):
             return np.linspace(0, 1, n_bins + 1), n_bins

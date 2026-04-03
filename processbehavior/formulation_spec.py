@@ -114,8 +114,8 @@ class ChartRequest:
         Whether to use re-centered residuals (RCR columns).
     companion : bool
         Whether to return both companion charts (Xbar+S or XmR+R).
-    bins : int
-        Number of bins for Histogram chart.
+    bins : int or None
+        Number of bins for Histogram chart. None for auto-binning.
     phased : bool
         Whether to compute per-phase limits for collapsed factors.
     """
@@ -127,7 +127,7 @@ class ChartRequest:
     residual_chart_type: str | None = None
     recentered: bool = False
     companion: bool = False
-    bins: int = 10
+    bins: int | None = 10
     phased: bool = False
     n_sigma: float = 3.0
     n_mode: str = "actual"
