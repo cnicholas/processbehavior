@@ -502,7 +502,7 @@ class TestEffectsPottingDifferentSDS:
 
     def test_sds1_full_replication(self, result_with_effects):
         """SDS 1 should have all effects available."""
-        assert result_with_effects.sds == 1
+        assert result_with_effects.analytical_sds == 1
         assert result_with_effects.has_effects
 
         # All chart types should work

@@ -293,7 +293,8 @@ class SDSResult:
     Attributes
     ----------
     sds : int
-        Sampling Design State (1-6) per Wheeler/Bishop Table 1
+        Sampling Design State (0-6). 0 indicates no analyzable observations
+        remain after cleaning. 1-6 per Wheeler/Bishop Table 1.
     min_cell_size : int
         Minimum observations per cell (for chart selection)
     reason : SDSReasonType | None
@@ -305,9 +306,9 @@ class SDSResult:
         - "partial_replication": SDS 3 (mixed N_kt)
 
         Incomplete (has empty cells, requires plan):
-        - "incomplete_with_singletons": SDS 4 (has 0s, 1s, and >=2s)
-        - "incomplete_no_singletons": SDS 5 (has 0s and >=2s, no 1s)
-        - "incomplete_no_replication": SDS 6 (has 0s, max = 1)
+        - "incomplete_no_singletons": SDS 4 (has 0s and >=2s, no 1s)
+        - "incomplete_no_replication": SDS 5 (has 0s, max = 1)
+        - "incomplete_with_singletons": SDS 6 (has 0s, 1s, and >=2s)
     n_empty_cells : int
         Count of cells with Nₖₜ=0 after plan reindex (if plan provided).
         For observed-only detection, counts cells where all responses are NA.
@@ -614,10 +615,10 @@ class SDSRegistry:
         """
         characteristics = {
             0: {
-                'description': 'No grouping or time structure',
+                'description': 'No analyzable observations after data cleaning',
                 'replication_type': 'none',
                 'r2_method': 'not_applicable',
-                'capabilities': ['basic_statistics_only'],
+                'capabilities': [],
                 'interaction_analysis': False,
                 'variance_decomposition': False
             },
