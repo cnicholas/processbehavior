@@ -1,186 +1,121 @@
-# 📊 processbehavior
+# processbehavior
 
-**processbehavior** is a Python package for **Statistical Process Control (SPC)** with a focus on **analyst usability** and **UI integration**. It prepares datasets, computes control-chart statistics, and returns **tidy, well-documented tables** suitable for dashboards and deeper analysis.
+A Python library for **Process Behavior Analysis** following the Wheeler/Bishop Variance Analysis System (VAS) methodology.
 
-## Features
-- **Charts:** X̄–S, Individuals–Moving Range (XmR), Range (R) *(R refining)*
-- **Rational subgrouping:** flexible multi-key grouping, robust validation  
-- **Time support:** Year/Quarter/Month/Week/DOY extraction for analyses & plots  
-- **Classic limits:** A3/B3/B4/D3/D4/d2/c4 with variable subgroup sizes  
-- **Point classification:** Rule 1 (3σ) + designed to extend to Western/Nelson  
-- **UI-ready outputs:** tidy `points`, `subgroups`, `limits`, `overall`, `rules`, `warnings`
+Unlike traditional SPC packages, processbehavior faithfully implements Wheeler/Bishop equation-by-equation: automatic Sampling Design State (SDS) detection, variance decomposition via R1-R5 residuals, and correct chart selection based on data structure.
 
-## Quickstart
-```python
-import pandas as pd
-import numpy as np
-from processbehavior import Analysis
+## Installation
 
-df = pd.DataFrame({
-    "timestamp": pd.date_range("2024-01-01", periods=30, freq="D"),
-    "machine": ["A"]*15 + ["B"]*15,
-    "x": np.random.normal(10, 1, 30),
-})
-
-spec = {
-    'analysis_type': 'Xbar',
-    'response_var': 'x',
-    'rsg_vars': ['machine'],
-    'time_var': 'timestamp',
-    'time_unit': 'Month',
-    'round_to': 3
-}
-
-result = Analysis(df, spec).calculate()
-
-points    = result.points
-subgroups = result.subgroups
-limits    = result.limits
-overall   = result.overall
-
-Perfect — here’s a polished **Markdown section** you can drop into your README, docs, or PyPI page. It uses LaTeX math (via Markdown delimiters) so it will render equations nicely in most doc sites (e.g., GitHub, MkDocs, Jupyter, Quarto).
-
----
-
-## 🔎 Residual System (R1–R5)
-
-`processbehavior` extends Shewhart’s framework by partitioning variation into distinct **residuals**.
-Each residual highlights a different *source of variation* so analysts can diagnose not only **if** a process is out of control, but also **why**.
-
----
-
-### **R1 — Overall deviation**
-
-* **Definition**
-
-  $$
-  R_1 = Y - \bar{Y}
-  $$
-* **Interpretation**
-  Deviation of each observation from the global mean.
-* **Use**
-  Helps identify *time-related shifts* when tracked sequentially; serves as a baseline for separating common vs. special causes.
-
----
-
-### **R2 — Within-cell residual**
-
-* **Definition**
-
-  $$
-  R_2 = Y - \bar{Y}_{kt}
-  $$
-
-  if both subgroup $k$ and time $t$ exist,
-  or, for one-way designs, the within-subgroup sequential residual (½-difference of adjacent observations).
-* **Interpretation**
-  Local “noise” after accounting for subgroup + time structure.
-* **Use**
-  Captures *within-subgroup variation* (measurement error, short-term fluctuation).
-
----
-
-### **R3 — Interaction residual**
-
-* **Definition**
-
-  $$
-  R_3 = \bar{Y}_{kt} - \bar{Y}_{k} - \bar{Y}_{t} + \bar{Y} - R_2
-  $$
-* **Interpretation**
-  Residual interaction between subgroup and time effects.
-* **Use**
-  Highlights *factor interactions* (e.g., a machine that only drifts under certain shifts).
-
----
-
-### **R4 — Time-marginal residual**
-
-* **Definition**
-
-  $$
-  R_4 = \bar{Y}_{t} - \bar{Y} - R_2
-  $$
-* **Interpretation**
-  Deviation of the time-period mean from the global mean.
-* **Use**
-  Highlights *systematic time effects* (seasonality, batch effects, trends).
-
----
-
-### **R5 — Subgroup-marginal residual**
-
-* **Definition**
-
-  $$
-  R_5 = \bar{Y}_{k} - \bar{Y} - R_2
-  $$
-* **Interpretation**
-  Deviation of subgroup mean from the global mean.
-* **Use**
-  Highlights *subgroup effects* (machine-to-machine variation, operator bias).
-
----
-
-## 🗺️ Why these matter
-
-* **R1 / R4** → diagnose *time-driven shifts*.
-* **R2** → isolate *pure noise* vs. signal.
-* **R3** → surface *interactions*.
-* **R5** → flag *consistent subgroup bias*.
-
-Together, these residuals create a **diagnostic map of variation sources**.
-In practice, plotting them side by side helps analysts understand whether signals are due to drift over time, subgroup effects, or interaction patterns — a richer picture than classic control charts alone.
-
----
-
-👉 When you publish, you can also add a **note of attribution** here:
-
-> *This residual system was developed in collaboration with Dr. Thomas Bishop (The Ohio State University), whose mentorship grounded this package in Shewhart’s philosophy of understanding sources of variation.*
-
----
-
-## Automatic Stratified Control Charts ⭐
-
-The killer feature that doesn't exist in other SPC software.
-
-### The Problem
-
-Traditional SPC tools force you to choose:
-- ❌ **Combine all groups** → Inflated limits mask true patterns
-- ❌ **Manual stratification** → Filter each group separately (tedious, error-prone)
-
-### The Solution
-
-**This system stratifies automatically:**
-```python
-# One specification
-from processbehavior import Analysis
-
-spec = {
-    'analysis_type': 'XmR',
-    'rsg_vars': ['lane', 'phase'],  # ← Stratify by these
-    'time_var': 'pull',
-    'response_var': 'fill_weight'
-}
-
-# One function call
-results = Analysis(df, spec).calculate()
-
-# Multiple charts automatically created:
-# results['lane1_phase1'] - Individual chart with lane1_phase1-specific limits
-# results['lane1_phase2'] - Individual chart with lane1_phase2-specific limits
-# results['lane2_phase1'] - Individual chart with lane2_phase1-specific limits
-# ...
+```bash
+pip install processbehavior
 ```
 
-### Key Distinction
+Plotting (plotly) and Excel export (openpyxl) are included. For static image export:
 
-**Grouping serves DIFFERENT purposes for different analyses:**
+```bash
+pip install processbehavior[images]
+```
 
-| Analysis | Grouping Purpose | Output | VAS Residuals |
-|----------|-----------------|---------|---------------|
-| **XmR/R** | **Stratification** | Separate chart per group | No (not needed) |
-| **Xbar-S** | **Variance decomposition** | Variance components | Yes (that's the point) |
+## Quickstart
 
-Both use `rsg_vars`, but for completely different reasons!
+```python
+import pandas as pd
+from processbehavior import ProcessBehavior
+
+# Wrap your DataFrame
+pb = ProcessBehavior(df)
+
+# Formulate the study (detect SDS, build analysis dataset)
+study = pb.formulate(
+    response=pb.cols.measurement,
+    time=pb.cols.batch,
+    factors=[pb.cols.machine]
+)
+
+# See what was detected
+print(study)  # Shows SDS, valid charts, design report
+
+# Execute analysis
+result = study.execute()
+
+# Access results
+print(result.summary)
+chart_data = result.get_chart('Xbar')
+stats = result.get_statistics('Xbar')
+
+# Plot
+result.plot()
+
+# Export to Excel
+result.to_excel('analysis.xlsx')
+```
+
+## Key Concepts
+
+### Two-Step Workflow
+
+The API mirrors how analysts think:
+
+1. **`formulate()`** - Understand your data structure. Detects the Sampling Design State (SDS 1-6), identifies valid charts, and computes residuals. This is the expensive step.
+2. **`execute()`** - Run analysis. Produces charts from the pre-computed data. This is cheap and can be called multiple times for different charts from the same study.
+
+### Sampling Design States (SDS)
+
+processbehavior automatically detects your data's structure:
+
+| SDS | Structure | Example |
+|-----|-----------|---------|
+| 1 | Factors + Time + Replication | 3 machines x 10 batches x 4 samples each |
+| 2 | Factors + Time, no replication | 3 machines x 10 batches, 1 sample each |
+| 3 | Factors + Time, partial replication | Mixed sample sizes across cells |
+| 4 | Time only (single stream) | 30 sequential measurements |
+| 5 | Factors only (no time) | 3 machines, multiple samples, no time order |
+| 6 | Individual values only | Flat list of measurements |
+
+The detected SDS determines which charts are valid, how R2 is calculated, and whether variance decomposition is available.
+
+### Residual System (R1-R5)
+
+For factorial designs (SDS 1-3), processbehavior decomposes variation into diagnostic residuals:
+
+- **R1** - Overall deviation from grand mean
+- **R2** - Within-cell noise (measurement error, short-term fluctuation)
+- **R3** - Interaction between factors and time
+- **R4** - Time effects (trends, seasonality, batch effects)
+- **R5** - Factor effects (machine-to-machine, operator bias)
+
+```python
+# Chart any residual
+result = study.execute(chart='XmR', value='R4')  # Time effects on XmR chart
+result = study.execute(chart='Xbar', value='R5')  # Factor effects on Xbar chart
+```
+
+### Stratified Analysis
+
+For XmR/R charts with grouping factors, processbehavior produces a single combined chart with per-stratum limits:
+
+```python
+result = study.execute(chart='XmR', by=['machine'])
+
+# Drill into a specific stratum
+for stratum in result.strata:
+    focused = result.focus(stratum)
+    focused.plot()
+```
+
+## Features
+
+- **Auto-detection**: SDS detection on raw data determines valid charts and analysis methods
+- **Correct charts**: Xbar-S, XmR (IMR), Range, Histogram with proper limit calculations
+- **Variance decomposition**: R1-R5 residuals for factorial designs
+- **Effects analysis**: Main effects, time effects, and interaction effects
+- **Stratified charts**: Automatic per-stratum limits for grouped individual data
+- **Signal detection**: Rule 1 (3-sigma) point classification
+- **IDE support**: Column auto-completion via `pb.cols`
+- **Self-diagnostic errors**: Helpful messages that say what's available and how to fix it
+- **Excel export**: Publication-ready workbooks with charts and statistics
+- **Interactive plots**: Plotly-based charts with hover details
+
+## License
+
+Apache 2.0

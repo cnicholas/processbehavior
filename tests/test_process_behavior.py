@@ -17,7 +17,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from processbehavior.exceptions import ColumnNotFoundError
+from processbehavior.exceptions import ColumnNotFoundError, FactorNotFoundError
 from processbehavior.process_behavior import ColumnAccessor, ProcessBehavior
 
 # ============================================================================
@@ -272,7 +272,7 @@ def test_formulate_validates_response_column():
     df = pd.DataFrame({'X': [1, 2, 3], 'Factor': ['A', 'A', 'B']})
     pdata = ProcessBehavior(df)
 
-    with pytest.raises(ValueError, match="not found"):
+    with pytest.raises(ColumnNotFoundError, match="not found"):
         pdata.formulate(response='NonExistent', factors=['Factor'])
 
 
@@ -775,7 +775,7 @@ def test_formulate_invalid_factor_column():
     df = pd.DataFrame({'Value': [1, 2, 3]})
     pdata = ProcessBehavior(df)
 
-    with pytest.raises(ValueError, match="not found"):
+    with pytest.raises(FactorNotFoundError, match="not found"):
         pdata.formulate(response='Value', factors=['NonExistent'])
 
 

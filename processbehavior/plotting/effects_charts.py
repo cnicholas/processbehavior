@@ -18,6 +18,8 @@ from typing import TYPE_CHECKING, Any
 import pandas as pd
 import plotly.graph_objects as go
 
+from processbehavior.exceptions import ChartNotAvailableError, ValidationError
+
 if TYPE_CHECKING:
     from .themes import ChartTheme
 
@@ -109,9 +111,11 @@ def create_main_effects_chart(
             time_effects = (name, data)
 
     if not factor_effects and time_effects is None:
-        raise ValueError(
+        raise ChartNotAvailableError(
             "No main effects found to plot.\n"
-            f"Available effects keys: {list(effects.keys())}"
+            f"Available effects keys: {list(effects.keys())}",
+            chart='main_effects',
+            available=list(effects.keys())
         )
 
     # Build combined data for horizontal bar chart
@@ -239,9 +243,11 @@ def create_factor_effects_chart(
             factor_effects.append((name, data))
 
     if not factor_effects:
-        raise ValueError(
+        raise ChartNotAvailableError(
             "No factor main effects found to plot.\n"
-            f"Available effects keys: {list(effects.keys())}"
+            f"Available effects keys: {list(effects.keys())}",
+            chart='factor_effects',
+            available=list(effects.keys())
         )
 
     # Build combined data for vertical bar chart
@@ -347,10 +353,12 @@ def create_time_effects_chart(
             break
 
     if time_effects is None:
-        raise ValueError(
+        raise ChartNotAvailableError(
             "No time effects found to plot.\n"
             "This requires a time variable in the analysis.\n"
-            f"Available effects keys: {list(effects.keys())}"
+            f"Available effects keys: {list(effects.keys())}",
+            chart='time_effects',
+            available=list(effects.keys())
         )
 
     # Build data for horizontal bar chart
@@ -462,9 +470,11 @@ def create_time_interaction_chart(
     >>> fig.show()
     """
     if 'factor_time' not in interactions:
-        raise ValueError(
+        raise ChartNotAvailableError(
             "Factor × time interaction not available.\n"
-            "This requires both factors and time variable in the analysis."
+            "This requires both factors and time variable in the analysis.",
+            chart='factor_time_interaction',
+            available=list(interactions.keys())
         )
 
     pdc = interactions['factor_time']
@@ -593,13 +603,15 @@ def create_factor_interaction_chart(
     >>> fig.show()
     """
     if 'factor_factor' not in interactions:
-        raise ValueError(
+        raise ChartNotAvailableError(
             "Factor × factor interaction not available.\n"
-            "This requires at least 2 factors in the analysis."
+            "This requires at least 2 factors in the analysis.",
+            chart='factor_factor_interaction',
+            available=list(interactions.keys())
         )
 
     if len(factors) < 2:
-        raise ValueError(
+        raise ValidationError(
             f"Factor interaction requires at least 2 factors, got {len(factors)}."
         )
 

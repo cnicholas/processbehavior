@@ -11,12 +11,31 @@ requires-python = ">=3.9"
 authors = [{name = "cnicholas", email = "4948774+cnicholas@users.noreply.github.com"}]
 license = { text = "Apache-2.0" }
 keywords = ["spc", "quality-control", "control-charts", "process-behavior", "shewhart"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Science/Research",
+  "Intended Audience :: Manufacturing",
+  "License :: OSI Approved :: Apache Software License",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: Scientific/Engineering :: Information Analysis",
+  "Topic :: Scientific/Engineering",
+]
 dependencies = [
   "pandas>=2.0",
   "natsort>=8.0.0",
   "openpyxl>=3.1",
   "plotly>=5.18",
 ]
+
+[project.urls]
+Homepage = "https://github.com/cnicholas/processbehavior"
+Repository = "https://github.com/cnicholas/processbehavior"
+Issues = "https://github.com/cnicholas/processbehavior/issues"
 
 [project.optional-dependencies]
 images = ["kaleido>=0.2"]

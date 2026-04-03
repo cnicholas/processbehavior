@@ -12,8 +12,8 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from processbehavior import Analysis
 from processbehavior import analysis_dataset as ad
+from processbehavior.analysis import Analysis
 from processbehavior.data_preparation import DataPreparation
 from processbehavior.formulation_spec import ChartRequest, FormulationSpec
 from processbehavior.sds_detector import SDSRegistry

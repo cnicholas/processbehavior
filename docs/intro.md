@@ -124,9 +124,9 @@ Interactive Plotly charts with multiple themes, zone shading, and professional s
 pip install processbehavior
 ```
 
-For plotting support:
+Plotting (plotly) and Excel export (openpyxl) are included by default. For static image export:
 ```bash
-pip install processbehavior[plotting]
+pip install processbehavior[images]
 ```
 
 ## Quick Links

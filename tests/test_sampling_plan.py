@@ -16,8 +16,8 @@ from processbehavior import (
     ColumnRef,
     ProcessBehavior,
     ValidationError,
-    encode_rsg,
 )
+from processbehavior.data_preparation import encode_rsg
 
 # =============================================================================
 # Test Fixtures

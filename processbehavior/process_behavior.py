@@ -538,7 +538,13 @@ class ProcessBehavior:
         --------
         >>> pb = ProcessBehavior.read_parquet('data.parquet')
         """
-        df = pd.read_parquet(path, **kwargs)
+        try:
+            df = pd.read_parquet(path, **kwargs)
+        except ImportError:
+            raise ImportError(
+                "Reading Parquet files requires pyarrow or fastparquet. "
+                "Install with: pip install pyarrow"
+            ) from None
         return cls(df, na_values=na_values)
 
     @classmethod

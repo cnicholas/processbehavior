@@ -23,6 +23,8 @@ import pandas as pd
 from natsort import natsorted
 from pandas.api.types import is_numeric_dtype
 
+from .exceptions import ColumnNotFoundError, FactorNotFoundError, ValidationError
+
 if TYPE_CHECKING:
     from .formulation_spec import FormulationSpec
 
@@ -328,33 +330,39 @@ class DataPreparation:
         if spec.has_grouping:
             missing = set(spec.rsg_vars) - set(df_cols)
             if missing:
-                raise ValueError(
+                raise FactorNotFoundError(
                     f"One or more grouping variables not found in dataset.\n"
                     f"Missing: {sorted(missing)}\n"
                     f"Required: {spec.rsg_vars}\n"
                     f"Available columns: {df_cols}\n"
-                    f"Fix: Check spelling or provide correct column names"
+                    f"Fix: Check spelling or provide correct column names",
+                    factor=str(sorted(missing)),
+                    available=df_cols
                 )
 
         # Validate time variable
         if spec.has_time and spec.time_var not in df_cols:
-            raise ValueError(
+            raise ColumnNotFoundError(
                 f"Time variable '{spec.time_var}' not found in dataset.\n"
                 f"Available columns: {df_cols}\n"
-                f"Fix: Check spelling or specify correct time column"
+                f"Fix: Check spelling or specify correct time column",
+                column=spec.time_var,
+                available=df_cols
             )
 
         # Validate response variable
         if spec.response_var not in df_cols:
-            raise ValueError(
+            raise ColumnNotFoundError(
                 f"Response variable '{spec.response_var}' not found in dataset.\n"
                 f"Available columns: {df_cols}\n"
-                f"Fix: Check spelling or specify correct measurement column"
+                f"Fix: Check spelling or specify correct measurement column",
+                column=spec.response_var,
+                available=df_cols
             )
 
         # Validate response variable is numeric
         if not is_numeric_dtype(df[spec.response_var]):
-            raise ValueError(
+            raise ValidationError(
                 f"Response variable '{spec.response_var}' must be numeric.\n"
                 f"Current type: {df[spec.response_var].dtype}\n"
                 f"Fix: Convert to numeric or choose a different column"

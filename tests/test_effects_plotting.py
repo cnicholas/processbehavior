@@ -11,7 +11,7 @@ import plotly.graph_objects as go
 import pytest
 
 from processbehavior import ProcessBehavior
-from processbehavior.exceptions import ValidationError
+from processbehavior.exceptions import ChartNotAvailableError, ValidationError
 from processbehavior.plotting import ControlChartFigure
 from processbehavior.plotting.effects_charts import (
     create_factor_effects_chart,
@@ -178,7 +178,7 @@ class TestCreateMainEffectsChart:
     def test_raises_if_no_effects(self, theme):
         """Should raise error if no effects data found."""
         empty_effects = {}
-        with pytest.raises(ValueError, match="No main effects found"):
+        with pytest.raises(ChartNotAvailableError, match="No main effects found"):
             create_main_effects_chart(empty_effects, theme)
 
 
@@ -240,7 +240,7 @@ class TestCreateFactorEffectsChart:
         """Should raise error if no factor effects data found."""
         # Create effects dict with only time effects
         time_only_effects = {'time': result_with_effects.effects.get('time')}
-        with pytest.raises(ValueError, match="No factor main effects found"):
+        with pytest.raises(ChartNotAvailableError, match="No factor main effects found"):
             create_factor_effects_chart(time_only_effects, theme)
 
 
@@ -300,7 +300,7 @@ class TestCreateTimeEffectsChart:
     def test_raises_if_no_time_effects(self, theme, result_no_time):
         """Should raise error if no time effects data found."""
         effects = result_no_time.effects
-        with pytest.raises(ValueError, match="No time effects found"):
+        with pytest.raises(ChartNotAvailableError, match="No time effects found"):
             create_time_effects_chart(effects, theme)
 
 
@@ -340,7 +340,7 @@ class TestCreateTimeInteractionChart:
 
     def test_raises_if_no_factor_time(self, theme, result_no_time):
         """Should raise error if factor_time not available."""
-        with pytest.raises(ValueError, match="Factor × time interaction not available"):
+        with pytest.raises(ChartNotAvailableError, match="Factor × time interaction not available"):
             create_time_interaction_chart(
                 interactions={},  # Empty interactions
                 effects={},
@@ -374,7 +374,7 @@ class TestCreateFactorInteractionChart:
 
     def test_raises_if_no_factor_factor(self, theme):
         """Should raise error if factor_factor not available."""
-        with pytest.raises(ValueError, match="Factor × factor interaction not available"):
+        with pytest.raises(ChartNotAvailableError, match="Factor × factor interaction not available"):
             create_factor_interaction_chart(
                 interactions={},
                 factors=['factor1', 'factor2'],
@@ -383,7 +383,7 @@ class TestCreateFactorInteractionChart:
 
     def test_raises_if_less_than_two_factors(self, theme, result_with_effects):
         """Should raise error if less than 2 factors."""
-        with pytest.raises(ValueError, match="at least 2 factors"):
+        with pytest.raises(ValidationError, match="at least 2 factors"):
             create_factor_interaction_chart(
                 interactions=result_with_effects.interactions,
                 factors=['factor1'],  # Only 1 factor
@@ -471,31 +471,23 @@ class TestEffectsPlottingErrors:
 
     def test_time_interaction_requires_time(self, result_no_time):
         """Should raise error when time interaction not available."""
-        with pytest.raises(
-            (ValueError, ValidationError), match="Time interaction not available",
-        ):
+        with pytest.raises(ValidationError, match="Time interaction not available"):
             result_no_time.plot(chart='TimeInteraction')
 
     def test_factor_interaction_requires_two_factors(self, result_single_factor):
         """Should raise error when factor interaction not available."""
-        with pytest.raises(
-            (ValueError, ValidationError), match="Factor interaction not available",
-        ):
+        with pytest.raises(ValidationError, match="Factor interaction not available"):
             result_single_factor.plot(chart='FactorInteraction')
 
     def test_time_effects_requires_time_variable(self, result_no_time):
         """Should raise error when time effects not available."""
-        with pytest.raises(
-            (ValueError, ValidationError), match="Time effects not available",
-        ):
+        with pytest.raises(ValidationError, match="Time effects not available"):
             result_no_time.plot(chart='TimeEffects')
 
     def test_main_effects_requires_effects(self, result_no_time):
         """MainEffects should raise error when effects not computed."""
         # result_no_time has factors but has_effects=False (XmR chart with by param)
-        with pytest.raises(
-            (ValueError, ValidationError), match="Effects not available",
-        ):
+        with pytest.raises(ValidationError, match="Effects not available"):
             result_no_time.plot(chart='MainEffects')
 
 

@@ -33,22 +33,13 @@ Main Classes
 ------------
 ProcessBehavior : Main user-facing API with auto-completion
 AnalysisResult : Unified result container
-Analysis : Core analysis engine
 """
 
 __version__ = "0.1.0"
 
-# Main user-facing API
-# Capability analysis
-# Core analysis classes
-from processbehavior.analysis import Analysis
-from processbehavior.analysis_dataset import AnalysisDataSet
-
 # Result object
 from processbehavior.analysis_result import AnalysisResult
 from processbehavior.capability import CapabilityResult, SpecLimits
-from processbehavior.data_preparation import DataPreparation, encode_rsg, natural_sort_key
-from processbehavior.effects_calculator import EffectsCalculator
 
 # Exceptions
 from processbehavior.exceptions import (
@@ -58,17 +49,12 @@ from processbehavior.exceptions import (
     ProcessBehaviorError,
     ValidationError,
 )
-from processbehavior.formulation_spec import ChartRequest, FormulationSpec
 from processbehavior.loss_function import LossResult
 from processbehavior.maximum_information import MaximumInformationResult
 
 # Plotting/theming
 from processbehavior.plotting import ChartTheme, get_theme, list_themes, register_theme
 from processbehavior.process_behavior import ColumnRef, ProcessBehavior
-from processbehavior.residual_calculator import calculate_vas_residuals
-
-# Utility classes (advanced users)
-from processbehavior.sds_detector import SDSAnalysisPlan, SDSRegistry, SDSResult
 
 # Study class (formulation layer)
 from processbehavior.study import DesignReport, Study
@@ -91,22 +77,6 @@ __all__ = [
     'ColumnNotFoundError',
     'FactorNotFoundError',
     'ChartNotAvailableError',
-
-    # Core classes
-    'Analysis',
-    'AnalysisDataSet',
-    'FormulationSpec',
-    'ChartRequest',
-
-    # Utilities
-    'SDSRegistry',
-    'SDSAnalysisPlan',
-    'SDSResult',
-    'DataPreparation',
-    'EffectsCalculator',
-    'calculate_vas_residuals',
-    'encode_rsg',
-    'natural_sort_key',
 
     # Plotting/theming
     'ChartTheme',

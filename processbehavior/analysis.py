@@ -34,6 +34,7 @@ import pandas as pd
 
 from .analysis_dataset import AnalysisDataSet
 from .analysis_result import AnalysisResult
+from .exceptions import ChartNotAvailableError, ValidationError
 from .formulation_spec import ChartRequest, FormulationSpec
 from .spc_constants import calculate_limits, detect_beyond_limits
 
@@ -146,13 +147,13 @@ class Analysis:
             self.ads = analysis_dataset
         else:
             if sds is None:
-                raise ValueError(
+                raise ValidationError(
                     "sds is required when analysis_dataset is not provided. "
                     "SDS should be detected at the entry point (ProcessBehavior) "
                     "and passed to Analysis."
                 )
             if df is None:
-                raise ValueError(
+                raise ValidationError(
                     "df is required when analysis_dataset is not provided."
                 )
             self.ads = AnalysisDataSet(df, spec, observed_sds=sds)
@@ -200,18 +201,22 @@ class Analysis:
             if col_name not in self.ads.analysis_dataset.columns:
                 available = [c for c in self.ads.analysis_dataset.columns
                             if c.startswith('R') or c == self.spec.response_var]
-                raise ValueError(
+                raise ChartNotAvailableError(
                     f"Residual column '{col_name}' not found.\n"
                     f"Available columns: {available}\n"
-                    f"This may indicate the SDS doesn't support this residual type."
+                    f"This may indicate the SDS doesn't support this residual type.",
+                    chart=col_name,
+                    available=available
                 )
 
             # Validate chart type
             valid_chart_types = {'Xbar', 'S', 'XmR', 'R', 'Histogram'}
             if chart_type not in valid_chart_types:
-                raise ValueError(
+                raise ChartNotAvailableError(
                     f"Chart type '{chart_type}' not supported for residual charts.\n"
-                    f"Valid types: {', '.join(sorted(valid_chart_types))}"
+                    f"Valid types: {', '.join(sorted(valid_chart_types))}",
+                    chart=chart_type,
+                    available=sorted(valid_chart_types)
                 )
 
             # Question answered by each residual
@@ -269,9 +274,11 @@ class Analysis:
                 }
 
             if self.analysis_type not in strategies:
-                raise ValueError(
+                raise ChartNotAvailableError(
                     f'Analysis type {self.analysis_type} not supported! '
-                    f'Valid types: {list(strategies.keys())}'
+                    f'Valid types: {list(strategies.keys())}',
+                    chart=self.analysis_type,
+                    available=list(strategies.keys())
                 )
 
             # Execute analysis strategy
@@ -743,7 +750,7 @@ class Analysis:
         # Handle case where no subgroups have >1 observation
         if out.shape[0] == 0:
             sds = self.ads._ads_result.sds if self.ads._ads_result else '?'
-            raise ValueError(
+            raise ValidationError(
                 f"No subgroups with n > 1 found — Xbar chart requires replicated observations.\n"
                 f"This data has Analytical Design State {sds}.\n"
                 f"Use chart='XmR' for individual values, or chart='Xbar' with value='R6' "
@@ -976,7 +983,7 @@ class Analysis:
 
         if not all_xbar_frames:
             sds = self.ads._ads_result.sds if self.ads._ads_result else '?'
-            raise ValueError(
+            raise ValidationError(
                 f"No subgroups with n > 1 found — Xbar chart requires replicated observations.\n"
                 f"This data has Analytical Design State {sds} "
                 f"({'no replication' if sds == 2 else 'partial replication' if sds == 3 else ''}).\n"
@@ -1239,7 +1246,7 @@ class Analysis:
                 # Handle case where no subgroups have >1 observation
                 if out.shape[0] == 0:
                     sds = self.ads._ads_result.sds if self.ads._ads_result else '?'
-                    raise ValueError(
+                    raise ValidationError(
                         f"No subgroups with n > 1 found — S chart requires replicated observations.\n"
                         f"This data has Analytical Design State {sds}.\n"
                         f"Use chart='XmR' for individual values."

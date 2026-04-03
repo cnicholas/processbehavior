@@ -17,7 +17,7 @@ Date: 2024-11-30
 import numpy as np
 import pandas as pd
 
-from processbehavior import Analysis
+from processbehavior.analysis import Analysis
 from processbehavior.analysis_dataset import AnalysisDataSet
 from processbehavior.data_preparation import DataPreparation
 from processbehavior.datasets import synthetic
