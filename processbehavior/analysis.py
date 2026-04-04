@@ -34,6 +34,7 @@ import pandas as pd
 
 from .analysis_dataset import AnalysisDataSet
 from .analysis_result import AnalysisResult
+from .data_preparation import encode_rsg
 from .exceptions import ChartNotAvailableError, ValidationError
 from .formulation_spec import ChartRequest, FormulationSpec
 from .spc_constants import calculate_limits, detect_beyond_limits
@@ -892,7 +893,7 @@ class Analysis:
         if len(stratify_by) == 1:
             stratify_col = stratify_by[0]
         else:
-            df['_stratify_key'] = df[stratify_by].apply(tuple, axis=1)
+            df['_stratify_key'] = df[stratify_by].apply(lambda row: encode_rsg(tuple(row)), axis=1)
             stratify_col = '_stratify_key'
 
         _limits_col = self._resolve_limits_column(value_col, df)
@@ -1063,7 +1064,7 @@ class Analysis:
             if len(stratify_by) == 1:
                 stratify_col = stratify_by[0]
             else:
-                df['_stratify_key'] = df[stratify_by].apply(tuple, axis=1)
+                df['_stratify_key'] = df[stratify_by].apply(lambda row: encode_rsg(tuple(row)), axis=1)
                 stratify_col = '_stratify_key'
             strata = df[stratify_col].unique().tolist()
             per_stratum = None
@@ -1680,7 +1681,7 @@ class Analysis:
         elif len(stratify_by) == 1:
             stratify_col = stratify_by[0]
         else:
-            out['_stratify_key'] = out[stratify_by].apply(tuple, axis=1)
+            out['_stratify_key'] = out[stratify_by].apply(lambda row: encode_rsg(tuple(row)), axis=1)
             stratify_col = '_stratify_key'
 
         # Canonical sort
@@ -2401,16 +2402,22 @@ class Analysis:
             # Use pandas groupby with list of columns (no collision risk)
             grouped = data.groupby(by, observed=True)
 
-            # Build strata list - tuples for multi-key, values for single-key
-            # Use tuple keys for multi-key to avoid collision (('A_B','C') != ('A','B_C'))
-            strata = data[by[0]].unique().tolist() if len(by) == 1 else list(grouped.groups.keys())
+            def _py(v):
+                """Normalize numpy/pandas scalars to python natives."""
+                return v.item() if hasattr(v, 'item') else v
+
+            # Build strata list - strings for all cases via encode_rsg
+            if len(by) == 1:
+                strata = data[by[0]].unique().tolist()
+            else:
+                strata = [encode_rsg(tuple(_py(v) for v in k)) for k in grouped.groups]
 
             # Calculate per-stratum statistics
             per_stratum_stats = {}
             for stratum, group_df in grouped:
                 # Unwrap single-element tuple for single-column groupby
                 # groupby(['col']) returns ('value',) tuples, but strata uses scalar values
-                key = stratum[0] if len(by) == 1 else stratum
+                key = stratum[0] if len(by) == 1 else encode_rsg(tuple(_py(v) for v in stratum))
                 stratum_vals = group_df[value_col].dropna()
                 stratum_n = len(stratum_vals)
                 stratum_mean = stratum_vals.mean() if stratum_n > 0 else float('nan')
@@ -2426,11 +2433,6 @@ class Analysis:
             output_data = data[output_cols].copy()
 
             # Add rsg column so focus() can filter consistently with other chart types
-            from .data_preparation import encode_rsg
-
-            def _py(v):
-                """Normalize numpy/pandas scalars to python natives."""
-                return v.item() if hasattr(v, 'item') else v
 
             if len(by) == 1:
                 output_data['rsg'] = output_data[by[0]].apply(

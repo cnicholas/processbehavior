@@ -967,7 +967,7 @@ class Plotter:
                     combined_data = combined_data.copy()
                     combined_data['_stratify_key'] = combined_data[
                         stratify_by
-                    ].apply(tuple, axis=1)
+                    ].apply(lambda row: encode_rsg(tuple(row)), axis=1)
                     stratify_col = '_stratify_key'
                 else:
                     stratify_col = None
@@ -978,12 +978,8 @@ class Plotter:
                         stratum_data = combined_data[mask].copy().reset_index(drop=True)
                         stratum_stats = nested_stats.get(stratum, {})
 
-                        if isinstance(stratum, (tuple, list)):
-                            stratum_str = encode_rsg(stratum)
-                            stratum_display = ' '.join(str(s) for s in stratum)
-                        else:
-                            stratum_str = encode_rsg(stratum)
-                            stratum_display = str(stratum)
+                        stratum_str = encode_rsg(stratum)
+                        stratum_display = str(stratum)
                         expanded_name = f"{name}_{stratum_str}"
 
                         all_lb = metadata.get('lane_boundaries')
