@@ -2,7 +2,7 @@
 Sampling Design State (SDS) detection for process behavior analysis.
 
 This module implements the complete SDS classification system from the
-Variance Analysis System (VAS) framework by Wheeler and Bishop.
+Variance Analysis System (VAS) framework by Bishop.
 
 The SDS determines:
 - What type of data structure we have
@@ -24,7 +24,7 @@ from typing import TYPE_CHECKING, ClassVar, Literal
 
 import pandas as pd
 
-# Formal vocabulary for SDS classification reasons (per Wheeler/Bishop Table 1)
+# Formal vocabulary for SDS classification reasons (per Bishop Table 1)
 SDSReasonType = Literal[
     # Complete/Semi-Complete (SDS 1, 2, 3) - no empty cells
     "full_replication",            # SDS 1: all N_kt >= 2
@@ -123,7 +123,7 @@ class SDSAnalysisPlan:
     limitations : list[str]
         What cannot be done with this SDS
     bishop_reference : str
-        Reference to Wheeler/Bishop methodology
+        Reference to Bishop methodology
 
     Examples
     --------
@@ -204,7 +204,7 @@ class SDSAnalysisPlan:
         - R4: Xbar/S when has_factors (aggregate across factors by time)
         - R5: Xbar/S when has_time (aggregate across time by factor)
 
-        Per Wheeler/Bishop Sections 20.6.1-4:
+        Per Bishop Sections 20.6.1-4:
         - R2 uses (k,t) cell subgrouping - S when n>=2
         - R3 uses (k,t) cell subgrouping - Xbar/S when n>=2
         - R4 Xbar/S use time-based subgrouping (N_.t = Σ_k N_kt)
@@ -294,7 +294,7 @@ class SDSResult:
     ----------
     sds : int
         Sampling Design State (0-6). 0 indicates no analyzable observations
-        remain after cleaning. 1-6 per Wheeler/Bishop Table 1.
+        remain after cleaning. 1-6 per Bishop Table 1.
     min_cell_size : int
         Minimum observations per cell (for chart selection)
     reason : SDSReasonType | None
@@ -323,7 +323,7 @@ class SDSRegistry:
     """
     Registry of Sampling Design State (SDS 1-6) definitions and rules.
 
-    Implements Wheeler/Bishop Table 1 classification based on N_kt distribution.
+    Implements Bishop Table 1 classification based on N_kt distribution.
 
     Provides:
     - SDS detection from data structure
@@ -331,7 +331,7 @@ class SDSRegistry:
     - Validation of SDS/analysis compatibility
     - VAS residual calculation rules
 
-    The SDS classification system (per Wheeler/Bishop Table 1):
+    The SDS classification system (per Bishop Table 1):
 
     **Complete/Semi-Complete** (no empty cells in grid):
 
@@ -537,7 +537,7 @@ class SDSRegistry:
 
         Notes
         -----
-        **Classification Logic (per Wheeler/Bishop Table 1)**
+        **Classification Logic (per Bishop Table 1)**
 
         Complete/Semi-Complete (no empty cells):
         - SDS 1: Min N_kt ≥ 2 (all cells replicated)
@@ -702,7 +702,7 @@ class SDSRegistry:
 
         Notes
         -----
-        Deterministic rule based on Wheeler/Bishop methodology:
+        Deterministic rule based on Bishop methodology:
         - Eq 59 (exact): R2 = Y - Ȳ_kt, requires replication
         - Eq 66 (MA2): R2 = (Y_j - Y_{j-1}) / 2, for singletons
         - Hybrid: exact where replicated, MA2 where singleton
@@ -1029,7 +1029,7 @@ class SDSRegistry:
         has_empty_cells: bool
     ) -> tuple[int, SDSReasonType]:
         """
-        Classify SDS directly from N_kt distribution per Wheeler/Bishop Table 1.
+        Classify SDS directly from N_kt distribution per Bishop Table 1.
 
         This is the core classification logic - pure and simple.
 
@@ -1253,7 +1253,7 @@ class SDSRegistry:
                     'Complete factorial designs'
                 ],
                 limitations=[],
-                bishop_reference="Wheeler/Bishop Methodology: Complete Data (SDS 1)"
+                bishop_reference="Bishop Methodology: Complete Data (SDS 1)"
             ),
 
             2: SDSAnalysisPlan(
@@ -1282,7 +1282,7 @@ class SDSRegistry:
                     'R2 estimated via moving average (approximate, not exact)',
                     'Interaction confounded with pure error'
                 ],
-                bishop_reference="Wheeler/Bishop Methodology: No Replication (SDS 2)"
+                bishop_reference="Bishop Methodology: No Replication (SDS 2)"
             ),
 
             3: SDSAnalysisPlan(
@@ -1312,7 +1312,7 @@ class SDSRegistry:
                     'Variance estimates less precise than SDS 1',
                     'May have unequal subgroup sizes'
                 ],
-                bishop_reference="Wheeler/Bishop Methodology: Partial Replication (SDS 3)"
+                bishop_reference="Bishop Methodology: Partial Replication (SDS 3)"
             ),
 
             # SDS 4-6 (incomplete grids) are observed/planned design states only.

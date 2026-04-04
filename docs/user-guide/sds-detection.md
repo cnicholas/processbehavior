@@ -53,7 +53,7 @@ print(f"Description: {study.sds_description}")
 
 ## The VAS Problem Formulation
 
-Following Wheeler's Variance Analysis System (VAS) methodology, a rigorous problem formulation includes:
+Following Bishop's Variance Analysis System (VAS) methodology, a rigorous problem formulation includes:
 
 - **Unit of Analysis**: The fundamental entity being measured (e.g., "filled cup", "loan contract")
 - **Response**: The measurement variable

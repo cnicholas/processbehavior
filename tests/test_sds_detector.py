@@ -180,7 +180,7 @@ def test_detect_sds_single_factor_level_no_replication(detector, sds4_data, spec
 
 
 def test_detect_sds2_with_nkt_grouping(detector, sds6_data, spec_with_grouping_and_time):
-    """SDS detection uses N_kt (factor × time) per Wheeler/Bishop.
+    """SDS detection uses N_kt (factor × time) per Bishop.
 
     DESIGN DECISION (Issue #60):
     - SDS classification: based on N_kt (factor × time cells)
@@ -191,7 +191,7 @@ def test_detect_sds2_with_nkt_grouping(detector, sds6_data, spec_with_grouping_a
     """
     result = detector.detect_sds(sds6_data, spec_with_grouping_and_time)
 
-    # Per Wheeler/Bishop: all N_kt = 1 → SDS 2
+    # Per Bishop: all N_kt = 1 → SDS 2
     assert result.sds == 2
     # min_cell_size is now kt-level (each kt cell has n=1)
     assert result.min_cell_size == 1
@@ -447,7 +447,7 @@ def test_detect_sds_boundary_75_percent_coverage(detector, spec_with_grouping_an
 
 
 def test_detect_sds2_sparse_time_coverage(detector, spec_with_grouping_and_time):
-    """SDS detection uses N_kt per Wheeler/Bishop.
+    """SDS detection uses N_kt per Bishop.
 
     DESIGN DECISION (Issue #60):
     - SDS classification: based on N_kt (factor × time cells)
@@ -465,7 +465,7 @@ def test_detect_sds2_sparse_time_coverage(detector, spec_with_grouping_and_time)
 
     result = detector.detect_sds(df, spec_with_grouping_and_time)
 
-    # Per Wheeler/Bishop: all N_kt = 1 → SDS 2
+    # Per Bishop: all N_kt = 1 → SDS 2
     assert result.sds == 2
     # min_cell_size is now kt-level (each kt cell has n=1)
     assert result.min_cell_size == 1
@@ -621,7 +621,7 @@ def test_realistic_scenario_designed_experiment_no_replication(detector):
 class TestR2ChartAvailability:
     """Tests for R2_S vs R2_XmR selection based on actual cell sizes.
 
-    Per Wheeler/Bishop Section 20.6.1:
+    Per Bishop Section 20.6.1:
     - R2_S is available when rational subgroups have n≥2
     - R2_XmR is used when n=1 (no within-cell variation)
     """
@@ -704,7 +704,7 @@ class TestR2ChartAvailability:
 class TestR4R5XbarSAvailability:
     """Tests for R4_Xbar, R4_S, R5_Xbar, R5_S availability.
 
-    Per Wheeler/Bishop Sections 20.6.3 and 20.6.4:
+    Per Bishop Sections 20.6.3 and 20.6.4:
     - R4 uses time-based subgrouping (available when has_factors=True)
     - R5 uses factor-based subgrouping (available when has_time=True)
     """

@@ -48,7 +48,7 @@ print(f"Reason: {study.sds_reason}")             # e.g., "partial_replication"
 print(f"Valid: {study.valid_charts}") # e.g., ['Xbar', 'S', 'XmR']
 ```
 
-## Wheeler's Variance Analysis System (VAS)
+## Bishop's Variance Analysis System (VAS)
 
 For replicated designs (SDS 1-3), ProcessBehavior computes five residual decompositions:
 

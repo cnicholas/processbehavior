@@ -1,5 +1,5 @@
 """
-Tests for Taguchi Loss Function Analysis (Wheeler/Bishop Ch. 15).
+Tests for Taguchi Loss Function Analysis (Bishop Ch. 15).
 
 Uses validation dataset (TABVASTESTDATABASE.csv) as ground truth.
 """

@@ -1,6 +1,6 @@
 # VAS Residuals
 
-Wheeler's **Variance Analysis System (VAS)** decomposes total variation into meaningful components. ProcessBehavior calculates five residuals (R1-R5) that help answer different analytical questions.
+Bishop's **Variance Analysis System (VAS)** decomposes total variation into meaningful components. ProcessBehavior calculates five residuals (R1-R5) that help answer different analytical questions.
 
 ## The Five Residuals
 

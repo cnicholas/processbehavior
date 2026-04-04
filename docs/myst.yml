@@ -2,12 +2,12 @@ version: 1
 
 project:
   title: ProcessBehavior
-  description: Python-native Process Behavior Charts with Wheeler's Variance Analysis System
+  description: Python-native Process Behavior Charts with Bishop's Variance Analysis System
   keywords:
     - SPC
     - statistical process control
     - control charts
-    - Wheeler
+    - Bishop
     - process behavior
     - quality engineering
   authors:

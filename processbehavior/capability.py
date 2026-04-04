@@ -1,5 +1,5 @@
 """
-Process Capability Analysis — Wheeler/Bishop Chapter 16.
+Process Capability Analysis — Bishop Chapter 16.
 
 Computes capability indices given specification limits. Core logic lives as
 pure module-level functions (composition pattern matching ResidualCalculator /
@@ -19,7 +19,7 @@ Potential Capability (achievable by removing assignable causes):
 
 References
 ----------
-Wheeler, D.J. & Bishop, T.  *Variance Analysis System* — Chapter 16.
+Bishop, T.  *Variance Analysis System* — Chapter 16.
 """
 
 from __future__ import annotations
@@ -94,7 +94,7 @@ class SpecLimits:
 @dataclass(frozen=True)
 class CapabilityResult:
     """
-    Result of a process capability assessment (Wheeler/Bishop Ch. 16).
+    Result of a process capability assessment (Bishop Ch. 16).
 
     Raw ``float`` values are stored unrounded.  Use :meth:`as_dict` for a
     rounded dictionary or ``repr()`` for a formatted summary.
@@ -346,7 +346,7 @@ def compute_sigma_hat(values: np.ndarray) -> tuple[float, float]:
 
     Notes
     -----
-    Wheeler/Bishop Ch. 16 — ddof=1 is mandatory.  The c4 correction
+    Bishop Ch. 16 — ddof=1 is mandatory.  The c4 correction
     removes the small-sample bias inherent in the sample standard
     deviation.
     """

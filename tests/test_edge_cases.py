@@ -313,11 +313,11 @@ class TestUnbalancedData:
         })
         pb = ProcessBehavior(df)
 
-        # Per Wheeler/Bishop, SDS is based on N_kt (factor × time cells):
+        # Per Bishop, SDS is based on N_kt (factor × time cells):
         # Each (Factor, Time) cell has exactly n=1, so this is SDS 2
         # Note: Analysis subgrouping uses factor-only (A:3, B:3) for chart selection
         study = pb.formulate(response='Value', factors=['Factor'], time='Time')
-        assert study.observed_design_state.sds == 2  # Wheeler/Bishop: all N_kt = 1 → SDS 2
+        assert study.observed_design_state.sds == 2  # Bishop: all N_kt = 1 → SDS 2
         assert 'Xbar' in study.valid_charts  # Still valid due to factor-level subgrouping
 
     def test_unbalanced_time_points(self):

@@ -1,5 +1,5 @@
 """
-Maximum Information Analysis — Wheeler/Bishop.
+Maximum Information Analysis — Bishop.
 
 Examines R2 residuals (the noise floor / within-cell variation) via two views:
 an XmR process behavior chart ("Is the noise floor stable?") and a percentage
@@ -9,7 +9,7 @@ Together they give the analyst full insight into irreducible variation.
 
 References
 ----------
-Wheeler, D.J. & Bishop, T.  *Variance Analysis System*.
+Bishop, T.  *Variance Analysis System*.
 """
 
 from __future__ import annotations

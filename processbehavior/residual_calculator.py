@@ -1,7 +1,7 @@
 """
 VAS (Variance Analysis System) residual calculations for process behavior analysis.
 
-This module calculates the Wheeler/Bishop VAS residuals (R1-R5) that decompose
+This module calculates the Bishop VAS residuals (R1-R5) that decompose
 total variation into interpretable components:
 
 - R1: Total deviation from grand mean (pure algebra)
@@ -210,7 +210,7 @@ def calculate_r1_residual(
     """
     Calculate R1 residual: total deviation from grand mean.
 
-    R1 = Y - Ȳ  (Equation 56 from Wheeler)
+    R1 = Y - Ȳ  (Bishop Equation 56)
 
     R1 represents the total variation of each observation around the
     overall average. It's the foundation for all other residuals.
@@ -254,7 +254,7 @@ def calculate_r3_residual(
     """
     Calculate R3 residual: interaction effects (factor × time).
 
-    R3 = Y - Ȳ_k - Ȳ_t + Ȳ  (Equation 66 from Wheeler)
+    R3 = Y - Ȳ_k - Ȳ_t + Ȳ  (Bishop Equation 66)
 
     R3 captures the interaction between factors and time. It represents
     variation that can't be explained by factor effects or time effects alone.
@@ -295,7 +295,7 @@ def calculate_r4_residual(
     """
     Calculate R4 residual: time effects + unexplained.
 
-    R4 = Ȳ_t - Ȳ + R2  (Equation 72 from Wheeler)
+    R4 = Ȳ_t - Ȳ + R2  (Bishop Equation 72)
 
     R4 represents time effects plus within-cell variation. Used to
     assess if time contributes meaningful variation.
@@ -325,7 +325,7 @@ def calculate_r5_residual(
     """
     Calculate R5 residual: factor effects + unexplained.
 
-    R5 = Ȳ_k - Ȳ + R2  (Equation 75 from Wheeler)
+    R5 = Ȳ_k - Ȳ + R2  (Bishop Equation 75)
 
     R5 represents factor effects plus within-cell variation. Used to
     assess if factors contribute meaningful variation and to calculate
@@ -370,7 +370,7 @@ def calculate_r2(
 
     When any cell has n=1, MA2 is applied to ALL observations across the
     entire canonical-sorted stream — no grouping by rsg_key, no hybrid
-    per-cell selection. Wheeler Eq 13.7-13.9 specify j=2,...,J with no
+    per-cell selection. Bishop Eq 13.7-13.9 specify j=2,...,J with no
     grouping; only j=1 gets R2=0.
 
     Parameters
@@ -489,7 +489,7 @@ def calculate_vas_residuals(
     )
 
     # Step 2: Derive marginal means from cell means (unweighted means analysis)
-    # Wheeler/Bishop VAS uses mean of cell means, giving each experimental
+    # Bishop VAS uses mean of cell means, giving each experimental
     # condition equal weight regardless of sample size within cells.
     cell_means_unique = out.groupby(
         [spec.rsg_var_name, spec.time_var], observed=True
@@ -516,7 +516,7 @@ def calculate_vas_residuals(
     # Unified formula: Ybar_kt - Ybar_k - Ybar_t + Ybar + R2
     # For exact (state 1): R2 = Y - Ybar_kt, so this simplifies to
     #   Y - Ybar_k - Ybar_t + Ybar (algebraically identical to old formula).
-    # For MA2 (states 2-3): adds R2 to each row per Wheeler/Bishop.
+    # For MA2 (states 2-3): adds R2 to each row per Bishop.
     logger.debug("Calculating R3 residual")
     out['R3'] = out['Ybar_kt'] - out['Ybar_k'] - out['Ybar_t'] + grand_mean + out['R2']
 

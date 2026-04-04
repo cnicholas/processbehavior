@@ -184,7 +184,7 @@ def test_calculate_r2_hybrid():
 
     When any cell has n=1, ALL observations use MA2 on the full
     canonical-sorted stream — no per-cell exact/MA2 selection.
-    Wheeler Eq 13.7-13.9: j=2,...,J with no grouping; only j=1 gets 0.
+    Bishop Eq 13.7-13.9: j=2,...,J with no grouping; only j=1 gets 0.
     """
     # A×1 has n=2, B×1 has n=1, B×2 has n=1
     # sort_key order: A×1(0), A×1(1), B×1(0), B×2(0)
@@ -582,7 +582,7 @@ def test_r2_ma2_multiple_groups():
     """
     MA2 R2 runs across the entire canonical-sorted stream, not per group.
 
-    Wheeler Eq 13.7-13.9: j=2,...,J with no grouping. Only j=1 gets R2=NaN.
+    Bishop Eq 13.7-13.9: j=2,...,J with no grouping. Only j=1 gets R2=NaN.
     The MA2 continues across rsg_key boundaries.
     """
     df = pd.DataFrame({
@@ -760,7 +760,7 @@ def test_unweighted_means_with_unbalanced_cells():
     observation-weighted. This matters when cell sizes vary.
 
     With unbalanced data, observation-weighted averages give more weight to
-    larger cells. Wheeler/Bishop VAS treats each experimental condition equally.
+    larger cells. Bishop VAS treats each experimental condition equally.
     """
     import numpy as np
 

@@ -3,7 +3,7 @@ Synthetic Data Generators for Statistical Process Control
 
 This module provides data generators for all Sampling Design States (SDS)
 defined in the Variance Analysis System framework by Dr. Donald Wheeler
-and extended by Dr. Davis Bishop.
+and extended by Dr. Thomas A. Bishop.
 
 Purpose:
 --------

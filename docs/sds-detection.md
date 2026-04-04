@@ -19,7 +19,7 @@ ProcessBehavior automatically detects your SDS to determine:
 
 ### The Six Sampling Design States
 
-Per Wheeler/Bishop Table 1, there are six distinct sampling design states:
+Per Bishop Table 1, there are six distinct sampling design states:
 
 | SDS | Name | N_kt Pattern | Description |
 |-----|------|--------------|-------------|
@@ -502,6 +502,6 @@ Nested designs (where factor B only exists within certain levels of factor A) ma
 
 ## Reference
 
-The SDS classification system is based on Wheeler and Bishop's Variance Analysis System (VAS) framework, specifically Table 1 which defines the six sampling design states by their N_kt distribution patterns.
+The SDS classification system is based on Bishop's Variance Analysis System (VAS) framework, specifically Table 1 which defines the six sampling design states by their N_kt distribution patterns.
 
 For more information on how SDS affects analysis capabilities, see `SDSRegistry.get_analysis_plan()` which returns the complete specification of valid charts, residuals, and analysis options for each SDS.

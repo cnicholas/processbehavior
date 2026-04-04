@@ -1,5 +1,5 @@
 """
-Tests for process capability analysis (Wheeler/Bishop Chapter 16).
+Tests for process capability analysis (Bishop Chapter 16).
 
 Covers:
 - SpecLimits validation
