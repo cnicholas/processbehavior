@@ -1,8 +1,8 @@
 # ProcessBehavior
 
-**Python-native Process Behavior Charts with Wheeler's Variance Analysis System**
+**Python-native Process Behavior Charts with Bishop's Variance Analysis System**
 
-ProcessBehavior brings Donald Wheeler's rigorous statistical process control methodology to Python, with a modern API designed for data scientists and quality engineers.
+ProcessBehavior brings Thomas A. Bishop's rigorous Variance Analysis System (VAS) methodology to Python, with a modern API designed for data scientists and quality engineers.
 
 ## Analyst Workflow
 
@@ -102,7 +102,7 @@ ProcessBehavior identifies six distinct sampling design states (SDS 1-6) and con
 | 5 | Nested/hierarchical | Multi-level analysis |
 | 6 | Unstructured | Special handling |
 
-### Wheeler's Variance Analysis System (VAS)
+### Bishop's Variance Analysis System (VAS)
 For replicated designs, ProcessBehavior computes the complete residual decomposition:
 - **R1**: Total deviation (Y - grand mean)
 - **R2**: Within-cell variation (unexplained noise)

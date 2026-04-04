@@ -1,8 +1,8 @@
 # processbehavior
 
-A Python library for **Process Behavior Analysis** following the Wheeler/Bishop Variance Analysis System (VAS) methodology.
+A Python library for **Process Behavior Analysis** following Thomas A. Bishop's Variance Analysis System (VAS) methodology.
 
-Unlike traditional SPC packages, processbehavior faithfully implements Wheeler/Bishop equation-by-equation: automatic Sampling Design State (SDS) detection, variance decomposition via R1-R5 residuals, and correct chart selection based on data structure.
+Unlike traditional SPC packages, processbehavior faithfully implements Bishop's VAS equation-by-equation: automatic Sampling Design State (SDS) detection, variance decomposition via R1-R5 residuals, and correct chart selection based on data structure.
 
 ## Installation
 

@@ -796,7 +796,7 @@ class ProcessBehavior:
         **Factors Required**
 
         At least one grouping factor (via ``factors`` or ``plan``) is required.
-        Wheeler's SDS classification assumes a factor × time grid structure.
+        Bishop's SDS classification assumes a factor × time grid structure.
 
         **SDS Detection**
 
@@ -823,7 +823,7 @@ class ProcessBehavior:
         if factors is None and plan is None:
             raise ValidationError(
                 "Cannot analyze response-only data without grouping structure.\n\n"
-                "Wheeler's Sampling Design States (SDS 1-6) require a factor × time grid.\n"
+                "Bishop's Sampling Design States (SDS 1-6) require a factor × time grid.\n"
                 "Please specify:\n"
                 "  - factors: categorical variables defining subgroups (e.g., Machine, Operator)\n"
                 "  - plan: expected factor levels for detecting incomplete designs\n\n"

@@ -1,7 +1,7 @@
 """
 Compare SDS detection on raw data vs tidy data.
 
-The "two-state problem": SDS detected on raw data (correct per Wheeler/Bishop)
+The "two-state problem": SDS detected on raw data (correct per Bishop)
 can differ from SDS detected after tidying (dropping NA response rows). This
 script makes that drift visible for each PM SDS variable in TABVASTESTDATABASE.
 """

@@ -71,7 +71,7 @@ This is where the API shines. The "understand before analyze" philosophy is exce
 | Feature | Grade | Notes |
 |---------|-------|-------|
 | `factors` DataFrame | A | Clear plan vs observed comparison |
-| `K`, `T`, `N` metrics | A | Wheeler/Bishop terminology preserved |
+| `K`, `T`, `N` metrics | A | Bishop terminology preserved |
 | `missing_combos` / `extra_combos` | A | Now capped at 100 for scalability |
 | `sds_reason` | A | Disambiguates nested vs incomplete |
 | `structure_summary` | A- | Helpful but verbose for simple cases |

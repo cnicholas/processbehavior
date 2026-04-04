@@ -86,9 +86,9 @@ class TestSDSDetection:
         assert sds == 2, f"Time as factor: Expected SDS=2, got {sds}"
 
     def test_sds2_detection_with_nkt_grouping(self):
-        """Test that SDS 2 data is correctly detected as SDS 2 per Wheeler/Bishop.
+        """Test that SDS 2 data is correctly detected as SDS 2 per Bishop.
 
-        Per Wheeler/Bishop methodology, SDS is based on N_kt (factor × time cells):
+        Per Bishop methodology, SDS is based on N_kt (factor × time cells):
         - make_sds(2) generates data with all N_kt = 1 (no replication)
         - This correctly classifies as SDS 2 (Semi-Complete, no replication)
 
@@ -108,7 +108,7 @@ class TestSDSDetection:
         }
 
         sds = detect_sds_for_test(df, spec)
-        assert sds == 2, f"Wheeler/Bishop: all N_kt=1 → Expected SDS=2, got {sds}"
+        assert sds == 2, f"Bishop: all N_kt=1 → Expected SDS=2, got {sds}"
 
     def test_sds5_nesting_structure(self):
         """Verify that SDS5 properly implements nested structure."""

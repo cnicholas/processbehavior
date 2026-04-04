@@ -17,7 +17,7 @@
 
 ## What This System Is
 
-processbehavior is a differentiated SPC library — nothing like it exists in Python or R. It faithfully implements the Wheeler/Bishop Variance Analysis System (VAS) methodology, equation-by-equation.
+processbehavior is a differentiated SPC library — nothing like it exists in Python or R. It faithfully implements Thomas A. Bishop's Variance Analysis System (VAS) methodology, equation-by-equation.
 
 The primary user is the analyst. The API must be simple, mirror how analysts think and work, do the basics excellently, and enable the most experienced analyst to extract deep value.
 
@@ -26,7 +26,7 @@ The primary user is the analyst. The API must be simple, mirror how analysts thi
 - **Analyst-first API**: The API mirrors the analyst's workflow, not the programmer's. `formulate()` is how analysts think: understand your data structure before computing. `execute()` is the computation. This two-step pattern is non-negotiable — it's not an architecture choice, it's a reflection of how analysis works.
 - **Do the basics excellently**: Simple things should be simple. `pb.formulate(response=..., factors=..., time=...)` → `study.execute()` → done. No configuration ceremony. The system auto-detects SDS, selects valid charts, cleans garbage characters, and produces correct results.
 - **Enable the expert**: Progressive disclosure. The casual analyst gets correct charts in two calls. The experienced analyst can drill into VAS residuals (R1-R5), variance decomposition, effects, interactions, `DesignReport` plan-vs-observed comparison, and `why_not()` explanations.
-- **Methodology fidelity**: This library implements Wheeler/Bishop — not "inspired by," but equation-by-equation. When convenience conflicts with the methodology, methodology wins. Don't suggest shortcuts that diverge from the reference. If you don't know what Wheeler/Bishop says, say so rather than guess.
+- **Methodology fidelity**: This library implements Bishop's VAS — not "inspired by," but equation-by-equation. When convenience conflicts with the methodology, methodology wins. Don't suggest shortcuts that diverge from the reference. If you don't know what Bishop says, say so rather than guess.
 - **Pit of success (Pythonic Hadley)**: The easy path is the correct path. Self-diagnostic errors that say what's available and how to fix it. Constrained APIs that prevent misuse. `ColumnRef` for IDE auto-completion. Garbage cleaned automatically.
 - **Correct before complete**: Validate against Bishop's Minitab reference data (TABVASTESTDATABASE.csv). Fewer features done correctly beats more features done approximately.
 - **SDS drives everything**: Detected once on raw data, passed through the system. No class re-detects SDS. It determines valid charts, R2 method, and variance decomposition.
@@ -55,7 +55,7 @@ The primary user is the analyst. The API must be simple, mirror how analysts thi
 - pytest with `.venv/bin/python -m pytest tests/`
 - Synthetic data: `from processbehavior.datasets.synthetic import make_sds`
 
-### Wheeler/Bishop Terminology
+### Wheeler Terminology
 - Process Behavior Chart = Control Chart
 - Natural Process Limits ≠ Specification Limits
 - XmR = IMR (Individual Moving Range)

@@ -119,7 +119,7 @@ upl = mR * D4              # m̄R * 3.268
 
 ## Validation Summary
 
-All chart statistics are now correctly calculated per Wheeler/Bishop methodology:
+All chart statistics are now correctly calculated per Bishop methodology:
 
 - **Xbar**: Grand mean (Ȳ) with limits based on S̄/c4(n)
 - **S**: Mean of subgroup std devs (S̄) with b3/b4 limits (can be negative)

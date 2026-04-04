@@ -1,6 +1,6 @@
 # Sampling Design State (SDS) Definitions
 
-This document provides the formal definitions of Sampling Design States (SDS) as defined by Wheeler and Bishop in the Variance Analysis System (VAS) framework.
+This document provides the formal definitions of Sampling Design States (SDS) as defined by Thomas A. Bishop, Ph.D. in the Variance Analysis System (VAS) framework.
 
 ## Notation
 

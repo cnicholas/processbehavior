@@ -94,7 +94,7 @@ SDS 6: Incomplete Grid (Unstructured/irregular sampling)
   - sds6_analysis.xlsx: Xbar chart analysis with incomplete coverage
   - Plan: full factorial expected, actual coverage incomplete
 
-SDS Detection Logic (Wheeler/Bishop Methodology)
+SDS Detection Logic (Bishop Methodology)
 ------------------------------------------------
 SDS classification is based on:
 - N_kt: observations per factor x time cell

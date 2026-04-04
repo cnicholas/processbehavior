@@ -460,7 +460,7 @@ class TestXbarEffectResidualLimits:
 
     At collapsed groupings (by single factor), R5's within-group std includes
     between-cell variance from the collapsed dimension, inflating limits.
-    R2 (within-cell noise) is the correct basis per Wheeler/Bishop.
+    R2 (within-cell noise) is the correct basis per Bishop.
 
     At RSG level, R5 std = R2 std within cells, so limits are unchanged.
     """

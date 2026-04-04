@@ -1,7 +1,7 @@
 """
 ProcessBehavior - Statistical Process Control for Python
 
-A Pythonic library for process behavior analysis following Wheeler/Bishop methodology.
+A Pythonic library for process behavior analysis following Bishop's VAS methodology.
 Provides auto-detection of Sampling Design States (SDS) and appropriate control chart
 analysis with variance decomposition.
 

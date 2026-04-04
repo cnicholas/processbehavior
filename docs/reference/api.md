@@ -467,7 +467,7 @@ Complete specification for an SDS.
 - `.supports_stratification`: Boolean
 - `.typical_use_cases`: List of example scenarios
 - `.limitations`: Known limitations
-- `.bishop_reference`: Reference to Wheeler/Bishop text
+- `.bishop_reference`: Reference to Bishop text
 
 ---
 

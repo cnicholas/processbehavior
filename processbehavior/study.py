@@ -1072,7 +1072,7 @@ class Study:
         The recommended chart type for this data structure.
 
         This is the chart type that best suits your data based on
-        Wheeler & Bishop methodology. Returns None when ADS=0
+        Bishop methodology. Returns None when ADS=0
         (no valid observations after data cleaning).
         """
         if self.analytical_design_state.sds == 0:
@@ -1556,7 +1556,7 @@ class Study:
 
     def maximum_information(self) -> MaximumInformationResult:
         """
-        Maximum information analysis of R2 residuals (Wheeler/Bishop).
+        Maximum information analysis of R2 residuals (Bishop).
 
         Examines the noise floor via an XmR chart and percentage histogram.
 
@@ -1632,7 +1632,7 @@ class Study:
             residual RCRk = Rk + baseline_k, shifting from a zero-centered
             scale to the response scale for easier interpretation. The
             baseline for each residual is defined by the VAS decomposition
-            (Wheeler/Bishop VAS §15.5). Requires VAS decomposition
+            (Bishop VAS §15.5). Requires VAS decomposition
             (factors + time).
 
         bins : int, optional

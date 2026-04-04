@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 class AnalysisDataSet:
     """
-    Orchestrates statistical process control analysis using Wheeler/Bishop methodology.
+    Orchestrates statistical process control analysis using Bishop's VAS methodology.
 
     This class coordinates the workflow:
     1. Data preparation and validation

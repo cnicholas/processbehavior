@@ -1,5 +1,5 @@
 """
-Taguchi Loss Function Analysis — Wheeler/Bishop Chapter 15.
+Taguchi Loss Function Analysis — Bishop Chapter 15.
 
 Decomposes expected loss into 5 components that identify where variation
 comes from: centering, unexplained (within-cell), process design conditions
@@ -9,7 +9,7 @@ loss.
 
 References
 ----------
-Wheeler, D.J. & Bishop, T.  *Variance Analysis System* — Chapter 15.
+Bishop, T.  *Variance Analysis System* — Chapter 15.
 """
 
 from __future__ import annotations
@@ -34,7 +34,7 @@ if TYPE_CHECKING:
 @dataclass(frozen=True)
 class LossResult:
     """
-    Result of a Taguchi Loss Function analysis (Wheeler/Bishop Ch. 15).
+    Result of a Taguchi Loss Function analysis (Bishop Ch. 15).
 
     Decomposes expected loss into 5 components: centering, unexplained,
     PDC, time, and PDC×time interaction. When multiple factors exist,
@@ -322,7 +322,7 @@ def _compute_unexplained_pooled(df) -> float:
     """
     Eq 15.18/15.19: pooled sigma from R2 for ADS 2/3.
 
-    Uses std(R2, ddof=1) / 0.7 then squares (Wheeler/Bishop Eq 15.18).
+    Uses std(R2, ddof=1) / 0.7 then squares (Bishop Eq 15.18).
     """
     r2 = df['R2'].dropna().to_numpy(dtype=float)
     sigma_hat = np.std(r2, ddof=1) / 0.7
@@ -408,7 +408,7 @@ def assess_loss(
     round_to: int = 3,
 ) -> LossResult:
     """
-    Assess Taguchi Loss Function decomposition (Wheeler/Bishop Ch. 15).
+    Assess Taguchi Loss Function decomposition (Bishop Ch. 15).
 
     Parameters
     ----------

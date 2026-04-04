@@ -397,7 +397,7 @@ class Analysis:
         For effect-carrying residuals (R1/R3/R4/R5 and RCR variants), use R2 instead.
         Non-R2 residuals retain structural effects (factor, time, interaction)
         whose within-group std inflates limits. R2 (within-cell noise) is the
-        correct dispersion basis per Wheeler/Bishop.
+        correct dispersion basis per Bishop.
 
         Always uses plain R2 (not RCR2) because recentered residuals add
         cell-specific offsets that inflate within-group std when groups span
@@ -1359,7 +1359,7 @@ class Analysis:
 
     def _calculate_xbar_s(self, value_col: str = None) -> dict:
         """
-        Calculate Xbar and S charts together (Wheeler methodology).
+        Calculate Xbar and S charts together (Bishop methodology).
 
         This method ensures that when companion=True, both charts are calculated
         efficiently using shared intermediate values. The S chart uses the
@@ -2331,7 +2331,7 @@ class Analysis:
 
     def _calculate_xmr_r(self, value_col: str = None) -> dict:
         """
-        Calculate XmR and R charts together (Wheeler methodology).
+        Calculate XmR and R charts together (Bishop methodology).
 
         This method ensures that when companion=True, both charts are calculated
         efficiently using shared intermediate values. The R chart uses the
