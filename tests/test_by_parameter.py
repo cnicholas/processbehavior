@@ -419,21 +419,21 @@ class TestThreeFactorLaneBoundaries:
         """by=['machine', 'shift'] stratifies by both, collapses operator."""
         result = three_factor_study.execute(chart='XmR', by=['machine', 'shift'])
 
-        # Stratified: 2x2 = 4 strata as tuples
+        # Stratified: 2x2 = 4 strata as strings
         strata = result.charts['XmR'].get('strata')
         assert strata is not None
         assert len(strata) == 4
 
-        # Strata keys are tuples (multi-key stratification)
+        # Strata keys are strings (encode_rsg format)
         for s in strata:
-            assert isinstance(s, tuple), f"Expected tuple stratum key, got {type(s).__name__}"
+            assert isinstance(s, str), f"Expected string stratum key, got {type(s).__name__}"
 
-        # Lane boundaries dict uses tuple keys
+        # Lane boundaries dict uses string keys
         boundaries = result.charts['XmR']['metadata']['lane_boundaries']
         assert isinstance(boundaries, dict)
 
         for stratum_key, stratum_bounds in boundaries.items():
-            assert isinstance(stratum_key, tuple)
+            assert isinstance(stratum_key, str)
 
             # Each boundary reflects the single collapsed factor
             for b in stratum_bounds:

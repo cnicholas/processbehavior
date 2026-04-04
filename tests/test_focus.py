@@ -120,10 +120,10 @@ class TestFocusSingleFactor:
 class TestFocusMultiFactor:
     """focus() with multi-factor stratification (by=['factor 1', 'factor 2'])."""
 
-    def test_focus_with_tuple_stratum(self, two_factor_xmr_result):
-        """Multi-factor strata are tuples; focus accepts them."""
+    def test_focus_with_multi_factor_stratum(self, two_factor_xmr_result):
+        """Multi-factor strata are strings (encode_rsg format); focus accepts them."""
         for s in two_factor_xmr_result.strata:
-            assert isinstance(s, tuple)  # multi-factor -> tuple
+            assert isinstance(s, str)  # multi-factor -> encoded string
         focused = two_factor_xmr_result.focus(two_factor_xmr_result.strata[0])
         assert len(focused.get_chart('XmR')) > 0
 

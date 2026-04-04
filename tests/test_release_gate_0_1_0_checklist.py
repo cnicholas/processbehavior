@@ -169,7 +169,7 @@ class TestGate01ExceptionModel:
 #   - result.strata values are exactly valid inputs to result.focus(...)
 #   - get_stratified_chart() resolves exact strata keys (no ambiguous matching)
 #   - list_strata() returns canonical values consistent with result.strata
-#   - Multi-factor strata round-trip correctly (tuple strata supported)
+#   - Multi-factor strata round-trip correctly (always strings via encode_rsg)
 # ============================================================================
 
 class TestGate02StratifiedAPISemantics:
