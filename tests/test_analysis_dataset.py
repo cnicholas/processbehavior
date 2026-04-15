@@ -19,42 +19,7 @@ from processbehavior.formulation_spec import ChartRequest, FormulationSpec
 from processbehavior.sds_detector import SDSRegistry
 from processbehavior.spc_constants import c4
 
-
-def _make_spec(spec_dict: dict) -> FormulationSpec:
-    """Convert old-style spec dict to FormulationSpec."""
-    rsg_vars = spec_dict.get('rsg_vars')
-    return FormulationSpec(
-        response_var=spec_dict['response_var'],
-        rsg_vars=tuple(rsg_vars) if rsg_vars else None,
-        time_var=spec_dict.get('time_var'),
-        round_to=spec_dict.get('round_to', 3),
-        rsg_var_name=spec_dict.get('rsg_var_name', 'rsg'),
-        rsg_var_delim=spec_dict.get('rsg_var_delim', '_'),
-    )
-
-
-def _make_request(spec_dict: dict) -> ChartRequest:
-    """Convert old-style spec dict to ChartRequest."""
-    return ChartRequest(
-        chart=spec_dict.get('analysis_type', 'Xbar'),
-        by=tuple(spec_dict['by']) if spec_dict.get('by') else None,
-        companion=spec_dict.get('companion', False),
-    )
-
-
-def detect_sds_for_test(df: pd.DataFrame, spec: dict) -> int:
-    """
-    Helper to detect SDS for tests that need to create AnalysisDataSet or Analysis directly.
-
-    Returns only the SDS integer, not the (sds, min_cell_size) tuple.
-    """
-    config = _make_spec(spec)
-    prep = DataPreparation()
-    prep.validate_columns(df, config)
-    prepared_df = prep.prepare_dataset(df, config)
-    detector = SDSRegistry()
-    result = detector.detect_sds(prepared_df, config)
-    return result.sds
+from conftest import make_spec, make_request, detect_sds_for_test
 
 
 # ========================
@@ -147,7 +112,7 @@ class TestXbarSAnalysis:
         sds = detect_sds_for_test(df_sds1, spec)
         assert sds == 1  # Verify this is actually SDS 1
 
-        result = Analysis(spec=_make_spec(spec), request=_make_request(spec), sds=sds, df=df_sds1).calculate()
+        result = Analysis(spec=make_spec(spec), request=make_request(spec), sds=sds, df=df_sds1).calculate()
 
         # Should return both Xbar and S charts (companion=True)
         assert len(result) == 2
@@ -181,7 +146,7 @@ class TestXbarSAnalysis:
         }
 
         sds = detect_sds_for_test(df_differing_Ns, spec)
-        result = Analysis(spec=_make_spec(spec), request=_make_request(spec), sds=sds, df=df_differing_Ns).calculate()
+        result = Analysis(spec=make_spec(spec), request=make_request(spec), sds=sds, df=df_differing_Ns).calculate()
 
         # Center should be grand mean of all observations (including n=1 groups)
         assert result['Xbar']['statistics']['center'] == 4.0
@@ -213,7 +178,7 @@ class TestXmRAnalysis:
         }
 
         sds = detect_sds_for_test(df, spec)
-        result = Analysis(spec=_make_spec(spec), request=_make_request(spec), sds=sds, df=df).calculate()
+        result = Analysis(spec=make_spec(spec), request=make_request(spec), sds=sds, df=df).calculate()
 
         # SRP: XmR only returns XmR (no longer bundled with R by default)
         assert hasattr(result, 'keys') and hasattr(result, 'values')
@@ -253,7 +218,7 @@ class TestXmRAnalysis:
             'companion': True  # Request bundled XmR+R
         }
         sds = detect_sds_for_test(df, spec)
-        result = Analysis(spec=_make_spec(spec), request=_make_request(spec), sds=sds, df=df).calculate()
+        result = Analysis(spec=make_spec(spec), request=make_request(spec), sds=sds, df=df).calculate()
 
         # Companion mode: XmR and R are bundled together
         keys = list(result.keys())
@@ -285,7 +250,7 @@ class TestRChartAnalysis:
             'round_to': 2
         }
         sds = detect_sds_for_test(df, spec)
-        result = Analysis(spec=_make_spec(spec), request=_make_request(spec), sds=sds, df=df).calculate()
+        result = Analysis(spec=make_spec(spec), request=make_request(spec), sds=sds, df=df).calculate()
 
         # SRP: R only returns R (no longer bundled with XmR by default)
         assert hasattr(result, "keys") and hasattr(result, "values")
@@ -327,7 +292,7 @@ class TestRChartAnalysis:
         }
 
         sds = detect_sds_for_test(df, spec)
-        result = Analysis(spec=_make_spec(spec), request=_make_request(spec), sds=sds, df=df).calculate()
+        result = Analysis(spec=make_spec(spec), request=make_request(spec), sds=sds, df=df).calculate()
 
         # SRP: R only returns R
         assert hasattr(result, "keys") and hasattr(result, "values")
@@ -368,7 +333,7 @@ class TestDateTimeHandling:
             else:
                 spec['by'] = ['a', 'b']  # XmR/R also needs explicit by with factors
             sds = detect_sds_for_test(df_dt, spec)
-            result = Analysis(spec=_make_spec(spec), request=_make_request(spec), sds=sds, df=df_dt).calculate()
+            result = Analysis(spec=make_spec(spec), request=make_request(spec), sds=sds, df=df_dt).calculate()
 
             if analysis in ['XmR', 'R']:
                 # SRP: Each chart type returns only itself
@@ -386,7 +351,7 @@ class TestDateTimeHandling:
         }
 
         sds = detect_sds_for_test(df_dt, spec)
-        result = Analysis(spec=_make_spec(spec), request=_make_request(spec), sds=sds, df=df_dt).calculate()
+        result = Analysis(spec=make_spec(spec), request=make_request(spec), sds=sds, df=df_dt).calculate()
 
         # With new bundled structure, access via chart type key
         xmr_data = result['XmR']['data']
@@ -433,7 +398,7 @@ class TestCanonicalOrdering:
         }
 
         sds = detect_sds_for_test(df, spec)
-        a_spec = _make_spec(spec)
+        a_spec = make_spec(spec)
         dataset = ad.AnalysisDataSet(df=df, spec=a_spec, observed_sds=sds)
 
         ads = dataset.analysis_dataset
@@ -464,7 +429,7 @@ class TestCanonicalOrdering:
         }
 
         sds = detect_sds_for_test(df, spec)
-        a_spec = _make_spec(spec)
+        a_spec = make_spec(spec)
         dataset = ad.AnalysisDataSet(df=df, spec=a_spec, observed_sds=sds)
 
         ads = dataset.analysis_dataset
@@ -498,7 +463,7 @@ class TestCanonicalOrdering:
         }
 
         sds = detect_sds_for_test(df, spec)
-        a_spec = _make_spec(spec)
+        a_spec = make_spec(spec)
         dataset = ad.AnalysisDataSet(df=df, spec=a_spec, observed_sds=sds)
 
         ads = dataset.analysis_dataset

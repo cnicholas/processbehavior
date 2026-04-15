@@ -10,46 +10,9 @@ These tests verify the DECLARATIVE CONTRACT that each chart type should follow.
 """
 import pandas as pd
 
+from conftest import make_spec, make_request, detect_sds_for_test
 from processbehavior.analysis import Analysis
-from processbehavior.data_preparation import DataPreparation
-from processbehavior.formulation_spec import ChartRequest, FormulationSpec
 from processbehavior.plotting.plotter import Plotter
-from processbehavior.sds_detector import SDSRegistry
-
-
-def _make_spec(spec_dict: dict) -> FormulationSpec:
-    """Convert old-style spec dict to FormulationSpec."""
-    rsg_vars = spec_dict.get('rsg_vars')
-    return FormulationSpec(
-        response_var=spec_dict['response_var'],
-        rsg_vars=tuple(rsg_vars) if rsg_vars else None,
-        time_var=spec_dict.get('time_var'),
-        round_to=spec_dict.get('round_to', 3),
-        rsg_var_name=spec_dict.get('rsg_var_name', 'rsg'),
-        rsg_var_delim=spec_dict.get('rsg_var_delim', '_'),
-    )
-
-
-def _make_request(spec_dict: dict) -> ChartRequest:
-    """Convert old-style spec dict to ChartRequest."""
-    return ChartRequest(
-        chart=spec_dict.get('analysis_type', 'Xbar'),
-        by=tuple(spec_dict['by']) if spec_dict.get('by') else None,
-        companion=spec_dict.get('companion', False),
-    )
-
-
-def detect_sds_for_test(df: pd.DataFrame, spec: dict) -> int:
-    """
-    Helper to detect SDS for tests that need to create Analysis directly.
-    """
-    config = _make_spec(spec)
-    prep = DataPreparation()
-    prep.validate_columns(df, config)
-    prepared_df = prep.prepare_dataset(df, config)
-    detector = SDSRegistry()
-    result = detector.detect_sds(prepared_df, config)
-    return result.sds
 
 
 def test_xbar_chart_column_contract():
@@ -76,7 +39,7 @@ def test_xbar_chart_column_contract():
     }
 
     sds = detect_sds_for_test(df, spec)
-    result = Analysis(spec=_make_spec(spec), request=_make_request(spec), sds=sds, df=df).calculate()
+    result = Analysis(spec=make_spec(spec), request=make_request(spec), sds=sds, df=df).calculate()
     xbar_data = result.charts['Xbar']['data']
 
     # Test column structure
@@ -127,7 +90,7 @@ def test_s_chart_column_contract():
     }
 
     sds = detect_sds_for_test(df, spec)
-    result = Analysis(spec=_make_spec(spec), request=_make_request(spec), sds=sds, df=df).calculate()
+    result = Analysis(spec=make_spec(spec), request=make_request(spec), sds=sds, df=df).calculate()
     sbar_data = result.charts['S']['data']
 
     # Test column structure
@@ -173,7 +136,7 @@ def test_xmr_chart_column_contract():
     }
 
     sds = detect_sds_for_test(df, spec)
-    result = Analysis(spec=_make_spec(spec), request=_make_request(spec), sds=sds, df=df).calculate()
+    result = Analysis(spec=make_spec(spec), request=make_request(spec), sds=sds, df=df).calculate()
 
     # XmR and R are bundled - use 'XmR' as the chart key
     chart_name = 'XmR'
