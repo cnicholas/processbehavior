@@ -339,7 +339,7 @@ def test_excel_export_summary_content(temp_excel_file):
 
     # Check for key attributes
     attributes = summary_df['Attribute'].tolist()
-    assert 'SDS' in attributes
+    assert 'ADS' in attributes
     assert 'Analysis Type' in attributes
     assert 'Response Variable' in attributes
     assert 'Total Observations' in attributes
@@ -564,4 +564,4 @@ def test_excel_export_round_trip_summary(temp_excel_file):
     assert 'Attribute' in summary_df.columns or len(summary_df.columns) >= 2
     # Should contain key metadata
     text = summary_df.to_string()
-    assert 'SDS' in text or 'sds' in text.lower()
+    assert 'ADS' in text or 'ads' in text.lower()

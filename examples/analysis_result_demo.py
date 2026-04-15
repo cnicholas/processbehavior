@@ -77,7 +77,7 @@ def example1_unified_access():
 
     # Access summary
     print("\n📋 Summary:")
-    print(f"  SDS: {result.summary['sds']} - {result.summary['sds_description']}")
+    print(f"  ADS: {result.summary['analytical_sds']} - {result.summary['analytical_sds_description']}")
     print(f"  Observations: {result.summary['n_observations']}")
     print(f"  Signals: {result.summary['n_signals_total']}")
 

@@ -128,8 +128,8 @@ def _build_summary_section(result, esc):
     <div class="section">
         <h2>Analysis Summary</h2>
         <table class="summary-table">
-            <tr><td><strong>SDS</strong></td><td>{esc(str(summary['sds']))} - {
-                esc(str(summary['sds_description']))}</td></tr>
+            <tr><td><strong>ADS</strong></td><td>{esc(str(summary['analytical_sds']))} - {
+                esc(str(summary['analytical_sds_description']))}</td></tr>
             <tr><td><strong>Response Variable</strong></td><td>{
                 esc(str(summary['response_var']))}</td></tr>
             <tr><td><strong>Observations</strong></td><td>{

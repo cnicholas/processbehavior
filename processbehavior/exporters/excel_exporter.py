@@ -174,8 +174,8 @@ class ExcelExporter:
 
         # SDS Information
         summary_items.append(('Category', 'Sampling Design State'))
-        summary_items.append(('SDS', self.result.summary['sds']))
-        summary_items.append(('Description', self.result.summary['sds_description']))
+        summary_items.append(('ADS', self.result.summary['analytical_sds']))
+        summary_items.append(('Description', self.result.summary['analytical_sds_description']))
         summary_items.append(('Replication Type', self.result.summary['replication_type']))
         summary_items.append(('', ''))
 
@@ -208,11 +208,11 @@ class ExcelExporter:
         summary_items.append(('Category', 'Process Signals'))
         summary_items.append(('Total Signals Detected', self.result.summary['n_signals_total']))
 
-        # Add SDS capabilities as a list
-        if self.result.summary['sds_capabilities']:
+        # Add ADS capabilities as a list
+        if self.result.summary['analytical_sds_capabilities']:
             summary_items.append(('', ''))
-            summary_items.append(('Category', 'SDS Capabilities'))
-            for capability in self.result.summary['sds_capabilities']:
+            summary_items.append(('Category', 'ADS Capabilities'))
+            for capability in self.result.summary['analytical_sds_capabilities']:
                 summary_items.append(('', capability))
 
         # Create DataFrame

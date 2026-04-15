@@ -214,9 +214,8 @@ class AnalysisResult:
             # SDS information
             'observed_sds': self.observed_sds,
             'analytical_sds': self.analytical_sds,
-            'sds': self.analytical_sds,  # alias for analytical_sds
-            'sds_description': self.analytical_sds_info.get('description', 'Unknown'),
-            'sds_capabilities': self.analytical_sds_info.get('capabilities', []),
+            'analytical_sds_description': self.analytical_sds_info.get('description', 'Unknown'),
+            'analytical_sds_capabilities': self.analytical_sds_info.get('capabilities', []),
             'replication_type': self.analytical_sds_info.get('replication_type', 'unknown'),
 
             # Analysis configuration

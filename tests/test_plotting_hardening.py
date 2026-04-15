@@ -331,8 +331,8 @@ class TestGenerateReportEscapesHtml:
 
         mock_result = MagicMock()
         mock_result.summary = {
-            'sds': 1,
-            'sds_description': 'test',
+            'analytical_sds': 1,
+            'analytical_sds_description': 'test',
             'response_var': '<script>alert("xss")</script>',
             'n_observations': 100,
             'chart_types': ['XmR'],
@@ -367,8 +367,8 @@ class TestGenerateReportEscapesHtml:
 
         mock_result = MagicMock()
         mock_result.summary = {
-            'sds': 1,
-            'sds_description': 'test',
+            'analytical_sds': 1,
+            'analytical_sds_description': 'test',
             'response_var': 'Y',
             'n_observations': 10,
             'chart_types': ['XmR'],
@@ -409,8 +409,8 @@ class TestXAxisLabel:
         from processbehavior.plotting.plotter import Plotter
 
         summary = {
-            'sds': 1,
-            'sds_description': 'test',
+            'analytical_sds': 1,
+            'analytical_sds_description': 'test',
             'response_var': 'Y',
             'n_observations': 10,
             'chart_types': ['XmR'],
