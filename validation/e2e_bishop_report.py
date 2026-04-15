@@ -119,13 +119,18 @@ def run_sds_validation(sds_num, pb, study, json_data):  # noqa: C901
     computed['pdc_effects_s'] = study.execute(
         chart='S', by=[pb.cols.FACTOR_1, pb.cols.FACTOR_2], value='R6'
     )
-    # PT effects (pages 22-23) — by=[PRODUCTION_TIME] for all SDS types
-    computed['pt_effects_xbar'] = study.execute(
-        chart='Xbar', by=[pb.cols.PRODUCTION_TIME], value='R3', recentered=True
-    )
-    computed['pt_effects_s'] = study.execute(
-        chart='S', by=[pb.cols.PRODUCTION_TIME], value='R3', recentered=True
-    )
+    # PT effects (pages 22-23) — chart type depends on SDS
+    if sds_num == 1:
+        computed['pt_effects_xbar'] = study.execute(
+            chart='Xbar', by=[pb.cols.PRODUCTION_TIME], value='R3', recentered=True
+        )
+        computed['pt_effects_s'] = study.execute(
+            chart='S', by=[pb.cols.PRODUCTION_TIME], value='R3', recentered=True
+        )
+    else:
+        computed['pt_effects_xmr'] = study.execute(
+            chart='XmR', by=[], value='R3', recentered=True, companion=True
+        )
     # Interaction (pages 28-29)
     if sds_num == 1:
         computed['interaction_xbar'] = study.execute(
@@ -239,8 +244,12 @@ def run_sds_validation(sds_num, pb, study, json_data):  # noqa: C901
                           safe_chart_table(result_obj, chart_type))
 
         elif category == 'pt_effects':
-            result_obj = computed['pt_effects_xbar'] if is_location else computed['pt_effects_s']
-            chart_type = 'Xbar' if is_location else 'S'
+            if sds_num == 1:
+                result_obj = computed['pt_effects_xbar'] if is_location else computed['pt_effects_s']
+                chart_type = 'Xbar' if is_location else 'S'
+            else:
+                result_obj = computed['pt_effects_xmr']
+                chart_type = 'XmR' if is_location else 'R'
             cl, lpl, upl = stats_from(result_obj, chart_type)
             append_result(chart_type, '[PRODUCTION_TIME]', 'R3', True, cl, lpl, upl,
                           safe_chart_table(result_obj, chart_type))

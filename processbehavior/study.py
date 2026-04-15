@@ -1883,6 +1883,25 @@ class Study:
         # Determine if this is a residual chart
         is_residual = value is not None and value.upper().startswith('R')
 
+        # Validate (chart, value) combo against ADS mapping
+        # Histogram is exempt — can plot any residual
+        # R chart is handled separately below (requires companion)
+        # R1 is exempt — total deviation, not a structured method of analysis
+        if is_residual and base_chart not in ('Histogram', 'R'):
+            # Extract base residual: RCR5 → R5, R5 → R5
+            val_upper = value.upper()
+            base_residual = val_upper[2:] if val_upper.startswith('RCR') else val_upper
+            if base_residual != 'R1' and (base_chart, base_residual) not in self.residual_charts:
+                valid_for_value = [c for c, v in self.residual_charts if v == base_residual]
+                raise ChartNotAvailableError(
+                    f"'{base_chart}' with value='{value}' is not valid for "
+                    f"ADS {self.analytical_design_state.sds}.\n"
+                    f"Valid charts for {base_residual}: {', '.join(valid_for_value) if valid_for_value else 'None'}\n"
+                    f"Use study.why_not('{base_chart}', value='{value}') for details.",
+                    chart=base_chart,
+                    available=valid_for_value
+                )
+
         if is_residual and base_chart == 'R' and not companion:
             raise ValidationError(
                 f"Chart type 'R' (moving range) is not supported for residual charts.\n"

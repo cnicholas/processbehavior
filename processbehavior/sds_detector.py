@@ -218,7 +218,9 @@ class SDSAnalysisPlan:
             return []
 
         # R2: S chart when cells have replication (min_cell_size >= 2)
-        r2 = [('S', 'R2')] if self.min_cell_size >= 2 else [('XmR', 'R2')]
+        # XmR R2 is always available for Maximum Information Analysis
+        r2 = [('S', 'R2')] if self.min_cell_size >= 2 else []
+        r2.append(('XmR', 'R2'))
 
         # R3: Same subgrouping as R2 - Xbar/S when min_cell_size >= 2
         r3 = [('Xbar', 'R3'), ('S', 'R3')] if self.min_cell_size >= 2 else [('XmR', 'R3')]

@@ -26,6 +26,17 @@ def sds1_study():
     )
 
 
+@pytest.fixture
+def sds2_study():
+    """SDS2 study — R2/R3 use XmR charts."""
+    df = make_sds(2, K1=2, K2=2, T=8, seed=42)
+    return ProcessBehavior(df).formulate(
+        response='y',
+        time='time',
+        factors=['factor 1', 'factor 2']
+    )
+
+
 
 
 # =============================================================================
@@ -435,9 +446,9 @@ class TestPhasedWithResidualValue:
         assert len(data) > 0
         assert result.charts['XmR']['metadata']['phased'] is True
 
-    def test_phased_residual_limits_vary(self, sds1_study):
+    def test_phased_residual_limits_vary(self, sds2_study):
         """Phased residual chart has per-phase limits (not constant)."""
-        result = sds1_study.execute(
+        result = sds2_study.execute(
             chart='XmR', by=[], phased=True, value='R2'
         )
         data = result.get_chart('XmR')
