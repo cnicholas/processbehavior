@@ -489,13 +489,13 @@ def test_study_sds_name():
     })
     study = ProcessBehavior(df).formulate(response='Value', factors=['Factor'], time='Time')
 
-    assert hasattr(study, 'sds_reason')
-    assert isinstance(study.sds_reason, str)
-    assert len(study.sds_reason) > 0
+    assert hasattr(study, 'ads_reason')
+    assert isinstance(study.ads_reason, str)
+    assert len(study.ads_reason) > 0
 
 
-def test_study_sds_description():
-    """Study should expose SDS description explaining the data structure."""
+def test_study_ads_description():
+    """Study should expose ADS description explaining the data structure."""
     np.random.seed(42)
     df = pd.DataFrame({
         'Value': np.random.normal(100, 5, 30),
@@ -504,9 +504,9 @@ def test_study_sds_description():
     })
     study = ProcessBehavior(df).formulate(response='Value', factors=['Factor'], time='Time')
 
-    assert hasattr(study, 'sds_description')
-    assert isinstance(study.sds_description, str)
-    assert len(study.sds_description) > 0
+    assert hasattr(study, 'ads_description')
+    assert isinstance(study.ads_description, str)
+    assert len(study.ads_description) > 0
 
 
 def test_study_response_property():

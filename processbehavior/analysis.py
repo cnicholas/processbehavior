@@ -205,7 +205,7 @@ class Analysis:
                 raise ChartNotAvailableError(
                     f"Residual column '{col_name}' not found.\n"
                     f"Available columns: {available}\n"
-                    f"This may indicate the SDS doesn't support this residual type.",
+                    f"This may indicate the analytical design state (ADS) doesn't support this residual type.",
                     chart=col_name,
                     available=available
                 )

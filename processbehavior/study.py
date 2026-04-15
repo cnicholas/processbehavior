@@ -1021,7 +1021,7 @@ class Study:
         return self._ads.analytical_design_state
 
     @property
-    def sds_reason(self) -> str | None:
+    def ads_reason(self) -> str | None:
         """
         Machine-readable reason token for the analytical design state.
 
@@ -1031,15 +1031,14 @@ class Study:
         return self.analytical_design_state.reason
 
     @property
-    def sds_description(self) -> str:
+    def ads_description(self) -> str:
         """
         Human-readable description of the analytical design state.
 
         Returns prose from SDSRegistry, e.g.
         'Full replication (all cells n>=2)'.
 
-        Note: This is ADS-derived (not ODS-derived). The description
-        reflects the analyzable structure after data cleaning.
+        Reflects the analyzable structure after data cleaning.
         """
         chars = SDSRegistry().get_sds_characteristics(self.analytical_design_state.sds)
         return chars['description']

@@ -46,7 +46,7 @@ result1.to_excel('example1_xbar_chart.xlsx')
 
 print("✓ Exported to: example1_xbar_chart.xlsx")
 print(f"  - Tabs created: {result1.summary['n_charts'] + 1}")  # +1 for Summary
-print(f"  - SDS: {result1.sds} ({result1.summary['sds_description']})")
+print(f"  - ADS: {result1.summary['analytical_sds']} ({result1.summary['analytical_sds_description']})")
 print(f"  - Charts: {', '.join(result1.all_charts)}")
 print(f"  - Has residuals: {result1.has_residuals}")
 print(f"  - Has effects: {result1.has_effects}")
