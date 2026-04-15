@@ -10,43 +10,10 @@ These tests verify:
 import numpy as np
 import pandas as pd
 
+from conftest import make_spec, detect_sds_for_test
 from processbehavior import ProcessBehavior
 from processbehavior import analysis_dataset as ad
-from processbehavior.data_preparation import DataPreparation
 from processbehavior.datasets import synthetic
-from processbehavior.formulation_spec import FormulationSpec
-from processbehavior.sds_detector import SDSRegistry
-
-
-def _make_spec(spec_dict: dict) -> FormulationSpec:
-    """Convert old-style spec dict to FormulationSpec."""
-    rsg_vars = spec_dict.get('rsg_vars')
-    return FormulationSpec(
-        response_var=spec_dict['response_var'],
-        rsg_vars=tuple(rsg_vars) if rsg_vars else None,
-        time_var=spec_dict.get('time_var'),
-        round_to=spec_dict.get('round_to', 3),
-        rsg_var_name=spec_dict.get('rsg_var_name', 'rsg'),
-        rsg_var_delim=spec_dict.get('rsg_var_delim', '_'),
-    )
-
-
-def detect_sds_for_test(df: pd.DataFrame, spec: dict) -> int:
-    """
-    Helper to detect SDS for tests that need to create AnalysisDataSet directly.
-
-    Uses FormulationSpec (without analysis_type) so data isn't filtered during SDS detection.
-    This matches the real workflow where SDS is detected before analysis_type is known.
-
-    Returns only the SDS integer, not the (sds, min_cell_size) tuple.
-    """
-    config = _make_spec(spec)
-    prep = DataPreparation()
-    prep.validate_columns(df, config)
-    prepared_df = prep.prepare_dataset(df, config)
-    detector = SDSRegistry()
-    result = detector.detect_sds(prepared_df, config)
-    return result.sds
 
 
 class TestSDSDetection:
@@ -172,7 +139,7 @@ class TestVASCalculationDecisions:
         }
 
         sds = detect_sds_for_test(df, spec)
-        aspec = _make_spec(spec)
+        aspec = make_spec(spec)
         ads = ad.AnalysisDataSet(df, aspec, observed_sds=sds)
 
         assert 'R1' in ads.analysis_dataset.columns, "SDS1 + Xbar should have VAS residuals"
@@ -195,7 +162,7 @@ class TestVASCalculationDecisions:
         }
 
         sds = detect_sds_for_test(df, spec)
-        aspec = _make_spec(spec)
+        aspec = make_spec(spec)
         ads = ad.AnalysisDataSet(df, aspec, observed_sds=sds)
 
         # VAS is computed for any SDS with grouping and time
@@ -239,7 +206,7 @@ class TestVASCalculationDecisions:
             }
 
             detected_sds = detect_sds_for_test(df, spec)
-            aspec = _make_spec(spec)
+            aspec = make_spec(spec)
             ads = ad.AnalysisDataSet(df, aspec, observed_sds=detected_sds)
 
             actual_vas = 'R1' in ads.analysis_dataset.columns
@@ -265,7 +232,7 @@ class TestResidualCalculations:
         }
 
         sds = detect_sds_for_test(df, spec)
-        aspec = _make_spec(spec)
+        aspec = make_spec(spec)
         ads = ad.AnalysisDataSet(df=df, spec=aspec, observed_sds=sds)
 
         # R2 should be y - Ybar_kt (within-cell residual)
@@ -290,7 +257,7 @@ class TestResidualCalculations:
         }
 
         sds = detect_sds_for_test(df, spec)
-        aspec = _make_spec(spec)
+        aspec = make_spec(spec)
         ads = ad.AnalysisDataSet(df=df, spec=aspec, observed_sds=sds)
 
         ds = ads.analysis_dataset
@@ -321,7 +288,7 @@ class TestResidualCalculations:
         }
 
         sds = detect_sds_for_test(df, spec)
-        aspec = _make_spec(spec)
+        aspec = make_spec(spec)
         ads = ad.AnalysisDataSet(df=df, spec=aspec, observed_sds=sds)
 
         ds = ads.analysis_dataset

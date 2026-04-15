@@ -2,15 +2,64 @@
 Shared pytest fixtures for processbehavior tests.
 
 This module provides:
+- Shared test helpers (spec/request builders, SDS detection)
 - Performance testing fixtures (large datasets)
 - Common specification fixtures
 - Module-scoped fixtures for expensive operations
 """
 
 import numpy as np
+import pandas as pd
 import pytest
 
 from processbehavior.datasets import synthetic
+from processbehavior.data_preparation import DataPreparation
+from processbehavior.formulation_spec import ChartRequest, FormulationSpec
+from processbehavior.sds_detector import SDSRegistry
+
+
+# ============================================================================
+# Shared Test Helpers
+# ============================================================================
+
+
+def make_spec(spec_dict: dict) -> FormulationSpec:
+    """Convert old-style spec dict to FormulationSpec."""
+    rsg_vars = spec_dict.get('rsg_vars')
+    return FormulationSpec(
+        response_var=spec_dict['response_var'],
+        rsg_vars=tuple(rsg_vars) if rsg_vars else None,
+        time_var=spec_dict.get('time_var'),
+        round_to=spec_dict.get('round_to', 3),
+        rsg_var_name=spec_dict.get('rsg_var_name', 'rsg'),
+        rsg_var_delim=spec_dict.get('rsg_var_delim', '_'),
+    )
+
+
+def make_request(spec_dict: dict) -> ChartRequest:
+    """Convert old-style spec dict to ChartRequest."""
+    return ChartRequest(
+        chart=spec_dict.get('analysis_type', 'Xbar'),
+        by=tuple(spec_dict['by']) if spec_dict.get('by') else None,
+        companion=spec_dict.get('companion', False),
+    )
+
+
+def detect_sds_for_test(df: pd.DataFrame, spec: dict) -> int:
+    """
+    Detect SDS for tests that create AnalysisDataSet directly.
+
+    Uses FormulationSpec (without analysis_type) so data isn't filtered
+    during SDS detection. Returns only the SDS integer.
+    """
+    config = make_spec(spec)
+    prep = DataPreparation()
+    prep.validate_columns(df, config)
+    prepared_df = prep.prepare_dataset(df, config)
+    detector = SDSRegistry()
+    result = detector.detect_sds(prepared_df, config)
+    return result.sds
+
 
 # ============================================================================
 # Performance Data Fixtures
