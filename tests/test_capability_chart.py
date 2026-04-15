@@ -134,30 +134,6 @@ def sample_values():
 
 
 # ============================================================================
-# Smoke Tests
-# ============================================================================
-
-
-class TestSmoke:
-    """Basic returns go.Figure for all spec configurations."""
-
-    def test_two_sided(self, sample_values):
-        cap = _make_cap_two_sided()
-        fig = create_capability_chart(cap, sample_values)
-        assert isinstance(fig, go.Figure)
-
-    def test_usl_only(self, sample_values):
-        cap = _make_cap_usl_only()
-        fig = create_capability_chart(cap, sample_values)
-        assert isinstance(fig, go.Figure)
-
-    def test_lsl_only(self, sample_values):
-        cap = _make_cap_lsl_only()
-        fig = create_capability_chart(cap, sample_values)
-        assert isinstance(fig, go.Figure)
-
-
-# ============================================================================
 # Histogram Trace
 # ============================================================================
 
@@ -207,28 +183,32 @@ def _get_vrect_shapes(fig: go.Figure) -> list:
 class TestSpecLines:
     """Verify spec limit vertical lines."""
 
-    def test_two_sided_has_lsl_and_usl_lines(self, sample_values):
-        cap = _make_cap_two_sided()
+    @pytest.mark.parametrize(
+        "make_cap, expected_present, expected_absent",
+        [
+            pytest.param(
+                _make_cap_two_sided, [233, 243], [],
+                id="two_sided-lsl_and_usl",
+            ),
+            pytest.param(
+                _make_cap_usl_only, [242], [234],
+                id="usl_only-usl_no_lsl",
+            ),
+            pytest.param(
+                _make_cap_lsl_only, [234], [],
+                id="lsl_only-lsl_present",
+            ),
+        ],
+    )
+    def test_spec_lines(self, sample_values, make_cap, expected_present, expected_absent):
+        cap = make_cap()
         fig = create_capability_chart(cap, sample_values)
         vlines = _get_vline_shapes(fig)
         x_values = [s.x0 for s in vlines]
-        assert 233 in x_values  # LSL
-        assert 243 in x_values  # USL
-
-    def test_usl_only_has_usl_no_lsl(self, sample_values):
-        cap = _make_cap_usl_only()
-        fig = create_capability_chart(cap, sample_values)
-        vlines = _get_vline_shapes(fig)
-        x_values = [s.x0 for s in vlines]
-        assert 242 in x_values  # USL
-        assert 234 not in x_values  # no LSL
-
-    def test_lsl_only_has_lsl_no_usl(self, sample_values):
-        cap = _make_cap_lsl_only()
-        fig = create_capability_chart(cap, sample_values)
-        vlines = _get_vline_shapes(fig)
-        x_values = [s.x0 for s in vlines]
-        assert 234 in x_values  # LSL
+        for val in expected_present:
+            assert val in x_values, f"Expected {val} in vline x-values"
+        for val in expected_absent:
+            assert val not in x_values, f"Expected {val} NOT in vline x-values"
 
     def test_target_line_present(self, sample_values):
         """Two-sided with target=238 → target vline present."""
@@ -244,39 +224,41 @@ class TestSpecLines:
 # ============================================================================
 
 
+def _wide_values():
+    """Values that extend well beyond typical spec limits."""
+    rng = np.random.default_rng(99)
+    return rng.normal(238, 5, size=200)
+
+
 class TestOutOfSpecShading:
     """Verify vrect shading for out-of-spec regions."""
 
-    def _wide_values(self):
-        """Values that extend well beyond typical spec limits."""
-        rng = np.random.default_rng(99)
-        return rng.normal(238, 5, size=200)
-
-    def test_two_sided_has_two_vrects(self):
-        """With wide data, both LSL and USL vrects appear."""
-        cap = _make_cap_two_sided()
-        vals = self._wide_values()
+    @pytest.mark.parametrize(
+        "make_cap, expected_count, check_fn",
+        [
+            pytest.param(
+                _make_cap_two_sided, 2, None,
+                id="two_sided-two_vrects",
+            ),
+            pytest.param(
+                _make_cap_usl_only, 1, lambda vrects: vrects[0].x0 >= 240,
+                id="usl_only-usl_vrect",
+            ),
+            pytest.param(
+                _make_cap_lsl_only, 1, lambda vrects: vrects[0].x1 <= 236,
+                id="lsl_only-lsl_vrect",
+            ),
+        ],
+    )
+    def test_vrect_shading(self, make_cap, expected_count, check_fn):
+        """With wide data, correct vrects appear per spec configuration."""
+        cap = make_cap()
+        vals = _wide_values()
         fig = create_capability_chart(cap, vals)
         vrects = _get_vrect_shapes(fig)
-        assert len(vrects) == 2
-
-    def test_usl_only_has_usl_vrect(self):
-        cap = _make_cap_usl_only()
-        vals = self._wide_values()
-        fig = create_capability_chart(cap, vals)
-        vrects = _get_vrect_shapes(fig)
-        # Only USL side
-        assert len(vrects) == 1
-        assert vrects[0].x0 >= 240
-
-    def test_lsl_only_has_lsl_vrect(self):
-        cap = _make_cap_lsl_only()
-        vals = self._wide_values()
-        fig = create_capability_chart(cap, vals)
-        vrects = _get_vrect_shapes(fig)
-        # Only LSL side
-        assert len(vrects) == 1
-        assert vrects[0].x1 <= 236
+        assert len(vrects) == expected_count
+        if check_fn is not None:
+            assert check_fn(vrects)
 
 
 # ============================================================================
@@ -334,52 +316,60 @@ def _get_annotation_text(fig: go.Figure) -> str:
 class TestAnnotationBox:
     """Verify capability index annotation content."""
 
-    def test_two_sided_shows_pp_ppl_ppu(self, sample_values):
-        cap = _make_cap_two_sided()
+    @pytest.mark.parametrize(
+        "make_cap_kwargs, chart_kwargs, expected_present, expected_absent",
+        [
+            pytest.param(
+                {}, {},
+                ["PP  Index", "PPL Index", "PPU Index"],
+                [],
+                id="two_sided-shows_pp_ppl_ppu",
+            ),
+            pytest.param(
+                {"with_r2": True}, {},
+                ["PP  Index"],
+                ["Cp ", "Cpk"],
+                id="two_sided_with_r2-current_omits_cp_cpk",
+            ),
+            pytest.param(
+                {"with_r2": False}, {},
+                ["PP  Index", "PPL Index", "PPU Index"],
+                ["Cp ", "Cpk"],
+                id="no_r2-omits_cp_cpk",
+            ),
+            pytest.param(
+                {"with_r2": True}, {"show_potential": False},
+                ["PP  Index"],
+                ["Cp ", "Cpk"],
+                id="show_potential_false-omits_cp_cpk",
+            ),
+        ],
+    )
+    def test_annotation_indices(
+        self, sample_values, make_cap_kwargs, chart_kwargs,
+        expected_present, expected_absent,
+    ):
+        cap = _make_cap_two_sided(**make_cap_kwargs)
+        fig = create_capability_chart(cap, sample_values, **chart_kwargs)
+        text = _get_annotation_text(fig)
+        for label in expected_present:
+            assert label in text, f"Expected '{label}' in annotation"
+        for label in expected_absent:
+            assert label not in text, f"Expected '{label}' NOT in annotation"
+
+    @pytest.mark.parametrize(
+        "make_cap, expected_labels",
+        [
+            pytest.param(_make_cap_usl_only, ["PPU Index", "Pct Above USL"], id="usl_only"),
+            pytest.param(_make_cap_lsl_only, ["PPL Index", "Pct Below LSL"], id="lsl_only"),
+        ],
+    )
+    def test_one_sided_annotations(self, sample_values, make_cap, expected_labels):
+        cap = make_cap()
         fig = create_capability_chart(cap, sample_values)
         text = _get_annotation_text(fig)
-        assert "PP  Index" in text
-        assert "PPL Index" in text
-        assert "PPU Index" in text
-
-    def test_two_sided_current_view_omits_cp_cpk(self, sample_values):
-        """Current view never shows Cp/Cpk, even with R2 available."""
-        cap = _make_cap_two_sided(with_r2=True)
-        fig = create_capability_chart(cap, sample_values)
-        text = _get_annotation_text(fig)
-        assert "PP  Index" in text
-        assert "Cp " not in text
-        assert "Cpk" not in text
-
-    def test_no_r2_omits_cp_cpk(self, sample_values):
-        cap = _make_cap_two_sided(with_r2=False)
-        fig = create_capability_chart(cap, sample_values)
-        text = _get_annotation_text(fig)
-        assert "PP  Index" in text
-        assert "PPL Index" in text
-        assert "PPU Index" in text
-        assert "Cp " not in text
-        assert "Cpk" not in text
-
-    def test_show_potential_false_omits_cp_cpk(self, sample_values):
-        cap = _make_cap_two_sided(with_r2=True)
-        fig = create_capability_chart(cap, sample_values, show_potential=False)
-        text = _get_annotation_text(fig)
-        assert "PP  Index" in text
-        assert "Cp " not in text
-        assert "Cpk" not in text
-
-    def test_usl_only_shows_ppu(self, sample_values):
-        cap = _make_cap_usl_only()
-        fig = create_capability_chart(cap, sample_values)
-        text = _get_annotation_text(fig)
-        assert "PPU Index" in text
-
-    def test_lsl_only_shows_ppl(self, sample_values):
-        cap = _make_cap_lsl_only()
-        fig = create_capability_chart(cap, sample_values)
-        text = _get_annotation_text(fig)
-        assert "PPL Index" in text
+        for label in expected_labels:
+            assert label in text, f"Expected '{label}' in annotation"
 
     def test_shows_n_and_sigma(self, sample_values):
         cap = _make_cap_two_sided()
@@ -395,18 +385,6 @@ class TestAnnotationBox:
         assert "Pct Below LSL" in text
         assert "Pct Above USL" in text
 
-    def test_usl_only_above_usl_count(self, sample_values):
-        cap = _make_cap_usl_only()
-        fig = create_capability_chart(cap, sample_values)
-        text = _get_annotation_text(fig)
-        assert "Pct Above USL" in text
-
-    def test_lsl_only_below_lsl_count(self, sample_values):
-        cap = _make_cap_lsl_only()
-        fig = create_capability_chart(cap, sample_values)
-        text = _get_annotation_text(fig)
-        assert "Pct Below LSL" in text
-
 
 # ============================================================================
 # Title
@@ -416,17 +394,24 @@ class TestAnnotationBox:
 class TestTitle:
     """Verify title generation."""
 
-    def test_auto_title_two_sided(self, sample_values):
-        cap = _make_cap_two_sided()
+    @pytest.mark.parametrize(
+        "make_cap, expected_substrings",
+        [
+            pytest.param(
+                _make_cap_two_sided, ["LSL=233", "USL=243", "Target=238"],
+                id="two_sided",
+            ),
+            pytest.param(
+                _make_cap_usl_only, ["USL=242"],
+                id="usl_only",
+            ),
+        ],
+    )
+    def test_auto_title(self, sample_values, make_cap, expected_substrings):
+        cap = make_cap()
         fig = create_capability_chart(cap, sample_values)
-        assert "LSL=233" in fig.layout.title.text
-        assert "USL=243" in fig.layout.title.text
-        assert "Target=238" in fig.layout.title.text
-
-    def test_auto_title_usl_only(self, sample_values):
-        cap = _make_cap_usl_only()
-        fig = create_capability_chart(cap, sample_values)
-        assert "USL=242" in fig.layout.title.text
+        for substr in expected_substrings:
+            assert substr in fig.layout.title.text
 
     def test_custom_title(self, sample_values):
         cap = _make_cap_two_sided()
@@ -442,19 +427,18 @@ class TestTitle:
 class TestTheme:
     """Verify theme colors are applied."""
 
-    def test_custom_theme_data_color(self, sample_values):
+    @pytest.mark.parametrize(
+        "theme_name, chart_kwargs",
+        [
+            pytest.param("dark", {"theme": get_theme("dark")}, id="custom_dark"),
+            pytest.param("processbehavior", {}, id="default"),
+        ],
+    )
+    def test_theme_data_color(self, sample_values, theme_name, chart_kwargs):
         cap = _make_cap_two_sided()
-        theme = get_theme("dark")
-        fig = create_capability_chart(cap, sample_values, theme=theme)
+        fig = create_capability_chart(cap, sample_values, **chart_kwargs)
         hist = fig.data[0]
-        assert hist.marker.color == theme.data_color
-
-    def test_default_theme_data_color(self, sample_values):
-        cap = _make_cap_two_sided()
-        fig = create_capability_chart(cap, sample_values)
-        hist = fig.data[0]
-        default_theme = get_theme("processbehavior")
-        assert hist.marker.color == default_theme.data_color
+        assert hist.marker.color == get_theme(theme_name).data_color
 
 
 # ============================================================================
@@ -494,20 +478,20 @@ class TestEdgeCases:
         # Histogram should have 3 values
         assert len(fig.data[0].x) == 3
 
-    def test_pandas_series_input(self):
-        """pd.Series input works."""
-        import pandas as pd
-
+    @pytest.mark.parametrize(
+        "make_values",
+        [
+            pytest.param(lambda: [237.0, 238.0, 239.0, 240.0], id="list"),
+            pytest.param(
+                lambda: __import__("pandas").Series([237.0, 238.0, 239.0, 240.0]),
+                id="pandas_series",
+            ),
+        ],
+    )
+    def test_accepts_array_like_input(self, make_values):
+        """Various array-like inputs work."""
         cap = _make_cap_two_sided()
-        values = pd.Series([237.0, 238.0, 239.0, 240.0])
-        fig = create_capability_chart(cap, values)
-        assert isinstance(fig, go.Figure)
-
-    def test_list_input(self):
-        """Plain list input works."""
-        cap = _make_cap_two_sided()
-        values = [237.0, 238.0, 239.0, 240.0]
-        fig = create_capability_chart(cap, values)
+        fig = create_capability_chart(cap, make_values())
         assert isinstance(fig, go.Figure)
 
     def test_width_height(self, sample_values):
@@ -560,19 +544,21 @@ class TestViewParameter:
         # Mean line should still be present
         assert cap.y_bar in x_values
 
-    def test_view_potential_default_percent_yaxis(self, sample_values):
-        """view='potential' defaults y-axis to 'Percent' when histnorm not overridden."""
+    @pytest.mark.parametrize(
+        "extra_kwargs, expected_yaxis",
+        [
+            pytest.param({}, "Percent", id="default_percent"),
+            pytest.param(
+                {"histnorm": "probability density"}, "Probability Density",
+                id="histnorm_override",
+            ),
+        ],
+    )
+    def test_view_potential_yaxis_label(self, sample_values, extra_kwargs, expected_yaxis):
+        """view='potential' y-axis label reflects histnorm setting."""
         cap = _make_cap_two_sided(with_r2=True)
-        fig = create_capability_chart(cap, sample_values, view="potential")
-        assert fig.layout.yaxis.title.text == "Percent"
-
-    def test_view_potential_histnorm_override(self, sample_values):
-        """Caller can override the default percent histnorm for potential view."""
-        cap = _make_cap_two_sided(with_r2=True)
-        fig = create_capability_chart(
-            cap, sample_values, view="potential", histnorm="probability density"
-        )
-        assert fig.layout.yaxis.title.text == "Probability Density"
+        fig = create_capability_chart(cap, sample_values, view="potential", **extra_kwargs)
+        assert fig.layout.yaxis.title.text == expected_yaxis
 
     def test_view_current_still_shows_npl_lines(self, sample_values):
         """Regression: current view still has NPL lines."""
@@ -630,26 +616,18 @@ class TestViewParameter:
 class TestPairedParameter:
     """Tests for the paired=True two-panel facet."""
 
-    def test_paired_creates_two_panels(self, sample_values):
-        """paired=True → figure has 2 subplots (xaxis and xaxis2)."""
+    def test_paired_structure(self, sample_values):
+        """paired=True → 2 subplots, 2 histograms, 2 annotation boxes."""
         cap = _make_cap_two_sided(with_r2=True)
         fig = create_capability_chart(cap, sample_values, paired=True)
         assert isinstance(fig, go.Figure)
-        # Subplots create xaxis2
+        # Two subplots
         assert fig.layout.xaxis2 is not None
         assert fig.layout.yaxis2 is not None
-
-    def test_paired_has_two_histograms(self, sample_values):
-        """paired=True → two histogram traces."""
-        cap = _make_cap_two_sided(with_r2=True)
-        fig = create_capability_chart(cap, sample_values, paired=True)
+        # Two histogram traces
         histograms = [t for t in fig.data if isinstance(t, go.Histogram)]
         assert len(histograms) == 2
-
-    def test_paired_has_two_annotations(self, sample_values):
-        """paired=True → two annotation boxes (one per panel)."""
-        cap = _make_cap_two_sided(with_r2=True)
-        fig = create_capability_chart(cap, sample_values, paired=True)
+        # Two monospace annotation boxes
         mono_annotations = [
             a for a in fig.layout.annotations
             if hasattr(a, "font") and a.font and a.font.family == "monospace"

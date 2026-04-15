@@ -17,80 +17,28 @@ from processbehavior import ProcessBehavior
 class TestDefaultGarbageCharacterHandling:
     """Test automatic handling of common garbage characters."""
 
-    def test_asterisk_treated_as_na(self):
-        """Test that '*' is automatically converted to NA."""
-        df = pd.DataFrame({
-            'TIME': [1, 2, 3, 4],
-            'Y': [235.5, '*', 237.2, 239.1]
-        })
-
-        pdf = ProcessBehavior(df)
-
-        # Asterisk should be converted to NA
-        assert pd.isna(pdf.data['Y'].iloc[1])
-        # Other values should remain
-        assert pdf.data['Y'].iloc[0] == 235.5
-        assert pdf.data['Y'].iloc[2] == 237.2
-
-    def test_question_mark_treated_as_na(self):
-        """Test that '?' is automatically converted to NA."""
+    @pytest.mark.parametrize("garbage_value, column, values_before_after", [
+        pytest.param('*', 'Y', (235.5, 237.2), id='asterisk'),
+        pytest.param('?', 'Y', (235.5, 237.2), id='question_mark'),
+        pytest.param('--', 'FACTOR', ('A', 'C'), id='double_dash'),
+        pytest.param('ND', 'Y', (235.5, 237.2), id='nd_not_detected'),
+        pytest.param('BDL', 'Y', (235.5, 237.2), id='bdl_below_detection_limit'),
+        pytest.param('BQL', 'Y', (235.5, 237.2), id='bql_below_quantification_limit'),
+        pytest.param('<LOD', 'Y', (235.5, 237.2), id='lod_below_limit_of_detection'),
+    ])
+    def test_garbage_char_treated_as_na(self, garbage_value, column, values_before_after):
+        """Test that garbage characters are automatically converted to NA."""
+        before, after = values_before_after
         df = pd.DataFrame({
             'TIME': [1, 2, 3],
-            'Y': [235.5, '?', 237.2]
+            column: [before, garbage_value, after]
         })
 
         pdf = ProcessBehavior(df)
-        assert pd.isna(pdf.data['Y'].iloc[1])
 
-    def test_double_dash_treated_as_na(self):
-        """Test that '--' is automatically converted to NA."""
-        df = pd.DataFrame({
-            'TIME': [1, 2, 3],
-            'FACTOR': ['A', '--', 'C']
-        })
-
-        pdf = ProcessBehavior(df)
-        assert pd.isna(pdf.data['FACTOR'].iloc[1])
-
-    def test_nd_treated_as_na(self):
-        """Test that 'ND' (Not Detected) is automatically converted to NA."""
-        df = pd.DataFrame({
-            'TIME': [1, 2, 3],
-            'Y': [235.5, 'ND', 237.2]
-        })
-
-        pdf = ProcessBehavior(df)
-        assert pd.isna(pdf.data['Y'].iloc[1])
-
-    def test_bdl_treated_as_na(self):
-        """Test that 'BDL' (Below Detection Limit) is automatically converted to NA."""
-        df = pd.DataFrame({
-            'TIME': [1, 2, 3],
-            'Y': [235.5, 'BDL', 237.2]
-        })
-
-        pdf = ProcessBehavior(df)
-        assert pd.isna(pdf.data['Y'].iloc[1])
-
-    def test_bql_treated_as_na(self):
-        """Test that 'BQL' (Below Quantification Limit) is automatically converted to NA."""
-        df = pd.DataFrame({
-            'TIME': [1, 2, 3],
-            'Y': [235.5, 'BQL', 237.2]
-        })
-
-        pdf = ProcessBehavior(df)
-        assert pd.isna(pdf.data['Y'].iloc[1])
-
-    def test_lod_treated_as_na(self):
-        """Test that '<LOD' (Below Limit of Detection) is automatically converted to NA."""
-        df = pd.DataFrame({
-            'TIME': [1, 2, 3],
-            'Y': [235.5, '<LOD', 237.2]
-        })
-
-        pdf = ProcessBehavior(df)
-        assert pd.isna(pdf.data['Y'].iloc[1])
+        assert pd.isna(pdf.data[column].iloc[1])
+        assert pdf.data[column].iloc[0] == before
+        assert pdf.data[column].iloc[2] == after
 
     def test_multiple_garbage_characters_in_same_column(self):
         """Test handling multiple types of garbage in one column."""
@@ -350,116 +298,88 @@ class TestIntegrationWithAnalysis:
 class TestNumericStringCleaning:
     """Test automatic cleaning of formatted numeric strings."""
 
-    def test_dollar_sign_cleaned(self):
-        df = pd.DataFrame({'Y': ['$1.50', '$2.00', '$3.50']})
-        pdf = ProcessBehavior(df)
-        assert pdf.data['Y'].dtype == 'float64'
-        assert list(pdf.data['Y']) == [1.50, 2.00, 3.50]
-
-    def test_dollar_sign_with_space_cleaned(self):
-        df = pd.DataFrame({'Y': ['$ 1.50', '$ 2.00', '$ 3.50']})
-        pdf = ProcessBehavior(df)
-        assert pdf.data['Y'].dtype == 'float64'
-        assert list(pdf.data['Y']) == [1.50, 2.00, 3.50]
-
-    def test_negative_dollar_cleaned(self):
-        df = pd.DataFrame({'Y': ['-$1.50', '-$ 2.00', '-$3.50']})
-        pdf = ProcessBehavior(df)
-        assert pdf.data['Y'].dtype == 'float64'
-        assert list(pdf.data['Y']) == [-1.50, -2.00, -3.50]
-
-    def test_accounting_negative_cleaned(self):
-        df = pd.DataFrame({'Y': ['(1.50)', '(2.00)', '(3.50)']})
-        pdf = ProcessBehavior(df)
-        assert pdf.data['Y'].dtype == 'float64'
-        assert list(pdf.data['Y']) == [-1.50, -2.00, -3.50]
-
-    def test_accounting_negative_with_dollar(self):
-        df = pd.DataFrame({'Y': ['($1.50)', '($ 2.00)', '($3.50)']})
-        pdf = ProcessBehavior(df)
-        assert pdf.data['Y'].dtype == 'float64'
-        assert list(pdf.data['Y']) == [-1.50, -2.00, -3.50]
-
-    def test_thousands_separator_cleaned(self):
-        df = pd.DataFrame({'Y': ['$1,234.56', '1,000', '$1,234,567.89']})
-        pdf = ProcessBehavior(df)
-        assert pdf.data['Y'].dtype == 'float64'
-        assert list(pdf.data['Y']) == [1234.56, 1000.0, 1234567.89]
-
-    def test_euro_symbol_cleaned(self):
-        df = pd.DataFrame({'Y': ['\u20ac100', '\u20ac200', '\u20ac300']})
-        pdf = ProcessBehavior(df)
-        assert pd.api.types.is_numeric_dtype(pdf.data['Y'])
-        assert list(pdf.data['Y']) == [100, 200, 300]
-
-    def test_pound_symbol_cleaned(self):
-        df = pd.DataFrame({'Y': ['\u00a3100', '\u00a3200', '\u00a3300']})
-        pdf = ProcessBehavior(df)
-        assert pd.api.types.is_numeric_dtype(pdf.data['Y'])
-        assert list(pdf.data['Y']) == [100, 200, 300]
-
-    def test_yen_symbol_cleaned(self):
-        df = pd.DataFrame({'Y': ['\u00a5100', '\u00a5200', '\u00a5300']})
+    @pytest.mark.parametrize("input_values, expected_values", [
+        pytest.param(
+            ['$1.50', '$2.00', '$3.50'], [1.50, 2.00, 3.50],
+            id='dollar_sign'),
+        pytest.param(
+            ['$ 1.50', '$ 2.00', '$ 3.50'], [1.50, 2.00, 3.50],
+            id='dollar_sign_with_space'),
+        pytest.param(
+            ['-$1.50', '-$ 2.00', '-$3.50'], [-1.50, -2.00, -3.50],
+            id='negative_dollar'),
+        pytest.param(
+            ['(1.50)', '(2.00)', '(3.50)'], [-1.50, -2.00, -3.50],
+            id='accounting_negative'),
+        pytest.param(
+            ['($1.50)', '($ 2.00)', '($3.50)'], [-1.50, -2.00, -3.50],
+            id='accounting_negative_with_dollar'),
+        pytest.param(
+            ['$1,234.56', '1,000', '$1,234,567.89'], [1234.56, 1000.0, 1234567.89],
+            id='thousands_separator'),
+        pytest.param(
+            ['\u20ac100', '\u20ac200', '\u20ac300'], [100, 200, 300],
+            id='euro_symbol'),
+        pytest.param(
+            ['\u00a3100', '\u00a3200', '\u00a3300'], [100, 200, 300],
+            id='pound_symbol'),
+        pytest.param(
+            ['\u00a5100', '\u00a5200', '\u00a5300'], [100, 200, 300],
+            id='yen_symbol'),
+        pytest.param(
+            ['25.5%', '30%', '100%'], [25.5, 30.0, 100.0],
+            id='percentage_sign'),
+        pytest.param(
+            [' $1.50 ', '  $2.00  ', ' $3.50'], [1.50, 2.00, 3.50],
+            id='whitespace_around_values'),
+        pytest.param(
+            ['($ 1,234.56)', '$ 2,345.67', '-$ 3,456.78'], [-1234.56, 2345.67, -3456.78],
+            id='compound_format'),
+        pytest.param(
+            ['1.50', '2.00', '3.50'], [1.50, 2.00, 3.50],
+            id='plain_numeric_strings'),
+    ])
+    def test_formatted_numeric_string_cleaned(self, input_values, expected_values):
+        """Test that formatted numeric strings are converted to expected numeric values."""
+        df = pd.DataFrame({'Y': input_values})
         pdf = ProcessBehavior(df)
         assert pd.api.types.is_numeric_dtype(pdf.data['Y'])
-        assert list(pdf.data['Y']) == [100, 200, 300]
-
-    def test_percentage_sign_cleaned(self):
-        df = pd.DataFrame({'Y': ['25.5%', '30%', '100%']})
-        pdf = ProcessBehavior(df)
-        assert pdf.data['Y'].dtype == 'float64'
-        assert list(pdf.data['Y']) == [25.5, 30.0, 100.0]
-
-    def test_whitespace_around_values(self):
-        df = pd.DataFrame({'Y': [' $1.50 ', '  $2.00  ', ' $3.50']})
-        pdf = ProcessBehavior(df)
-        assert pdf.data['Y'].dtype == 'float64'
-        assert list(pdf.data['Y']) == [1.50, 2.00, 3.50]
-
-    def test_compound_format(self):
-        """Accounting negative + currency + thousands separator."""
-        df = pd.DataFrame({'Y': ['($ 1,234.56)', '$ 2,345.67', '-$ 3,456.78']})
-        pdf = ProcessBehavior(df)
-        assert pdf.data['Y'].dtype == 'float64'
-        assert list(pdf.data['Y']) == [-1234.56, 2345.67, -3456.78]
-
-    def test_plain_numeric_strings_converted(self):
-        """Strings that are just numbers (no formatting) should also convert."""
-        df = pd.DataFrame({'Y': ['1.50', '2.00', '3.50']})
-        pdf = ProcessBehavior(df)
-        assert pdf.data['Y'].dtype == 'float64'
-        assert list(pdf.data['Y']) == [1.50, 2.00, 3.50]
+        assert list(pdf.data['Y']) == expected_values
 
 
 class TestNumericStringDataIntegrity:
     """Ensure numeric string cleaning doesn't produce false positives."""
 
-    def test_pure_text_column_unchanged(self):
-        df = pd.DataFrame({'LABEL': ['Red', 'Blue', 'Green']})
+    @pytest.mark.parametrize("column, input_values, expected_dtype, expected_values", [
+        pytest.param(
+            'LABEL', ['Red', 'Blue', 'Green'], 'string', ['Red', 'Blue', 'Green'],
+            id='pure_text_unchanged'),
+        pytest.param(
+            'Y', [1.0, 2.0, 3.0], 'float64', [1.0, 2.0, 3.0],
+            id='numeric_column_unchanged'),
+        pytest.param(
+            'Y', [1, 2, 3], 'int64', [1, 2, 3],
+            id='integer_column_unchanged'),
+        pytest.param(
+            'LABEL',
+            ['Red', '$1.50', 'Blue', 'Green', 'Orange',
+             'Yellow', 'Purple', 'Pink', 'Brown', 'Black'],
+            'string', None,
+            id='below_threshold_unchanged'),
+        pytest.param(
+            'Y', [-1.5, -2.0, -3.5], 'float64', [-1.5, -2.0, -3.5],
+            id='negative_numbers_not_mangled'),
+    ])
+    def test_data_identity_preserved(self, column, input_values, expected_dtype, expected_values):
+        """Test that data that is already correct is not changed."""
+        df = pd.DataFrame({column: input_values})
         pdf = ProcessBehavior(df)
-        assert pd.api.types.is_string_dtype(pdf.data['LABEL'])
-        assert list(pdf.data['LABEL']) == ['Red', 'Blue', 'Green']
-
-    def test_numeric_column_unchanged(self):
-        df = pd.DataFrame({'Y': [1.0, 2.0, 3.0]})
-        pdf = ProcessBehavior(df)
-        assert pdf.data['Y'].dtype == 'float64'
-        assert list(pdf.data['Y']) == [1.0, 2.0, 3.0]
-
-    def test_integer_column_unchanged(self):
-        df = pd.DataFrame({'Y': [1, 2, 3]})
-        pdf = ProcessBehavior(df)
-        assert pdf.data['Y'].dtype == 'int64'
-        assert list(pdf.data['Y']) == [1, 2, 3]
-
-    def test_below_threshold_column_unchanged(self):
-        """Column with < 80% convertible values stays as object."""
-        df = pd.DataFrame({
-            'LABEL': ['Red', '$1.50', 'Blue', 'Green', 'Orange',
-                       'Yellow', 'Purple', 'Pink', 'Brown', 'Black']
-        })
-        pdf = ProcessBehavior(df)
-        assert pd.api.types.is_string_dtype(pdf.data['LABEL'])
+        if expected_dtype == 'string':
+            assert pd.api.types.is_string_dtype(pdf.data[column])
+        else:
+            assert pdf.data[column].dtype == expected_dtype
+        if expected_values is not None:
+            assert list(pdf.data[column]) == expected_values
 
     def test_original_dataframe_not_modified(self):
         df = pd.DataFrame({'Y': ['$1.50', '$2.00', '$3.50']})
@@ -474,12 +394,6 @@ class TestNumericStringDataIntegrity:
         assert pdf.data['Y'].iloc[0] == 1.50
         assert pd.isna(pdf.data['Y'].iloc[1])
         assert pdf.data['Y'].iloc[2] == 3.00
-
-    def test_negative_numbers_not_mangled(self):
-        """Negative sign should not be confused with formatting."""
-        df = pd.DataFrame({'Y': [-1.5, -2.0, -3.5]})
-        pdf = ProcessBehavior(df)
-        assert list(pdf.data['Y']) == [-1.5, -2.0, -3.5]
 
 
 class TestNumericStringWithGarbageChars:
