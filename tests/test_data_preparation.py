@@ -178,14 +178,6 @@ def test_prepare_dataset_creates_rsg_column(prep, simple_df, spec_xbar):
     assert len(result) == 8
 
 
-def test_prepare_dataset_creates_n_column(prep, simple_df, spec_xbar):
-    """Should create 'n' column with group sizes."""
-    result = prep.prepare_dataset(simple_df, spec_xbar)
-
-    assert 'n' in result.columns
-    assert all(result['n'] > 1)  # All groups should have n > 1
-
-
 def test_prepare_dataset_keeps_small_groups(prep, small_groups_df):
     """FormulationSpec is chart-agnostic, so prepare_dataset keeps all groups.
 
@@ -881,13 +873,20 @@ def test_integration_mixed_factor_types_correct_stratification(prep):
     assert categories.index('1_A') < categories.index('10_A')
 
 
-def test_prepare_dataset_preserves_observation_counts(prep):
-    """Observation counts should be preserved (after dropna)."""
+@pytest.mark.parametrize("n_lanes,n_pulls,n_obs_per_cell", [
+    (3, 2, 3),   # 3 lanes × 2 pulls × 3 obs = 18 rows
+    (4, 25, 2),  # 4 lanes × 25 pulls × 2 obs = 200 rows
+])
+def test_prepare_dataset_preserves_observation_counts(prep, n_lanes, n_pulls, n_obs_per_cell):
+    """Data preparation preserves row counts, per-group counts, and n column."""
+    np.random.seed(42)
+    total = n_lanes * n_pulls * n_obs_per_cell
     df = pd.DataFrame({
-        'lane': [1, 1, 2, 2, 3, 3] * 3,  # 18 rows, 6 per lane
-        'pull': [1, 2, 1, 2, 1, 2] * 3,
-        'weight': [10.1, 10.2, 10.3, 10.4, 10.5, 10.6] * 3
+        'lane': np.repeat(range(1, n_lanes + 1), n_pulls * n_obs_per_cell),
+        'pull': np.tile(np.repeat(range(1, n_pulls + 1), n_obs_per_cell), n_lanes),
+        'weight': np.random.normal(10, 0.5, total),
     })
+
     spec = FormulationSpec(
         response_var='weight',
         rsg_vars=('lane',),
@@ -896,12 +895,16 @@ def test_prepare_dataset_preserves_observation_counts(prep):
 
     result = prep.prepare_dataset(df, spec)
 
-    # Should preserve all 18 observations
-    assert len(result) == 18, f"Expected 18 rows, got {len(result)}"
+    assert len(result) == total, f"Expected {total} rows, got {len(result)}"
 
-    # Should preserve per-group counts
+    per_lane = n_pulls * n_obs_per_cell
     counts = result.groupby('rsg', observed=True).size()
-    assert all(counts == 6), f"Expected 6 observations per lane, got {counts.tolist()}"
+    assert all(counts == per_lane), f"Expected {per_lane} per lane, got {counts.tolist()}"
+
+    assert 'n' in result.columns
+    assert all(result['n'] == n_obs_per_cell), (
+        f"Expected n={n_obs_per_cell}, got unique n values: {result['n'].unique()}"
+    )
 
 
 def test_prepare_dataset_handles_missing_data_correctly(prep):
@@ -941,40 +944,6 @@ def test_prepare_dataset_handles_missing_data_correctly(prep):
     counts_by_lane = result.groupby('rsg', observed=True).size().to_dict()
     assert counts_by_lane.get('2', 0) == 4, "Lane 2 should have 4 observations"
     assert counts_by_lane.get('3', 0) == 4, "Lane 3 should have 4 observations"
-
-
-def test_full_pipeline_observation_count_integrity(prep):
-    """End-to-end test: Verify observation counts through full pipeline.
-
-    With kt-level filtering, each (lane, pull) cell needs n>=2.
-    We create data with 2 obs per kt cell (4 lanes × 25 pulls × 2 obs = 200 rows).
-    """
-    np.random.seed(42)
-    # 4 lanes × 25 time points × 2 observations per kt cell = 200 rows
-    df = pd.DataFrame({
-        'lane': np.repeat([1, 2, 3, 4], 50),
-        'pull': np.tile(np.repeat(range(1, 26), 2), 4),  # 1,1,2,2,...,25,25 repeated 4 times
-        'weight': np.random.normal(10, 0.5, 200)
-    })
-
-    spec = FormulationSpec(
-        response_var='weight',
-        rsg_vars=('lane',),
-        time_var='pull',
-    )
-
-    result = prep.prepare_dataset(df, spec)
-
-    # Should have all 200 rows (no missing, all kt cells have n=2)
-    assert len(result) == 200, f"Expected 200 rows, got {len(result)}"
-
-    # Verify per-lane counts
-    lane_counts = result.groupby('rsg', observed=True).size().to_dict()
-    for lane in ['1', '2', '3', '4']:
-        assert lane_counts.get(lane, 0) == 50, f"Lane {lane}: expected 50 observations"
-
-    # Verify n column values (should all be 2)
-    assert all(result['n'] == 2), f"Expected n=2 for all kt cells, got unique n values: {result['n'].unique()}"
 
 
 # ============================================================================
