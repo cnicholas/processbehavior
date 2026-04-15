@@ -733,7 +733,43 @@ class DesignReport:
         lines.append("")
         lines.append(f"  Structure: {self.structure_summary}")
 
+        # Available analyses (derived from ADS)
+        if self._ads_result and self._ads_result.sds > 0:
+            lines.extend(self._repr_available_analyses())
+
         return '\n'.join(lines)
+
+    def _repr_available_analyses(self) -> list[str]:
+        """Compact chart×value availability section derived from ADS."""
+        ads = self._ads_result
+        plan = SDSRegistry.get_analysis_plan(
+            sds=ads.sds, min_cell_size=ads.min_cell_size
+        )
+
+        lines = ["", f"  Available analyses (ADS {ads.sds}):"]
+
+        # Primary charts with recommended marker
+        primaries = []
+        for chart in plan.valid_charts:
+            label = f"{chart} *" if chart == plan.recommended_chart else chart
+            primaries.append(label)
+        lines.append(f"    Primary: {', '.join(primaries)}")
+
+        # Residual charts grouped by residual
+        from collections import defaultdict
+        residual_groups: dict[str, list[str]] = defaultdict(list)
+        for chart_type, residual in plan.residual_charts:
+            residual_groups[residual].append(chart_type)
+
+        for residual in ['R2', 'R3', 'R4', 'R5', 'R6']:
+            if residual in residual_groups:
+                charts = ', '.join(residual_groups[residual])
+                lines.append(f"    {residual}: {charts}")
+
+        # Analysis methods
+        lines.append("    Methods: Capability, Loss Function, Maximum Information")
+
+        return lines
 
 
 class StudyChartAccessor:
@@ -1160,6 +1196,43 @@ class Study:
         if self._spec.rsg_vars_list and 'R5' in ads_cols:
             available.append('R6')
         return StudyResidualAccessor(available)
+
+    @property
+    def available_analysis_methods(self) -> pd.DataFrame:
+        """
+        Analysis methods available for this study beyond charts.
+
+        Returns a DataFrame listing Capability, Loss Function, and
+        Maximum Information with availability based on the ADS.
+
+        Returns
+        -------
+        pd.DataFrame
+            Columns: method, available, description
+        """
+        import pandas as pd
+
+        ads_cols = set(self._ads.analysis_dataset.columns)
+        vas_available = 'R2' in ads_cols
+
+        rows = [
+            {
+                'method': 'Capability',
+                'available': self.analytical_design_state.sds > 0,
+                'description': 'Process capability against specification limits (Ch. 16)',
+            },
+            {
+                'method': 'Loss Function',
+                'available': vas_available,
+                'description': 'Taguchi loss decomposition into 5 components (Ch. 15)',
+            },
+            {
+                'method': 'Maximum Information',
+                'available': vas_available,
+                'description': 'Noise floor analysis via R2 XmR + histogram',
+            },
+        ]
+        return pd.DataFrame(rows)
 
     @property
     def support(self) -> pd.DataFrame:
