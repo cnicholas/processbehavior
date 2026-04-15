@@ -54,9 +54,9 @@ class TestInvalidCombinations:
         with pytest.raises(ValidationError, match="companion.*Histogram"):
             sds1_study.execute(chart='Histogram', companion=True)
 
-    def test_phased_with_value_allowed(self, sds1_study):
+    def test_phased_with_value_allowed(self, sds2_study):
         """phased=True with value= (residual) is allowed."""
-        result = sds1_study.execute(
+        result = sds2_study.execute(
             chart='XmR', by=[], phased=True, value='R2'
         )
         assert len(result.get_chart('XmR')) > 0
@@ -111,10 +111,10 @@ class TestValidCombinations:
 class TestCompanionWithResiduals:
     """companion=True should return both charts when charting residuals."""
 
-    def test_xmr_companion_with_residual_returns_both(self, sds1_single_factor_study):
-        """XmR + companion + value='R5' → both XmR and R."""
-        result = sds1_single_factor_study.execute(
-            chart='XmR', by=[], companion=True, value='R5'
+    def test_xmr_companion_with_residual_returns_both(self, sds2_study):
+        """XmR + companion + value='R2' → both XmR and R."""
+        result = sds2_study.execute(
+            chart='XmR', by=[], companion=True, value='R2'
         )
         assert 'XmR' in result.charts
         assert 'R' in result.charts
@@ -125,10 +125,10 @@ class TestCompanionWithResiduals:
         assert 'Xbar' in result.charts
         assert 'S' in result.charts
 
-    def test_xmr_no_companion_with_residual_returns_single(self, sds1_single_factor_study):
-        """XmR + companion=False + value='R5' → only XmR."""
-        result = sds1_single_factor_study.execute(
-            chart='XmR', by=[], companion=False, value='R5'
+    def test_xmr_no_companion_with_residual_returns_single(self, sds2_study):
+        """XmR + companion=False + value='R2' → only XmR."""
+        result = sds2_study.execute(
+            chart='XmR', by=[], companion=False, value='R2'
         )
         assert 'XmR' in result.charts
         assert 'R' not in result.charts

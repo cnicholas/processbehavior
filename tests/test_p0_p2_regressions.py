@@ -72,7 +72,7 @@ class TestRChartResidualValidation:
         assert 'XmR' in result.charts
         assert 'R' in result.charts
 
-    def test_xmr_with_residual_still_works(self, sds1_study):
-        """XmR + residual must still work (no false positive)."""
-        result = sds1_study.execute(chart='XmR', value='R3', by=[])
-        assert 'XmR' in result.charts
+    def test_xbar_with_residual_still_works(self, sds1_study):
+        """Xbar + residual must still work (no false positive)."""
+        result = sds1_study.execute(chart='Xbar', value='R3')
+        assert 'Xbar' in result.charts

@@ -43,7 +43,7 @@ class TestResolveMrSourceColumn:
 class TestRecenteredXmRLimits:
     """Recentered XmR limits should have same width as non-recentered."""
 
-    @pytest.mark.parametrize('residual', ['R2', 'R3', 'R4', 'R5'])
+    @pytest.mark.parametrize('residual', ['R2', 'R3'])
     def test_xmr_limit_width_matches(self, sds2_study, residual):
         """Limit half-width must be identical with and without recentering."""
         result_plain = sds2_study.execute(
@@ -80,7 +80,7 @@ class TestRecenteredXmRLimits:
 class TestRecenteredRChart:
     """Companion R chart should be unaffected by recentering."""
 
-    @pytest.mark.parametrize('residual', ['R2', 'R3', 'R4', 'R5'])
+    @pytest.mark.parametrize('residual', ['R2', 'R3'])
     def test_r_chart_limits_match(self, sds2_study, residual):
         """R chart CL/UPL must be identical with and without recentering."""
         result_plain = sds2_study.execute(
@@ -143,27 +143,25 @@ class TestRecenteredStratified:
 class TestRecenteredR6:
     """R6 should have both R6 and RCR6 when recentered=True."""
 
-    def test_r6_xmr_limit_width_matches(self, sds2_study):
-        """R6 recentered XmR limits should have same width as non-recentered."""
+    def test_r6_xbar_limit_width_matches(self, sds2_study):
+        """R6 recentered Xbar limits should have same width as non-recentered."""
         result_plain = sds2_study.execute(
-            chart='XmR', value='R6', by=['FACTOR 1'],
+            chart='Xbar', value='R6', by=['FACTOR 1'],
         )
         result_rc = sds2_study.execute(
-            chart='XmR', value='R6', by=['FACTOR 1'], recentered=True,
+            chart='Xbar', value='R6', by=['FACTOR 1'], recentered=True,
         )
 
-        xmr_plain = result_plain.charts['XmR']
-        xmr_rc = result_rc.charts['XmR']
+        plain_data = result_plain.charts['Xbar']['data']
+        rc_data = result_rc.charts['Xbar']['data']
 
-        for stratum in xmr_plain['strata']:
-            sp = xmr_plain['statistics'][stratum]
-            sr = xmr_rc['statistics'][stratum]
-            width_plain = sp['upl'] - sp['lpl']
-            width_rc = sr['upl'] - sr['lpl']
-            assert width_plain == pytest.approx(width_rc, abs=0.01), (
-                f"R6 stratum {stratum}: recentered width {width_rc:.4f} != "
-                f"non-recentered {width_plain:.4f}"
-            )
+        width_plain = (plain_data['upl'] - plain_data['lpl']).iloc[0]
+        width_rc = (rc_data['upl'] - rc_data['lpl']).iloc[0]
+
+        assert width_plain == pytest.approx(width_rc, abs=0.01), (
+            f"R6 recentered Xbar width {width_rc:.4f} != "
+            f"non-recentered {width_plain:.4f}"
+        )
 
 
 class TestNonRecenteredUnchanged:

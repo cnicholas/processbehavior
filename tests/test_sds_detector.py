@@ -636,7 +636,7 @@ class TestR2ChartAvailability:
         assert plan.vas_residuals_supported is True
         assert plan.min_cell_size == 3
         assert ('S', 'R2') in plan.residual_charts
-        assert ('XmR', 'R2') not in plan.residual_charts
+        assert ('XmR', 'R2') in plan.residual_charts  # Always available for MaxInfo
 
     def test_sds2_always_has_r2_xmr(self):
         """SDS 2 (no replication) should always have R2_XmR.
@@ -661,12 +661,13 @@ class TestR2ChartAvailability:
         assert plan.vas_residuals_supported is True
         assert plan.min_cell_size == 2
         assert ('S', 'R2') in plan.residual_charts
-        assert ('XmR', 'R2') not in plan.residual_charts
+        assert ('XmR', 'R2') in plan.residual_charts  # Always available for MaxInfo
 
     def test_sds3_without_replication_has_r2_xmr(self):
         """SDS 3 with min_cell_size=1 should use R2_XmR.
 
         When some cells have only n=1, we must use XmR for R2.
+        S R2 is not available without replication.
         """
         plan = SDSRegistry.get_analysis_plan(sds=3, min_cell_size=1)
 
@@ -748,7 +749,7 @@ class TestR4R5XbarSAvailability:
         plan = SDSRegistry.get_analysis_plan(sds=1, min_cell_size=3)
 
         expected = [
-            ('S', 'R2'),
+            ('S', 'R2'), ('XmR', 'R2'),
             ('Xbar', 'R3'), ('S', 'R3'),
             ('Xbar', 'R4'), ('S', 'R4'),
             ('Xbar', 'R5'), ('S', 'R5'),
