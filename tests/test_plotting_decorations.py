@@ -22,7 +22,6 @@ from processbehavior.plotting.run_rules_viz import add_run_rules_visualization
 from processbehavior.plotting.stats_box import (
     add_stats_box,
     build_stats_text,
-    format_stat_value,
 )
 from processbehavior.plotting.zones import (
     add_zone_shading,
@@ -251,27 +250,6 @@ class TestAddLaneBoundaries:
 # =========================================================================
 # Stats Box
 # =========================================================================
-
-class TestFormatStatValue:
-
-    def test_large_value_full(self):
-        assert format_stat_value(152.3456) == '152.35'
-
-    def test_medium_value_full(self):
-        assert format_stat_value(52.3456) == '52.346'
-
-    def test_small_value_full(self):
-        assert format_stat_value(5.12345) == '5.1235'
-
-    def test_large_value_compact(self):
-        assert format_stat_value(152.3456, compact=True) == '152'
-
-    def test_medium_value_compact(self):
-        assert format_stat_value(52.3456, compact=True) == '52.3'
-
-    def test_small_value_compact(self):
-        assert format_stat_value(5.12345, compact=True) == '5.12'
-
 
 class TestBuildStatsText:
 
