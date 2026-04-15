@@ -33,15 +33,12 @@ SDS_CONFIGS = {
 }
 
 
-def context_to_stratum(context_subtitle: str, sds: int) -> str | tuple:
+def context_to_stratum(context_subtitle: str, sds: int) -> str:
     """Convert JSON context_subtitle 'PDC RSG - 1-1' to our stratum key."""
     # Extract '1-1' from 'PDC RSG - 1-1'
     level = context_subtitle.split(' - ')[1]  # '1-1'
     f1, f2 = level.split('-')
-    if sds == 1:
-        return f'{f1}_{f2}'  # SDS 1 strata are strings like '1_1'
-    else:
-        return (int(f1), int(f2))  # SDS 2/3 strata are tuples like (1, 1)
+    return f'{f1}_{f2}'  # Strata normalized to strings per #73
 
 
 def close(actual, expected, tol=TOLERANCE):
@@ -119,18 +116,15 @@ def run_sds_validation(sds_num, pb, study, json_data):  # noqa: C901
     computed['pdc_effects_s'] = study.execute(
         chart='S', by=[pb.cols.FACTOR_1, pb.cols.FACTOR_2], value='R6'
     )
-    # PT effects (pages 22-23) — chart type depends on SDS
-    if sds_num == 1:
-        computed['pt_effects_xbar'] = study.execute(
-            chart='Xbar', by=[pb.cols.PRODUCTION_TIME], value='R3', recentered=True
-        )
-        computed['pt_effects_s'] = study.execute(
-            chart='S', by=[pb.cols.PRODUCTION_TIME], value='R3', recentered=True
-        )
-    else:
-        computed['pt_effects_xmr'] = study.execute(
-            chart='XmR', by=[], value='R3', recentered=True, companion=True
-        )
+    # PT effects (pages 22-23) — Xbar/S by time for all SDS
+    # When charted by=[time], each time subgroup has multiple factor levels,
+    # giving n>1 subgroups even in SDS 2, so Xbar/S is correct.
+    computed['pt_effects_xbar'] = study.execute(
+        chart='Xbar', by=[pb.cols.PRODUCTION_TIME], value='R3', recentered=True
+    )
+    computed['pt_effects_s'] = study.execute(
+        chart='S', by=[pb.cols.PRODUCTION_TIME], value='R3', recentered=True
+    )
     # Interaction (pages 28-29)
     if sds_num == 1:
         computed['interaction_xbar'] = study.execute(
@@ -244,12 +238,8 @@ def run_sds_validation(sds_num, pb, study, json_data):  # noqa: C901
                           safe_chart_table(result_obj, chart_type))
 
         elif category == 'pt_effects':
-            if sds_num == 1:
-                result_obj = computed['pt_effects_xbar'] if is_location else computed['pt_effects_s']
-                chart_type = 'Xbar' if is_location else 'S'
-            else:
-                result_obj = computed['pt_effects_xmr']
-                chart_type = 'XmR' if is_location else 'R'
+            result_obj = computed['pt_effects_xbar'] if is_location else computed['pt_effects_s']
+            chart_type = 'Xbar' if is_location else 'S'
             cl, lpl, upl = stats_from(result_obj, chart_type)
             append_result(chart_type, '[PRODUCTION_TIME]', 'R3', True, cl, lpl, upl,
                           safe_chart_table(result_obj, chart_type))

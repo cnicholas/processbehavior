@@ -222,8 +222,13 @@ class SDSAnalysisPlan:
         r2 = [('S', 'R2')] if self.min_cell_size >= 2 else []
         r2.append(('XmR', 'R2'))
 
-        # R3: Same subgrouping as R2 - Xbar/S when min_cell_size >= 2
-        r3 = [('Xbar', 'R3'), ('S', 'R3')] if self.min_cell_size >= 2 else [('XmR', 'R3')]
+        # R3: Xbar/S when subgroups have n>=2, XmR for individual observations
+        # Both are valid: Xbar/S by=[time] aggregates across factors (n>1),
+        # XmR by=[] or by=[factors,time] charts individual observations.
+        # Xbar will raise at compute time if subgroups have n=1.
+        r3 = [('Xbar', 'R3'), ('S', 'R3')]
+        if self.min_cell_size < 2:
+            r3.append(('XmR', 'R3'))
 
         # R4: Xbar/S when aggregating across factors gives n>=2 per time subgroup
         r4 = [('Xbar', 'R4'), ('S', 'R4')] if self.has_factors else [('XmR', 'R4')]
