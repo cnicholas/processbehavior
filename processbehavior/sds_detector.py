@@ -189,6 +189,8 @@ class SDSAnalysisPlan:
         ('XmR', 'R5'): 'Does the factor have a significant effect?',
         ('Xbar', 'R5'): 'Do factors have a significant effect on the mean?',
         ('S', 'R5'): 'Do factors have a significant effect on variation?',
+        ('Xbar', 'R6'): 'Do individual factors have a significant effect on the mean?',
+        ('S', 'R6'): 'Do individual factors have a significant effect on variation?',
     }
 
     @property
@@ -203,12 +205,14 @@ class SDSAnalysisPlan:
         - R3: Xbar/S when cells have n>=2, otherwise XmR
         - R4: Xbar/S when has_factors (aggregate across factors by time)
         - R5: Xbar/S when has_time (aggregate across time by factor)
+        - R6: Always Xbar/S (factor main effects aggregate across time)
 
         Per Bishop Sections 20.6.1-4:
         - R2 uses (k,t) cell subgrouping - S when n>=2
         - R3 uses (k,t) cell subgrouping - Xbar/S when n>=2
         - R4 Xbar/S use time-based subgrouping (N_.t = Σ_k N_kt)
         - R5 Xbar/S use factor-based subgrouping (N_k. = Σ_t N_kt)
+        - R6 Xbar/S use factor-based subgrouping (requires by= at execute time)
         """
         if not self.vas_residuals_supported:
             return []
@@ -225,7 +229,11 @@ class SDSAnalysisPlan:
         # R5: Xbar/S when aggregating across time gives n>=2 per factor subgroup
         r5 = [('Xbar', 'R5'), ('S', 'R5')] if self.has_time else [('XmR', 'R5')]
 
-        return r2 + r3 + r4 + r5
+        # R6: Always Xbar/S — factor main effects aggregate across time,
+        # giving n>=2 subgroups regardless of cell-level replication
+        r6 = [('Xbar', 'R6'), ('S', 'R6')]
+
+        return r2 + r3 + r4 + r5 + r6
 
     def __str__(self) -> str:
         """Pretty print the analysis plan."""
@@ -1241,7 +1249,7 @@ class SDSRegistry:
                 recommended_chart='Xbar',
                 invalid_charts=[],
                 vas_residuals_supported=True,
-                residuals_available=['R1', 'R2', 'R3', 'R4', 'R5'],
+                residuals_available=['R1', 'R2', 'R3', 'R4', 'R5', 'R6'],
                 residual_calculation_method='exact',
                 main_effects_supported=True,
                 interaction_effects_supported=True,
@@ -1267,7 +1275,7 @@ class SDSRegistry:
                 recommended_chart='XmR',
                 invalid_charts=[],
                 vas_residuals_supported=True,
-                residuals_available=['R1', 'R2', 'R3', 'R4', 'R5'],
+                residuals_available=['R1', 'R2', 'R3', 'R4', 'R5', 'R6'],
                 residual_calculation_method='moving_average',
                 main_effects_supported=True,
                 interaction_effects_supported=True,
@@ -1296,7 +1304,7 @@ class SDSRegistry:
                 recommended_chart='XmR',
                 invalid_charts=[],
                 vas_residuals_supported=True,
-                residuals_available=['R1', 'R2', 'R3', 'R4', 'R5'],
+                residuals_available=['R1', 'R2', 'R3', 'R4', 'R5', 'R6'],
                 residual_calculation_method='hybrid',
                 main_effects_supported=True,
                 interaction_effects_supported=True,

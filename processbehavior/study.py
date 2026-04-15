@@ -1097,9 +1097,11 @@ class Study:
         ...     result = study.execute(chart=chart, value=value)
         """
         ads_cols = set(self._ads.analysis_dataset.columns)
+        # R6 is computed on-the-fly from R5+R2, so check prerequisites instead of column
+        r6_available = {'R5', 'R2'}.issubset(ads_cols)
         return [
             (chart, value) for chart, value in self._plan.residual_charts
-            if value in ads_cols
+            if value in ads_cols or (value == 'R6' and r6_available)
         ]
 
     @property
@@ -1194,7 +1196,7 @@ class Study:
         rows = []
 
         # All possible primary charts
-        ALL_PRIMARY = ['Xbar', 'S', 'XmR', 'R']
+        ALL_PRIMARY = ['Xbar', 'S', 'XmR', 'R', 'Histogram']
 
         # All possible residual charts as (chart_type, residual) tuples
         ALL_RESIDUALS = [
@@ -1202,6 +1204,7 @@ class Study:
             ('Xbar', 'R3'), ('S', 'R3'), ('XmR', 'R3'),
             ('Xbar', 'R4'), ('S', 'R4'), ('XmR', 'R4'),
             ('Xbar', 'R5'), ('S', 'R5'), ('XmR', 'R5'),
+            ('Xbar', 'R6'), ('S', 'R6'),
         ]
 
         # ADS=0 guard: all charts unavailable

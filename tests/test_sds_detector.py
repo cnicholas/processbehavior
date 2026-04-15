@@ -744,26 +744,43 @@ class TestR4R5XbarSAvailability:
             assert ('Xbar', 'R5') in plan.residual_charts
 
     def test_sds1_full_residual_charts(self):
-        """SDS 1 should have full Xbar/S charts for R3, R4 and R5."""
+        """SDS 1 should have full Xbar/S charts for R3, R4, R5, and R6."""
         plan = SDSRegistry.get_analysis_plan(sds=1, min_cell_size=3)
 
-        expected = [('S', 'R2'), ('Xbar', 'R3'), ('S', 'R3'), ('Xbar', 'R4'), ('S', 'R4'), ('Xbar', 'R5'), ('S', 'R5')]
+        expected = [
+            ('S', 'R2'),
+            ('Xbar', 'R3'), ('S', 'R3'),
+            ('Xbar', 'R4'), ('S', 'R4'),
+            ('Xbar', 'R5'), ('S', 'R5'),
+            ('Xbar', 'R6'), ('S', 'R6'),
+        ]
         assert plan.residual_charts == expected
 
     def test_sds2_residual_charts(self):
-        """SDS 2 (no replication) should still have R4/R5 Xbar/S."""
+        """SDS 2 (no replication) should still have R4/R5/R6 Xbar/S."""
         plan = SDSRegistry.get_analysis_plan(sds=2, min_cell_size=1)
 
         # R2 and R3 should be XmR (no replication)
         assert ('XmR', 'R2') in plan.residual_charts
         assert ('XmR', 'R3') in plan.residual_charts
-        # R4/R5 should still have Xbar/S if has_factors/has_time
+        # R4/R5/R6 should still have Xbar/S if has_factors/has_time
         if plan.has_factors:
             assert ('Xbar', 'R4') in plan.residual_charts
             assert ('S', 'R4') in plan.residual_charts
         if plan.has_time:
             assert ('Xbar', 'R5') in plan.residual_charts
             assert ('S', 'R5') in plan.residual_charts
+        # R6 is always Xbar/S
+        assert ('Xbar', 'R6') in plan.residual_charts
+        assert ('S', 'R6') in plan.residual_charts
+
+    def test_r6_always_xbar_s(self):
+        """R6 (factor main effects) is always Xbar/S for all analytical SDS."""
+        for sds in [1, 2, 3]:
+            plan = SDSRegistry.get_analysis_plan(sds=sds, min_cell_size=2)
+            assert ('Xbar', 'R6') in plan.residual_charts
+            assert ('S', 'R6') in plan.residual_charts
+            assert ('XmR', 'R6') not in plan.residual_charts
 
     def test_r3_xbar_s_when_replication(self):
         """R3 should have Xbar/S when min_cell_size >= 2, otherwise XmR."""
