@@ -240,3 +240,107 @@ class TestNumericFactorCategoryAxis:
         assert fig._fig.layout.xaxis.type == "category", (
             f"Expected category axis, got {fig._fig.layout.xaxis.type}"
         )
+
+
+# ============================================================================
+# Tick label invariants for XmR with lane boundaries (repeated time)
+# ============================================================================
+
+
+class TestTickLabelBlockInvariants:
+    """Tick labels must be monotonic within each factor block.
+
+    When XmR charts have lane boundaries (collapsed factors), time values
+    repeat across blocks. Tick thinning must select labels per-block to
+    avoid garbled cross-block mixing.
+    """
+
+    @staticmethod
+    def _study():
+        from processbehavior.datasets.synthetic import make_sds
+        df = make_sds(2, K1=3, K2=2, T=10, seed=42)
+        return ProcessBehavior(df).formulate(
+            response='y', factors=['factor 1', 'factor 2'], time='time',
+        )
+
+    @staticmethod
+    def _extract_ticks_and_boundaries(result, chart_name='XmR'):
+        """Extract tick positions, labels, and lane boundary positions."""
+        if result.is_stratified:
+            focused = result.focus(result.strata[0])
+        else:
+            focused = result
+
+        fig = focused.plot()
+        ax = fig.figure.layout.xaxis
+        tickvals = list(ax.tickvals) if ax.tickvals else []
+        ticktext = list(ax.ticktext) if ax.ticktext else []
+
+        meta = focused.charts[chart_name].get('metadata', {})
+        lb = meta.get('lane_boundaries')
+        if isinstance(lb, list):
+            boundary_positions = [b['position'] for b in lb]
+        elif isinstance(lb, dict):
+            first_key = next(iter(lb))
+            boundary_positions = [b['position'] for b in lb[first_key]]
+        else:
+            boundary_positions = []
+
+        data = focused.get_chart(chart_name)
+        return tickvals, ticktext, boundary_positions, data
+
+    @pytest.mark.parametrize("by", [
+        pytest.param([], id="overall"),
+        pytest.param(['factor 1'], id="by_factor1"),
+        pytest.param(['factor 2'], id="by_factor2"),
+    ])
+    def test_tick_labels_monotonic_within_blocks(self, by):
+        """Tick labels should increase within each factor block."""
+        study = self._study()
+        result = study.execute(chart='XmR', by=by, companion=True)
+        tickvals, ticktext, boundaries, data = self._extract_ticks_and_boundaries(result)
+
+        n = len(data)
+        edges = sorted({0} | set(boundaries) | {n})
+
+        for i in range(len(edges) - 1):
+            start, end = edges[i], edges[i + 1]
+            block_labels = [
+                int(ticktext[j]) for j, pos in enumerate(tickvals)
+                if start <= pos < end
+            ]
+            if len(block_labels) >= 2:
+                for k in range(1, len(block_labels)):
+                    assert block_labels[k] > block_labels[k - 1], (
+                        f"Block [{start}, {end}): tick labels not monotonic: {block_labels}"
+                    )
+
+    @pytest.mark.parametrize("by", [
+        pytest.param([], id="overall"),
+        pytest.param(['factor 1'], id="by_factor1"),
+        pytest.param(['factor 2'], id="by_factor2"),
+    ])
+    def test_every_block_has_at_least_one_tick(self, by):
+        """Every factor block should have at least one tick label."""
+        study = self._study()
+        result = study.execute(chart='XmR', by=by, companion=True)
+        tickvals, ticktext, boundaries, data = self._extract_ticks_and_boundaries(result)
+
+        n = len(data)
+        edges = sorted({0} | set(boundaries) | {n})
+
+        for i in range(len(edges) - 1):
+            start, end = edges[i], edges[i + 1]
+            block_ticks = [pos for pos in tickvals if start <= pos < end]
+            assert len(block_ticks) >= 1, (
+                f"Block [{start}, {end}) has no tick labels"
+            )
+
+    def test_full_rsg_no_lane_boundaries(self):
+        """by=[all factors] has unique time — no lane boundaries, no blocks."""
+        study = self._study()
+        result = study.execute(chart='XmR', by=['factor 1', 'factor 2'], companion=True)
+        focused = result.focus(result.strata[0])
+        meta = focused.charts['XmR'].get('metadata', {})
+        lb = meta.get('lane_boundaries')
+        assert not lb, "Full RSG should have no lane boundaries"

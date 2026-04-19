@@ -1038,10 +1038,16 @@ class Plotter:
         if is_categorical and n <= max_ticks:
             return
 
-        # Select evenly-spaced time ticks (first, last, and regular interval)
-        # Lane boundaries are visual separators rendered separately — they
-        # should not inflate the time tick set.
-        if n <= max_ticks:
+        # Select evenly-spaced time ticks.
+        # When time repeats across factor blocks (lane boundaries present),
+        # thin ticks per block to avoid cross-block label mixing.
+        lane_bounds = metadata.get('lane_boundaries')
+        block_edges = self._get_block_edges(lane_bounds, n)
+
+        if block_edges and not is_categorical:
+            # Per-block thinning: distribute ticks across blocks
+            tick_positions = self._thin_ticks_per_block(block_edges, n, max_ticks)
+        elif n <= max_ticks:
             tick_positions = list(range(n))
         else:
             step = max(2, (n - 1) // (max_ticks - 1))
@@ -1079,6 +1085,61 @@ class Plotter:
                 automargin=True,
                 **kwargs,
             )
+
+    @staticmethod
+    def _get_block_edges(lane_bounds, n: int) -> list[int] | None:
+        """Extract sorted block edge positions from lane boundary metadata.
+
+        Returns [0, b1, b2, ..., n] or None if no boundaries.
+        """
+        if not lane_bounds:
+            return None
+
+        if isinstance(lane_bounds, list):
+            positions = [b['position'] for b in lane_bounds]
+        elif isinstance(lane_bounds, dict):
+            # Stratified: take boundaries from first stratum
+            first_key = next(iter(lane_bounds))
+            positions = [b['position'] for b in lane_bounds[first_key]]
+        else:
+            return None
+
+        if not positions:
+            return None
+
+        return sorted({0} | set(positions) | {n})
+
+    @staticmethod
+    def _thin_ticks_per_block(
+        block_edges: list[int], n: int, max_ticks: int,
+    ) -> list[int]:
+        """Select evenly-spaced tick positions independently within each block.
+
+        Distributes the tick budget proportionally by block size, with a
+        minimum of 2 ticks (first and last) per block.
+        """
+        n_blocks = len(block_edges) - 1
+        ticks_per_block = max(2, max_ticks // n_blocks)
+        all_positions: set[int] = set()
+
+        for i in range(n_blocks):
+            start = block_edges[i]
+            end = block_edges[i + 1]
+            block_n = end - start
+            if block_n <= 0:
+                continue
+
+            if block_n <= ticks_per_block:
+                block_ticks = list(range(start, end))
+            else:
+                step = max(2, (block_n - 1) // (ticks_per_block - 1))
+                block_ticks = list(range(start, end, step))
+                if end - 1 not in block_ticks:
+                    block_ticks.append(end - 1)
+
+            all_positions.update(block_ticks)
+
+        return sorted(all_positions)
 
     # ---- Y-range / histogram helpers ----
 
