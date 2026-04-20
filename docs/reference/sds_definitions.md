@@ -128,4 +128,4 @@ To determine the SDS for a dataset:
 
 - Wheeler, D. J. (1995). *Advanced Topics in Statistical Process Control*. SPC Press, Knoxville, TN.
 - Wheeler, D. J. & Chambers, D. S. (1992). *Understanding Statistical Process Control*. SPC Press.
-- Bishop, D. R. (2023). Personal communication - Variance Analysis System implementation.
+- Bishop, T. A. (2023). Personal communication — Variance Analysis System implementation.

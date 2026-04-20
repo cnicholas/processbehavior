@@ -1,8 +1,8 @@
 # VAS Residuals
 
-Bishop's **Variance Analysis System (VAS)** decomposes total variation into meaningful components. ProcessBehavior calculates five residuals (R1-R5) that help answer different analytical questions.
+Dr. Thomas A. Bishop's **Variance Analysis System (VAS)** decomposes total variation into meaningful components. ProcessBehavior calculates six residuals (R1-R6) that help answer different analytical questions.
 
-## The Five Residuals
+## The Residual Hierarchy
 
 | Residual | Name | Formula | Questions Answered |
 |----------|------|---------|-------------------|
@@ -11,6 +11,7 @@ Bishop's **Variance Analysis System (VAS)** decomposes total variation into mean
 | **R3** | Interaction | Y - Y̅<sub>k</sub> - Y̅<sub>t</sub> + Y̅ | Do factor effects change over time? |
 | **R4** | Time | Y̅<sub>t</sub> - Y̅ + R2 | Are there time trends or shifts? |
 | **R5** | Factor | Y̅<sub>k</sub> - Y̅ + R2 | Do factors differ from each other? |
+| **R6** | Factor Main Effect | α<sub>i</sub> + R2 | Does a specific factor have a significant effect? |
 
 Where:
 - Y = individual observation
@@ -135,6 +136,37 @@ When charting R5 on Xbar, limits use R2's Sbar (within-cell noise), not R5's own
 - No signals → Factor differences are within normal variation
 - Use for equipment comparison, operator comparison, etc.
 
+## R6: Factor Main Effect Residuals
+
+**Purpose**: Isolate a specific factor's main effect combined with within-cell noise.
+
+**Formula**: R6 = α<sub>i</sub> + R2
+
+Where α<sub>i</sub> = mean(R5 | factor level(s)) — the mean of R5 for each level of the specified factor(s).
+
+R6 differs from R5 in that it isolates the effect of *individual factors* when multiple factors exist. R5 contains the combined effect of all factors; R6 lets you examine one factor at a time.
+
+**Chart**: Xbar with `value='R6'` and `by` specifying which factor(s) to examine.
+
+```python
+# In a two-factor study, examine FACTOR 1's effect
+result = study.execute(chart='Xbar', value='R6', by=['factor 1'])
+fig = result.plot(show_zones=True, title='Factor 1 Main Effect')
+
+# Re-centered on original measurement scale
+result = study.execute(chart='Xbar', value='R6', by=['factor 1'], recentered=True)
+```
+
+**Key details**:
+- R6 is computed on-the-fly during `execute()` (not stored in the dataset like R1-R5)
+- The `by` parameter is required and specifies which factor(s) to compute the main effect for
+- Available when the study has factors and R5/R2 are present
+- Re-centered R6 (RCR6) adds back the grand mean: RCR6 = Ȳ + α<sub>i</sub> + R2
+
+**Interpretation**:
+- Signals in R6 → The specified factor has a significant main effect
+- Useful for drilling into multi-factor studies: which factor matters most?
+
 ## How Effect Residuals Are Charted
 
 When you chart an effect-carrying residual (R3, R4, or R5) on Xbar or S, the system substitutes **R2** as the dispersion basis. Understanding this substitution is key to interpreting these charts correctly.
@@ -233,7 +265,7 @@ fig = result.plot(show_zones=True, show_rules=True)
 
 ```python
 result = study.execute(chart='XmR', by=['lane'], value='R5')
-fig = result.plot(show_zones=True, show_signals=True)
+fig = result.plot(show_zones=True, highlight_signals=True)
 ```
 
 ## Interpreting the Complete Picture
@@ -331,6 +363,31 @@ R5 = Ȳ_k - Ȳ + R2
 
 ## Next Steps
 
+## Maximum Information Analysis
+
+The **Maximum Information** analysis examines the noise floor of your process by analyzing R2 residuals via an XmR chart and percentage histogram. It answers: *What variation is inherent to the system, and is it predictable?*
+
+```python
+mi = study.maximum_information()
+
+# Key statistics
+print(f"Noise floor sigma: {mi.sigma_hat}")   # Unbiased sigma from R2
+print(f"Natural process limits: [{mi.lpl}, {mi.upl}]")
+print(f"Signals in noise: {mi.n_signals}")     # Points beyond limits
+
+# Visualize
+mi.plot()                        # Combined XmR + histogram
+mi.plot(view='xmr')              # XmR chart of R2 only
+mi.plot(view='histogram', bins=15)  # Percentage histogram only
+```
+
+**Interpretation**:
+- **Stable R2 on XmR** (no signals) → The noise floor is predictable. Any variation beyond this level is attributable to factors, time, or interactions.
+- **Signals in R2** → Special causes exist *within* subgroups. Investigate measurement system or within-cell process variation before interpreting R3-R5.
+- **σ̂ (sigma_hat)** → The irreducible noise floor. This is the best the process can achieve even if all assignable causes are eliminated.
+
+## Next Steps
+
 - [Xbar-S Analysis](../tutorials/xbar-s-analysis.ipynb) - Practical VAS analysis
 - [Chart Types](chart-types.md) - All residual chart types
-- [API Reference](../reference/api.md) - ResidualCalculator API
+- [API Reference](../reference/api.md) - Complete Study API

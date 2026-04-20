@@ -98,35 +98,33 @@ Wheeler identifies six sampling design states that determine valid analysis appr
 
 ---
 
-### SDS 4: Nested Design
+### SDS 4: Incomplete, No Singletons
 
-**Definition**: Hierarchical factor structure.
+**Definition**: Incomplete grid — empty cells present, all observed cells have N_kt >= 2.
 
-**Capabilities**: Limited to stratified XmR
-
----
-
-### SDS 5: Unstructured
-
-**Definition**: Irregular or sporadic collection.
-
-**Capabilities**: Most limited analysis
+**After cleansing**: Collapses to ADS 1 (Full Replication)
 
 ---
 
-### SDS 6: Single Stream
+### SDS 5: Incomplete, No Replication
 
-**Definition**: One factor level measured over time.
+**Definition**: Incomplete grid — empty cells present, all observed cells have N_kt = 1.
 
-**ProcessBehavior Detection**: No factors, or single factor level
+**After cleansing**: Collapses to ADS 2 (No Replication)
 
-**Capabilities**: XmR analysis, full WECO rules
+---
+
+### SDS 6: Incomplete, With Singletons
+
+**Definition**: Incomplete grid — empty cells present, observed cells have mixed N_kt.
+
+**After cleansing**: Collapses to ADS 3 (Partial Replication)
 
 ---
 
 ## Variance Analysis System (VAS)
 
-Wheeler's framework for decomposing variation into meaningful components.
+Dr. Thomas A. Bishop's framework for decomposing variation into meaningful components. VAS extends Wheeler's process behavior chart methodology with a hierarchical residual decomposition (R1-R5) that isolates within-cell, interaction, time, and factor effects.
 
 ### R1: Total Deviation
 

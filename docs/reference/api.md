@@ -75,15 +75,18 @@ study = pb.formulate(...)
 - `.time`: Time variable name
 - `.precision`: Decimal precision
 
-**Properties - SDS:**
-- `.plan_design_state`: `SDSResult | None` -- what was planned (None if no plan)
-- `.observed_design_state`: `SDSResult` -- what was observed in raw data
-- `.analytical_design_state`: `SDSResult` -- what is analyzable after tidying
-- `.sds_reason`: ADS-derived machine token (e.g., `'full_replication'`)
-- `.sds_description`: ADS-derived human prose description
+**Properties - Design States:**
+
+ProcessBehavior tracks three Design States for traceability. The **Analytical Design State (ADS)** is the authoritative state that drives chart selection and all analysis decisions. See [Key Concepts: Design State Traceability](../getting-started/key-concepts.md#design-state-traceability) for details.
+
+- `.plan_design_state`: `SDSResult | None` -- Plan Design State (PDS). Computed from sampling plan parameters (K × T × N). Always SDS 1 (N >= 2) or SDS 2 (N = 1). Returns None when no plan is provided.
+- `.observed_design_state`: `SDSResult` -- Observed Design State (ODS). Detected on raw data before NA filtering. Captures the actual data structure including incomplete designs (SDS 4-6). Diagnostic/lineage only.
+- `.analytical_design_state`: `SDSResult` -- Analytical Design State (ADS). Computed on tidy data after data cleansing. Drives valid charts, residual availability, R2 method, and interaction analysis. SDS 4-6 collapse to 1-3 after cleansing.
+- `.ads_reason`: ADS-derived machine token (e.g., `'full_replication'`, `'no_replication'`, `'partial_replication'`)
+- `.ads_description`: ADS-derived human prose description (e.g., `'Full replication (all cells n>=2)'`)
 
 **Properties - Charts:**
-- `.valid_charts`: List of valid chart types ('Xbar', 'S', 'XmR', 'R')
+- `.valid_charts`: List of valid chart types (e.g., `['Histogram', 'Xbar', 'S', 'XmR', 'R']`)
 - `.recommended_chart`: Best chart for this SDS
 - `.charts`: Accessor for valid chart types (e.g., `study.charts.Xbar`)
 - `.residuals`: Accessor for available residuals (e.g., `study.residuals.R2`)
@@ -99,18 +102,21 @@ study = pb.formulate(...)
 
 ```python
 result = study.execute(
-    chart: str = None,           # Chart type: 'Xbar', 'S', 'XmR', 'R'
+    chart: str = None,           # Chart type: 'Xbar', 'S', 'XmR', 'R', 'Histogram'
     by: list[str] = None,        # Grouping/stratification (subset of factors)
-    value: str = None,           # What to chart: None (response) or 'R1'-'R5'
+    value: str = None,           # What to chart: None (response) or 'R1'-'R6'
     recentered: bool = False,    # Re-center residuals on original scale
     bins: int = None,            # Number of bins for histogram charts
-    companion: bool = False      # Return companion charts (Xbar+S or XmR+R)
+    companion: bool = False,     # Return companion charts (Xbar+S or XmR+R)
+    phased: bool = False,        # Per-phase control limits for collapsed factors
+    n_sigma: float = 3.0,        # Sigma multiplier for limit calculation
+    n_mode: str = "actual"       # Subgroup size mode: 'actual' or 'average'
 ) -> AnalysisResult
 ```
 
 **Parameters:**
 
-- `chart`: Base chart type. One of `'Xbar'`, `'S'`, `'XmR'`, `'R'`.
+- `chart`: Base chart type. One of `'Xbar'`, `'S'`, `'XmR'`, `'R'`, `'Histogram'`.
 - `by`: Controls grouping/stratification:
   - `None`: Default for chart type (full factors for Xbar/S, required for XmR with factors)
   - `[]`: Collapse all factors
@@ -118,10 +124,13 @@ result = study.execute(
   - `['f1', 'f2']`: Aggregate/stratify by multiple factors
 - `value`: What to plot:
   - `None`: Chart response variable (default)
-  - `'R1'` to `'R5'`: Chart the specified VAS residual
+  - `'R1'` to `'R6'`: Chart the specified VAS residual
 - `recentered`: If True and using residuals, re-center on original scale
 - `bins`: Number of bins for histogram charts
 - `companion`: If True, returns both charts in a pair (Xbar+S or XmR+R). Either chart in the pair triggers the pair (e.g., `chart='S', companion=True` returns Xbar+S)
+- `phased`: If True, calculate separate control limits for each phase (contiguous runs of the same rational subgroup key) when factors are collapsed via `by`
+- `n_sigma`: Sigma multiplier for control limit calculation (default 3.0)
+- `n_mode`: Subgroup size mode — `'actual'` uses each subgroup's actual n, `'average'` uses the average n across all subgroups
 
 **Examples:**
 
@@ -274,10 +283,10 @@ fig = result.plot(
     ncols: int = 2,
     show_limits: bool = True,
     show_zones: bool = False,
-    show_signals: bool = False,
+    highlight_signals: bool = True,
     show_rules: bool = False,
     show_stats: bool = False,
-    template: str = 'processbehavior',
+    theme: str = 'processbehavior',
     width: int = 1000,
     height: int = None,
     title: str = None
@@ -345,10 +354,12 @@ rules = (
     .run(length=8)             # Rule 4: 8+ same side
     .trend(length=6)           # Rule 5: 6+ trending
     .oscillation(length=14)    # Rule 6: 14+ alternating
-    .hugging_center(length=15) # Rule 7: 15+ in Zone C
+    .reduced_variation(length=15) # Rule 7: 15+ in Zone C
     .avoiding_center(length=8) # Rule 8: 8+ avoiding Zone C
-    .build()
 )
+
+# Pass directly to detect_signals
+signals = result.detect_signals(rules=rules)
 ```
 
 ### SignalConfig
@@ -591,7 +602,7 @@ Valid rule configuration:
 ['rule_1', 'rule_2', 'rule_5']
 
 # RuleSet object
-RuleSet().beyond_limits().run().build()
+RuleSet().beyond_limits().run()
 ```
 
 ---

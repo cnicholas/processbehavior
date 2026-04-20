@@ -1,6 +1,6 @@
 # Study Formulation
 
-The `formulate()` method is the heart of ProcessBehavior. It enables the analyst to specify the key inputs defined during problem forumlation to create a structured study.  The system automatically detects the sampling design and prepares the analysis.
+The `formulate()` method is the heart of ProcessBehavior. It enables the analyst to specify the key inputs defined during problem formulation to create a structured study.  The system automatically detects the sampling design and prepares the analysis.
 
 ## The Formulation API
 
@@ -113,7 +113,11 @@ When you call `formulate()`, ProcessBehavior:
 
 ## The Study Object
 
-Formulation returns a `Study` object with rich information:
+Formulation returns a `Study` object with rich information about your data structure and available analyses.
+
+### Design State Traceability
+
+The Study tracks three Design States providing transparent lineage from raw data to analysis. The **Analytical Design State (ADS)** is the authoritative state that drives all analysis decisions. See [Design State Traceability](../getting-started/key-concepts.md#design-state-traceability) for the full explanation.
 
 ```python
 study = pb.formulate(
@@ -122,14 +126,17 @@ study = pb.formulate(
     time=pb.cols.batch
 )
 
-# SDS information
-print(study.observed_design_state)    # SDSResult(sds=1, reason='full_replication', ...)
-print(study.analytical_design_state) # SDSResult (what is analyzable after tidying)
-print(study.sds_reason)              # "full_replication" (ADS-derived machine token)
-print(study.sds_description)         # Detailed explanation (ADS-derived human prose)
+# Design states
+print(study.observed_design_state)    # ODS: what was actually collected (raw data)
+print(study.analytical_design_state)  # ADS: what is fit for analysis (tidy data)
+print(study.plan_design_state)        # PDS: what was intended (None if no plan)
 
-# Chart recommendations
-print(study.valid_charts)       # ['Xbar', 'S', 'XmR']
+# ADS-derived properties (these drive chart selection)
+print(study.ads_reason)              # e.g., "full_replication"
+print(study.ads_description)         # e.g., "Full replication (all cells n>=2)"
+
+# Chart recommendations (determined by ADS)
+print(study.valid_charts)       # ['Histogram', 'Xbar', 'S', 'XmR', 'R']
 print(study.recommended_chart)  # 'Xbar'
 print(study.residuals)          # StudyResidualAccessor(R1, R2, R3, R4, R5)
 
@@ -354,15 +361,110 @@ report.missing_combos   # RSG groups in plan but not observed
 report.plan_adherence   # Summary of how well data matches plan
 ```
 
-Works with or without a sampling plan -- without a plan, it reports observed structure only.
+Works with or without a sampling plan — without a plan, it reports observed structure only.
+
+### Interpreting the Design Report
+
+The Design Report shows the full **Design State lineage** (PDS → ODS → ADS) and highlights structural discrepancies between your plan and observed data.
+
+**Key metrics to check:**
+
+| Metric | What It Tells You | Action |
+|--------|-------------------|--------|
+| **K_missing > 0** | Factor combinations in your plan were never observed | Investigate why — were samples lost? Were levels skipped? |
+| **T_missing > 0** | Expected time points are absent from data | Check for missing batches or skipped collection periods |
+| **N_observed as (min, med, max)** | Cell sizes vary | Large variation may indicate SDS 3; consider standardizing collection |
+| **coverage < 1.0** | Data doesn't cover the full planned grid | Lower coverage = more incomplete design (SDS 4-6) |
+| **ODS ≠ ADS** | Raw structure changed after cleansing | Empty cells were removed; check `missing_combos` to understand what was lost |
+| **remediation** | Actionable guidance for improving the design | Follow the suggestion to move toward SDS 1 |
+
+**Example output:**
+
+```
+Design Report (2 factors)
+  Unit of analysis: filled container
+  Design lineage:
+    Planned Design State:    SDS 1 (Full Replication)
+    Observed Design State:   SDS 6 (Incomplete, With Singletons) — 3 empty cells
+    Analytical Design State: SDS 1 (Full Replication)
+  Plan adherence: 3 missing cells out of 480 planned (99.4% coverage)
+  K=6, T=80, R=477/480, N=(2, 3, 5)
+```
+
+This tells you: the plan called for full replication across 480 cells. Three cells were empty in the raw data (ODS 6), but after cleansing the remaining 477 cells all have n >= 2 (ADS 1), enabling full Xbar-S analysis with exact R2.
+
+### `study.capability()`
+
+Assesses process capability against specification limits (Bishop Ch. 16). Returns both **current capability** (Pp/Ppk, based on overall variation) and **potential capability** (Cp/Cpk, based on R2 within-cell noise only).
+
+```python
+from processbehavior import SpecLimits
+
+# Two-sided specifications
+cap = study.capability(usl=250.5, lsl=249.5, target=250.0)
+print(f"Current:   Pp={cap.pp:.2f}, Ppk={cap.ppk:.2f}")
+print(f"Potential: Cp={cap.cp:.2f}, Cpk={cap.cpk:.2f}")
+print(f"Outside specs: {cap.pct_outside:.1f}%")
+
+# One-sided (upper limit only)
+cap = study.capability(usl=105.0)
+
+# Visualize
+cap.plot(values=study.dataset[study.response].dropna().values)
+```
+
+| Metric | Based On | Meaning |
+|--------|----------|---------|
+| **Pp/Ppk** | Overall σ̂ (all variation) | Current capability — process as-is |
+| **Cp/Cpk** | R2 σ̂ (within-cell noise only) | Potential capability — achievable if all assignable causes are eliminated |
+
+Potential capability (Cp/Cpk) requires VAS residuals (factors + time). If unavailable, `cap.potential_unavailable_reason` explains why.
+
+### `study.loss_function()`
+
+Decomposes expected loss into five components using the Taguchi Loss Function (Bishop Ch. 15). Identifies the largest sources of variation as a Pareto analysis.
+
+```python
+# Use grand mean as target (centering = 0)
+loss = study.loss_function()
+
+# Use explicit target
+loss = study.loss_function(target=250.0)
+
+# The 5 components (as percentages of total loss)
+print(f"Centering:   {loss.pct_centering:.1f}%")
+print(f"Unexplained: {loss.pct_unexplained:.1f}%")
+print(f"PDC:         {loss.pct_pdc:.1f}%")
+print(f"Time:        {loss.pct_time:.1f}%")
+print(f"Interaction: {loss.pct_interaction:.1f}%")
+
+# For multi-factor studies, see PDC breakdown by factor
+print(loss.pdc_by_factor)  # e.g., {'machine': 12.5, 'operator': 4.3}
+
+# Visualize
+loss.plot()                    # 5-bar Pareto
+loss.plot(structured=True)     # Expands PDC into per-factor components
+```
+
+**The five components:**
+
+| Component | Formula | What It Captures |
+|-----------|---------|-----------------|
+| **Centering** | (Ȳ - Target)² | Loss from being off-target |
+| **Unexplained** | Within-cell variance | Irreducible noise (R2) |
+| **PDC** | Between-factor variance | Factor (process design condition) effects |
+| **Time** | Between-time variance | Time period effects |
+| **Interaction** | Factor × time variance | How factor effects change over time |
+
+These five components always sum to the total expected loss. The largest percentage identifies where to focus improvement efforts.
 
 ## Best Practices
 
-1. **Use auto-completion** - Prevents typos and speeds up development
-2. **Start simple** - Begin with just response, add factors/time as needed
-3. **Check the SDS** - Understand your data structure before analyzing
-4. **Use why_not()** - Learn why certain charts aren't available
-5. **Review the dataset** - Check `study.dataset` to verify residual calculations
+1. **Use auto-completion** — Prevents typos and speeds up development
+2. **Start simple** — Begin with just response, add factors/time as needed
+3. **Check the ADS** — Understand your analytical design state before interpreting
+4. **Use why_not()** — Learn why certain charts aren't available
+5. **Review the design** — Use `study.design()` to verify structure and lineage
 
 ## Next Steps
 

@@ -4,13 +4,7 @@ ProcessBehavior can export complete analysis results to Excel workbooks with mul
 
 ## Requirements
 
-Excel export requires the `openpyxl` package:
-
-```bash
-pip install processbehavior[excel]
-# or
-pip install openpyxl
-```
+Excel export uses `openpyxl`, which is installed automatically with processbehavior. No additional installation is needed.
 
 ## Basic Export
 
@@ -218,10 +212,10 @@ print(f"Exported with {signals.count} signals detected")
 
 ### "No module named 'openpyxl'"
 
+openpyxl is a core dependency and should be installed automatically. If missing:
+
 ```bash
 pip install openpyxl
-# or
-pip install processbehavior[excel]
 ```
 
 ### Chart Images Not Appearing

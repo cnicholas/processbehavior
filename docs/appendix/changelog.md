@@ -38,7 +38,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `Study` class with chart recommendations
 
 #### Analysis
-- `analyze()` method for chart calculation
+- `execute()` method for chart calculation
 - `AnalysisResult` class for unified result access
 - VAS residual calculations (R1-R5)
 - Support for Xbar, S, XmR, and R charts

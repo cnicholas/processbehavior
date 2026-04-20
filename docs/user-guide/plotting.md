@@ -25,10 +25,10 @@ fig = result.plot(
     ncols=2,                 # Columns in faceted layout
     show_limits=True,        # Show control limits (UCL, LCL)
     show_zones=False,        # Show zone shading (A, B, C)
-    show_signals=False,      # Highlight out-of-control points
+    highlight_signals=True,  # Highlight out-of-control points
     show_rules=False,        # Show all WECO rule violations
     show_stats=False,        # Display statistics box
-    template='processbehavior',  # Theme name
+    theme='processbehavior',     # Theme name
     width=1000,              # Figure width in pixels
     height=None,             # Figure height (auto if None)
     title=None               # Custom title
@@ -42,7 +42,7 @@ fig = result.plot(
 ```python
 fig = result.plot(
     show_zones=True,      # Shaded 1σ, 2σ, 3σ zones
-    show_signals=True     # Red markers for beyond-limits points
+    highlight_signals=True     # Red markers for beyond-limits points
 )
 fig.show()
 ```
@@ -52,7 +52,7 @@ fig.show()
 ```python
 fig = result.plot(
     show_zones=True,
-    show_signals=True,
+    highlight_signals=True,
     show_rules=True,      # All WECO rule violations
     show_stats=True       # Statistics box (CL, UCL, LCL)
 )
@@ -80,7 +80,7 @@ fig = result.plot(
     facet=True,
     ncols=2,              # 2 columns of charts
     show_zones=True,
-    show_signals=True
+    highlight_signals=True
 )
 fig.show()
 ```
@@ -107,7 +107,7 @@ ProcessBehavior includes four professional themes:
 Professional SPC styling with clear data visibility.
 
 ```python
-fig = result.plot(template='processbehavior')
+fig = result.plot(theme='processbehavior')
 ```
 
 ### minimal
@@ -115,7 +115,7 @@ fig = result.plot(template='processbehavior')
 Light background with minimal annotations.
 
 ```python
-fig = result.plot(template='minimal')
+fig = result.plot(theme='minimal')
 ```
 
 ### dark
@@ -123,7 +123,7 @@ fig = result.plot(template='minimal')
 Dark theme with high contrast colors.
 
 ```python
-fig = result.plot(template='dark')
+fig = result.plot(theme='dark')
 ```
 
 ### ggplot
@@ -131,7 +131,7 @@ fig = result.plot(template='dark')
 Inspired by ggplot2's aesthetics.
 
 ```python
-fig = result.plot(template='ggplot')
+fig = result.plot(theme='ggplot')
 ```
 
 ## Listing Available Themes
@@ -189,7 +189,7 @@ custom = ChartTheme(
 register_theme(custom)
 
 # Use it
-fig = result.plot(template='company')
+fig = result.plot(theme='company')
 ```
 
 ## ControlChartFigure Methods
@@ -251,7 +251,7 @@ Signals are highlighted differently based on the rule violated:
 
 ```python
 # Just beyond-limits signals (Rule 1)
-fig = result.plot(show_signals=True)
+fig = result.plot(highlight_signals=True)
 
 # All WECO rules
 fig = result.plot(show_rules=True)
@@ -319,9 +319,9 @@ fig = make_subplots(rows=2, cols=1, subplot_titles=['Xbar', 'S'])
 fig = result.plot(
     chart='Xbar',
     show_zones=True,
-    show_signals=True,
+    highlight_signals=True,
     show_stats=True,
-    template='processbehavior',
+    theme='processbehavior',
     title='Fill Weight Analysis - Xbar Chart',
     width=1200
 )
