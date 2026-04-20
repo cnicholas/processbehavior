@@ -21,7 +21,7 @@ flowchart LR
     end
 
     subgraph Analysis
-        E[analyze]
+        E[execute]
         F[AnalysisResult]
     end
 
@@ -85,7 +85,7 @@ print(f"Recommended: {study.recommended_chart}")
 
 # Analyze and visualize
 result = study.execute()
-result.plot(show_zones=True, show_signals=True)
+result.plot(show_zones=True, highlight_signals=True)
 ```
 
 ## Key Features
@@ -141,7 +141,7 @@ pip install processbehavior[images]
 ProcessBehavior follows Wheeler's philosophy that **process behavior charts are not about statistics—they're about understanding variation**. The package is designed to:
 
 1. **Guide, not dictate** - Recommend appropriate analyses while allowing expert override
-2. **Return plain DataFrames** - No custom classes; results work with your existing pandas workflow
+2. **DataFrame-backed results** - Access chart data, residuals, and effects as standard pandas DataFrames
 3. **Separate concerns** - Formulation, analysis, and visualization are distinct steps
 4. **Be explicit** - No hidden defaults; all parameters are visible and documented
 

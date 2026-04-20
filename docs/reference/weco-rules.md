@@ -63,8 +63,7 @@ signals = result.detect_signals(rules='standard')
 ```python
 from processbehavior.signals import RuleSet
 
-rules = RuleSet().zone_a(consecutive=2).build()
-```
+rules = RuleSet().zone_a(consecutive=2)```
 
 ### Rule 3: Zone B (4 of 5)
 
@@ -82,8 +81,7 @@ rules = RuleSet().zone_a(consecutive=2).build()
 - Slow process change
 
 ```python
-rules = RuleSet().zone_b(consecutive=4).build()
-```
+rules = RuleSet().zone_b(consecutive=4)```
 
 ### Rule 4: Run
 
@@ -102,11 +100,9 @@ rules = RuleSet().zone_b(consecutive=4).build()
 - Seasonal effect
 
 ```python
-rules = RuleSet().run(length=8).build()
-
+rules = RuleSet().run(length=8)
 # More sensitive (shorter run)
-rules = RuleSet().run(length=7).build()
-```
+rules = RuleSet().run(length=7)```
 
 ### Rule 5: Trend
 
@@ -125,11 +121,9 @@ rules = RuleSet().run(length=7).build()
 - Fatigue effects
 
 ```python
-rules = RuleSet().trend(length=6).build()
-
+rules = RuleSet().trend(length=6)
 # More sensitive
-rules = RuleSet().trend(length=5).build()
-```
+rules = RuleSet().trend(length=5)```
 
 ### Rule 6: Oscillation
 
@@ -148,8 +142,7 @@ rules = RuleSet().trend(length=5).build()
 - Systematic sampling issue
 
 ```python
-rules = RuleSet().oscillation(length=14).build()
-```
+rules = RuleSet().oscillation(length=14)```
 
 ### Rule 7: Hugging Center
 
@@ -168,8 +161,7 @@ rules = RuleSet().oscillation(length=14).build()
 - Data averaging or smoothing
 
 ```python
-rules = RuleSet().hugging_center(length=15).build()
-```
+rules = RuleSet().reduced_variation(length=15)```
 
 ### Rule 8: Avoiding Center
 
@@ -188,8 +180,7 @@ rules = RuleSet().hugging_center(length=15).build()
 - Subgroup selection issue
 
 ```python
-rules = RuleSet().avoiding_center(length=8).build()
-```
+rules = RuleSet().avoiding_center(length=8)```
 
 ## Rule Sets
 
@@ -228,11 +219,9 @@ Select specific rules for your needs.
 from processbehavior.signals import RuleSet
 
 # Just limits and trends
-rules = RuleSet().beyond_limits().trend().build()
-
+rules = RuleSet().beyond_limits().trend()
 # Limits and runs with custom length
-rules = RuleSet().beyond_limits().run(length=7).build()
-
+rules = RuleSet().beyond_limits().run(length=7)
 # Full configuration
 rules = (
     RuleSet()
@@ -240,8 +229,7 @@ rules = (
     .zone_a(consecutive=2)
     .run(length=8)
     .trend(length=5)
-    .build()
-)
+    )
 
 signals = result.detect_signals(rules=rules)
 ```

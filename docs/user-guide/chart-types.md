@@ -62,7 +62,7 @@ Use `study.valid_charts` and `study.residuals` to see options.
 
 ```python
 result = study.execute(chart='Xbar')
-fig = result.plot(chart='Xbar', show_zones=True, show_signals=True)
+fig = result.plot(chart='Xbar', show_zones=True, highlight_signals=True)
 ```
 
 Points beyond limits indicate subgroups that differ from the overall average.

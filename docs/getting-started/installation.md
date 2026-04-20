@@ -40,37 +40,39 @@ pip install -e ".[dev]"
 After installation, verify everything works:
 
 ```python
-import processbehavior as pb
-
-# Check version
-print(f"ProcessBehavior version: {pb.__version__}")
+import processbehavior
+print(f"ProcessBehavior version: {processbehavior.__version__}")
 
 # Quick functionality test
 import pandas as pd
 import numpy as np
+from processbehavior import ProcessBehavior
 
-# Create sample data
+# Create sample data: 3 machines x 10 batches x 1 measurement
 np.random.seed(42)
 df = pd.DataFrame({
     'value': np.random.normal(100, 5, 30),
-    'time': range(30)
+    'batch': [f'batch_{i//3 + 1}' for i in range(30)],
+    'machine': ['A', 'B', 'C'] * 10
 })
 
 # Run a simple analysis
-pb = pb.ProcessBehavior(df)
-study = pb.formulate(response=pb.cols.value, time=pb.cols.time)
+pb = ProcessBehavior(df)
+study = pb.formulate(response=pb.cols.value, factors=[pb.cols.machine], time=pb.cols.batch)
 result = study.execute()
 
-print(f"SDS detected: {study.observed_design_state.sds}")
-print(f"Charts available: {result.all_charts}")
+print(f"SDS: {study.analytical_design_state.sds}")
+print(f"Valid charts: {study.valid_charts}")
+print(f"Recommended: {study.recommended_chart}")
 print("Installation verified!")
 ```
 
 Expected output:
 ```
 ProcessBehavior version: 0.1.0
-SDS detected: SDSResult(sds=4, reason='single_stream', ...)
-Charts available: ['XmR', 'R']
+SDS: 2
+Valid charts: ['Histogram', 'Xbar', 'S', 'XmR', 'R']
+Recommended: XmR
 Installation verified!
 ```
 

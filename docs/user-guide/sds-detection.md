@@ -20,14 +20,21 @@ SDS detection runs on raw data before NA rows are dropped, so cells where all re
 
 ## The Six Sampling Design States
 
-| SDS | Name | Structure | Recommended Chart |
-|-----|------|-----------|-------------------|
-| 1 | Full Replication | All cells n >= 2 | Xbar-S |
-| 2 | No Replication | All cells n = 1 | Xbar-S (MR-based) |
-| 3 | Partial Replication | Mixed n=1 and n>=2 | Xbar-S (hybrid) |
-| 4 | Nested Design | Hierarchical structure | XmR |
-| 5 | Unstructured | Irregular collection | XmR |
-| 6 | Single Stream | One factor, multiple times | Stratified XmR |
+**Complete/Semi-Complete (no empty cells):**
+
+| SDS | Name | Cell Sizes (N_kt) | Recommended Chart |
+|-----|------|--------------------|-------------------|
+| 1 | Full Replication | All N_kt >= 2 | Xbar |
+| 2 | No Replication | All N_kt = 1 | XmR |
+| 3 | Partial Replication | Mix of N_kt = 1 and N_kt >= 2 | XmR |
+
+**Incomplete (has empty cells — detected on raw data before cleansing):**
+
+| SDS | Name | Cell Sizes (N_kt) | Collapses to ADS |
+|-----|------|--------------------|------------------|
+| 4 | Incomplete, No Singletons | Empty cells + all observed N_kt >= 2 | ADS 1 |
+| 5 | Incomplete, No Replication | Empty cells + all observed N_kt = 1 | ADS 2 |
+| 6 | Incomplete, With Singletons | Empty cells + mixed N_kt | ADS 3 |
 
 ## How SDS is Detected
 
@@ -250,60 +257,70 @@ The design report shows:
 ```
 
 **Capabilities**:
-- ⚠️ Hybrid variance estimation (exact for n>1, zero for n=1)
+- ⚠️ Hybrid R2 estimation (exact where n >= 2, ma2 where n = 1)
 - ⚠️ VAS residuals available but interpretation requires care
 - ✅ Xbar-S analysis with hybrid limits
 
-**Valid Charts**: Xbar, S, XmR
+**Valid Charts**: Histogram, Xbar, S, XmR, R
 
-## SDS 4: Nested Design
+!!! note "Why Mixed is treated conservatively"
+    For R2 calculation, SDS 3 uses the hybrid method: exact within-cell deviation where cells have n >= 2, and the ma2 (moving average) method where cells have n = 1. This conservative approach was validated by Monte Carlo simulation — it produces more reliable variance estimates than attempting to use only the replicated cells. The recommended chart is XmR (not Xbar) because the mixed replication makes subgroup-mean interpretation less straightforward.
 
-**Structure**: Hierarchical factor structure with incomplete temporal coverage.
+## SDS 4: Incomplete, No Singletons
 
-**Example**: Different operators work different shifts on different days
+**Structure**: Incomplete grid — some cells have no data, but all present cells have N_kt >= 2.
 
-**Capabilities**:
-- ⚠️ Limited to XmR analysis
-- ⚠️ Stratified analysis recommended
+**Example**: A planned 4-lane x 10-batch study where 3 batches were skipped entirely, but all collected batches have 3+ replicates.
 
-**Valid Charts**: XmR, R
+**After cleansing**: Collapses to **ADS 1** (Full Replication) — the empty cells are removed and all remaining cells have full replication.
 
-## SDS 5: Unstructured
+**Valid Charts**: Histogram, XmR, R (plus Xbar, S after collapse to ADS 1)
 
-**Structure**: Irregular or sporadic data collection.
+## SDS 5: Incomplete, No Replication
 
-**Example**: Measurements taken whenever convenient, no regular schedule
+**Structure**: Incomplete grid — some cells have no data, and all present cells have N_kt = 1.
 
-**Capabilities**:
-- ⚠️ Most limited analysis options
-- ⚠️ XmR with adaptive limits
+**Example**: A sparse unreplicated factorial where some factor-time combinations were never measured.
 
-**Valid Charts**: XmR, R
+**After cleansing**: Collapses to **ADS 2** (No Replication) — the empty cells are removed, leaving an unreplicated structure.
 
-## SDS 6: Single Stream Over Time
+**Valid Charts**: Histogram, XmR, R (plus Xbar, S after collapse to ADS 2)
 
-**Structure**: One factor level (or no factors), multiple time points.
+## SDS 6: Incomplete, With Singletons
 
-**Example**: Daily temperature readings from one sensor
+**Structure**: Incomplete grid — some cells have no data, and present cells have a mix of N_kt = 1 and N_kt >= 2.
 
-```python
-# Just measurements over time
-# Day 1: 72.1
-# Day 2: 71.8
-# Day 3: 72.5
-# ...
-```
+**Example**: A manufacturing study where some shifts had one measurement, others had three, and some were skipped entirely.
 
-**Capabilities**:
-- ✅ Perfect for time series monitoring
-- ✅ All 8 WECO rules applicable
-- ❌ No factor comparisons (only one level)
+**After cleansing**: Collapses to **ADS 3** (Partial Replication) — the empty cells are removed, leaving a mixed-replication structure.
 
-**Valid Charts**: XmR, R
+**Valid Charts**: Histogram, XmR, R (plus Xbar, S after collapse to ADS 3)
 
-## Checking Your SDS
+## From Observation to Analysis: ODS → ADS
 
-After formulation, inspect the SDS information:
+ProcessBehavior tracks three Design States as data flows through the system. Understanding this pipeline is key to interpreting your results correctly.
+
+### The Pipeline
+
+1. **Plan Design State (PDS)** — Computed from your sampling plan parameters (K × T × N). Always SDS 1 or SDS 2. Only available when you provide a `plan` to `formulate()`.
+
+2. **Observed Design State (ODS)** — Detected on **raw data** before any NA filtering. Response rows with garbage values (`*`, `ND`, etc.) are preserved during detection, so cells where all responses are NA count as empty cells (N_kt = 0). This enables detection of SDS 4-6 (Incomplete designs).
+
+3. **Analytical Design State (ADS)** — Computed on **tidy data** after data cleansing removes invalid response rows. The ADS reflects the structure that is actually fit for analysis and **drives all analysis decisions**: valid charts, R2 calculation method, residual availability, and interaction analysis.
+
+### Why ODS and ADS Can Differ
+
+After data cleansing, empty cells disappear. SDS 4-6 (Incomplete designs) collapse to their Complete/Semi-Complete equivalents:
+
+| ODS | After Cleansing → | ADS | Why |
+|-----|-------------------|-----|-----|
+| 4 (Incomplete, no singletons) | Empty cells removed | 1 (Full Replication) | All remaining cells have n >= 2 |
+| 5 (Incomplete, no replication) | Empty cells removed | 2 (No Replication) | All remaining cells have n = 1 |
+| 6 (Incomplete, with singletons) | Empty cells removed | 3 (Partial Replication) | Remaining cells have mixed n |
+
+This separation means the system correctly identifies incomplete data collection (via ODS) while performing the most powerful analysis the clean data supports (via ADS).
+
+### Checking Your Design States
 
 ```python
 study = pb.formulate(
@@ -312,34 +329,36 @@ study = pb.formulate(
     time=pb.cols.batch
 )
 
-# Quick check
-print(f"SDS {study.observed_design_state.sds}: {study.sds_reason}")
+# The ADS drives analysis — use these for chart selection
+print(f"ADS: {study.analytical_design_state.sds}")  # e.g., 1
+print(f"Reason: {study.ads_reason}")                # e.g., "full_replication"
+print(f"Description: {study.ads_description}")       # Human-readable
 
-# Detailed information
-print(study.sds_description)  # ADS-derived human prose
+# The ODS captures the raw data structure (diagnostic)
+print(f"ODS: {study.observed_design_state.sds}")     # e.g., 6
 
-# What's valid for this SDS?
+# Chart validity is determined by the ADS
 print(f"Valid charts: {study.valid_charts}")
 print(f"Recommended: {study.recommended_chart}")
-
-# VAS residual charts (if available)
 print(f"Available residuals: {study.residuals}")
+
+# Full design lineage via study.design()
+print(study.design())
 ```
 
 ## Impact on Analysis
 
-The SDS affects three key aspects:
+The **Analytical Design State** determines three key aspects of the analysis:
 
-### 1. Variance Estimation
+### 1. Variance Estimation (R2 Method)
 
-| SDS | Method |
-|-----|--------|
-| 1 | Within-cell standard deviation (exact) |
-| 2 | 2-point backward moving average |
-| 3 | Hybrid: exact for n>1, zero for n=1 |
-| 4 | Within-cell standard deviation (exact for present cells) |
-| 5 | 2-point backward moving average |
-| 6 | Hybrid: exact for n>1, zero for n=1 |
+The R2 method is determined by the tidy data structure (ADS), not the raw SDS:
+
+| ADS | R2 Method | Description |
+|-----|-----------|-------------|
+| 1 | exact | Within-cell standard deviation (`R2 = Y - Ȳ_kt`) |
+| 2 | ma2 | 2-point moving average for unreplicated designs |
+| 3 | hybrid | Exact where n >= 2, ma2 where n = 1 |
 
 ### 2. Available Charts
 
@@ -442,14 +461,14 @@ print(cell_counts['n'].value_counts())
 
 ## Summary
 
-| If You Have... | SDS | Best Approach |
-|----------------|-----|---------------|
-| Full replication (n>=2 per cell) | 1 | Xbar-S with full VAS |
-| One observation per cell | 2 | Xbar-S with MR limits |
-| Mixed replication | 3 | Xbar-S with hybrid limits |
-| Nested/hierarchical | 4 | Stratified XmR |
-| Irregular collection | 5 | XmR with caution |
-| Single stream over time | 6 | XmR with full WECO rules |
+| If You Have... | ODS | ADS (after cleansing) | Best Approach |
+|----------------|-----|-----------------------|---------------|
+| Full replication (n>=2 per cell) | 1 | 1 | Xbar with full VAS |
+| One observation per cell | 2 | 2 | XmR with MA2-based R2 |
+| Mixed replication | 3 | 3 | XmR with hybrid R2 |
+| Incomplete grid, all observed replicated | 4 | 1 | Xbar with full VAS |
+| Incomplete grid, all observed n=1 | 5 | 2 | XmR with MA2-based R2 |
+| Incomplete grid, mixed observed | 6 | 3 | XmR with hybrid R2 |
 
 ## Next Steps
 

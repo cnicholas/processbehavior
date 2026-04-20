@@ -24,28 +24,100 @@ This separation ensures you understand your data structure before analyzing it.
 
 The **Sampling Design State** describes the structure of your data. ProcessBehavior automatically detects which of six states applies:
 
-| SDS | Name | Description | Recommended Chart |
-|-----|------|-------------|-------------------|
-| 1 | Full Replication | All factor-time cells have n >= 2 | Xbar-S |
-| 2 | No Replication | All cells have exactly n = 1 | Xbar-S (MR-based) |
-| 3 | Partial Replication | Mix of n=1 and n>=2 cells | Xbar-S (hybrid) |
-| 4 | Single Stream | One factor level over time | Stratified XmR |
-| 5 | Nested Design | Hierarchical factor structure | XmR |
-| 6 | Unstructured | Irregular/sporadic collection | XmR |
+**Complete/Semi-Complete (no empty cells):**
+
+| SDS | Name | Cell Sizes | Recommended Chart |
+|-----|------|------------|-------------------|
+| 1 | Full Replication | All N_kt >= 2 | Xbar |
+| 2 | No Replication | All N_kt = 1 | XmR |
+| 3 | Partial Replication | Mix of N_kt = 1 and N_kt >= 2 | XmR |
+
+**Incomplete (has empty cells):**
+
+| SDS | Name | Cell Sizes | Recommended Chart |
+|-----|------|------------|-------------------|
+| 4 | Incomplete, No Singletons | Empty cells + all observed N_kt >= 2 | XmR |
+| 5 | Incomplete, No Replication | Empty cells + all observed N_kt = 1 | XmR |
+| 6 | Incomplete, With Singletons | Empty cells + mixed N_kt | XmR |
+
+See [SDS Definitions](../reference/sds_definitions.md) for the formal classification table per Dr. Thomas A. Bishop's VAS methodology.
 
 ### Why SDS Matters
 
 The SDS determines:
 - Which chart types are valid
-- How within-group variance is estimated
+- How within-group variance is estimated (R2 method: exact, ma2, or hybrid)
 - Which VAS residuals can be computed
 - What conclusions you can draw
 
 ```python
 study = pb.formulate(response='weight', factors=['lane'], time='batch')
-print(f"SDS: {study.observed_design_state.sds}")   # e.g., 3
-print(f"Reason: {study.sds_reason}")             # e.g., "partial_replication"
-print(f"Valid: {study.valid_charts}") # e.g., ['Xbar', 'S', 'XmR']
+print(f"SDS: {study.analytical_design_state.sds}")  # e.g., 1
+print(f"Reason: {study.ads_reason}")                # e.g., "full_replication"
+print(f"Valid: {study.valid_charts}")                # e.g., ['Histogram', 'Xbar', 'S', 'XmR', 'R']
+```
+
+## Design State Traceability
+
+ProcessBehavior tracks **three Design States** as data flows from intent through observation to analysis, providing transparent lineage at every step.
+
+### The Three States
+
+| State | Property | Computed From | Purpose |
+|-------|----------|---------------|---------|
+| **Plan Design State (PDS)** | `study.plan_design_state` | Sampling plan parameters | What you *intended* to collect |
+| **Observed Design State (ODS)** | `study.observed_design_state` | Raw data (before NA filtering) | What was *actually collected* |
+| **Analytical Design State (ADS)** | `study.analytical_design_state` | Tidy data (after data cleansing) | What is *fit for analysis* |
+
+**The ADS drives all analysis decisions** — valid charts, residual availability, R2 calculation method, and interaction analysis. The ODS and PDS provide diagnostic lineage so you can trace exactly how your data structure changed through processing.
+
+### Why Three States?
+
+Raw data often contains garbage values, missing cells, and structural irregularities. The ODS captures this reality — including incomplete designs (SDS 4-6) where some factor-time cells are entirely empty. After data cleansing removes invalid observations, the empty cells disappear and the remaining structure may be simpler:
+
+- ODS 4 (Incomplete, no singletons) → ADS 1 (Full Replication)
+- ODS 5 (Incomplete, no replication) → ADS 2 (No Replication)
+- ODS 6 (Incomplete, with singletons) → ADS 3 (Partial Replication)
+
+This separation means the system correctly identifies incomplete data collection (ODS) while still performing the most powerful analysis the clean data supports (ADS).
+
+### Viewing Design State Lineage
+
+Use `study.design()` to see the full lineage:
+
+```python
+report = study.design()
+print(report)
+
+# Design Report (2 factors)
+#   Design lineage:
+#     Planned Design State:    SDS 1 (Full Replication)
+#     Observed Design State:   SDS 6 (Incomplete, With Singletons) — 3 empty cells
+#     Analytical Design State: SDS 1 (Full Replication)
+#   ...
+```
+
+When ODS and ADS differ, the Study display shows both:
+
+```python
+print(study)
+# Study(response='weight', factors=[lane], time='pull', ods=6, ads=1)
+#   Valid: Histogram, Xbar, S, XmR, R | Recommended: Xbar
+```
+
+### Key Properties
+
+```python
+# Plan Design State (None if no plan was provided)
+study.plan_design_state       # SDSResult or None
+
+# Observed Design State (always available)
+study.observed_design_state   # SDSResult — diagnostic/lineage
+
+# Analytical Design State (drives analysis)
+study.analytical_design_state # SDSResult — the authoritative state
+study.ads_reason              # e.g., "full_replication" (machine-readable)
+study.ads_description         # e.g., "Full replication (all cells n>=2)"
 ```
 
 ## Bishop's Variance Analysis System (VAS)
@@ -176,7 +248,7 @@ ProcessBehavior follows Wheeler's philosophy:
 
 3. **Separate formulation from analysis** - Understanding your data structure comes first.
 
-4. **Plain DataFrames** - Results are standard pandas DataFrames, not custom objects.
+4. **DataFrame-backed results** - Access chart data, residuals, and effects as standard pandas DataFrames.
 
 ## Next Steps
 
