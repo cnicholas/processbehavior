@@ -43,10 +43,10 @@ print(result.residuals.head())
 
 **Purpose**: Assess measurement/within-subgroup variation.
 
-**Formula by SDS**:
-- **SDS 1 (Full Replication)**: R2 = Y - Y̅<sub>kt</sub> (exact within-cell deviation)
-- **SDS 2 (No Replication)**: R2 = (Y<sub>j</sub> - Y<sub>j-1</sub>) / 2 (backward 2-point moving average)
-- **SDS 3 (Partial)**: Hybrid approach
+**Formula by DS**:
+- **DS 1 (Full Replication)**: R2 = Y - Y̅<sub>kt</sub> (exact within-cell deviation)
+- **DS 2 (No Replication)**: R2 = (Y<sub>j</sub> - Y<sub>j-1</sub>) / 2 (backward 2-point moving average)
+- **DS 3 (Partial)**: Hybrid approach
 
 **Chart**: S chart with `value='R2'` (for replicated data) or XmR
 
@@ -214,21 +214,21 @@ Re-centering formulas:
 
 **Note on recentered moving ranges**: For recentered residuals on XmR, the moving range is computed from the non-recentered version (e.g., RCR3 uses MR from R3). This avoids structural jumps between factor levels inflating the moving ranges.
 
-## Residual Availability by SDS
+## Residual Availability by DS
 
-| SDS | R1 | R2 | R3 | R4 | R5 |
+| DS | R1 | R2 | R3 | R4 | R5 |
 |-----|----|----|----|----|-----|
 | 1 (Full Replication) | ✅ | ✅ Within-cell | ✅ | ✅ | ✅ |
 | 2 (No Replication) | ✅ | ✅ MR-based | ✅ | ✅ | ✅ |
 | 3 (Partial) | ✅ | ✅ Hybrid | ✅ | ✅ | ✅ |
-| 4 (Single Stream) | ✅ | ✅ Hybrid | ✅ | ✅ | ✅ |
-| 5 (Nested) | ✅ | ✅ Hybrid | ✅ | ✅ | ✅ |
-| 6 (Unstructured) | ✅ | ✅ MR-based | ✅ | ✅ | ✅ |
+| 4 (Incomplete, No Singletons) → ADS 1 | ✅ | ✅ Within-cell | ✅ | ✅ | ✅ |
+| 5 (Incomplete, No Replication) → ADS 2 | ✅ | ✅ MR-based | ✅ | ✅ | ✅ |
+| 6 (Incomplete, With Singletons) → ADS 3 | ✅ | ✅ Hybrid | ✅ | ✅ | ✅ |
 
 **Note on R2 calculation**: R2 adapts to your sampling structure:
-- **SDS 1**: Within-cell deviation (`R2 = Y - Ȳ_kt`)
-- **SDS 2, 6**: Moving average method (`R2 = Y - MA2`) for unreplicated/sparse designs
-- **SDS 3, 4, 5**: Hybrid approach (within-cell for n>1 cells, zero for n=1 cells)
+- **DS 1**: Within-cell deviation (`R2 = Y - Ȳ_kt`)
+- **DS 2, 6**: Moving average method (`R2 = Y - MA2`) for unreplicated/sparse designs
+- **DS 3, 4, 5**: Hybrid approach (within-cell for n>1 cells, zero for n=1 cells)
 
 ## Analysis Workflow with Residuals
 
@@ -308,7 +308,7 @@ for residual in ['R3', 'R4', 'R5']:
 ## Best Practices
 
 1. **Always check R2 first** - Measurement stability is foundational
-2. **Use SDS 1 when possible** - Full replication gives exact residuals
+2. **Use DS 1 when possible** - Full replication gives exact residuals
 3. **Interpret in sequence** - R2 → R3 → R4 → R5
 4. **Consider re-centering** - Easier to explain on original scale
 5. **Document findings** - Record which residuals showed signals
@@ -323,7 +323,7 @@ R1 = Y - Ȳ
 
 Sum of R1 across all observations = 0
 
-### R2: Within-Cell (SDS 1)
+### R2: Within-Cell (DS 1)
 
 ```
 R2 = Y - Ȳ_kt
@@ -331,7 +331,7 @@ R2 = Y - Ȳ_kt
 
 Where Y̅<sub>kt</sub> is the mean of observations in cell (k, t).
 
-### R2: Within-Cell (SDS 2, Backward Moving Average)
+### R2: Within-Cell (DS 2, Backward Moving Average)
 
 ```
 R2_j = (Y_j - Y_{j-1}) / 2

@@ -1,6 +1,6 @@
-# Sampling Design State (SDS) Definitions
+# Design State (DS) Definitions
 
-This document provides the formal definitions of Sampling Design States (SDS) as defined by Thomas A. Bishop, Ph.D. in the Variance Analysis System (VAS) framework.
+This document provides the formal definitions of Design States (DS) as defined by Thomas A. Bishop, Ph.D. in the Variance Analysis System (VAS) framework.
 
 ## Notation
 
@@ -9,9 +9,9 @@ This document provides the formal definitions of Sampling Design States (SDS) as
 - **N_kt**: Number of observations in cell (k, t) - the count of measurements for factor level k at time t
 - **Rational Subgroup**: A (k, t) cell - observations sharing the same factor level and time period
 
-## SDS Classification Table
+## DS Classification Table
 
-| Design State | Sample Size N_kt | Sampling Design State | Distribution of Sample Sizes Across Rational Subgroups |
+| Design State | Sample Size N_kt | Design State | Distribution of Sample Sizes Across Rational Subgroups |
 |:------------:|------------------|:---------------------:|--------------------------------------------------------|
 | **1** | Min N_kt ≥ 2 | Complete | Multiple observations in each of the rational subgroups |
 | **2** | Min N_kt = 1 and Max N_kt = 1 | Semi-Complete | A single observation in each of the rational subgroups |
@@ -22,7 +22,7 @@ This document provides the formal definitions of Sampling Design States (SDS) as
 
 ## Detailed Definitions
 
-### SDS 1: Complete with Full Replication
+### DS 1: Complete with Full Replication
 
 - **Condition**: Min N_kt ≥ 2
 - **Grid Status**: Complete
@@ -33,7 +33,7 @@ This document provides the formal definitions of Sampling Design States (SDS) as
   - Xbar-S charts are optimal
   - Interaction effects can be estimated precisely
 
-### SDS 2: Semi-Complete with No Replication
+### DS 2: Semi-Complete with No Replication
 
 - **Condition**: Min N_kt = 1 AND Max N_kt = 1
 - **Grid Status**: Semi-Complete
@@ -44,7 +44,7 @@ This document provides the formal definitions of Sampling Design States (SDS) as
   - VAS residuals available but R2 is approximate
   - Common in unreplicated factorial designs
 
-### SDS 3: Semi-Complete with Partial Replication
+### DS 3: Semi-Complete with Partial Replication
 
 - **Condition**: Min N_kt = 1 AND Max N_kt ≥ 2
 - **Grid Status**: Semi-Complete
@@ -55,7 +55,7 @@ This document provides the formal definitions of Sampling Design States (SDS) as
   - Partial interaction effect estimation
   - Requires careful handling of mixed replication
 
-### SDS 4: Incomplete with Replication Only
+### DS 4: Incomplete with Replication Only
 
 - **Condition**: Min N_kt = 0 AND N_kt ≠ 1 (no cells with exactly 1) AND Max N_kt ≥ 2
 - **Grid Status**: Incomplete
@@ -66,7 +66,7 @@ This document provides the formal definitions of Sampling Design States (SDS) as
   - Can estimate within-cell variance for present cells
   - Common in nested/hierarchical designs with asynchronous coverage
 
-### SDS 5: Incomplete with No Replication
+### DS 5: Incomplete with No Replication
 
 - **Condition**: Min N_kt = 0 AND Max N_kt = 1
 - **Grid Status**: Incomplete
@@ -77,7 +77,7 @@ This document provides the formal definitions of Sampling Design States (SDS) as
   - No within-cell variance estimation possible
   - Moving average methods required throughout
 
-### SDS 6: Incomplete with Mixed Replication
+### DS 6: Incomplete with Mixed Replication
 
 - **Condition**: Min N_kt = 0 AND some N_kt = 1 AND Max N_kt ≥ 2
 - **Grid Status**: Incomplete
@@ -90,7 +90,7 @@ This document provides the formal definitions of Sampling Design States (SDS) as
 
 ## Detection Algorithm
 
-To determine the SDS for a dataset:
+To determine the DS for a dataset:
 
 ```
 1. Compute N_kt for all (factor, time) combinations
@@ -103,18 +103,18 @@ To determine the SDS for a dataset:
 
 3. Classification:
    - If NOT has_missing (Complete/Semi-Complete grid):
-     - If min_n ≥ 2 → SDS 1
-     - If min_n = 1 AND max_n = 1 → SDS 2
-     - If min_n = 1 AND max_n ≥ 2 → SDS 3
+     - If min_n ≥ 2 → DS 1
+     - If min_n = 1 AND max_n = 1 → DS 2
+     - If min_n = 1 AND max_n ≥ 2 → DS 3
    - If has_missing (Incomplete grid):
-     - If NOT has_singles AND has_multiples → SDS 4
-     - If has_singles AND NOT has_multiples → SDS 5
-     - If has_singles AND has_multiples → SDS 6
+     - If NOT has_singles AND has_multiples → DS 4
+     - If has_singles AND NOT has_multiples → DS 5
+     - If has_singles AND has_multiples → DS 6
 ```
 
-## R2 Calculation Methods by SDS
+## R2 Calculation Methods by DS
 
-| SDS | R2 Method | Description |
+| DS | R2 Method | Description |
 |-----|-----------|-------------|
 | 0 | N/A | No VAS decomposition |
 | 1 | Exact (within-cell) | Pooled within-cell variance |

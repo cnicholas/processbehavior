@@ -61,7 +61,7 @@ pb = ProcessBehavior(df)
 study = pb.formulate(response=pb.cols.value, factors=[pb.cols.machine], time=pb.cols.batch)
 result = study.execute()
 
-print(f"SDS: {study.analytical_design_state.sds}")
+print(f"DS: {study.analytical_design_state.sds}")
 print(f"Valid charts: {study.valid_charts}")
 print(f"Recommended: {study.recommended_chart}")
 print("Installation verified!")
@@ -70,7 +70,7 @@ print("Installation verified!")
 Expected output:
 ```
 ProcessBehavior version: 0.1.0
-SDS: 2
+DS: 2
 Valid charts: ['Histogram', 'Xbar', 'S', 'XmR', 'R']
 Recommended: XmR
 Installation verified!

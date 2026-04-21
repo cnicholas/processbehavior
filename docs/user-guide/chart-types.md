@@ -122,25 +122,25 @@ fig = result.plot(title='Factor Effects')
 
 Signals indicate true differences between factor levels.
 
-## Chart Validity by SDS
+## Chart Validity by DS
 
-Not all charts are valid for all Sampling Design States:
+Not all charts are valid for all Design States:
 
-| Chart | SDS 1 | SDS 2 | SDS 3 | SDS 4 | SDS 5-6 |
+| Chart | DS 1 | DS 2 | DS 3 | DS 4 | DS 5-6 |
 |-------|-------|-------|-------|-------|---------|
 | Xbar | ✅ | ✅ | ✅ | ❌ | ❌ |
 | S | ✅ | ✅ | ✅ | ❌ | ❌ |
 | XmR | ✅ | ✅ | ✅ | ✅ | ✅ |
 | R | ✅ | ✅ | ✅ | ✅ | ✅ |
 
-**Residual availability** depends on SDS. Use `study.residuals` to check:
+**Residual availability** depends on DS. Use `study.residuals` to check:
 
 ```python
 print(f"Valid charts: {study.valid_charts}")
 print(f"Available residuals: {study.residuals}")
 ```
 
-**Note on R2**: SDS 2 and 5 use the moving average method; SDS 1, 3, 4, 6 use within-cell deviation (R2 = Y - Ȳ_kt). See [VAS Residuals](residuals.md) for details.
+**Note on R2**: DS 2 and 5 use the moving average method; DS 1, 3, 4, 6 use within-cell deviation (R2 = Y - Ȳ_kt). See [VAS Residuals](residuals.md) for details.
 
 ## Companion Charts
 
@@ -300,13 +300,13 @@ Re-centering uses:
 ```
 Do you have factors?
 ├── No → Do you have time?
-│   └── Yes → SDS 6: Use XmR
+│   └── Yes → DS 6: Use XmR
 └── Yes → Do you have time?
     ├── No → Use Xbar to compare factors
     └── Yes → Do you have replication (n>=2 per cell)?
-        ├── All cells → SDS 1: Full Xbar-S + VAS residuals
-        ├── Some cells → SDS 3: Hybrid Xbar-S + limited VAS
-        └── No cells → SDS 2: Xbar-S with MR-based limits
+        ├── All cells → DS 1: Full Xbar-S + VAS residuals
+        ├── Some cells → DS 3: Hybrid Xbar-S + limited VAS
+        └── No cells → DS 2: Xbar-S with MR-based limits
 ```
 
 ## Summary

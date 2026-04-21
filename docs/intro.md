@@ -33,7 +33,7 @@ flowchart LR
 
     A --> B
     B --> C
-    C -->|"SDS detection"| D
+    C -->|"DS detection"| D
     D --> E
     E --> F
     F --> G
@@ -51,8 +51,8 @@ flowchart LR
 **Key Steps:**
 1. **Load** your process data into a pandas DataFrame
 2. **Wrap** with `ProcessBehavior` for IDE auto-completion
-3. **Formulate** your study — ProcessBehavior detects the Sampling Design State (SDS) and determines:
-   - Design state (SDS 1–6)
+3. **Formulate** your study — ProcessBehavior detects the Design State (DS) and determines:
+   - Design State (DS 1–6)
    - Valid and recommended charts
    - Available VAS residuals (R1–R5)
    - Main effects analysis
@@ -62,7 +62,7 @@ flowchart LR
 
 ## What Makes ProcessBehavior Different?
 
-Unlike traditional SPC packages that require you to manually select chart types and configure parameters, ProcessBehavior automatically detects your data's **Sampling Design State (SDS)** and recommends the appropriate analysis approach.
+Unlike traditional SPC packages that require you to manually select chart types and configure parameters, ProcessBehavior automatically detects your data's **Design State (DS)** and recommends the appropriate analysis approach.
 
 ```python
 import pandas as pd
@@ -79,8 +79,8 @@ study = pb.formulate(
     time=pb.cols.timestamp
 )
 
-# ProcessBehavior automatically detects SDS and recommends charts
-print(f"Detected: SDS {study.observed_design_state.sds}")
+# ProcessBehavior automatically detects DS and recommends charts
+print(f"Detected: DS {study.observed_design_state.sds}")
 print(f"Recommended: {study.recommended_chart}")
 
 # Analyze and visualize
@@ -90,25 +90,26 @@ result.plot(show_zones=True, highlight_signals=True)
 
 ## Key Features
 
-### Automatic Sampling Design Detection
-ProcessBehavior identifies six distinct sampling design states (SDS 1-6) and configures the analysis accordingly:
+### Automatic Design State Detection
+ProcessBehavior identifies six distinct Design States (DS 1-6) and configures the analysis accordingly:
 
-| SDS | Design | Charts |
-|-----|--------|--------|
-| 1 | Full replication | Xbar-S with VAS residuals |
-| 2 | No replication | Xbar-S with moving range |
-| 3 | Partial replication | Hybrid approach |
-| 4 | Single stream | Stratified XmR |
-| 5 | Nested/hierarchical | Multi-level analysis |
-| 6 | Unstructured | Special handling |
+| DS | Name | Cell Sizes (N_kt) |
+|-----|------|--------------------|
+| 1 | Full Replication | All N_kt >= 2 |
+| 2 | No Replication | All N_kt = 1 |
+| 3 | Partial Replication | Mix of N_kt = 1 and N_kt >= 2 |
+| 4 | Incomplete, No Singletons | Empty cells + all observed N_kt >= 2 |
+| 5 | Incomplete, No Replication | Empty cells + all observed N_kt = 1 |
+| 6 | Incomplete, With Singletons | Empty cells + mixed N_kt |
 
-### Bishop's Variance Analysis System (VAS)
+### Dr. Thomas A. Bishop's Variance Analysis System (VAS)
 For replicated designs, ProcessBehavior computes the complete residual decomposition:
 - **R1**: Total deviation (Y - grand mean)
 - **R2**: Within-cell variation (unexplained noise)
 - **R3**: Interaction residual (factor × time)
 - **R4**: Time effect + within-cell variation
 - **R5**: Factor effect + within-cell variation
+- **R6**: Factor main effect residual (computed on-the-fly per factor)
 
 ### Western Electric Rules
 Built-in signal detection with configurable rules:
@@ -133,7 +134,7 @@ pip install processbehavior[images]
 
 - [Quickstart](getting-started/quickstart.ipynb) - Get up and running in 5 minutes
 - [Basic XmR Chart](tutorials/basic-imr.ipynb) - Your first control chart
-- [Sampling Design States](user-guide/sds-detection.md) - Understanding sampling designs
+- [Design States](user-guide/sds-detection.md) - Understanding Design States
 - [API Reference](reference/api.md) - Complete API reference
 
 ## Philosophy

@@ -41,7 +41,7 @@ study = pb.formulate(
 ) -> Study
 ```
 
-Creates a Study object with automatic SDS detection.
+Creates a Study object with automatic DS detection.
 
 **Parameters:**
 
@@ -79,15 +79,15 @@ study = pb.formulate(...)
 
 ProcessBehavior tracks three Design States for traceability. The **Analytical Design State (ADS)** is the authoritative state that drives chart selection and all analysis decisions. See [Key Concepts: Design State Traceability](../getting-started/key-concepts.md#design-state-traceability) for details.
 
-- `.plan_design_state`: `SDSResult | None` -- Plan Design State (PDS). Computed from sampling plan parameters (K × T × N). Always SDS 1 (N >= 2) or SDS 2 (N = 1). Returns None when no plan is provided.
-- `.observed_design_state`: `SDSResult` -- Observed Design State (ODS). Detected on raw data before NA filtering. Captures the actual data structure including incomplete designs (SDS 4-6). Diagnostic/lineage only.
-- `.analytical_design_state`: `SDSResult` -- Analytical Design State (ADS). Computed on tidy data after data cleansing. Drives valid charts, residual availability, R2 method, and interaction analysis. SDS 4-6 collapse to 1-3 after cleansing.
+- `.plan_design_state`: `SDSResult | None` -- Plan Design State (PDS). Computed from sampling plan parameters (K × T × N). Always DS 1 (N >= 2) or DS 2 (N = 1). Returns None when no plan is provided.
+- `.observed_design_state`: `SDSResult` -- Observed Design State (ODS). Detected on raw data before NA filtering. Captures the actual data structure including incomplete designs (DS 4-6). Diagnostic/lineage only.
+- `.analytical_design_state`: `SDSResult` -- Analytical Design State (ADS). Computed on tidy data after data cleansing. Drives valid charts, residual availability, R2 method, and interaction analysis. DS 4-6 collapse to 1-3 after cleansing.
 - `.ads_reason`: ADS-derived machine token (e.g., `'full_replication'`, `'no_replication'`, `'partial_replication'`)
 - `.ads_description`: ADS-derived human prose description (e.g., `'Full replication (all cells n>=2)'`)
 
 **Properties - Charts:**
 - `.valid_charts`: List of valid chart types (e.g., `['Histogram', 'Xbar', 'S', 'XmR', 'R']`)
-- `.recommended_chart`: Best chart for this SDS
+- `.recommended_chart`: Best chart for this DS
 - `.charts`: Accessor for valid chart types (e.g., `study.charts.Xbar`)
 - `.residuals`: Accessor for available residuals (e.g., `study.residuals.R2`)
 - `.residual_charts`: List of residual+chart combinations (internal)
@@ -157,7 +157,7 @@ result = study.execute(chart='XmR', by=['lane'], value='R4', recentered=True)
 explanation = study.why_not(chart: str) -> str
 ```
 
-Explains why a chart type is invalid for this SDS.
+Explains why a chart type is invalid for this DS.
 
 #### design()
 
@@ -190,14 +190,14 @@ Returned by `study.design()`. Compares sampling plan to observed data structure.
 - `.extra_levels`: Dict of factor -> list of levels observed but not in plan
 - `.missing_combos`: List of RSG groups in plan but not observed
 - `.extra_combos`: List of RSG groups observed but not in plan
-- `.min_cell_size`: Minimum observations per cell (from SDS detection)
+- `.min_cell_size`: Minimum observations per cell (from DS detection)
 - `.n_empty_cells`: Count of cells with zero observations
 - `.coverage`: Ratio of observed to planned cells (0.0-1.0, None without plan)
 - `.remediation`: Actionable hint for improving design (or None)
 - `.plan_adherence`: Summary of how well data matches plan
 - `.structure_summary`: Summary of structure discrepancies
 - `.has_plan`: Boolean -- whether a sampling plan was provided
-- `.sds_reason`: SDS classification reason from detector
+- `.sds_reason`: DS classification reason from detector
 - `.unit_of_analysis`: The fundamental entity being measured
 
 ---
@@ -225,9 +225,9 @@ result = study.execute()
 - `.has_effects`: Boolean
 - `.has_interactions`: Boolean
 
-**Properties - SDS:**
-- `.analytical_sds`: Analytical Sampling Design State (int)
-- `.analytical_sds_info`: Complete analytical SDS details
+**Properties - DS:**
+- `.analytical_sds`: Analytical Design State (int)
+- `.analytical_sds_info`: Complete analytical DS details
 
 **Properties - Summary:**
 - `.summary`: Dict with all metadata
@@ -439,11 +439,11 @@ theme = get_theme('dark')
 
 ---
 
-## SDS Detection
+## DS Detection
 
 ### SDSRegistry
 
-Automatic SDS detection (used internally).
+Automatic DS detection (used internally).
 
 ```python
 from processbehavior.sds_detector import SDSRegistry
@@ -458,7 +458,7 @@ plan = detector.detect(
 
 ### SDSAnalysisPlan
 
-Complete specification for an SDS.
+Complete specification for a DS.
 
 **Properties:**
 - `.sds`: State number (0-6) (on SDSAnalysisPlan objects)
@@ -662,7 +662,7 @@ except ColumnNotFoundError as e:
 
 ### ChartNotAvailableError
 
-Raised when a chart type is invalid or unavailable for the current SDS.
+Raised when a chart type is invalid or unavailable for the current DS.
 
 ```python
 from processbehavior import ChartNotAvailableError

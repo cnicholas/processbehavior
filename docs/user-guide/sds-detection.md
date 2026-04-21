@@ -1,6 +1,6 @@
-# Sampling Design States
+# Design States
 
-ProcessBehavior automatically detects your data's **Sampling Design State (SDS)**, which determines the appropriate analysis approach. Understanding SDS helps you interpret results correctly and choose the right charts.
+ProcessBehavior automatically detects your data's **Design State (DS)**, which determines the appropriate analysis approach. Understanding DS helps you interpret results correctly and choose the right charts.
 
 ## Expected vs Observed: The Core Model
 
@@ -13,16 +13,16 @@ The system operates effectively with or without a plan:
 
 | Approach | What ProcessBehavior Knows | Capabilities |
 |----------|---------------------------|--------------|
-| **Without plan** | Observed structure (including all-NA cells) | All SDS detection (1-6), charts, basic design reports |
-| **With plan** | Expected + observed structure | All SDS detection (1-6), coverage analysis, rich design reports |
+| **Without plan** | Observed structure (including all-NA cells) | All DS detection (1-6), charts, basic design reports |
+| **With plan** | Expected + observed structure | All DS detection (1-6), coverage analysis, rich design reports |
 
-SDS detection runs on raw data before NA rows are dropped, so cells where all response values are NA are counted as empty (N_kt=0). This enables SDS 4-6 detection even without a plan. With a plan, ProcessBehavior can additionally compare what *was* collected against what *should have been* collected—catching entirely absent factor levels and providing detailed reports showing exactly what's missing.
+DS detection runs on raw data before NA rows are dropped, so cells where all response values are NA are counted as empty (N_kt=0). This enables DS 4-6 detection even without a plan. With a plan, ProcessBehavior can additionally compare what *was* collected against what *should have been* collected—catching entirely absent factor levels and providing detailed reports showing exactly what's missing.
 
-## The Six Sampling Design States
+## The Six Design States
 
 **Complete/Semi-Complete (no empty cells):**
 
-| SDS | Name | Cell Sizes (N_kt) | Recommended Chart |
+| DS | Name | Cell Sizes (N_kt) | Recommended Chart |
 |-----|------|--------------------|-------------------|
 | 1 | Full Replication | All N_kt >= 2 | Xbar |
 | 2 | No Replication | All N_kt = 1 | XmR |
@@ -30,13 +30,13 @@ SDS detection runs on raw data before NA rows are dropped, so cells where all re
 
 **Incomplete (has empty cells — detected on raw data before cleansing):**
 
-| SDS | Name | Cell Sizes (N_kt) | Collapses to ADS |
+| DS | Name | Cell Sizes (N_kt) | Collapses to ADS |
 |-----|------|--------------------|------------------|
 | 4 | Incomplete, No Singletons | Empty cells + all observed N_kt >= 2 | ADS 1 |
 | 5 | Incomplete, No Replication | Empty cells + all observed N_kt = 1 | ADS 2 |
 | 6 | Incomplete, With Singletons | Empty cells + mixed N_kt | ADS 3 |
 
-## How SDS is Detected
+## How DS is Detected
 
 When you call `formulate()`, ProcessBehavior examines:
 
@@ -53,7 +53,7 @@ study = pb.formulate(
     time='batch'
 )
 
-print(f"SDS: {study.observed_design_state.sds}")
+print(f"DS: {study.observed_design_state.sds}")
 print(f"Reason: {study.sds_reason}")
 print(f"Description: {study.sds_description}")
 ```
@@ -79,11 +79,11 @@ study = pb.formulate(
     time='batch'
 )
 
-print(f"SDS: {study.observed_design_state.sds}")
+print(f"DS: {study.observed_design_state.sds}")
 print(f"Charts: {study.valid_charts}")
 ```
 
-This works for all SDS types (1-6). SDS detection is determined by properties of the observed data—replication levels, cell sizes, and factor structure—including cells where all response values are NA (counted as empty).
+This works for all DS types (1-6). DS detection is determined by properties of the observed data—replication levels, cell sizes, and factor structure—including cells where all response values are NA (counted as empty).
 
 ## Extending Formulation with a Sampling Plan
 
@@ -108,19 +108,19 @@ study = pb.formulate(response='weight', time='time', plan=plan)
 2. **Design reports** - See exactly what's missing from your data (planned vs observed K, T, N, R)
 3. **Documentation** - Captures the intended experimental design for reproducibility
 
-### SDS 4-6 Detection: With and Without a Plan
+### DS 4-6 Detection: With and Without a Plan
 
-ProcessBehavior can detect SDS 4-6 **with or without a plan**. SDS detection runs on raw data before NA rows are dropped, so cells where all response values are NA (e.g., from garbage values like `*` or `ND`) are counted as empty cells (N_kt=0).
+ProcessBehavior can detect DS 4-6 **with or without a plan**. DS detection runs on raw data before NA rows are dropped, so cells where all response values are NA (e.g., from garbage values like `*` or `ND`) are counted as empty cells (N_kt=0).
 
 | Approach | How Empty Cells Are Detected |
 |----------|------------------------------|
 | **`factors`** | Factor/time combinations where every response value is NA or garbage |
 | **`plan`** | Same as above, plus factor levels or time points entirely absent from the data |
 
-A plan adds value by catching gaps that `factors` alone cannot see—for example, if a factor level was planned but never collected at all, no rows exist for that level, so `factors` won't see it. But when the data contains all planned factor levels (even if some cells have all-NA responses), both approaches detect the same SDS.
+A plan adds value by catching gaps that `factors` alone cannot see—for example, if a factor level was planned but never collected at all, no rows exist for that level, so `factors` won't see it. But when the data contains all planned factor levels (even if some cells have all-NA responses), both approaches detect the same DS.
 
 ```python
-# With factors: ProcessBehavior sees all-NA cells as empty → SDS 4-6 detected
+# With factors: ProcessBehavior sees all-NA cells as empty → DS 4-6 detected
 # With plan: additionally catches factor levels entirely absent from data
 ```
 
@@ -185,12 +185,12 @@ The design report shows:
 - **K, T, R**: Planned vs observed counts with missing tallies
 - **N**: Planned vs observed (min, median, max) cell sizes
 - **missing_combos**: Which factor combinations are missing
-- **sds_reason**: Why this SDS was detected
+- **sds_reason**: Why this DS was detected
 - **structure_summary**: Overall assessment
 
 ### Summary: When Plans Add Value
 
-| SDS | Plan Required? | Plan Adds |
+| DS | Plan Required? | Plan Adds |
 |-----|---------------|-----------|
 | 1 - Full Replication | No | Design comparison, coverage reports |
 | 2 - No Replication | No | Design comparison, coverage reports |
@@ -199,9 +199,9 @@ The design report shows:
 | 5 - Incomplete without Replication | No | Catches entirely absent factor levels |
 | 6 - Incomplete with Singletons | No | Catches entirely absent factor levels |
 
-**Best practice:** Always use a plan for rigorous VAS analysis. While not required for SDS detection, plans document your experimental design, catch entirely absent factor levels, and enable rich design reports.
+**Best practice:** Always use a plan for rigorous VAS analysis. While not required for DS detection, plans document your experimental design, catch entirely absent factor levels, and enable rich design reports.
 
-## SDS 1: Full Replication
+## DS 1: Full Replication
 
 **Structure**: Every (factor, time) combination has 2+ observations.
 
@@ -222,7 +222,7 @@ The design report shows:
 
 **Valid Charts**: Xbar, S, XmR + residual charts (R2 via S, R3-R5 via Xbar/S)
 
-## SDS 2: No Replication
+## DS 2: No Replication
 
 **Structure**: Every (factor, time) combination has exactly 1 observation.
 
@@ -243,7 +243,7 @@ The design report shows:
 
 **Valid Charts**: Xbar, S, XmR
 
-## SDS 3: Partial Replication
+## DS 3: Partial Replication
 
 **Structure**: Mix of n=1 and n>=2 cells (most common in practice).
 
@@ -264,9 +264,9 @@ The design report shows:
 **Valid Charts**: Histogram, Xbar, S, XmR, R
 
 !!! note "Why Mixed is treated conservatively"
-    For R2 calculation, SDS 3 uses the hybrid method: exact within-cell deviation where cells have n >= 2, and the ma2 (moving average) method where cells have n = 1. This conservative approach was validated by Monte Carlo simulation — it produces more reliable variance estimates than attempting to use only the replicated cells. The recommended chart is XmR (not Xbar) because the mixed replication makes subgroup-mean interpretation less straightforward.
+    For R2 calculation, DS 3 uses the hybrid method: exact within-cell deviation where cells have n >= 2, and the ma2 (moving average) method where cells have n = 1. This conservative approach was validated by Monte Carlo simulation — it produces more reliable variance estimates than attempting to use only the replicated cells. The recommended chart is XmR (not Xbar) because the mixed replication makes subgroup-mean interpretation less straightforward.
 
-## SDS 4: Incomplete, No Singletons
+## DS 4: Incomplete, No Singletons
 
 **Structure**: Incomplete grid — some cells have no data, but all present cells have N_kt >= 2.
 
@@ -276,7 +276,7 @@ The design report shows:
 
 **Valid Charts**: Histogram, XmR, R (plus Xbar, S after collapse to ADS 1)
 
-## SDS 5: Incomplete, No Replication
+## DS 5: Incomplete, No Replication
 
 **Structure**: Incomplete grid — some cells have no data, and all present cells have N_kt = 1.
 
@@ -286,7 +286,7 @@ The design report shows:
 
 **Valid Charts**: Histogram, XmR, R (plus Xbar, S after collapse to ADS 2)
 
-## SDS 6: Incomplete, With Singletons
+## DS 6: Incomplete, With Singletons
 
 **Structure**: Incomplete grid — some cells have no data, and present cells have a mix of N_kt = 1 and N_kt >= 2.
 
@@ -302,15 +302,15 @@ ProcessBehavior tracks three Design States as data flows through the system. Und
 
 ### The Pipeline
 
-1. **Plan Design State (PDS)** — Computed from your sampling plan parameters (K × T × N). Always SDS 1 or SDS 2. Only available when you provide a `plan` to `formulate()`.
+1. **Plan Design State (PDS)** — Computed from your sampling plan parameters (K × T × N). Always DS 1 or DS 2. Only available when you provide a `plan` to `formulate()`.
 
-2. **Observed Design State (ODS)** — Detected on **raw data** before any NA filtering. Response rows with garbage values (`*`, `ND`, etc.) are preserved during detection, so cells where all responses are NA count as empty cells (N_kt = 0). This enables detection of SDS 4-6 (Incomplete designs).
+2. **Observed Design State (ODS)** — Detected on **raw data** before any NA filtering. Response rows with garbage values (`*`, `ND`, etc.) are preserved during detection, so cells where all responses are NA count as empty cells (N_kt = 0). This enables detection of DS 4-6 (Incomplete designs).
 
 3. **Analytical Design State (ADS)** — Computed on **tidy data** after data cleansing removes invalid response rows. The ADS reflects the structure that is actually fit for analysis and **drives all analysis decisions**: valid charts, R2 calculation method, residual availability, and interaction analysis.
 
 ### Why ODS and ADS Can Differ
 
-After data cleansing, empty cells disappear. SDS 4-6 (Incomplete designs) collapse to their Complete/Semi-Complete equivalents:
+After data cleansing, empty cells disappear. DS 4-6 (Incomplete designs) collapse to their Complete/Semi-Complete equivalents:
 
 | ODS | After Cleansing → | ADS | Why |
 |-----|-------------------|-----|-----|
@@ -335,7 +335,7 @@ print(f"Reason: {study.ads_reason}")                # e.g., "full_replication"
 print(f"Description: {study.ads_description}")       # Human-readable
 
 # The ODS captures the raw data structure (diagnostic)
-print(f"ODS: {study.observed_design_state.sds}")     # e.g., 6
+print(f"ODS: {study.observed_design_state.sds}")    # e.g., 6
 
 # Chart validity is determined by the ADS
 print(f"Valid charts: {study.valid_charts}")
@@ -352,7 +352,7 @@ The **Analytical Design State** determines three key aspects of the analysis:
 
 ### 1. Variance Estimation (R2 Method)
 
-The R2 method is determined by the tidy data structure (ADS), not the raw SDS:
+The R2 method is determined by the tidy data structure (ADS), not the raw DS:
 
 | ADS | R2 Method | Description |
 |-----|-----------|-------------|
@@ -364,7 +364,7 @@ The R2 method is determined by the tidy data structure (ADS), not the raw SDS:
 
 #### Standard Charts
 
-| SDS | Xbar-S | Stratified XmR |
+| DS | Xbar-S | Stratified XmR |
 |-----|--------|----------------|
 | 1 | ✅ | ✅ |
 | 2 | ✅ (MR-based limits) | ✅ |
@@ -379,12 +379,12 @@ The available chart types for each residual depend on the **rational subgrouping
 
 | Residual | Subgrouping | Xbar/S Available | XmR Available |
 |----------|-------------|------------------|---------------|
-| **R2** | By cell (k,t) | SDS 1, 3, 4, 6* | All SDS |
-| **R3** | By cell (k,t) | SDS 1, 3, 4, 6* | All SDS |
-| **R4** | By time (aggregate across factors) | All SDS | All SDS |
-| **R5** | By factor (aggregate across time) | All SDS | All SDS |
+| **R2** | By cell (k,t) | DS 1, 3, 4, 6* | All DS |
+| **R3** | By cell (k,t) | DS 1, 3, 4, 6* | All DS |
+| **R4** | By time (aggregate across factors) | All DS | All DS |
+| **R5** | By factor (aggregate across time) | All DS | All DS |
 
-*When cells have n≥2. SDS 2 and 5 use XmR only.
+*When cells have n≥2. DS 2 and 5 use XmR only.
 
 **Key insight**: R4 and R5 use different rational subgrouping than R2/R3:
 - **R4**: Aggregates observations across factor levels for each time point (N_.t = Σ_k N_kt)
@@ -393,22 +393,22 @@ The available chart types for each residual depend on the **rational subgrouping
 This enables Xbar/S analysis for R4 and R5 even when individual cells have n=1, because the aggregated subgroups have larger sample sizes.
 
 **Note on R2 calculation**: R2 adapts to your sampling structure:
-- **SDS 1**: Within-cell deviation (`R2 = Y - Ȳ_kt`)
-- **SDS 2, 5**: Moving average method (`R2 = Y - MA2`) for unreplicated/sparse designs
-- **SDS 3, 4, 6**: Within-cell deviation (R2=0 for cells with n=1)
+- **DS 1**: Within-cell deviation (`R2 = Y - Ȳ_kt`)
+- **DS 2, 5**: Moving average method (`R2 = Y - MA2`) for unreplicated/sparse designs
+- **DS 3, 4, 6**: Within-cell deviation (R2=0 for cells with n=1)
 
 ### 3. Signal Detection Rules
 
-| SDS | Applicable Rules |
+| DS | Applicable Rules |
 |-----|-----------------|
 | 1-3 (Xbar/S) | Rule 1 only |
 | 1-6 (XmR) | All 8 rules |
 
-## Improving Your SDS
+## Improving Your DS
 
-To get a higher SDS (more analytical power):
+To get a higher DS (more analytical power):
 
-### Move from SDS 2 → SDS 1
+### Move from DS 2 → DS 1
 
 Add replicates to each cell:
 ```python
@@ -416,7 +416,7 @@ Add replicates to each cell:
 # Take 3 measurements per lane-batch
 ```
 
-### Move from SDS 3 → SDS 1
+### Move from DS 3 → DS 1
 
 Ensure all cells have the same number of replicates:
 ```python
@@ -424,7 +424,7 @@ Ensure all cells have the same number of replicates:
 # Every lane-batch combination gets exactly n measurements
 ```
 
-### Move from SDS 6 → SDS 1-3
+### Move from DS 6 → DS 1-3
 
 Add factor levels:
 ```python
@@ -432,13 +432,13 @@ Add factor levels:
 # Monitor multiple sensors simultaneously
 ```
 
-## Example: Diagnosing SDS
+## Example: Diagnosing DS
 
 ```python
 import pandas as pd
 from processbehavior import ProcessBehavior
 
-# Check cell sizes to understand your SDS
+# Check cell sizes to understand your DS
 study = pb.formulate(
     response=pb.cols.weight,
     factors=[pb.cols.lane],
@@ -454,9 +454,9 @@ cell_counts = (study.dataset
 print("Observations per cell:")
 print(cell_counts['n'].value_counts())
 
-# If all n >= 2: SDS 1
-# If all n == 1: SDS 2
-# If mixed: SDS 3
+# If all n >= 2: DS 1
+# If all n == 1: DS 2
+# If mixed: DS 3
 ```
 
 ## Summary
@@ -472,6 +472,6 @@ print(cell_counts['n'].value_counts())
 
 ## Next Steps
 
-- [Chart Types](chart-types.md) - Choosing the right chart for your SDS
-- [VAS Residuals](residuals.md) - VAS residual interpretation by SDS
-- [API Reference](../reference/api.md) - Complete SDS detection API
+- [Chart Types](chart-types.md) - Choosing the right chart for your DS
+- [VAS Residuals](residuals.md) - VAS residual interpretation by DS
+- [API Reference](../reference/api.md) - Complete DS detection API
