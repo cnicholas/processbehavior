@@ -64,11 +64,11 @@ ProcessBehavior follows Donald Wheeler's terminology and methodology as presente
 
 ---
 
-## Sampling Design States (SDS)
+## Design States (DS)
 
-Wheeler identifies six sampling design states that determine valid analysis approaches.
+Wheeler identifies six design states that determine valid analysis approaches.
 
-### SDS 1: Full Replication
+### DS 1: Full Replication
 
 **Definition**: Every (factor × time) cell contains 2+ observations.
 
@@ -78,7 +78,7 @@ Wheeler identifies six sampling design states that determine valid analysis appr
 
 ---
 
-### SDS 2: No Replication
+### DS 2: No Replication
 
 **Definition**: Every cell contains exactly 1 observation.
 
@@ -88,7 +88,7 @@ Wheeler identifies six sampling design states that determine valid analysis appr
 
 ---
 
-### SDS 3: Partial Replication
+### DS 3: Partial Replication
 
 **Definition**: Mix of replicated and unreplicated cells.
 
@@ -98,7 +98,7 @@ Wheeler identifies six sampling design states that determine valid analysis appr
 
 ---
 
-### SDS 4: Incomplete, No Singletons
+### DS 4: Incomplete, No Singletons
 
 **Definition**: Incomplete grid — empty cells present, all observed cells have N_kt >= 2.
 
@@ -106,7 +106,7 @@ Wheeler identifies six sampling design states that determine valid analysis appr
 
 ---
 
-### SDS 5: Incomplete, No Replication
+### DS 5: Incomplete, No Replication
 
 **Definition**: Incomplete grid — empty cells present, all observed cells have N_kt = 1.
 
@@ -114,7 +114,7 @@ Wheeler identifies six sampling design states that determine valid analysis appr
 
 ---
 
-### SDS 6: Incomplete, With Singletons
+### DS 6: Incomplete, With Singletons
 
 **Definition**: Incomplete grid — empty cells present, observed cells have mixed N_kt.
 
@@ -136,7 +136,7 @@ Dr. Thomas A. Bishop's framework for decomposing variation into meaningful compo
 
 ### R2: Within-Cell Residual
 
-**Formula (SDS 1)**: R2 = Y - Y̅<sub>kt</sub>
+**Formula (DS 1)**: R2 = Y - Y̅<sub>kt</sub>
 
 **Meaning**: Variation within subgroups, the "unexplained" portion.
 
@@ -290,7 +290,7 @@ Essential references:
 
 2. **Advanced Topics in Statistical Process Control**
    - VAS residual analysis
-   - Sampling Design States
+   - Design States
    - Complex designs
 
 3. **Making Sense of Data**
@@ -314,7 +314,7 @@ Essential references:
 | Average Chart | `study.charts.Xbar` |
 | s Chart | `study.charts.S` |
 | R1-R5 Residuals | `result.residuals` |
-| SDS Detection | `study.observed_design_state` / `study.analytical_design_state` |
+| DS Detection | `study.observed_design_state` / `study.analytical_design_state` |
 | Natural Process Limits | `result.get_statistics()` |
 
 ---

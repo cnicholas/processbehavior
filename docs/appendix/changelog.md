@@ -34,7 +34,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 #### Core Features
 - `ProcessBehavior` class for data wrapping with IDE auto-completion
 - `formulate()` method for study definition
-- Automatic Sampling Design State (SDS 1-6) detection
+- Automatic Design State (DS 1-6) detection
 - `Study` class with chart recommendations
 
 #### Analysis
@@ -88,8 +88,8 @@ The following features were developed during the pre-release phase:
 - Column auto-completion
 - Basic data validation
 
-#### Phase 2: SDS Detection
-- Sampling Design State detection algorithm
+#### Phase 2: DS Detection
+- Design State detection algorithm
 - SDSAnalysisPlan specification
 - Valid chart determination
 

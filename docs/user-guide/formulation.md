@@ -1,6 +1,6 @@
 # Study Formulation
 
-The `formulate()` method is the heart of ProcessBehavior. It enables the analyst to specify the key inputs defined during problem formulation to create a structured study.  The system automatically detects the sampling design and prepares the analysis.
+The `formulate()` method is the heart of ProcessBehavior. It enables the analyst to specify the key inputs defined during problem formulation to create a structured study. The system automatically detects the design state and prepares the analysis.
 
 ## The Formulation API
 
@@ -47,8 +47,8 @@ After formulation, the `study.charts` accessor provides auto-completion for vali
 ```python
 study = pb.formulate(...)
 
-# Type study.charts. and see only valid charts for your SDS
-study.charts.Xbar        # Available if SDS supports it
+# Type study.charts. and see only valid charts for your DS
+study.charts.Xbar        # Available if DS supports it
 study.charts.XmR         # Always available
 study.residuals.R4       # VAS residual (pass to value=)
 ```
@@ -106,7 +106,7 @@ When you call `formulate()`, ProcessBehavior:
 
 1. **Validates data** - Checks for required columns and data types
 2. **Cleans data** - Handles missing values and garbage characters
-3. **Detects SDS** - Determines the Sampling Design State (0-6)
+3. **Detects DS** - Determines the Design State (0-6)
 4. **Calculates means** - Computes Y̅, Y̅_k, Y̅_t, Y̅_kt
 5. **Computes residuals** - Calculates R1-R5
 6. **Determines valid charts** - Lists which analyses are appropriate
@@ -154,10 +154,10 @@ print(study.dataset.columns.tolist())
 If you try to use an invalid chart, `why_not()` explains why:
 
 ```python
-# If Xbar is not valid for your SDS
+# If Xbar is not valid for your DS
 study.why_not('Xbar')
 # Returns: "Xbar requires subgrouped data (n >= 2 per cell).
-#          Your data has n=1 per cell (SDS 2)."
+#          Your data has n=1 per cell (DS 2)."
 ```
 
 ## Common Patterns
@@ -171,7 +171,7 @@ study = pb.formulate(
     response=pb.cols.temperature,
     time=pb.cols.day
 )
-# Results in SDS 4, recommends XmR
+# Results in DS 4, recommends XmR
 ```
 
 ### Pattern 2: Comparing Groups
@@ -183,7 +183,7 @@ study = pb.formulate(
     response=pb.cols.yield_pct,
     factors=[pb.cols.machine, pb.cols.operator]
 )
-# Results in SDS varies, recommends Xbar or XmR
+# Results in DS varies, recommends Xbar or XmR
 ```
 
 ### Pattern 3: Groups Over Time
@@ -196,7 +196,7 @@ study = pb.formulate(
     factors=[pb.cols.lane],
     time=pb.cols.pull
 )
-# Results in SDS 1-3, recommends Xbar-S with VAS residuals
+# Results in DS 1-3, recommends Xbar-S with VAS residuals
 ```
 
 ### Pattern 4: Replicated Design
@@ -210,7 +210,7 @@ study = pb.formulate(
     factors=[pb.cols.lane],
     time=pb.cols.batch
 )
-# Results in SDS 1 (Full Replication) - most powerful design
+# Results in DS 1 (Full Replication) - most powerful design
 ```
 
 ## Data Cleaning
@@ -277,16 +277,16 @@ study = pb.formulate(
 | Some time points were entirely skipped | `plan` with `'T'` |
 | You want to compare planned vs observed structure | `plan` |
 
-### SDS 4-6 Detection
+### DS 4-6 Detection
 
-ProcessBehavior can detect SDS 4-6 **with or without a plan**. SDS detection runs on raw data before NA rows are dropped, so cells where all response values are NA (e.g., from garbage values like `*` or `ND`) are counted as empty cells (N_kt=0). This means:
+ProcessBehavior can detect DS 4-6 **with or without a plan**. DS detection runs on raw data before NA rows are dropped, so cells where all response values are NA (e.g., from garbage values like `*` or `ND`) are counted as empty cells (N_kt=0). This means:
 
-- **With `factors`**: SDS 4-6 are detected when the data contains factor/time combinations where every response value is NA or garbage. The system sees these as empty cells in the grid.
-- **With `plan`**: SDS 4-6 are also detected when factor levels or time points specified in the plan are entirely absent from the data. This catches gaps that `factors` alone cannot see.
+- **With `factors`**: DS 4-6 are detected when the data contains factor/time combinations where every response value is NA or garbage. The system sees these as empty cells in the grid.
+- **With `plan`**: DS 4-6 are also detected when factor levels or time points specified in the plan are entirely absent from the data. This catches gaps that `factors` alone cannot see.
 
-A plan is valuable for documenting experimental intent and catching absent factor levels, but it is not required for SDS 4-6 detection.
+A plan is valuable for documenting experimental intent and catching absent factor levels, but it is not required for DS 4-6 detection.
 
-After formulating with `plan`, use `study.design()` to see planned vs observed structure. See [SDS Detection](sds-detection.md) for details on SDS 4-6.
+After formulating with `plan`, use `study.design()` to see planned vs observed structure. See [Design States](sds-detection.md) for details on DS 4-6.
 
 ## The `companion` Parameter
 
@@ -334,7 +334,7 @@ Explains why a specific chart is unavailable:
 
 ```python
 study.why_not('XmR', value='R2')
-# "'XmR' (R2) unavailable: Not available for this SDS"
+# "'XmR' (R2) unavailable: Not available for this DS"
 ```
 
 ### `study.design()`
@@ -373,10 +373,10 @@ The Design Report shows the full **Design State lineage** (PDS → ODS → ADS) 
 |--------|-------------------|--------|
 | **K_missing > 0** | Factor combinations in your plan were never observed | Investigate why — were samples lost? Were levels skipped? |
 | **T_missing > 0** | Expected time points are absent from data | Check for missing batches or skipped collection periods |
-| **N_observed as (min, med, max)** | Cell sizes vary | Large variation may indicate SDS 3; consider standardizing collection |
-| **coverage < 1.0** | Data doesn't cover the full planned grid | Lower coverage = more incomplete design (SDS 4-6) |
+| **N_observed as (min, med, max)** | Cell sizes vary | Large variation may indicate DS 3; consider standardizing collection |
+| **coverage < 1.0** | Data doesn't cover the full planned grid | Lower coverage = more incomplete design (DS 4-6) |
 | **ODS ≠ ADS** | Raw structure changed after cleansing | Empty cells were removed; check `missing_combos` to understand what was lost |
-| **remediation** | Actionable guidance for improving the design | Follow the suggestion to move toward SDS 1 |
+| **remediation** | Actionable guidance for improving the design | Follow the suggestion to move toward DS 1 |
 
 **Example output:**
 
@@ -384,9 +384,9 @@ The Design Report shows the full **Design State lineage** (PDS → ODS → ADS) 
 Design Report (2 factors)
   Unit of analysis: filled container
   Design lineage:
-    Planned Design State:    SDS 1 (Full Replication)
-    Observed Design State:   SDS 6 (Incomplete, With Singletons) — 3 empty cells
-    Analytical Design State: SDS 1 (Full Replication)
+    Planned Design State:    DS 1 (Full Replication)
+    Observed Design State:   DS 6 (Incomplete, With Singletons) — 3 empty cells
+    Analytical Design State: DS 1 (Full Replication)
   Plan adherence: 3 missing cells out of 480 planned (99.4% coverage)
   K=6, T=80, R=477/480, N=(2, 3, 5)
 ```
@@ -468,6 +468,6 @@ These five components always sum to the total expected loss. The largest percent
 
 ## Next Steps
 
-- [Sampling Design States](sds-detection.md) - Understanding Sampling Design States
+- [Design States](sds-detection.md) - Understanding Design States
 - [Chart Types](chart-types.md) - Choosing the right chart
 - [VAS Residuals](residuals.md) - Working with VAS residuals

@@ -10,7 +10,7 @@ ProcessBehavior follows a deliberate three-step workflow:
 # 1. Wrap your data
 pb = ProcessBehavior(df)
 
-# 2. Formulate your study (SDS detection happens here)
+# 2. Formulate your study (DS detection happens here)
 study = pb.formulate(response=..., factors=..., time=...)
 
 # 3. Analyze and visualize
@@ -20,13 +20,13 @@ result.plot()
 
 This separation ensures you understand your data structure before analyzing it.
 
-## Sampling Design States (SDS)
+## Design States (DS)
 
-The **Sampling Design State** describes the structure of your data. ProcessBehavior automatically detects which of six states applies:
+The **Design State** describes the structure of your data. ProcessBehavior automatically detects which of six states applies:
 
 **Complete/Semi-Complete (no empty cells):**
 
-| SDS | Name | Cell Sizes | Recommended Chart |
+| DS | Name | Cell Sizes | Recommended Chart |
 |-----|------|------------|-------------------|
 | 1 | Full Replication | All N_kt >= 2 | Xbar |
 | 2 | No Replication | All N_kt = 1 | XmR |
@@ -34,17 +34,17 @@ The **Sampling Design State** describes the structure of your data. ProcessBehav
 
 **Incomplete (has empty cells):**
 
-| SDS | Name | Cell Sizes | Recommended Chart |
+| DS | Name | Cell Sizes | Recommended Chart |
 |-----|------|------------|-------------------|
 | 4 | Incomplete, No Singletons | Empty cells + all observed N_kt >= 2 | XmR |
 | 5 | Incomplete, No Replication | Empty cells + all observed N_kt = 1 | XmR |
 | 6 | Incomplete, With Singletons | Empty cells + mixed N_kt | XmR |
 
-See [SDS Definitions](../reference/sds_definitions.md) for the formal classification table per Dr. Thomas A. Bishop's VAS methodology.
+See [DS Definitions](../reference/sds_definitions.md) for the formal classification table per Dr. Thomas A. Bishop's VAS methodology.
 
-### Why SDS Matters
+### Why DS Matters
 
-The SDS determines:
+The DS determines:
 - Which chart types are valid
 - How within-group variance is estimated (R2 method: exact, ma2, or hybrid)
 - Which VAS residuals can be computed
@@ -52,7 +52,7 @@ The SDS determines:
 
 ```python
 study = pb.formulate(response='weight', factors=['lane'], time='batch')
-print(f"SDS: {study.analytical_design_state.sds}")  # e.g., 1
+print(f"DS: {study.analytical_design_state.sds}")  # e.g., 1
 print(f"Reason: {study.ads_reason}")                # e.g., "full_replication"
 print(f"Valid: {study.valid_charts}")                # e.g., ['Histogram', 'Xbar', 'S', 'XmR', 'R']
 ```
@@ -73,7 +73,7 @@ ProcessBehavior tracks **three Design States** as data flows from intent through
 
 ### Why Three States?
 
-Raw data often contains garbage values, missing cells, and structural irregularities. The ODS captures this reality — including incomplete designs (SDS 4-6) where some factor-time cells are entirely empty. After data cleansing removes invalid observations, the empty cells disappear and the remaining structure may be simpler:
+Raw data often contains garbage values, missing cells, and structural irregularities. The ODS captures this reality — including incomplete designs (DS 4-6) where some factor-time cells are entirely empty. After data cleansing removes invalid observations, the empty cells disappear and the remaining structure may be simpler:
 
 - ODS 4 (Incomplete, no singletons) → ADS 1 (Full Replication)
 - ODS 5 (Incomplete, no replication) → ADS 2 (No Replication)
@@ -91,9 +91,9 @@ print(report)
 
 # Design Report (2 factors)
 #   Design lineage:
-#     Planned Design State:    SDS 1 (Full Replication)
-#     Observed Design State:   SDS 6 (Incomplete, With Singletons) — 3 empty cells
-#     Analytical Design State: SDS 1 (Full Replication)
+#     Planned Design State:    DS 1 (Full Replication)
+#     Observed Design State:   DS 6 (Incomplete, With Singletons) — 3 empty cells
+#     Analytical Design State: DS 1 (Full Replication)
 #   ...
 ```
 
@@ -122,7 +122,7 @@ study.ads_description         # e.g., "Full replication (all cells n>=2)"
 
 ## Bishop's Variance Analysis System (VAS)
 
-For replicated designs (SDS 1-3), ProcessBehavior computes five residual decompositions:
+For replicated designs (DS 1-3), ProcessBehavior computes five residual decompositions:
 
 | Residual | Formula | Questions Answered |
 |----------|---------|-------------------|
@@ -235,7 +235,7 @@ ProcessBehavior uses Wheeler's terminology consistently:
 | Response Variable | Y, measurement | `response` |
 | Rational Subgroup | Factor, group | `factors` |
 | Time Sequence | Period, batch | `time` |
-| Sampling Design State | - | `observed_design_state` / `analytical_design_state` |
+| Design State | - | `observed_design_state` / `analytical_design_state` |
 | Process Behavior Chart | Control Chart | Chart |
 
 ## Philosophy
@@ -244,7 +244,7 @@ ProcessBehavior follows Wheeler's philosophy:
 
 1. **Charts are for understanding, not control** - The goal is insight into variation, not just limit checking.
 
-2. **Let the data speak** - Automatic SDS detection ensures appropriate analysis.
+2. **Let the data speak** - Automatic DS detection ensures appropriate analysis.
 
 3. **Separate formulation from analysis** - Understanding your data structure comes first.
 
@@ -253,5 +253,5 @@ ProcessBehavior follows Wheeler's philosophy:
 ## Next Steps
 
 - [Basic XmR Chart](../tutorials/basic-imr.ipynb) - Create your first XmR chart
-- [Sampling Design States](../user-guide/sds-detection.md) - Deep dive into SDS
+- [Design States](../user-guide/sds-detection.md) - Deep dive into DS
 - [VAS Residuals](../user-guide/residuals.md) - Understanding VAS residuals

@@ -20,7 +20,7 @@ result.to_excel('analysis_results.xlsx')
 ```python
 result.to_excel(
     'analysis_results.xlsx',
-    include_summary=True,        # Metadata and SDS information
+    include_summary=True,        # Metadata and DS information
     include_charts=True,         # Chart data (one tab per chart)
     include_residuals=True,      # R1-R5 decomposition
     include_effects=True,        # Main effects (factor and time)
@@ -39,7 +39,7 @@ A typical export creates these sheets:
 ### Summary Sheet
 
 Contains metadata about the analysis:
-- Sampling Design State (SDS)
+- Design State (DS)
 - Data dimensions (factors, time points, observations)
 - Analysis type and chart used
 - Control limit values
