@@ -98,12 +98,12 @@ def test_excel_export_with_full_dataset(temp_excel_file):
     assert 'y' in dataset_df.columns
 
 
-def test_excel_export_stratified_xmr(temp_excel_file):
-    """Test Excel export with stratified XmR chart (SRP: XmR only)."""
+def test_excel_export_stratified_x(temp_excel_file):
+    """Test Excel export with stratified X chart (SRP: X only)."""
     df = make_sds(1, K1=3, K2=2, T=5, n_min=2, n_max=3, seed=42)
 
     spec = {
-        'analysis_type': 'XmR',
+        'analysis_type': 'X',
         'rsg_vars': ['factor 1'],
         'time_var': 'time',
         'response_var': 'y'
@@ -123,26 +123,26 @@ def test_excel_export_stratified_xmr(temp_excel_file):
     excel_file = pd.ExcelFile(temp_excel_file, engine='openpyxl')
     chart_tabs = [name for name in excel_file.sheet_names if 'Chart_' in name]
 
-    # SRP: XmR only returns XmR (no longer bundled with R by default)
-    assert len(chart_tabs) == 1, f"Expected 1 chart tab (SRP: XmR only), got {len(chart_tabs)}: {chart_tabs}"
-    assert 'Chart_XmR' in chart_tabs, f"Expected Chart_XmR tab, got: {chart_tabs}"
+    # SRP: X only returns X (no longer bundled with mR by default)
+    assert len(chart_tabs) == 1, f"Expected 1 chart tab (SRP: X only), got {len(chart_tabs)}: {chart_tabs}"
+    assert 'Chart_X' in chart_tabs, f"Expected Chart_X tab, got: {chart_tabs}"
 
-    # Verify the XmR tab has data
-    xmr_data = pd.read_excel(temp_excel_file, sheet_name='Chart_XmR')
-    assert len(xmr_data) > 0, "XmR chart tab should have data"
-    assert 'rsg' in xmr_data.columns, "XmR data should have 'rsg' column for stratification"
+    # Verify the X tab has data
+    x_data = pd.read_excel(temp_excel_file, sheet_name='Chart_X')
+    assert len(x_data) > 0, "X chart tab should have data"
+    assert 'rsg' in x_data.columns, "X data should have 'rsg' column for stratification"
 
 
-def test_excel_export_stratified_xmr_companion(temp_excel_file):
-    """Test Excel export with stratified XmR charts (companion=True for bundled output)."""
+def test_excel_export_stratified_x_companion(temp_excel_file):
+    """Test Excel export with stratified X charts (companion=True for bundled output)."""
     df = make_sds(1, K1=3, K2=2, T=5, n_min=2, n_max=3, seed=42)
 
     spec = {
-        'analysis_type': 'XmR',
+        'analysis_type': 'X',
         'rsg_vars': ['factor 1'],
         'time_var': 'time',
         'response_var': 'y',
-        'companion': True  # Request bundled XmR+R
+        'companion': True  # Request bundled X+mR
     }
 
     sds = detect_sds_for_test(df, spec)
@@ -159,10 +159,10 @@ def test_excel_export_stratified_xmr_companion(temp_excel_file):
     excel_file = pd.ExcelFile(temp_excel_file, engine='openpyxl')
     chart_tabs = [name for name in excel_file.sheet_names if 'Chart_' in name]
 
-    # Companion mode: XmR+R bundled together
-    assert len(chart_tabs) == 2, f"Expected 2 chart tabs (XmR+R companion), got {len(chart_tabs)}: {chart_tabs}"
-    assert 'Chart_XmR' in chart_tabs, f"Expected Chart_XmR tab, got: {chart_tabs}"
-    assert 'Chart_R' in chart_tabs, f"Expected Chart_R tab, got: {chart_tabs}"
+    # Companion mode: X+mR bundled together
+    assert len(chart_tabs) == 2, f"Expected 2 chart tabs (X+mR companion), got {len(chart_tabs)}: {chart_tabs}"
+    assert 'Chart_X' in chart_tabs, f"Expected Chart_X tab, got: {chart_tabs}"
+    assert 'Chart_mR' in chart_tabs, f"Expected Chart_mR tab, got: {chart_tabs}"
 
 
 def test_excel_export_with_residuals(temp_excel_file):
@@ -390,7 +390,7 @@ def test_excel_tab_name_truncation(temp_excel_file):
     })
 
     spec = {
-        'analysis_type': 'XmR',
+        'analysis_type': 'X',
         'rsg_vars': ['factor 1'],
         'time_var': 'time',
         'response_var': 'y'
@@ -457,7 +457,7 @@ def test_excel_export_stratified_multifactor(temp_excel_file):
     study = ProcessBehavior(df).formulate(
         response='y', time='time', factors=['factor 1', 'factor 2'],
     )
-    result = study.execute(chart='XmR', by=['factor 1', 'factor 2'])
+    result = study.execute(chart='X', by=['factor 1', 'factor 2'])
     result.to_excel(temp_excel_file)
 
     assert os.path.exists(temp_excel_file)
@@ -479,7 +479,7 @@ def test_excel_export_sds4_minimal(temp_excel_file):
     study = ProcessBehavior(df).formulate(
         response='y', time='time', factors=['group'],
     )
-    result = study.execute(chart='XmR', by=['group'])
+    result = study.execute(chart='X', by=['group'])
     result.to_excel(temp_excel_file)
 
     assert os.path.exists(temp_excel_file)
@@ -488,7 +488,7 @@ def test_excel_export_sds4_minimal(temp_excel_file):
 
 
 def test_excel_export_s_chart(temp_excel_file):
-    """Test export with S chart (different chart type than Xbar/XmR)."""
+    """Test export with S chart (different chart type than Xbar/X)."""
     df = make_sds(1, K1=3, K2=2, T=4, n_min=3, n_max=3, seed=42)
 
     spec = {

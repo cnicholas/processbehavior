@@ -28,8 +28,8 @@ SPEC_TARGET = 237
 
 SDS_CONFIGS = {
     1: {'response_attr': 'PM_SDS_1', 'json': 'vassds1analysis.json', 'chart': 'Xbar'},
-    2: {'response_attr': 'PM_SDS_2', 'json': 'vassds2analysis.json', 'chart': 'XmR'},
-    3: {'response_attr': 'PM_SDS_3', 'json': 'vassds3analysis.json', 'chart': 'XmR'},
+    2: {'response_attr': 'PM_SDS_2', 'json': 'vassds2analysis.json', 'chart': 'X'},
+    3: {'response_attr': 'PM_SDS_3', 'json': 'vassds3analysis.json', 'chart': 'X'},
 }
 
 
@@ -79,7 +79,7 @@ def classify_page(item):
 
 
 def is_location_chart(item):
-    """True if this page shows a location chart (Xbar or XmR), False for dispersion (S or R)."""
+    """True if this page shows a location chart (Xbar or X), False for dispersion (S or mR)."""
     variable = item.get('variable') or ''
     chart_title = item.get('chart_title') or ''
     if variable and 'STDEV' in variable.upper():
@@ -104,8 +104,8 @@ def run_sds_validation(sds_num, pb, study, json_data):  # noqa: C901
         computed['overall'] = study.execute(chart='Xbar', by=[], companion=True)
         computed['stratified'] = study.execute(chart='Xbar', by=[pb.cols.PRODUCTION_TIME], companion=True)
     else:
-        computed['overall'] = study.execute(chart='XmR', by=[], companion=True)
-        computed['stratified'] = study.execute(chart='XmR', by=[pb.cols.FACTOR_1, pb.cols.FACTOR_2], companion=True)
+        computed['overall'] = study.execute(chart='X', by=[], companion=True)
+        computed['stratified'] = study.execute(chart='X', by=[pb.cols.FACTOR_1, pb.cols.FACTOR_2], companion=True)
 
     # Effects charts — all SDS types
     # PDC effects (pages 20-21)
@@ -137,7 +137,7 @@ def run_sds_validation(sds_num, pb, study, json_data):  # noqa: C901
         )
     else:
         computed['r3_xmr'] = study.execute(
-            chart='XmR', by=[], value='R3', recentered=True, companion=True
+            chart='X', by=[], value='R3', recentered=True, companion=True
         )
     # Individual factor effects (pages 24-27)
     computed['f1_effects_xbar'] = study.execute(
@@ -153,7 +153,7 @@ def run_sds_validation(sds_num, pb, study, json_data):  # noqa: C901
         chart='S', by=[pb.cols.FACTOR_2], value='R6'
     )
 
-    computed['max_info_xmr'] = study.execute(chart='XmR', by=[], value='R2')
+    computed['max_info_xmr'] = study.execute(chart='X', by=[], value='R2')
     computed['loss'] = study.loss_function(target=SPEC_TARGET)
     computed['capability'] = study.capability(lsl=SPEC_LSL, usl=SPEC_USL, target=SPEC_TARGET)
 
@@ -212,7 +212,7 @@ def run_sds_validation(sds_num, pb, study, json_data):  # noqa: C901
         def primary_chart_type(_loc=is_location):
             if sds_num == 1:
                 return 'Xbar' if _loc else 'S'
-            return 'XmR' if _loc else 'R'
+            return 'X' if _loc else 'mR'
 
         if category == 'overall':
             overall = computed['overall']
@@ -274,16 +274,16 @@ def run_sds_validation(sds_num, pb, study, json_data):  # noqa: C901
             else:
                 r3 = computed['r3_xmr']
                 if is_location:
-                    cl, lpl, upl = stats_from(r3, 'XmR')
-                    append_result('XmR', '[]', 'R3', True, cl, lpl, upl, safe_chart_table(r3, 'XmR'))
+                    cl, lpl, upl = stats_from(r3, 'X')
+                    append_result('X', '[]', 'R3', True, cl, lpl, upl, safe_chart_table(r3, 'X'))
                 else:
-                    cl, lpl, upl = stats_from(r3, 'R')
-                    append_result('R', '[]', 'R3', True, cl, lpl, upl, safe_chart_table(r3, 'R'))
+                    cl, lpl, upl = stats_from(r3, 'mR')
+                    append_result('mR', '[]', 'R3', True, cl, lpl, upl, safe_chart_table(r3, 'mR'))
 
         elif category == 'max_info':
             mi_xmr = computed['max_info_xmr']
-            cl, lpl, upl = stats_from(mi_xmr, 'XmR')
-            append_result('XmR', '[]', 'R2', False, cl, lpl, upl, safe_chart_table(mi_xmr, 'XmR'))
+            cl, lpl, upl = stats_from(mi_xmr, 'X')
+            append_result('X', '[]', 'R2', False, cl, lpl, upl, safe_chart_table(mi_xmr, 'X'))
 
         elif category in ('loss_function', 'capability', 'max_info_histogram'):
             append_result(category, '-', '-', False, None, None, None, None,

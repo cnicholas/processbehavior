@@ -73,15 +73,15 @@ class TestDegenerateCases:
         ),
         pytest.param(
             _degenerate_constant_response,
-            lambda _, result: result.get_chart('XmR')['center'].iloc[0] == 50.0,
+            lambda _, result: result.get_chart('X')['center'].iloc[0] == 50.0,
             id='constant_response',
         ),
         pytest.param(
             _degenerate_near_constant_response,
             lambda _, result: (
-                not result.get_chart('XmR')['center'].isna().any()
-                and not np.isinf(result.get_chart('XmR')['upl']).any()
-                and not np.isinf(result.get_chart('XmR')['lpl']).any()
+                not result.get_chart('X')['center'].isna().any()
+                and not np.isinf(result.get_chart('X')['upl']).any()
+                and not np.isinf(result.get_chart('X')['lpl']).any()
             ),
             id='near_constant_response',
         ),
@@ -92,7 +92,7 @@ class TestDegenerateCases:
         pb = ProcessBehavior(df)
         study = pb.formulate(response='Value', factors=['Factor'], time='Time')
         assert study is not None
-        result = study.execute(chart='XmR', by=['Factor'])
+        result = study.execute(chart='X', by=['Factor'])
         assert result is not None
         assert check(study, result)
 
@@ -220,9 +220,9 @@ class TestExtremeValues:
         df = make_df()
         pb = ProcessBehavior(df)
         study = pb.formulate(response='Value', factors=['Factor'], time='Time')
-        result = study.execute(chart='XmR', by=['Factor'])
+        result = study.execute(chart='X', by=['Factor'])
         assert result is not None
-        chart_df = result.get_chart('XmR')
+        chart_df = result.get_chart('X')
         assert chart_df is not None
         assert check(chart_df)
 
@@ -238,9 +238,9 @@ class TestExtremeValues:
         pb = ProcessBehavior(df)
 
         study = pb.formulate(response='Value', factors=['Factor'], time='Time')
-        result = study.execute(chart='XmR', by=['Factor'])
+        result = study.execute(chart='X', by=['Factor'])
 
-        chart_df = result.get_chart('XmR')
+        chart_df = result.get_chart('X')
         assert not chart_df['center'].isna().any()
         assert not np.isinf(chart_df['upl']).any()
 
@@ -404,7 +404,7 @@ class TestDataTypes:
         pytest.param(
             _dtype_integer_response,
             dict(response='Value', factors=['Factor'], time='Time'),
-            dict(chart='XmR', by=['Factor']),
+            dict(chart='X', by=['Factor']),
             id='integer_response',
         ),
         pytest.param(
@@ -461,10 +461,10 @@ class TestChartGeneration:
         pb = ProcessBehavior(df)
 
         study = pb.formulate(response='Value', factors=['Factor'], time='Time')
-        result = study.execute(chart='XmR', by=['Factor'])
+        result = study.execute(chart='X', by=['Factor'])
 
         # Should be able to get chart
-        chart_df = result.get_chart('XmR')
+        chart_df = result.get_chart('X')
         assert chart_df is not None
         # UPL and LPL should equal center (no variation)
         assert (chart_df['upl'] == chart_df['center']).all()
@@ -480,10 +480,10 @@ class TestChartGeneration:
         pb = ProcessBehavior(df)
 
         study = pb.formulate(response='Value', factors=['Factor'], time='Time')
-        result = study.execute(chart='XmR', by=['Factor'])
+        result = study.execute(chart='X', by=['Factor'])
 
         # get_chart returns a DataFrame with chart columns
-        chart_df = result.get_chart('XmR')
+        chart_df = result.get_chart('X')
         assert isinstance(chart_df, pd.DataFrame)
         assert 'center' in chart_df.columns
         assert 'upl' in chart_df.columns  # upper process limit

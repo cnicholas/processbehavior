@@ -266,7 +266,7 @@ class TestIntegrationWithAnalysis:
         assert study.observed_design_state.sds == 5
 
         # Use XmR chart (valid for SDS 5) with explicit stratification
-        result = study.execute(chart='XmR', by=['FACTOR'])
+        result = study.execute(chart='X', by=['FACTOR'])
 
         # Should complete successfully
         assert result is not None
@@ -497,5 +497,5 @@ class TestGrossRevenueDatabase:
             time='YR-WEEK'
         )
         # XmR with factors requires explicit by parameter
-        result = study.execute(chart='XmR', by=['HOME TEAM'])
+        result = study.execute(chart='X', by=['HOME TEAM'])
         assert result is not None

@@ -41,7 +41,7 @@ class TestSDSDetection:
 
         # With time as factor: 30 factor×time cells with n=1 each = SDS 2
         spec = {
-            'analysis_type': 'XmR',
+            'analysis_type': 'X',
             'rsg_vars': ['factor 1', 'time'],  # time is now a factor!
             'time_var': 'time',
             'response_var': 'y',
@@ -115,12 +115,12 @@ class TestSDSDetection:
 
         # XmR with factors requires explicit 'by' parameter
         # SRP: XmR only returns XmR (use companion=True for bundled XmR+R)
-        result = study.execute(chart='XmR', by=['factor 1', 'factor 2'])
+        result = study.execute(chart='X', by=['factor 1', 'factor 2'])
 
         assert result is not None
-        # SRP: Should have single XmR chart
+        # SRP: Should have single X chart
         assert len(result.charts) == 1
-        assert 'XmR' in result.charts
+        assert 'X' in result.charts
 
 
 class TestVASCalculationDecisions:
@@ -154,7 +154,7 @@ class TestVASCalculationDecisions:
         df = synthetic.make_sds(1, K1=2, K2=2, T=3, n_min=2, n_max=4, seed=42)
 
         spec = {
-            'analysis_type': 'XmR',
+            'analysis_type': 'X',
             'rsg_vars': ['factor 1'],
             'response_var': 'y',
             'time_var': 'time',
@@ -181,12 +181,12 @@ class TestVASCalculationDecisions:
             # SDS 1: Has grouping + time → always VAS
             (1, 'Xbar'): True,
             (1, 'S'): True,
-            (1, 'XmR'): True,  # Changed from False
-            (1, 'R'): True,    # Changed from False
+            (1, 'X'): True,  # Changed from False
+            (1, 'mR'): True,    # Changed from False
 
             # SDS 2: Has grouping + time → always VAS
             (2, 'Xbar'): True,
-            (2, 'XmR'): True,  # Changed from False
+            (2, 'X'): True,  # Changed from False
         }
 
         generators = {

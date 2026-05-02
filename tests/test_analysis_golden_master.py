@@ -263,7 +263,7 @@ def _make_missing_values():
 
 
 def _make_companion_mode():
-    """Scenario 5: Companion mode — Xbar+S and XmR+R companion charts."""
+    """Scenario 5: Companion mode — Xbar+S and X+mR companion charts."""
     return synthetic.make_sds(1, K1=3, K2=2, T=6, n_min=2, n_max=4, seed=42)
 
 
@@ -290,11 +290,11 @@ def _make_pathological_ordering():
 # ============================================================================
 
 def _execute_unstratified_small():
-    """Execute scenario 1: SDS 4 single-condition XmR (by=[] for single stream)."""
+    """Execute scenario 1: SDS 4 single-condition X (by=[] for single stream)."""
     df = _make_unstratified_small()
     pb = ProcessBehavior(df)
     study = pb.formulate(response="y", factors=["factor 1"], time="time")
-    return study.execute(chart="XmR", by=[], companion=True)
+    return study.execute(chart="X", by=[], companion=True)
 
 
 def _execute_stratified_balanced():
@@ -314,19 +314,19 @@ def _execute_stratified_uneven():
 
 
 def _execute_missing_values():
-    """Execute scenario 4: missing values, XmR."""
+    """Execute scenario 4: missing values, X."""
     df = _make_missing_values()
     pb = ProcessBehavior(df)
     study = pb.formulate(response="y", factors=["factor 1", "factor 2"], time="time")
-    return study.execute(chart="XmR", by=[], companion=True)
+    return study.execute(chart="X", by=[], companion=True)
 
 
 def _execute_companion_xmr_r():
-    """Execute scenario 5a: companion XmR+R."""
+    """Execute scenario 5a: companion X+mR."""
     df = _make_companion_mode()
     pb = ProcessBehavior(df)
     study = pb.formulate(response="y", factors=["factor 1", "factor 2"], time="time")
-    return study.execute(chart="XmR", by=[], companion=True)
+    return study.execute(chart="X", by=[], companion=True)
 
 
 def _execute_companion_xbar_s():
@@ -346,19 +346,19 @@ def _execute_residual_chart():
 
 
 def _execute_single_obs_strata():
-    """Execute scenario 7: SDS 3 with n=1 strata, XmR by=[]."""
+    """Execute scenario 7: SDS 3 with n=1 strata, X by=[]."""
     df = _make_single_obs_strata()
     pb = ProcessBehavior(df)
     study = pb.formulate(response="y", factors=["factor 1", "factor 2"], time="time")
-    return study.execute(chart="XmR", by=[], companion=True)
+    return study.execute(chart="X", by=[], companion=True)
 
 
 def _execute_pathological_ordering():
-    """Execute scenario 8: reverse-sorted input, XmR companion."""
+    """Execute scenario 8: reverse-sorted input, X companion."""
     df = _make_pathological_ordering()
     pb = ProcessBehavior(df)
     study = pb.formulate(response="y", factors=["factor 1", "factor 2"], time="time")
-    return study.execute(chart="XmR", by=[], companion=True)
+    return study.execute(chart="X", by=[], companion=True)
 
 
 # ============================================================================
@@ -416,26 +416,26 @@ class TestCompanionEquivalence:
     """
 
     def test_xmr_companion_vs_independent(self):
-        """Companion XmR+R should match independent XmR + independent R."""
+        """Companion X+mR should match independent X + independent mR."""
         df = _make_companion_mode()
         pb = ProcessBehavior(df)
         study = pb.formulate(response="y", factors=["factor 1", "factor 2"], time="time")
 
         # Companion
-        companion = study.execute(chart="XmR", by=[], companion=True)
+        companion = study.execute(chart="X", by=[], companion=True)
 
         # Independent
-        xmr_only = study.execute(chart="XmR", by=[])
-        r_only = study.execute(chart="R", by=[])
+        xmr_only = study.execute(chart="X", by=[])
+        r_only = study.execute(chart="mR", by=[])
 
-        # Compare XmR
+        # Compare X
         _assert_chart_equivalence(
-            companion.charts["XmR"], xmr_only.charts["XmR"], "XmR companion vs independent"
+            companion.charts["X"], xmr_only.charts["X"], "X companion vs independent"
         )
 
-        # Compare R
+        # Compare mR
         _assert_chart_equivalence(
-            companion.charts["R"], r_only.charts["R"], "R companion vs independent"
+            companion.charts["mR"], r_only.charts["mR"], "mR companion vs independent"
         )
 
     def test_xbar_s_companion_vs_independent(self):
@@ -462,23 +462,23 @@ class TestCompanionEquivalence:
         )
 
     def test_xmr_stratified_companion_vs_independent(self):
-        """Companion stratified XmR+R should match independent stratified XmR + R."""
+        """Companion stratified X+mR should match independent stratified X + mR."""
         df = _make_stratified_balanced()
         pb = ProcessBehavior(df)
         study = pb.formulate(response="y", factors=["factor 1", "factor 2"], time="time")
 
         # Companion stratified
-        companion = study.execute(chart="XmR", by=["factor 1", "factor 2"], companion=True)
+        companion = study.execute(chart="X", by=["factor 1", "factor 2"], companion=True)
 
         # Independent stratified
-        xmr_only = study.execute(chart="XmR", by=["factor 1", "factor 2"])
-        r_only = study.execute(chart="R", by=["factor 1", "factor 2"])
+        xmr_only = study.execute(chart="X", by=["factor 1", "factor 2"])
+        r_only = study.execute(chart="mR", by=["factor 1", "factor 2"])
 
         _assert_chart_equivalence(
-            companion.charts["XmR"], xmr_only.charts["XmR"], "XmR stratified companion vs independent"
+            companion.charts["X"], xmr_only.charts["X"], "X stratified companion vs independent"
         )
         _assert_chart_equivalence(
-            companion.charts["R"], r_only.charts["R"], "R stratified companion vs independent"
+            companion.charts["mR"], r_only.charts["mR"], "mR stratified companion vs independent"
         )
 
 
@@ -536,27 +536,27 @@ class TestShapeInvariants:
     """Assert structural properties that hold for any dataset."""
 
     def test_xmr_row_count_preserved(self):
-        """XmR: len(output) == len(input) per stratum."""
+        """X: len(output) == len(input) per stratum."""
         df = _make_unstratified_small()
         pb = ProcessBehavior(df)
         study = pb.formulate(response="y", factors=["factor 1"], time="time")
-        result = study.execute(chart="XmR", by=[])
+        result = study.execute(chart="X", by=[])
 
-        xmr_data = result.charts["XmR"]["data"]
+        xmr_data = result.charts["X"]["data"]
         assert len(xmr_data) == len(df), (
-            f"XmR row count mismatch: output={len(xmr_data)}, input={len(df)}"
+            f"X row count mismatch: output={len(xmr_data)}, input={len(df)}"
         )
 
     def test_r_row_count_drops_first(self):
-        """R: output drops first observation (NaN mR)."""
+        """mR: output drops first observation (NaN mR)."""
         df = _make_unstratified_small()
         pb = ProcessBehavior(df)
         study = pb.formulate(response="y", factors=["factor 1"], time="time")
-        result = study.execute(chart="R", by=[])
+        result = study.execute(chart="mR", by=[])
 
-        r_data = result.charts["R"]["data"]
+        r_data = result.charts["mR"]["data"]
         assert len(r_data) == len(df) - 1, (
-            f"R row count mismatch: output={len(r_data)}, expected={len(df) - 1}"
+            f"mR row count mismatch: output={len(r_data)}, expected={len(df) - 1}"
         )
 
     def test_beyond_limits_values_valid(self):
@@ -564,9 +564,9 @@ class TestShapeInvariants:
         df = _make_stratified_balanced()
         pb = ProcessBehavior(df)
         study = pb.formulate(response="y", factors=["factor 1", "factor 2"], time="time")
-        result = study.execute(chart="XmR", by=[], companion=True)
+        result = study.execute(chart="X", by=[], companion=True)
 
-        for chart_key in ("XmR", "R"):
+        for chart_key in ("X", "mR"):
             data = result.charts[chart_key]["data"]
             if "beyond_limits" in data.columns:
                 unique_vals = set(data["beyond_limits"].unique())
@@ -579,9 +579,9 @@ class TestShapeInvariants:
         df = _make_unstratified_small()
         pb = ProcessBehavior(df)
         study = pb.formulate(response="y", factors=["factor 1"], time="time")
-        result = study.execute(chart="XmR", by=[])
+        result = study.execute(chart="X", by=[])
 
-        xmr_data = result.charts["XmR"]["data"]
+        xmr_data = result.charts["X"]["data"]
         centers = xmr_data["center"].unique()
         assert len(centers) == 1, (
             f"Center line should be constant, got {len(centers)} unique values"
@@ -592,9 +592,9 @@ class TestShapeInvariants:
         df = _make_unstratified_small()
         pb = ProcessBehavior(df)
         study = pb.formulate(response="y", factors=["factor 1"], time="time")
-        result = study.execute(chart="XmR", by=[])
+        result = study.execute(chart="X", by=[])
 
-        stats = result.charts["XmR"]["statistics"]
+        stats = result.charts["X"]["statistics"]
         if _limits_are_scalar(stats):
             assert stats["lpl"] <= stats["center"] <= stats["upl"], (
                 f"Limit ordering violated: LPL={stats['lpl']}, "
@@ -606,9 +606,9 @@ class TestShapeInvariants:
         df = _make_stratified_balanced()
         pb = ProcessBehavior(df)
         study = pb.formulate(response="y", factors=["factor 1", "factor 2"], time="time")
-        result = study.execute(chart="XmR", by=["factor 1", "factor 2"])
+        result = study.execute(chart="X", by=["factor 1", "factor 2"])
 
-        stats = result.charts["XmR"]["statistics"]
+        stats = result.charts["X"]["statistics"]
         for stratum, s in stats.items():
             if _limits_are_scalar(s):
                 assert s["lpl"] <= s["center"] <= s["upl"], (
@@ -631,15 +631,15 @@ class TestShapeInvariants:
             )
 
     def test_r_chart_lpl_ge_zero(self):
-        """R chart: LPL is always >= 0 (ranges can't be negative)."""
+        """mR chart: LPL is always >= 0 (ranges can't be negative)."""
         df = _make_unstratified_small()
         pb = ProcessBehavior(df)
         study = pb.formulate(response="y", factors=["factor 1"], time="time")
-        result = study.execute(chart="R", by=[])
+        result = study.execute(chart="mR", by=[])
 
-        stats = result.charts["R"]["statistics"]
+        stats = result.charts["mR"]["statistics"]
         if _limits_are_scalar(stats):
-            assert stats["lpl"] >= 0, f"R chart LPL should be >= 0, got {stats['lpl']}"
+            assert stats["lpl"] >= 0, f"mR chart LPL should be >= 0, got {stats['lpl']}"
 
     def test_pathological_ordering_matches_normal(self):
         """Reverse-sorted input should produce identical results for n=1 data.
@@ -654,7 +654,7 @@ class TestShapeInvariants:
         study_normal = pb_normal.formulate(
             response="y", factors=["factor 1", "factor 2"], time="time"
         )
-        result_normal = study_normal.execute(chart="XmR", by=[], companion=True)
+        result_normal = study_normal.execute(chart="X", by=[], companion=True)
 
         # Reverse ordering
         df_reverse = df_normal.iloc[::-1].reset_index(drop=True)
@@ -662,9 +662,9 @@ class TestShapeInvariants:
         study_reverse = pb_reverse.formulate(
             response="y", factors=["factor 1", "factor 2"], time="time"
         )
-        result_reverse = study_reverse.execute(chart="XmR", by=[], companion=True)
+        result_reverse = study_reverse.execute(chart="X", by=[], companion=True)
 
-        for chart_key in ("XmR", "R"):
+        for chart_key in ("X", "mR"):
             _assert_chart_equivalence(
                 result_normal.charts[chart_key],
                 result_reverse.charts[chart_key],
@@ -676,9 +676,9 @@ class TestShapeInvariants:
         df = _make_stratified_balanced()
         pb = ProcessBehavior(df)
         study = pb.formulate(response="y", factors=["factor 1", "factor 2"], time="time")
-        result = study.execute(chart="XmR", by=[])
+        result = study.execute(chart="X", by=[])
 
-        meta = result.charts["XmR"].get("metadata", {})
+        meta = result.charts["X"].get("metadata", {})
         boundaries = meta.get("lane_boundaries")
         if boundaries:
             # boundaries can be a list (ungrouped) or dict (stratified)

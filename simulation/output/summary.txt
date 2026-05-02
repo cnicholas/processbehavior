@@ -1,0 +1,186 @@
+========================================================================
+SIMULATION STUDY: Range-Based Sigma Estimation
+             Under Mixed Subgroup Sizes
+========================================================================
+
+Parameters: μ=100.0, σ_within=5.0, K=50, replications=1000
+Scenarios:  5 singleton props × 3 size dists × 4 SNR values = 60
+
+------------------------------------------------------------------------
+BIAS SUMMARY (% relative to σ_true)
+------------------------------------------------------------------------
+
+  Range-based:
+    Mean bias:  +0.01%
+    Max |bias|: 1.76%
+    Mean RMSE:  0.638
+    Max RMSE:   1.495
+
+  GLM residual:
+    Mean bias:  -0.72%
+    Max |bias|: 4.22%
+    Mean RMSE:  0.527
+    Max RMSE:   1.327
+
+  Naive MR-mixed:
+    Mean bias:  +2.81%
+    Max |bias|: 21.03%
+    Mean RMSE:  0.627
+    Max RMSE:   1.655
+
+------------------------------------------------------------------------
+SANITY CHECK: SNR=0 (no between-subgroup variation)
+------------------------------------------------------------------------
+  Range-based: mean bias = +0.11%, max |bias| = 1.76%
+  GLM residual: mean bias = -0.56%, max |bias| = 2.20%
+  Naive MR-mixed: mean bias = +0.07%, max |bias| = 1.49%
+
+------------------------------------------------------------------------
+PRECISION DEGRADATION: Range-based std(σ̂) by singleton %
+------------------------------------------------------------------------
+  10% singletons → 45 subgroups with n≥2 → mean std(σ̂) = 0.391
+  30% singletons → 35 subgroups with n≥2 → mean std(σ̂) = 0.442
+  50% singletons → 25 subgroups with n≥2 → mean std(σ̂) = 0.522
+  70% singletons → 15 subgroups with n≥2 → mean std(σ̂) = 0.663
+  90% singletons →  4 subgroups with n≥2 → mean std(σ̂) = 1.170
+
+------------------------------------------------------------------------
+NAIVE MR-MIXED: Bias contamination by SNR
+------------------------------------------------------------------------
+  SNR=0.0: mean bias = +0.07%, max |bias| = 1.49%
+  SNR=0.5: mean bias = +0.83%, max |bias| = 3.02%
+  SNR=1.0: mean bias = +2.59%, max |bias| = 6.92%
+  SNR=2.0: mean bias = +7.76%, max |bias| = 21.03%
+
+------------------------------------------------------------------------
+EFFECTIVE SUBGROUP COUNTS (K=50)
+------------------------------------------------------------------------
+  10% singletons → 45 subgroups contributing to range-based estimate
+  30% singletons → 35 subgroups contributing to range-based estimate
+  50% singletons → 25 subgroups contributing to range-based estimate
+  70% singletons → 15 subgroups contributing to range-based estimate
+  90% singletons → 4 subgroups contributing to range-based estimate
+
+========================================================================
+THRESHOLD ANALYSIS: Where does estimation quality degrade?
+========================================================================
+
+--- Range-based ---
+  RMSE > 0.5:
+    singleton=10%  size=small (2–3)       SNR=2.0  RMSE=0.501  std=0.499
+    singleton=30%  size=small (2–3)       SNR=0.0  RMSE=0.538  std=0.538
+    singleton=30%  size=small (2–3)       SNR=0.5  RMSE=0.557  std=0.557
+    singleton=30%  size=small (2–3)       SNR=1.0  RMSE=0.564  std=0.565
+    singleton=30%  size=small (2–3)       SNR=2.0  RMSE=0.562  std=0.562
+    singleton=50%  size=small (2–3)       SNR=0.0  RMSE=0.638  std=0.638
+    singleton=50%  size=small (2–3)       SNR=0.5  RMSE=0.670  std=0.671
+    singleton=50%  size=small (2–3)       SNR=1.0  RMSE=0.662  std=0.662
+    singleton=50%  size=small (2–3)       SNR=2.0  RMSE=0.659  std=0.659
+    singleton=50%  size=moderate (2–5)    SNR=0.0  RMSE=0.528  std=0.529
+    singleton=50%  size=moderate (2–5)    SNR=0.5  RMSE=0.561  std=0.561
+    singleton=50%  size=moderate (2–5)    SNR=1.0  RMSE=0.542  std=0.542
+    singleton=50%  size=moderate (2–5)    SNR=2.0  RMSE=0.542  std=0.541
+    singleton=70%  size=small (2–3)       SNR=0.0  RMSE=0.823  std=0.824
+    singleton=70%  size=small (2–3)       SNR=0.5  RMSE=0.851  std=0.849
+    singleton=70%  size=small (2–3)       SNR=1.0  RMSE=0.842  std=0.842
+    singleton=70%  size=small (2–3)       SNR=2.0  RMSE=0.815  std=0.816
+    singleton=70%  size=moderate (2–5)    SNR=0.0  RMSE=0.710  std=0.711
+    singleton=70%  size=moderate (2–5)    SNR=0.5  RMSE=0.698  std=0.698
+    singleton=70%  size=moderate (2–5)    SNR=1.0  RMSE=0.690  std=0.690
+    singleton=70%  size=moderate (2–5)    SNR=2.0  RMSE=0.668  std=0.667
+    singleton=90%  size=small (2–3)       SNR=0.0  RMSE=1.422  std=1.420
+    singleton=90%  size=small (2–3)       SNR=0.5  RMSE=1.453  std=1.453
+    singleton=90%  size=small (2–3)       SNR=1.0  RMSE=1.486  std=1.486
+    singleton=90%  size=small (2–3)       SNR=2.0  RMSE=1.495  std=1.496
+    singleton=90%  size=moderate (2–5)    SNR=0.0  RMSE=1.222  std=1.222
+    singleton=90%  size=moderate (2–5)    SNR=0.5  RMSE=1.191  std=1.191
+    singleton=90%  size=moderate (2–5)    SNR=1.0  RMSE=1.208  std=1.209
+    singleton=90%  size=moderate (2–5)    SNR=2.0  RMSE=1.217  std=1.217
+    singleton=90%  size=wide (2–15)       SNR=0.0  RMSE=0.841  std=0.841
+    singleton=90%  size=wide (2–15)       SNR=0.5  RMSE=0.859  std=0.858
+    singleton=90%  size=wide (2–15)       SNR=1.0  RMSE=0.845  std=0.846
+    singleton=90%  size=wide (2–15)       SNR=2.0  RMSE=0.797  std=0.797
+  RMSE > 1.0:
+    singleton=90%  size=small (2–3)       SNR=0.0  RMSE=1.422  std=1.420
+    singleton=90%  size=small (2–3)       SNR=0.5  RMSE=1.453  std=1.453
+    singleton=90%  size=small (2–3)       SNR=1.0  RMSE=1.486  std=1.486
+    singleton=90%  size=small (2–3)       SNR=2.0  RMSE=1.495  std=1.496
+    singleton=90%  size=moderate (2–5)    SNR=0.0  RMSE=1.222  std=1.222
+    singleton=90%  size=moderate (2–5)    SNR=0.5  RMSE=1.191  std=1.191
+    singleton=90%  size=moderate (2–5)    SNR=1.0  RMSE=1.208  std=1.209
+    singleton=90%  size=moderate (2–5)    SNR=2.0  RMSE=1.217  std=1.217
+  RMSE > 1.5: Never exceeded
+
+--- GLM residual ---
+  RMSE > 0.5:
+    singleton=50%  size=small (2–3)       SNR=0.0  RMSE=0.572  std=0.571
+    singleton=50%  size=small (2–3)       SNR=0.5  RMSE=0.586  std=0.585
+    singleton=50%  size=small (2–3)       SNR=1.0  RMSE=0.582  std=0.580
+    singleton=50%  size=small (2–3)       SNR=2.0  RMSE=0.583  std=0.581
+    singleton=70%  size=small (2–3)       SNR=0.0  RMSE=0.738  std=0.737
+    singleton=70%  size=small (2–3)       SNR=0.5  RMSE=0.754  std=0.754
+    singleton=70%  size=small (2–3)       SNR=1.0  RMSE=0.760  std=0.759
+    singleton=70%  size=small (2–3)       SNR=2.0  RMSE=0.721  std=0.720
+    singleton=70%  size=moderate (2–5)    SNR=0.0  RMSE=0.584  std=0.584
+    singleton=70%  size=moderate (2–5)    SNR=0.5  RMSE=0.574  std=0.574
+    singleton=70%  size=moderate (2–5)    SNR=1.0  RMSE=0.565  std=0.565
+    singleton=70%  size=moderate (2–5)    SNR=2.0  RMSE=0.568  std=0.564
+    singleton=90%  size=small (2–3)       SNR=0.0  RMSE=1.255  std=1.252
+    singleton=90%  size=small (2–3)       SNR=0.5  RMSE=1.306  std=1.295
+    singleton=90%  size=small (2–3)       SNR=1.0  RMSE=1.305  std=1.289
+    singleton=90%  size=small (2–3)       SNR=2.0  RMSE=1.327  std=1.315
+    singleton=90%  size=moderate (2–5)    SNR=0.0  RMSE=0.997  std=0.992
+    singleton=90%  size=moderate (2–5)    SNR=0.5  RMSE=1.007  std=0.999
+    singleton=90%  size=moderate (2–5)    SNR=1.0  RMSE=1.004  std=0.998
+    singleton=90%  size=moderate (2–5)    SNR=2.0  RMSE=1.012  std=1.002
+    singleton=90%  size=wide (2–15)       SNR=0.0  RMSE=0.605  std=0.605
+    singleton=90%  size=wide (2–15)       SNR=0.5  RMSE=0.584  std=0.585
+    singleton=90%  size=wide (2–15)       SNR=1.0  RMSE=0.595  std=0.594
+    singleton=90%  size=wide (2–15)       SNR=2.0  RMSE=0.600  std=0.599
+  RMSE > 1.0:
+    singleton=90%  size=small (2–3)       SNR=0.0  RMSE=1.255  std=1.252
+    singleton=90%  size=small (2–3)       SNR=0.5  RMSE=1.306  std=1.295
+    singleton=90%  size=small (2–3)       SNR=1.0  RMSE=1.305  std=1.289
+    singleton=90%  size=small (2–3)       SNR=2.0  RMSE=1.327  std=1.315
+    singleton=90%  size=moderate (2–5)    SNR=0.5  RMSE=1.007  std=0.999
+    singleton=90%  size=moderate (2–5)    SNR=1.0  RMSE=1.004  std=0.998
+    singleton=90%  size=moderate (2–5)    SNR=2.0  RMSE=1.012  std=1.002
+  RMSE > 1.5: Never exceeded
+
+--- Naive MR-mixed (bias focus) ---
+  |Bias| > 5%:
+    singleton=50%  size=moderate (2–5)    SNR=2.0  bias=+5.3%
+    singleton=70%  size=small (2–3)       SNR=2.0  bias=+7.4%
+    singleton=70%  size=moderate (2–5)    SNR=2.0  bias=+7.0%
+    singleton=70%  size=wide (2–15)       SNR=2.0  bias=+7.8%
+    singleton=90%  size=small (2–3)       SNR=1.0  bias=+6.2%
+    singleton=90%  size=small (2–3)       SNR=2.0  bias=+21.0%
+    singleton=90%  size=moderate (2–5)    SNR=1.0  bias=+6.9%
+    singleton=90%  size=moderate (2–5)    SNR=2.0  bias=+20.4%
+    singleton=90%  size=wide (2–15)       SNR=1.0  bias=+6.9%
+    singleton=90%  size=wide (2–15)       SNR=2.0  bias=+20.6%
+  |Bias| > 10%:
+    singleton=90%  size=small (2–3)       SNR=2.0  bias=+21.0%
+    singleton=90%  size=moderate (2–5)    SNR=2.0  bias=+20.4%
+    singleton=90%  size=wide (2–15)       SNR=2.0  bias=+20.6%
+  |Bias| > 20%:
+    singleton=90%  size=small (2–3)       SNR=2.0  bias=+21.0%
+    singleton=90%  size=moderate (2–5)    SNR=2.0  bias=+20.4%
+    singleton=90%  size=wide (2–15)       SNR=2.0  bias=+20.6%
+
+========================================================================
+KEY FINDINGS
+========================================================================
+
+1. Range-based estimator unbiased at SNR=0: YES (max |bias| = 1.76%)
+2. GLM residual estimator unbiased at SNR=0: YES (max |bias| = 2.20%)
+3. Naive MR-mixed bias at SNR=0: +0.07% (should be ~0)
+   Naive MR-mixed bias at SNR=2: +7.76% (should be >0, contaminated)
+4. Range-based precision at 90% singletons: mean std = 1.170
+   Range-based precision at 10% singletons: mean std = 0.391
+   Degradation ratio: 3.0x
+
+5. The degradation is a PRECISION problem, not a BIAS problem.
+   As singleton proportion increases, fewer subgroups contribute
+   to the range-based estimate, increasing its variability.
+   The estimate remains unbiased throughout.

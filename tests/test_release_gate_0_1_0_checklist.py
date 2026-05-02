@@ -42,7 +42,7 @@ def sds4_study():
 @pytest.fixture
 def stratified_result(sds1_study):
     """Stratified XmR result with two strata dimensions."""
-    return sds1_study.execute(chart='XmR', by=['factor 1'])
+    return sds1_study.execute(chart='X', by=['factor 1'])
 
 
 # ============================================================================
@@ -103,17 +103,17 @@ class TestGate01ExceptionModel:
         # SDS 4 has one factor; specifying an invalid by should not raise
         # raw ValueError.
         with pytest.raises(ProcessBehaviorError):
-            sds4_study.execute(chart='XmR', by=['nonexistent'])
+            sds4_study.execute(chart='X', by=['nonexistent'])
 
     def test_imr_without_explicit_by_raises_validation_error(self, sds1_study):
         """IMR/R chart with factors but no by= must raise ValidationError."""
         with pytest.raises(ValidationError):
-            sds1_study.execute(chart='XmR')
+            sds1_study.execute(chart='X')
 
     def test_time_in_by_for_xmr_raises_validation_error(self, sds1_study):
         """Using time variable in by= for XmR chart raises ValidationError."""
         with pytest.raises(ValidationError, match="time"):
-            sds1_study.execute(chart='XmR', by=['time'])
+            sds1_study.execute(chart='X', by=['time'])
 
     # -- focus() paths -------------------------------------------------------
 
@@ -148,8 +148,8 @@ class TestGate01ExceptionModel:
     def test_process_behavior_error_catches_all_by_failures(self, sds1_study):
         """ProcessBehaviorError must catch every by= failure mode."""
         bad_inputs = [
-            dict(chart='XmR'),              # missing required by
-            dict(chart='XmR', by=['time']), # time in by for XmR
+            dict(chart='X'),              # missing required by
+            dict(chart='X', by=['time']), # time in by for XmR
         ]
         for kwargs in bad_inputs:
             with pytest.raises(ProcessBehaviorError):
@@ -184,7 +184,7 @@ class TestGate02StratifiedAPISemantics:
     def test_multi_factor_strata_roundtrip(self, sds1_study):
         """Multi-factor by= produces strata that roundtrip through focus()."""
         result = sds1_study.execute(
-            chart='XmR', by=['factor 1', 'factor 2'],
+            chart='X', by=['factor 1', 'factor 2'],
         )
         assert result.is_stratified, "Expected stratified result"
         assert len(result.strata) > 1, "Expected multiple strata"
@@ -198,7 +198,7 @@ class TestGate02StratifiedAPISemantics:
         """Focused result must contain non-empty chart data."""
         stratum = stratified_result.strata[0]
         focused = stratified_result.focus(stratum)
-        chart = focused.get_chart('XmR')
+        chart = focused.get_chart('X')
         assert len(chart) > 0, "Focused chart data must be non-empty"
 
     def test_focus_rejects_partial_match(self, stratified_result):
@@ -228,7 +228,7 @@ class TestGate04StrataTypeHints:
     def test_strata_type_annotation_covers_tuples(self, sds1_study):
         """Multi-factor strata are tuples; type annotation must not say list[str]."""
         result = sds1_study.execute(
-            chart='XmR', by=['factor 1', 'factor 2'],
+            chart='X', by=['factor 1', 'factor 2'],
         )
         strata = result.strata
         # Multi-factor strata should be present
@@ -248,7 +248,7 @@ class TestGate04StrataTypeHints:
     def test_focus_accepts_actual_strata_types(self, sds1_study):
         """focus() must accept whatever type strata actually returns."""
         result = sds1_study.execute(
-            chart='XmR', by=['factor 1', 'factor 2'],
+            chart='X', by=['factor 1', 'factor 2'],
         )
         # This exercises focus() with the actual runtime type (str or tuple)
         # If strata returns tuples but focus() annotation says str,

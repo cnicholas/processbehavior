@@ -115,9 +115,9 @@ def test_s_chart_column_contract():
     assert value_col == 's', f"Plotter must use 's' column for S chart, got '{value_col}'"
 
 
-def test_xmr_chart_column_contract():
+def test_x_chart_column_contract():
     """
-    Verify XmR chart follows the column contract:
+    Verify X chart follows the column contract:
     - response_var column contains varying individual values (VALUES TO PLOT)
     - 'center' column contains constant grand mean (CENTERLINE)
     - Plotter uses response_var column
@@ -129,7 +129,7 @@ def test_xmr_chart_column_contract():
     })
 
     spec = {
-        'analysis_type': 'XmR',
+        'analysis_type': 'X',
         'response_var': 'weight',
         'rsg_vars': ['group'],
         'time_var': 'time'
@@ -138,17 +138,17 @@ def test_xmr_chart_column_contract():
     sds = detect_sds_for_test(df, spec)
     result = Analysis(spec=make_spec(spec), request=make_request(spec), sds=sds, df=df).calculate()
 
-    # XmR and R are bundled - use 'XmR' as the chart key
-    chart_name = 'XmR'
-    xmr_chart = result.charts[chart_name]
-    xmr_data = xmr_chart['data']
+    # X chart key
+    chart_name = 'X'
+    x_chart = result.charts[chart_name]
+    x_data = x_chart['data']
 
     # Test column structure
-    assert 'weight' in xmr_data.columns, "XmR data must have response_var column"
-    assert 'center' in xmr_data.columns, "XmR data must have 'center' column"
+    assert 'weight' in x_data.columns, "X data must have response_var column"
+    assert 'center' in x_data.columns, "X data must have 'center' column"
 
     # CRITICAL TEST: 'weight' should vary (these are the values to plot)
-    weight_values = xmr_data['weight'].tolist()
+    weight_values = x_data['weight'].tolist()
     assert len(set(weight_values)) > 1, (
         "'weight' must vary (individual measurements). "
         f"Got: {weight_values}. This is a BUG if all values are identical."
@@ -157,15 +157,15 @@ def test_xmr_chart_column_contract():
     assert 239.1 in weight_values, "Should contain original measurement 239.1"
 
     # Test that 'center' is constant (this is the centerline)
-    center_values = xmr_data['center'].tolist()
+    center_values = x_data['center'].tolist()
     assert len(set(center_values)) == 1, "'center' must be constant (centerline)"
 
     # Test plotter uses correct column (via metadata)
     plotter = Plotter(result)
-    value_col = plotter._get_value_column(xmr_chart, chart_name)
+    value_col = plotter._get_value_column(x_chart, chart_name)
     assert value_col == 'weight', (
-        f"Plotter must use 'weight' (response_var) column for XmR chart, got '{value_col}'. "
-        "This is a BUG - XmR should plot individual values, not the center!"
+        f"Plotter must use 'weight' (response_var) column for X chart, got '{value_col}'. "
+        "This is a BUG - X should plot individual values, not the center!"
     )
 
 
@@ -180,16 +180,16 @@ def test_chart_type_declarative_contract():
     CHART_VALUE_COLUMNS = {
         'Xbar': 'xbar',      # Plot subgroup means
         'S': 's',            # Plot subgroup std devs
-        'R': 'mr',           # Plot moving ranges
-        'XmR': None,         # Plot response_var (dynamic)
+        'mR': 'mr',          # Plot moving ranges
+        'X': None,           # Plot response_var (dynamic)
     }
 
     # Map of analysis_type → expected centerline column name (now standardized)
     CHART_CENTER_COLUMNS = {
         'Xbar': 'center',    # Grand mean
         'S': 'center',       # Mean of std devs
-        'R': 'center',       # Mean of moving ranges
-        'XmR': 'center',     # Grand mean
+        'mR': 'center',      # Mean of moving ranges
+        'X': 'center',       # Grand mean
     }
 
     print("\n" + "="*80)
@@ -224,7 +224,7 @@ if __name__ == '__main__':
     tests = [
         ("Xbar chart", test_xbar_chart_column_contract),
         ("S chart", test_s_chart_column_contract),
-        ("XmR chart", test_xmr_chart_column_contract),
+        ("X chart", test_x_chart_column_contract),
         ("Declarative contract", test_chart_type_declarative_contract),
     ]
 

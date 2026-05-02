@@ -798,7 +798,7 @@ class StudyChartAccessor:
         Parameters
         ----------
         valid_charts : list of str
-            Primary chart types (Xbar, S, XmR, R)
+            Primary chart types (Xbar, S, X, mR)
         """
         self._valid_charts = valid_charts
 
@@ -832,7 +832,7 @@ class StudyResidualAccessor:
 
         # With recentered
         result = study.execute(
-            chart=study.charts.XmR, value=study.residuals.R4, recentered=True
+            chart=study.charts.X, value=study.residuals.R4, recentered=True
         )
 
     Attributes are set dynamically based on which residuals were computed.
@@ -1094,7 +1094,7 @@ class Study:
         Returns
         -------
         list of str
-            Valid chart types (e.g., ['Xbar', 'S', 'XmR']).
+            Valid chart types (e.g., ['Xbar', 'S', 'X']).
             Empty list when ADS=0 (no valid observations after cleaning).
         """
         if self.analytical_design_state.sds == 0:
@@ -1146,13 +1146,13 @@ class Study:
         Accessor for IDE auto-completion of primary chart types.
 
         Primary charts are the standard process behavior charts:
-        Xbar, S, XmR, R
+        Xbar, S, X, mR
 
         For residual charts (VAS analysis), use study.residuals instead.
 
         Usage:
             study.charts.Xbar  # Auto-completes valid primary charts
-            study.charts.XmR
+            study.charts.X
 
         Returns
         -------
@@ -1178,7 +1178,7 @@ class Study:
 
         Usage:
             study.execute(chart=study.charts.Xbar, value=study.residuals.R5)
-            study.execute(chart='XmR', value=study.residuals.R4, recentered=True)
+            study.execute(chart='X', value=study.residuals.R4, recentered=True)
 
         Returns
         -------
@@ -1229,7 +1229,7 @@ class Study:
             {
                 'method': 'Maximum Information',
                 'available': vas_available,
-                'description': 'Noise floor analysis via R2 XmR + histogram',
+                'description': 'Noise floor analysis via R2 X + histogram',
             },
         ]
         return pd.DataFrame(rows)
@@ -1269,14 +1269,14 @@ class Study:
         rows = []
 
         # All possible primary charts
-        ALL_PRIMARY = ['Xbar', 'S', 'XmR', 'R', 'Histogram']
+        ALL_PRIMARY = ['Xbar', 'S', 'X', 'mR', 'Histogram']
 
         # All possible residual charts as (chart_type, residual) tuples
         ALL_RESIDUALS = [
-            ('S', 'R2'), ('XmR', 'R2'),
-            ('Xbar', 'R3'), ('S', 'R3'), ('XmR', 'R3'),
-            ('Xbar', 'R4'), ('S', 'R4'), ('XmR', 'R4'),
-            ('Xbar', 'R5'), ('S', 'R5'), ('XmR', 'R5'),
+            ('S', 'R2'), ('X', 'R2'),
+            ('Xbar', 'R3'), ('S', 'R3'), ('X', 'R3'),
+            ('Xbar', 'R4'), ('S', 'R4'), ('X', 'R4'),
+            ('Xbar', 'R5'), ('S', 'R5'), ('X', 'R5'),
             ('Xbar', 'R6'), ('S', 'R6'),
         ]
 
@@ -1363,7 +1363,7 @@ class Study:
         Parameters
         ----------
         chart : str
-            Chart type to check (e.g., 'XmR', 'S', 'Xbar')
+            Chart type to check (e.g., 'X', 'S', 'Xbar')
         value : str, optional
             Residual to check (e.g., 'R2', 'R5'). Required for residual
             chart queries.
@@ -1633,7 +1633,7 @@ class Study:
         """
         Maximum information analysis of R2 residuals (Bishop).
 
-        Examines the noise floor via an XmR chart and percentage histogram.
+        Examines the noise floor via an X chart and percentage histogram.
 
         Returns
         -------
@@ -1643,7 +1643,7 @@ class Study:
         Examples
         --------
         >>> mi = study.maximum_information()
-        >>> mi.plot()                    # Combined XmR + histogram
+        >>> mi.plot()                    # Combined X + histogram
         >>> mi.plot(view='histogram')    # Percentage histogram only
         """
         from .maximum_information import assess_maximum_information
@@ -1678,14 +1678,16 @@ class Study:
         ----------
         chart : str, optional
             Chart type. If None, uses recommended_chart.
-            Valid charts: 'Xbar', 'S', 'XmR', 'R', 'Histogram'.
+            Valid charts: 'Xbar', 'S', 'X', 'mR', 'Histogram'.
+            X is the focal (individual values) chart; mR is its companion
+            (moving range). Use companion=True to get both together.
 
         by : list[str], optional
             Factors to group/stratify by. Controls view granularity.
 
             - by=None: Default for chart type (full rsg_key for Xbar/S,
-              ERROR for XmR/R with factors - must be explicit)
-            - by=[]: For XmR/R: single overall chart (collapse all factors).
+              ERROR for X/mR with factors - must be explicit)
+            - by=[]: For X/mR: single overall chart (collapse all factors).
               For Xbar/S: equivalent to by=None (cell-level grouping).
             - by=['factor']: Stratify/aggregate by single factor
             - by=['f1', 'f2']: Stratify/aggregate by factor combination
@@ -1694,7 +1696,7 @@ class Study:
               Special case: by=[time_var] with factors stratifies by
               factor combinations, producing one chart per combo with
               time on x-axis. Only applies to response (not residuals).
-            For XmR/R: by controls stratification (separate charts)
+            For X/mR: by controls stratification (separate charts)
 
         value : str, optional
             What to chart. Options:
@@ -1718,7 +1720,7 @@ class Study:
         companion : bool, default False
             Returns both the location chart and its companion range chart
             in a single result, regardless of which is requested
-            (e.g., chart='R', companion=True returns both XmR and R).
+            (e.g., chart='mR', companion=True returns both X and mR).
             Each chart is accessed separately via get_chart().
             Not applicable to Histogram.
 
@@ -1761,7 +1763,7 @@ class Study:
         ValueError
             If specified chart is not valid for this SDS
             If by contains invalid factors
-            If XmR/R with factors but by not specified
+            If X/mR with factors but by not specified
 
         Examples
         --------
@@ -1779,11 +1781,11 @@ class Study:
         >>> # Xbar aggregated by factor 1
         >>> result = study.execute(chart='Xbar', by=['factor 1'])
 
-        >>> # IMR stratified by all factors (separate chart per combo)
-        >>> result = study.execute(chart='XmR', by=['factor 1', 'factor 2'])
+        >>> # X chart stratified by all factors (separate chart per combo)
+        >>> result = study.execute(chart='X', by=['factor 1', 'factor 2'])
 
-        >>> # IMR single overall chart
-        >>> result = study.execute(chart='XmR', by=[])
+        >>> # X chart single overall
+        >>> result = study.execute(chart='X', by=[])
 
         >>> # Stratified Xbar by time (one chart per factor combination)
         >>> result = study.execute(chart='Xbar', by=['PRODUCTION TIME'])
@@ -1791,7 +1793,7 @@ class Study:
         Chart residuals:
 
         >>> result = study.execute(chart='Xbar', value='R5')  # Factor effects
-        >>> result = study.execute(chart='XmR', value='R4', recentered=True)
+        >>> result = study.execute(chart='X', value='R4', recentered=True)
 
         Chain to visualization:
 
@@ -1885,9 +1887,9 @@ class Study:
 
         # Validate (chart, value) combo against ADS mapping
         # Histogram is exempt — can plot any residual
-        # R chart is handled separately below (requires companion)
+        # mR chart is handled separately below (requires companion)
         # R1 is exempt — total deviation, not a structured method of analysis
-        if is_residual and base_chart not in ('Histogram', 'R'):
+        if is_residual and base_chart not in ('Histogram', 'mR'):
             # Extract base residual: RCR5 → R5, R5 → R5
             val_upper = value.upper()
             base_residual = val_upper[2:] if val_upper.startswith('RCR') else val_upper
@@ -1902,12 +1904,12 @@ class Study:
                     available=valid_for_value
                 )
 
-        if is_residual and base_chart == 'R' and not companion:
+        if is_residual and base_chart == 'mR' and not companion:
             raise ValidationError(
-                f"Chart type 'R' (moving range) is not supported for residual charts.\n"
-                f"Residual charts support: Xbar, S, XmR, Histogram.\n"
-                f"Use: study.execute(chart='XmR', value='{value}') or "
-                f"study.execute(chart='R', value='{value}', companion=True)"
+                f"Chart type 'mR' (moving range) is not supported for residual charts.\n"
+                f"Residual charts support: Xbar, S, X, Histogram.\n"
+                f"Use: study.execute(chart='X', value='{value}') or "
+                f"study.execute(chart='mR', value='{value}', companion=True)"
             )
 
         # Build chart request (ephemeral, per-execute)
@@ -1997,9 +1999,9 @@ class Study:
 
     def _validate_phased(self, base_chart: str, by_validated: list[str] | None) -> None:
         """Validate phased=True requirements."""
-        if base_chart not in ('XmR', 'R'):
+        if base_chart not in ('X', 'mR'):
             raise ValidationError(
-                f"phased=True is only valid for XmR or R charts, "
+                f"phased=True is only valid for X or mR charts, "
                 f"got '{base_chart}'."
             )
         if by_validated is None:
@@ -2029,7 +2031,7 @@ class Study:
         Parameters
         ----------
         chart : str
-            Chart request string. Only accepts base charts: 'Xbar', 'S', 'XmR', 'R'
+            Chart request string. Only accepts base charts: 'Xbar', 'S', 'X', 'mR'
 
         Returns
         -------
@@ -2044,7 +2046,7 @@ class Study:
         if not chart or not isinstance(chart, str):
             raise ValidationError("Chart name must be a non-empty string")
 
-        # Normalize case (e.g. "xmr" -> "XmR", "XBAR" -> "Xbar")
+        # Normalize case (e.g. "x" -> "X", "XBAR" -> "Xbar")
         chart = normalize_chart_name(chart)
 
         # Base chart - valid
@@ -2061,7 +2063,7 @@ class Study:
             raise ValidationError(
                 f"'{chart}' is a residual identifier, not a chart type.\n"
                 f"Use: study.execute(chart='Xbar', value='{chart}')\n"
-                f"Or: study.execute(chart='XmR', value='{chart}')"
+                f"Or: study.execute(chart='X', value='{chart}')"
             )
 
         # Alias without base chart
@@ -2070,7 +2072,7 @@ class Study:
             raise ValidationError(
                 f"'{chart}' is a residual alias for {residual_id}, not a chart type.\n"
                 f"Use: study.execute(chart='Xbar', value='{residual_id}')\n"
-                f"Or: study.execute(chart='XmR', value='{residual_id}')"
+                f"Or: study.execute(chart='X', value='{residual_id}')"
             )
 
         raise ValidationError(
@@ -2127,7 +2129,7 @@ class Study:
         by : list[str] | None
             User-specified by parameter
         base_chart : str
-            Base chart type being requested (Xbar, S, XmR, R)
+            Base chart type being requested (Xbar, S, X, mR)
 
         Returns
         -------
@@ -2138,12 +2140,12 @@ class Study:
         ------
         ValidationError
             If by contains factors not in rsg_vars
-            If by=None for IMR/R with factors (must be explicit)
-            If by contains time variable for IMR/R charts
+            If by=None for X/mR with factors (must be explicit)
+            If by contains time variable for X/mR charts
         """
         factors = self._spec.rsg_vars_list
         time_var = self._spec.time_var
-        is_time_series_chart = base_chart in ('XmR', 'R')
+        is_time_series_chart = base_chart in ('X', 'mR')
 
         # No factors case: by=None is fine, by=[] is also fine
         if not factors:
@@ -2157,10 +2159,10 @@ class Study:
         # Has factors case
         if by is None:
             if is_time_series_chart:
-                # IMR/R with factors requires explicit by
+                # X/mR with factors requires explicit by
                 factor_str = ', '.join(f"'{f}'" for f in factors)
                 raise ValidationError(
-                    f"IMR/R charts with factors require explicit 'by' parameter.\n"
+                    f"X/mR charts with factors require explicit 'by' parameter.\n"
                     f"Specify how to stratify:\n"
                     f"  by=[{factor_str}] for {self._get_factor_combinations()} charts (one per factor combination)\n"
                     f"  by=['{factors[0]}'] for fewer charts (stratify by single factor)\n"
@@ -2174,7 +2176,7 @@ class Study:
             by = [by]
 
         # Validate by is subset of valid dimensions
-        # - IMR/R: factors only (time is x-axis)
+        # - X/mR: factors only (time is x-axis)
         # - Xbar/S: factors + time (cell_key dimensions)
         by_set = set(by)
         factor_set = set(factors)

@@ -86,16 +86,16 @@ For factorial designs (DS 1-3), processbehavior decomposes variation into diagno
 
 ```python
 # Chart any residual
-result = study.execute(chart='XmR', value='R4')  # Time effects on XmR chart
+result = study.execute(chart='X', value='R4')  # Time effects on X chart
 result = study.execute(chart='Xbar', value='R5')  # Factor effects on Xbar chart
 ```
 
 ### Stratified Analysis
 
-For XmR/R charts with grouping factors, processbehavior produces a single combined chart with per-stratum limits:
+For X/mR charts with grouping factors, processbehavior produces a single combined chart with per-stratum limits:
 
 ```python
-result = study.execute(chart='XmR', by=['machine'])
+result = study.execute(chart='X', by=['machine'])
 
 # Drill into a specific stratum
 for stratum in result.strata:
@@ -106,7 +106,7 @@ for stratum in result.strata:
 ## Features
 
 - **Auto-detection**: DS detection on raw data determines valid charts and analysis methods
-- **Correct charts**: Xbar-S, XmR (IMR), Range, Histogram with proper limit calculations
+- **Correct charts**: Xbar-S, X (Individual), mR (Moving Range), Histogram with proper limit calculations
 - **Variance decomposition**: R1-R5 residuals for factorial designs
 - **Effects analysis**: Main effects, time effects, and interaction effects
 - **Stratified charts**: Automatic per-stratum limits for grouped individual data

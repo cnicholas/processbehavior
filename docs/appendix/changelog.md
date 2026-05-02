@@ -9,12 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - Jupyter Book documentation structure
-- Comprehensive tutorials (XmR, Xbar-S, Stratified, Signal Detection)
+- Comprehensive tutorials (X, Xbar-S, Stratified, Signal Detection)
 - User guide for all major features
 - API reference documentation
 - Western Electric rules reference
 
 ### Changed
+- **Breaking:** Chart API simplified — `chart='XmR'` removed (use `chart='X'` with `companion=True`), `chart='R'` renamed to `chart='mR'`. The API now uses focal-chart naming: name the chart you care about, companion adds the pair.
 - Removed scipy dependency (pure Python implementations)
 - Improved signal detection for S charts (rule-based minimum observations)
 
@@ -41,8 +42,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `execute()` method for chart calculation
 - `AnalysisResult` class for unified result access
 - VAS residual calculations (R1-R5)
-- Support for Xbar, S, XmR, and R charts
-- Stratified XmR analysis
+- Support for Xbar, S, X, and mR charts
+- Stratified X analysis
 
 #### Signal Detection
 - Western Electric rules 1-8
@@ -145,7 +146,7 @@ If you were using a pre-release version, note these changes:
 #### API Changes
 ```python
 # Old (pre-release)
-result = pb.analyze(response_var='weight', chart_type='XmR').calculate()
+result = pb.analyze(response_var='weight', chart_type='X').calculate()
 
 # New (v0.1.0)
 study = pb.formulate(response=pb.cols.weight)

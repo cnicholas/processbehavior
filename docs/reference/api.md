@@ -86,7 +86,7 @@ ProcessBehavior tracks three Design States for traceability. The **Analytical De
 - `.ads_description`: ADS-derived human prose description (e.g., `'Full replication (all cells n>=2)'`)
 
 **Properties - Charts:**
-- `.valid_charts`: List of valid chart types (e.g., `['Histogram', 'Xbar', 'S', 'XmR', 'R']`)
+- `.valid_charts`: List of valid chart types (e.g., `['Histogram', 'Xbar', 'S', 'X', 'mR']`)
 - `.recommended_chart`: Best chart for this DS
 - `.charts`: Accessor for valid chart types (e.g., `study.charts.Xbar`)
 - `.residuals`: Accessor for available residuals (e.g., `study.residuals.R2`)
@@ -102,12 +102,12 @@ ProcessBehavior tracks three Design States for traceability. The **Analytical De
 
 ```python
 result = study.execute(
-    chart: str = None,           # Chart type: 'Xbar', 'S', 'XmR', 'R', 'Histogram'
+    chart: str = None,           # Chart type: 'Xbar', 'S', 'X', 'mR', 'Histogram'
     by: list[str] = None,        # Grouping/stratification (subset of factors)
     value: str = None,           # What to chart: None (response) or 'R1'-'R6'
     recentered: bool = False,    # Re-center residuals on original scale
     bins: int = None,            # Number of bins for histogram charts
-    companion: bool = False,     # Return companion charts (Xbar+S or XmR+R)
+    companion: bool = False,     # Return companion charts (Xbar+S or X+mR)
     phased: bool = False,        # Per-phase control limits for collapsed factors
     n_sigma: float = 3.0,        # Sigma multiplier for limit calculation
     n_mode: str = "actual"       # Subgroup size mode: 'actual' or 'average'
@@ -116,9 +116,9 @@ result = study.execute(
 
 **Parameters:**
 
-- `chart`: Base chart type. One of `'Xbar'`, `'S'`, `'XmR'`, `'R'`, `'Histogram'`.
+- `chart`: Base chart type. One of `'Xbar'`, `'S'`, `'X'`, `'mR'`, `'Histogram'`.
 - `by`: Controls grouping/stratification:
-  - `None`: Default for chart type (full factors for Xbar/S, required for XmR with factors)
+  - `None`: Default for chart type (full factors for Xbar/S, required for X with factors)
   - `[]`: Collapse all factors
   - `['factor']`: Aggregate/stratify by single factor
   - `['f1', 'f2']`: Aggregate/stratify by multiple factors
@@ -127,7 +127,7 @@ result = study.execute(
   - `'R1'` to `'R6'`: Chart the specified VAS residual
 - `recentered`: If True and using residuals, re-center on original scale
 - `bins`: Number of bins for histogram charts
-- `companion`: If True, returns both charts in a pair (Xbar+S or XmR+R). Either chart in the pair triggers the pair (e.g., `chart='S', companion=True` returns Xbar+S)
+- `companion`: If True, returns both charts in a pair (Xbar+S or X+mR). Either chart in the pair triggers the pair (e.g., `chart='S', companion=True` returns Xbar+S)
 - `phased`: If True, calculate separate control limits for each phase (contiguous runs of the same rational subgroup key) when factors are collapsed via `by`
 - `n_sigma`: Sigma multiplier for control limit calculation (default 3.0)
 - `n_mode`: Subgroup size mode — `'actual'` uses each subgroup's actual n, `'average'` uses the average n across all subgroups
@@ -141,14 +141,14 @@ result = study.execute(chart='Xbar')
 # Xbar chart aggregated by single factor
 result = study.execute(chart='Xbar', by=['factor 1'])
 
-# XmR chart stratified by factor (one chart per level)
-result = study.execute(chart='XmR', by=['lane'])
+# X chart stratified by factor (one chart per level)
+result = study.execute(chart='X', by=['lane'])
 
 # Chart R5 residuals on Xbar
 result = study.execute(chart='Xbar', value='R5')
 
-# Recentered R4 residuals on stratified XmR
-result = study.execute(chart='XmR', by=['lane'], value='R4', recentered=True)
+# Recentered R4 residuals on stratified X
+result = study.execute(chart='X', by=['lane'], value='R4', recentered=True)
 ```
 
 #### why_not()
@@ -560,7 +560,7 @@ Valid chart type strings:
 
 ```python
 # Standard charts
-'Xbar', 'S', 'XmR', 'R'
+'Xbar', 'S', 'X', 'mR'
 
 # Effects and interaction charts (passed to result.plot())
 'Effects'            # All main effects (factor + time) combined
@@ -576,16 +576,16 @@ To chart residuals, use the `value` parameter:
 # Chart R5 residuals on Xbar
 study.execute(chart='Xbar', value='R5')
 
-# Chart R4 residuals on stratified XmR
-study.execute(chart='XmR', by=['lane'], value='R4')
+# Chart R4 residuals on stratified X
+study.execute(chart='X', by=['lane'], value='R4')
 ```
 
 For stratified charts, use the `by` parameter:
 
 ```python
 # Stratify by single factor
-result = study.execute(chart='XmR', by=['lane'])
-# Access strata: result.charts['XmR']['strata']  # ['A', 'B', 'C', 'D']
+result = study.execute(chart='X', by=['lane'])
+# Access strata: result.charts['X']['strata']  # ['A', 'B', 'C', 'D']
 ```
 
 ### Rule Types

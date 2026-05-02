@@ -1,6 +1,6 @@
 """Tests for chart name parsing in Study._parse_chart_request().
 
-The parser now only accepts base chart types (Xbar, S, XmR, R).
+The parser now only accepts base chart types (Xbar, S, X, mR).
 Residual charts are specified via the `value` parameter:
   study.execute(chart='Xbar', value='R5')  # instead of chart='R5_Xbar'
 """
@@ -37,13 +37,13 @@ class TestBaseCharts:
         base_chart = study._parse_chart_request("S")
         assert base_chart == "S"
 
-    def test_xmr(self, study):
-        base_chart = study._parse_chart_request("XmR")
-        assert base_chart == "XmR"
+    def test_x(self, study):
+        base_chart = study._parse_chart_request("X")
+        assert base_chart == "X"
 
-    def test_r(self, study):
-        base_chart = study._parse_chart_request("R")
-        assert base_chart == "R"
+    def test_mr(self, study):
+        base_chart = study._parse_chart_request("mR")
+        assert base_chart == "mR"
 
 
 class TestCaseInsensitiveChartNames:
@@ -53,17 +53,23 @@ class TestCaseInsensitiveChartNames:
         ("xbar", "Xbar"),
         ("XBAR", "Xbar"),
         ("Xbar", "Xbar"),
-        ("xmr", "XmR"),
-        ("Xmr", "XmR"),
-        ("XMR", "XmR"),
-        ("XmR", "XmR"),
+        ("x", "X"),
+        ("X", "X"),
+        ("mr", "mR"),
+        ("MR", "mR"),
+        ("mR", "mR"),
         ("s", "S"),
-        ("r", "R"),
         ("histogram", "Histogram"),
         ("HISTOGRAM", "Histogram"),
     ])
     def test_parse_chart_request_case_insensitive(self, study, input_name, expected):
         assert study._parse_chart_request(input_name) == expected
+
+    @pytest.mark.parametrize("removed_name", ["xmr", "XmR", "Xmr", "XMR", "r", "R"])
+    def test_removed_chart_names_raise_helpful_error(self, study, removed_name):
+        """Old chart names (XmR, R) should raise ValueError with migration guidance."""
+        with pytest.raises(ValueError):
+            study._parse_chart_request(removed_name)
 
 
 class TestOldSyntaxRaisesError:
@@ -79,10 +85,10 @@ class TestOldSyntaxRaisesError:
         with pytest.raises(ValidationError, match="no longer supported"):
             study._parse_chart_request("R2_S")
 
-    def test_r4_xmr_old_syntax(self, study):
-        """Old R4_XmR syntax should error with migration guidance."""
+    def test_r4_x_old_syntax(self, study):
+        """Old R4_X syntax should error with migration guidance."""
         with pytest.raises(ValidationError, match="no longer supported"):
-            study._parse_chart_request("R4_XmR")
+            study._parse_chart_request("R4_X")
 
     def test_rcr5_xbar_old_syntax(self, study):
         """Old RCR5_Xbar syntax should error with migration guidance."""

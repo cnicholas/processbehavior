@@ -47,14 +47,14 @@ class TestRecenteredXmRLimits:
     def test_xmr_limit_width_matches(self, sds2_study, residual):
         """Limit half-width must be identical with and without recentering."""
         result_plain = sds2_study.execute(
-            chart='XmR', value=residual, by=[],
+            chart='X', value=residual, by=[],
         )
         result_rc = sds2_study.execute(
-            chart='XmR', value=residual, by=[], recentered=True,
+            chart='X', value=residual, by=[], recentered=True,
         )
 
-        stats_plain = result_plain.charts['XmR']['statistics']
-        stats_rc = result_rc.charts['XmR']['statistics']
+        stats_plain = result_plain.charts['X']['statistics']
+        stats_rc = result_rc.charts['X']['statistics']
 
         width_plain = stats_plain['upl'] - stats_plain['lpl']
         width_rc = stats_rc['upl'] - stats_rc['lpl']
@@ -67,9 +67,9 @@ class TestRecenteredXmRLimits:
     def test_xmr_r3_reference_values(self, sds2_study):
         """SDS 2, PM2, R3, by=[], XmR recentered: match Tom's Minitab values."""
         result = sds2_study.execute(
-            chart='XmR', value='R3', by=[], recentered=True,
+            chart='X', value='R3', by=[], recentered=True,
         )
-        stats = result.charts['XmR']['statistics']
+        stats = result.charts['X']['statistics']
 
         # Tom's reference: CL=237.79, LPL=233.94, UPL=241.63, half-width=3.85
         assert stats['center'] == pytest.approx(237.79, abs=0.1)
@@ -84,14 +84,14 @@ class TestRecenteredRChart:
     def test_r_chart_limits_match(self, sds2_study, residual):
         """R chart CL/UPL must be identical with and without recentering."""
         result_plain = sds2_study.execute(
-            chart='XmR', value=residual, by=[], companion=True,
+            chart='X', value=residual, by=[], companion=True,
         )
         result_rc = sds2_study.execute(
-            chart='XmR', value=residual, by=[], companion=True, recentered=True,
+            chart='X', value=residual, by=[], companion=True, recentered=True,
         )
 
-        r_stats_plain = result_plain.charts['R']['statistics']
-        r_stats_rc = result_rc.charts['R']['statistics']
+        r_stats_plain = result_plain.charts['mR']['statistics']
+        r_stats_rc = result_rc.charts['mR']['statistics']
 
         assert r_stats_plain['center'] == pytest.approx(r_stats_rc['center'], abs=0.01)
         assert r_stats_plain['upl'] == pytest.approx(r_stats_rc['upl'], abs=0.01)
@@ -100,9 +100,9 @@ class TestRecenteredRChart:
     def test_r_chart_r3_reference_values(self, sds2_study):
         """R chart reference values: CL=1.440, UPL=4.720, LPL=0."""
         result = sds2_study.execute(
-            chart='XmR', value='R3', by=[], companion=True,
+            chart='X', value='R3', by=[], companion=True,
         )
-        r_stats = result.charts['R']['statistics']
+        r_stats = result.charts['mR']['statistics']
 
         assert r_stats['center'] == pytest.approx(1.440, abs=0.01)
         assert r_stats['upl'] == pytest.approx(4.720, abs=0.05)
@@ -115,14 +115,14 @@ class TestRecenteredStratified:
     def test_stratified_xmr_width_matches(self, sds2_study):
         """Stratified by=['FACTOR 1']: limit width identical with recentering."""
         result_plain = sds2_study.execute(
-            chart='XmR', value='R3', by=['FACTOR 1'],
+            chart='X', value='R3', by=['FACTOR 1'],
         )
         result_rc = sds2_study.execute(
-            chart='XmR', value='R3', by=['FACTOR 1'], recentered=True,
+            chart='X', value='R3', by=['FACTOR 1'], recentered=True,
         )
 
-        xmr_plain = result_plain.charts['XmR']
-        xmr_rc = result_rc.charts['XmR']
+        xmr_plain = result_plain.charts['X']
+        xmr_rc = result_rc.charts['X']
 
         # Both should be stratified
         assert xmr_plain['metadata']['stratified'] is True
@@ -169,8 +169,8 @@ class TestNonRecenteredUnchanged:
 
     def test_non_recentered_xmr_unchanged(self, sds2_study):
         """Default (recentered=False) XmR should be byte-for-byte stable."""
-        result = sds2_study.execute(chart='XmR', value='R3', by=[])
-        stats = result.charts['XmR']['statistics']
+        result = sds2_study.execute(chart='X', value='R3', by=[])
+        stats = result.charts['X']['statistics']
 
         # These are known-good values from before the fix
         half_width = (stats['upl'] - stats['lpl']) / 2

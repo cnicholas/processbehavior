@@ -25,8 +25,8 @@ DS detection runs on raw data before NA rows are dropped, so cells where all res
 | DS | Name | Cell Sizes (N_kt) | Recommended Chart |
 |-----|------|--------------------|-------------------|
 | 1 | Full Replication | All N_kt >= 2 | Xbar |
-| 2 | No Replication | All N_kt = 1 | XmR |
-| 3 | Partial Replication | Mix of N_kt = 1 and N_kt >= 2 | XmR |
+| 2 | No Replication | All N_kt = 1 | X |
+| 3 | Partial Replication | Mix of N_kt = 1 and N_kt >= 2 | X |
 
 **Incomplete (has empty cells — detected on raw data before cleansing):**
 
@@ -220,7 +220,7 @@ The design report shows:
 - ✅ Full interaction analysis
 - ✅ Most powerful statistical tests
 
-**Valid Charts**: Xbar, S, XmR + residual charts (R2 via S, R3-R5 via Xbar/S)
+**Valid Charts**: Xbar, S, X + residual charts (R2 via S, R3-R5 via Xbar/S)
 
 ## DS 2: No Replication
 
@@ -241,7 +241,7 @@ The design report shows:
 - ✅ Main effects analysis
 - ✅ Xbar-S analysis (with MR-based limits)
 
-**Valid Charts**: Xbar, S, XmR
+**Valid Charts**: Xbar, S, X
 
 ## DS 3: Partial Replication
 
@@ -261,10 +261,10 @@ The design report shows:
 - ⚠️ VAS residuals available but interpretation requires care
 - ✅ Xbar-S analysis with hybrid limits
 
-**Valid Charts**: Histogram, Xbar, S, XmR, R
+**Valid Charts**: Histogram, Xbar, S, X, mR
 
 !!! note "Why Mixed is treated conservatively"
-    For R2 calculation, DS 3 uses the hybrid method: exact within-cell deviation where cells have n >= 2, and the ma2 (moving average) method where cells have n = 1. This conservative approach was validated by Monte Carlo simulation — it produces more reliable variance estimates than attempting to use only the replicated cells. The recommended chart is XmR (not Xbar) because the mixed replication makes subgroup-mean interpretation less straightforward.
+    For R2 calculation, DS 3 uses the hybrid method: exact within-cell deviation where cells have n >= 2, and the ma2 (moving average) method where cells have n = 1. This conservative approach was validated by Monte Carlo simulation — it produces more reliable variance estimates than attempting to use only the replicated cells. The recommended chart is X (not Xbar) because the mixed replication makes subgroup-mean interpretation less straightforward.
 
 ## DS 4: Incomplete, No Singletons
 
@@ -274,7 +274,7 @@ The design report shows:
 
 **After cleansing**: Collapses to **ADS 1** (Full Replication) — the empty cells are removed and all remaining cells have full replication.
 
-**Valid Charts**: Histogram, XmR, R (plus Xbar, S after collapse to ADS 1)
+**Valid Charts**: Histogram, X, mR (plus Xbar, S after collapse to ADS 1)
 
 ## DS 5: Incomplete, No Replication
 
@@ -284,7 +284,7 @@ The design report shows:
 
 **After cleansing**: Collapses to **ADS 2** (No Replication) — the empty cells are removed, leaving an unreplicated structure.
 
-**Valid Charts**: Histogram, XmR, R (plus Xbar, S after collapse to ADS 2)
+**Valid Charts**: Histogram, X, mR (plus Xbar, S after collapse to ADS 2)
 
 ## DS 6: Incomplete, With Singletons
 
@@ -294,7 +294,7 @@ The design report shows:
 
 **After cleansing**: Collapses to **ADS 3** (Partial Replication) — the empty cells are removed, leaving a mixed-replication structure.
 
-**Valid Charts**: Histogram, XmR, R (plus Xbar, S after collapse to ADS 3)
+**Valid Charts**: Histogram, X, mR (plus Xbar, S after collapse to ADS 3)
 
 ## From Observation to Analysis: ODS → ADS
 
@@ -364,7 +364,7 @@ The R2 method is determined by the tidy data structure (ADS), not the raw DS:
 
 #### Standard Charts
 
-| DS | Xbar-S | Stratified XmR |
+| DS | Xbar-S | Stratified X |
 |-----|--------|----------------|
 | 1 | ✅ | ✅ |
 | 2 | ✅ (MR-based limits) | ✅ |
@@ -377,14 +377,14 @@ The R2 method is determined by the tidy data structure (ADS), not the raw DS:
 
 The available chart types for each residual depend on the **rational subgrouping structure**:
 
-| Residual | Subgrouping | Xbar/S Available | XmR Available |
+| Residual | Subgrouping | Xbar/S Available | X Available |
 |----------|-------------|------------------|---------------|
 | **R2** | By cell (k,t) | DS 1, 3, 4, 6* | All DS |
 | **R3** | By cell (k,t) | DS 1, 3, 4, 6* | All DS |
 | **R4** | By time (aggregate across factors) | All DS | All DS |
 | **R5** | By factor (aggregate across time) | All DS | All DS |
 
-*When cells have n≥2. DS 2 and 5 use XmR only.
+*When cells have n≥2. DS 2 and 5 use X only.
 
 **Key insight**: R4 and R5 use different rational subgrouping than R2/R3:
 - **R4**: Aggregates observations across factor levels for each time point (N_.t = Σ_k N_kt)
@@ -402,7 +402,7 @@ This enables Xbar/S analysis for R4 and R5 even when individual cells have n=1, 
 | DS | Applicable Rules |
 |-----|-----------------|
 | 1-3 (Xbar/S) | Rule 1 only |
-| 1-6 (XmR) | All 8 rules |
+| 1-6 (X) | All 8 rules |
 
 ## Improving Your DS
 
@@ -464,11 +464,11 @@ print(cell_counts['n'].value_counts())
 | If You Have... | ODS | ADS (after cleansing) | Best Approach |
 |----------------|-----|-----------------------|---------------|
 | Full replication (n>=2 per cell) | 1 | 1 | Xbar with full VAS |
-| One observation per cell | 2 | 2 | XmR with MA2-based R2 |
-| Mixed replication | 3 | 3 | XmR with hybrid R2 |
+| One observation per cell | 2 | 2 | X with MA2-based R2 |
+| Mixed replication | 3 | 3 | X with hybrid R2 |
 | Incomplete grid, all observed replicated | 4 | 1 | Xbar with full VAS |
-| Incomplete grid, all observed n=1 | 5 | 2 | XmR with MA2-based R2 |
-| Incomplete grid, mixed observed | 6 | 3 | XmR with hybrid R2 |
+| Incomplete grid, all observed n=1 | 5 | 2 | X with MA2-based R2 |
+| Incomplete grid, mixed observed | 6 | 3 | X with hybrid R2 |
 
 ## Next Steps
 

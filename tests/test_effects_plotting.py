@@ -98,7 +98,7 @@ def result_no_time():
         response=pdf.cols.value,
         factors=[pdf.cols.factor1]
     )
-    return study.execute(chart='XmR', by=['factor1'])
+    return study.execute(chart='X', by=['factor1'])
 
 
 @pytest.fixture
@@ -530,7 +530,7 @@ class TestEffectsPottingDifferentSDS:
             factors=[pdf.cols.factor1, pdf.cols.factor2],
             time=pdf.cols.time
         )
-        result = study.execute(chart='XmR', by=['factor1', 'factor2'])
+        result = study.execute(chart='X', by=['factor1', 'factor2'])
 
         assert result.analytical_sds == 2
         assert result.has_effects

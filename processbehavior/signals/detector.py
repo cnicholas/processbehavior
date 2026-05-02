@@ -91,7 +91,7 @@ class SignalDetector:
         chart_name : str, default 'Chart'
             Name of chart for reporting
         chart_type : str, default 'Xbar'
-            Chart type ('Xbar', 'S', 'XmR', 'R') - determines applicable rules
+            Chart type ('Xbar', 'S', 'X', 'mR') - determines applicable rules
 
         Returns
         -------
@@ -101,7 +101,7 @@ class SignalDetector:
         Examples
         --------
         >>> detector = SignalDetector()
-        >>> signals = detector.detect(chart_data, chart_stats, chart_type='XmR')
+        >>> signals = detector.detect(chart_data, chart_stats, chart_type='X')
         >>> print(signals.summary)
         """
         config = config or SignalConfig()

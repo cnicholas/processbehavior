@@ -36,7 +36,7 @@ def sds1_stratified_xmr_result():
     study = ProcessBehavior(df).formulate(
         response='y', time='time', factors=['factor 1', 'factor 2'],
     )
-    return study.execute(chart='XmR', by=['factor 1'])
+    return study.execute(chart='X', by=['factor 1'])
 
 
 @pytest.fixture(scope='module')
@@ -51,7 +51,7 @@ def sds4_xmr_result():
     study = ProcessBehavior(df).formulate(
         response='y', time='time', factors=['group'],
     )
-    return study.execute(chart='XmR', by=['group'])
+    return study.execute(chart='X', by=['group'])
 
 
 # ============================================================================
@@ -100,7 +100,7 @@ class TestChartTable:
 
     def test_xmr_no_subgroup_col(self, sds4_xmr_result):
         """SDS 4 (no factors) chart_table should work without subgroup column."""
-        table = sds4_xmr_result.chart_table('XmR')
+        table = sds4_xmr_result.chart_table('X')
         assert isinstance(table, pd.DataFrame)
         assert len(table) > 0
         assert 'value' in table.columns
@@ -129,7 +129,7 @@ class TestGetStatistics:
 
     def test_stratified_returns_nested_dict(self, sds1_stratified_xmr_result):
         """Stratified result should return dict keyed by stratum."""
-        stats = sds1_stratified_xmr_result.get_statistics('XmR')
+        stats = sds1_stratified_xmr_result.get_statistics('X')
         assert isinstance(stats, dict)
         # Should be nested — values are dicts, not scalars
         strata = sds1_stratified_xmr_result.strata

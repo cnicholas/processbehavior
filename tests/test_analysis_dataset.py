@@ -28,7 +28,7 @@ from conftest import make_spec, make_request, detect_sds_for_test
 
 @pytest.fixture
 def analysis_types():
-    return ['Xbar', 'S', 'XmR', 'R']
+    return ['Xbar', 'S', 'X', 'mR']
 
 
 @pytest.fixture
@@ -169,7 +169,7 @@ class TestXmRAnalysis:
     def test_xmr_with_grouping(self, df):
         """Test stratified XmR analysis with grouping."""
         spec = {
-            'analysis_type': 'XmR',
+            'analysis_type': 'X',
             'rsg_vars': ['a', 'b'],
             'time_var': 'd',
             'response_var': 'c',
@@ -183,10 +183,10 @@ class TestXmRAnalysis:
         # SRP: XmR only returns XmR (no longer bundled with R by default)
         assert hasattr(result, 'keys') and hasattr(result, 'values')
         keys = list(result.keys())
-        assert 'XmR' in keys
+        assert 'X' in keys
 
         # Check that XmR chart has strata
-        xmr_chart = result['XmR']
+        xmr_chart = result['X']
         assert 'strata' in xmr_chart
         # Third group only had 1 obs so should be dropped
         strata = xmr_chart['strata']
@@ -209,7 +209,7 @@ class TestXmRAnalysis:
     def test_xmr_with_grouping_companion(self, df):
         """Test XmR chart with grouping returns both XmR and R when companion=True."""
         spec = {
-            'analysis_type': 'XmR',
+            'analysis_type': 'X',
             'rsg_vars': ['a', 'b'],
             'time_var': 'd',
             'response_var': 'c',
@@ -222,11 +222,11 @@ class TestXmRAnalysis:
 
         # Companion mode: XmR and R are bundled together
         keys = list(result.keys())
-        assert 'XmR' in keys
-        assert 'R' in keys
+        assert 'X' in keys
+        assert 'mR' in keys
 
         # Check R chart is present with nested statistics
-        r_chart = result['R']
+        r_chart = result['mR']
         assert 'strata' in r_chart
         assert 'a_c' in r_chart['strata']
         assert 'b_d' in r_chart['strata']
@@ -242,7 +242,7 @@ class TestRChartAnalysis:
     def test_r_with_grouping(self, df):
         """Test R chart with grouping variable (SRP: R only)."""
         spec = {
-            'analysis_type': 'R',
+            'analysis_type': 'mR',
             'rsg_vars': ['a', 'b'],
             'time_var': 'd',
             'response_var': 'c',
@@ -255,10 +255,10 @@ class TestRChartAnalysis:
         # SRP: R only returns R (no longer bundled with XmR by default)
         assert hasattr(result, "keys") and hasattr(result, "values")
         keys = list(result.keys())
-        assert 'R' in keys
+        assert 'mR' in keys
 
         # Check that R chart has strata
-        r_chart = result['R']
+        r_chart = result['mR']
         assert 'strata' in r_chart
         strata = r_chart['strata']
         # Third group had 1 obs and should be dropped
@@ -284,7 +284,7 @@ class TestRChartAnalysis:
         df = pd.read_csv(f_path)
 
         spec = {
-            'analysis_type': 'R',
+            'analysis_type': 'mR',
             'rsg_vars': ['lane', 'phase'],
             'response_var': 'fill_weight',
             'rsg_var_name': 'rsg',
@@ -296,10 +296,10 @@ class TestRChartAnalysis:
 
         # SRP: R only returns R
         assert hasattr(result, "keys") and hasattr(result, "values")
-        assert 'R' in result
+        assert 'mR' in result
 
         # Strata are nested inside each chart
-        r_chart = result['R']
+        r_chart = result['mR']
         assert 'strata' in r_chart
         assert len(r_chart['strata']) == 8  # 8 lane-phase combinations
 
@@ -335,7 +335,7 @@ class TestDateTimeHandling:
             sds = detect_sds_for_test(df_dt, spec)
             result = Analysis(spec=make_spec(spec), request=make_request(spec), sds=sds, df=df_dt).calculate()
 
-            if analysis in ['XmR', 'R']:
+            if analysis in ['X', 'mR']:
                 # SRP: Each chart type returns only itself
                 out = result[analysis]['data']
                 assert out.columns.tolist()[0] == has_time
@@ -343,7 +343,7 @@ class TestDateTimeHandling:
     def test_string_date_converted_and_sorted(self, df_dt):
         """Test that string date columns are converted and sorted chronologically."""
         spec = {
-            'analysis_type': 'XmR',
+            'analysis_type': 'X',
             'rsg_vars': ['a', 'b'],
             'time_var': 'd2',
             'response_var': 'c',
@@ -354,7 +354,7 @@ class TestDateTimeHandling:
         result = Analysis(spec=make_spec(spec), request=make_request(spec), sds=sds, df=df_dt).calculate()
 
         # With new bundled structure, access via chart type key
-        xmr_data = result['XmR']['data']
+        xmr_data = result['X']['data']
 
         # String dates should be converted to datetime
         o_type = xmr_data['d2'].dtype

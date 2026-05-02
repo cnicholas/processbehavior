@@ -1,10 +1,10 @@
-"""Tests for SRP refactor of Xbar/S and XmR/R chart calculation.
+"""Tests for SRP refactor of Xbar/S and X/mR chart calculation.
 
 These tests verify that the `companion` parameter works correctly and that
 the refactored chart methods follow Single Responsibility Principle.
 
 Issue #69 Phase 1: Xbar/S SRP Refactor
-Issue #69 Phase 2: XmR/R SRP Refactor
+Issue #69 Phase 2: X/mR SRP Refactor
 """
 
 import pandas as pd
@@ -70,24 +70,24 @@ class TestSRPCompliance:
         assert 'Xbar' not in result.charts
 
     def test_calculate_xmr_returns_only_xmr(self, sds1_study):
-        """XmR chart should return only XmR data when companion=False."""
-        result = sds1_study.execute(chart='XmR', by=[])
+        """X chart should return only X data when companion=False."""
+        result = sds1_study.execute(chart='X', by=[])
 
-        # Should have XmR
-        assert 'XmR' in result.charts
+        # Should have X
+        assert 'X' in result.charts
 
-        # Should NOT have R (SRP compliance)
-        assert 'R' not in result.charts
+        # Should NOT have mR (SRP compliance)
+        assert 'mR' not in result.charts
 
     def test_calculate_r_returns_only_r(self, sds1_study):
-        """R chart should return only R data when companion=False."""
-        result = sds1_study.execute(chart='R', by=[])
+        """mR chart should return only mR data when companion=False."""
+        result = sds1_study.execute(chart='mR', by=[])
 
-        # Should have R
-        assert 'R' in result.charts
+        # Should have mR
+        assert 'mR' in result.charts
 
-        # Should NOT have XmR (SRP compliance)
-        assert 'XmR' not in result.charts
+        # Should NOT have X (SRP compliance)
+        assert 'X' not in result.charts
 
 
 # =============================================================================
@@ -114,20 +114,20 @@ class TestCompanionBehavior:
         assert 'S' in result.charts
 
     def test_companion_xmr_returns_both_charts(self, sds1_study):
-        """With companion=True, requesting XmR should return both XmR and R."""
-        result = sds1_study.execute(chart='XmR', by=[], companion=True)
+        """With companion=True, requesting X should return both X and mR."""
+        result = sds1_study.execute(chart='X', by=[], companion=True)
 
         # Should have both charts
-        assert 'XmR' in result.charts
-        assert 'R' in result.charts
+        assert 'X' in result.charts
+        assert 'mR' in result.charts
 
     def test_companion_r_returns_both_charts(self, sds1_study):
-        """With companion=True, requesting R should return both XmR and R."""
-        result = sds1_study.execute(chart='R', by=[], companion=True)
+        """With companion=True, requesting mR should return both X and mR."""
+        result = sds1_study.execute(chart='mR', by=[], companion=True)
 
         # Should have both charts
-        assert 'XmR' in result.charts
-        assert 'R' in result.charts
+        assert 'X' in result.charts
+        assert 'mR' in result.charts
 
 
 # =============================================================================
@@ -186,12 +186,12 @@ class TestConsistency:
         assert stats_solo == stats_companion
 
     def test_xmr_data_identical_companion_vs_uncompanioned(self, sds1_study):
-        """XmR data should be identical whether calculated alone or with R."""
-        result_solo = sds1_study.execute(chart='XmR', by=[])
-        result_companion = sds1_study.execute(chart='XmR', by=[], companion=True)
+        """X data should be identical whether calculated alone or with mR."""
+        result_solo = sds1_study.execute(chart='X', by=[])
+        result_companion = sds1_study.execute(chart='X', by=[], companion=True)
 
-        xmr_solo = result_solo.charts['XmR']['data']
-        xmr_companion = result_companion.charts['XmR']['data']
+        xmr_solo = result_solo.charts['X']['data']
+        xmr_companion = result_companion.charts['X']['data']
 
         pd.testing.assert_frame_equal(
             xmr_solo.reset_index(drop=True),
@@ -200,22 +200,22 @@ class TestConsistency:
         )
 
     def test_xmr_statistics_identical_companion_vs_uncompanioned(self, sds1_study):
-        """XmR statistics should be identical whether calculated alone or with R."""
-        result_solo = sds1_study.execute(chart='XmR', by=[])
-        result_companion = sds1_study.execute(chart='XmR', by=[], companion=True)
+        """X statistics should be identical whether calculated alone or with mR."""
+        result_solo = sds1_study.execute(chart='X', by=[])
+        result_companion = sds1_study.execute(chart='X', by=[], companion=True)
 
-        stats_solo = result_solo.charts['XmR']['statistics']
-        stats_companion = result_companion.charts['XmR']['statistics']
+        stats_solo = result_solo.charts['X']['statistics']
+        stats_companion = result_companion.charts['X']['statistics']
 
         assert stats_solo == stats_companion
 
     def test_r_data_identical_companion_vs_independent(self, sds1_study):
-        """R data should be identical whether calculated via companion or independently."""
-        result_solo = sds1_study.execute(chart='R', by=[])
-        result_companion = sds1_study.execute(chart='R', by=[], companion=True)
+        """mR data should be identical whether calculated via companion or independently."""
+        result_solo = sds1_study.execute(chart='mR', by=[])
+        result_companion = sds1_study.execute(chart='mR', by=[], companion=True)
 
-        r_solo = result_solo.charts['R']['data']
-        r_companion = result_companion.charts['R']['data']
+        r_solo = result_solo.charts['mR']['data']
+        r_companion = result_companion.charts['mR']['data']
 
         pd.testing.assert_frame_equal(
             r_solo.reset_index(drop=True),
@@ -224,12 +224,12 @@ class TestConsistency:
         )
 
     def test_r_statistics_identical_companion_vs_independent(self, sds1_study):
-        """R statistics should be identical whether calculated via companion or independently."""
-        result_solo = sds1_study.execute(chart='R', by=[])
-        result_companion = sds1_study.execute(chart='R', by=[], companion=True)
+        """mR statistics should be identical whether calculated via companion or independently."""
+        result_solo = sds1_study.execute(chart='mR', by=[])
+        result_companion = sds1_study.execute(chart='mR', by=[], companion=True)
 
-        stats_solo = result_solo.charts['R']['statistics']
-        stats_companion = result_companion.charts['R']['statistics']
+        stats_solo = result_solo.charts['mR']['statistics']
+        stats_companion = result_companion.charts['mR']['statistics']
 
         assert stats_solo == stats_companion
 
@@ -251,13 +251,13 @@ class TestDefaultBehavior:
         assert 'S' not in result.charts
 
     def test_companion_false_is_default_xmr(self, sds1_study):
-        """Default behavior should be companion=False (SRP-compliant) for XmR."""
+        """Default behavior should be companion=False (SRP-compliant) for X."""
         # Execute without specifying companion
-        result = sds1_study.execute(chart='XmR', by=[])
+        result = sds1_study.execute(chart='X', by=[])
 
-        # Should only have XmR (default is companion=False)
-        assert 'XmR' in result.charts
-        assert 'R' not in result.charts
+        # Should only have X (default is companion=False)
+        assert 'X' in result.charts
+        assert 'mR' not in result.charts
 
     def test_histogram_rejects_companion(self, sds1_study):
         """Histogram should reject companion parameter (no companion histogram)."""
@@ -307,66 +307,66 @@ class TestEdgeCases:
         assert len(xbar_data) == len(s_data)
 
     def test_xmr_srp_stratified(self, sds1_study):
-        """XmR SRP should work correctly with stratification (by parameter)."""
+        """X SRP should work correctly with stratification (by parameter)."""
         # Stratify by all factors
-        result = sds1_study.execute(chart='XmR', by=['factor 1', 'factor 2'])
+        result = sds1_study.execute(chart='X', by=['factor 1', 'factor 2'])
 
-        # Should have XmR only
-        assert 'XmR' in result.charts
-        assert 'R' not in result.charts
+        # Should have X only
+        assert 'X' in result.charts
+        assert 'mR' not in result.charts
 
         # Should have strata metadata
-        assert 'strata' in result.charts['XmR']
+        assert 'strata' in result.charts['X']
 
     def test_xmr_srp_ungrouped(self, sds1_study):
-        """XmR SRP should work correctly without stratification (by=[])."""
-        result = sds1_study.execute(chart='XmR', by=[])
+        """X SRP should work correctly without stratification (by=[])."""
+        result = sds1_study.execute(chart='X', by=[])
 
-        # Should have XmR only
-        assert 'XmR' in result.charts
-        assert 'R' not in result.charts
+        # Should have X only
+        assert 'X' in result.charts
+        assert 'mR' not in result.charts
 
         # Should NOT have strata (ungrouped)
-        assert 'strata' not in result.charts['XmR']
+        assert 'strata' not in result.charts['X']
 
     def test_r_srp_stratified(self, sds1_study):
-        """R SRP should work correctly with stratification."""
+        """mR SRP should work correctly with stratification."""
         # Stratify by all factors
-        result = sds1_study.execute(chart='R', by=['factor 1', 'factor 2'])
+        result = sds1_study.execute(chart='mR', by=['factor 1', 'factor 2'])
 
-        # Should have R only
-        assert 'R' in result.charts
-        assert 'XmR' not in result.charts
+        # Should have mR only
+        assert 'mR' in result.charts
+        assert 'X' not in result.charts
 
         # Should have strata metadata
-        assert 'strata' in result.charts['R']
+        assert 'strata' in result.charts['mR']
 
     def test_r_srp_ungrouped(self, sds1_study):
-        """R SRP should work correctly without stratification."""
-        result = sds1_study.execute(chart='R', by=[])
+        """mR SRP should work correctly without stratification."""
+        result = sds1_study.execute(chart='mR', by=[])
 
-        # Should have R only
-        assert 'R' in result.charts
-        assert 'XmR' not in result.charts
+        # Should have mR only
+        assert 'mR' in result.charts
+        assert 'X' not in result.charts
 
     def test_companion_xmr_with_stratification(self, sds1_study):
-        """Companion XmR/R should work with stratification."""
-        result = sds1_study.execute(chart='XmR', by=['factor 1', 'factor 2'], companion=True)
+        """Companion X/mR should work with stratification."""
+        result = sds1_study.execute(chart='X', by=['factor 1', 'factor 2'], companion=True)
 
         # Should have both charts
-        assert 'XmR' in result.charts
-        assert 'R' in result.charts
+        assert 'X' in result.charts
+        assert 'mR' in result.charts
 
         # Both should have strata
-        assert 'strata' in result.charts['XmR']
-        assert 'strata' in result.charts['R']
+        assert 'strata' in result.charts['X']
+        assert 'strata' in result.charts['mR']
 
     def test_companion_xmr_and_r_have_consistent_strata(self, sds1_study):
-        """When companion, XmR and R should have the same strata."""
-        result = sds1_study.execute(chart='XmR', by=['factor 1', 'factor 2'], companion=True)
+        """When companion, X and mR should have the same strata."""
+        result = sds1_study.execute(chart='X', by=['factor 1', 'factor 2'], companion=True)
 
-        xmr_strata = result.charts['XmR']['strata']
-        r_strata = result.charts['R']['strata']
+        xmr_strata = result.charts['X']['strata']
+        r_strata = result.charts['mR']['strata']
 
         # Should have same strata
         assert xmr_strata == r_strata

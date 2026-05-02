@@ -265,11 +265,11 @@ class TestValidation:
 
     def test_xmr_n_sigma_raises(self, xmr_study):
         with pytest.raises(ValidationError, match="only supported for Xbar/S"):
-            xmr_study.execute(chart='XmR', by=[], n_sigma=2.0)
+            xmr_study.execute(chart='X', by=[], n_sigma=2.0)
 
     def test_xmr_n_mode_raises(self, xmr_study):
         with pytest.raises(ValidationError, match="only supported for Xbar/S"):
-            xmr_study.execute(chart='XmR', by=[], n_mode="average")
+            xmr_study.execute(chart='X', by=[], n_mode="average")
 
     def test_histogram_n_sigma_raises(self, sds1_study):
         with pytest.raises(ValidationError, match="only supported for Xbar/S"):
@@ -277,7 +277,7 @@ class TestValidation:
 
     def test_default_values_no_validation_error_on_non_xbar(self, xmr_study):
         """Default n_sigma=3.0, n_mode='actual' should NOT raise on XmR."""
-        result = xmr_study.execute(chart='XmR', by=[])
+        result = xmr_study.execute(chart='X', by=[])
         assert result is not None
 
 

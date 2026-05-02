@@ -165,8 +165,8 @@ def test_formulation_spec_grouping_no_time():
 
 def test_chart_request_basic():
     """Test ChartRequest with only the required chart field."""
-    req = ChartRequest(chart='XmR')
-    assert req.chart == 'XmR'
+    req = ChartRequest(chart='X')
+    assert req.chart == 'X'
     assert req.by is None
     assert req.value_col is None
     assert req.residual is None
@@ -191,7 +191,7 @@ def test_chart_request_s_chart():
 
 
 def test_chart_request_companion():
-    """Test ChartRequest with companion=True for Xbar+S or XmR+R."""
+    """Test ChartRequest with companion=True for Xbar+S or X+mR."""
     req = ChartRequest(chart='Xbar', companion=True)
     assert req.companion is True
 
@@ -199,19 +199,19 @@ def test_chart_request_companion():
 def test_chart_request_residual():
     """Test ChartRequest for residual charting."""
     req = ChartRequest(
-        chart='XmR',
+        chart='X',
         residual='R2',
-        residual_chart_type='XmR',
+        residual_chart_type='X',
         value_col='R2'
     )
     assert req.residual == 'R2'
-    assert req.residual_chart_type == 'XmR'
+    assert req.residual_chart_type == 'X'
     assert req.value_col == 'R2'
 
 
 def test_chart_request_recentered():
     """Test ChartRequest with recentered residuals."""
-    req = ChartRequest(chart='XmR', residual='R2', recentered=True)
+    req = ChartRequest(chart='X', residual='R2', recentered=True)
     assert req.recentered is True
 
 
@@ -224,19 +224,19 @@ def test_chart_request_histogram():
 
 def test_chart_request_is_frozen():
     """Test that ChartRequest is immutable."""
-    req = ChartRequest(chart='XmR')
+    req = ChartRequest(chart='X')
     with pytest.raises(AttributeError):
         req.chart = 'Xbar'
 
 
 def test_chart_request_value_col():
     """Test ChartRequest with explicit value_col."""
-    req = ChartRequest(chart='XmR', value_col='Height')
+    req = ChartRequest(chart='X', value_col='Height')
     assert req.value_col == 'Height'
 
 
 def test_chart_request_by_tuple():
     """Test that by field is stored as a tuple."""
-    req = ChartRequest(chart='XmR', by=('a', 'b'))
+    req = ChartRequest(chart='X', by=('a', 'b'))
     assert isinstance(req.by, tuple)
     assert req.by == ('a', 'b')

@@ -176,13 +176,15 @@ Dr. Thomas A. Bishop's framework for decomposing variation into meaningful compo
 
 ## Chart Types
 
-### I Chart (Individual)
+### X Chart (Individual)
 
 **Wheeler's Term**: X Chart, Individual Chart
 
 **Common Alternatives**: I Chart, Individuals Chart
 
-**Definition**: Plots individual observations.
+**Definition**: Plots individual observations. When paired with its companion mR chart, forms the classic XmR pair.
+
+**In ProcessBehavior**: `study.charts.X`
 
 ---
 
@@ -192,19 +194,9 @@ Dr. Thomas A. Bishop's framework for decomposing variation into meaningful compo
 
 **Common Alternatives**: MR Chart, Moving Range Chart
 
-**Definition**: Plots |X<sub>i</sub> - X<sub>i-1</sub>|, the absolute difference between consecutive points.
+**Definition**: Moving range chart, the companion to the X chart. Plots |X<sub>i</sub> - X<sub>i-1</sub>|, the absolute difference between consecutive points.
 
----
-
-### XmR Chart (Individual and Moving Range)
-
-**Wheeler's Term**: XmR Chart
-
-**Common Alternatives**: IMR Chart, I-MR Chart
-
-**Definition**: Combined Individual and Moving Range chart.
-
-**In ProcessBehavior**: `study.charts.XmR`
+**In ProcessBehavior**: `study.charts.mR`
 
 ---
 
@@ -242,7 +234,7 @@ Wheeler uses the standard SPC constants from Shewhart's work:
 | A₃ | Xbar limits from s | 3 / (c₄√n) |
 | B₃, B₄ | S chart limits | Functions of c₄ and n |
 | d₂ | Unbiasing range | Tabulated |
-| D₃, D₄ | R chart limits | Functions of d₂ |
+| D₃, D₄ | mR chart limits | Functions of d₂ |
 
 ---
 
@@ -310,7 +302,8 @@ Essential references:
 | Process Behavior Chart | `result.plot()` |
 | Rational Subgroup | `factors` parameter |
 | Time Sequence | `time` parameter |
-| XmR Chart | `study.charts.XmR` |
+| X Chart | `study.charts.X` |
+| mR Chart | `study.charts.mR` |
 | Average Chart | `study.charts.Xbar` |
 | s Chart | `study.charts.S` |
 | R1-R5 Residuals | `result.residuals` |

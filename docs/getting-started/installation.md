@@ -71,8 +71,8 @@ Expected output:
 ```
 ProcessBehavior version: 0.1.0
 DS: 2
-Valid charts: ['Histogram', 'Xbar', 'S', 'XmR', 'R']
-Recommended: XmR
+Valid charts: ['Histogram', 'Xbar', 'S', 'X', 'mR']
+Recommended: X
 Installation verified!
 ```
 

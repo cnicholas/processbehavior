@@ -72,8 +72,8 @@ fig = result.plot(chart='S', show_zones=True)
 ### Stratified Faceted View
 
 ```python
-# For stratified XmR analysis
-result = study.execute(study.charts.XmR)
+# For stratified X analysis
+result = study.execute(study.charts.X)
 
 # All lanes in one figure
 fig = result.plot(
@@ -90,7 +90,7 @@ fig.show()
 ```python
 # Focus on one lane
 fig = result.plot(
-    chart='XmR_Lane_A',
+    chart='X_Lane_A',
     show_zones=True,
     show_rules=True,
     show_stats=True

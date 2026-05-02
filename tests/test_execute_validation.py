@@ -57,14 +57,14 @@ class TestInvalidCombinations:
     def test_phased_with_value_allowed(self, sds2_study):
         """phased=True with value= (residual) is allowed."""
         result = sds2_study.execute(
-            chart='XmR', by=[], phased=True, value='R2'
+            chart='X', by=[], phased=True, value='R2'
         )
-        assert len(result.get_chart('XmR')) > 0
+        assert len(result.get_chart('X')) > 0
 
     def test_bins_non_histogram_raises(self, sds1_single_factor_study):
         """bins with non-Histogram chart raises ValidationError."""
         with pytest.raises(ValidationError, match="bins.*Histogram"):
-            sds1_single_factor_study.execute(chart='XmR', by=[], bins=10)
+            sds1_single_factor_study.execute(chart='X', by=[], bins=10)
 
     def test_bins_non_histogram_raises_xbar(self, sds1_study):
         """bins with Xbar chart raises ValidationError."""
@@ -86,8 +86,8 @@ class TestValidCombinations:
         assert result is not None
 
     def test_xmr_without_bins_succeeds(self, sds1_single_factor_study):
-        """chart='XmR' without bins (None) succeeds."""
-        result = sds1_single_factor_study.execute(chart='XmR', by=[])
+        """chart='X' without bins (None) succeeds."""
+        result = sds1_single_factor_study.execute(chart='X', by=[])
         assert result is not None
 
     def test_histogram_with_bins_succeeds(self, sds1_study):
@@ -96,9 +96,9 @@ class TestValidCombinations:
         assert result is not None
 
     def test_companion_xmr_succeeds(self, sds1_single_factor_study):
-        """companion=True with XmR succeeds."""
+        """companion=True with X succeeds."""
         result = sds1_single_factor_study.execute(
-            chart='XmR', by=[], companion=True
+            chart='X', by=[], companion=True
         )
         assert result is not None
 
@@ -112,12 +112,12 @@ class TestCompanionWithResiduals:
     """companion=True should return both charts when charting residuals."""
 
     def test_xmr_companion_with_residual_returns_both(self, sds2_study):
-        """XmR + companion + value='R2' → both XmR and R."""
+        """X + companion + value='R2' → both X and mR."""
         result = sds2_study.execute(
-            chart='XmR', by=[], companion=True, value='R2'
+            chart='X', by=[], companion=True, value='R2'
         )
-        assert 'XmR' in result.charts
-        assert 'R' in result.charts
+        assert 'X' in result.charts
+        assert 'mR' in result.charts
 
     def test_xbar_companion_with_residual_returns_both(self, sds1_study):
         """Xbar + companion + value='R5' → both Xbar and S."""
@@ -126,12 +126,12 @@ class TestCompanionWithResiduals:
         assert 'S' in result.charts
 
     def test_xmr_no_companion_with_residual_returns_single(self, sds2_study):
-        """XmR + companion=False + value='R2' → only XmR."""
+        """X + companion=False + value='R2' → only X."""
         result = sds2_study.execute(
-            chart='XmR', by=[], companion=False, value='R2'
+            chart='X', by=[], companion=False, value='R2'
         )
-        assert 'XmR' in result.charts
-        assert 'R' not in result.charts
+        assert 'X' in result.charts
+        assert 'mR' not in result.charts
 
     def test_companion_residual_preserves_metadata(self, sds1_study):
         """Companion residual charts should have residual metadata on both."""
@@ -160,18 +160,18 @@ class TestRecenteredValueResolution:
 
     def test_recentered_false_uses_r2(self, sds2_study):
         """value='R2', recentered=False → charts R2 column."""
-        result = sds2_study.execute(chart='XmR', by=[], value='R2', recentered=False)
-        assert result.charts['XmR']['metadata']['value_col'] == 'R2'
+        result = sds2_study.execute(chart='X', by=[], value='R2', recentered=False)
+        assert result.charts['X']['metadata']['value_col'] == 'R2'
 
     def test_recentered_true_uses_rcr2(self, sds2_study):
         """value='R2', recentered=True → charts RCR2 column."""
-        result = sds2_study.execute(chart='XmR', by=[], value='R2', recentered=True)
-        assert result.charts['XmR']['metadata']['value_col'] == 'RCR2'
+        result = sds2_study.execute(chart='X', by=[], value='R2', recentered=True)
+        assert result.charts['X']['metadata']['value_col'] == 'RCR2'
 
     def test_rcr2_passthrough(self, sds2_study):
         """value='RCR2' directly selects RCR2 without recentered flag."""
-        result = sds2_study.execute(chart='XmR', by=[], value='RCR2')
-        assert result.charts['XmR']['metadata']['value_col'] == 'RCR2'
+        result = sds2_study.execute(chart='X', by=[], value='RCR2')
+        assert result.charts['X']['metadata']['value_col'] == 'RCR2'
 
     def test_recentered_true_without_value_raises(self, sds1_study):
         """recentered=True with value=None raises ValidationError."""
@@ -197,7 +197,7 @@ class TestRecenteredRequiresVAS:
     def test_recentered_without_time_raises(self, no_time_study):
         """recentered=True without time raises clear ValidationError."""
         with pytest.raises(ValidationError, match="factors.*time"):
-            no_time_study.execute(chart='XmR', by=[], value='R2', recentered=True)
+            no_time_study.execute(chart='X', by=[], value='R2', recentered=True)
 
 
 # =============================================================================

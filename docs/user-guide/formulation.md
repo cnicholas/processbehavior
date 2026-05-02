@@ -49,7 +49,7 @@ study = pb.formulate(...)
 
 # Type study.charts. and see only valid charts for your DS
 study.charts.Xbar        # Available if DS supports it
-study.charts.XmR         # Always available
+study.charts.X           # Always available
 study.residuals.R4       # VAS residual (pass to value=)
 ```
 
@@ -136,7 +136,7 @@ print(study.ads_reason)              # e.g., "full_replication"
 print(study.ads_description)         # e.g., "Full replication (all cells n>=2)"
 
 # Chart recommendations (determined by ADS)
-print(study.valid_charts)       # ['Histogram', 'Xbar', 'S', 'XmR', 'R']
+print(study.valid_charts)       # ['Histogram', 'Xbar', 'S', 'X', 'mR']
 print(study.recommended_chart)  # 'Xbar'
 print(study.residuals)          # StudyResidualAccessor(R1, R2, R3, R4, R5)
 
@@ -171,7 +171,7 @@ study = pb.formulate(
     response=pb.cols.temperature,
     time=pb.cols.day
 )
-# Results in DS 4, recommends XmR
+# Results in DS 4, recommends X
 ```
 
 ### Pattern 2: Comparing Groups
@@ -183,7 +183,7 @@ study = pb.formulate(
     response=pb.cols.yield_pct,
     factors=[pb.cols.machine, pb.cols.operator]
 )
-# Results in DS varies, recommends Xbar or XmR
+# Results in DS varies, recommends Xbar or X
 ```
 
 ### Pattern 3: Groups Over Time
@@ -290,14 +290,14 @@ After formulating with `plan`, use `study.design()` to see planned vs observed s
 
 ## The `companion` Parameter
 
-Wheeler recommends reading certain charts as pairs: Xbar with S, and XmR with R (the variation chart first, then the location chart). The `companion` parameter in `execute()` returns both charts together.
+Wheeler recommends reading certain charts as pairs: Xbar with S, and X with mR (the variation chart first, then the location chart). The `companion` parameter in `execute()` returns both charts together.
 
 ```python
 # Returns both Xbar and S charts together
 result = study.execute(chart='Xbar', companion=True)
 
-# Returns both XmR and R charts together, stratified
-result = study.execute(chart='XmR', by=['lane'], companion=True)
+# Returns both X and mR charts together, stratified
+result = study.execute(chart='X', by=['lane'], companion=True)
 ```
 
 Key details:
@@ -333,8 +333,8 @@ study.support[study.support['available']]
 Explains why a specific chart is unavailable:
 
 ```python
-study.why_not('XmR', value='R2')
-# "'XmR' (R2) unavailable: Not available for this DS"
+study.why_not('X', value='R2')
+# "'X' (R2) unavailable: Not available for this DS"
 ```
 
 ### `study.design()`

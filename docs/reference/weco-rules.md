@@ -238,7 +238,7 @@ signals = result.detect_signals(rules=rules)
 
 Not all rules apply to all chart types:
 
-| Rule | Xbar | S | XmR | R |
+| Rule | Xbar | S | X | mR |
 |------|------|---|-----|---|
 | 1: Beyond Limits | ✅ | ✅ | ✅ | ✅ |
 | 2: Zone A | ❌ | ❌ | ✅ | ✅ |
@@ -249,7 +249,7 @@ Not all rules apply to all chart types:
 | 7: Hugging Center | ❌ | ❌ | ✅ | ✅ |
 | 8: Avoiding Center | ❌ | ❌ | ✅ | ✅ |
 
-**Reason**: Xbar and S charts compare subgroups, which may not be time-ordered. Rules 2-8 assume sequential ordering, which is guaranteed only for XmR charts.
+**Reason**: Xbar and S charts compare subgroups, which may not be time-ordered. Rules 2-8 assume sequential ordering, which is guaranteed only for X charts.
 
 ## Sensitivity vs. False Alarms
 
