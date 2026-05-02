@@ -384,12 +384,20 @@ def detect_beyond_limits(x: float, lpl: float, upl: float) -> int:
 # Chart Name Constants
 # ============================================================================
 
-# Valid base chart types for syntactic validation
-VALID_BASE_CHARTS = {"Xbar", "S", "XmR", "R", "Histogram"}
+# Valid base chart types for syntactic validation.
+# API uses focal-chart naming: 'X' (individual) and 'mR' (moving range).
+# Use companion=True to get the paired chart (X↔mR).
+VALID_BASE_CHARTS = {"Xbar", "S", "X", "mR", "Histogram"}
 
 # Case-insensitive canonical chart name mapping
 CHART_NAME_CANONICAL: dict[str, str] = {
     name.lower(): name for name in VALID_BASE_CHARTS
+}
+
+# Removed chart names with migration hints
+_REMOVED_CHART_NAMES: dict[str, str] = {
+    "xmr": "Use chart='X' for the individual chart, or chart='X' with companion=True for both X and mR.",
+    "r": "Use chart='mR' for the moving range chart.",
 }
 
 
@@ -398,8 +406,21 @@ def normalize_chart_name(name: str) -> str:
 
     Returns the canonical name if recognized, otherwise returns input unchanged.
     This allows stratum names (e.g. 'Alice') to pass through unmodified.
+
+    Raises
+    ------
+    ValueError
+        If the name matches a removed chart name (e.g., 'XmR').
     """
-    return CHART_NAME_CANONICAL.get(name.lower(), name)
+    lower = name.lower()
+    if lower in CHART_NAME_CANONICAL:
+        return CHART_NAME_CANONICAL[lower]
+    if lower in _REMOVED_CHART_NAMES:
+        raise ValueError(
+            f"Chart name '{name}' has been removed. "
+            f"{_REMOVED_CHART_NAMES[lower]}"
+        )
+    return name
 
 # Human-readable residual aliases
 # Maps alias -> {id, label, description}

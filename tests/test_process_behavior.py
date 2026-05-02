@@ -319,8 +319,8 @@ def test_study_has_charts_accessor(simple_values):
 
     assert hasattr(study, 'charts')
     # Should be able to access valid chart types as attributes
-    if 'XmR' in study.valid_charts:
-        assert study.charts.XmR == 'XmR'
+    if 'X' in study.valid_charts:
+        assert study.charts.X == 'X'
 
 
 # ============================================================================
@@ -470,7 +470,7 @@ def test_formulate_with_chart_selection():
     assert result_xbar is not None
 
     # XmR with factors requires explicit 'by' parameter
-    result_xmr = study.execute(chart='XmR', by=['Batch'])
+    result_xmr = study.execute(chart='X', by=['Batch'])
     assert result_xmr is not None
 
 
@@ -662,7 +662,7 @@ def test_study_residual_charts_sds1_has_all(grouped_single_factor):
     )
 
     residual_charts = study.residual_charts
-    assert ('S', 'R2') in residual_charts or ('XmR', 'R2') in residual_charts
+    assert ('S', 'R2') in residual_charts or ('X', 'R2') in residual_charts
     assert any(v == 'R3' for _, v in residual_charts)
     assert any(v == 'R4' for _, v in residual_charts)
     assert any(v == 'R5' for _, v in residual_charts)
@@ -676,8 +676,8 @@ def test_study_why_not_valid_chart(simple_values):
     """why_not() should confirm valid charts."""
     study = ProcessBehavior(simple_values).formulate(response='Value', factors=['Factor'], time='Time')
 
-    # XmR is valid for SDS 4
-    result = study.why_not('XmR')
+    # X is valid for SDS 4
+    result = study.why_not('X')
     assert 'IS available' in result or 'available' in result.lower()
 
 
@@ -707,9 +707,9 @@ def test_study_charts_accessor_has_valid_charts(simple_values):
     """Study.charts should have attributes for each valid chart."""
     study = ProcessBehavior(simple_values).formulate(response='Value', factors=['Factor'], time='Time')
 
-    # For SDS 4, XmR should be available
-    assert hasattr(study.charts, 'XmR')
-    assert study.charts.XmR == 'XmR'
+    # For SDS 4, X should be available
+    assert hasattr(study.charts, 'X')
+    assert study.charts.X == 'X'
 
 
 def test_study_charts_accessor_dir(simple_values):
@@ -717,7 +717,7 @@ def test_study_charts_accessor_dir(simple_values):
     study = ProcessBehavior(simple_values).formulate(response='Value', factors=['Factor'], time='Time')
 
     chart_attrs = dir(study.charts)
-    assert 'XmR' in chart_attrs
+    assert 'X' in chart_attrs
 
 
 def test_study_charts_accessor_xbar_for_grouped(grouped_single_factor):

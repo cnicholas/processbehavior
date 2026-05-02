@@ -42,20 +42,20 @@ def sds1_study_two_factor():
 @pytest.fixture(scope='module')
 def non_stratified_xmr_result(sds1_study_single_factor):
     """Non-stratified XmR result (by=[]) — for non-stratified error tests."""
-    return sds1_study_single_factor.execute(chart='XmR', by=[])
+    return sds1_study_single_factor.execute(chart='X', by=[])
 
 
 @pytest.fixture(scope='module')
 def single_factor_xmr_result(sds1_study_single_factor):
     """Stratified XmR result with single factor."""
-    return sds1_study_single_factor.execute(chart='XmR', by=['factor 1'])
+    return sds1_study_single_factor.execute(chart='X', by=['factor 1'])
 
 
 @pytest.fixture(scope='module')
 def two_factor_xmr_result(sds1_study_two_factor):
     """Stratified XmR result with two factors."""
     return sds1_study_two_factor.execute(
-        chart='XmR', by=['factor 1', 'factor 2']
+        chart='X', by=['factor 1', 'factor 2']
     )
 
 
@@ -79,7 +79,7 @@ class TestFocusSingleFactor:
         """Focused rsg column has exactly one unique value matching the stratum."""
         stratum = single_factor_xmr_result.strata[0]
         focused = single_factor_xmr_result.focus(stratum)
-        data = focused.get_chart('XmR')
+        data = focused.get_chart('X')
         assert 'rsg' in data.columns
         assert data['rsg'].nunique() == 1
         assert data['rsg'].iloc[0] == encode_rsg(stratum)
@@ -87,29 +87,29 @@ class TestFocusSingleFactor:
     def test_focus_row_count_matches_original(self, single_factor_xmr_result):
         """Focused row count == original filtered by rsg."""
         stratum = single_factor_xmr_result.strata[0]
-        original = single_factor_xmr_result.get_chart('XmR')
-        focused = single_factor_xmr_result.focus(stratum).get_chart('XmR')
+        original = single_factor_xmr_result.get_chart('X')
+        focused = single_factor_xmr_result.focus(stratum).get_chart('X')
         expected = len(original[original['rsg'] == encode_rsg(stratum)])
         assert len(focused) == expected
 
     def test_focus_statistics_are_flat(self, single_factor_xmr_result):
         """Focused stats are a flat dict, not nested."""
         stratum = single_factor_xmr_result.strata[0]
-        stats = single_factor_xmr_result.focus(stratum).get_statistics('XmR')
+        stats = single_factor_xmr_result.focus(stratum).get_statistics('X')
         assert not any(isinstance(v, dict) for v in stats.values())
 
     def test_focus_metadata_not_stratified(self, single_factor_xmr_result):
         """Focused metadata has stratified=False."""
         stratum = single_factor_xmr_result.strata[0]
         focused = single_factor_xmr_result.focus(stratum)
-        metadata = focused.charts['XmR']['metadata']
+        metadata = focused.charts['X']['metadata']
         assert metadata.get('stratified') is False
 
     def test_every_stratum_roundtrip(self, single_factor_xmr_result):
         """Every value from result.strata works with focus()."""
         for s in single_factor_xmr_result.strata:
             focused = single_factor_xmr_result.focus(s)
-            assert len(focused.get_chart('XmR')) > 0
+            assert len(focused.get_chart('X')) > 0
 
 
 # =============================================================================
@@ -125,13 +125,13 @@ class TestFocusMultiFactor:
         for s in two_factor_xmr_result.strata:
             assert isinstance(s, str)  # multi-factor -> encoded string
         focused = two_factor_xmr_result.focus(two_factor_xmr_result.strata[0])
-        assert len(focused.get_chart('XmR')) > 0
+        assert len(focused.get_chart('X')) > 0
 
     def test_focus_every_stratum_roundtrip(self, two_factor_xmr_result):
         """Every stratum in multi-factor result works with focus()."""
         for s in two_factor_xmr_result.strata:
             focused = two_factor_xmr_result.focus(s)
-            data = focused.get_chart('XmR')
+            data = focused.get_chart('X')
             assert len(data) > 0
             assert data['rsg'].nunique() == 1
 
@@ -185,7 +185,7 @@ class TestFocusErrors:
 
     def test_focus_encoding_equivalence(self, single_factor_xmr_result):
         """encode_rsg(raw_stratum) matches rsg values in chart data for every stratum."""
-        data = single_factor_xmr_result.get_chart('XmR')
+        data = single_factor_xmr_result.get_chart('X')
         for s in single_factor_xmr_result.strata:
             encoded = encode_rsg(s)
             assert encoded in data['rsg'].values, (
@@ -204,7 +204,7 @@ class TestStratifiedChartsHaveRsg:
     def test_all_stratified_charts_have_rsg(self, sds1_study_single_factor):
         """For a stratified run, every chart with strata has rsg column."""
         result = sds1_study_single_factor.execute(
-            chart='XmR', by=['factor 1'], companion=True
+            chart='X', by=['factor 1'], companion=True
         )
         for chart_name, chart_info in result.charts.items():
             if chart_info.get('strata'):
@@ -222,7 +222,7 @@ class TestStratifiedChartsHaveRsg:
     def test_focus_every_stratified_chart_no_leak(self, sds1_study_single_factor):
         """For each stratified chart, focus produces single-stratum data."""
         result = sds1_study_single_factor.execute(
-            chart='XmR', by=['factor 1'], companion=True
+            chart='X', by=['factor 1'], companion=True
         )
         stratum = result.strata[0]
         focused = result.focus(stratum)

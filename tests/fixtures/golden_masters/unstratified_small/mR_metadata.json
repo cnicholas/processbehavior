@@ -1,6 +1,6 @@
 {
   "center_col": "center",
-  "chart_type": "R",
+  "chart_type": "mR",
   "lane_boundaries": null,
   "value_col": "mr"
 }

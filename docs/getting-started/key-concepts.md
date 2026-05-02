@@ -29,16 +29,16 @@ The **Design State** describes the structure of your data. ProcessBehavior autom
 | DS | Name | Cell Sizes | Recommended Chart |
 |-----|------|------------|-------------------|
 | 1 | Full Replication | All N_kt >= 2 | Xbar |
-| 2 | No Replication | All N_kt = 1 | XmR |
-| 3 | Partial Replication | Mix of N_kt = 1 and N_kt >= 2 | XmR |
+| 2 | No Replication | All N_kt = 1 | X |
+| 3 | Partial Replication | Mix of N_kt = 1 and N_kt >= 2 | X |
 
 **Incomplete (has empty cells):**
 
 | DS | Name | Cell Sizes | Recommended Chart |
 |-----|------|------------|-------------------|
-| 4 | Incomplete, No Singletons | Empty cells + all observed N_kt >= 2 | XmR |
-| 5 | Incomplete, No Replication | Empty cells + all observed N_kt = 1 | XmR |
-| 6 | Incomplete, With Singletons | Empty cells + mixed N_kt | XmR |
+| 4 | Incomplete, No Singletons | Empty cells + all observed N_kt >= 2 | X |
+| 5 | Incomplete, No Replication | Empty cells + all observed N_kt = 1 | X |
+| 6 | Incomplete, With Singletons | Empty cells + mixed N_kt | X |
 
 See [DS Definitions](../reference/sds_definitions.md) for the formal classification table per Dr. Thomas A. Bishop's VAS methodology.
 
@@ -54,7 +54,7 @@ The DS determines:
 study = pb.formulate(response='weight', factors=['lane'], time='batch')
 print(f"DS: {study.analytical_design_state.sds}")  # e.g., 1
 print(f"Reason: {study.ads_reason}")                # e.g., "full_replication"
-print(f"Valid: {study.valid_charts}")                # e.g., ['Histogram', 'Xbar', 'S', 'XmR', 'R']
+print(f"Valid: {study.valid_charts}")                # e.g., ['Histogram', 'Xbar', 'S', 'X', 'mR']
 ```
 
 ## Design State Traceability
@@ -102,7 +102,7 @@ When ODS and ADS differ, the Study display shows both:
 ```python
 print(study)
 # Study(response='weight', factors=[lane], time='pull', ods=6, ads=1)
-#   Valid: Histogram, Xbar, S, XmR, R | Recommended: Xbar
+#   Valid: Histogram, Xbar, S, X, mR | Recommended: Xbar
 ```
 
 ### Key Properties
@@ -144,7 +144,7 @@ For replicated designs (DS 1-3), ProcessBehavior computes five residual decompos
 print(study.dataset[['R1', 'R2', 'R3', 'R4', 'R5']].head())
 
 # Chart residuals using the value parameter
-result = study.execute(chart='XmR', by=['lane'], value='R4')
+result = study.execute(chart='X', by=['lane'], value='R4')
 result.plot()
 ```
 
@@ -156,8 +156,8 @@ result.plot()
 |-------|----------|--------------|
 | **Xbar** | Compare subgroup means | n >= 2 per subgroup |
 | **S** | Monitor subgroup variation | n >= 2 per subgroup |
-| **XmR** | Individual measurements over time | Any structure |
-| **R** | Range of subgroups | n >= 2 per subgroup |
+| **X** | Individual measurements over time | Any structure |
+| **mR** | Moving range of individuals | Any structure |
 
 ### Residual Charts
 
@@ -167,16 +167,16 @@ Use the `value` parameter to chart residuals instead of the response variable:
 # Chart R5 residuals (factor effects) on an Xbar chart
 result = study.execute(chart='Xbar', value='R5')
 
-# Chart R4 residuals (time effects) on a stratified XmR chart
-result = study.execute(chart='XmR', by=['lane'], value='R4')
+# Chart R4 residuals (time effects) on a stratified X chart
+result = study.execute(chart='X', by=['lane'], value='R4')
 ```
 
 | Residual | Chart Type | Purpose |
 |----------|------------|---------|
-| **R2** | S or XmR | Within-group variation stability |
-| **R3** | XmR | Detect factor-time interactions |
-| **R4** | XmR | Detect time effects |
-| **R5** | Xbar or XmR | Detect factor effects |
+| **R2** | S or X | Within-group variation stability |
+| **R3** | X | Detect factor-time interactions |
+| **R4** | X | Detect time effects |
+| **R5** | Xbar or X | Detect factor effects |
 
 ## The `by` Parameter
 
@@ -192,8 +192,8 @@ result = study.execute(chart='Xbar', by=['factor 1'])
 # Xbar chart collapsed to grand mean
 result = study.execute(chart='Xbar', by=[])
 
-# XmR chart stratified by factor (separate chart per level)
-result = study.execute(chart='XmR', by=['lane'])
+# X chart stratified by factor (separate chart per level)
+result = study.execute(chart='X', by=['lane'])
 ```
 
 **Key concept**: The `by` parameter creates *views* over the same underlying data. Residuals are computed once during formulation and never change regardless of how you view them.
@@ -216,7 +216,7 @@ Signal detection uses the Western Electric (WECO) rules:
 ### Rule Applicability
 
 - **Xbar/S charts**: Only Rule 1 applies (beyond limits)
-- **XmR charts**: All 8 rules apply
+- **X charts**: All 8 rules apply
 
 ```python
 # Standard rules (1-4)
@@ -252,6 +252,6 @@ ProcessBehavior follows Wheeler's philosophy:
 
 ## Next Steps
 
-- [Basic XmR Chart](../tutorials/basic-imr.ipynb) - Create your first XmR chart
+- [Basic X Chart](../tutorials/basic-imr.ipynb) - Create your first X chart
 - [Design States](../user-guide/sds-detection.md) - Deep dive into DS
 - [VAS Residuals](../user-guide/residuals.md) - Understanding VAS residuals

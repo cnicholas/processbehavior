@@ -3,7 +3,7 @@ AnalysisResult - Unified container for all analysis outputs.
 
 This module provides a comprehensive result object that makes all analysis data
 easily accessible in one place:
-- Chart data (Xbar, S, XmR, R) with chart type as primary key
+- Chart data (Xbar, S, X, mR) with chart type as primary key
 - Stratified chart support with strata property and focus() for drill-down
 - Residuals (R1-R5)
 - Effects (main effects, interactions)
@@ -11,10 +11,10 @@ easily accessible in one place:
 
 Chart Structure
 ---------------
-Charts are always keyed by chart type (e.g., 'Xbar', 'S', 'XmR', 'R').
-XmR and R charts are bundled together, similar to Xbar and S.
+Charts are always keyed by chart type (e.g., 'Xbar', 'S', 'X', 'mR').
+X and mR charts are bundled together, similar to Xbar and S.
 
-For stratified XmR/R charts, the structure includes:
+For stratified X/mR charts, the structure includes:
 - Combined DataFrame with all strata (rsg column identifies them)
 - Statistics nested by stratum: {'Machine1': {...}, 'Machine2': {...}}
 - 'strata' list for discovering available subgroups
@@ -63,7 +63,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 # Standard SPC chart type names
-STANDARD_CHART_NAMES = {'Xbar', 'S', 'XmR', 'R'}
+STANDARD_CHART_NAMES = {'Xbar', 'S', 'X', 'mR'}
 
 
 class AnalysisResult:
@@ -72,7 +72,7 @@ class AnalysisResult:
 
     This class unifies all analysis outputs into a single, easily accessible object.
     It provides:
-    - Chart data and statistics (Xbar, S, XmR, R)
+    - Chart data and statistics (Xbar, S, X, mR)
     - VAS residuals (R1-R5)
     - Main effects and interactions
     - Sampling Design State (SDS) information
@@ -81,15 +81,15 @@ class AnalysisResult:
 
     Chart Structure
     ---------------
-    Charts are keyed by chart type (e.g., 'Xbar', 'S', 'XmR', 'R'):
+    Charts are keyed by chart type (e.g., 'Xbar', 'S', 'X', 'mR'):
 
     - For standard charts:
       ``{'Xbar': {'data': DataFrame, 'statistics': dict, 'metadata': dict}}``
 
-    - For stratified XmR/R charts (multiple subgroups):
-      ``{'XmR': {'data': DataFrame, 'statistics': {stratum: dict}, 'strata': list}}``
+    - For stratified X/mR charts (multiple subgroups):
+      ``{'X': {'data': DataFrame, 'statistics': {stratum: dict}, 'strata': list}}``
 
-    XmR and R charts are always bundled together, similar to Xbar and S.
+    X and mR charts are always bundled together, similar to Xbar and S.
 
     Attributes
     ----------
@@ -146,7 +146,7 @@ class AnalysisResult:
         analysis_dataset_obj : AnalysisDataSet
             The underlying AnalysisDataSet with all calculations
         analysis_type : str, optional
-            The executed chart type ('Xbar', 'S', 'XmR', 'R').
+            The executed chart type ('Xbar', 'S', 'X', 'mR').
             Passed from Analysis at execute() time so result.summary
             reports the executed chart, not the recommended one.
         """
@@ -367,7 +367,7 @@ class AnalysisResult:
         """
         Get list of available subgroups for stratified charts.
 
-        For stratified XmR/R analysis, returns the list of subgroups
+        For stratified X/mR analysis, returns the list of subgroups
         (e.g., ['Machine1_F2_1', 'Machine2_F2_2', ...]).
 
         Values returned here are valid inputs to ``focus()``.
@@ -379,7 +379,7 @@ class AnalysisResult:
 
         Examples
         --------
-        >>> result = study.execute(chart='XmR', by=['factor 1'])
+        >>> result = study.execute(chart='X', by=['factor 1'])
         >>> result.strata
         ['level_1', 'level_2', ...]
 
@@ -410,7 +410,7 @@ class AnalysisResult:
         """
         Return new AnalysisResult focused on a single stratum.
 
-        For stratified XmR/R analysis, this allows drilling down to
+        For stratified X/mR analysis, this allows drilling down to
         a specific subgroup. The returned result is immutable - the
         original result is unchanged.
 
@@ -433,7 +433,7 @@ class AnalysisResult:
 
         Examples
         --------
-        >>> result = study.execute(chart='XmR', by=['factor 1'])
+        >>> result = study.execute(chart='X', by=['factor 1'])
         >>> result.strata
         ['level_1', 'level_2', ...]
         >>> focused = result.focus('level_1')
@@ -567,7 +567,7 @@ class AnalysisResult:
         Examples
         --------
         >>> xbar = result.get_chart('Xbar')
-        >>> alice = result.get_chart('Alice')  # For stratified XmR
+        >>> alice = result.get_chart('Alice')  # For stratified X
         """
         name = self._resolve_chart_name(name)
         if name not in self.charts:
@@ -1164,7 +1164,7 @@ class AnalysisResult:
         """
         Extract base chart type from chart name.
 
-        Handles stratified chart names like 'XmR_lane_1' -> 'XmR'.
+        Handles stratified chart names like 'X_lane_1' -> 'X'.
 
         Parameters
         ----------
@@ -1174,14 +1174,14 @@ class AnalysisResult:
         Returns
         -------
         str
-            Base chart type ('Xbar', 'S', 'XmR', 'R')
+            Base chart type ('Xbar', 'S', 'X', 'mR')
         """
         # Common chart type mapping
         type_mapping = {
             'Xbar': 'Xbar',
             'S': 'S',
-            'XmR': 'XmR',
-            'R': 'R'
+            'X': 'X',
+            'mR': 'mR'
         }
 
         # Check if chart name starts with a known type
@@ -1219,7 +1219,7 @@ class AnalysisResult:
         Parameters
         ----------
         chart : str, optional
-            Specific chart to plot ('Xbar', 'S', 'XmR', etc.).
+            Specific chart to plot ('Xbar', 'S', 'X', etc.).
             Also accepts 'Effects', 'MainEffects', 'TimeEffects',
             'TimeInteraction', 'FactorInteraction'.
             If None, plots all available charts.

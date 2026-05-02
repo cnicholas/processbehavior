@@ -1,10 +1,10 @@
 {
   "center_col": "center",
-  "chart_type": "R",
+  "chart_type": "X",
   "lane_boundaries": [
     {
       "label": "F1_1_F2_2",
-      "position": 11,
+      "position": 8,
       "variables": [
         "factor 1",
         "factor 2"
@@ -12,7 +12,7 @@
     },
     {
       "label": "F1_2_F2_1",
-      "position": 22,
+      "position": 16,
       "variables": [
         "factor 1",
         "factor 2"
@@ -20,12 +20,12 @@
     },
     {
       "label": "F1_2_F2_2",
-      "position": 32,
+      "position": 24,
       "variables": [
         "factor 1",
         "factor 2"
       ]
     }
   ],
-  "value_col": "mr"
+  "value_col": "y"
 }

@@ -89,17 +89,17 @@ class TestBug2_DuplicateByValues:
         # Execute with duplicated by
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
-            result_dup = study.execute(chart='XmR', by=['factor 1', 'factor 1'])
+            result_dup = study.execute(chart='X', by=['factor 1', 'factor 1'])
             # Should have emitted a warning about deduplication
             dedup_warnings = [x for x in w if "Duplicate" in str(x.message)]
             assert len(dedup_warnings) >= 1, "Expected a UserWarning about duplicate by values"
 
         # Execute with clean by
-        result_clean = study.execute(chart='XmR', by=['factor 1'])
+        result_clean = study.execute(chart='X', by=['factor 1'])
 
         # Both should produce equivalent chart data
-        df_dup = result_dup.charts['XmR']['data']
-        df_clean = result_clean.charts['XmR']['data']
+        df_dup = result_dup.charts['X']['data']
+        df_clean = result_clean.charts['X']['data']
         pd.testing.assert_frame_equal(df_dup, df_clean)
 
     def test_duplicate_by_with_multiple_factors(self):
@@ -108,13 +108,13 @@ class TestBug2_DuplicateByValues:
         with warnings.catch_warnings(record=True):
             warnings.simplefilter("always")
             result = study.execute(
-                chart='XmR', by=['factor 1', 'factor 2', 'factor 1']
+                chart='X', by=['factor 1', 'factor 2', 'factor 1']
             )
 
         # Should work — equivalent to by=['factor 1', 'factor 2']
-        result_clean = study.execute(chart='XmR', by=['factor 1', 'factor 2'])
+        result_clean = study.execute(chart='X', by=['factor 1', 'factor 2'])
         pd.testing.assert_frame_equal(
-            result.charts['XmR']['data'], result_clean.charts['XmR']['data']
+            result.charts['X']['data'], result_clean.charts['X']['data']
         )
 
 
@@ -231,8 +231,8 @@ class TestBug6_LaneBoundaryUnderscore:
             response='y', time='time', factors=['factor 1'],
         )
 
-        result = study.execute(chart='XmR', by=[])
-        metadata = result.charts['XmR']['metadata']
+        result = study.execute(chart='X', by=[])
+        metadata = result.charts['X']['metadata']
         lane_boundaries = metadata.get('lane_boundaries')
 
         # Should have lane boundaries (transitions between A_B→C_D, C_D→E_F
@@ -261,8 +261,8 @@ class TestBug6_LaneBoundaryUnderscore:
             response='y', time='time', factors=['factor 1'],
         )
 
-        result = study.execute(chart='XmR', by=[])
-        metadata = result.charts['XmR']['metadata']
+        result = study.execute(chart='X', by=[])
+        metadata = result.charts['X']['metadata']
         boundaries = metadata.get('lane_boundaries')
 
         # With 2 factor levels and by=[], boundaries should exist
@@ -298,8 +298,8 @@ class TestBug10_InsufficientStrataMetadata:
             response='y', time='time', factors=['factor 1'],
         )
 
-        result = study.execute(chart='XmR', by=['factor 1'])
-        metadata = result.charts['XmR']['metadata']
+        result = study.execute(chart='X', by=['factor 1'])
+        metadata = result.charts['X']['metadata']
 
         assert 'insufficient_strata' in metadata, (
             "Expected 'insufficient_strata' key in non-phased stratified XmR metadata"
@@ -317,8 +317,8 @@ class TestBug10_InsufficientStrataMetadata:
         """When all strata have >= 2 observations, insufficient_strata should be None."""
         study = _make_sds1_study()
 
-        result = study.execute(chart='XmR', by=['factor 1'])
-        metadata = result.charts['XmR']['metadata']
+        result = study.execute(chart='X', by=['factor 1'])
+        metadata = result.charts['X']['metadata']
 
         # All strata should have sufficient data
         assert metadata.get('insufficient_strata') is None, (

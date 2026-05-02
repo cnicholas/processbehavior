@@ -48,7 +48,7 @@ print(result.residuals.head())
 - **DS 2 (No Replication)**: R2 = (Y<sub>j</sub> - Y<sub>j-1</sub>) / 2 (backward 2-point moving average)
 - **DS 3 (Partial)**: Hybrid approach
 
-**Chart**: S chart with `value='R2'` (for replicated data) or XmR
+**Chart**: S chart with `value='R2'` (for replicated data) or X
 
 ```python
 # Chart the within-cell variation
@@ -69,10 +69,10 @@ fig = result.plot(show_zones=True, title='Within-Cell Variation')
 
 This removes both main effects, leaving only the interaction.
 
-**Chart**: XmR with `value='R3'`
+**Chart**: X with `value='R3'`
 
 ```python
-result = study.execute(chart='XmR', by=['lane'], value='R3')
+result = study.execute(chart='X', by=['lane'], value='R3')
 fig = result.plot(show_zones=True, title='Factor × Time Interactions')
 ```
 
@@ -89,11 +89,11 @@ fig = result.plot(show_zones=True, title='Factor × Time Interactions')
 
 This combines the time effect with within-cell variation.
 
-**Chart**: XmR with `value='R4'` (stratified by factor), or Xbar with `value='R4'` (aggregated across factors).
+**Chart**: X with `value='R4'` (stratified by factor), or Xbar with `value='R4'` (aggregated across factors).
 
 ```python
-# Stratified XmR — one chart per factor level
-result = study.execute(chart='XmR', by=['lane'], value='R4')
+# Stratified X — one chart per factor level
+result = study.execute(chart='X', by=['lane'], value='R4')
 fig = result.plot(show_zones=True, show_rules=True, title='Time Effects')
 
 # Xbar — subgroup means across factor levels
@@ -117,11 +117,11 @@ When charting R4 on Xbar, limits use R2's Sbar (within-cell noise), not R4's own
 
 This combines the factor effect with within-cell variation.
 
-**Chart**: XmR with `value='R5'` (stratified by factor), or Xbar with `value='R5'` (aggregated by factor).
+**Chart**: X with `value='R5'` (stratified by factor), or Xbar with `value='R5'` (aggregated by factor).
 
 ```python
-# Stratified XmR — one chart per factor level
-result = study.execute(chart='XmR', by=['lane'], value='R5')
+# Stratified X — one chart per factor level
+result = study.execute(chart='X', by=['lane'], value='R5')
 fig = result.plot(show_zones=True, title='Factor Effects')
 
 # Xbar — subgroup means by factor
@@ -181,7 +181,7 @@ R3, R4, and R5 contain structural effects by design — that's what makes them u
 |-------|----------------|---------------------|
 | **Xbar** | Subgroup means of the requested residual | R2's within-group Sbar |
 | **S** | R2's within-group std (**not** the requested residual's) | R2's Sbar for CL and limits |
-| **XmR** | Individual residual values | Moving range of the residual itself (no R2 substitution) |
+| **X** | Individual residual values | Moving range of the residual itself (no R2 substitution) |
 
 ### The S chart surprise
 
@@ -191,7 +191,7 @@ This is the most counterintuitive behavior: `execute(chart='S', value='R3')` plo
 
 The R2 substitution only matters when `by` collapses factors. At the full RSG level (all factors in `by`), the residual's within-group standard deviation equals R2's, so there is no visible difference. When you collapse — e.g., `by=['factor1']` in a two-factor study — R2 correctly isolates within-cell noise while the residual's own std would include between-cell variance from the collapsed dimension.
 
-For XmR charts, there is no substitution. The moving range is always computed from the requested residual's own values.
+For X charts, there is no substitution. The moving range is always computed from the requested residual's own values.
 
 ## Re-centered Residuals
 
@@ -199,11 +199,11 @@ By default, residual charts are centered at zero. Use `recentered=True` to show 
 
 ```python
 # Zero-centered (default)
-result = study.execute(chart='XmR', by=['lane'], value='R4')
+result = study.execute(chart='X', by=['lane'], value='R4')
 # Centerline at 0, values show deviation from time mean
 
 # Re-centered on original scale
-result = study.execute(chart='XmR', by=['lane'], value='R4', recentered=True)
+result = study.execute(chart='X', by=['lane'], value='R4', recentered=True)
 # Centerline at grand mean, values on original measurement scale
 ```
 
@@ -212,7 +212,7 @@ Re-centering formulas:
 - RCR4 = R4 + Y̅<sub>t</sub>
 - RCR5 = R5 + Y̅<sub>k</sub>
 
-**Note on recentered moving ranges**: For recentered residuals on XmR, the moving range is computed from the non-recentered version (e.g., RCR3 uses MR from R3). This avoids structural jumps between factor levels inflating the moving ranges.
+**Note on recentered moving ranges**: For recentered residuals on X charts, the moving range is computed from the non-recentered version (e.g., RCR3 uses MR from R3). This avoids structural jumps between factor levels inflating the moving ranges.
 
 ## Residual Availability by DS
 
@@ -246,8 +246,8 @@ if signals.has_signals:
 ### Step 2: Check R3 (Interactions)
 
 ```python
-result = study.execute(chart='XmR', by=['lane'], value='R3')
-signals = result.detect_signals(chart='XmR')
+result = study.execute(chart='X', by=['lane'], value='R3')
+signals = result.detect_signals(chart='X')
 
 if signals.has_signals:
     print("Significant factor × time interactions detected.")
@@ -257,14 +257,14 @@ if signals.has_signals:
 ### Step 3: Check R4 (Time Effects)
 
 ```python
-result = study.execute(chart='XmR', by=['lane'], value='R4')
+result = study.execute(chart='X', by=['lane'], value='R4')
 fig = result.plot(show_zones=True, show_rules=True)
 ```
 
 ### Step 4: Check R5 (Factor Effects)
 
 ```python
-result = study.execute(chart='XmR', by=['lane'], value='R5')
+result = study.execute(chart='X', by=['lane'], value='R5')
 fig = result.plot(show_zones=True, highlight_signals=True)
 ```
 
@@ -298,11 +298,11 @@ result_r2 = study.execute(chart='S', value='R2')
 signals_r2 = result_r2.detect_signals(chart='S')
 print(f"R2 on S: {signals_r2.count} signals")
 
-# Analyze R3-R5 on stratified XmR charts
+# Analyze R3-R5 on stratified X charts
 for residual in ['R3', 'R4', 'R5']:
-    result = study.execute(chart='XmR', by=['lane'], value=residual)
-    signals = result.detect_signals(chart='XmR')
-    print(f"{residual} on XmR: {signals.count} signals")
+    result = study.execute(chart='X', by=['lane'], value=residual)
+    signals = result.detect_signals(chart='X')
+    print(f"{residual} on X: {signals.count} signals")
 ```
 
 ## Best Practices
@@ -365,7 +365,7 @@ R5 = Ȳ_k - Ȳ + R2
 
 ## Maximum Information Analysis
 
-The **Maximum Information** analysis examines the noise floor of your process by analyzing R2 residuals via an XmR chart and percentage histogram. It answers: *What variation is inherent to the system, and is it predictable?*
+The **Maximum Information** analysis examines the noise floor of your process by analyzing R2 residuals via an X chart and percentage histogram. It answers: *What variation is inherent to the system, and is it predictable?*
 
 ```python
 mi = study.maximum_information()
@@ -376,13 +376,13 @@ print(f"Natural process limits: [{mi.lpl}, {mi.upl}]")
 print(f"Signals in noise: {mi.n_signals}")     # Points beyond limits
 
 # Visualize
-mi.plot()                        # Combined XmR + histogram
-mi.plot(view='xmr')              # XmR chart of R2 only
+mi.plot()                        # Combined X + histogram
+mi.plot(view='xmr')              # X chart of R2 only
 mi.plot(view='histogram', bins=15)  # Percentage histogram only
 ```
 
 **Interpretation**:
-- **Stable R2 on XmR** (no signals) → The noise floor is predictable. Any variation beyond this level is attributable to factors, time, or interactions.
+- **Stable R2 on X chart** (no signals) → The noise floor is predictable. Any variation beyond this level is attributable to factors, time, or interactions.
 - **Signals in R2** → Special causes exist *within* subgroups. Investigate measurement system or within-cell process variation before interpreting R3-R5.
 - **σ̂ (sigma_hat)** → The irreducible noise floor. This is the best the process can achieve even if all assignable causes are eliminated.
 

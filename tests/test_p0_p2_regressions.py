@@ -43,34 +43,34 @@ class TestR6MutationSafety:
 
 
 class TestRChartResidualValidation:
-    """P2: chart='R' with a residual value must raise ValidationError early."""
+    """P2: chart='mR' with a residual value must raise ValidationError early."""
 
     def test_r_chart_with_residual_raises_validation_error(self, sds1_study):
-        """execute(chart='R', value='R3') must raise ValidationError."""
+        """execute(chart='mR', value='R3') must raise ValidationError."""
         with pytest.raises(ValidationError, match="not supported for residual"):
-            sds1_study.execute(chart='R', value='R3', by=[])
+            sds1_study.execute(chart='mR', value='R3', by=[])
 
     def test_r_chart_with_r5_raises_validation_error(self, sds1_study):
-        """execute(chart='R', value='R5') must raise ValidationError."""
+        """execute(chart='mR', value='R5') must raise ValidationError."""
         with pytest.raises(ValidationError, match="not supported for residual"):
-            sds1_study.execute(chart='R', value='R5', by=[])
+            sds1_study.execute(chart='mR', value='R5', by=[])
 
     def test_r_chart_with_residual_no_companion_still_raises(self, sds1_study):
-        """execute(chart='R', value='R3', companion=False) must still raise."""
+        """execute(chart='mR', value='R3', companion=False) must still raise."""
         with pytest.raises(ValidationError, match="not supported for residual"):
-            sds1_study.execute(chart='R', value='R3', by=[], companion=False)
+            sds1_study.execute(chart='mR', value='R3', by=[], companion=False)
 
     def test_r_chart_with_residual_companion_works(self, sds1_study):
-        """execute(chart='R', value='R3', companion=True) returns both XmR and R."""
-        result = sds1_study.execute(chart='R', value='R3', by=[], companion=True)
-        assert 'XmR' in result.charts
-        assert 'R' in result.charts
+        """execute(chart='mR', value='R3', companion=True) returns both X and mR."""
+        result = sds1_study.execute(chart='mR', value='R3', by=[], companion=True)
+        assert 'X' in result.charts
+        assert 'mR' in result.charts
 
     def test_r_chart_with_residual_companion_recentered_works(self, sds1_study):
-        """execute(chart='R', value='R3', companion=True, recentered=True) works."""
-        result = sds1_study.execute(chart='R', value='R3', by=[], companion=True, recentered=True)
-        assert 'XmR' in result.charts
-        assert 'R' in result.charts
+        """execute(chart='mR', value='R3', companion=True, recentered=True) works."""
+        result = sds1_study.execute(chart='mR', value='R3', by=[], companion=True, recentered=True)
+        assert 'X' in result.charts
+        assert 'mR' in result.charts
 
     def test_xbar_with_residual_still_works(self, sds1_study):
         """Xbar + residual must still work (no false positive)."""

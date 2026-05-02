@@ -52,8 +52,8 @@ class TestSignalConfig:
         # Test chart-type-based defaults
         assert config.get_rules_for_chart('Xbar') == ['rule_1']
         assert config.get_rules_for_chart('S') == ['rule_1']
-        assert len(config.get_rules_for_chart('XmR')) == 8
-        assert len(config.get_rules_for_chart('R')) == 8
+        assert len(config.get_rules_for_chart('X')) == 8
+        assert len(config.get_rules_for_chart('mR')) == 8
 
     def test_preset_standard(self):
         """Test standard preset."""
@@ -198,9 +198,9 @@ class TestSignalDetector:
         detector = SignalDetector()
         config = SignalConfig()  # Default config
 
-        # XmR charts apply all rules, including rule_4 which needs 8 observations
+        # X charts apply all rules, including rule_4 which needs 8 observations
         with pytest.raises(ValueError, match="Insufficient observations"):
-            detector.detect(data, simple_stats, config, chart_type='XmR')
+            detector.detect(data, simple_stats, config, chart_type='X')
 
     def test_missing_stats(self, simple_data):
         """Test error handling for missing statistics."""

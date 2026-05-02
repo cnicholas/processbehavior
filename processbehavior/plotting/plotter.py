@@ -105,7 +105,7 @@ class Plotter:
         Parameters
         ----------
         chart : str, optional
-            Specific chart to plot ('Xbar', 'S', 'XmR', etc.).
+            Specific chart to plot ('Xbar', 'S', 'X', etc.).
             Also accepts effects chart types: 'Effects', 'MainEffects',
             'TimeEffects', 'TimeInteraction', 'FactorInteraction'.
             If None, plots all available charts.
@@ -803,7 +803,7 @@ class Plotter:
         # Standard charts
         standard = {
             k: v for k, v in self.charts.items()
-            if k in ['Xbar', 'S', 'XmR', 'R', 'Histogram']
+            if k in ['Xbar', 'S', 'X', 'mR', 'Histogram']
         }
         if not standard and len(self.charts) == 1:
             standard = dict(self.charts)
@@ -868,7 +868,7 @@ class Plotter:
     ) -> tuple[dict, int | None]:
         """Reorder stratified companion charts into paired rows.
 
-        Detects stratified companion pairs (Xbar+S or XmR+R with ≥ 4 charts)
+        Detects stratified companion pairs (Xbar+S or X+mR with ≥ 4 charts)
         and interleaves them so each stratum's pair is side-by-side:
         ``[Xbar_1_1, S_1_1, Xbar_1_2, S_1_2, ...]``
 
@@ -888,7 +888,7 @@ class Plotter:
             return charts, None
 
         type_set = set(base_types.keys())
-        if type_set not in ({'Xbar', 'S'}, {'XmR', 'R'}):
+        if type_set not in ({'Xbar', 'S'}, {'X', 'mR'}):
             return charts, None
 
         # Extract stratum suffixes: everything after the first '_'
@@ -900,7 +900,7 @@ class Plotter:
         if 'Xbar' in type_set:
             primary, secondary = 'Xbar', 'S'
         else:
-            primary, secondary = 'XmR', 'R'
+            primary, secondary = 'X', 'mR'
 
         # Build lookup by suffix for each type
         secondary_by_suffix = {suffix(n): n for n in base_types[secondary]}
@@ -1251,7 +1251,7 @@ class Plotter:
 
         if grouping_vars and len(grouping_vars) == 1:
             parts.append(f"by {grouping_vars[0]}")
-        if '_' in chart_name and chart_name not in ['Xbar', 'S', 'XmR']:
+        if '_' in chart_name and chart_name not in ['Xbar', 'S', 'X']:
             stratum = self._extract_stratum_name(chart_name)
             if stratum:
                 parts.append(f"- {stratum}")
@@ -1274,8 +1274,8 @@ class Plotter:
     @staticmethod
     def _get_chart_type_display(chart_name: str) -> str:
         display_names = {
-            'Xbar': 'X\u0304', 'S': 'S', 'XmR': 'XmR',
-            'R': 'R', 'Histogram': 'Histogram',
+            'Xbar': 'X\u0304', 'S': 'S', 'X': 'X',
+            'mR': 'mR', 'Histogram': 'Histogram',
         }
         if chart_name in display_names:
             return display_names[chart_name]
@@ -1286,7 +1286,7 @@ class Plotter:
 
     @staticmethod
     def _extract_stratum_name(chart_name: str) -> str | None:
-        prefixes = ['Xbar_', 'S_', 'XmR_', 'R_', 'Histogram_']
+        prefixes = ['Xbar_', 'S_', 'X_', 'mR_', 'Histogram_']
         result = chart_name
         for prefix in prefixes:
             if result.startswith(prefix):
@@ -1300,7 +1300,7 @@ class Plotter:
     ) -> str:
         if x_col in ('subgroup', 'rsg', 'group'):
             base_type = chart_name.split('_')[0] if chart_name else ''
-            if base_type in ('XmR', 'R'):
+            if base_type in ('X', 'mR'):
                 time_var = self.summary.get('time_var')
                 if time_var:
                     return time_var.replace('_', ' ').title()

@@ -35,7 +35,7 @@ class TestGetXColumnUniqueness:
             factors=[pb.cols.factor_1, pb.cols.factor_2],
             time=pb.cols.time,
         )
-        return study.execute(chart='XmR', by=[])
+        return study.execute(chart='X', by=[])
 
     @pytest.fixture
     def plotter_with_unique_rsg(self):
@@ -92,8 +92,8 @@ class TestByEmptyXmrXAxis:
             factors=[pb.cols.factor_1, pb.cols.factor_2],
             time=pb.cols.time,
         )
-        result = study.execute(chart='XmR', by=[])
-        fig = result.plot(chart='XmR')
+        result = study.execute(chart='X', by=[])
+        fig = result.plot(chart='X')
 
         # The x-axis data on the first trace should be numeric (integer index),
         # not categorical strings that repeat.
@@ -125,12 +125,12 @@ class TestAdaptiveTickAngle:
             factors=[pb.cols.factor_1, pb.cols.factor_2],
             time=pb.cols.time,
         )
-        return study.execute(chart='XmR', by=[])
+        return study.execute(chart='X', by=[])
 
     def test_tick_angle_horizontal_for_sparse_charts(self):
         """Charts with <=20 ticks should have tickangle=0 (horizontal)."""
         result = self._make_result(4)  # 4 time × 4 combos = 16 obs → ≤20 ticks
-        fig = result.plot(chart='XmR')
+        fig = result.plot(chart='X')
 
         # Get xaxis tickangle — may be on xaxis or xaxis2 depending on subplot
         layout = fig._fig.layout
@@ -163,8 +163,8 @@ class TestAdaptiveTickAngle:
             factors=[pb.cols.factor_1, pb.cols.factor_2],
             time=pb.cols.time,
         )
-        result = study.execute(chart='XmR', by=[])
-        fig = result.plot(chart='XmR')
+        result = study.execute(chart='X', by=[])
+        fig = result.plot(chart='X')
 
         layout = fig._fig.layout
         angles = []
@@ -180,7 +180,7 @@ class TestAdaptiveTickAngle:
     def test_tick_angle_horizontal_for_dense_short_labels(self):
         """Charts with many time points but short numeric labels stay horizontal."""
         result = self._make_result(100)  # 100 time × 4 combos = 400 obs, labels "1"-"100"
-        fig = result.plot(chart='XmR')
+        fig = result.plot(chart='X')
 
         layout = fig._fig.layout
         angles = []
@@ -264,7 +264,7 @@ class TestTickLabelBlockInvariants:
         )
 
     @staticmethod
-    def _extract_ticks_and_boundaries(result, chart_name='XmR'):
+    def _extract_ticks_and_boundaries(result, chart_name='X'):
         """Extract tick positions, labels, and lane boundary positions."""
         if result.is_stratified:
             focused = result.focus(result.strata[0])
@@ -297,7 +297,7 @@ class TestTickLabelBlockInvariants:
     def test_tick_labels_monotonic_within_blocks(self, by):
         """Tick labels should increase within each factor block."""
         study = self._study()
-        result = study.execute(chart='XmR', by=by, companion=True)
+        result = study.execute(chart='X', by=by, companion=True)
         tickvals, ticktext, boundaries, data = self._extract_ticks_and_boundaries(result)
 
         n = len(data)
@@ -323,7 +323,7 @@ class TestTickLabelBlockInvariants:
     def test_every_block_has_at_least_one_tick(self, by):
         """Every factor block should have at least one tick label."""
         study = self._study()
-        result = study.execute(chart='XmR', by=by, companion=True)
+        result = study.execute(chart='X', by=by, companion=True)
         tickvals, ticktext, boundaries, data = self._extract_ticks_and_boundaries(result)
 
         n = len(data)
@@ -339,8 +339,8 @@ class TestTickLabelBlockInvariants:
     def test_full_rsg_no_lane_boundaries(self):
         """by=[all factors] has unique time — no lane boundaries, no blocks."""
         study = self._study()
-        result = study.execute(chart='XmR', by=['factor 1', 'factor 2'], companion=True)
+        result = study.execute(chart='X', by=['factor 1', 'factor 2'], companion=True)
         focused = result.focus(result.strata[0])
-        meta = focused.charts['XmR'].get('metadata', {})
+        meta = focused.charts['X'].get('metadata', {})
         lb = meta.get('lane_boundaries')
         assert not lb, "Full RSG should have no lane boundaries"

@@ -335,13 +335,13 @@ class TestGenerateReportEscapesHtml:
             'analytical_sds_description': 'test',
             'response_var': '<script>alert("xss")</script>',
             'n_observations': 100,
-            'chart_types': ['XmR'],
+            'chart_types': ['X'],
             'n_signals_total': 0,
             'has_residuals': False,
             'has_effects': False,
             'is_stratified': False,
         }
-        mock_result.charts = {'XmR': {'data': pd.DataFrame({'value': [1, 2, 3]}), 'statistics': {}}}
+        mock_result.charts = {'X': {'data': pd.DataFrame({'value': [1, 2, 3]}), 'statistics': {}}}
         mock_result.has_residuals = False
         mock_result.has_effects = False
 
@@ -371,13 +371,13 @@ class TestGenerateReportEscapesHtml:
             'analytical_sds_description': 'test',
             'response_var': 'Y',
             'n_observations': 10,
-            'chart_types': ['XmR'],
+            'chart_types': ['X'],
             'n_signals_total': 0,
             'has_residuals': False,
             'has_effects': False,
             'is_stratified': False,
         }
-        mock_result.charts = {'XmR': {'data': pd.DataFrame({'value': [1]}), 'statistics': {}}}
+        mock_result.charts = {'X': {'data': pd.DataFrame({'value': [1]}), 'statistics': {}}}
         mock_result.has_residuals = False
         mock_result.has_effects = False
 
@@ -398,12 +398,12 @@ class TestGenerateReportEscapesHtml:
 
 
 # =========================================================================
-# X-axis label: XmR gets "Observation", Xbar gets "Subgroup"
+# X-axis label: X gets "Observation", Xbar gets "Subgroup"
 # =========================================================================
 
 
 class TestXAxisLabel:
-    """XmR charts should label x-axis 'Observation', not 'Subgroup'."""
+    """X charts should label x-axis 'Observation', not 'Subgroup'."""
 
     def _make_plotter(self, summary_overrides=None):
         from processbehavior.plotting.plotter import Plotter
@@ -413,7 +413,7 @@ class TestXAxisLabel:
             'analytical_sds_description': 'test',
             'response_var': 'Y',
             'n_observations': 10,
-            'chart_types': ['XmR'],
+            'chart_types': ['X'],
             'n_signals_total': 0,
             'has_residuals': False,
             'has_effects': False,
@@ -424,15 +424,15 @@ class TestXAxisLabel:
 
         mock_result = MagicMock()
         mock_result.summary = summary
-        mock_result.charts = {'XmR': {'data': pd.DataFrame({'value': [1]}), 'statistics': {}}}
+        mock_result.charts = {'X': {'data': pd.DataFrame({'value': [1]}), 'statistics': {}}}
         mock_result.has_residuals = False
         mock_result.has_effects = False
         return Plotter(mock_result)
 
-    def test_xmr_xaxis_label_not_subgroup(self):
-        """XmR chart with 'rsg' column gets 'Observation', not 'Subgroup'."""
+    def test_x_xaxis_label_not_subgroup(self):
+        """X chart with 'rsg' column gets 'Observation', not 'Subgroup'."""
         plotter = self._make_plotter()
-        label = plotter._get_xaxis_label('rsg', 'XmR')
+        label = plotter._get_xaxis_label('rsg', 'X')
         assert label == 'Observation'
 
     def test_xbar_xaxis_label_is_subgroup(self):
@@ -441,22 +441,22 @@ class TestXAxisLabel:
         label = plotter._get_xaxis_label('rsg', 'Xbar')
         assert label == 'Subgroup'
 
-    def test_xmr_xaxis_label_uses_time_var(self):
-        """XmR chart with time variable gets the time variable name."""
+    def test_x_xaxis_label_uses_time_var(self):
+        """X chart with time variable gets the time variable name."""
         plotter = self._make_plotter({'time_var': 'pull_date'})
-        label = plotter._get_xaxis_label('rsg', 'XmR')
+        label = plotter._get_xaxis_label('rsg', 'X')
         assert label == 'Pull Date'
 
-    def test_xmr_residuals_xaxis_label(self):
-        """XmR_residuals chart with 'rsg' gets 'Observation'."""
+    def test_x_residuals_xaxis_label(self):
+        """X_residuals chart with 'rsg' gets 'Observation'."""
         plotter = self._make_plotter()
-        label = plotter._get_xaxis_label('rsg', 'XmR_residuals')
+        label = plotter._get_xaxis_label('rsg', 'X_residuals')
         assert label == 'Observation'
 
-    def test_r_chart_xaxis_label(self):
-        """R chart with 'rsg' gets 'Observation'."""
+    def test_mr_chart_xaxis_label(self):
+        """mR chart with 'rsg' gets 'Observation'."""
         plotter = self._make_plotter()
-        label = plotter._get_xaxis_label('rsg', 'R')
+        label = plotter._get_xaxis_label('rsg', 'mR')
         assert label == 'Observation'
 
     def test_s_chart_xaxis_label_is_subgroup(self):

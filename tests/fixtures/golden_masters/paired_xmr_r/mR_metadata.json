@@ -1,10 +1,10 @@
 {
   "center_col": "center",
-  "chart_type": "XmR",
+  "chart_type": "mR",
   "lane_boundaries": [
     {
       "label": "F1_1_F2_2",
-      "position": 8,
+      "position": 17,
       "variables": [
         "factor 1",
         "factor 2"
@@ -12,7 +12,7 @@
     },
     {
       "label": "F1_2_F2_1",
-      "position": 16,
+      "position": 34,
       "variables": [
         "factor 1",
         "factor 2"
@@ -20,12 +20,28 @@
     },
     {
       "label": "F1_2_F2_2",
-      "position": 24,
+      "position": 52,
+      "variables": [
+        "factor 1",
+        "factor 2"
+      ]
+    },
+    {
+      "label": "F1_3_F2_1",
+      "position": 69,
+      "variables": [
+        "factor 1",
+        "factor 2"
+      ]
+    },
+    {
+      "label": "F1_3_F2_2",
+      "position": 88,
       "variables": [
         "factor 1",
         "factor 2"
       ]
     }
   ],
-  "value_col": "y"
+  "value_col": "mr"
 }

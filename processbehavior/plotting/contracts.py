@@ -18,7 +18,7 @@ if TYPE_CHECKING:
     from .themes import ChartTheme
 
 # Valid chart types that renderers accept
-VALID_CHART_TYPES = frozenset({'Xbar', 'S', 'XmR', 'R', 'Histogram'})
+VALID_CHART_TYPES = frozenset({'Xbar', 'S', 'X', 'mR', 'Histogram'})
 
 
 class PlotError(ProcessBehaviorError):

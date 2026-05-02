@@ -212,7 +212,7 @@ class TestAnalyzePerformance:
         """analyze() XmR chart with 100K rows."""
         start = time.perf_counter()
         # XmR with factors now requires explicit 'by' parameter
-        result = study_100k.execute(chart='XmR', by=['factor 1'])
+        result = study_100k.execute(chart='X', by=['factor 1'])
         elapsed = time.perf_counter() - start
 
         assert result is not None

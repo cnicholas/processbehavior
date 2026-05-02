@@ -141,9 +141,9 @@ def perf_spec():
 
 @pytest.fixture
 def perf_spec_xmr():
-    """Specification for XmR analysis performance tests."""
+    """Specification for X analysis performance tests."""
     return {
-        'analysis_type': 'XmR',
+        'analysis_type': 'X',
         'rsg_vars': ['factor 1'],
         'time_var': 'time',
         'response_var': 'y',

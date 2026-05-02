@@ -18,7 +18,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 # Standard SPC chart type names
-STANDARD_CHART_NAMES = {'Xbar', 'S', 'XmR', 'R'}
+STANDARD_CHART_NAMES = {'Xbar', 'S', 'X', 'mR'}
 
 
 class ExcelExporter:
@@ -68,7 +68,7 @@ class ExcelExporter:
 
         Creates a multi-sheet Excel workbook with organized analysis results:
         - Summary: Analysis metadata, SDS info, signal counts
-        - Charts: One tab per chart (Xbar, S, stratified XmR, etc.)
+        - Charts: One tab per chart (Xbar, S, stratified X, etc.)
         - Residuals: R1-R5 variance decomposition (if available)
         - Effects: Main effects (if calculated)
         - Interactions: Interaction terms (if calculated)
@@ -123,7 +123,7 @@ class ExcelExporter:
         -----
         - Tab names are limited to 31 characters (Excel limitation)
         - Chart tabs are prefixed with 'Chart_' for clarity
-        - Stratified charts use format 'XmR_{group_name}'
+        - Stratified charts use format 'X_{group_name}'
         - Summary tab includes SDS info and signal counts
         - Formatting includes frozen headers and auto-sized columns
         - Visual_Charts tab includes embedded images (requires Chrome for kaleido)
@@ -229,14 +229,14 @@ class ExcelExporter:
     def _write_chart_tabs(self, writer: pd.ExcelWriter, format_cells: bool) -> None:
         """Write tabs for each chart."""
 
-        # Check if this is a stratified analysis (XmR/R with grouping_vars)
+        # Check if this is a stratified analysis (X/mR with grouping_vars)
         if self.result.summary['is_stratified']:
             # Stratified analysis: combine all stratified charts into single tab
             self._write_stratified_chart_tab(writer, format_cells)
 
-            # For stratified XmR/R charts, also create a summary tab for quick comparison
+            # For stratified X/mR charts, also create a summary tab for quick comparison
             chart_type = self.result._analysis_type
-            if chart_type in ['XmR', 'R']:
+            if chart_type in ['X', 'mR']:
                 self._write_stratified_summary_tab(writer, format_cells)
         else:
             # Standard analysis: each chart gets its own tab
@@ -282,7 +282,7 @@ class ExcelExporter:
             if chart_data is None or not isinstance(chart_data, pd.DataFrame):
                 continue
 
-            # For XmR/R with grouping_vars, the 'rsg' column already exists
+            # For X/mR with grouping_vars, the 'rsg' column already exists
             # and contains the stratification identifier (chart name)
             # No need to add it - just use the data as-is
             combined_data.append(chart_data.copy())
@@ -332,7 +332,7 @@ class ExcelExporter:
         format_cells: bool
     ) -> None:
         """
-        Create a summary tab for stratified XmR/R charts.
+        Create a summary tab for stratified X/mR charts.
 
         Provides a high-level comparison across all strata showing:
         - Stratum identifier (RSG)
@@ -636,7 +636,7 @@ class ExcelExporter:
 
         Creates HTML files in the same directory as the Excel file:
         - {basename}_combined.html - Combined Xbar/S charts
-        - {basename}_stratified.html - Stratified XmR charts (if applicable)
+        - {basename}_stratified.html - Stratified X charts (if applicable)
         """
         try:
             from pathlib import Path

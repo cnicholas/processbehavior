@@ -4,8 +4,8 @@ Analysis - Chart calculation strategies for process behavior analysis.
 This module provides the Analysis class which executes chart calculations using
 the strategy pattern. It supports:
 - Xbar and S charts (subgroup mean and variation)
-- XmR charts (individual and moving range)
-- R charts (range)
+- X charts (individual values)
+- mR charts (moving range)
 
 The Analysis class coordinates between:
 - FormulationSpec (structural configuration)
@@ -51,25 +51,25 @@ logger = logging.getLogger(__name__)
 class _MRChartSpec:
     """Captures what makes an MR-family chart different from its sibling.
 
-    XmR and R charts share >85% of their calculation pipeline. The differences
+    X and mR charts share >85% of their calculation pipeline. The differences
     are behavioral, not parametric — this dataclass encodes those differences
     so a single shared method can serve both chart types.
     """
-    chart_type: str         # 'XmR' or 'R'
+    chart_type: str         # 'X' or 'mR'
     limits_type: str        # "XmR" or "R" — passed to calculate_limits()
     plot_col: str           # Which column to plot: 'raw' (use value_col) or 'mr'
     center_source: str      # What the center line represents: 'mean' or 'mR'
-    drops_first_mr: bool    # False for XmR, True for R
-    lane_boundary_offset: int  # 0 for XmR, -1 for R
+    drops_first_mr: bool    # False for X, True for mR
+    lane_boundary_offset: int  # 0 for X, -1 for mR
 
 
 _XMR_SPEC = _MRChartSpec(
-    chart_type='XmR', limits_type='XmR',
+    chart_type='X', limits_type='XmR',
     plot_col='raw', center_source='mean',
     drops_first_mr=False, lane_boundary_offset=0,
 )
 _R_SPEC = _MRChartSpec(
-    chart_type='R', limits_type='R',
+    chart_type='mR', limits_type='R',
     plot_col='mr', center_source='mR',
     drops_first_mr=True, lane_boundary_offset=-1,
 )
@@ -101,7 +101,7 @@ class Analysis:
     Unified analysis class handling all chart types via strategy pattern.
 
     This class replaces the AbstractFactory pattern with a simpler, more maintainable
-    approach. All analysis types (Xbar, S, XmR, R) are handled through internal
+    approach. All analysis types (Xbar, S, X, mR) are handled through internal
     strategy methods.
 
     Usage:
@@ -190,7 +190,7 @@ class Analysis:
         residual = self.request.residual
         if residual:
             # Residual chart analysis - inline logic (was _calculate_residual_chart)
-            chart_type = self.request.residual_chart_type or 'XmR'
+            chart_type = self.request.residual_chart_type or 'X'
             recentered = self.request.recentered
 
             # Determine column name
@@ -211,7 +211,7 @@ class Analysis:
                 )
 
             # Validate chart type
-            valid_chart_types = {'Xbar', 'S', 'XmR', 'R', 'Histogram'}
+            valid_chart_types = {'Xbar', 'S', 'X', 'mR', 'Histogram'}
             if chart_type not in valid_chart_types:
                 raise ChartNotAvailableError(
                     f"Chart type '{chart_type}' not supported for residual charts.\n"
@@ -234,15 +234,15 @@ class Analysis:
                 residual_strategies = {
                     'Xbar': self._calculate_xbar_s,
                     'S': self._calculate_xbar_s,
-                    'XmR': self._calculate_xmr_r,
-                    'R': self._calculate_xmr_r,
+                    'X': self._calculate_xmr_r,
+                    'mR': self._calculate_xmr_r,
                     'Histogram': self._calculate_histogram,
                 }
             else:
                 residual_strategies = {
                     'Xbar': self._calculate_xbar,
                     'S': self._calculate_s,
-                    'XmR': self._calculate_xmr,
+                    'X': self._calculate_xmr,
                     'Histogram': self._calculate_histogram,
                 }
             chart_data = residual_strategies[chart_type](value_col=col_name)
@@ -252,7 +252,7 @@ class Analysis:
 
         else:
             # Standard chart analysis
-            # Check if companion charts requested (Xbar+S or XmR+R together)
+            # Check if companion charts requested (Xbar+S or X+mR together)
             companion = self.request.companion
 
             if companion:
@@ -260,8 +260,8 @@ class Analysis:
                 strategies = {
                     'Xbar': self._calculate_xbar_s,
                     'S': self._calculate_xbar_s,
-                    'XmR': self._calculate_xmr_r,  # Bundled XmR+R
-                    'R': self._calculate_xmr_r,
+                    'X': self._calculate_xmr_r,  # Bundled X+mR
+                    'mR': self._calculate_xmr_r,
                     'Histogram': self._calculate_histogram  # No companion for Histogram
                 }
             else:
@@ -269,8 +269,8 @@ class Analysis:
                 strategies = {
                     'Xbar': self._calculate_xbar,
                     'S': self._calculate_s,
-                    'XmR': self._calculate_xmr,  # SRP: XmR only
-                    'R': self._calculate_r,  # SRP: R only
+                    'X': self._calculate_xmr,  # SRP: X only
+                    'mR': self._calculate_r,  # SRP: mR only
                     'Histogram': self._calculate_histogram
                 }
 
@@ -450,9 +450,9 @@ class Analysis:
         is_response = value_col == spec.response_var
 
         # Xbar/S: by=[] normalizes to by=None (Kt-level aggregation).
-        # XmR/R handles by=[] directly in _calculate_xmr() as single-stream.
+        # X/mR handles by=[] directly in _calculate_xmr() as single-stream.
         # This split is intentional — `by` means "aggregate by" for Xbar/S
-        # and "stratify by" for XmR/R, matching each chart type's semantics.
+        # and "stratify by" for X/mR, matching each chart type's semantics.
         if by == []:
             by = None
 
@@ -518,7 +518,7 @@ class Analysis:
 
         Lane boundaries are positions in the data where a factor that was
         "collapsed" (not in `by`) changes value. These are rendered as
-        vertical dashed lines on XmR charts.
+        vertical dashed lines on X charts.
 
         Parameters
         ----------
@@ -629,7 +629,7 @@ class Analysis:
                 cols_to_keep.insert(0, 'x')
             else:
                 # Use obs_id as implicit time for single condition over time (SDS 4)
-                # Rationale: Wheeler's XmR assumes temporal ordering, and obs_id
+                # Rationale: Wheeler's X chart assumes temporal ordering, and obs_id
                 # provides that ordering from the original data sequence.
                 # See: ProcessBehavior.formulate() docstring for full explanation.
                 cols_to_keep.insert(0, 'obs_id')
@@ -754,7 +754,7 @@ class Analysis:
             raise ValidationError(
                 f"No subgroups with n > 1 found — Xbar chart requires replicated observations.\n"
                 f"This data has Analytical Design State {sds}.\n"
-                f"Use chart='XmR' for individual values, or chart='Xbar' with value='R6' "
+                f"Use chart='X' for individual values, or chart='Xbar' with value='R6' "
                 f"for effects analysis."
             )
 
@@ -988,7 +988,7 @@ class Analysis:
                 f"No subgroups with n > 1 found — Xbar chart requires replicated observations.\n"
                 f"This data has Analytical Design State {sds} "
                 f"({'no replication' if sds == 2 else 'partial replication' if sds == 3 else ''}).\n"
-                f"Use chart='XmR' for individual values, or chart='Xbar' with value='R6' "
+                f"Use chart='X' for individual values, or chart='Xbar' with value='R6' "
                 f"for effects analysis."
             )
         chart_out = pd.concat(all_xbar_frames, ignore_index=True)
@@ -1250,7 +1250,7 @@ class Analysis:
                     raise ValidationError(
                         f"No subgroups with n > 1 found — S chart requires replicated observations.\n"
                         f"This data has Analytical Design State {sds}.\n"
-                        f"Use chart='XmR' for individual values."
+                        f"Use chart='X' for individual values."
                     )
 
                 out['N'] = out['n'].max()
@@ -1417,9 +1417,9 @@ class Analysis:
         _precomputed: dict = None,
     ) -> dict:
         """
-        Shared pipeline for MR-family charts (XmR and R).
+        Shared pipeline for MR-family charts (X and mR).
 
-        The XmR and R charts share >85% of their calculation logic. The behavioral
+        The X and mR charts share >85% of their calculation logic. The behavioral
         differences are encoded in ``mr_spec`` — no boolean flags needed.
 
         Parameters
@@ -1431,7 +1431,7 @@ class Analysis:
         _return_intermediates : bool, optional
             If True, includes '_intermediates' key for companion-mode reuse.
         _precomputed : dict, optional
-            Pre-computed intermediates from a prior XmR call (companion mode).
+            Pre-computed intermediates from a prior X call (companion mode).
             When provided, skips data preparation and uses these values directly.
 
         Returns
@@ -1490,7 +1490,7 @@ class Analysis:
         plot_col: str,
         precomputed: dict,
     ) -> dict:
-        """Build an MR-family chart reusing intermediates from a companion XmR call."""
+        """Build an MR-family chart reusing intermediates from a companion X call."""
         spec = self.spec
         out = precomputed['out'].copy()
         stratify_col = precomputed['stratify_col']
@@ -1515,7 +1515,7 @@ class Analysis:
             r_phase_stats = _join_limits(r_phase_stats, r_lims)
             r_phase_stats['center'] = r_phase_stats['mR']
 
-            # Replace XmR limits with R limits
+            # Replace X limits with mR limits
             out = out.drop(columns=['center', 'lpl', 'upl', 'beyond_limits'], errors='ignore')
             out = out.merge(
                 r_phase_stats[[stratify_col, '_phase_id', 'center', 'lpl', 'upl']],
@@ -1561,8 +1561,8 @@ class Analysis:
         # --- Non-phased precomputed path ---
         grouped = precomputed['grouped'].copy()
 
-        # For R chart: compute R-specific limits from XmR's grouped data
-        # grouped has columns: stratify_col, center (=mean), mR, lpl, upl (XmR limits)
+        # For mR chart: compute mR-specific limits from X's grouped data
+        # grouped has columns: stratify_col, center (=mean), mR, lpl, upl (X limits)
         r_grouped = grouped.rename(columns={'center': 'xmr_center', 'mR': 'center'})
 
         r_lims = r_grouped.apply(
@@ -1577,14 +1577,14 @@ class Analysis:
 
         r_grouped = _join_limits(r_grouped, r_lims, rsuffix='_r')
 
-        # Resolve lpl/upl column names (may have suffix if XmR lpl/upl exist)
+        # Resolve lpl/upl column names (may have suffix if X lpl/upl exist)
         if 'lpl_r' in r_grouped.columns:
             r_grouped = r_grouped.rename(columns={'lpl_r': 'r_lpl', 'upl_r': 'r_upl'})
             r_lpl_col, r_upl_col = 'r_lpl', 'r_upl'
         else:
             r_lpl_col, r_upl_col = 'lpl', 'upl'
 
-        # Merge R limits to the data (drop XmR-specific columns first)
+        # Merge mR limits to the data (drop X-specific columns first)
         r_out = out.drop(columns=['center', 'lpl', 'upl', 'beyond_limits'], errors='ignore')
         r_merge_data = r_grouped[[stratify_col, 'center', r_lpl_col, r_upl_col]].rename(
             columns={r_lpl_col: 'lpl', r_upl_col: 'upl'}
@@ -1838,8 +1838,8 @@ class Analysis:
         )
 
         # Compute limits per group
-        # For XmR: center=mean, limits based on mean ± E2*mR
-        # For R:   center=mR, limits based on 0 to D4*mR
+        # For X:  center=mean, limits based on mean ± E2*mR
+        # For mR: center=mR, limits based on 0 to D4*mR
         if mr_spec.center_source == 'mean':
             lims = grouped.apply(
                 lambda row: calculate_limits(
@@ -1986,7 +1986,7 @@ class Analysis:
                 r_phase_stats = _join_limits(r_phase_stats, r_lims)
                 r_phase_stats['center'] = r_phase_stats['mR']
 
-                # Replace XmR limits with R limits
+                # Replace X limits with mR limits
                 out = out.drop(columns=['center', 'lpl', 'upl'], errors='ignore')
                 out = out.merge(
                     r_phase_stats[['_phase_id', 'center', 'lpl', 'upl']],
@@ -2027,7 +2027,7 @@ class Analysis:
                 return result
 
             # --- Existing non-phased precomputed path ---
-            # Reuse intermediates from companion XmR call
+            # Reuse intermediates from companion X call
             out = _precomputed['out'].copy()
             mR = _precomputed['mR']
             xmr_lane_boundaries = _precomputed['lane_boundaries']
@@ -2281,7 +2281,7 @@ class Analysis:
         _return_intermediates: bool = False,
     ) -> dict:
         """
-        Calculate XmR (Individual) chart statistics.
+        Calculate X (Individual) chart statistics.
 
         Delegates to _calculate_mr_chart with _XMR_SPEC.
 
@@ -2295,7 +2295,7 @@ class Analysis:
         Returns
         -------
         dict
-            Chart data: {'XmR': {'data': df, 'statistics': dict, 'metadata': dict}}
+            Chart data: {'X': {'data': df, 'statistics': dict, 'metadata': dict}}
         """
         return self._calculate_mr_chart(
             _XMR_SPEC, value_col=value_col,
@@ -2308,7 +2308,7 @@ class Analysis:
         _precomputed: dict = None,
     ) -> dict:
         """
-        Calculate R (Range) chart statistics.
+        Calculate mR (Moving Range) chart statistics.
 
         Delegates to _calculate_mr_chart with _R_SPEC.
 
@@ -2322,7 +2322,7 @@ class Analysis:
         Returns
         -------
         dict
-            Chart data: {'R': {'data': df, 'statistics': dict, 'metadata': dict}}
+            Chart data: {'mR': {'data': df, 'statistics': dict, 'metadata': dict}}
         """
         return self._calculate_mr_chart(
             _R_SPEC, value_col=value_col,
@@ -2331,11 +2331,11 @@ class Analysis:
 
     def _calculate_xmr_r(self, value_col: str = None) -> dict:
         """
-        Calculate XmR and R charts together (Bishop methodology).
+        Calculate X and mR charts together (Bishop methodology).
 
         This method ensures that when companion=True, both charts are calculated
-        efficiently using shared intermediate values. The R chart uses the
-        same data computed for XmR, avoiding redundant calculation.
+        efficiently using shared intermediate values. The mR chart uses the
+        same data computed for X, avoiding redundant calculation.
 
         Parameters
         ----------
@@ -2345,15 +2345,15 @@ class Analysis:
         Returns
         -------
         dict
-            Combined chart data: {'XmR': {...}, 'R': {...}}
+            Combined chart data: {'X': {...}, 'mR': {...}}
         """
-        # Calculate XmR with intermediates for R reuse
+        # Calculate X with intermediates for mR reuse
         xmr_result = self._calculate_xmr(value_col, _return_intermediates=True)
 
         # Extract intermediates and remove from result
         intermediates = xmr_result.pop('_intermediates')
 
-        # Calculate R using precomputed values
+        # Calculate mR using precomputed values
         r_result = self._calculate_r(value_col, _precomputed=intermediates)
 
         # Combine results

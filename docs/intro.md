@@ -133,7 +133,7 @@ pip install processbehavior[images]
 ## Quick Links
 
 - [Quickstart](getting-started/quickstart.ipynb) - Get up and running in 5 minutes
-- [Basic XmR Chart](tutorials/basic-imr.ipynb) - Your first control chart
+- [Basic X Chart](tutorials/basic-imr.ipynb) - Your first control chart
 - [Design States](user-guide/sds-detection.md) - Understanding Design States
 - [API Reference](reference/api.md) - Complete API reference
 
