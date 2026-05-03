@@ -45,10 +45,6 @@ coverage.xml
 
 # Jupyter
 .ipynb_checkpoints/
-*.ipynb
-!docs/**/*.ipynb  # Keep Jupyter Book notebooks
-!*_tutorial.ipynb  # Keep tutorial notebooks in repo
-!validation/*.ipynb  # Keep validation notebooks
 
 # Temporary files
 *.tmp
@@ -57,56 +53,45 @@ coverage.xml
 *.bak
 *.swp
 
-# Analysis output files (examples/demos should not be committed)
+# Generated/exported data files (Excel, CSV, PDF, images)
 *.xlsx
 *.xls
 *.csv
-# Keep test datasets
 !processbehavior/datasets/data/*.csv
-# Keep validation reference data
+!tests/fixtures/data/*.csv
 !validation/*.csv
 *.pdf
 *.png
 *.jpg
 *.jpeg
 
-# Temporary scripts and demos (work-in-progress)
-analyze_*.py
-demo_*.py
-test_excel_*.py
-verify_*.py
-new_*.py
+# Generated HTML reports (regenerable plotly/notebook output)
+*.html
+!docs/**/*.html
 
-# Documentation drafts (keep only finalized docs)
-COMMIT_MESSAGE.txt
-*_DRAFT.md
-*_WIP.md
-ANALYSIS_COMPARISON.md
-ANALYSIS_OUTPUT_REVIEW.md
-ANALYSIS_RESULT_IMPLEMENTATION.md
-EXCEL_EXPORT_GUIDE.md
-EXECUTIVE_SUMMARY_FOR_TOM.md
-NEW_API_SUMMARY.md
-PROCESSBEHAVIOR_OVERVIEW.md
-PROCESSBEHAVIOR_OVERVIEW.pdf
-REFACTORING_*.md
-STRATIFIED_SUMMARY_DEMO.md
-code_review_issues.md
-github_issues.md
-QUICK_START_REFACTORING.md
-R2_VALIDATION_REPORT.md
+# Office binaries
+*.docx
 
-# Keep important documentation
-!README.md
-!CHANGELOG.md
-!CONTRIBUTING.md
-!CODE_OF_CONDUCT.md
-!SECURITY.md
-!pythonic_hadley_persona.md
-!PACKAGING_CHECKLIST.md
-!SAMPLING_DESIGN_STATES_REFERENCE.md
-!PLOTTING_FRAMEWORK_DESIGN.md
-!WESTERN_ELECTRIC_RULES_DESIGN.md
+# Secrets — never commit
+.env
+.env.*
+.envrc
+*.pem
+*.key
+*.p12
+*.pfx
+id_rsa*
+.aws/
+
+# Internal planning / scratch (kept out of the public repo)
+/2026-*.md
+/COMPREHENSIVE_*.md
+/CLAUDE.md
+/pythonic_hadley_persona.md
+/create_sds_charts_doc.py
+/visualize_design_states.py
+/Getting_Started_Guide.docx
+simulation/output/
 
 # mypy
 .mypy_cache/
