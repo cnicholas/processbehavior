@@ -280,7 +280,7 @@ class TestRChartAnalysis:
 
     def test_r_with_fillweight_data(self):
         """Test R chart on FillWeight800 dataset with stratification (SRP: R only)."""
-        f_path = "processbehavior/datasets/data/FILLWEIGHTDATA_800.csv"
+        f_path = "tests/fixtures/data/FILLWEIGHTDATA_800.csv"
         df = pd.read_csv(f_path)
 
         spec = {
