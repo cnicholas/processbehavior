@@ -1094,7 +1094,7 @@ class Study:
         Returns
         -------
         list of str
-            Valid chart types (e.g., ['Xbar', 'S', 'X']).
+            Valid chart types (e.g., ['Histogram', 'Xbar', 'S', 'X', 'mR']).
             Empty list when ADS=0 (no valid observations after cleaning).
         """
         if self.analytical_design_state.sds == 0:

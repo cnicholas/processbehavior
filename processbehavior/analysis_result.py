@@ -600,7 +600,7 @@ class AnalysisResult:
         Examples
         --------
         >>> stats = result.get_statistics('Xbar')
-        >>> print(f"Mean: {stats['Mean']}, UPL: {stats['upl']}")
+        >>> print(f"Center: {stats['center']}, UPL: {stats['upl']}")
         """
         name = self._resolve_chart_name(name)
         if name not in self.charts:
