@@ -43,7 +43,7 @@ Documentation = "https://cnicholas.github.io/processbehavior/"
 excel = ["openpyxl>=3.1"]
 images = ["kaleido>=0.2"]
 test = [
-  "pytest>=8",
+  "pytest>=9.0.3",
   "pytest-cov>=5",
   "pytest-timeout>=2.4",
   "pyarrow>=14.0",
@@ -53,17 +53,39 @@ lint = [
   "ruff>=0.5",
   "mypy>=1.10",
   "pre-commit>=3.7",
+  "filelock>=3.20.3",
+  "virtualenv>=20.36.1",
 ]
 docs = [
-  "jupyter-book>=1.0",
+  "jupyter-book>=2.0",
   "ipykernel",
+  # Transitive pins to clear known CVEs in the docs toolchain.
+  "lxml>=6.1.0",
+  "nbconvert>=7.17.1",
+  "pillow>=12.2.0",
+  "pygments>=2.20.0",
+  "tornado>=6.5.5",
+  "orjson>=3.11.6",
+  "requests>=2.33.0",
 ]
 dev = [
-  "processbehavior[test,lint,images,excel]",
+  "processbehavior[test,lint,images,excel,docs]",
 ]
 
 [tool.hatch.version]
 path = "processbehavior/__init__.py"
+
+[tool.coverage.run]
+source = ["processbehavior"]
+branch = true
+
+[tool.coverage.report]
+exclude_lines = [
+  "pragma: no cover",
+  "raise NotImplementedError",
+  "if __name__ == .__main__.:",
+  "if TYPE_CHECKING:",
+]
 
 [tool.hatch.build.targets.wheel]
 packages = ["processbehavior"]
