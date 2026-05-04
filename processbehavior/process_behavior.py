@@ -310,7 +310,7 @@ class ProcessBehavior:
     2. Auto-detecting Sampling Design State (SDS)
     3. Showing valid chart types for the detected SDS
     4. Recommending the best chart for the detected SDS
-    5. Two-step workflow: formulate() then analyze()
+    5. Two-step workflow: formulate() then execute()
 
     Usage:
         # Basic usage with auto-completion

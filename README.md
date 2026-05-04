@@ -1,5 +1,10 @@
 # processbehavior
 
+[![PyPI version](https://img.shields.io/pypi/v/processbehavior.svg)](https://pypi.org/project/processbehavior/)
+[![Python versions](https://img.shields.io/pypi/pyversions/processbehavior.svg)](https://pypi.org/project/processbehavior/)
+[![CI](https://github.com/cnicholas/processbehavior/actions/workflows/ci.yml/badge.svg)](https://github.com/cnicholas/processbehavior/actions/workflows/ci.yml)
+[![License](https://img.shields.io/pypi/l/processbehavior.svg)](https://github.com/cnicholas/processbehavior/blob/main/LICENSE)
+
 A Python library for **Process Behavior Analysis** following Thomas A. Bishop's Variance Analysis System (VAS) methodology.
 
 Unlike traditional SPC packages, processbehavior faithfully implements Bishop's VAS equation-by-equation: automatic Design State (DS) detection, variance decomposition via R1-R5 residuals, and correct chart selection based on data structure.
@@ -10,45 +15,43 @@ Unlike traditional SPC packages, processbehavior faithfully implements Bishop's 
 pip install processbehavior
 ```
 
-Plotting (plotly) and Excel export (openpyxl) are included. For static image export:
+Plotting (plotly) is included. For Excel export and static image export, install the corresponding extras:
 
 ```bash
-pip install processbehavior[images]
+pip install "processbehavior[excel]"   # openpyxl, for result.to_excel(...)
+pip install "processbehavior[images]"  # kaleido, for static plot images
 ```
 
 ## Quickstart
 
 ```python
-import pandas as pd
-from processbehavior import ProcessBehavior
+import processbehavior as pb
 
-# Wrap your DataFrame
-pb = ProcessBehavior(df)
+# Generate a sample dataset (replace with your own DataFrame)
+df = pb.make_sds(sds=1, seed=42)
+# Columns: 'time', 'factor 1', 'factor 2', 'y'
 
-# Formulate the study (detect DS, build analysis dataset)
-study = pb.formulate(
-    response=pb.cols.measurement,
-    time=pb.cols.batch,
-    factors=[pb.cols.machine]
+# Formulate the study — detect the Design State and build the analysis dataset
+study = pb.ProcessBehavior(df).formulate(
+    response='y',
+    time='time',
+    factors=['factor 1', 'factor 2'],
 )
-
-# See what was detected
-print(study)  # Shows DS, valid charts, design report
+print(study)  # DS, valid charts, recommended chart
 
 # Execute analysis
-result = study.execute()
+result = study.execute()                       # uses the recommended chart
+stats = result.get_statistics('Xbar')          # {'N', 'center', 'lpl', 'upl'}
+print(f"Center: {stats['center']}, UPL: {stats['upl']}")
 
-# Access results
-print(result.summary)
-chart_data = result.get_chart('Xbar')
-stats = result.get_statistics('Xbar')
-
-# Plot
+# Plot (interactive plotly figure)
 result.plot()
 
-# Export to Excel
+# Export to Excel (requires the [excel] extra)
 result.to_excel('analysis.xlsx')
 ```
+
+When working with your own data, `pb.cols.<column_name>` provides IDE auto-completion for column references in `formulate(...)`.
 
 ## Key Concepts
 

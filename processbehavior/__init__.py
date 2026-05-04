@@ -1,32 +1,31 @@
 """
 ProcessBehavior - Statistical Process Control for Python
 
-A Pythonic library for process behavior analysis following Bishop's VAS methodology.
-Provides auto-detection of Sampling Design States (SDS) and appropriate control chart
-analysis with variance decomposition.
+A Pythonic library for process behavior analysis following Bishop's VAS
+methodology. Provides auto-detection of Design States (DS) and appropriate
+control chart analysis with variance decomposition.
 
 Quick Start
 -----------
-    from processbehavior import ProcessBehavior
+    import processbehavior as pb
 
-    # Wrap your DataFrame
-    pb = ProcessBehavior(df)
+    # Generate sample data (replace with your own DataFrame)
+    df = pb.make_sds(sds=1, seed=42)
 
-    # Formulate the study (detect SDS, get recommendations)
-    study = pb.formulate(
-        response=pb.cols.measurement,
-        time=pb.cols.time,
-        factors=[pb.cols.line]
+    # Formulate the study (detect DS, build analysis dataset)
+    study = pb.ProcessBehavior(df).formulate(
+        response='y',
+        time='time',
+        factors=['factor 1', 'factor 2'],
     )
+    print(study)
 
-    # Run analysis
+    # Execute analysis
     result = study.execute()
+    stats = result.get_statistics('Xbar')
+    print(f"Center: {stats['center']}, UPL: {stats['upl']}")
 
-    # Access results
-    print(result.summary)
-    xbar_chart = result.get_chart('Xbar')
-
-    # Export to Excel
+    # Export to Excel (requires the [excel] extra)
     result.to_excel('analysis.xlsx')
 
 Main Classes
@@ -49,6 +48,7 @@ from processbehavior.exceptions import (
     ProcessBehaviorError,
     ValidationError,
 )
+from processbehavior.datasets.synthetic import make_sds
 from processbehavior.loss_function import LossResult
 from processbehavior.maximum_information import MaximumInformationResult
 
@@ -83,4 +83,7 @@ __all__ = [
     'get_theme',
     'list_themes',
     'register_theme',
+
+    # Datasets
+    'make_sds',
 ]

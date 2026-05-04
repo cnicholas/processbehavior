@@ -36,6 +36,8 @@ dependencies = [
 Homepage = "https://github.com/cnicholas/processbehavior"
 Repository = "https://github.com/cnicholas/processbehavior"
 Issues = "https://github.com/cnicholas/processbehavior/issues"
+Changelog = "https://github.com/cnicholas/processbehavior/blob/main/CHANGELOG.md"
+Documentation = "https://cnicholas.github.io/processbehavior/"
 
 [project.optional-dependencies]
 excel = ["openpyxl>=3.1"]
