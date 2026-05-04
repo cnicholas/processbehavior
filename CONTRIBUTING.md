@@ -82,6 +82,33 @@ Open an issue at <https://github.com/cnicholas/processbehavior/issues> with:
 For security-sensitive issues, use the private disclosure path in
 `SECURITY.md` instead of opening a public issue.
 
+## Releasing
+
+Releases are published to PyPI by the `Publish` workflow on tag push.
+
+1. Confirm CI is green on `main`, including the `audit` and `smoke-test` jobs.
+2. Move `## [Unreleased]` content into a new `## [X.Y.Z] - YYYY-MM-DD` section
+   in `CHANGELOG.md` and update the compare links at the bottom.
+3. Bump the version in `processbehavior/__init__.py` (`__version__`).
+   `pyproject.toml` reads it via `[tool.hatch.version]`.
+4. Commit with subject `Release vX.Y.Z`, push to `main`.
+5. Tag and push:
+   ```bash
+   git tag -s vX.Y.Z -m "Release vX.Y.Z"
+   git push origin vX.Y.Z
+   ```
+   The tag push triggers `.github/workflows/publish.yml`, which builds,
+   verifies with `twine check`, and uploads to PyPI via OIDC trusted
+   publishing — no API tokens.
+6. Verify the release on https://pypi.org/project/processbehavior/ and run
+   `pip install processbehavior==X.Y.Z` in a fresh venv to confirm the
+   README quickstart still runs end-to-end.
+
+The PyPI trusted publisher must be configured **once** at
+https://pypi.org/manage/project/processbehavior/settings/publishing/
+before the first release. Configure repository
+`cnicholas/processbehavior`, workflow `publish.yml`, environment `pypi`.
+
 ## Code of Conduct
 
 By participating, you agree to follow the [Code of Conduct](CODE_OF_CONDUCT.md).
