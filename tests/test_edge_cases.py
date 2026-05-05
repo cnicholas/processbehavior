@@ -12,7 +12,6 @@ import pytest
 from processbehavior import ProcessBehavior
 from processbehavior.exceptions import ValidationError
 
-
 # ============================================================================
 # TestMissingData: NaN handling
 # ============================================================================

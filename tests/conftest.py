@@ -12,11 +12,10 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from processbehavior.datasets import synthetic
 from processbehavior.data_preparation import DataPreparation
+from processbehavior.datasets import synthetic
 from processbehavior.formulation_spec import ChartRequest, FormulationSpec
 from processbehavior.sds_detector import SDSRegistry
-
 
 # ============================================================================
 # Shared Test Helpers
