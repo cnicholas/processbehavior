@@ -6,7 +6,6 @@ to multi-sheet Excel workbooks.
 """
 
 import os
-import tempfile
 
 import pandas as pd
 import pytest
@@ -21,14 +20,14 @@ pytestmark = pytest.mark.io
 
 
 @pytest.fixture
-def temp_excel_file():
-    """Create a temporary file path for Excel output."""
-    with tempfile.NamedTemporaryFile(suffix='.xlsx', delete=False) as f:
-        filepath = f.name
-    yield filepath
-    # Cleanup after test
-    if os.path.exists(filepath):
-        os.remove(filepath)
+def temp_excel_file(tmp_path):
+    """Path for a per-test Excel output file.
+
+    Use pytest's tmp_path so Windows file-handle cleanup is handled by the
+    pytest fixture machinery (retries on WinError 32) instead of an
+    immediate os.remove that races with openpyxl/pandas readers.
+    """
+    return str(tmp_path / 'out.xlsx')
 
 
 def test_excel_export_basic(temp_excel_file):
