@@ -43,7 +43,9 @@ Documentation = "https://cnicholas.github.io/processbehavior/"
 excel = ["openpyxl>=3.1"]
 images = ["kaleido>=0.2"]
 test = [
-  "pytest>=9.0.3",
+  # pytest 9.x requires Python 3.10+; keep 3.9 on the latest 8.x line.
+  "pytest>=9.0.3; python_version >= '3.10'",
+  "pytest>=8.4.2,<9; python_version < '3.10'",
   "pytest-cov>=5",
   "pytest-timeout>=2.4",
   "pyarrow>=14.0",
