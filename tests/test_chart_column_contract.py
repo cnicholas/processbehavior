@@ -9,8 +9,8 @@ This test exposes bugs in:
 These tests verify the DECLARATIVE CONTRACT that each chart type should follow.
 """
 import pandas as pd
+from conftest import detect_sds_for_test, make_request, make_spec
 
-from conftest import make_spec, make_request, detect_sds_for_test
 from processbehavior.analysis import Analysis
 from processbehavior.plotting.plotter import Plotter
 

@@ -266,10 +266,7 @@ class TestTickLabelBlockInvariants:
     @staticmethod
     def _extract_ticks_and_boundaries(result, chart_name='X'):
         """Extract tick positions, labels, and lane boundary positions."""
-        if result.is_stratified:
-            focused = result.focus(result.strata[0])
-        else:
-            focused = result
+        focused = result.focus(result.strata[0]) if result.is_stratified else result
 
         fig = focused.plot()
         ax = fig.figure.layout.xaxis

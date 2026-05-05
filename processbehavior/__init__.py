@@ -39,6 +39,7 @@ __version__ = "0.1.0"
 # Result object
 from processbehavior.analysis_result import AnalysisResult
 from processbehavior.capability import CapabilityResult, SpecLimits
+from processbehavior.datasets.synthetic import make_sds
 
 # Exceptions
 from processbehavior.exceptions import (
@@ -48,7 +49,6 @@ from processbehavior.exceptions import (
     ProcessBehaviorError,
     ValidationError,
 )
-from processbehavior.datasets.synthetic import make_sds
 from processbehavior.loss_function import LossResult
 from processbehavior.maximum_information import MaximumInformationResult
 

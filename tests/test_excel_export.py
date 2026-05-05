@@ -10,7 +10,6 @@ import tempfile
 
 import pandas as pd
 import pytest
-
 from conftest import detect_sds_for_test, make_request, make_spec
 
 from processbehavior.analysis import Analysis
@@ -468,9 +467,9 @@ def test_excel_export_stratified_multifactor(temp_excel_file):
 
 def test_excel_export_sds4_minimal(temp_excel_file):
     """Test export with minimal SDS 4-like data (single factor level)."""
-    from processbehavior import ProcessBehavior
-
     import numpy as np
+
+    from processbehavior import ProcessBehavior
     df = pd.DataFrame({
         'y': np.random.default_rng(42).normal(50, 5, 20),
         'time': range(1, 21),

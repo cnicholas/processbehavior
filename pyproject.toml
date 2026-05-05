@@ -53,8 +53,10 @@ lint = [
   "ruff>=0.5",
   "mypy>=1.10",
   "pre-commit>=3.7",
-  "filelock>=3.20.3",
-  "virtualenv>=20.36.1",
+  # Transitive CVE-driven floors. filelock>=3.20 and virtualenv>=20.36
+  # drop Python 3.9 wheels, so the floors are conditioned on >= 3.10.
+  "filelock>=3.20.3; python_version >= '3.10'",
+  "virtualenv>=20.36.1; python_version >= '3.10'",
 ]
 docs = [
   "jupyter-book>=2.0",
@@ -143,6 +145,13 @@ lint.ignore = []
 lint.mccabe.max-complexity = 15
 format.quote-style = "single"
 target-version = "py39"
+extend-exclude = [
+  "validation",
+  "examples",
+  "docs",
+  "simulation",
+  "*.ipynb",
+]
 
 [tool.mypy]
 python_version = "3.9"

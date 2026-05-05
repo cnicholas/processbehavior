@@ -58,7 +58,10 @@ jobs:
           python -m pip install --upgrade pip
           pip install -e ".[dev]"
           pip install pip-audit
-          pip-audit --strict --skip-editable
+          # --strict treats any skipped package as fatal; the project
+          # itself is editable here and not yet on PyPI, so it is always
+          # skipped. Re-enable --strict once the package is published.
+          pip-audit --skip-editable
 
   package:
     name: build distribution

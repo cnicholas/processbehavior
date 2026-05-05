@@ -8,9 +8,8 @@ These tests verify:
 """
 
 import numpy as np
-import pandas as pd
+from conftest import detect_sds_for_test, make_spec
 
-from conftest import make_spec, detect_sds_for_test
 from processbehavior import ProcessBehavior
 from processbehavior import analysis_dataset as ad
 from processbehavior.datasets import synthetic
