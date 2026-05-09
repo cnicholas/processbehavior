@@ -341,3 +341,142 @@ class TestTickLabelBlockInvariants:
         meta = focused.charts['X'].get('metadata', {})
         lb = meta.get('lane_boundaries')
         assert not lb, "Full RSG should have no lane boundaries"
+
+
+# ============================================================================
+# Two-tier x-axis: per-block time ticks + cell-label band (overall X chart)
+# ============================================================================
+
+
+class TestTwoTierXAxis:
+    """Multi-cell overall X charts get a two-tier x-axis:
+    per-cell production_time ticks above a cell-label band annotation.
+    """
+
+    @staticmethod
+    def _result():
+        from processbehavior.datasets.synthetic import make_sds
+        df = make_sds(2, K1=3, K2=2, T=10, seed=42)
+        study = ProcessBehavior(df).formulate(
+            response='y', factors=['factor 1', 'factor 2'], time='time',
+        )
+        return study.execute(chart='X', by=[])
+
+    @staticmethod
+    def _cell_band_annotations(fig):
+        """Return paper-coord cell-band annotations (yref=paper, y<0)."""
+        return [
+            a for a in fig.figure.layout.annotations
+            if getattr(a, 'yref', None) == 'paper' and getattr(a, 'y', 0) < 0
+        ]
+
+    def test_cell_band_one_per_block(self):
+        """One cell-band annotation per factor block."""
+        result = self._result()
+        fig = result.plot()
+        bands = self._cell_band_annotations(fig)
+        meta = result.charts['X'].get('metadata', {})
+        lane_bounds = meta.get('lane_boundaries') or []
+        # n blocks = n boundaries + 1
+        assert len(bands) == len(lane_bounds) + 1, (
+            f"Expected {len(lane_bounds) + 1} cell-band annotations, got {len(bands)}"
+        )
+
+    def test_cell_band_text_matches_rsg(self):
+        """Cell-band annotation text equals the rsg value at each block start."""
+        result = self._result()
+        fig = result.plot()
+        bands = self._cell_band_annotations(fig)
+        meta = result.charts['X'].get('metadata', {})
+        lane_bounds = meta.get('lane_boundaries') or []
+        data = result.charts['X']['data']
+        n = len(data)
+        edges = sorted({0, n} | {b['position'] for b in lane_bounds})
+        # Annotations are added in block order; strip <b> tags.
+        seen_texts = [a.text.replace('<b>', '').replace('</b>', '') for a in bands]
+        expected_texts = [str(data.iloc[edges[i]]['rsg']) for i in range(len(edges) - 1)]
+        assert seen_texts == expected_texts, (
+            f"Cell-band labels mismatch:\n  got: {seen_texts}\n  want: {expected_texts}"
+        )
+
+    def test_per_block_tick_count(self):
+        """Default 4 production_time ticks per block (or fewer if block_n < 4)."""
+        result = self._result()
+        fig = result.plot()
+        ax = fig.figure.layout.xaxis
+        tickvals = list(ax.tickvals or [])
+        meta = result.charts['X'].get('metadata', {})
+        lane_bounds = meta.get('lane_boundaries') or []
+        data = result.charts['X']['data']
+        n = len(data)
+        edges = sorted({0, n} | {b['position'] for b in lane_bounds})
+        for i in range(len(edges) - 1):
+            start, end = edges[i], edges[i + 1]
+            block_n = end - start
+            block_ticks = [t for t in tickvals if start <= t < end]
+            expected = min(4, block_n)
+            assert len(block_ticks) == expected, (
+                f"Block [{start},{end}) has {len(block_ticks)} ticks, expected {expected}"
+            )
+
+    def test_legend_hidden_for_single_series(self):
+        """Single-trace X chart hides the redundant legend chip."""
+        result = self._result()
+        fig = result.plot()
+        # showlegend may be False explicitly or inherited as None+default;
+        # we only care that the rendered figure suppresses the legend.
+        assert fig.figure.layout.showlegend is False, (
+            "Single-series X chart should not show a legend"
+        )
+
+    def test_limits_annotation_in_paper_coords(self):
+        """The UPL/CL/LPL summary annotation lives outside the plot area."""
+        result = self._result()
+        fig = result.plot()
+        # Find the limits annotation by content.
+        matches = [
+            a for a in fig.figure.layout.annotations
+            if 'UPL' in (a.text or '') and 'CL' in (a.text or '')
+        ]
+        assert matches, "Expected a UPL/CL/LPL summary annotation"
+        ann = matches[0]
+        assert ann.xref == 'paper', f"Limits annotation xref={ann.xref}, expected 'paper'"
+        assert ann.yref == 'paper', f"Limits annotation yref={ann.yref}, expected 'paper'"
+        assert ann.y > 1.0, f"Limits annotation y={ann.y}, expected > 1.0 (above plot)"
+
+    def test_lane_top_labels_suppressed(self):
+        """Top-of-plot lane labels are not drawn when the cell band is present."""
+        result = self._result()
+        fig = result.plot()
+        meta = result.charts['X'].get('metadata', {})
+        lane_bounds = meta.get('lane_boundaries') or []
+        boundary_labels = {b.get('label') for b in lane_bounds if b.get('label')}
+        if not boundary_labels:
+            pytest.skip("no lane boundary labels in this scenario")
+        # No annotation at the top of the plot area should match a lane
+        # boundary label. Top-of-plot annotations have yanchor='bottom'
+        # and y near the data y_max with yref not 'paper'.
+        offending = [
+            a for a in fig.figure.layout.annotations
+            if (a.text or '').replace('<b>', '').replace('</b>', '') in boundary_labels
+            and getattr(a, 'yref', '') != 'paper'
+        ]
+        assert not offending, (
+            f"Top-of-plot lane labels still drawn: {[a.text for a in offending]}"
+        )
+
+    def test_hover_includes_cell_and_time(self):
+        """Hover template carries cell, time, and obs id via customdata."""
+        result = self._result()
+        fig = result.plot()
+        # Find the main data trace (not the beyond-limits highlight).
+        main_traces = [t for t in fig.figure.data if t.name == 'X']
+        assert main_traces, "expected an 'X' trace"
+        tr = main_traces[0]
+        assert tr.customdata is not None, "main trace should have customdata"
+        assert 'Cell:' in (tr.hovertemplate or ''), (
+            f"hovertemplate missing 'Cell:': {tr.hovertemplate!r}"
+        )
+        assert 'Time:' in (tr.hovertemplate or ''), (
+            f"hovertemplate missing 'Time:': {tr.hovertemplate!r}"
+        )

@@ -26,7 +26,67 @@ from .stats_box import add_stats_box
 from .zones import add_zone_shading
 
 if TYPE_CHECKING:
-    pass
+    import pandas as pd
+
+
+# ---------------------------------------------------------------------------
+#  Hover construction
+# ---------------------------------------------------------------------------
+
+
+def _build_hover(
+    data: pd.DataFrame,
+    ctx: RenderContext,
+    value_col: str,
+) -> tuple[list | None, str]:
+    """Build (customdata, hovertemplate) for the main data trace.
+
+    When the x-axis falls back to integer position because the time
+    variable is non-unique (the dense multi-cell X-chart case), the
+    default hover ``%{x}<br>%{y:.3f}`` shows just the row index — useless
+    once production_time is no longer a tick label. So we attach
+    customdata carrying [cell, time, obs_id] when those columns exist
+    and surface them in the template.
+
+    Returns (None, default_template) for charts where the x-axis already
+    carries enough context (categorical x_col), preserving existing
+    behavior for Xbar/S charts and other paths.
+    """
+    spec = ctx.spec
+    x_col = spec.x_col
+    cell_col = 'rsg' if 'rsg' in data.columns else None
+    time_var: str | None = None
+    for cand in ('PRODUCTION TIME', 'time', 'production_time', 'PRODUCTION_TIME'):
+        if cand in data.columns and cand != x_col and cand != value_col:
+            time_var = cand
+            break
+    has_obs_id = 'obs_id' in data.columns
+
+    # Only enrich when x falls back to integer position AND we have
+    # something useful to add. Categorical-x charts (Xbar by factor) and
+    # single-cell charts get the existing default template.
+    if x_col is not None or (cell_col is None and time_var is None and not has_obs_id):
+        return None, '%{x}<br>%{y:.3f}<extra></extra>'
+
+    parts = [f'<b>{ctx.chart_name}</b> = %{{y:.3f}}']
+    custom_cols: list[str] = []
+    template_pieces: list[str] = []
+    if cell_col:
+        custom_cols.append(cell_col)
+        template_pieces.append(f'Cell: %{{customdata[{len(custom_cols) - 1}]}}')
+    if time_var and time_var in data.columns:
+        custom_cols.append(time_var)
+        template_pieces.append(f'Time: %{{customdata[{len(custom_cols) - 1}]}}')
+    if has_obs_id:
+        custom_cols.append('obs_id')
+        template_pieces.append(f'Obs:  %{{customdata[{len(custom_cols) - 1}]}}')
+
+    if not custom_cols:
+        return None, '%{x}<br>%{y:.3f}<extra></extra>'
+
+    customdata = data[custom_cols].astype(object).values.tolist()
+    hovertemplate = '<br>'.join(parts + template_pieces) + '<extra></extra>'
+    return customdata, hovertemplate
 
 
 # ---------------------------------------------------------------------------
@@ -74,6 +134,7 @@ def render_control_chart(
         add_zone_shading(fig, stats, theme, row=row, col=col, ncols=ncols)
 
     # 2. Main data trace
+    customdata, hovertemplate = _build_hover(data, ctx, value_col)
     trace_kw = dict(
         x=x_data,
         y=data[value_col],
@@ -82,8 +143,10 @@ def render_control_chart(
         marker=dict(size=ctx.marker_size, color=theme.data_color),
         line=dict(color=theme.data_color, width=ctx.line_width),
         opacity=theme.data_opacity,
-        hovertemplate='%{x}<br>%{y:.3f}<extra></extra>',
+        hovertemplate=hovertemplate,
     )
+    if customdata is not None:
+        trace_kw['customdata'] = customdata
     if ctx.is_faceted:
         trace_kw['showlegend'] = False
     _add_trace(fig, go.Scatter(**trace_kw), row, col)
@@ -122,7 +185,14 @@ def render_control_chart(
             y_max = data[value_col].max()
             y_pad = (y_max - y_min) * 0.05
             y_range = (y_min - y_pad, y_max + y_pad)
-            add_lane_boundaries(fig, lane_boundaries, y_range, theme, row=row, col=col)
+            # Single-chart mode: cell labels are rendered as a band below the
+            # axis title by Plotter._apply_time_tick_labels, so suppress the
+            # top-of-plot lane labels here. Faceted mode keeps top labels
+            # per panel.
+            add_lane_boundaries(
+                fig, lane_boundaries, y_range, theme,
+                row=row, col=col, show_labels=ctx.is_faceted,
+            )
 
 
 # ---------------------------------------------------------------------------
@@ -312,20 +382,26 @@ def _add_limit_summary_annotation(
 
     text = ' | '.join(parts)
 
-    # Build domain-relative refs
+    # Build domain-relative refs.
+    # For single-chart mode, place the annotation in paper coords just
+    # below the title so it never collides with in-plot decorations
+    # (lane labels, signal markers, run-rule annotations). For faceted
+    # mode keep the per-subplot domain placement.
     subplot_kw = _subplot_kwargs(row, col)
     if row is not None and col is not None:
         subplot_idx = (row - 1) * (ncols or 1) + col
         xref = 'x domain' if subplot_idx == 1 else f'x{subplot_idx} domain'
         yref = 'y domain' if subplot_idx == 1 else f'y{subplot_idx} domain'
+        x_pos, y_pos, yanchor = 1.0, 1.0, 'top'
     else:
-        xref = 'x domain'
-        yref = 'y domain'
+        xref = 'paper'
+        yref = 'paper'
+        x_pos, y_pos, yanchor = 1.0, 1.04, 'bottom'
 
     fig.add_annotation(
-        x=1.0, xref=xref,
-        y=1.0, yref=yref,
-        yanchor='top',
+        x=x_pos, xref=xref,
+        y=y_pos, yref=yref,
+        yanchor=yanchor,
         xanchor='right',
         text=text,
         showarrow=False,
