@@ -31,6 +31,14 @@ The primary user is the analyst. The API must be simple, mirror how analysts thi
 - **Correct before complete**: Validate against Bishop's Minitab reference data (TABVASTESTDATABASE.csv). Fewer features done correctly beats more features done approximately.
 - **SDS drives everything**: Detected once on raw data, passed through the system. No class re-detects SDS. It determines valid charts, R2 method, and variance decomposition.
 - **Composition, single responsibility, immutability**: AnalysisDataSet orchestrates but delegates. Study is a frozen dataclass. Calculation functions are pure where possible.
+- **Exception convention**: Input/parameter validation raises `ValidationError` or one of its subclasses (`ColumnNotFoundError`, `FactorNotFoundError`, `ChartNotAvailableError`) from `processbehavior/exceptions.py`. Methodology invariants can stay `RuntimeError`. Never raise raw `ValueError` for user-facing input errors. (As of v0.1.0 there are ~71 raw `raise ValueError` calls left from earlier code; the hierarchy is the target — don't add new ones.)
+
+## Releasing
+
+- Single-source version: `processbehavior/__init__.py:__version__`. `pyproject.toml` reads it dynamically via `[tool.hatch.version]`.
+- Move content from `## [Unreleased]` in root `CHANGELOG.md` into a new `## [X.Y.Z] - YYYY-MM-DD` section; update compare links at the bottom.
+- Tag `vX.Y.Z` triggers `.github/workflows/publish.yml` which builds, runs `twine check`, and uploads to PyPI via OIDC trusted publishing (no API tokens). The trusted publisher must be configured once at pypi.org/manage/project/processbehavior/settings/publishing/ before the first tag.
+- Full process is in CONTRIBUTING.md → Releasing.
 
 ## Domain & Architecture
 
@@ -39,6 +47,7 @@ The primary user is the analyst. The API must be simple, mirror how analysts thi
 - **R2 is structure-dependent** (exact/ma2/hybrid based on cell sizes). R1, R3, R4, R5 are pure algebra.
 - **`rsg_vars` dual semantics**: variance decomposition groups for Xbar/S; stratification (separate charts) for IMR/R.
 - **obs_id assigned BEFORE sort**, cell_key = (factor × time) tuple. Canonical sort: (cell_key, obs_id).
+- **Stats-dict shape**: `result.get_statistics(name)` returns a dict with keys `{N, center, lpl, upl}`. Never `mean`, never `Mean`. Doc examples, README snippets, and tests must use `'center'`. (See the bug fixed at `analysis_result.py:603` in Phase 2.)
 
 ### Pipeline
 - `formulate()` is expensive: SDS detection on raw data, builds AnalysisDataSet (residuals, effects)
@@ -50,15 +59,34 @@ The primary user is the analyst. The API must be simple, mirror how analysts thi
 - `AnalysisDataSet` orchestrates: `DataPreparation` → `SDSRegistry` → `ResidualCalculator` / `EffectsCalculator`
 - `DataPrepConfig` (base config) → `AnalysisSpecification` (adds analysis_type)
 
+### Dependency boundaries
+- Runtime deps (in `[project.dependencies]`): `numpy>=1.23`, `pandas>=2.0,<3`, `natsort>=8.0`, `plotly>=5.18,<7`. Upper bounds on pandas/plotly are intentional — the next major bumps both have documented breaking changes.
+- numpy is declared explicitly even though pandas pulls it. Don't rely on transitive resolution.
+- `openpyxl` and `kaleido` are NOT runtime deps. They live in `[excel]` and `[images]` extras, respectively, and are lazy-imported inside the export paths. Don't move them back to the runtime list.
+- `[dev]` is a recursive aggregate — `[test, lint, images, excel, docs]`.
+
 ### Validation & Testing
 - `validation/TABVASTESTDATABASE.csv`: Bishop's reference data. PM SDS 1–6 columns, `*` = NA
 - pytest with `.venv/bin/python -m pytest tests/`
-- Synthetic data: `from processbehavior.datasets.synthetic import make_sds`
+- Synthetic data: top-level `pb.make_sds(...)` (re-exported); module path `from processbehavior.datasets.synthetic import make_sds`
+- Use pytest's `tmp_path` for any file the test writes; never `tempfile.NamedTemporaryFile(delete=False)` + manual `os.remove`. The hand-rolled pattern races with openpyxl/pandas readers on Windows (WinError 32). The `temp_excel_file` fixture in `tests/test_excel_export.py` is the reference pattern.
+- CI matrix is `[3.9, 3.11, 3.13]` × `[ubuntu, macos, windows]`. Lint + mypy run only on `ubuntu/3.11` to avoid platform-specific drift.
+- Python 3.9 has conditional pins in `[lint]`/`[test]`: pytest>=9 and filelock>=3.20 / virtualenv>=20.36 dropped 3.9 wheels, so those floors are gated on `python_version >= '3.10'`.
+- Run a fast local slice with `.venv/bin/python -m pytest tests/ -m "not slow"`.
 
 ### Wheeler Terminology
 - Process Behavior Chart = Control Chart
 - Natural Process Limits ≠ Specification Limits
 - XmR = IMR (Individual Moving Range)
+
+### Docs
+- Jupyter Book / MyST is the only doc system. Config: `docs/myst.yml`. The previous `mkdocs.yml` was deleted in Phase 2; do not restore it.
+- Root `CHANGELOG.md` is the source of truth — `docs/appendix/changelog.md` is a `{include}` of it.
+- The `Docs` workflow at `.github/workflows/docs.yml` builds with the MyST CLI and deploys to GitHub Pages on push to `main` (gated on Pages being enabled in repo Settings).
+
+### Audit history
+- Phase 3 release-prep follow-ups (mypy re-enable, broad-except cleanup, lockfile, etc.) are tracked in GitHub Issue #77.
+- The original four-agent pre-release audit synthesis lives in the commit messages around `88477a5` (Phase 1) → `5b8ce17` (Phase 2) → `a97e079` (Phase 3). The aggregated `COMPREHENSIVE_PRE_RELEASE_EVALUATION.md` was untracked in Phase 1.
 
 ## Commit Message Template
 ## Summary
@@ -106,6 +134,15 @@ The primary user is the analyst. The API must be simple, mirror how analysts thi
 - **Docs:** <!-- docstring updates / user-facing notes -->
 - **Follow-ups (not in this PR):** <!-- explicitly defer gold plating -->
 
-##Testing
+## Testing
 - Always use the validation dataset for testing.  It is ground truth.
 - File: [text](validation/TABVASTESTDATABASE.csv)
+
+## Anti-patterns (don't add these back)
+- Don't track planning docs at repo root. Use `.claude/notes/` (already gitignored).
+- Don't bundle CSVs in `processbehavior/datasets/data/` without a `load_<name>()` function in `processbehavior/datasets/__init__.py`. Test-only CSVs belong in `tests/fixtures/data/`.
+- Don't track generated artifacts: `*.html` reports, `*.docx`, `simulation/output/*`. They are gitignored — keep them so.
+- Don't pin GitHub Actions by major tag. Use full SHA + a `# vX.Y.Z` comment; Dependabot keeps them current.
+- Don't use `pip-audit --strict` while the project is editable and not yet on PyPI — `--strict` errors on any skipped package and the editable project is always skipped. Re-enable after first publish.
+- Don't suggest restoring `mkdocs.yml` — see "Docs" above.
+- Don't use `tempfile.NamedTemporaryFile(delete=False) + os.remove` in tests — see "Validation & Testing" above.
