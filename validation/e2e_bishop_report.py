@@ -455,11 +455,14 @@ def run_sds_validation(sds_num, pb, study, json_data):  # noqa: C901
             append_result('X', '[]', 'R2', False, cl, lpl, upl, safe_chart_table(mi_xmr, 'X'))
 
         elif category in ('loss_function', 'capability', 'max_info_histogram'):
-            append_result(category, '-', '-', False, None, None, None, None,
-                          note='Deferred — tested separately')
+            # Covered by the dedicated Capability and Loss-function sub-tables
+            # rendered per SDS by generate_html(); skip the redundant chart-table
+            # row that would otherwise show as grey "Deferred".
+            continue
 
         else:
-            append_result('skip', '-', '-', False, None, None, None, None)
+            # No other category produces a meaningful chart-row; drop it.
+            continue
 
     capability_results = _build_capability_results(sds_num, computed['capability'].as_dict())
     loss_results = _build_loss_results(sds_num, computed['loss'].as_dict())
