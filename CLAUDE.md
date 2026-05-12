@@ -48,6 +48,7 @@ The primary user is the analyst. The API must be simple, mirror how analysts thi
 - **`rsg_vars` dual semantics**: variance decomposition groups for Xbar/S; stratification (separate charts) for IMR/R.
 - **obs_id assigned BEFORE sort**, cell_key = (factor × time) tuple. Canonical sort: (cell_key, obs_id).
 - **Stats-dict shape**: `result.get_statistics(name)` returns a dict with keys `{N, center, lpl, upl}`. Never `mean`, never `Mean`. Doc examples, README snippets, and tests must use `'center'`. (See the bug fixed at `analysis_result.py:603` in Phase 2.)
+- **Xbar center line is Bishop VAS unweighted**: mean of (factor × time) cell means on `value_col`, equal weight per experimental condition regardless of cell N_kt. Holds for both response and residual Xbar charts; balanced designs collapse to the observation-weighted mean, unbalanced designs differ by a methodology-required (and per Bishop, practically negligible) amount. Computed in `_calculate_xbar` at `analysis.py:~699`. Don't reintroduce `df[value_col].mean()` as the center — that's the dead-branch bug fixed in this release.
 
 ### Pipeline
 - `formulate()` is expensive: SDS detection on raw data, builds AnalysisDataSet (residuals, effects)

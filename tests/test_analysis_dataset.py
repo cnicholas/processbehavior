@@ -143,8 +143,10 @@ class TestXbarSAnalysis:
         sds = detect_sds_for_test(df_differing_Ns, spec)
         result = Analysis(spec=make_spec(spec), request=make_request(spec), sds=sds, df=df_differing_Ns).calculate()
 
-        # Center should be grand mean of all observations (including n=1 groups)
-        assert result['Xbar']['statistics']['center'] == 4.0
+        # Center is Bishop's unweighted grand mean (mean of (a,b) x time cell
+        # means), not the observation-weighted mean. The two diverge on
+        # unbalanced data: obs-weighted = 4.0, Bishop unweighted = 4.14.
+        assert result['Xbar']['statistics']['center'] == 4.14
         # Limits should vary when group sizes differ
         assert result['Xbar']['statistics']['lpl'] == 'Varies'
         assert result['Xbar']['statistics']['upl'] == 'Varies'

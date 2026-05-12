@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- Xbar center line now correctly computes Bishop VAS's mean of (factor × time)
+  cell means on the charted column for both response and residual charts.
+  Previously a dead-code branch in `_calculate_xbar` caused the center to fall
+  through to an observation-weighted mean (`df[value_col].mean()`), producing a
+  small (<0.05) divergence from Bishop's reference on unbalanced designs.
+  Surfaced on SDS 3 R3 (recentered) Xbar by PRODUCTION_TIME, where the center
+  shifts from 237.81 to the methodologically-correct 237.83. Balanced designs
+  (SDS 1, SDS 2's degenerate single-obs cells) and stratified Xbar charts were
+  unaffected.
+
 ## [0.1.0] - 2026-05-03
 
 Initial public release. The 0.1.x line is **alpha** — the public API is settling

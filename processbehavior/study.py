@@ -1752,6 +1752,19 @@ class Study:
 
             Only valid for Xbar/S charts.
 
+        Notes
+        -----
+        **Xbar center line (Bishop VAS unweighted).** For both response and
+        residual Xbar charts, the center line is the mean of (factor x time)
+        cell means on the charted column — equal weight per experimental
+        condition, regardless of how many observations fall in each cell. This
+        is the VAS-canonical grand mean and matches Bishop's Minitab reference.
+        It is **not** the observation-weighted mean and **not** the mean of the
+        plotted subgroup means. On balanced designs the three coincide; on
+        unbalanced designs they differ slightly, but per Bishop the practical
+        difference is negligible — the methodology still requires the
+        unweighted form.
+
         Returns
         -------
         AnalysisResult

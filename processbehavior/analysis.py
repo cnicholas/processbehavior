@@ -390,6 +390,46 @@ class Analysis:
 
         return n_to_use, n_max
 
+    def _residual_grain(self, value_col: str) -> list[str]:
+        """Return the cell-grid columns at which to compute Bishop's grand mean
+        for an Xbar chart on this column.
+
+        Each VAS residual is recentered around a baseline computed at a specific
+        grain (see `analysis_dataset.py:364-371` and `study.py:2009`). The
+        canonical grand mean of an RCRk chart averages over that grain — equal
+        weight per cell — yielding Bishop's unweighted center line.
+
+        Grain table (None for non-residuals; falls through to other logic):
+          R1, R2, R3 -> [rsg_var, time_var]   (full cell grid)
+          R4         -> [rsg_var]             (time effect removed)
+          R5, R6     -> [rsg_var]             (factor effects live at rsg level)
+
+        Returns an empty list when the column isn't a residual or the spec
+        lacks the required factors/time — caller falls back to `df.mean()`.
+        """
+        if value_col is None:
+            return []
+        spec = self.spec
+        base = value_col.upper()
+        if base.startswith('RCR'):
+            base = 'R' + base[3:]
+        if not (base.startswith('R') and len(base) >= 2 and base[1].isdigit()):
+            return []
+        # R5/R6 are factor-effect residuals; R4 is the time-effect residual
+        # (time component removed). For our SDS 3 validation only R3 and R6 are
+        # exercised; R4/R5 grains are inferred from the recentering structure.
+        if base in ('R5', 'R6'):
+            return [spec.rsg_var_name] if spec.rsg_var_name else []
+        if base == 'R4':
+            return [spec.rsg_var_name] if spec.rsg_var_name else []
+        # R1, R2, R3: full (rsg x time) cell grid
+        grain = []
+        if spec.rsg_var_name:
+            grain.append(spec.rsg_var_name)
+        if spec.time_var:
+            grain.append(spec.time_var)
+        return grain
+
     @staticmethod
     def _resolve_limits_column(value_col: str, df: pd.DataFrame) -> str:
         """Return the column to use for within-group std in limit calculations.
@@ -435,9 +475,11 @@ class Analysis:
         Examples
         --------
         >>> groupby_cols, ybar_col, stratify_by = self._resolve_by_grouping('y')
-        >>> # by=[] -> ([], 'Ybar', []) - collapse all, use grand mean
+        >>> # by=[] (normalized to by=None) -> ([rsg, time_var], 'Ybar_kt', [])
+        >>> #   - cell-level aggregation when factors+time exist
         >>> # by=['factor1','factor2'] -> (['rsg'], 'Ybar_k', []) - use factor means
         >>> # by=['time_var'] with factors -> ([time_var], 'Ybar_t', [rsg_var_name])
+        >>> # NOTE: ybar_col is None for residual value_col (no pre-cached mean).
         """
         spec = self.spec
         by = self.request.by
@@ -695,8 +737,30 @@ class Analysis:
 
         _limits_col = self._resolve_limits_column(value_col, df)
 
-        # Calculate grand mean (center line) - use pre-calculated if available
-        _Ybar = df['Ybar'].iloc[0] if ybar_col == 'Ybar' and 'Ybar' in df.columns else df[value_col].mean()
+        # Bishop VAS grand mean: equal weight per cell at the residual's natural
+        # grain, regardless of cell N. The unweighted form is canonical; weighted
+        # vs unweighted differ only on unbalanced designs, and Bishop's principle
+        # is that the practical difference is negligible -- the methodology still
+        # requires the unweighted form. Each residual is recentered at a specific
+        # grain (analysis_dataset.py:364-371; study.py:2009 for R6), and the grand
+        # mean averages over that grain:
+        #   R3 (interaction)        -> (rsg, time) full cell grid
+        #   R4 (time effect)        -> (rsg) factor grain (time component removed)
+        #   R5, R6 (factor effects) -> (time) or (rsg) depending on what's removed
+        # In practice the only residuals exercised by Bishop's validation are R3
+        # (full cell grid) and R5/R6 (factor grain).
+        if value_col == spec.response_var and 'Ybar' in df.columns:
+            _Ybar = df['Ybar'].iloc[0]
+        else:
+            grain_cols = self._residual_grain(value_col)
+            if grain_cols and value_col in df.columns:
+                _Ybar = (
+                    df.groupby(grain_cols, observed=True)[value_col]
+                    .mean()
+                    .mean()
+                )
+            else:
+                _Ybar = df[value_col].mean()
 
         # Handle by=[] (collapse all) - single point chart
         if groupby_cols == []:
@@ -758,7 +822,7 @@ class Analysis:
                 f"for effects analysis."
             )
 
-        # Use grand mean as center line (not mean of subgroup means)
+        # Use Bishop VAS grand mean (mean of cell means on value_col) as center
         _Xbar = _Ybar
         _S = out["s"].mean()
         _N = out['n'].max()
