@@ -1494,12 +1494,12 @@ class TestSDS6Divergence:
 
     @pytest.fixture
     def pb_validation(self):
-        return ProcessBehavior.read_csv('validation/TABVASTESTDATABASE.csv')
+        return ProcessBehavior.read_csv('validation/PBTESTDATABASE_T100.csv')
 
     def test_ods_5_ads_2_chart_unlock(self, pb_validation):
         """ADS 2 unlocks Xbar/S that ODS 5 would have blocked."""
         study = pb_validation.formulate(
-            response='PM SDS 6', factors=['FACTOR 1', 'FACTOR 2'],
+            response='PM SDS 5', factors=['FACTOR 1', 'FACTOR 2'],
             time='PRODUCTION TIME'
         )
         assert study.observed_design_state.sds == 5
@@ -1509,7 +1509,7 @@ class TestSDS6Divergence:
     def test_ods_4_ads_1_interactions_enabled(self, pb_validation):
         """ADS 1 enables interaction effects that ODS 4 would have blocked."""
         study = pb_validation.formulate(
-            response='PM SDS 5', factors=['FACTOR 1', 'FACTOR 2'],
+            response='PM SDS 4', factors=['FACTOR 1', 'FACTOR 2'],
             time='PRODUCTION TIME'
         )
         assert study.observed_design_state.sds == 4
@@ -1518,7 +1518,7 @@ class TestSDS6Divergence:
     def test_ods_6_ads_3_min_cell_size(self, pb_validation):
         """ADS 3 reflects tidy min_cell_size, not raw incomplete structure."""
         study = pb_validation.formulate(
-            response='PM SDS 4', factors=['FACTOR 1', 'FACTOR 2'],
+            response='PM SDS 6', factors=['FACTOR 1', 'FACTOR 2'],
             time='PRODUCTION TIME'
         )
         assert study.observed_design_state.sds == 6
@@ -1527,7 +1527,7 @@ class TestSDS6Divergence:
     def test_ods_5_why_not_reflects_ads(self, pb_validation):
         """why_not() reasoning must reflect ADS capability, not ODS limitations."""
         study = pb_validation.formulate(
-            response='PM SDS 6', factors=['FACTOR 1', 'FACTOR 2'],
+            response='PM SDS 5', factors=['FACTOR 1', 'FACTOR 2'],
             time='PRODUCTION TIME'
         )
         # Xbar is valid under ADS 2
@@ -1573,7 +1573,7 @@ class TestTNValidation:
 
     @pytest.fixture
     def pb_validation(self):
-        return ProcessBehavior.read_csv('validation/TABVASTESTDATABASE.csv')
+        return ProcessBehavior.read_csv('validation/PBTESTDATABASE_T100.csv')
 
     def test_plan_without_N_raises(self, pb_validation):
         """Plan without N must raise ValidationError."""
@@ -1612,7 +1612,7 @@ class TestPlanDesignState:
 
     @pytest.fixture
     def pb_validation(self):
-        return ProcessBehavior.read_csv('validation/TABVASTESTDATABASE.csv')
+        return ProcessBehavior.read_csv('validation/PBTESTDATABASE_T100.csv')
 
     def test_plan_with_T_N_computes_PDS(self, pb_validation):
         """Plan with T and N >= 2 computes PDS = SDS 1."""
@@ -1653,12 +1653,12 @@ class TestDesignReportLineage:
 
     @pytest.fixture
     def pb_validation(self):
-        return ProcessBehavior.read_csv('validation/TABVASTESTDATABASE.csv')
+        return ProcessBehavior.read_csv('validation/PBTESTDATABASE_T100.csv')
 
     def test_divergent_report_shows_both(self, pb_validation):
         """When ODS != ADS, DesignReport must show both."""
         study = pb_validation.formulate(
-            response='PM SDS 6', factors=['FACTOR 1', 'FACTOR 2'],
+            response='PM SDS 5', factors=['FACTOR 1', 'FACTOR 2'],
             time='PRODUCTION TIME'
         )
         report = repr(study.design())
@@ -1943,19 +1943,23 @@ class TestSdsReasonDetailFix:
 
 
 # =============================================================================
-# TDD: Drift-Invariant Tests for SDS Renumbering
+# SDS Column Label Alignment Tests
 # =============================================================================
 
-class TestSDSRenumberDrift:
-    """Prove ODS N (incomplete) -> ADS N-3 (complete) after renumbering.
+class TestSDSColumnLabelAlignment:
+    """PM SDS N column name aligns with the detector's classification.
 
-    Uses Bishop's validation CSV. Column names (PM SDS 4/5/6) are Bishop's
-    labels -- they don't change. Our detector's ODS output changes.
+    Tom Bishop's corrected golden dataset (PBTESTDATABASE_T100.csv) labels
+    each column so that PM SDS N data classifies as ODS N. Two invariants
+    are pinned here:
+
+    1. PM SDS N -> ODS N for every N in 1..6.
+    2. For incomplete designs (N in {4, 5, 6}), ODS N reduces to ADS N-3.
     """
 
     @pytest.fixture
     def pb_validation(self):
-        return ProcessBehavior.read_csv('validation/TABVASTESTDATABASE.csv')
+        return ProcessBehavior.read_csv('validation/PBTESTDATABASE_T100.csv')
 
     @pytest.fixture
     def _formulate(self, pb_validation):
@@ -1966,38 +1970,16 @@ class TestSDSRenumberDrift:
             )
         return _f
 
-    def test_pm_sds5_column_detects_as_ods4_ads1(self, _formulate):
-        """PM SDS 5 data = incomplete_no_singletons -> ODS 4, ADS 1 (4-3=1)."""
-        study = _formulate('PM SDS 5')
-        assert study.observed_design_state.sds == 4
-        assert study.observed_design_state.reason == 'incomplete_no_singletons'
-        assert study.analytical_design_state.sds == 1
-        assert study.observed_design_state.sds - 3 == study.analytical_design_state.sds
+    @pytest.mark.parametrize('sds', [1, 2, 3, 4, 5, 6])
+    def test_pm_sds_n_column_detects_as_ods_n(self, _formulate, sds):
+        """PM SDS N data classifies as ODS N for N in 1..6."""
+        study = _formulate(f'PM SDS {sds}')
+        assert study.observed_design_state.sds == sds
 
-    def test_pm_sds6_column_detects_as_ods5_ads2(self, _formulate):
-        """PM SDS 6 data = incomplete_no_replication -> ODS 5, ADS 2 (5-3=2)."""
-        study = _formulate('PM SDS 6')
-        assert study.observed_design_state.sds == 5
-        assert study.observed_design_state.reason == 'incomplete_no_replication'
-        assert study.analytical_design_state.sds == 2
-        assert study.observed_design_state.sds - 3 == study.analytical_design_state.sds
-
-    def test_pm_sds4_column_detects_as_ods6_ads3(self, _formulate):
-        """PM SDS 4 data = incomplete_with_singletons -> ODS 6, ADS 3 (6-3=3)."""
-        study = _formulate('PM SDS 4')
-        assert study.observed_design_state.sds == 6
-        assert study.observed_design_state.reason == 'incomplete_with_singletons'
-        assert study.analytical_design_state.sds == 3
-        assert study.observed_design_state.sds - 3 == study.analytical_design_state.sds
-
-    @pytest.mark.parametrize("col,expected_ods,expected_ads", [
-        ('PM SDS 4', 6, 3),
-        ('PM SDS 5', 4, 1),
-        ('PM SDS 6', 5, 2),
-    ])
-    def test_n_minus_3_invariant(self, _formulate, col, expected_ods, expected_ads):
-        """The universal invariant: ODS - 3 = ADS for all incomplete states."""
-        study = _formulate(col)
-        assert study.observed_design_state.sds == expected_ods
+    @pytest.mark.parametrize('ods,expected_ads', [(4, 1), (5, 2), (6, 3)])
+    def test_ods_n_resolves_to_ads_n_minus_3(self, _formulate, ods, expected_ads):
+        """Incomplete designs (ODS 4/5/6) tidy to complete ADS 1/2/3."""
+        study = _formulate(f'PM SDS {ods}')
+        assert study.observed_design_state.sds == ods
         assert study.analytical_design_state.sds == expected_ads
-        assert expected_ods - 3 == expected_ads
+        assert ods - 3 == expected_ads

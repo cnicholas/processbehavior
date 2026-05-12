@@ -107,7 +107,7 @@ include = [
   "processbehavior/datasets/data/*.csv",
   "tests/**/*.py",
   "tests/fixtures/**/*",
-  "validation/TABVASTESTDATABASE.csv",
+  "validation/PBTESTDATABASE_T100.csv",
   "README.md",
   "LICENSE",
   "CHANGELOG.md",

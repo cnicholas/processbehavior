@@ -15,7 +15,7 @@ from processbehavior.analysis import Analysis
 @pytest.fixture
 def sds2_study():
     """PM SDS 2 study from validation dataset."""
-    df = pd.read_csv('validation/TABVASTESTDATABASE.csv')
+    df = pd.read_csv('validation/PBTESTDATABASE_T100.csv')
     pb = ProcessBehavior(df)
     return pb.formulate(
         response='PM SDS 2',

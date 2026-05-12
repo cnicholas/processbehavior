@@ -37,7 +37,7 @@ The full test suite is the gate: if it fails, the change is not ready.
 
 ## Validating against Bishop's reference data
 
-The file `validation/TABVASTESTDATABASE.csv` is ground-truth Minitab output
+The file `validation/PBTESTDATABASE_T100.csv` is ground-truth Minitab output
 for DS 1–6 from Bishop's reference materials. Numerical changes that touch
 residuals (R1–R5), DS detection, limit calculations, or variance
 decomposition must keep the relevant Bishop-reference tests green:

@@ -12,7 +12,7 @@ from processbehavior import ProcessBehavior, ValidationError
 @pytest.fixture
 def sds1_study():
     """SDS1 study from validation dataset."""
-    pb = ProcessBehavior.read_csv('validation/TABVASTESTDATABASE.csv')
+    pb = ProcessBehavior.read_csv('validation/PBTESTDATABASE_T100.csv')
     return pb.formulate(
         response='PM SDS 1',
         time='PRODUCTION TIME',

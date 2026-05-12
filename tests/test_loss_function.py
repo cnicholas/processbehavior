@@ -1,7 +1,7 @@
 """
 Tests for Taguchi Loss Function Analysis (Bishop Ch. 15).
 
-Uses validation dataset (TABVASTESTDATABASE.csv) as ground truth.
+Uses validation dataset (PBTESTDATABASE_T100.csv) as ground truth.
 """
 
 import pytest
@@ -15,7 +15,7 @@ from processbehavior import LossResult, ProcessBehavior, ValidationError
 @pytest.fixture
 def pb():
     """Load validation dataset."""
-    return ProcessBehavior.read_csv('validation/TABVASTESTDATABASE.csv')
+    return ProcessBehavior.read_csv('validation/PBTESTDATABASE_T100.csv')
 
 
 @pytest.fixture
