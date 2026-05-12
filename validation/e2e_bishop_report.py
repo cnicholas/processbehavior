@@ -37,8 +37,12 @@ SDS_CONFIGS = {
 CAPABILITY_TOLERANCE = 0.01
 EXPECTED_CAPABILITY = {
     1: {
-        # Current (overall sigma): only PP/PPU/PPL provided so far
+        # Current (overall sigma)
         'pp': 0.96, 'ppk_upper': 0.80, 'ppk_lower': 1.11,
+        'pct_below_lsl': 0.53, 'pct_above_usl': 0.45,
+        # Potential (R2 sigma)
+        'cp': 2.08, 'cpk_upper': 1.74, 'cpk_lower': 2.42,
+        'potential_pct_below_lsl': 0.0, 'potential_pct_above_usl': 0.0,
     },
     2: {
         # Current
