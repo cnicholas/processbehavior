@@ -106,9 +106,9 @@ EXPECTED_LOSS = {
         # Factor-level decomposition of pct_pdc
         'pct_pdc_f1':       8.3,
         'pct_pdc_f2':       3.8,
-        # Tom's note said 0.6 but his own F1+F2+PDF Int should equal pdc=13.7
-        # (8.3+3.8+0.6=12.7 vs 8.3+3.8+1.6=13.7). Our system computes 1.59
-        # (rounds to 1.6); encoded as 1.6 -- flag to Tom on next sync.
+        # Tom's initial note said 0.6 but it didn't reconcile with his own
+        # pdc=13.7 (8.3+3.8+0.6=12.7); 1.6 makes the row internally
+        # consistent and matches our 1.59. Confirmed by Tom as 1.6.
         'pct_pdc_factor_interaction':   1.6,
     },
 }
