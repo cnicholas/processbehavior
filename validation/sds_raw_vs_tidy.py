@@ -3,7 +3,7 @@ Compare SDS detection on raw data vs tidy data.
 
 The "two-state problem": SDS detected on raw data (correct per Bishop)
 can differ from SDS detected after tidying (dropping NA response rows). This
-script makes that drift visible for each PM SDS variable in TABVASTESTDATABASE.
+script makes that drift visible for each PM SDS variable in PBTESTDATABASE_T100.
 """
 
 import pandas as pd
@@ -15,7 +15,7 @@ from processbehavior.sds_detector import SDSRegistry
 # ---------------------------------------------------------------------------
 # Load raw data
 # ---------------------------------------------------------------------------
-raw_df = pd.read_csv("validation/TABVASTESTDATABASE.csv", na_values=["*"])
+raw_df = pd.read_csv("validation/PBTESTDATABASE_T100.csv", na_values=["*"])
 
 pm_sds_vars = [f"PM SDS {i}" for i in range(1, 7)]
 registry = SDSRegistry()

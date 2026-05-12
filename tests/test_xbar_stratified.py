@@ -10,7 +10,7 @@ from processbehavior.plotting.plotter import Plotter
 @pytest.fixture
 def sds1_study():
     """PM SDS 1 study: 2 factors, time, replication."""
-    df = pd.read_csv('validation/TABVASTESTDATABASE.csv')
+    df = pd.read_csv('validation/PBTESTDATABASE_T100.csv')
     pb = ProcessBehavior(df)
     return pb.formulate(
         response='PM SDS 1',

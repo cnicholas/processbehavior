@@ -2,7 +2,7 @@
 E2E Validation Report: processbehavior vs Tom Bishop's VAS Analyses
 
 Generates an HTML report comparing our library output against Tom Bishop's
-Minitab reference analyses for SDS 1-3. Uses TABVASTESTDATABASE.csv as input.
+Minitab reference analyses for SDS 1-3. Uses PBTESTDATABASE_T100.csv as input.
 
 Usage:
     python validation/e2e_bishop_report.py
@@ -17,7 +17,7 @@ from processbehavior import ProcessBehavior
 
 # --- Configuration ---
 
-VALIDATION_CSV = Path(__file__).parent / 'TABVASTESTDATABASE.csv'
+VALIDATION_CSV = Path(__file__).parent / 'PBTESTDATABASE_T100.csv'
 FIXTURES_DIR = Path(__file__).parent.parent / 'tests' / 'fixtures' / 'bishop_analyses'
 OUTPUT_HTML = Path(__file__).parent / 'e2e_bishop_report.html'
 TOLERANCE = 0.01  # half-unit of last decimal place

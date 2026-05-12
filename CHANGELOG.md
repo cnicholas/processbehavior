@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- Synced validation dataset to Tom Bishop's corrected golden copy
+  (`validation/PBTESTDATABASE_T100.csv`, replacing `TABVASTESTDATABASE.csv`).
+  PM SDS 4/5/6 columns are now labeled so PM SDS N data classifies as ODS N
+  (the prior file had a cyclic offset that the old `TestSDSRenumberDrift`
+  test class documented). `PM KNOWN` column removed. PM SDS 1/2/3 + factor,
+  time, and `PM INERT` columns are byte-identical. The e2e Bishop validator
+  remains all-green; `TestSDSRenumberDrift` is replaced by
+  `TestSDSColumnLabelAlignment` with two cleaner parametrized invariants.
+
 ### Fixed
 - Xbar center line now correctly computes Bishop VAS's mean of (factor × time)
   cell means on the charted column for both response and residual charts.
@@ -73,7 +83,7 @@ and may change between minor versions until 1.0.
 - `make_sds(sds=N, seed=...)` synthetic dataset generators for DS 1–6,
   re-exported at the top level for `pb.make_sds(...)`
 - Edge-case generators (`make_edge_cases`)
-- Bishop's `TABVASTESTDATABASE.csv` reference is shipped in the source
+- Bishop's `PBTESTDATABASE_T100.csv` reference is shipped in the source
   distribution for validation
 
 #### Packaging

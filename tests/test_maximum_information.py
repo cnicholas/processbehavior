@@ -11,7 +11,7 @@ from processbehavior import MaximumInformationResult, ProcessBehavior, Validatio
 # Helpers
 # ---------------------------------------------------------------------------
 
-VALIDATION_CSV = "validation/TABVASTESTDATABASE.csv"
+VALIDATION_CSV = "validation/PBTESTDATABASE_T100.csv"
 
 
 def _make_study(sds: int):
