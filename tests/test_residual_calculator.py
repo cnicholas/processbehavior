@@ -726,28 +726,33 @@ def test_residual_chart_uses_correct_column():
 
     # Get actual values from the dataset
     ds = result.dataset
-    y_mean = ds['y'].mean()
-    r5_mean = ds['R5'].mean()
+    # Bishop VAS Xbar centers use mean of cell means at the residual's natural
+    # grain, not observation-weighted df[col].mean(). For Y, that's the
+    # pre-computed Ybar (full cell grid). For R5, it's the rsg-level grain.
+    y_center_expected = ds['Ybar'].iloc[0]
+    r5_center_expected = (
+        ds.groupby(['factor 1', 'factor 2'], observed=True)['R5'].mean().mean()
+    )
 
-    # Y and R5 should have different means (otherwise test is not meaningful)
-    assert not np.isclose(y_mean, r5_mean, atol=0.1), \
-        "Test data should have different Y and R5 means"
+    # Y and R5 should have different centers (otherwise test is not meaningful)
+    assert not np.isclose(y_center_expected, r5_center_expected, atol=0.1), \
+        "Test data should have different Y and R5 centers"
 
-    # Get Xbar center (uses Y) - should be close to Y mean
+    # Get Xbar center (uses Y) - should equal Bishop unweighted Y center.
     xbar_stats = result.get_statistics('Xbar')
-    assert np.isclose(xbar_stats['center'], y_mean, atol=0.01), \
-        f"Xbar center {xbar_stats['center']} should equal Y mean {y_mean}"
+    assert np.isclose(xbar_stats['center'], y_center_expected, atol=0.01), \
+        f"Xbar center {xbar_stats['center']} should equal {y_center_expected}"
 
-    # Get R5 Xbar center (should use R5) - should be close to R5 mean
+    # Get R5 Xbar center (should use R5) - Bishop unweighted at rsg grain.
     r5_result = study.execute(chart='Xbar', value='R5')
     r5_xbar_stats = r5_result.get_statistics('Xbar')
-    assert np.isclose(r5_xbar_stats['center'], r5_mean, atol=0.01), \
-        f"R5 Xbar center {r5_xbar_stats['center']} should equal R5 mean {r5_mean}"
+    assert np.isclose(r5_xbar_stats['center'], r5_center_expected, atol=0.01), \
+        f"R5 Xbar center {r5_xbar_stats['center']} should equal {r5_center_expected}"
 
-    # Most importantly: R5 Xbar center should NOT equal Y mean
+    # Most importantly: R5 Xbar center should NOT equal Y center
     # This catches the bug where residual charts used Y instead of R5
-    assert not np.isclose(r5_xbar_stats['center'], y_mean, atol=0.1), \
-        f"R5 Xbar center {r5_xbar_stats['center']} should NOT equal Y mean {y_mean}"
+    assert not np.isclose(r5_xbar_stats['center'], y_center_expected, atol=0.1), \
+        f"R5 Xbar center {r5_xbar_stats['center']} should NOT equal {y_center_expected}"
 
 
 # ============================================================================
