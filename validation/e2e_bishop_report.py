@@ -32,6 +32,101 @@ SDS_CONFIGS = {
     3: {'response_attr': 'PM_SDS_3', 'json': 'vassds3analysis.json', 'chart': 'X'},
 }
 
+# Tom's process-capability reference indices (LSL=232, USL=242, Target=237).
+# Tom reports to 2 decimals; tolerance is half-unit of last decimal place.
+CAPABILITY_TOLERANCE = 0.01
+EXPECTED_CAPABILITY = {
+    1: {
+        # Current (overall sigma): only PP/PPU/PPL provided so far
+        'pp': 0.96, 'ppk_upper': 0.80, 'ppk_lower': 1.11,
+    },
+    2: {
+        # Current
+        'pp': 1.1, 'ppk_upper': 0.93, 'ppk_lower': 1.27,
+        'pct_below_lsl': 0.5, 'pct_above_usl': 0.0,
+        # Potential (R2 sigma)
+        'cp': 2.51, 'cpk_upper': 2.12, 'cpk_lower': 2.91,
+        'potential_pct_below_lsl': 0.0, 'potential_pct_above_usl': 0.0,
+    },
+    3: {
+        # Current
+        'pp': 0.96, 'ppk_upper': 0.8, 'ppk_lower': 1.12,
+        'pct_below_lsl': 0.53, 'pct_above_usl': 0.46,
+        # Potential (R2 sigma)
+        'cp': 2.34, 'cpk_upper': 1.95, 'cpk_lower': 2.72,
+        'potential_pct_below_lsl': 0.0, 'potential_pct_above_usl': 0.0,
+    },
+}
+# (Tom's label) -> (CapabilityResult.as_dict key). Order shown is the order
+# they appear in the report table; "Current" block then "Potential" block.
+CAPABILITY_METRICS = [
+    ('Current PP',          'pp'),
+    ('Current PPU Index',   'ppk_upper'),
+    ('Current PPL',         'ppk_lower'),
+    ('Current % below LSL', 'pct_below_lsl'),
+    ('Current % above USL', 'pct_above_usl'),
+    ('Potential PP',          'cp'),
+    ('Potential PPU Index',   'cpk_upper'),
+    ('Potential PPL',         'cpk_lower'),
+    ('Potential % below LSL', 'potential_pct_below_lsl'),
+    ('Potential % above USL', 'potential_pct_above_usl'),
+]
+
+# Tom's Taguchi loss-function decomposition (percentages). 1 decimal place;
+# tolerance is half-unit of last decimal place.
+LOSS_TOLERANCE = 0.05
+EXPECTED_LOSS = {
+    1: {
+        'pct_centering':   16.8,  # Tom: "mean"
+        'pct_unexplained': 23.0,
+        'pct_pdc':         14.2,
+        'pct_time':         2.7,  # Tom: "pt"
+        'pct_interaction': 43.3,  # Tom: "pdcxpt"
+    },
+    2: {
+        # 5-component decomposition
+        'pct_centering':   16.1,
+        'pct_unexplained': 23.6,
+        'pct_pdc':         15.6,
+        'pct_time':         2.2,
+        'pct_interaction': 42.5,
+        # Factor-level decomposition of pct_pdc (synthetic fields; computed
+        # from LossResult.pdc_by_factor / total in _build_loss_results)
+        'pct_pdc_f1':                  10.6,
+        'pct_pdc_f2':                   4.1,
+        'pct_pdc_factor_interaction':   0.9,  # Tom: "PDF Int"
+    },
+    3: {
+        # 5-component decomposition
+        'pct_centering':   16.4,
+        'pct_unexplained': 25.0,
+        'pct_pdc':         13.7,
+        'pct_time':         2.5,
+        'pct_interaction': 42.4,
+        # Factor-level decomposition of pct_pdc
+        'pct_pdc_f1':       8.3,
+        'pct_pdc_f2':       3.8,
+        # Tom's note said 0.6 but his own F1+F2+PDF Int should equal pdc=13.7
+        # (8.3+3.8+0.6=12.7 vs 8.3+3.8+1.6=13.7). Our system computes 1.59
+        # (rounds to 1.6); encoded as 1.6 -- flag to Tom on next sync.
+        'pct_pdc_factor_interaction':   1.6,
+    },
+}
+# (Tom's label) -> (LossResult.as_dict key, or synthetic key). Synthetic
+# keys (pct_pdc_f1, pct_pdc_f2, pct_pdc_factor_interaction) are computed
+# inside _build_loss_results since LossResult only exposes the absolute
+# pdc_by_factor / pdc_factor_interaction values, not percentages.
+LOSS_METRICS = [
+    ('mean',        'pct_centering'),
+    ('unexplained', 'pct_unexplained'),
+    ('pdc',         'pct_pdc'),
+    ('pt',          'pct_time'),
+    ('pdcxpt',      'pct_interaction'),
+    ('F1',          'pct_pdc_f1'),
+    ('F2',          'pct_pdc_f2'),
+    ('PDC Int',     'pct_pdc_factor_interaction'),
+]
+
 
 def context_to_stratum(context_subtitle: str, sds: int) -> str:
     """Convert JSON context_subtitle 'PDC RSG - 1-1' to our stratum key."""
@@ -91,8 +186,78 @@ def is_location_chart(item):
     return 'Moving Range' not in chart_title
 
 
+def _coerce_float(v):
+    """Cast numpy scalars to Python float so downstream `is True` checks work."""
+    if v is None:
+        return None
+    return float(v)
+
+
+def _build_capability_results(sds_num, cap_dict):
+    """Validate process-capability indices against EXPECTED_CAPABILITY."""
+    expected = EXPECTED_CAPABILITY.get(sds_num, {})
+    rows = []
+    for label, field in CAPABILITY_METRICS:
+        actual = _coerce_float(cap_dict.get(field))
+        exp = expected.get(field)
+        match = bool(close(actual, exp, tol=CAPABILITY_TOLERANCE)) if exp is not None else None
+        rows.append({
+            'label': label, 'field': field,
+            'expected': exp, 'actual': actual, 'match': match,
+        })
+    return rows
+
+
+def _augment_loss_with_factor_percentages(loss_dict):
+    """Derive per-factor pdc percentages from absolutes (LossResult doesn't expose them).
+
+    Returns a shallow copy with synthetic keys ``pct_pdc_f1``, ``pct_pdc_f2``,
+    ``pct_pdc_factor_interaction`` added when the loss decomposition includes
+    a multi-factor breakdown. No-op otherwise.
+    """
+    derived = dict(loss_dict)
+    total = loss_dict.get('total')
+    pdc_by_factor = loss_dict.get('pdc_by_factor') or {}
+    pdc_fi = loss_dict.get('pdc_factor_interaction')
+    if not total or total <= 0:
+        return derived
+    # The validation dataset uses "FACTOR 1" / "FACTOR 2" naming; resolve them
+    # positionally so this stays robust if factor names ever change.
+    factor_keys = list(pdc_by_factor.keys())
+    if len(factor_keys) >= 1:
+        derived['pct_pdc_f1'] = round(100 * pdc_by_factor[factor_keys[0]] / total, 3)
+    if len(factor_keys) >= 2:
+        derived['pct_pdc_f2'] = round(100 * pdc_by_factor[factor_keys[1]] / total, 3)
+    if pdc_fi is not None:
+        derived['pct_pdc_factor_interaction'] = round(100 * pdc_fi / total, 3)
+    return derived
+
+
+def _build_loss_results(sds_num, loss_dict):
+    """Validate loss-function decomposition (percentages) against EXPECTED_LOSS."""
+    expected = EXPECTED_LOSS.get(sds_num, {})
+    derived = _augment_loss_with_factor_percentages(loss_dict)
+    rows = []
+    for label, field in LOSS_METRICS:
+        actual = _coerce_float(derived.get(field))
+        exp = expected.get(field)
+        match = bool(close(actual, exp, tol=LOSS_TOLERANCE)) if exp is not None else None
+        rows.append({
+            'label': label, 'field': field,
+            'expected': exp, 'actual': actual, 'match': match,
+        })
+    return rows
+
+
 def run_sds_validation(sds_num, pb, study, json_data):  # noqa: C901
-    """Run all validations for one SDS type. Returns list of result dicts."""
+    """Run all validations for one SDS type.
+
+    Returns
+    -------
+    dict
+        ``{'charts': [...], 'capability': [...], 'loss': [...]}`` where each
+        list contains per-row dicts ready for HTML rendering.
+    """
     results = []
     items = json_data['items']
 
@@ -292,7 +457,14 @@ def run_sds_validation(sds_num, pb, study, json_data):  # noqa: C901
         else:
             append_result('skip', '-', '-', False, None, None, None, None)
 
-    return results
+    capability_results = _build_capability_results(sds_num, computed['capability'].as_dict())
+    loss_results = _build_loss_results(sds_num, computed['loss'].as_dict())
+
+    return {
+        'charts': results,
+        'capability': capability_results,
+        'loss': loss_results,
+    }
 
 
 def fmt(val, decimals=2):
@@ -338,8 +510,50 @@ def render_chart_table_html(table):
     return html
 
 
-def generate_html(all_results):  # noqa: C901
-    """Generate the full HTML report."""
+def _render_metric_table(title: str, rows, value_decimals: int, tolerance: float) -> str:
+    """Render a small capability- or loss-style metric table (4 columns)."""
+    sub_pass = sum(1 for r in rows if r['match'] is True)
+    sub_fail = sum(1 for r in rows if r['match'] is False)
+    sub_skip = sum(1 for r in rows if r['match'] is None)
+
+    html = (
+        f'<h3 style="color:#666; margin-top:18px; margin-bottom:6px; font-size:15px;">{title}'
+        f' <small style="color:#888; font-weight:normal;">(tol &plusmn;{tolerance})</small></h3>'
+    )
+    html += (
+        f'<div class="summary" style="margin:4px 0; padding:6px 12px; font-size:12px;">'
+        f'<span class="pass-count">{sub_pass} passed</span> / '
+        f'<span class="fail-count">{sub_fail} failed</span> / '
+        f'<span class="skip-count">{sub_skip} pending</span>'
+        f'</div>'
+    )
+    html += '<table class="main"><tr>'
+    html += '<th>Metric</th><th>Expected</th><th>Actual</th><th>Match</th></tr>'
+    for r in rows:
+        cls = match_class(r['match'])
+        mark = 'PASS' if r['match'] is True else ('FAIL' if r['match'] is False else 'pending')
+        exp = fmt(r['expected'], decimals=value_decimals)
+        act = fmt(r['actual'], decimals=value_decimals)
+        html += (
+            f'<tr class="{cls}"><td>{r["label"]}</td>'
+            f'<td>{exp}</td><td>{act}</td><td>{mark}</td></tr>'
+        )
+    html += '</table>'
+    return html
+
+
+def generate_html(all_results, aux_by_sds=None):  # noqa: C901
+    """Generate the full HTML report.
+
+    Parameters
+    ----------
+    all_results : list[dict]
+        Per-chart-row result dicts (existing schema).
+    aux_by_sds : dict[int, dict] | None
+        Optional auxiliary results keyed by SDS number, with
+        ``{'capability': [...], 'loss': [...]}`` per SDS.
+    """
+    aux_by_sds = aux_by_sds or {}
     html = """<!DOCTYPE html>
 <html>
 <head>
@@ -388,6 +602,18 @@ summary { cursor: pointer; color: #1565c0; font-size: 12px; }
                 total_checks += 1
                 total_pass += 1
             elif val is False:
+                total_checks += 1
+                total_fail += 1
+            else:
+                total_skip += 1
+
+    # Also fold in capability + loss matches from auxiliary results
+    for aux in aux_by_sds.values():
+        for row in aux.get('capability', []) + aux.get('loss', []):
+            if row['match'] is True:
+                total_checks += 1
+                total_pass += 1
+            elif row['match'] is False:
                 total_checks += 1
                 total_fail += 1
             else:
@@ -505,6 +731,21 @@ out of {total_checks + total_skip} total checks
 
         html += '</table>'
 
+        # Capability + loss-function sections under each SDS
+        aux = aux_by_sds.get(sds_num, {})
+        cap_rows = aux.get('capability', [])
+        loss_rows = aux.get('loss', [])
+        if cap_rows:
+            html += _render_metric_table(
+                f'Process Capability (LSL={SPEC_LSL}, USL={SPEC_USL}, Target={SPEC_TARGET})',
+                cap_rows, value_decimals=2, tolerance=CAPABILITY_TOLERANCE,
+            )
+        if loss_rows:
+            html += _render_metric_table(
+                'Taguchi Loss Function (% of total)',
+                loss_rows, value_decimals=1, tolerance=LOSS_TOLERANCE,
+            )
+
     from datetime import datetime
     html += f'<p class="timestamp">Generated: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}</p>'
     html += '</body></html>'
@@ -517,6 +758,7 @@ def main():
     pb = ProcessBehavior(df)
 
     all_results = []
+    aux_by_sds = {}   # {sds_num: {'capability': [...], 'loss': [...]}}
 
     for sds_num, config in SDS_CONFIGS.items():
         print(f'\nProcessing SDS {sds_num}...')
@@ -532,16 +774,30 @@ def main():
         with open(json_path) as f:
             json_data = json.load(f)
 
-        results = run_sds_validation(sds_num, pb, study, json_data)
-        all_results.extend(results)
+        sds_payload = run_sds_validation(sds_num, pb, study, json_data)
+        chart_results = sds_payload['charts']
+        all_results.extend(chart_results)
+        aux_by_sds[sds_num] = {
+            'capability': sds_payload['capability'],
+            'loss': sds_payload['loss'],
+        }
 
-        # Print summary
-        passes = sum(1 for r in results for k in ('match_cl', 'match_lpl', 'match_upl') if r.get(k) is True)
-        fails = sum(1 for r in results for k in ('match_cl', 'match_lpl', 'match_upl') if r.get(k) is False)
+        # Print summary across charts + capability/loss
+        passes = sum(
+            1 for r in chart_results for k in ('match_cl', 'match_lpl', 'match_upl') if r.get(k) is True
+        )
+        fails = sum(
+            1 for r in chart_results for k in ('match_cl', 'match_lpl', 'match_upl') if r.get(k) is False
+        )
+        for row in sds_payload['capability'] + sds_payload['loss']:
+            if row['match'] is True:
+                passes += 1
+            elif row['match'] is False:
+                fails += 1
         print(f'  Results: {passes} passed, {fails} failed')
 
     print('\nGenerating HTML report...')
-    html = generate_html(all_results)
+    html = generate_html(all_results, aux_by_sds)
     OUTPUT_HTML.write_text(html)
     print(f'Report written to: {OUTPUT_HTML}')
 
