@@ -27,6 +27,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   shifts from 237.81 to the methodologically-correct 237.83. Balanced designs
   (SDS 1, SDS 2's degenerate single-obs cells) and stratified Xbar charts were
   unaffected.
+- `AnalysisResult.strata` now returns the order-preserving intersection of
+  every chart's strata list. Previously it returned the first chart's list,
+  which for X+mR companion results inherited the X chart's full strata even
+  when mR had dropped first-row-per-stratum on single-observation cells.
+  `result.focus(stratum)` then raised on those strata, breaking any caller
+  that drove `.focus()` from `.strata`. The mR chart's published `strata`
+  list is also now filtered to exclude insufficient strata.
+- `AnalysisResult.chart_table()` previously raised
+  `ValueError: You are trying to merge on object and int64 columns` when a
+  chart's by-column had been stringified during construction (e.g. PRODUCTION
+  TIME → object) while the analysis dataset kept it numeric. The n-join now
+  coerces both sides to `str` when the join-key dtypes differ, and falls
+  back to skipping the n-join entirely if the merge still fails — the
+  table renders either way. Surfaced on `chart='Xbar', by=[time_var],
+  value='R4', companion=True, recentered=True`.
 
 ## [0.1.0] - 2026-05-03
 

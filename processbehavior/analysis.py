@@ -1696,6 +1696,12 @@ class Analysis:
             if len(r_out[r_out[stratify_col] == s]) < 2
         ]
 
+        # Drop strata that lost all rows post-mR (single-obs cells) from the
+        # published strata list. The focus()/strata contract requires every
+        # stratum exposed here to be focusable; insufficient strata have
+        # empty data and would fail downstream consumers.
+        published_strata = [s for s in strata if s not in (insufficient_strata or [])]
+
         return {
             mr_spec.chart_type: {
                 'data': chart_out,
@@ -1710,7 +1716,7 @@ class Analysis:
                     'stratify_by': list(stratify_by),
                     'insufficient_strata': insufficient_strata if insufficient_strata else None,
                 },
-                'strata': strata,
+                'strata': published_strata,
             },
         }
 
@@ -1984,6 +1990,12 @@ class Analysis:
             if len(out[out[stratify_col] == s]) < 2
         ]
 
+        # Drop strata that lost all rows post-mR (single-obs cells) from the
+        # published strata list. The focus()/strata contract requires every
+        # stratum exposed here to be focusable; insufficient strata have
+        # empty data and would fail downstream consumers.
+        published_strata = [s for s in strata if s not in (insufficient_strata or [])]
+
         result[mr_spec.chart_type] = {
             'data': chart_out,
             'statistics': chart_statistics,
@@ -1997,7 +2009,7 @@ class Analysis:
                 'stratify_by': list(stratify_by),
                 'insufficient_strata': insufficient_strata if insufficient_strata else None,
             },
-            'strata': strata,
+            'strata': published_strata,
         }
 
         # Optionally include intermediates for companion calculation
