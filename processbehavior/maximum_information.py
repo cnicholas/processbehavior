@@ -15,7 +15,7 @@ Bishop, T.  *Variance Analysis System*.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 
 import numpy as np
 import pandas as pd
@@ -78,7 +78,7 @@ class MaximumInformationResult:
     def plot(
         self,
         *,
-        view: str = "combined",
+        view: Literal["combined", "xmr", "histogram"] = "combined",
         bins: int = 10,
         theme=None,
         width: int = 900,

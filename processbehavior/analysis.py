@@ -2498,10 +2498,22 @@ class Analysis:
                 stratum_n = len(stratum_vals)
                 stratum_mean = stratum_vals.mean() if stratum_n > 0 else float('nan')
                 stratum_std = stratum_vals.std() if stratum_n >= 2 else float('nan')
+                _mean_rounded = (
+                    round(stratum_mean, spec.round_to) if pd.notna(stratum_mean) else None
+                )
+                _std_rounded = (
+                    round(stratum_std, spec.round_to) if pd.notna(stratum_std) else None
+                )
+                # Unified stats shape ({N, center, lpl, upl}) plus histogram
+                # extras (mean alias, std). Histogram has no control limits.
                 per_stratum_stats[key] = {
-                    'mean': round(stratum_mean, spec.round_to) if pd.notna(stratum_mean) else None,
-                    'std': round(stratum_std, spec.round_to) if pd.notna(stratum_std) else None,
-                    'n': stratum_n
+                    'N': stratum_n,
+                    'center': _mean_rounded,
+                    'lpl': None,
+                    'upl': None,
+                    'mean': _mean_rounded,
+                    'std': _std_rounded,
+                    'n': stratum_n,
                 }
 
             # Keep value column and by columns for plotting
@@ -2537,14 +2549,24 @@ class Analysis:
 
         # Unstratified (by=[]) - full distribution
         output_data = data[[value_col]].copy()
+        _mean_rounded = round(mean, spec.round_to) if pd.notna(mean) else None
+        _std_rounded = (
+            round(std, spec.round_to) if n >= 2 and pd.notna(std) else None
+        )
 
         return {
             'Histogram': {
                 'data': output_data,
+                # Unified stats shape ({N, center, lpl, upl}) plus histogram
+                # extras (mean alias, std). Histogram has no control limits.
                 'statistics': {
-                    'mean': round(mean, spec.round_to) if pd.notna(mean) else None,
-                    'std': round(std, spec.round_to) if n >= 2 and pd.notna(std) else None,
-                    'n': n
+                    'N': n,
+                    'center': _mean_rounded,
+                    'lpl': None,
+                    'upl': None,
+                    'mean': _mean_rounded,
+                    'std': _std_rounded,
+                    'n': n,
                 },
                 'metadata': {
                     'chart_type': 'Histogram',

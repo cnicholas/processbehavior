@@ -10,6 +10,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - ``make_design(state=N, ...)`` as a forward-looking alias for
   ``make_sds(sds=N, ...)``. Same semantics, three-state vocabulary.
+- ``SDSResult`` is re-exported at the top level so users can
+  ``from processbehavior import SDSResult`` for type hints on
+  ``study.observed_design_state`` and ``study.analytical_design_state``.
+- ``DesignReport.factors_table`` — preferred name for the factor-level
+  summary DataFrame. The legacy ``DesignReport.factors`` continues to
+  work as an alias; rename avoids confusion with ``Study.factors``
+  (which is a ``list[str]`` of column names, not a DataFrame).
+- ``Literal[...]`` type hints on stringly-typed enum parameters:
+  ``study.execute(chart=, value=, n_mode=)``,
+  ``result.plot(theme=)`` and the three sibling plot methods,
+  ``MaximumInformationResult.plot(view=)``, and
+  ``CapabilityResult.plot(view=)``. IDEs now offer autocomplete for
+  the valid values; arbitrary strings still work for custom themes /
+  forward-compat.
+
+### Changed
+- ``AnalysisResult.get_statistics()`` returns a unified shape across
+  every chart type: ``{N, center, lpl, upl}``. The Histogram chart
+  additionally carries ``{mean, std, n}`` as extras (``mean`` is an
+  alias for ``center``; ``n`` is an alias for ``N``); its ``lpl`` and
+  ``upl`` are ``None`` because a histogram has no control limits.
+  Previously the Histogram path returned ``{mean, std, n}`` only,
+  contradicting the documented contract.
+- ``Study.observed_design_state`` now raises ``RuntimeError`` with a
+  clear message when accessed on a ``Study`` instance that was not
+  built via ``ProcessBehavior.formulate()``. Previously it silently
+  returned ``None`` while typed as ``SDSResult``.
 
 ### Changed
 - **Design-state terminology rolled out across the user surface.** The
