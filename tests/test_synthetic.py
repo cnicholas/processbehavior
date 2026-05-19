@@ -43,24 +43,31 @@ class TestSyntheticStructure:
         has_multiples = (cells >= 2).any()
         assert has_singles and has_multiples, "SDS3 should have mixed replication"
 
-    def test_sds4_no_factor2(self):
-        """SDS4: Single condition, factor 2 = 'NA'."""
-        df = make_sds(4, T=20, seed=42)
-        assert df['factor 2'].eq('NA').all(), "SDS4 should have factor 2 = 'NA'"
+    def test_sds4_incomplete_replicated(self):
+        """ODS 4: Incomplete grid, all occupied cells replicated (N>=2)."""
+        df = make_sds(4, K1=3, K2=2, T=6, seed=42)
+        # Empty cells appear as rows with y=NaN
+        assert df['y'].isna().any(), "ODS 4 must include at least one empty cell (NaN y)"
+        occupied = df.dropna(subset=['y'])
+        sizes = occupied.groupby(['factor 1', 'factor 2', 'time']).size()
+        assert (sizes >= 2).all(), "ODS 4 occupied cells must all have N>=2"
 
-    def test_sds5_nested_structure(self):
-        """SDS5: Factor 2 nested in factor 1."""
-        df = make_sds(5, L=2, H_per_L=3, T=4, seed=42)
-        # Each factor 2 value should appear with only one factor 1 value
-        factor2_to_factor1 = df.groupby('factor 2')['factor 1'].nunique()
-        assert factor2_to_factor1.max() == 1, "SDS5 factor 2 should be nested in factor 1"
+    def test_sds5_incomplete_singletons(self):
+        """ODS 5: Incomplete grid, all occupied cells singleton (N=1)."""
+        df = make_sds(5, K1=3, K2=2, T=6, seed=42)
+        assert df['y'].isna().any(), "ODS 5 must include at least one empty cell"
+        occupied = df.dropna(subset=['y'])
+        sizes = occupied.groupby(['factor 1', 'factor 2', 'time']).size()
+        assert (sizes == 1).all(), "ODS 5 occupied cells must all be singletons"
 
-    def test_sds6_incomplete_grid(self):
-        """SDS6: Incomplete (factor × time) grid due to sparse sampling."""
-        df = make_sds(6, T=40, K1=3, K2=2, p_sampled=0.5, seed=42)
-        full_grid = 3 * 2 * 40  # K1 × K2 × T
-        actual_cells = df.groupby(['factor 1', 'factor 2', 'time']).ngroups
-        assert actual_cells < full_grid * 0.95, "SDS6 should have incomplete grid"
+    def test_sds6_incomplete_mixed(self):
+        """ODS 6: Incomplete grid, mix of singleton and replicated cells."""
+        df = make_sds(6, K1=3, K2=2, T=8, seed=42)
+        assert df['y'].isna().any(), "ODS 6 must include at least one empty cell"
+        occupied = df.dropna(subset=['y'])
+        sizes = occupied.groupby(['factor 1', 'factor 2', 'time']).size()
+        assert (sizes == 1).any(), "ODS 6 must have at least one singleton cell"
+        assert (sizes >= 2).any(), "ODS 6 must have at least one replicated cell"
 
 
 class TestSDSDetection:
@@ -88,65 +95,54 @@ class TestSDSDetection:
         )
         assert study.observed_design_state.sds == 2, f"Expected SDS 2, got SDS {study.observed_design_state.sds}"
 
-    def test_sds4_data_classifies_by_replication(self):
-        """make_sds(4) generates K=1 data, classifies by N_kt pattern.
-
-        Per Table 1: K=1 with all N_kt=1 → SDS 2 (no replication).
-        SDS 4 in Table 1 means "incomplete with singletons", not K=1.
-        """
-        df = make_sds(4, T=20, seed=42)
-        pdf = ProcessBehavior(df)
-        study = pdf.formulate(
-            response=pdf.cols.y,
-            factors=[pdf.cols.factor_1],
-            time=pdf.cols.time
-        )
-        # K=1, all N_kt=1 → SDS 2 (no replication)
-        obs_sds = study.observed_design_state.sds
-        assert obs_sds == 2, f"Expected SDS 2 (no replication), got SDS {obs_sds}"
-
-    def test_sds5_data_classifies_by_nkt_pattern(self):
-        """make_sds(5) generates nested data, classifies by N_kt pattern.
-
-        Without a plan, nested data classifies based on observed N_kt.
-        The SDS depends on whether the observed cells show replication.
-        """
-        df = make_sds(5, L=2, H_per_L=3, T=6, p_active=0.7, seed=42)
+    def test_sds4_classifies_as_ods4(self):
+        """make_sds(4) data classifies as ODS 4 (incomplete, all replicated)."""
+        df = make_sds(4, K1=3, K2=2, T=6, seed=42)
         pdf = ProcessBehavior(df)
         study = pdf.formulate(
             response=pdf.cols.y,
             factors=[pdf.cols.factor_1, pdf.cols.factor_2],
             time=pdf.cols.time
         )
-        # Without a plan, classifies based on observed N_kt pattern
-        # Nested structure with n=1 per cell typically → SDS 2
-        obs_sds = study.observed_design_state.sds
-        assert obs_sds in [1, 2, 3], f"Expected SDS 1/2/3, got SDS {obs_sds}"
+        assert study.observed_design_state.sds == 4, (
+            f"Expected ODS 4, got ODS {study.observed_design_state.sds}"
+        )
+        # Lineage: after tidy → ADS 1 (full replication on surviving grid)
+        assert study.analytical_design_state.sds == 1, (
+            f"Expected ADS 1, got ADS {study.analytical_design_state.sds}"
+        )
 
-    def test_sds6_detected_with_plan(self):
-        """SDS6 requires plan to detect incomplete grid."""
-        df = make_sds(6, T=40, K1=3, K2=2, p_sampled=0.5, seed=42)
+    def test_sds5_classifies_as_ods5(self):
+        """make_sds(5) data classifies as ODS 5 (incomplete, all singletons)."""
+        df = make_sds(5, K1=3, K2=2, T=6, seed=42)
         pdf = ProcessBehavior(df)
-
-        # Get actual factor levels from the data
-        factor1_levels = df['factor 1'].unique().tolist()
-        factor2_levels = df['factor 2'].unique().tolist()
-
-        # Plan specifies expected levels - data is incomplete relative to this
-        # Note: Use plan alone (not with factors) per API requirements
         study = pdf.formulate(
             response=pdf.cols.y,
-            time=pdf.cols.time,
-            plan={
-                'factors': {
-                    pdf.cols.factor_1: factor1_levels,
-                    pdf.cols.factor_2: factor2_levels
-                },
-                'T': 40,
-                'N': 2
-            }
+            factors=[pdf.cols.factor_1, pdf.cols.factor_2],
+            time=pdf.cols.time
         )
-        assert study.observed_design_state.sds == 5, f"Expected SDS 5, got SDS {study.observed_design_state.sds}"
+        assert study.observed_design_state.sds == 5, (
+            f"Expected ODS 5, got ODS {study.observed_design_state.sds}"
+        )
+        assert study.analytical_design_state.sds == 2, (
+            f"Expected ADS 2, got ADS {study.analytical_design_state.sds}"
+        )
+
+    def test_sds6_classifies_as_ods6(self):
+        """make_sds(6) data classifies as ODS 6 (incomplete, mixed N)."""
+        df = make_sds(6, K1=3, K2=2, T=8, seed=42)
+        pdf = ProcessBehavior(df)
+        study = pdf.formulate(
+            response=pdf.cols.y,
+            factors=[pdf.cols.factor_1, pdf.cols.factor_2],
+            time=pdf.cols.time
+        )
+        assert study.observed_design_state.sds == 6, (
+            f"Expected ODS 6, got ODS {study.observed_design_state.sds}"
+        )
+        assert study.analytical_design_state.sds == 3, (
+            f"Expected ADS 3, got ADS {study.analytical_design_state.sds}"
+        )
 
 
 class TestFullPipeline:

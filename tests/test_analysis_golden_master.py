@@ -238,8 +238,12 @@ def _assert_result_matches_snapshot(scenario_name: str, result):
 # These must be stable across runs (fixed seeds, no randomness).
 
 def _make_unstratified_small():
-    """Scenario 1: Unstratified, small N — SDS 4, single condition over time."""
-    return synthetic.make_sds(4, T=15, seed=42)
+    """Scenario 1: Unstratified, small N — single condition over time (15 obs).
+
+    Uses ``make_sds(2, K1=1, K2=1, T=15)`` to produce a single-stream
+    time series suitable for unstratified X/mR shape testing.
+    """
+    return synthetic.make_sds(2, K1=1, K2=1, T=15, seed=42)
 
 
 def _make_stratified_balanced():

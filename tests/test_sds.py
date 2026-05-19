@@ -76,34 +76,22 @@ class TestSDSDetection:
         sds = detect_sds_for_test(df, spec)
         assert sds == 2, f"Bishop: all N_kt=1 → Expected SDS=2, got {sds}"
 
-    def test_sds5_nesting_structure(self):
-        """Verify that SDS5 properly implements nested structure."""
-        df = synthetic.make_sds(5, L=3, H_per_L=4, T=6, seed=42)
+    def test_sds5_incomplete_singletons(self):
+        """Verify that ODS 5 produces incomplete-grid singleton structure."""
+        df = synthetic.make_sds(5, K1=3, K2=2, T=6, seed=42)
 
-        # Test 1: Each head should appear with exactly one line
-        head_line_map = df.groupby('factor 2')['factor 1'].unique()
-        for head, lines in head_line_map.items():
-            assert len(lines) == 1, f"{head} appears with multiple lines: {lines}"
+        # ODS 5 must include empty cells (NaN y rows)
+        assert df['y'].isna().any(), "ODS 5 must include at least one empty cell"
 
-        # Test 2: Should have L*H_per_L unique heads total
-        n_unique_heads = df['factor 2'].nunique()
-        expected_heads = 3 * 4  # L * H_per_L
-        assert n_unique_heads == expected_heads, \
-            f"Expected {expected_heads} unique heads, got {n_unique_heads}"
-
-        # Test 3: Each line should have H_per_L heads
-        heads_per_line = df.groupby('factor 1')['factor 2'].nunique()
-        assert (heads_per_line == 4).all(), \
-            f"Not all lines have 4 heads: {heads_per_line.to_dict()}"
-
-        # Test 4: Head names should reflect nesting
-        sample_heads = df['factor 2'].unique()[:3]
-        for head in sample_heads:
-            assert 'Line' in head, f"Head name should contain 'Line': {head}"
+        # All occupied cells must be singletons
+        occupied = df.dropna(subset=['y'])
+        sizes = occupied.groupby(['factor 1', 'factor 2', 'time']).size()
+        assert (sizes == 1).all(), \
+            f"ODS 5 occupied cells must all be singletons; saw {sizes.unique()}"
 
     def test_sds6_stratified_xmr(self):
-        """Test that stratified XmR works with irregular SDS6 data."""
-        df = synthetic.make_sds(6, T=80, K1=3, K2=2, p_sampled=0.6, seed=42)
+        """Stratified XmR works with the ODS 6 incomplete-mixed shape."""
+        df = synthetic.make_sds(6, K1=3, K2=2, T=12, seed=42)
 
         pdf = ProcessBehavior(df)
         study = pdf.formulate(
@@ -113,11 +101,9 @@ class TestSDSDetection:
         )
 
         # XmR with factors requires explicit 'by' parameter
-        # SRP: XmR only returns XmR (use companion=True for bundled XmR+R)
         result = study.execute(chart='X', by=['factor 1', 'factor 2'])
 
         assert result is not None
-        # SRP: Should have single X chart
         assert len(result.charts) == 1
         assert 'X' in result.charts
 
