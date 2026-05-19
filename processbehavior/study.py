@@ -1,8 +1,9 @@
 """
 Study class for process behavior analysis formulation.
 
-The Study object represents a formulated analysis - it knows what data structure
-you have (SDS), what charts are valid, and guides you toward correct analysis.
+The Study object represents a formulated analysis - it knows the
+design-state lineage of your data (PDS / ODS / ADS), what charts are
+valid, and guides you toward correct analysis.
 
 This is the "teaching" layer of the API that helps users understand their data
 before running calculations.
@@ -689,19 +690,19 @@ class DesignReport:
         pds = self._pds_result
 
         if ods and ads:
-            lines.append("  Design lineage:")
+            lines.append("  Design-state lineage:")
             if pds is not None:
-                lines.append(f"    Planned Design State:    SDS {pds.sds} ({self._humanize_reason(pds.reason)})")
+                lines.append(f"    PDS (Planned):    {pds.sds} ({self._humanize_reason(pds.reason)})")
             else:
-                lines.append("    Planned Design State:    No plan")
+                lines.append("    PDS (Planned):    no plan supplied")
             empty_detail = f" — {ods.n_empty_cells} empty cells" if ods.n_empty_cells > 0 else ""
             ods_reason = self._humanize_reason(ods.reason)
-            lines.append(f"    Observed Design State:   SDS {ods.sds} ({ods_reason}){empty_detail}")
-            lines.append(f"    Analytical Design State: SDS {ads.sds} ({self._humanize_reason(ads.reason)})")
+            lines.append(f"    ODS (Observed):   {ods.sds} ({ods_reason}){empty_detail}")
+            lines.append(f"    ADS (Analytical): {ads.sds} ({self._humanize_reason(ads.reason)})")
         elif self.sds_reason_detail:
-            lines.append(f"  SDS reason: {self.sds_reason_detail}")
+            lines.append(f"  Classification reason: {self.sds_reason_detail}")
         elif self._sds_reason:
-            lines.append(f"  SDS reason: {self._sds_reason}")
+            lines.append(f"  Classification reason: {self._sds_reason}")
 
         # Plan adherence (only shown when plan is provided)
         if self.plan_adherence:
@@ -1863,7 +1864,7 @@ class Study:
         if base_chart not in self.valid_charts:
             available_list = list(self.valid_charts)
             raise ChartNotAvailableError(
-                f"Chart type '{base_chart}' is not valid for SDS {self.analytical_design_state.sds}.\n"
+                f"Chart type '{base_chart}' is not valid for ADS {self.analytical_design_state.sds}.\n"
                 f"Valid charts: {', '.join(available_list)}\n"
                 f"Recommended: {self.recommended_chart}\n"
                 f"Use study.why_not('{base_chart}') for explanation.",
@@ -1889,7 +1890,7 @@ class Study:
                 ]
                 raise ChartNotAvailableError(
                     f"Residual column '{value_col}' not found in the dataset "
-                    f"for SDS {self.analytical_design_state.sds}.\n"
+                    f"for ADS {self.analytical_design_state.sds}.\n"
                     f"Available residual columns: {', '.join(available_residuals) if available_residuals else 'None'}\n"
                     f"Use study.residuals to see available options.",
                     chart=value_col,
@@ -2354,7 +2355,7 @@ class Study:
             available = [c for c in self._ads.analysis_dataset.columns
                         if c.startswith('R') and len(c) == 2 and c[1].isdigit()]
             raise ValidationError(
-                f"Residual column '{col_name}' not available for SDS {self.analytical_design_state.sds}. "
+                f"Residual column '{col_name}' not available for ADS {self.analytical_design_state.sds}. "
                 f"Available: {available}"
             )
 
@@ -2368,8 +2369,9 @@ class Study:
         """
         Concise study summary.
 
-        Shows formulation, SDS, and available charts in minimal format.
-        Use study.support for the full chart availability DataFrame.
+        Shows formulation, design-state lineage, and available charts in
+        minimal format. Use ``study.design()`` for the full lineage
+        report and ``study.support`` for the chart availability DataFrame.
         """
         # 1-line formulation summary
         factors_str = ', '.join(self.factors) if self.factors else 'None'
@@ -2377,7 +2379,7 @@ class Study:
 
         ads_sds = self.analytical_design_state.sds
         ods_sds = self.observed_design_state.sds
-        sds_display = f"sds={ads_sds}" if ads_sds == ods_sds else f"ods={ods_sds}, ads={ads_sds}"
+        sds_display = f"ads={ads_sds}" if ads_sds == ods_sds else f"ods={ods_sds}, ads={ads_sds}"
         lines = [
             f"Study(response='{self.response}', factors=[{factors_str}], time='{time_str}', {sds_display})",
         ]

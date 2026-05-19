@@ -1,27 +1,26 @@
-# SDS Detection: How Sampling Design States Are Classified
+# Design-state detection: how PDS / ODS / ADS are classified
 
-This document explains how ProcessBehavior detects and classifies Sampling Design States (SDS). Understanding SDS detection is essential for interpreting what analysis capabilities are available for your data.
+This document explains how ProcessBehavior detects and classifies the design-state lineage. Understanding detection is essential for interpreting which analysis capabilities are available for your data.
 
 ## Overview
 
-### What is SDS and Why It Matters
+### The three-state model
 
-The Sampling Design State (SDS) describes the structure of your data in terms of:
-- **Factors (K)**: Categorical variables that define groups (e.g., Lane, Phase, Machine)
-- **Time (T)**: The temporal dimension of your process
-- **Replication**: How many observations exist per factor-time cell
+ProcessBehavior reports the design state at three points in the analysis lifecycle:
 
-ProcessBehavior automatically detects your SDS to determine:
-- Which chart types are valid
-- How to calculate variance (R2 residual)
-- What VAS residuals (R1-R5) are available
-- Whether interaction analysis is possible
+| State | Computed from | Codomain | Drives |
+|-------|---------------|----------|--------|
+| **PDS** — Planned | Declared plan (factors, time, or explicit `plan=`) | {1, 2} | Diagnostic only |
+| **ODS** — Observed | Raw data, before NA-filtering | {1..6} | Diagnostic; also the input the chart-selection layer uses for incomplete-grid warnings |
+| **ADS** — Analytical | Tidy data, after NA-filtering | {0, 1, 2, 3} | **Chart selection, residual availability, R2 method, variance decomposition** |
 
-### The Six Sampling Design States
+Each state carries a `.sds` integer code on Bishop's 1–6 reference scale. The legacy "SDS" prefix survives in internal class names (`SDSResult`, `SDSRegistry`, this file's filename) and in that code; conceptually the model is three-state.
 
-Per Bishop Table 1, there are six distinct sampling design states:
+### Bishop's six structural codes
 
-| SDS | Name | N_kt Pattern | Description |
+Per Bishop Table 1, there are six distinct structural classifications on the N_kt distribution:
+
+| Code | Name | N_kt Pattern | Description |
 |-----|------|--------------|-------------|
 | 1 | Complete | All N_kt ≥ 2 | Full replication in every cell |
 | 2 | Semi-Complete | All N_kt = 1 | No replication (all singletons) |
@@ -30,15 +29,14 @@ Per Bishop Table 1, there are six distinct sampling design states:
 | 5 | Incomplete | Has 0s, max = 1 | Incomplete without replication |
 | 6 | Incomplete | Has 0s, 1s, and ≥2s | Incomplete with singletons |
 
-**Complete/Semi-Complete** (SDS 1-3): No empty cells (all cells have N_kt ≥ 1)
-**Incomplete** (SDS 4-6): Has empty cells (some N_kt = 0)
+**Complete/Semi-Complete** (codes 1–3): No empty cells (all cells have N_kt ≥ 1).
+**Incomplete** (codes 4–6): Has empty cells (some N_kt = 0); applies to ODS only — these codes collapse to 1, 2, 3 in ADS once the tidied subset is classified.
 
-### When Detection Runs
+### When detection runs
 
-SDS detection runs **before** `prepare_dataset()`, on the raw data. This timing is critical because:
-- Cells with all-NA responses are preserved (they haven't been dropped yet)
-- The true intended structure is visible
-- Without raw data detection, all-NA cells would vanish and the structure would appear more complete than intended
+- **ODS** is detected on the **raw data** before NA rows are dropped. Cells with all-NA responses are preserved as N_kt = 0 so the true intended structure is visible.
+- **ADS** is detected on the **tidy data** after NA filtering. Empty cells have already vanished by the time ADS is classified, so its codomain is narrower ({0, 1, 2, 3}).
+- **PDS** is computed from the declared plan (or inferred from the formulate call). It does not look at the data.
 
 ## Core Concepts
 

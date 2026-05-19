@@ -1666,13 +1666,15 @@ class TestDesignReportLineage:
         assert 'Analytical' in report
 
     def test_agreeing_report_shows_single(self, pb_validation):
-        """When ODS == ADS, DesignReport shows single state."""
+        """When ODS == ADS, DesignReport shows the design-state lineage block."""
         study = pb_validation.formulate(
             response='PM SDS 1', factors=['FACTOR 1', 'FACTOR 2'],
             time='PRODUCTION TIME'
         )
         report = repr(study.design())
-        assert 'Design state' in report or 'SDS 1' in report
+        assert 'Design-state lineage' in report
+        assert 'ODS (Observed):' in report
+        assert 'ADS (Analytical):' in report
 
 
 # =============================================================================

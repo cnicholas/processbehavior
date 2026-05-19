@@ -357,8 +357,8 @@ def test_study_repr(simple_values):
     study = pdata.formulate(response='Value', factors=['Factor'], time='Time')
     study_str = str(study)
 
-    # Should contain useful information
-    assert 'SDS' in study_str or 'sds' in study_str.lower()
+    # Should contain useful information (the design-state lineage)
+    assert 'ads' in study_str.lower() or 'ods' in study_str.lower()
 
 
 # ============================================================================

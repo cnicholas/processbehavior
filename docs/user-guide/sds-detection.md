@@ -1,40 +1,61 @@
-# Design States
+# Design-state lineage (PDS / ODS / ADS)
 
-ProcessBehavior automatically detects your data's **Design State (DS)**, which determines the appropriate analysis approach. Understanding DS helps you interpret results correctly and choose the right charts.
+ProcessBehavior reports the design state at **three points** in your analysis lifecycle, and routes chart selection, residual availability, and variance decomposition by the third one (ADS).
 
-## Expected vs Observed: The Core Model
+## The three states
 
-ProcessBehavior understands every analytic study through the lens of **expected structure** versus **observed structure**:
+| State | Computed from | Codomain | Meaning |
+|-------|---------------|----------|---------|
+| **PDS** — Planned | Your declared `factors` and `time` (or an explicit `plan=`) | {1, 2} | What you intended to collect |
+| **ODS** — Observed | Raw data, before NA-filtering | {1..6} | What was actually collected (cells with all-NA responses count as "attempted but empty") |
+| **ADS** — Analytical | Tidy data, after NA-filtering | {0, 1, 2, 3} | What survives tidying; **drives chart selection, residual availability, and variance decomposition** |
 
-- **Observed structure** comes from your data—the actual factor levels, time points, and cell sizes present
-- **Expected structure** comes from your sampling plan—what the experimental design intended
+The integer 1–6 codes are Bishop's reference scale ("Bishop Table 1"). Each of PDS, ODS, ADS carries a value on that scale via its `.sds` field.
 
-The system operates effectively with or without a plan:
+Access the full lineage on a formulated study:
+
+```python
+study.plan_design_state        # PDS (or None when no plan was supplied)
+study.observed_design_state    # ODS — Bishop's classification of the raw N_kt distribution
+study.analytical_design_state  # ADS — what the analysis is fit for
+study.design()                 # DesignReport — all three in one report object
+```
+
+## Expected vs Observed: the underlying model
+
+The lineage above falls out of ProcessBehavior's expected-vs-observed model:
+
+- **Observed structure** comes from your data — the actual factor levels, time points, and cell sizes present.
+- **Expected structure** comes from your sampling plan — what the experimental design intended.
+
+The system operates effectively with or without an explicit `plan=`:
 
 | Approach | What ProcessBehavior Knows | Capabilities |
 |----------|---------------------------|--------------|
-| **Without plan** | Observed structure (including all-NA cells) | All DS detection (1-6), charts, basic design reports |
-| **With plan** | Expected + observed structure | All DS detection (1-6), coverage analysis, rich design reports |
+| **Without plan** | Observed structure (including all-NA cells) | Full ODS / ADS detection, charts, basic design reports |
+| **With plan** | Expected + observed structure | Full PDS / ODS / ADS detection, coverage analysis, rich design reports |
 
-DS detection runs on raw data before NA rows are dropped, so cells where all response values are NA are counted as empty (N_kt=0). This enables DS 4-6 detection even without a plan. With a plan, ProcessBehavior can additionally compare what *was* collected against what *should have been* collected—catching entirely absent factor levels and providing detailed reports showing exactly what's missing.
+ODS detection runs on raw data before NA rows are dropped, so cells where all response values are NA are counted as empty (N_kt=0). This enables ODS 4–6 detection even without a plan. With a plan, ProcessBehavior can additionally compare what *was* collected against what *should have been* collected — catching entirely absent factor levels and providing detailed reports showing exactly what's missing.
 
-## The Six Design States
+## Bishop's six design states (the 1–6 scale)
+
+Each of PDS, ODS, ADS reports a value on this scale.
 
 **Complete/Semi-Complete (no empty cells):**
 
-| DS | Name | Cell Sizes (N_kt) | Recommended Chart |
+| Code | Name | Cell Sizes (N_kt) | Recommended Chart |
 |-----|------|--------------------|-------------------|
 | 1 | Full Replication | All N_kt >= 2 | Xbar |
 | 2 | No Replication | All N_kt = 1 | X |
 | 3 | Partial Replication | Mix of N_kt = 1 and N_kt >= 2 | X |
 
-**Incomplete (has empty cells — detected on raw data before cleansing):**
+**Incomplete (has empty cells — applies to ODS only; collapses during tidying):**
 
-| DS | Name | Cell Sizes (N_kt) | Collapses to ADS |
-|-----|------|--------------------|------------------|
-| 4 | Incomplete, No Singletons | Empty cells + all observed N_kt >= 2 | ADS 1 |
-| 5 | Incomplete, No Replication | Empty cells + all observed N_kt = 1 | ADS 2 |
-| 6 | Incomplete, With Singletons | Empty cells + mixed N_kt | ADS 3 |
+| Code | Name | Cell Sizes (N_kt) | ODS → ADS collapse |
+|-----|------|--------------------|--------------------|
+| 4 | Incomplete, No Singletons | Empty cells + all observed N_kt >= 2 | ODS 4 → ADS 1 |
+| 5 | Incomplete, No Replication | Empty cells + all observed N_kt = 1 | ODS 5 → ADS 2 |
+| 6 | Incomplete, With Singletons | Empty cells + mixed N_kt | ODS 6 → ADS 3 |
 
 ## How DS is Detected
 

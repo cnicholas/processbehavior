@@ -2,7 +2,7 @@
 ProcessBehavior - Main entry point for process behavior analysis.
 
 This module provides a user-friendly interface with IDE auto-completion for column names
-and SDS-driven automatic analysis selection.
+and automatic chart selection driven by the analytical design state (ADS).
 
 Usage:
     from processbehavior import ProcessBehavior
@@ -307,9 +307,9 @@ class ProcessBehavior:
 
     This class makes analysis frictionless by:
     1. Providing IDE auto-completion for column names
-    2. Auto-detecting Sampling Design State (SDS)
-    3. Showing valid chart types for the detected SDS
-    4. Recommending the best chart for the detected SDS
+    2. Auto-detecting the design-state lineage (PDS / ODS / ADS)
+    3. Showing valid chart types based on the analytical design state (ADS)
+    4. Recommending the best chart for the detected ADS
     5. Two-step workflow: formulate() then execute()
 
     Usage:
@@ -716,7 +716,7 @@ class ProcessBehavior:
             Sampling plan specifying expected factor levels. Must contain a
             ``'factors'`` key mapping column names (or ColumnRefs) to lists of
             expected levels. Optionally include ``'T'`` (planned time points)
-            and ``'N'`` (planned observations per cell). Enables SDS 4-6
+            and ``'N'`` (planned observations per cell). Enables ODS 4-6
             detection by comparing observed structure to planned structure.
             Cannot be used with ``factors``.
 
@@ -739,8 +739,8 @@ class ProcessBehavior:
         -------
         Study
             A Study object with:
-            - SDS detection results
-            - Valid and recommended chart types
+            - PDS / ODS / ADS design-state lineage
+            - Valid and recommended chart types (routed by ADS)
             - Pre-calculated residuals and effects (via study.dataset)
             - study.execute() to run chart-specific analysis
             - study.design() to compare plan vs observed (when plan provided)
@@ -751,9 +751,9 @@ class ProcessBehavior:
 
         >>> pb = ProcessBehavior(df)
         >>> study = pb.formulate(response='weight')
-        >>> print(study)  # Shows SDS, valid charts, next steps
+        >>> print(study)  # Shows PDS / ODS / ADS, valid charts, next steps
 
-        With factors (SDS 1-3):
+        With factors (complete designs, ADS 1-3):
 
         >>> study = pb.formulate(
         ...     response='fill_weight',
@@ -815,15 +815,15 @@ class ProcessBehavior:
         if factors is not None and plan is not None:
             raise ValidationError(
                 "Cannot specify both 'factors' and 'plan'. Use either:\n"
-                "  • factors=[...] to infer structure from observed data (SDS 1-3)\n"
-                "  • plan={col: [levels], ...} to specify expected structure (SDS 1-6)"
+                "  • factors=[...] to infer structure from observed data (complete designs)\n"
+                "  • plan={col: [levels], ...} to specify expected structure (complete + incomplete designs)"
             )
 
         # Require at least one of factors or plan
         if factors is None and plan is None:
             raise ValidationError(
                 "Cannot analyze response-only data without grouping structure.\n\n"
-                "Bishop's Sampling Design States (SDS 1-6) require a factor × time grid.\n"
+                "Bishop's design states (codes 1-6) require a factor × time grid.\n"
                 "Please specify:\n"
                 "  - factors: categorical variables defining subgroups (e.g., Machine, Operator)\n"
                 "  - plan: expected factor levels for detecting incomplete designs\n\n"

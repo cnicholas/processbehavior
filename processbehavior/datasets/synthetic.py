@@ -997,47 +997,42 @@ def make_sds(
     **kwargs
 ) -> pd.DataFrame:
     """
-    Generate synthetic data for any Sampling Design State.
+    Generate synthetic data classifying as the requested design state.
 
-    Convenience function that dispatches to the appropriate SDS-specific
-    generator. Useful for loops and parameterized testing.
+    Bishop's design-state scale assigns an integer 1-6 to each (factor x
+    time) grid based on the N_kt distribution. ``make_sds(N)`` generates
+    data whose Observed Design State (ODS) classification equals ``N``.
+    See :func:`make_design` for the same function under its
+    forward-looking name.
 
     Args:
-        sds: Sampling Design State (1, 2, 3, 4, 5, or 6)
-        K1: Number of factor 1 levels (not used for SDS 4)
-        K2: Number of factor 2 levels (not used for SDS 4, 5)
-        T: Number of time periods
-        n: Number of observations (deprecated, use T instead)
-        seed: Random seed for reproducibility
-        **kwargs: Additional arguments passed to specific generator
+        sds: Bishop design-state code (1, 2, 3, 4, 5, or 6).
+        K1: Number of factor 1 levels.
+        K2: Number of factor 2 levels.
+        T: Number of time periods.
+        n: Deprecated alias kept for backward compatibility; ignored.
+        seed: Random seed for reproducibility.
+        **kwargs: Additional keyword arguments forwarded to the
+            state-specific generator (``make_sds1`` etc.).
 
     Returns:
-        DataFrame appropriate for specified SDS
-
-    Note:
-        SDS 0 was consolidated into SDS 4. Response-only data (no factors,
-        no time) is now treated as SDS 4 with implicit time ordering via
-        obs_id. Use make_sds4() for simple time series data.
+        DataFrame with columns ``time``, ``factor 1``, ``factor 2``,
+        ``y`` whose ODS classification equals ``sds``. After NA-filtering
+        during tidying, ODS 4/5/6 collapse to ADS 1/2/3 respectively.
 
     Examples:
-        >>> # Generate data for each SDS type
-        >>> for sds in [1, 2, 3, 4, 5, 6]:
-        ...     df = make_sds(sds, K1=3, K2=2, T=8, seed=42)
-        ...     print(f"SDS {sds}: {len(df)} observations")
-
-        >>> # Useful for parameterized testing
-        >>> @pytest.mark.parametrize('sds', [1, 2, 3, 4, 5, 6])
-        >>> def test_all_sds(sds):
-        ...     df = make_sds(sds, seed=42)
-        ...     assert len(df) > 0
-
-        >>> # Pass through kwargs to specific generator
-        >>> df = make_sds(3, K1=4, K2=2, T=10,
-        ...               p_replicated=0.3,  # SDS3-specific arg
-        ...               seed=42)
+        >>> # Round-trip: generated ODS equals requested ODS
+        >>> for s in (1, 2, 3, 4, 5, 6):
+        ...     df = make_sds(s, seed=42)
+        ...     study = pb.ProcessBehavior(df).formulate(
+        ...         response='y',
+        ...         factors=['factor 1', 'factor 2'],
+        ...         time='time',
+        ...     )
+        ...     assert study.observed_design_state.sds == s
 
     Raises:
-        ValueError: If SDS type not in [1, 2, 3, 4, 5, 6]
+        ValueError: If sds not in [1, 2, 3, 4, 5, 6].
     """
     generators = {
         1: make_sds1,
@@ -1055,6 +1050,41 @@ def make_sds(
         )
 
     return generators[sds](K1=K1, K2=K2, T=T, seed=seed, **kwargs)
+
+
+def make_design(
+    state: int,
+    K1: int = 3,
+    K2: int = 2,
+    T: int = 8,
+    seed: Optional[int] = None,
+    **kwargs,
+) -> pd.DataFrame:
+    """
+    Generate synthetic data classifying as the requested design state.
+
+    Forward-looking alias for :func:`make_sds` that uses the new
+    three-state vocabulary (PDS / ODS / ADS). The integer ``state`` is
+    Bishop's design-state code (1-6); the returned DataFrame, when run
+    through ``ProcessBehavior(...).formulate(...)``, classifies as that
+    Observed Design State.
+
+    Args:
+        state: Bishop design-state code (1, 2, 3, 4, 5, or 6).
+        K1, K2: Number of factor 1 / factor 2 levels.
+        T: Number of time periods.
+        seed: Random seed for reproducibility.
+        **kwargs: Additional keyword arguments forwarded to the
+            state-specific generator.
+
+    Returns:
+        Same as :func:`make_sds`.
+
+    Examples:
+        >>> df = make_design(state=4, K1=3, K2=2, T=6, seed=42)
+        >>> # study.observed_design_state.sds == 4
+    """
+    return make_sds(sds=state, K1=K1, K2=K2, T=T, seed=seed, **kwargs)
 
 
 # ============================================================================
