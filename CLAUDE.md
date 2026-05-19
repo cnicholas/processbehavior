@@ -24,12 +24,12 @@ The primary user is the analyst. The API must be simple, mirror how analysts thi
 ## Engineering Philosophy
 
 - **Analyst-first API**: The API mirrors the analyst's workflow, not the programmer's. `formulate()` is how analysts think: understand your data structure before computing. `execute()` is the computation. This two-step pattern is non-negotiable — it's not an architecture choice, it's a reflection of how analysis works.
-- **Do the basics excellently**: Simple things should be simple. `pb.formulate(response=..., factors=..., time=...)` → `study.execute()` → done. No configuration ceremony. The system auto-detects SDS, selects valid charts, cleans garbage characters, and produces correct results.
+- **Do the basics excellently**: Simple things should be simple. `pb.formulate(response=..., factors=..., time=...)` → `study.execute()` → done. No configuration ceremony. The system auto-detects the PDS / ODS / ADS lineage, selects valid charts, cleans garbage characters, and produces correct results.
 - **Enable the expert**: Progressive disclosure. The casual analyst gets correct charts in two calls. The experienced analyst can drill into VAS residuals (R1-R5), variance decomposition, effects, interactions, `DesignReport` plan-vs-observed comparison, and `why_not()` explanations.
 - **Methodology fidelity**: This library implements Bishop's VAS — not "inspired by," but equation-by-equation. When convenience conflicts with the methodology, methodology wins. Don't suggest shortcuts that diverge from the reference. If you don't know what Bishop says, say so rather than guess.
 - **Pit of success (Pythonic Hadley)**: The easy path is the correct path. Self-diagnostic errors that say what's available and how to fix it. Constrained APIs that prevent misuse. `ColumnRef` for IDE auto-completion. Garbage cleaned automatically.
 - **Correct before complete**: Validate against Bishop's Minitab reference data (PBTESTDATABASE_T100.csv). Fewer features done correctly beats more features done approximately.
-- **SDS drives everything**: Detected once on raw data, passed through the system. No class re-detects SDS. It determines valid charts, R2 method, and variance decomposition.
+- **ADS drives everything**: The library reports three design states — PDS (planned), ODS (observed-on-raw-data, before NA drop), ADS (analytical, after tidying). **ADS** determines valid charts, R2 method, and variance decomposition. Detected once during `formulate()` and passed through the system; no class re-detects state. PDS and ODS are exposed for diagnostics via `study.plan_design_state`, `study.observed_design_state`, `DesignReport`. The legacy term "SDS" survives in internal class names (`SDSResult`, `SDSRegistry`, `sds_detector.py`) and in the integer 1-6 code that each state carries on its `.sds` field (Bishop's reference scale); the conceptual model is three-state.
 - **Composition, single responsibility, immutability**: AnalysisDataSet orchestrates but delegates. Study is a frozen dataclass. Calculation functions are pure where possible.
 - **Exception convention**: Input/parameter validation raises `ValidationError` or one of its subclasses (`ColumnNotFoundError`, `FactorNotFoundError`, `ChartNotAvailableError`) from `processbehavior/exceptions.py`. Methodology invariants can stay `RuntimeError`. Never raise raw `ValueError` for user-facing input errors. (As of v0.1.0 there are ~71 raw `raise ValueError` calls left from earlier code; the hierarchy is the target — don't add new ones.)
 
@@ -43,7 +43,7 @@ The primary user is the analyst. The API must be simple, mirror how analysts thi
 ## Domain & Architecture
 
 ### Critical Invariants
-- **SDS detection runs on RAW data** (before dropping NA response rows). Cells with all-NA responses count as "attempted" cells — required to detect SDS 4-6 (incomplete designs).
+- **ODS detection runs on RAW data** (before dropping NA response rows). Cells with all-NA responses count as "attempted" cells — required to detect ODS 4-6 (incomplete designs). ADS is then computed on the tidied data; ODS {4,5,6} collapse to ADS {1,2,3}.
 - **R2 is structure-dependent** (exact/ma2/hybrid based on cell sizes). R1, R3, R4, R5 are pure algebra.
 - **`rsg_vars` dual semantics**: variance decomposition groups for Xbar/S; stratification (separate charts) for IMR/R.
 - **obs_id assigned BEFORE sort**, cell_key = (factor × time) tuple. Canonical sort: (cell_key, obs_id).
@@ -51,7 +51,7 @@ The primary user is the analyst. The API must be simple, mirror how analysts thi
 - **Xbar center line is Bishop VAS unweighted**: mean of (factor × time) cell means on `value_col`, equal weight per experimental condition regardless of cell N_kt. Holds for both response and residual Xbar charts; balanced designs collapse to the observation-weighted mean, unbalanced designs differ by a methodology-required (and per Bishop, practically negligible) amount. Computed in `_calculate_xbar` at `analysis.py:~699`. Don't reintroduce `df[value_col].mean()` as the center — that's the dead-branch bug fixed in this release.
 
 ### Pipeline
-- `formulate()` is expensive: SDS detection on raw data, builds AnalysisDataSet (residuals, effects)
+- `formulate()` is expensive: ODS detection on raw data, ADS on tidy data, builds AnalysisDataSet (residuals, effects)
 - `execute()` is cheap: runs chart strategy on pre-computed data
 - Multiple charts from same Study without re-computation
 

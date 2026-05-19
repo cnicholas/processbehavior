@@ -51,9 +51,9 @@ flowchart LR
 **Key Steps:**
 1. **Load** your process data into a pandas DataFrame
 2. **Wrap** with `ProcessBehavior` for IDE auto-completion
-3. **Formulate** your study — ProcessBehavior detects the Design State (DS) and determines:
-   - Design State (DS 1–6)
-   - Valid and recommended charts
+3. **Formulate** your study — ProcessBehavior detects the design-state lineage (PDS / ODS / ADS) and determines:
+   - Planned, Observed, and Analytical Design States on Bishop's 1–6 reference scale
+   - Valid and recommended charts (routed by ADS)
    - Available VAS residuals (R1–R5)
    - Main effects analysis
    - Interaction analysis
@@ -62,7 +62,7 @@ flowchart LR
 
 ## What Makes ProcessBehavior Different?
 
-Unlike traditional SPC packages that require you to manually select chart types and configure parameters, ProcessBehavior automatically detects your data's **Design State (DS)** and recommends the appropriate analysis approach.
+Unlike traditional SPC packages that require you to manually select chart types and configure parameters, ProcessBehavior automatically detects the **design-state lineage of your data** — PDS (planned), ODS (observed), ADS (analytical) — and routes the analysis by what your data actually supports.
 
 ```python
 import pandas as pd
@@ -79,8 +79,9 @@ study = pb.formulate(
     time=pb.cols.timestamp
 )
 
-# ProcessBehavior automatically detects DS and recommends charts
-print(f"Detected: DS {study.observed_design_state.sds}")
+# ProcessBehavior reports the lineage and recommends charts
+print(f"Observed:   ODS {study.observed_design_state.sds}")
+print(f"Analytical: ADS {study.analytical_design_state.sds}")
 print(f"Recommended: {study.recommended_chart}")
 
 # Analyze and visualize
@@ -90,10 +91,16 @@ result.plot(show_zones=True, highlight_signals=True)
 
 ## Key Features
 
-### Automatic Design State Detection
-ProcessBehavior identifies six distinct Design States (DS 1-6) and configures the analysis accordingly:
+### Three-State Design-State Lineage
+ProcessBehavior reports three design states at three points in the analysis lifecycle:
 
-| DS | Name | Cell Sizes (N_kt) |
+- **PDS** (Planned) — what you intended to collect; ∈ {1, 2}
+- **ODS** (Observed) — what was actually collected, before NA-filtering; ∈ {1..6}
+- **ADS** (Analytical) — what survives tidying and drives chart selection, residuals, variance decomposition; ∈ {0, 1, 2, 3}
+
+The integer codes are Bishop's reference scale ("Bishop Table 1"):
+
+| Code | Name | Cell Sizes (N_kt) |
 |-----|------|--------------------|
 | 1 | Full Replication | All N_kt >= 2 |
 | 2 | No Replication | All N_kt = 1 |
@@ -101,6 +108,8 @@ ProcessBehavior identifies six distinct Design States (DS 1-6) and configures th
 | 4 | Incomplete, No Singletons | Empty cells + all observed N_kt >= 2 |
 | 5 | Incomplete, No Replication | Empty cells + all observed N_kt = 1 |
 | 6 | Incomplete, With Singletons | Empty cells + mixed N_kt |
+
+ODS values in {4, 5, 6} collapse to ADS values in {1, 2, 3} during tidying.
 
 ### Dr. Thomas A. Bishop's Variance Analysis System (VAS)
 For replicated designs, ProcessBehavior computes the complete residual decomposition:
@@ -135,7 +144,7 @@ pip install "processbehavior[images]"  # adds kaleido for static PNG/SVG export
 
 - [Quickstart](getting-started/quickstart.ipynb) - Get up and running in 5 minutes
 - [Basic X Chart](tutorials/basic-imr.ipynb) - Your first control chart
-- [Design States](user-guide/sds-detection.md) - Understanding Design States
+- [Design-state lineage](user-guide/sds-detection.md) - Understanding PDS / ODS / ADS
 - [API Reference](reference/api.md) - Complete API reference
 
 ## Philosophy

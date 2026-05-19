@@ -1,26 +1,34 @@
 """
 ProcessBehavior - Statistical Process Control for Python
 
-A Pythonic library for process behavior analysis following Bishop's VAS
-methodology. Provides auto-detection of Sampling Design State (SDS) and
-appropriate control chart analysis with variance decomposition.
+A Pythonic library for process behavior analysis following Bishop's
+Variance Analysis System (VAS). The library models the data lifecycle
+through three design states and routes analysis by what your data
+actually supports:
+
+- **Planned Design State (PDS)** — what you intended to collect
+- **Observed Design State (ODS)** — what was actually collected (raw data)
+- **Analytical Design State (ADS)** — what survives tidying and drives
+  chart selection, residual availability, and variance decomposition
 
 Quick Start
 -----------
     import processbehavior as pb
 
-    # Generate sample data (replace with your own DataFrame)
-    df = pb.make_sds(sds=1, seed=42)
+    # Generate sample data (or supply your own DataFrame)
+    df = pb.make_design(state=1, seed=42)
 
-    # Formulate the study (detect SDS, build analysis dataset)
+    # Formulate the study (detects PDS / ODS / ADS, builds analysis dataset)
     study = pb.ProcessBehavior(df).formulate(
         response='y',
         time='time',
         factors=['factor 1', 'factor 2'],
     )
-    print(study)
+    print(f"Observed:   ODS {study.observed_design_state.sds}")
+    print(f"Analytical: ADS {study.analytical_design_state.sds}")
+    print(f"Recommended chart: {study.recommended_chart}")
 
-    # Execute analysis
+    # Execute analysis (routes by ADS)
     result = study.execute()
     stats = result.get_statistics('Xbar')
     print(f"Center: {stats['center']}, UPL: {stats['upl']}")
@@ -31,7 +39,16 @@ Quick Start
 Main Classes
 ------------
 ProcessBehavior : Main user-facing API with auto-completion
-AnalysisResult : Unified result container
+Study           : Formulated study carrying PDS / ODS / ADS lineage
+DesignReport    : Plan-vs-observed-vs-analytical lineage report
+AnalysisResult  : Unified result container
+
+A Note on Terminology
+---------------------
+The integer codes 1-6 are Bishop's reference scale ("Bishop Table 1").
+Each design state - PDS, ODS, or ADS - reports a value on that scale via
+its ``.sds`` field. Internally some modules still use the legacy "SDS"
+prefix (e.g. ``sds_detector.py``); the model itself is three-state.
 """
 
 __version__ = "0.1.1"
@@ -39,7 +56,7 @@ __version__ = "0.1.1"
 # Result object
 from processbehavior.analysis_result import AnalysisResult
 from processbehavior.capability import CapabilityResult, SpecLimits
-from processbehavior.datasets.synthetic import make_sds
+from processbehavior.datasets.synthetic import make_design, make_sds
 
 # Exceptions
 from processbehavior.exceptions import (
@@ -85,5 +102,6 @@ __all__ = [
     'register_theme',
 
     # Datasets
+    'make_design',
     'make_sds',
 ]

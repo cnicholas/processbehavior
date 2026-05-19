@@ -1,6 +1,8 @@
-# Design State (DS) Definitions
+# Bishop's design-state reference scale (1–6)
 
-This document provides the formal definitions of Design States (DS) as defined by Thomas A. Bishop, Ph.D. in the Variance Analysis System (VAS) framework.
+This document provides the formal definitions of the six structural design states defined by Thomas A. Bishop, Ph.D. in the Variance Analysis System (VAS) framework. These are the integer codes carried by each state in the PDS / ODS / ADS lineage via its `.sds` field.
+
+For background on the lineage itself (Planned → Observed → Analytical), see [Design-state detection](../user-guide/sds-detection.md).
 
 ## Notation
 

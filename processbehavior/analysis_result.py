@@ -7,7 +7,7 @@ easily accessible in one place:
 - Stratified chart support with strata property and focus() for drill-down
 - Residuals (R1-R5)
 - Effects (main effects, interactions)
-- Summary metadata (SDS, statistics, capabilities)
+- Summary metadata (design-state lineage, statistics, capabilities)
 
 Chart Structure
 ---------------
@@ -76,7 +76,7 @@ class AnalysisResult:
     - Chart data and statistics (Xbar, S, X, mR)
     - VAS residuals (R1-R5)
     - Main effects and interactions
-    - Sampling Design State (SDS) information
+    - Design-state lineage information (PDS / ODS / ADS)
     - Summary metadata
     - Stratified chart support with focus() for drill-down
 
@@ -927,7 +927,7 @@ class AnalysisResult:
             "="*70,
             "ANALYSIS RESULT SUMMARY",
             "="*70,
-            f"\nAnalytical Design State: SDS {self.analytical_sds}",
+            f"\nAnalytical Design State (ADS): {self.analytical_sds}",
             f"Description: {self.analytical_sds_info['description']}",
             f"\nAnalysis Type: {self.summary['analysis_type']}",
             f"Response Variable: {self.summary['response_var']}",

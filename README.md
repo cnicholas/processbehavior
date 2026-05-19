@@ -7,7 +7,7 @@
 
 A Python library for **Process Behavior Analysis** following Thomas A. Bishop's Variance Analysis System (VAS) methodology.
 
-Unlike traditional SPC packages, processbehavior faithfully implements Bishop's VAS equation-by-equation: automatic Design State (DS) detection, variance decomposition via R1-R5 residuals, and correct chart selection based on data structure.
+Unlike traditional SPC packages, processbehavior faithfully implements Bishop's VAS equation-by-equation: automatic detection of the three-state design lineage (PDS / ODS / ADS), variance decomposition via R1-R5 residuals, and chart selection routed by the data your study can actually analyze.
 
 ## Installation
 
@@ -28,18 +28,20 @@ pip install "processbehavior[images]"  # kaleido, for static plot images
 import processbehavior as pb
 
 # Generate a sample dataset (replace with your own DataFrame)
-df = pb.make_sds(sds=1, seed=42)
+df = pb.make_design(state=1, seed=42)
 # Columns: 'time', 'factor 1', 'factor 2', 'y'
 
-# Formulate the study — detect the Design State and build the analysis dataset
+# Formulate — detects PDS / ODS / ADS and builds the analysis dataset
 study = pb.ProcessBehavior(df).formulate(
     response='y',
     time='time',
     factors=['factor 1', 'factor 2'],
 )
-print(study)  # DS, valid charts, recommended chart
+print(f"Observed:   ODS {study.observed_design_state.sds}")
+print(f"Analytical: ADS {study.analytical_design_state.sds}")
+print(f"Recommended chart: {study.recommended_chart}")
 
-# Execute analysis
+# Execute analysis (routes by ADS)
 result = study.execute()                       # uses the recommended chart
 stats = result.get_statistics('Xbar')          # {'N', 'center', 'lpl', 'upl'}
 print(f"Center: {stats['center']}, UPL: {stats['upl']}")
@@ -59,27 +61,44 @@ When working with your own data, `pb.cols.<column_name>` provides IDE auto-compl
 
 The API mirrors how analysts think:
 
-1. **`formulate()`** - Understand your data structure. Detects the Design State (DS 1-6), identifies valid charts, and computes residuals. This is the expensive step.
+1. **`formulate()`** - Understand your data structure. Detects PDS / ODS / ADS, identifies valid charts, and computes residuals. This is the expensive step.
 2. **`execute()`** - Run analysis. Produces charts from the pre-computed data. This is cheap and can be called multiple times for different charts from the same study.
 
-### Design States (DS)
+### Design-State Lineage (PDS / ODS / ADS)
 
-processbehavior automatically detects your data's structure:
+processbehavior reports three design states at three points in the analysis lifecycle:
 
-| DS | Name | Cell Sizes (N_kt) |
-|-----|------|--------------------|
-| 1 | Full Replication | All N_kt >= 2 |
-| 2 | No Replication | All N_kt = 1 |
-| 3 | Partial Replication | Mix of N_kt = 1 and N_kt >= 2 |
-| 4 | Incomplete, No Singletons | Empty cells + all observed N_kt >= 2 |
-| 5 | Incomplete, No Replication | Empty cells + all observed N_kt = 1 |
-| 6 | Incomplete, With Singletons | Empty cells + mixed N_kt |
+| State | Computed from | Codomain | Meaning |
+|-------|---------------|----------|---------|
+| **PDS** — Planned | Your declared `factors` and `time` (or an explicit `plan=`) | {1, 2} | What you intended to collect |
+| **ODS** — Observed | Raw data, before NA filtering | {1..6} | What was actually collected (cells with all-NA responses count as "attempted but empty") |
+| **ADS** — Analytical | Tidy data, after NA filtering | {0, 1, 2, 3} | What survives tidying; **drives chart selection, residual availability, and variance decomposition** |
 
-The **Analytical Design State** (ADS) determines which charts are valid, how R2 is calculated, and whether variance decomposition is available. DS 4-6 (Incomplete) collapse to DS 1-3 after data cleansing.
+The integer codes are Bishop's reference scale ("Bishop Table 1"):
+
+| Code | Cell Sizes (N_kt) |
+|------|--------------------|
+| 1 | Complete grid, all N_kt >= 2 (full replication) |
+| 2 | Complete grid, all N_kt = 1 (no replication) |
+| 3 | Complete grid, mix of N_kt = 1 and N_kt >= 2 |
+| 4 | Incomplete grid, occupied cells N_kt >= 2 |
+| 5 | Incomplete grid, occupied cells N_kt = 1 |
+| 6 | Incomplete grid, mixed N_kt |
+
+ODS values in {4, 5, 6} collapse to ADS values in {1, 2, 3} during tidying (empty cells drop and the surviving subset becomes the analytical grid).
+
+Access the lineage on a formulated study:
+
+```python
+study.plan_design_state        # PDS (when a plan was supplied)
+study.observed_design_state    # ODS — what the raw data showed
+study.analytical_design_state  # ADS — what the analysis is fit for
+study.design()                 # DesignReport: full lineage in one object
+```
 
 ### Residual System (R1-R5)
 
-For factorial designs (DS 1-3), processbehavior decomposes variation into diagnostic residuals:
+For factorial designs (ADS 1-3), processbehavior decomposes variation into diagnostic residuals:
 
 - **R1** - Overall deviation from grand mean
 - **R2** - Within-cell noise (measurement error, short-term fluctuation)
@@ -108,7 +127,7 @@ for stratum in result.strata:
 
 ## Features
 
-- **Auto-detection**: DS detection on raw data determines valid charts and analysis methods
+- **Three-state lineage**: PDS / ODS / ADS detected automatically; chart selection routes by ADS
 - **Correct charts**: Xbar-S, X (Individual), mR (Moving Range), Histogram with proper limit calculations
 - **Variance decomposition**: R1-R5 residuals for factorial designs
 - **Effects analysis**: Main effects, time effects, and interaction effects
@@ -121,11 +140,11 @@ for stratum in result.strata:
 
 ## Scope
 
-processbehavior is the **computational engine** for Bishop's VAS methodology. It handles data ingestion, DS detection, residual computation, chart generation, and export.
+processbehavior is the **computational engine** for Bishop's VAS methodology. It handles data ingestion, design-state lineage detection (PDS / ODS / ADS), residual computation, chart generation, and export.
 
 For the **curated analyst experience** — guided workflows, interactive dashboards, and collaboration features — see [processbehavior.com](https://processbehavior.com).
 
-For the **methodological foundation** — the theory behind VAS, DS classification, and residual interpretation — see the forthcoming book by Dr. Thomas A. Bishop and Chris Nicholas.
+For the **methodological foundation** — the theory behind VAS, design-state classification, and residual interpretation — see the forthcoming book by Dr. Thomas A. Bishop and Chris Nicholas.
 
 ## License
 

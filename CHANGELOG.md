@@ -7,6 +7,48 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- ``make_design(state=N, ...)`` as a forward-looking alias for
+  ``make_sds(sds=N, ...)``. Same semantics, three-state vocabulary.
+
+### Changed
+- **Design-state terminology rolled out across the user surface.** The
+  library has always reported three states (Planned / Observed / Analytical
+  Design State), but documentation, error messages, and the module
+  docstring previously talked about "SDS" as if it were a single concept.
+  The user-facing surfaces now consistently use **PDS / ODS / ADS** for
+  the states and reserve the integer 1–6 codes for Bishop's reference
+  scale (which each state carries on its ``.sds`` field). Touched:
+  ``__init__.py`` module docstring, ``README.md``, ``CLAUDE.md``,
+  ``docs/intro.md``, ``docs/getting-started/quickstart.ipynb``,
+  ``docs/getting-started/installation.md``, ``docs/sds-detection.md``,
+  ``docs/user-guide/sds-detection.md``, ``docs/reference/sds_definitions.md``,
+  and the public docstrings of ``Study``, ``ProcessBehavior``, ``AnalysisResult``.
+- ``Study.__repr__`` lineage block now reads ``PDS (Planned)`` /
+  ``ODS (Observed)`` / ``ADS (Analytical)`` and drops the redundant
+  ``SDS`` prefix on the integer code.
+- User-facing error messages from ``study.execute()`` ("Chart type X is
+  not valid for ADS N" instead of "for SDS N") now name the analytical
+  state explicitly.
+- Internal infrastructure (``SDSResult``, ``SDSRegistry``,
+  ``SDSAnalysisPlan``, ``sds_detector.py``, the ``.sds`` field on each
+  state, ``test_sds_detector.py``, ``test_sds.py``) is unchanged — a
+  deeper internal rename is deferred to a future breaking-change pass.
+- Yesterday's [0.1.1] entry that claimed "Sampling Design State (SDS)"
+  as canonical terminology is superseded by this pass.
+
+### Fixed
+- ``make_sds(sds=4)``, ``make_sds(sds=5)``, ``make_sds(sds=6)`` now
+  produce data that classifies as ODS 4 / 5 / 6 respectively. Prior
+  implementations were scenario archetypes (single-stream time series,
+  nested hierarchy, regime-change sparse sampling) that all classified
+  as ODS 2 (complete grid, no replication) regardless of the requested
+  state. The new generators produce Bishop's structural incomplete-grid
+  shapes via empty (NaN-y) cells. After tidying, ODS 4/5/6 collapse to
+  ADS 1/2/3 as Bishop's table prescribes.
+- New ``tests/test_design_state_lineage.py`` (21 tests) pins the
+  ``make_sds(sds=N) → ODS N`` contract so this drift cannot recur.
+
 ## [0.1.1] - 2026-05-18
 
 ### Changed
