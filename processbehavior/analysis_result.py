@@ -572,8 +572,8 @@ class AnalysisResult:
 
         Raises
         ------
-        KeyError
-            If chart name not found
+        ChartNotAvailableError
+            If chart name not found in this result.
 
         Examples
         --------
@@ -601,12 +601,14 @@ class AnalysisResult:
         Returns
         -------
         dict
-            Statistics dictionary with keys like 'mean', 'lpl', 'upl', 'n'
+            Statistics dictionary. For control charts (X, mR, Xbar, S) the
+            keys are ``{'N', 'center', 'lpl', 'upl'}``. For the Histogram
+            chart the keys are ``{'mean', 'std', 'n'}``.
 
         Raises
         ------
-        KeyError
-            If chart name not found
+        ChartNotAvailableError
+            If chart name not found in this result.
 
         Examples
         --------

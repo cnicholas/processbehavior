@@ -2,8 +2,8 @@
 ProcessBehavior - Statistical Process Control for Python
 
 A Pythonic library for process behavior analysis following Bishop's VAS
-methodology. Provides auto-detection of Design States (DS) and appropriate
-control chart analysis with variance decomposition.
+methodology. Provides auto-detection of Sampling Design State (SDS) and
+appropriate control chart analysis with variance decomposition.
 
 Quick Start
 -----------
@@ -12,7 +12,7 @@ Quick Start
     # Generate sample data (replace with your own DataFrame)
     df = pb.make_sds(sds=1, seed=42)
 
-    # Formulate the study (detect DS, build analysis dataset)
+    # Formulate the study (detect SDS, build analysis dataset)
     study = pb.ProcessBehavior(df).formulate(
         response='y',
         time='time',
@@ -34,7 +34,7 @@ ProcessBehavior : Main user-facing API with auto-completion
 AnalysisResult : Unified result container
 """
 
-__version__ = "0.1.0"
+__version__ = "0.1.1"
 
 # Result object
 from processbehavior.analysis_result import AnalysisResult

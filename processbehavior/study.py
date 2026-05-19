@@ -1773,10 +1773,11 @@ class Study:
 
         Raises
         ------
-        ValueError
+        ChartNotAvailableError
             If specified chart is not valid for this SDS
-            If by contains invalid factors
-            If X/mR with factors but by not specified
+        ValidationError
+            If by contains invalid factors, or if X/mR with factors
+            requires an explicit by parameter that wasn't supplied
 
         Examples
         --------
@@ -1828,7 +1829,7 @@ class Study:
         # Parse and validate chart request (returns base chart type only)
         base_chart = self._parse_chart_request(chart_request)
 
-        # Validate by parameter (may raise ValueError)
+        # Validate by parameter (may raise ValidationError)
         by_validated = self._validate_by_parameter(by, base_chart)
 
         # Recentered validation - only R1-R5 allowed with recentered=True
@@ -2326,8 +2327,8 @@ class Study:
 
         Raises
         ------
-        ValueError
-            If value specifies unavailable residual
+        ValidationError
+            If value specifies an unavailable residual
         """
         if value is None or value.lower() == 'response':
             return self._spec.response_var
