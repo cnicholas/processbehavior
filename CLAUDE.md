@@ -28,7 +28,7 @@ The primary user is the analyst. The API must be simple, mirror how analysts thi
 - **Enable the expert**: Progressive disclosure. The casual analyst gets correct charts in two calls. The experienced analyst can drill into VAS residuals (R1-R5), variance decomposition, effects, interactions, `DesignReport` plan-vs-observed comparison, and `why_not()` explanations.
 - **Methodology fidelity**: This library implements Bishop's VAS — not "inspired by," but equation-by-equation. When convenience conflicts with the methodology, methodology wins. Don't suggest shortcuts that diverge from the reference. If you don't know what Bishop says, say so rather than guess.
 - **Pit of success (Pythonic Hadley)**: The easy path is the correct path. Self-diagnostic errors that say what's available and how to fix it. Constrained APIs that prevent misuse. `ColumnRef` for IDE auto-completion. Garbage cleaned automatically.
-- **Correct before complete**: Validate against Bishop's Minitab reference data (TABVASTESTDATABASE.csv). Fewer features done correctly beats more features done approximately.
+- **Correct before complete**: Validate against Bishop's Minitab reference data (PBTESTDATABASE_T100.csv). Fewer features done correctly beats more features done approximately.
 - **SDS drives everything**: Detected once on raw data, passed through the system. No class re-detects SDS. It determines valid charts, R2 method, and variance decomposition.
 - **Composition, single responsibility, immutability**: AnalysisDataSet orchestrates but delegates. Study is a frozen dataclass. Calculation functions are pure where possible.
 - **Exception convention**: Input/parameter validation raises `ValidationError` or one of its subclasses (`ColumnNotFoundError`, `FactorNotFoundError`, `ChartNotAvailableError`) from `processbehavior/exceptions.py`. Methodology invariants can stay `RuntimeError`. Never raise raw `ValueError` for user-facing input errors. (As of v0.1.0 there are ~71 raw `raise ValueError` calls left from earlier code; the hierarchy is the target — don't add new ones.)
@@ -67,7 +67,7 @@ The primary user is the analyst. The API must be simple, mirror how analysts thi
 - `[dev]` is a recursive aggregate — `[test, lint, images, excel, docs]`.
 
 ### Validation & Testing
-- `validation/TABVASTESTDATABASE.csv`: Bishop's reference data. PM SDS 1–6 columns, `*` = NA
+- `validation/PBTESTDATABASE_T100.csv`: Bishop's reference data. PM SDS 1–6 columns, `*` = NA
 - pytest with `.venv/bin/python -m pytest tests/`
 - Synthetic data: top-level `pb.make_sds(...)` (re-exported); module path `from processbehavior.datasets.synthetic import make_sds`
 - Use pytest's `tmp_path` for any file the test writes; never `tempfile.NamedTemporaryFile(delete=False)` + manual `os.remove`. The hand-rolled pattern races with openpyxl/pandas readers on Windows (WinError 32). The `temp_excel_file` fixture in `tests/test_excel_export.py` is the reference pattern.
@@ -137,7 +137,7 @@ The primary user is the analyst. The API must be simple, mirror how analysts thi
 
 ## Testing
 - Always use the validation dataset for testing.  It is ground truth.
-- File: [text](validation/TABVASTESTDATABASE.csv)
+- File: [text](validation/PBTESTDATABASE_T100.csv)
 
 ## Anti-patterns (don't add these back)
 - Don't track planning docs at repo root. Use `.claude/notes/` (already gitignored).

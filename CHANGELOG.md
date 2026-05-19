@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-05-18
+
 ### Changed
 - Synced validation dataset to Tom Bishop's corrected golden copy
   (`validation/PBTESTDATABASE_T100.csv`, replacing `TABVASTESTDATABASE.csv`).
@@ -16,6 +18,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   time, and `PM INERT` columns are byte-identical. The e2e Bishop validator
   remains all-green; `TestSDSRenumberDrift` is replaced by
   `TestSDSColumnLabelAlignment` with two cleaner parametrized invariants.
+- Documentation, docstrings, and the quickstart notebook now use the
+  canonical "Sampling Design State (SDS)" terminology consistently. The
+  prior "Design State (DS)" phrasing in `__init__.py`, the installation
+  guide, and the quickstart was non-canonical.
+- `study.execute()`, `AnalysisResult.get_chart()`, and `get_statistics()`
+  docstring `Raises` blocks now name the actual exception subclasses
+  (`ValidationError`, `ChartNotAvailableError`) instead of bare
+  `ValueError` / `KeyError`.
 
 ### Fixed
 - Xbar center line now correctly computes Bishop VAS's mean of (factor × time)
@@ -54,8 +64,8 @@ and may change between minor versions until 1.0.
 - `ProcessBehavior` wrapper for pandas DataFrames with IDE auto-completion
   for column references via `pb.cols`
 - Two-step analyst workflow: `pb.formulate(...) → study.execute(...) → AnalysisResult`
-- Automatic detection of Bishop's six **Design States (DS 1–6)** on raw data
-  before NA handling, including incomplete designs (DS 4–6)
+- Automatic detection of Bishop's six **Sampling Design States (SSDS 1–6)** on raw data
+  before NA handling, including incomplete designs (SDS 4–6)
 - Self-diagnostic exceptions (`ColumnNotFoundError`, `FactorNotFoundError`,
   `ChartNotAvailableError`, `ValidationError`) reporting what is available
   and how to fix the call
@@ -95,7 +105,7 @@ and may change between minor versions until 1.0.
 - Static image export (requires `[images]` extra)
 
 #### Datasets
-- `make_sds(sds=N, seed=...)` synthetic dataset generators for DS 1–6,
+- `make_sds(sds=N, seed=...)` synthetic dataset generators for SDS 1–6,
   re-exported at the top level for `pb.make_sds(...)`
 - Edge-case generators (`make_edge_cases`)
 - Bishop's `PBTESTDATABASE_T100.csv` reference is shipped in the source
@@ -113,5 +123,6 @@ and may change between minor versions until 1.0.
 - `natsort >= 8.0`
 - `plotly >= 5.18, < 7`
 
-[Unreleased]: https://github.com/cnicholas/processbehavior/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/cnicholas/processbehavior/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/cnicholas/processbehavior/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/cnicholas/processbehavior/releases/tag/v0.1.0

@@ -5,13 +5,15 @@
 ProcessBehavior requires Python 3.9 or later.
 
 ### Dependencies (installed automatically)
-- **pandas** >= 2.0 - Data manipulation
+- **numpy** >= 1.23 - Numerical computing
+- **pandas** >= 2.0, < 3 - Data manipulation
 - **natsort** >= 8.0 - Natural sorting for factor levels
-- **plotly** >= 5.18 - Interactive visualization
-- **openpyxl** >= 3.1 - Excel export
+- **plotly** >= 5.18, < 7 - Interactive visualization
 
 ### Optional Dependencies
-- **kaleido** >= 0.2 - Static image export (install via `pip install processbehavior[images]`)
+Install via `pip install "processbehavior[<extra>]"`:
+- **openpyxl** >= 3.1 — Excel export (`[excel]`)
+- **kaleido** — Static image export (`[images]`)
 
 ## Installation Methods
 
@@ -21,10 +23,16 @@ ProcessBehavior requires Python 3.9 or later.
 pip install processbehavior
 ```
 
+### With Excel Export
+
+```bash
+pip install "processbehavior[excel]"
+```
+
 ### With Static Image Export
 
 ```bash
-pip install processbehavior[images]
+pip install "processbehavior[images]"
 ```
 
 ### From Source (Development)
@@ -61,7 +69,7 @@ pb = ProcessBehavior(df)
 study = pb.formulate(response=pb.cols.value, factors=[pb.cols.machine], time=pb.cols.batch)
 result = study.execute()
 
-print(f"DS: {study.analytical_design_state.sds}")
+print(f"SDS: {study.analytical_design_state.sds}")
 print(f"Valid charts: {study.valid_charts}")
 print(f"Recommended: {study.recommended_chart}")
 print("Installation verified!")
@@ -70,7 +78,7 @@ print("Installation verified!")
 Expected output:
 ```
 ProcessBehavior version: 0.1.0
-DS: 2
+SDS: 2
 Valid charts: ['Histogram', 'Xbar', 'S', 'X', 'mR']
 Recommended: X
 Installation verified!
