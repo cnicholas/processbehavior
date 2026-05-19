@@ -594,581 +594,392 @@ def make_sds3(  # noqa: C901
 
 
 # ============================================================================
-# SDS 4: Single Condition Over Time - Time Series
+# SDS 4: Incomplete grid, occupied cells replicated (N >= 2)
 # ============================================================================
 
 def make_sds4(
-    T: int = 40,
-    mu: float = 50.0,
-    sigma: float = 0.4,
-    drift_rate: float = 0.15,
-    drift_type: str = 'random_walk',
-    seed: Optional[int] = None,
-    include_truth: bool = False
-) -> pd.DataFrame:
-    """
-    Generate Sampling Design State 4 data (single condition over time).
-    
-    SDS4 represents a single process measured over time with no grouping
-    structure. This is classic time series data in SPC - one machine,
-    one product, one process parameter tracked over many time points.
-    
-    Characteristics:
-    ---------------
-    - Only one "condition" or factor level (K=1)
-    - Multiple time points (large T)
-    - No grouping structure
-    - Appropriate for IMR (Individual-Moving Range) charts
-    - May exhibit trends, drift, or cycles
-    
-    Use Cases:
-    ---------
-    - Testing IMR chart without grouping
-    - Demonstrating time series control charts
-    - Teaching trend detection
-    - Single-stream process monitoring
-    - Continuous process variables
-    
-    Args:
-        T: Number of time periods (observations)
-        mu: Starting process mean
-        sigma: Random variation (short-term)
-        drift_rate: Standard deviation of drift per time step
-        drift_type: Type of time-based pattern:
-            - 'random_walk': Cumulative random drift (default)
-            - 'linear': Linear trend upward
-            - 'cyclic': Sinusoidal pattern
-            - 'step': Step change at midpoint
-            - 'none': Pure random (no time structure)
-        seed: Random seed
-        include_truth: Include drift component as column
-        
-    Returns:
-        DataFrame with time series structure
-        
-    Mathematical Models:
-        Random Walk:
-            Y_t = μ + Σ(δ_i) + ε_t
-            where δ_i ~ N(0, drift_rate²)
-            
-        Linear:
-            Y_t = μ + β*t + ε_t
-            where β = drift_rate
-            
-        Cyclic:
-            Y_t = μ + A*sin(2π*t/period) + ε_t
-            where A = drift_rate * 3
-            
-        Step:
-            Y_t = μ + [0 if t<T/2 else drift_rate*3] + ε_t
-    
-    Examples:
-        >>> # Basic time series (random walk)
-        >>> df = make_sds4(T=50, seed=42)
-        >>> df['factor 1'].unique()
-        array(['K1'])  # Single factor level
-        
-        >>> # Linear upward trend
-        >>> df = make_sds4(T=100, drift_type='linear', 
-        ...                drift_rate=0.1, seed=42)
-        >>> # Useful for testing trend detection
-        
-        >>> # Cyclic pattern (seasonal effect)
-        >>> df = make_sds4(T=80, drift_type='cyclic',
-        ...                drift_rate=2.0, seed=42)
-        >>> # Models daily/weekly cycles
-        
-        >>> # Step change (process adjustment at t=50)
-        >>> df = make_sds4(T=100, drift_type='step',
-        ...                drift_rate=5.0, seed=42)
-        >>> # Models mean shift at midpoint
-        
-        >>> # Pure random
-        >>> # Pure random (no drift)
-        >>> df = make_sds4(T=60, drift_type='none', seed=42)
-        >>> # Models stable process with only random variation
-        
-        >>> # With ground truth to validate drift detection
-        >>> df = make_sds4(T=50, include_truth=True, seed=42)
-        >>> # Can plot true_drift vs estimated drift
-    
-    Validation:
-        - Single factor level only (K=1)
-        - T time points present
-        - Appropriate for IMR analysis
-    
-    See Also:
-        make_sds6: For regime changes (discrete shifts)
-        make_sds5: For nested hierarchical structures
-    """
-    rng = np.random.default_rng(seed)
-    
-    # Generate drift/trend component based on type
-    if drift_type == 'random_walk':
-        # Cumulative random walk
-        steps = rng.normal(0, drift_rate, T)
-        drift = np.cumsum(steps)
-        
-    elif drift_type == 'linear':
-        # Linear trend
-        drift = np.linspace(0, drift_rate * T, T)
-        
-    elif drift_type == 'cyclic':
-        # Sinusoidal pattern
-        period = T / 4  # 4 complete cycles
-        t_vals = np.arange(T)
-        amplitude = drift_rate * 3
-        drift = amplitude * np.sin(2 * np.pi * t_vals / period)
-        
-    elif drift_type == 'step':
-        # Step change at midpoint
-        drift = np.zeros(T)
-        midpoint = T // 2
-        drift[midpoint:] = drift_rate * 3
-        
-    elif drift_type == 'none':
-        # No drift, pure random
-        drift = np.zeros(T)
-        
-    else:
-        raise ValueError(
-            f"Unknown drift_type: {drift_type}. "
-            f"Valid: 'random_walk', 'linear', 'cyclic', 'step', 'none'"
-        )
-    
-    # Generate observations
-    rows = []
-    for t in range(T):
-        epsilon = rng.normal(0, sigma)
-        y = mu + drift[t] + epsilon
-        
-        row = {
-            'time': t + 1,
-            'factor 1': "K1",  # Single condition
-            'factor 2': "NA",
-            'y': y
-        }
-        
-        if include_truth:
-            row.update({
-                'true_drift': drift[t],
-                'true_error': epsilon,
-                'true_mean': mu + drift[t]
-            })
-        
-        rows.append(row)
-    
-    df = pd.DataFrame(rows)
-    
-    # Validation
-    if df['factor 1'].nunique() != 1:
-        raise AssertionError("SDS4 must have single factor level")
-    if len(df) != T:
-        raise AssertionError(f"SDS4 validation failed: expected {T} obs, got {len(df)}")
-    
-    logger.debug(
-        f"Generated SDS4 data: {T} time points, drift_type='{drift_type}', "
-        f"drift_rate={drift_rate}"
-    )
-    
-    return df
-
-
-# ============================================================================
-# SDS 5: Nested Design - Hierarchical with Asynchronous Coverage
-# ============================================================================
-
-def make_sds5(
-    L: int = 2,
-    H_per_L: int = 3,
-    T: int = 8,
-    mu: float = 50.0,
-    sigma: float = 0.4,
-    line_effect_size: float = 2.0,
-    head_effect_size: float = 1.0,
-    time_effect_size: float = 0.8,
-    p_active: float = 0.8,
-    seed: Optional[int] = None,
-    include_truth: bool = False
-) -> pd.DataFrame:
-    """
-    Generate Sampling Design State 5 data (nested design with asynchronous coverage).
-    
-    SDS5 models hierarchical/nested structures common in manufacturing:
-    - Multiple production lines, each with multiple heads/spindles
-    - Heads are NESTED within lines (Head 1 on Line A ≠ Head 1 on Line B)
-    - Not all heads active at all times (asynchronous)
-    
-    This is common in:
-    - Multi-head fillers (heads nested in lanes)
-    - Multi-spindle machines (spindles nested in stations)
-    - Hierarchical production (operators nested in shifts)
-    
-    Characteristics:
-    ---------------
-    - Two or more factors with hierarchical structure
-    - Factor 2 nested within Factor 1
-    - Irregular temporal patterns (not all combinations at all times)
-    - Asynchronous operation (heads come on/off line)
-    - Requires special handling of nested structure
-    
-    Use Cases:
-    ---------
-    - Testing nested design analysis
-    - Demonstrating hierarchical structures
-    - Multi-head filling machine scenarios
-    - Multi-spindle machining operations
-    - Teaching variance component models
-    
-    Args:
-        L: Number of lines (top-level factor)
-        H_per_L: Number of heads per line (nested factor)
-        T: Number of time periods
-        mu: Grand mean
-        sigma: Within-observation error
-        line_effect_size: Std dev of line effects
-        head_effect_size: Std dev of head-within-line effects
-        time_effect_size: Std dev of time effects
-        p_active: Probability that a head is active at any time point (0 to 1)
-        seed: Random seed
-        include_truth: Include true effects as columns
-        
-    Returns:
-        DataFrame with nested structure
-        
-    Mathematical Model:
-        Y_ihjt = μ + λ_i + η_ij + τ_t + ε_ihjt
-        
-        where:
-            μ: Grand mean
-            λ_i: Line i effect ~ N(0, line_effect_size²)
-            η_ij: Head j within line i ~ N(0, head_effect_size²)
-            τ_t: Time t effect ~ N(0, time_effect_size²)
-            ε_ihjt: Error ~ N(0, σ²)
-            
-        Note: η_ij is nested (Head 1 of Line 1 ≠ Head 1 of Line 2)
-    
-    Examples:
-        >>> # Basic nested structure: 2 lines, 3 heads each
-        >>> df = make_sds5(L=2, H_per_L=3, T=8, seed=42)
-        >>> # Check nesting: each head appears with only one line
-        >>> df.groupby('factor 2')['factor 1'].nunique().max()
-        1  # Each head belongs to exactly one line
-        
-        >>> # Multi-head filler scenario
-        >>> df = make_sds5(L=4, H_per_L=4, T=12,  # 4 lanes, 4 heads, 12 hours
-        ...                mu=237.5,               # Target fill weight
-        ...                line_effect_size=1.5,   # Lane-to-lane variation
-        ...                head_effect_size=0.8,   # Head-within-lane variation
-        ...                p_active=0.9,           # 90% uptime
-        ...                seed=42)
-        
-        >>> # Sparse operation (maintenance scenario)
-        >>> df = make_sds5(L=3, H_per_L=2, T=10,
-        ...                p_active=0.5,  # Only 50% uptime
-        ...                seed=42)
-        >>> # Many missing time points for each head
-        
-        >>> # With ground truth for variance component validation
-        >>> df = make_sds5(L=2, H_per_L=3, T=6,
-        ...                include_truth=True, seed=42)
-        >>> # Can estimate variance components and compare to truth
-    
-    Nested Structure Verification:
-        >>> df = make_sds5(L=2, H_per_L=3, seed=42)
-        >>> # Verify nesting: each head unique to its line
-        >>> nesting_check = df.groupby('factor 2')['factor 1'].unique()
-        >>> all(len(lines) == 1 for lines in nesting_check)
-        True
-    
-    Validation:
-        - Each head appears with exactly one line (nesting)
-        - Not all (line, head, time) combinations present (asynchronous)
-        - At least some observations for each line
-        - Irregular time coverage (some time points may be missing for heads)
-    
-    See Also:
-        make_sds1: For crossed (not nested) factorial designs
-        make_sds6: For regime changes with irregular patterns
-    """
-    rng = np.random.default_rng(seed)
-    
-    # Generate hierarchical effects
-    line_eff = rng.normal(0, line_effect_size, L)  # Line-level effects
-    head_eff = rng.normal(0, head_effect_size, (L, H_per_L))  # Head nested in line
-    tau = rng.normal(0, time_effect_size, T)  # Time effects
-    
-    rows = []
-    
-    for line in range(L):
-        for head in range(H_per_L):
-            # CRITICAL FIX: Make head names unique across ALL lines
-            # This ensures proper nesting structure
-            # Format: Line{i}_Head{j} creates unique identifier
-            head_name = f"Line{line+1}_Head{head+1}"
-            
-            # Determine which time points this head is active
-            # Asynchronous: not all heads active at all times
-            active_times = [t for t in range(T) if rng.random() < p_active]
-            
-            # Ensure at least some activity
-            if len(active_times) == 0:
-                active_times = [rng.integers(0, T)]
-            
-            for t in active_times:
-                epsilon = rng.normal(0, sigma)
-                y = (mu + line_eff[line] + head_eff[line, head] + 
-                     tau[t] + epsilon)
-                
-                row = {
-                    'time': t + 1,
-                    'factor 1': f"Line{line+1}",
-                    'factor 2': head_name,  # Unique head identifier
-                    'y': y
-                }
-                
-                if include_truth:
-                    row.update({
-                        'true_line_effect': line_eff[line],
-                        'true_head_effect': head_eff[line, head],
-                        'true_time_effect': tau[t],
-                        'true_error': epsilon
-                    })
-                
-                rows.append(row)
-    
-    df = pd.DataFrame(rows)
-    
-    # Validation - verify nested structure
-    head_line_map = df.groupby('factor 2')['factor 1'].nunique()
-    if not (head_line_map == 1).all():
-        raise AssertionError(
-            "SDS5 validation failed: heads must be nested within lines. "
-            "Each head should appear with exactly one line."
-        )
-    
-    # Check that we have irregular coverage (asynchronous)
-    full_grid_size = L * H_per_L * T
-    actual_combinations = df.groupby(['factor 1', 'factor 2', 'time']).size().shape[0]
-    
-    if actual_combinations >= full_grid_size * 0.95:
-        logger.warning(
-            f"SDS5: Nearly complete grid ({actual_combinations}/{full_grid_size}). "
-            f"Consider reducing p_active for more realistic asynchronous pattern."
-        )
-    
-    # Ensure we have data for all lines
-    lines_with_data = df['factor 1'].nunique()
-    if lines_with_data < L:
-        logger.warning(
-            f"SDS5: Only {lines_with_data}/{L} lines have data. "
-            f"Consider increasing p_active."
-        )
-    
-    logger.debug(
-        f"Generated SDS5 data: {L} lines × {H_per_L} heads/line × {T} times "
-        f"= {len(df)} observations (p_active={p_active:.1%})"
-    )
-    
-    return df
-
-
-# ============================================================================
-# SDS 6: Unstructured / Regime Changes
-# ============================================================================
-
-def make_sds6(  # noqa: C901
-    T: int = 80,
     K1: int = 3,
     K2: int = 2,
+    T: int = 6,
+    p_drop: float = 0.25,
+    n_min: int = 2,
+    n_max: int = 5,
     mu: float = 50.0,
-    sigma: float = 0.5,
-    regime_lengths: Optional[list[int]] = None,
-    regime_shifts: Optional[list[float]] = None,
-    factor1_effect_size: float = 1.8,
-    factor2_effect_size: float = 1.2,
-    p_sampled: float = 0.7,
+    sigma: float = 0.4,
+    factor1_effect_size: float = 2.0,
+    factor2_effect_size: float = 1.5,
+    time_effect_size: float = 1.0,
     seed: Optional[int] = None,
-    include_truth: bool = False,
     factor1_names: Optional[list[str]] = None,
-    factor2_names: Optional[list[str]] = None
+    factor2_names: Optional[list[str]] = None,
 ) -> pd.DataFrame:
     """
-    Generate Sampling Design State 6 data (unstructured with regime changes).
+    Generate Observed Design State 4 (ODS 4) data.
 
-    SDS6 represents complex, irregular patterns common in real processes:
-    - Regime changes (process mean shifts over time)
-    - Irregular sampling (not all factors sampled at all times)
-    - Cannot form regular grid
-    - Mix of time-based patterns and factor effects
+    ODS 4 is Bishop's classification for incomplete designs where every
+    occupied (factor × time) cell carries at least 2 observations. Some
+    cells are missing entirely (no data was collected there). After NA
+    filtering during tidying, ODS 4 collapses to ADS 1 (full replication
+    on the surviving grid).
 
-    Characteristics:
+    Characteristics
     ---------------
-    - Incomplete (factor × time) grid
-    - Regime changes or process shifts over time
-    - Irregular, sparse sampling patterns
-    - Difficult to separate regime effects from factor/time effects
-
-    Use Cases:
-    ---------
-    - Testing regime detection algorithms
-    - Demonstrating non-standard data patterns
-    - Irregular production schedules
-    - Long-term process studies with adjustments
+    - K1 × K2 × T grid with a fraction of cells empty (no observations)
+    - Every occupied cell has n_min..n_max observations (n_min ≥ 2)
+    - Bishop's structural ODS 4 classification by the N_kt distribution
 
     Args:
-        T: Total number of time periods
-        K1: Number of factor 1 levels
-        K2: Number of factor 2 levels
-        mu: Baseline process mean
-        sigma: Random variation
-        regime_lengths: Duration of each regime (list)
-        regime_shifts: Mean shift for each regime (list)
-        factor1_effect_size: Std dev of factor 1 effects
-        factor2_effect_size: Std dev of factor 2 effects
-        p_sampled: Probability that each cell is sampled (0 to 1)
-        seed: Random seed
-        include_truth: Include regime info and true effects
-        factor1_names: Custom factor 1 level names
-        factor2_names: Custom factor 2 level names
+        K1, K2: Number of levels for factor 1 and factor 2
+        T: Number of time periods
+        p_drop: Approximate fraction of cells to leave empty (0 < p_drop < 1).
+            The exact number is ``max(1, int(p_drop * K1 * K2 * T))``, clipped
+            so at least one cell remains occupied.
+        n_min, n_max: Replication range for occupied cells. ``n_min`` must be
+            at least 2 for the result to classify as ODS 4 (not ODS 6).
+        mu, sigma: Grand mean and within-cell error standard deviation
+        factor1_effect_size, factor2_effect_size, time_effect_size: Standard
+            deviations of the corresponding main effects
+        seed: Random seed for reproducibility
+        factor1_names, factor2_names: Custom factor level names
 
     Returns:
-        DataFrame with irregular structure and regime information
+        DataFrame with columns ``time``, ``factor 1``, ``factor 2``, ``y``.
+        Empty cells appear as single rows with ``y = NaN`` so the SDS
+        detector observes them as N_kt = 0.
 
     Examples:
-        >>> # Basic regime change pattern
-        >>> df = make_sds6(T=80, K1=3, K2=2, seed=42)
-        >>> df.groupby('regime')['y'].mean()
-
-        >>> # Sparse sampling (irregular production)
-        >>> df = make_sds6(T=60, K1=3, K2=2,
-        ...                p_sampled=0.4,  # Only 40% of slots sampled
-        ...                seed=42)
-
-    Validation:
-        - Incomplete grid (sparse sampling)
-        - Regime changes present (if multiple regimes)
-        - Some observations in each regime
-
-    See Also:
-        make_sds4: For single condition with time patterns
-        make_sds5: For nested structures
+        >>> df = make_sds4(K1=3, K2=2, T=6, seed=42)
+        >>> # After formulate(), study.observed_design_state.sds == 4
+        >>> # After tidy/NA drop, study.analytical_design_state.sds == 1
     """
+    if not 0 < p_drop < 1:
+        raise ValueError(f"p_drop must be in (0, 1), got {p_drop}")
+    if n_min < 2:
+        raise ValueError(f"ODS 4 requires n_min >= 2 (no singletons), got {n_min}")
+    if n_max < n_min:
+        raise ValueError(f"n_max ({n_max}) must be >= n_min ({n_min})")
+
     rng = np.random.default_rng(seed)
 
-    # Default regime pattern if not specified
-    if regime_lengths is None:
-        n_regimes = 4
-        regime_lengths = [T // n_regimes] * n_regimes
-        # Adjust last regime to account for rounding
-        regime_lengths[-1] = T - sum(regime_lengths[:-1])
-
-    if regime_shifts is None:
-        regime_shifts = [-1.0, 0.0, 1.2, 0.0]
-
-    if len(regime_shifts) != len(regime_lengths):
-        raise ValueError(
-            f"regime_shifts length ({len(regime_shifts)}) must equal "
-            f"regime_lengths length ({len(regime_lengths)})"
-        )
-
-    if sum(regime_lengths) != T:
-        raise ValueError(
-            f"Sum of regime_lengths ({sum(regime_lengths)}) must equal T ({T})"
-        )
-
-    # Create regime mapping
-    regimes = np.repeat(range(len(regime_lengths)), regime_lengths)
-
-    # Generate factor effects
-    factor1_eff = rng.normal(0, factor1_effect_size, K1)
-    factor2_eff = rng.normal(0, factor2_effect_size, K2)
+    rho = rng.normal(0, factor1_effect_size, K1)
+    phi = rng.normal(0, factor2_effect_size, K2)
+    tau = rng.normal(0, time_effect_size, T)
 
     if factor1_names is None:
-        factor1_names = [f"Machine{k+1}" for k in range(K1)]
+        factor1_names = [f"F1_{k+1}" for k in range(K1)]
     elif len(factor1_names) != K1:
-        raise ValueError("Length of factor1_names must equal K1")
-
+        raise ValueError(
+            f"Length of factor1_names ({len(factor1_names)}) must equal K1 ({K1})"
+        )
     if factor2_names is None:
         factor2_names = [f"F2_{k+1}" for k in range(K2)]
     elif len(factor2_names) != K2:
-        raise ValueError("Length of factor2_names must equal K2")
+        raise ValueError(
+            f"Length of factor2_names ({len(factor2_names)}) must equal K2 ({K2})"
+        )
+
+    total_cells = K1 * K2 * T
+    n_drop = max(1, int(p_drop * total_cells))
+    n_drop = min(n_drop, total_cells - 1)
+    dropped = set(rng.choice(total_cells, size=n_drop, replace=False).tolist())
 
     rows = []
-    regime_obs_count = {i: 0 for i in range(len(regime_lengths))}
+    cell_idx = 0
+    for k1 in range(K1):
+        for k2 in range(K2):
+            for t in range(T):
+                if cell_idx in dropped:
+                    rows.append({
+                        'time': t + 1,
+                        'factor 1': factor1_names[k1],
+                        'factor 2': factor2_names[k2],
+                        'y': np.nan,
+                    })
+                else:
+                    n = int(rng.integers(n_min, n_max + 1))
+                    for _ in range(n):
+                        eps = rng.normal(0, sigma)
+                        y = mu + rho[k1] + phi[k2] + tau[t] + eps
+                        rows.append({
+                            'time': t + 1,
+                            'factor 1': factor1_names[k1],
+                            'factor 2': factor2_names[k2],
+                            'y': y,
+                        })
+                cell_idx += 1
 
-    for t in range(T):
-        regime = regimes[min(t, len(regimes) - 1)]
-        shift = regime_shifts[regime]
+    df = pd.DataFrame(rows)
 
-        # Irregular sampling: not all factor combinations sampled at each time
-        for k1 in range(K1):
-            for k2 in range(K2):
-                if rng.random() < p_sampled:
-                    epsilon = rng.normal(0, sigma)
-                    y = mu + shift + factor1_eff[k1] + factor2_eff[k2] + epsilon
+    logger.debug(
+        f"Generated ODS 4 data: {K1}x{K2}x{T} grid, {n_drop}/{total_cells} cells empty, "
+        f"{len(df)} total rows ({df['y'].notna().sum()} valid responses)"
+    )
+    return df
 
-                    row = {
+
+# ============================================================================
+# SDS 5: Incomplete grid, occupied cells unreplicated (N = 1)
+# ============================================================================
+
+def make_sds5(
+    K1: int = 3,
+    K2: int = 2,
+    T: int = 6,
+    p_drop: float = 0.25,
+    mu: float = 50.0,
+    sigma: float = 0.4,
+    factor1_effect_size: float = 2.0,
+    factor2_effect_size: float = 1.5,
+    time_effect_size: float = 1.0,
+    seed: Optional[int] = None,
+    factor1_names: Optional[list[str]] = None,
+    factor2_names: Optional[list[str]] = None,
+) -> pd.DataFrame:
+    """
+    Generate Observed Design State 5 (ODS 5) data.
+
+    ODS 5 is Bishop's classification for incomplete designs where every
+    occupied (factor × time) cell carries exactly one observation. Some
+    cells are missing entirely. After NA filtering during tidying, ODS 5
+    collapses to ADS 2 (no replication on the surviving grid).
+
+    Characteristics
+    ---------------
+    - K1 × K2 × T grid with a fraction of cells empty
+    - Every occupied cell has exactly one observation
+    - Bishop's structural ODS 5 classification by the N_kt distribution
+
+    Args:
+        K1, K2: Number of levels for factor 1 and factor 2
+        T: Number of time periods
+        p_drop: Approximate fraction of cells to leave empty (0 < p_drop < 1).
+            The exact number is ``max(1, int(p_drop * K1 * K2 * T))``, clipped
+            so at least one cell remains occupied.
+        mu, sigma: Grand mean and within-cell error standard deviation
+        factor1_effect_size, factor2_effect_size, time_effect_size: Standard
+            deviations of the corresponding main effects
+        seed: Random seed for reproducibility
+        factor1_names, factor2_names: Custom factor level names
+
+    Returns:
+        DataFrame with columns ``time``, ``factor 1``, ``factor 2``, ``y``.
+        Empty cells appear as single rows with ``y = NaN``.
+
+    Examples:
+        >>> df = make_sds5(K1=3, K2=2, T=6, seed=42)
+        >>> # After formulate(), study.observed_design_state.sds == 5
+        >>> # After tidy/NA drop, study.analytical_design_state.sds == 2
+    """
+    if not 0 < p_drop < 1:
+        raise ValueError(f"p_drop must be in (0, 1), got {p_drop}")
+
+    rng = np.random.default_rng(seed)
+
+    rho = rng.normal(0, factor1_effect_size, K1)
+    phi = rng.normal(0, factor2_effect_size, K2)
+    tau = rng.normal(0, time_effect_size, T)
+
+    if factor1_names is None:
+        factor1_names = [f"F1_{k+1}" for k in range(K1)]
+    elif len(factor1_names) != K1:
+        raise ValueError(
+            f"Length of factor1_names ({len(factor1_names)}) must equal K1 ({K1})"
+        )
+    if factor2_names is None:
+        factor2_names = [f"F2_{k+1}" for k in range(K2)]
+    elif len(factor2_names) != K2:
+        raise ValueError(
+            f"Length of factor2_names ({len(factor2_names)}) must equal K2 ({K2})"
+        )
+
+    total_cells = K1 * K2 * T
+    n_drop = max(1, int(p_drop * total_cells))
+    n_drop = min(n_drop, total_cells - 1)
+    dropped = set(rng.choice(total_cells, size=n_drop, replace=False).tolist())
+
+    rows = []
+    cell_idx = 0
+    for k1 in range(K1):
+        for k2 in range(K2):
+            for t in range(T):
+                if cell_idx in dropped:
+                    rows.append({
+                        'time': t + 1,
+                        'factor 1': factor1_names[k1],
+                        'factor 2': factor2_names[k2],
+                        'y': np.nan,
+                    })
+                else:
+                    eps = rng.normal(0, sigma)
+                    y = mu + rho[k1] + phi[k2] + tau[t] + eps
+                    rows.append({
                         'time': t + 1,
                         'factor 1': factor1_names[k1],
                         'factor 2': factor2_names[k2],
                         'y': y,
-                        'regime': regime
-                    }
-
-                    if include_truth:
-                        row.update({
-                            'regime_shift': shift,
-                            'true_factor1_effect': factor1_eff[k1],
-                            'true_factor2_effect': factor2_eff[k2],
-                            'true_error': epsilon,
-                            'true_mean': mu + shift + factor1_eff[k1] + factor2_eff[k2]
-                        })
-
-                    rows.append(row)
-                    regime_obs_count[regime] += 1
+                    })
+                cell_idx += 1
 
     df = pd.DataFrame(rows)
 
-    # Ensure we have at least some data
-    if len(df) == 0:
-        raise AssertionError(
-            f"SDS6 validation failed: no observations generated. "
-            f"Increase p_sampled (currently {p_sampled})."
+    logger.debug(
+        f"Generated ODS 5 data: {K1}x{K2}x{T} grid, {n_drop}/{total_cells} cells empty, "
+        f"every occupied cell has N=1, {df['y'].notna().sum()} valid responses"
+    )
+    return df
+
+
+# ============================================================================
+# SDS 6: Incomplete grid, mixed replication (some N=1, some N>=2)
+# ============================================================================
+
+def make_sds6(  # noqa: C901
+    K1: int = 3,
+    K2: int = 2,
+    T: int = 6,
+    p_drop: float = 0.25,
+    p_singleton: float = 0.4,
+    n_min: int = 2,
+    n_max: int = 5,
+    mu: float = 50.0,
+    sigma: float = 0.4,
+    factor1_effect_size: float = 2.0,
+    factor2_effect_size: float = 1.5,
+    time_effect_size: float = 1.0,
+    seed: Optional[int] = None,
+    factor1_names: Optional[list[str]] = None,
+    factor2_names: Optional[list[str]] = None,
+) -> pd.DataFrame:
+    """
+    Generate Observed Design State 6 (ODS 6) data.
+
+    ODS 6 is Bishop's classification for incomplete designs where occupied
+    cells carry a mix of singleton (N=1) and replicated (N>=2) observations.
+    Some cells are missing entirely. After NA filtering during tidying,
+    ODS 6 collapses to ADS 3 (mixed replication on the surviving grid).
+
+    Characteristics
+    ---------------
+    - K1 × K2 × T grid with a fraction of cells empty
+    - Among occupied cells, some have exactly 1 observation; others have
+      ``n_min..n_max`` observations
+    - Bishop's structural ODS 6 classification by the N_kt distribution
+      (must have BOTH singletons AND replicated cells)
+
+    Args:
+        K1, K2: Number of levels for factor 1 and factor 2
+        T: Number of time periods
+        p_drop: Approximate fraction of cells to leave empty (0 < p_drop < 1)
+        p_singleton: Among occupied cells, probability of singleton vs
+            replicated (0 < p_singleton < 1). The generator guarantees at
+            least one of each so the result classifies as ODS 6, not ODS 4/5.
+        n_min, n_max: Replication range for the replicated cells (>= 2)
+        mu, sigma: Grand mean and within-cell error standard deviation
+        factor1_effect_size, factor2_effect_size, time_effect_size: Standard
+            deviations of the corresponding main effects
+        seed: Random seed for reproducibility
+        factor1_names, factor2_names: Custom factor level names
+
+    Returns:
+        DataFrame with columns ``time``, ``factor 1``, ``factor 2``, ``y``.
+        Empty cells appear as single rows with ``y = NaN``.
+
+    Examples:
+        >>> df = make_sds6(K1=3, K2=2, T=6, seed=42)
+        >>> # After formulate(), study.observed_design_state.sds == 6
+        >>> # After tidy/NA drop, study.analytical_design_state.sds == 3
+    """
+    if not 0 < p_drop < 1:
+        raise ValueError(f"p_drop must be in (0, 1), got {p_drop}")
+    if not 0 < p_singleton < 1:
+        raise ValueError(f"p_singleton must be in (0, 1), got {p_singleton}")
+    if n_min < 2:
+        raise ValueError(f"n_min must be >= 2 (replicated cells), got {n_min}")
+    if n_max < n_min:
+        raise ValueError(f"n_max ({n_max}) must be >= n_min ({n_min})")
+
+    rng = np.random.default_rng(seed)
+
+    rho = rng.normal(0, factor1_effect_size, K1)
+    phi = rng.normal(0, factor2_effect_size, K2)
+    tau = rng.normal(0, time_effect_size, T)
+
+    if factor1_names is None:
+        factor1_names = [f"F1_{k+1}" for k in range(K1)]
+    elif len(factor1_names) != K1:
+        raise ValueError(
+            f"Length of factor1_names ({len(factor1_names)}) must equal K1 ({K1})"
+        )
+    if factor2_names is None:
+        factor2_names = [f"F2_{k+1}" for k in range(K2)]
+    elif len(factor2_names) != K2:
+        raise ValueError(
+            f"Length of factor2_names ({len(factor2_names)}) must equal K2 ({K2})"
         )
 
-    # Validation
-    # Check that we have irregular grid (some factor-time combinations missing)
-    full_grid_size = K1 * K2 * T
-    actual_combinations = df.groupby(['factor 1', 'factor 2', 'time']).size().shape[0]
-
-    if actual_combinations >= full_grid_size * 0.95:
-        logger.warning(
-            f"SDS6: Nearly complete grid ({actual_combinations}/{full_grid_size}). "
-            f"Consider reducing p_sampled for more irregular pattern."
+    total_cells = K1 * K2 * T
+    n_drop = max(1, int(p_drop * total_cells))
+    n_drop = min(n_drop, total_cells - 2)  # Need at least 2 occupied cells (1 singleton, 1 replicated)
+    if n_drop < 1:
+        raise ValueError(
+            f"Grid too small for ODS 6: K1*K2*T={total_cells} can't fit "
+            f"both empty cells and at least one singleton + one replicated cell"
         )
 
-    # Check that all regimes have data
-    empty_regimes = [r for r, count in regime_obs_count.items() if count == 0]
-    if empty_regimes:
-        raise AssertionError(
-            f"SDS6 validation failed: regimes {empty_regimes} have no observations. "
-            f"Increase p_sampled or adjust regime_lengths."
-        )
+    occupied_indices = [i for i in range(total_cells) if i not in set(
+        rng.choice(total_cells, size=n_drop, replace=False).tolist()
+    )]
+    # rebuild dropped set from indices not in occupied
+    occupied_set = set(occupied_indices)
+    dropped_set = set(range(total_cells)) - occupied_set
+    n_occupied = len(occupied_indices)
 
-    # Check that all factor 1 levels appear
-    factors_present = df['factor 1'].nunique()
-    if factors_present < K1:
-        logger.warning(
-            f"SDS6: Only {factors_present}/{K1} factor 1 levels have observations. "
-            f"Consider increasing p_sampled."
-        )
+    # Assign singleton vs replicated status to each occupied cell;
+    # guarantee at least one of each.
+    singleton_flags = rng.random(n_occupied) < p_singleton
+    if not singleton_flags.any():
+        singleton_flags[0] = True
+    if singleton_flags.all():
+        singleton_flags[-1] = False
+
+    occupied_to_singleton = dict(zip(occupied_indices, singleton_flags.tolist()))
+
+    rows = []
+    cell_idx = 0
+    for k1 in range(K1):
+        for k2 in range(K2):
+            for t in range(T):
+                if cell_idx in dropped_set:
+                    rows.append({
+                        'time': t + 1,
+                        'factor 1': factor1_names[k1],
+                        'factor 2': factor2_names[k2],
+                        'y': np.nan,
+                    })
+                else:
+                    n = (
+                        1 if occupied_to_singleton[cell_idx]
+                        else int(rng.integers(n_min, n_max + 1))
+                    )
+                    for _ in range(n):
+                        eps = rng.normal(0, sigma)
+                        y = mu + rho[k1] + phi[k2] + tau[t] + eps
+                        rows.append({
+                            'time': t + 1,
+                            'factor 1': factor1_names[k1],
+                            'factor 2': factor2_names[k2],
+                            'y': y,
+                        })
+                cell_idx += 1
+
+    df = pd.DataFrame(rows)
 
     logger.debug(
-        f"Generated SDS6 data: {len(df)} observations across {len(regime_lengths)} regimes, "
-        f"{actual_combinations}/{full_grid_size} cells filled ({actual_combinations/full_grid_size:.1%})"
+        f"Generated ODS 6 data: {K1}x{K2}x{T} grid, {n_drop}/{total_cells} cells empty, "
+        f"{int(singleton_flags.sum())} singletons + "
+        f"{int((~singleton_flags).sum())} replicated cells, "
+        f"{df['y'].notna().sum()} valid responses"
     )
-
     return df
 
 
@@ -1243,16 +1054,7 @@ def make_sds(
             f"Available SDS types: {sorted(generators.keys())}"
         )
 
-    # SDS 4 doesn't use K1/K2 parameters
-    if sds == 4:
-        return generators[sds](T=T, seed=seed, **kwargs)
-    # SDS 5 uses L and H_per_L instead of K1/K2
-    elif sds == 5:
-        L = kwargs.pop('L', max(2, K1 // 2))
-        H_per_L = kwargs.pop('H_per_L', 3)
-        return generators[sds](L=L, H_per_L=H_per_L, T=T, seed=seed, **kwargs)
-    else:
-        return generators[sds](K1=K1, K2=K2, T=T, seed=seed, **kwargs)
+    return generators[sds](K1=K1, K2=K2, T=T, seed=seed, **kwargs)
 
 
 # ============================================================================
@@ -1580,36 +1382,32 @@ def generate_test_suite(
     df = make_sds3(K1=3, K2=2, T=12, replication_pattern='early_times', seed=seed)
     df.to_csv(files['sds3_early_times'], index=False)
     
-    # SDS 4 variations
-    files['sds4_random_walk'] = os.path.join(output_dir, 'sds4_random_walk.csv')
-    df = make_sds4(T=50, drift_type='random_walk', seed=seed)
-    df.to_csv(files['sds4_random_walk'], index=False)
-    
-    files['sds4_linear'] = os.path.join(output_dir, 'sds4_linear.csv')
-    df = make_sds4(T=60, drift_type='linear', seed=seed)
-    df.to_csv(files['sds4_linear'], index=False)
-    
-    files['sds4_step'] = os.path.join(output_dir, 'sds4_step.csv')
-    df = make_sds4(T=80, drift_type='step', seed=seed)
-    df.to_csv(files['sds4_step'], index=False)
-    
-    # SDS 5 variations
-    files['sds5_basic'] = os.path.join(output_dir, 'sds5_basic.csv')
-    df = make_sds5(L=2, H_per_L=3, T=8, seed=seed)
-    df.to_csv(files['sds5_basic'], index=False)
-    
-    files['sds5_large'] = os.path.join(output_dir, 'sds5_large.csv')
-    df = make_sds5(L=4, H_per_L=4, T=12, seed=seed)
-    df.to_csv(files['sds5_large'], index=False)
-    
-    # SDS 6 variations
-    files['sds6_basic'] = os.path.join(output_dir, 'sds6_basic.csv')
-    df = make_sds6(T=80, K1=3, seed=seed)
-    df.to_csv(files['sds6_basic'], index=False)
-    
-    files['sds6_sparse'] = os.path.join(output_dir, 'sds6_sparse.csv')
-    df = make_sds6(T=60, K1=4, p_sampled=0.4, seed=seed)
-    df.to_csv(files['sds6_sparse'], index=False)
+    # SDS 4 variations (ODS 4: incomplete grid, all occupied cells replicated)
+    files['sds4_default'] = os.path.join(output_dir, 'sds4_default.csv')
+    df = make_sds4(K1=3, K2=2, T=8, seed=seed)
+    df.to_csv(files['sds4_default'], index=False)
+
+    files['sds4_sparse'] = os.path.join(output_dir, 'sds4_sparse.csv')
+    df = make_sds4(K1=3, K2=2, T=10, p_drop=0.5, seed=seed)
+    df.to_csv(files['sds4_sparse'], index=False)
+
+    # SDS 5 variations (ODS 5: incomplete grid, all occupied cells singleton)
+    files['sds5_default'] = os.path.join(output_dir, 'sds5_default.csv')
+    df = make_sds5(K1=3, K2=2, T=8, seed=seed)
+    df.to_csv(files['sds5_default'], index=False)
+
+    files['sds5_sparse'] = os.path.join(output_dir, 'sds5_sparse.csv')
+    df = make_sds5(K1=4, K2=3, T=12, p_drop=0.5, seed=seed)
+    df.to_csv(files['sds5_sparse'], index=False)
+
+    # SDS 6 variations (ODS 6: incomplete grid, mixed singleton / replicated)
+    files['sds6_default'] = os.path.join(output_dir, 'sds6_default.csv')
+    df = make_sds6(K1=3, K2=2, T=8, seed=seed)
+    df.to_csv(files['sds6_default'], index=False)
+
+    files['sds6_singleton_heavy'] = os.path.join(output_dir, 'sds6_singleton_heavy.csv')
+    df = make_sds6(K1=4, K2=2, T=10, p_singleton=0.7, seed=seed)
+    df.to_csv(files['sds6_singleton_heavy'], index=False)
     
     # Edge cases
     edge_cases = make_edge_cases()
@@ -1876,13 +1674,17 @@ def make_large_dataset(
         df = make_sds2(K1=K1, K2=K2, T=T, seed=seed)
 
     elif sds == 4:
-        # Single factor, T time points
-        df = make_sds4(T=n_rows, seed=seed)
+        # ODS 4: incomplete grid, all occupied cells replicated.
+        # Scale K1, K2, T to roughly hit n_rows total observations.
+        K1 = max(2, int(np.sqrt(n_rows // 8)))
+        K2 = max(2, int(np.sqrt(n_rows // 8)))
+        T = max(2, n_rows // (K1 * K2 * 3))
+        df = make_sds4(K1=K1, K2=K2, T=T, seed=seed)
 
     else:
         raise ValueError(
             f'SDS {sds} not optimized for large datasets. '
-            f'Supported: 1 (full replication), 2 (no replication), 4 (time series)'
+            f'Supported: 1 (full replication), 2 (no replication), 4 (incomplete grid)'
         )
 
     # Add extra columns with mixed data types
