@@ -47,7 +47,7 @@ from __future__ import annotations
 
 import contextlib
 import logging
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Literal
 
 import pandas as pd
 
@@ -62,6 +62,11 @@ if TYPE_CHECKING:
     from .signals.result import SignalResult
 
 logger = logging.getLogger(__name__)
+
+# Built-in theme names (Literal for IDE autocomplete on .plot(theme=...)).
+# Custom themes registered via ``register_theme`` work too — the bare
+# ``str`` union on the parameter type allows them through.
+ThemeName = Literal['processbehavior', 'ggplot', 'minimal', 'dark', 'publication']
 
 # Standard SPC chart type names
 STANDARD_CHART_NAMES = {'Xbar', 'S', 'X', 'mR'}
@@ -601,9 +606,13 @@ class AnalysisResult:
         Returns
         -------
         dict
-            Statistics dictionary. For control charts (X, mR, Xbar, S) the
-            keys are ``{'N', 'center', 'lpl', 'upl'}``. For the Histogram
-            chart the keys are ``{'mean', 'std', 'n'}``.
+            Statistics dictionary. Every chart guarantees the same four
+            unified keys: ``{'N', 'center', 'lpl', 'upl'}``. The Histogram
+            chart also includes ``{'mean', 'std', 'n'}`` as additional
+            fields (``mean`` is an alias for ``center``; ``std`` is the
+            sample standard deviation; ``n`` is an alias for ``N``); its
+            ``'lpl'`` and ``'upl'`` are ``None`` because a histogram
+            has no control limits.
 
         Raises
         ------
@@ -1232,7 +1241,7 @@ class AnalysisResult:
         show_zones: bool = False,
         show_rules: bool = False,
         show_stats: bool = False,
-        theme: str = 'processbehavior',
+        theme: ThemeName | str = 'processbehavior',
         width: int = 1000,
         height: int | None = None,
         aspect_ratio: float | None = None,
@@ -1331,7 +1340,7 @@ class AnalysisResult:
         self,
         residual_type: str = 'R1',
         plot_type: str = 'all',
-        theme: str = 'processbehavior',
+        theme: ThemeName | str = 'processbehavior',
         width: int = 1200,
         height: int = 400,
     ) -> ControlChartFigure:
@@ -1366,7 +1375,7 @@ class AnalysisResult:
     def plot_effects(
         self,
         effect_type: str = 'factor',
-        theme: str = 'processbehavior',
+        theme: ThemeName | str = 'processbehavior',
         width: int = 800,
         height: int = 500,
     ) -> ControlChartFigure:
@@ -1399,7 +1408,7 @@ class AnalysisResult:
         include_residuals: bool = True,
         include_effects: bool = True,
         include_summary: bool = True,
-        theme: str = 'processbehavior',
+        theme: ThemeName | str = 'processbehavior',
         width: int = 1200,
         title: str | None = None,
     ) -> None:

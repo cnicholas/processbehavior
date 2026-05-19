@@ -22,7 +22,7 @@ import functools
 import math
 import re
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 
 from .exceptions import ChartNotAvailableError, FactorNotFoundError, ValidationError
 from .sds_detector import SDSRegistry
@@ -55,9 +55,10 @@ class DesignReport:
 
     Attributes
     ----------
-    factors : pd.DataFrame
+    factors_table : pd.DataFrame
         Factor-level summary table with columns: factor, planned, observed,
-        missing_levels, extra_levels
+        missing_levels, extra_levels. (Aliased as ``factors`` for backward
+        compatibility.)
     missing_levels : dict[str, list]
         Levels in plan but not observed, per factor
     extra_levels : dict[str, list]
@@ -114,7 +115,7 @@ class DesignReport:
 
       Structure: Incomplete: 4 RSG groups missing; 2 time points missing
 
-    >>> design.factors
+    >>> design.factors_table
        factor     planned      observed  missing_levels  extra_levels
     0    Lane  [1,2,3,4]    [1,2,3,4]              []            []
     1   Phase    [1,2,3]        [1,2]             [3]            []
@@ -149,7 +150,7 @@ class DesignReport:
     _ads_result: SDSResult | None = None  # Analytical Design State
 
     @property
-    def factors(self) -> pd.DataFrame:
+    def factors_table(self) -> pd.DataFrame:
         """
         Factor-level summary table.
 
@@ -182,6 +183,16 @@ class DesignReport:
             })
 
         return pd.DataFrame(rows)
+
+    @property
+    def factors(self) -> pd.DataFrame:
+        """Backwards-compatible alias for ``factors_table``.
+
+        Returns the same DataFrame as ``factors_table``. Prefer the new
+        name to avoid confusion with ``Study.factors`` (which is a
+        ``list[str]`` of column names, not a DataFrame).
+        """
+        return self.factors_table
 
     @property
     def missing_levels(self) -> dict[str, list]:
@@ -1041,6 +1052,12 @@ class Study:
         -------
         SDSResult
         """
+        if self._sds_result is None:
+            raise RuntimeError(
+                "Study has no observed_design_state — it was not built via "
+                "ProcessBehavior.formulate(). Use pb.formulate(...) to "
+                "construct Study; direct construction is not supported."
+            )
         return self._sds_result
 
     @property
@@ -1653,15 +1670,15 @@ class Study:
 
     def execute(
         self,
-        chart: str | None = None,
+        chart: Literal['Histogram', 'Xbar', 'S', 'X', 'mR'] | str | None = None,
         by: list[str] | None = None,
-        value: str | None = None,
+        value: Literal['response', 'R1', 'R2', 'R3', 'R4', 'R5', 'R6'] | str | None = None,
         recentered: bool = False,
         bins: int | None = None,
         companion: bool = False,
         phased: bool = False,
         n_sigma: float = 3.0,
-        n_mode: str = "actual",
+        n_mode: Literal['actual', 'average'] = "actual",
     ) -> AnalysisResult:
         """
         Run the analysis and return results.

@@ -73,6 +73,9 @@ from processbehavior.maximum_information import MaximumInformationResult
 from processbehavior.plotting import ChartTheme, get_theme, list_themes, register_theme
 from processbehavior.process_behavior import ColumnRef, ProcessBehavior
 
+# Design-state lineage type (re-exported for type-hint use)
+from processbehavior.sds_detector import SDSResult
+
 # Study class (formulation layer)
 from processbehavior.study import DesignReport, Study
 
@@ -82,6 +85,7 @@ __all__ = [
     'ColumnRef',
     'Study',
     'DesignReport',
+    'SDSResult',
     'AnalysisResult',
     'SpecLimits',
     'CapabilityResult',

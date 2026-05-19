@@ -25,7 +25,7 @@ Bishop, T.  *Variance Analysis System* — Chapter 16.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 
 import numpy as np
 
@@ -194,7 +194,7 @@ class CapabilityResult:
     # ------------------------------------------------------------------
 
     def plot(self, values, *, theme=None, show_potential=True,
-             view="current", paired=False,
+             view: Literal["current", "potential"] = "current", paired=False,
              x_label=None, nbins=None, histnorm="", width=900, height=500,
              title=None):
         """
