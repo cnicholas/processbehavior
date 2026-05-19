@@ -365,17 +365,19 @@ class AnalysisResult:
     @property
     def strata(self) -> list[str]:
         """
-        Get list of available subgroups for stratified charts.
+        Get list of available subgroups focusable across every chart.
 
-        For stratified X/mR analysis, returns the list of subgroups
-        (e.g., ['Machine1_F2_1', 'Machine2_F2_2', ...]).
-
-        Values returned here are valid inputs to ``focus()``.
+        For stratified analysis, returns the order-preserving intersection
+        of every chart's strata list. A stratum present in one chart but
+        missing data in another (e.g. an X+mR pair where mR dropped a
+        single-observation cell) is excluded so that the returned values
+        are valid inputs to ``focus()`` for the full result.
 
         Returns
         -------
         list[str]
-            List of stratum names if stratified, empty list otherwise.
+            List of stratum names focusable across all charts. Empty list
+            if no chart is stratified.
 
         Examples
         --------
@@ -388,11 +390,19 @@ class AnalysisResult:
         ...         focused = result.focus(stratum)
         ...         focused.plot()
         """
-        # Check each chart for 'strata' key
-        for chart_info in self.charts.values():
-            if 'strata' in chart_info and chart_info['strata']:
-                return list(chart_info['strata'])
-        return []
+        strata_lists = [
+            list(chart_info['strata'])
+            for chart_info in self.charts.values()
+            if 'strata' in chart_info and chart_info['strata']
+        ]
+        if not strata_lists:
+            return []
+        if len(strata_lists) == 1:
+            return strata_lists[0]
+        common = set(strata_lists[0])
+        for sl in strata_lists[1:]:
+            common &= set(sl)
+        return [s for s in strata_lists[0] if s in common]
 
     @property
     def is_stratified(self) -> bool:
@@ -793,8 +803,26 @@ class AnalysisResult:
                 if kt_cols:
                     # Get unique n per kt cell
                     n_per_kt = ads.groupby(kt_cols, observed=True)['n'].first().reset_index()
-                    # Merge to add n
-                    chart_data = chart_data.merge(n_per_kt, on=kt_cols, how='left')
+                    # Coerce join-key dtypes — chart construction may
+                    # stringify by-columns (e.g. 'PRODUCTION TIME' becomes
+                    # object) while the ads keeps them numeric, which pandas
+                    # refuses to merge. When the dtypes differ on either
+                    # side, cast both sides of every kt column to string so
+                    # values (not just dtypes) line up.
+                    mismatched = any(
+                        chart_data[col].dtype != n_per_kt[col].dtype
+                        for col in kt_cols
+                    )
+                    if mismatched:
+                        for col in kt_cols:
+                            chart_data[col] = chart_data[col].astype(str)
+                            n_per_kt[col] = n_per_kt[col].astype(str)
+                    # Merge to add n; if it still fails, skip the n-join
+                    # rather than killing the entire table.
+                    try:
+                        chart_data = chart_data.merge(n_per_kt, on=kt_cols, how='left')
+                    except (ValueError, TypeError):
+                        pass
 
         # Build output columns in logical order
         output_cols = []
