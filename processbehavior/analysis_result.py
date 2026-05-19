@@ -45,6 +45,7 @@ Access residuals and effects::
 
 from __future__ import annotations
 
+import contextlib
 import logging
 from typing import TYPE_CHECKING, Any
 
@@ -819,10 +820,8 @@ class AnalysisResult:
                             n_per_kt[col] = n_per_kt[col].astype(str)
                     # Merge to add n; if it still fails, skip the n-join
                     # rather than killing the entire table.
-                    try:
+                    with contextlib.suppress(ValueError, TypeError):
                         chart_data = chart_data.merge(n_per_kt, on=kt_cols, how='left')
-                    except (ValueError, TypeError):
-                        pass
 
         # Build output columns in logical order
         output_cols = []

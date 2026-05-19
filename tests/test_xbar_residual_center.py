@@ -18,7 +18,6 @@ import pytest
 from processbehavior import ProcessBehavior
 from processbehavior.datasets import synthetic
 
-
 VALIDATION_CSV = (
     Path(__file__).parent.parent / 'validation' / 'PBTESTDATABASE_T100.csv'
 )
