@@ -43,6 +43,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   forward-compat.
 
 ### Changed
+- **`AnalysisResult.get_statistics()` no longer uses the string literal
+  `'Varies'` as a sentinel for variable limits.** The affected stats
+  fields (`N`, `lpl`, `upl`) are now `None` when limits vary, and a new
+  optional `'limits_vary': True` flag is added to the dict so callers
+  can detect variable limits without comparing against magic strings.
+  Fixes the type-pollution where `stats['upl'] > x` would raise
+  `TypeError` on charts with variable cell sizes or phased limits.
+  Pre-release breaking change: code that does `stats['upl'] == 'Varies'`
+  must migrate to `stats.get('limits_vary')` or `stats['upl'] is None`.
 - ``AnalysisResult.get_statistics()`` returns a unified shape across
   every chart type: ``{N, center, lpl, upl}``. The Histogram chart
   additionally carries ``{mean, std, n}`` as extras (``mean`` is an

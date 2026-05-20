@@ -226,7 +226,7 @@ class TestZoneBoundariesMissingLogsDebug:
     def test_varying_limits_logs_debug(self, theme, caplog):
         with caplog.at_level(logging.DEBUG):
             result = calculate_zone_boundaries(
-                {'center': 50.0, 'upl': 'Varies', 'lpl': 35.0}, theme
+                {'center': 50.0, 'upl': None, 'lpl': 35.0, 'limits_vary': True}, theme
             )
 
         assert result is None

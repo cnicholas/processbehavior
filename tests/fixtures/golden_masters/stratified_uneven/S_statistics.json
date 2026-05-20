@@ -1,6 +1,7 @@
 {
-  "N": "Varies",
+  "N": null,
   "center": 0.276,
-  "lpl": "Varies",
-  "upl": "Varies"
+  "limits_vary": true,
+  "lpl": null,
+  "upl": null
 }

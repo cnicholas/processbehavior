@@ -148,12 +148,14 @@ class TestXbarSAnalysis:
         # unbalanced data: obs-weighted = 4.0, Bishop unweighted = 4.14.
         assert result['Xbar']['statistics']['center'] == 4.14
         # Limits should vary when group sizes differ
-        assert result['Xbar']['statistics']['lpl'] == 'Varies'
-        assert result['Xbar']['statistics']['upl'] == 'Varies'
+        assert result['Xbar']['statistics']['lpl'] is None
+        assert result['Xbar']['statistics']['upl'] is None
+        assert result['Xbar']['statistics']['limits_vary'] is True
 
         assert result['S']['statistics']['center'] == 2.48
-        assert result['S']['statistics']['lpl'] == 'Varies'
-        assert result['S']['statistics']['upl'] == 'Varies'
+        assert result['S']['statistics']['lpl'] is None
+        assert result['S']['statistics']['upl'] is None
+        assert result['S']['statistics']['limits_vary'] is True
 
 
 # ========================

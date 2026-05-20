@@ -203,8 +203,10 @@ class TestBug4_NModeAverageStatistics:
         result = study.execute(chart='Xbar')
         stats = result.charts['Xbar']['statistics']
 
-        # With variable n, default behavior should report 'Varies'
-        assert stats['N'] == 'Varies' or isinstance(stats['N'], (int, float))
+        # With variable n, default behavior reports N=None + limits_vary=True;
+        # if cell sizes happen to be uniform, N is a scalar number.
+        assert (stats['N'] is None and stats.get('limits_vary') is True) \
+               or isinstance(stats['N'], (int, float))
 
 
 # ---------------------------------------------------------------------------

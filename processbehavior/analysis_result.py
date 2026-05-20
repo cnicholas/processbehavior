@@ -610,12 +610,20 @@ class AnalysisResult:
         -------
         dict
             Statistics dictionary. Every chart guarantees the same four
-            unified keys: ``{'N', 'center', 'lpl', 'upl'}``. The Histogram
-            chart also includes ``{'mean', 'std', 'n'}`` as additional
-            fields (``mean`` is an alias for ``center``; ``std`` is the
-            sample standard deviation; ``n`` is an alias for ``N``); its
-            ``'lpl'`` and ``'upl'`` are ``None`` because a histogram
-            has no control limits.
+            unified keys: ``{'N', 'center', 'lpl', 'upl'}``.
+
+            When the control limits or subgroup size vary across
+            subgroups (e.g. Xbar/S with ``n_mode='actual'`` on unbalanced
+            data, phased charts, or any chart whose limits aren't a
+            single scalar), ``N``, ``lpl``, and ``upl`` are ``None`` and
+            an optional ``'limits_vary': True`` flag is added so callers
+            can detect variable limits without a type check.
+
+            The Histogram chart also includes ``{'mean', 'std', 'n'}``
+            as additional fields (``mean`` is an alias for ``center``;
+            ``std`` is the sample standard deviation; ``n`` is an alias
+            for ``N``); its ``'lpl'`` and ``'upl'`` are ``None`` because
+            a histogram has no control limits.
 
         Raises
         ------

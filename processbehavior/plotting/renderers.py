@@ -366,16 +366,16 @@ def _add_limit_summary_annotation(
     parts: list[str] = []
 
     # UPL
-    if 'upl' in stats and stats['upl'] != 'Varies':
+    if stats.get('upl') is not None:
         parts.append(format_limit_label('UPL', stats['upl'], True))
 
     # CL
     center_key = spec.center_key
-    if center_key and center_key in stats and stats[center_key] != 'Varies':
+    if center_key and stats.get(center_key) is not None:
         parts.append(format_limit_label('CL', stats[center_key], True))
 
     # LPL
-    if 'lpl' in stats and stats['lpl'] != 'Varies':
+    if stats.get('lpl') is not None:
         parts.append(format_limit_label('LPL', stats['lpl'], True))
 
     if not parts:
@@ -433,7 +433,7 @@ def _add_limits(
 
     # ---- UPL ----
     if 'upl' in stats:
-        if stats['upl'] != 'Varies':
+        if stats['upl'] is not None:
             label = format_limit_label('UPL', stats['upl'], ctx.show_limit_values)
             _add_fixed_limit(
                 fig, stats['upl'], label,
@@ -449,7 +449,7 @@ def _add_limits(
 
     # ---- LPL ----
     if 'lpl' in stats:
-        if stats['lpl'] != 'Varies':
+        if stats['lpl'] is not None:
             label = format_limit_label('LPL', stats['lpl'], ctx.show_limit_values)
             _add_fixed_limit(
                 fig, stats['lpl'], label,
@@ -479,7 +479,7 @@ def _add_limits(
     # ---- Centerline ----
     center_key = spec.center_key
     if center_key and center_key in stats:
-        if stats[center_key] == 'Varies':
+        if stats[center_key] is None:
             if 'center' in data.columns:
                 add_stepped_limit_line(
                     fig, data, x_col, 'center',

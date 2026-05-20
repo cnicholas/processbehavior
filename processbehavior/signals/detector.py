@@ -307,7 +307,7 @@ class SignalDetector:
 
     def _limits_vary(self, stats: dict) -> bool:
         """Check if control limits vary (per-row limits)."""
-        return stats.get('upl') == 'Varies' or stats.get('lpl') == 'Varies'
+        return bool(stats.get('limits_vary'))
 
     def _calculate_per_row_zones(
         self,

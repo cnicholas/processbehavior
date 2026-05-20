@@ -865,10 +865,10 @@ class Analysis:
             statistics['upl'] = xbar['upl'].max()
             statistics['lpl'] = xbar['lpl'].max()
         else:
-            variable_stats = 'Varies'
-            statistics['N'] = variable_stats
-            statistics['lpl'] = variable_stats
-            statistics['upl'] = variable_stats
+            statistics['N'] = None
+            statistics['lpl'] = None
+            statistics['upl'] = None
+            statistics['limits_vary'] = True
 
         # Determine the grouping column for output
         by = self.request.by
@@ -1029,13 +1029,15 @@ class Analysis:
 
             all_xbar_frames.append(out)
 
+            _has_fixed_n = n_to_use == 'N'
             chart_statistics[stratum] = {
                 'center': round(_Xbar, spec.round_to),
                 'N': round(n_avg, spec.round_to) if n_avg is not None else (
-                    out['N'].iloc[0] if n_to_use == 'N' else 'Varies'
+                    out['N'].iloc[0] if _has_fixed_n else None
                 ),
-                'lpl': round(out['lpl'].iloc[0], spec.round_to) if n_to_use == 'N' else 'Varies',
-                'upl': round(out['upl'].iloc[0], spec.round_to) if n_to_use == 'N' else 'Varies',
+                'lpl': round(out['lpl'].iloc[0], spec.round_to) if _has_fixed_n else None,
+                'upl': round(out['upl'].iloc[0], spec.round_to) if _has_fixed_n else None,
+                **({'limits_vary': True} if not _has_fixed_n else {}),
             }
 
             if _return_intermediates:
@@ -1194,13 +1196,15 @@ class Analysis:
 
             all_s_frames.append(out)
 
+            _has_fixed_n = n_to_use == 'N'
             chart_statistics[stratum] = {
                 'center': round(_S, spec.round_to),
                 'N': round(n_avg, spec.round_to) if n_avg is not None else (
-                    out['N'].iloc[0] if n_to_use == 'N' else 'Varies'
+                    out['N'].iloc[0] if _has_fixed_n else None
                 ),
-                'lpl': round(out['lpl'].iloc[0], spec.round_to) if n_to_use == 'N' else 'Varies',
-                'upl': round(out['upl'].iloc[0], spec.round_to) if n_to_use == 'N' else 'Varies',
+                'lpl': round(out['lpl'].iloc[0], spec.round_to) if _has_fixed_n else None,
+                'upl': round(out['upl'].iloc[0], spec.round_to) if _has_fixed_n else None,
+                **({'limits_vary': True} if not _has_fixed_n else {}),
             }
 
         chart_out = pd.concat(all_s_frames, ignore_index=True)
@@ -1402,10 +1406,10 @@ class Analysis:
             statistics['upl'] = out['upl'].max()
             statistics['lpl'] = out['lpl'].max()
         else:
-            variable_stats = 'Varies'
-            statistics['N'] = variable_stats
-            statistics['lpl'] = variable_stats
-            statistics['upl'] = variable_stats
+            statistics['N'] = None
+            statistics['lpl'] = None
+            statistics['upl'] = None
+            statistics['limits_vary'] = True
 
         return {
             'S': {
@@ -1600,7 +1604,8 @@ class Analysis:
             chart_statistics = {}
             for stratum in strata:
                 chart_statistics[stratum] = {
-                    'center': 'Varies', 'lpl': 'Varies', 'upl': 'Varies',
+                    'N': None, 'center': None, 'lpl': None, 'upl': None,
+                    'limits_vary': True,
                 }
 
             # Phased R: no lane boundary offset (no rows dropped)
@@ -1832,11 +1837,12 @@ class Analysis:
                     if boundaries:
                         lane_boundaries[stratum] = boundaries
 
-            # 10. Statistics per stratum = 'Varies'
+            # 10. Statistics per stratum: limits vary per phase
             chart_statistics = {}
             for stratum in strata:
                 chart_statistics[stratum] = {
-                    'center': 'Varies', 'lpl': 'Varies', 'upl': 'Varies',
+                    'N': None, 'center': None, 'lpl': None, 'upl': None,
+                    'limits_vary': True,
                 }
 
             # 11. Track single-point phases
@@ -2081,9 +2087,11 @@ class Analysis:
                 )
 
                 chart_statistics = {
-                    'center': 'Varies',
-                    'lpl': 'Varies',
-                    'upl': 'Varies',
+                    'N': None,
+                    'center': None,
+                    'lpl': None,
+                    'upl': None,
+                    'limits_vary': True,
                 }
 
                 # Phased R: no lane boundary offset needed (no rows dropped)
@@ -2241,11 +2249,13 @@ class Analysis:
                 value_cols=[plot_col, 'center', 'lpl', 'upl', 'beyond_limits'],
             )
 
-            # 10. Statistics: 'Varies' signals stepped rendering
+            # 10. Statistics: limits_vary=True signals stepped rendering
             chart_statistics = {
-                'center': 'Varies',
-                'lpl': 'Varies',
-                'upl': 'Varies',
+                'N': None,
+                'center': None,
+                'lpl': None,
+                'upl': None,
+                'limits_vary': True,
             }
 
             # 11. Track single-point phases for visibility

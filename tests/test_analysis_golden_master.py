@@ -532,7 +532,7 @@ def _assert_chart_equivalence(actual: dict, expected: dict, label: str):
 # ============================================================================
 
 def _limits_are_scalar(stats: dict) -> bool:
-    """Check if limits are scalar floats (not 'Varies')."""
+    """Check if limits are scalar floats (not None / not varying)."""
     return isinstance(stats.get("lpl"), (int, float)) and isinstance(stats.get("upl"), (int, float))
 
 
