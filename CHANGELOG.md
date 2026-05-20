@@ -8,6 +8,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- ``processbehavior.types`` module formalizing the chart-payload contract
+  as TypedDicts (``ChartPayload``, ``ChartStatistics``, ``HistogramExtras``,
+  ``ChartMetadata``, ``Charts`` type alias). Producer return types in
+  ``analysis.py`` and consumer signatures in ``plotting/plotter.py`` and
+  ``plotting/renderers.py`` now reference the typed contract so mypy
+  catches key drift at edit time. The strata-list and Xbar dead-branch
+  bug classes (commits ``f938fdf`` and ``1444b63``) were producer/consumer
+  disagreements about this shape; the TypedDicts close that gap.
 - ``make_design(state=N, ...)`` as a forward-looking alias for
   ``make_sds(sds=N, ...)``. Same semantics, three-state vocabulary.
 - ``SDSResult`` is re-exported at the top level so users can

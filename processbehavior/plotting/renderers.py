@@ -18,6 +18,7 @@ from typing import TYPE_CHECKING
 import numpy as np
 import plotly.graph_objects as go
 
+from ..types import ChartPayload
 from .contracts import RenderContext
 from .lane_boundaries import add_lane_boundaries
 from .limits import add_stepped_limit_line, format_limit_label
@@ -202,7 +203,7 @@ def render_control_chart(
 
 def render_histogram(
     fig: go.Figure,
-    chart_info: dict,
+    chart_info: ChartPayload,
     theme,
     *,
     show_stats: bool = True,

@@ -38,6 +38,7 @@ from .data_preparation import encode_rsg
 from .exceptions import ChartNotAvailableError, ValidationError
 from .formulation_spec import ChartRequest, FormulationSpec
 from .spc_constants import calculate_limits, detect_beyond_limits
+from .types import ChartPayload
 
 # Configure module logger
 logger = logging.getLogger(__name__)
@@ -1421,7 +1422,7 @@ class Analysis:
             }
         }
 
-    def _calculate_xbar_s(self, value_col: str = None) -> dict:
+    def _calculate_xbar_s(self, value_col: str = None) -> dict[str, ChartPayload]:
         """
         Calculate Xbar and S charts together (Bishop methodology).
 
@@ -2405,7 +2406,7 @@ class Analysis:
             _precomputed=_precomputed,
         )
 
-    def _calculate_xmr_r(self, value_col: str = None) -> dict:
+    def _calculate_xmr_r(self, value_col: str = None) -> dict[str, ChartPayload]:
         """
         Calculate X and mR charts together (Bishop methodology).
 
@@ -2435,7 +2436,7 @@ class Analysis:
         # Combine results
         return {**xmr_result, **r_result}
 
-    def _calculate_histogram(self, value_col: str = None) -> dict:
+    def _calculate_histogram(self, value_col: str = None) -> dict[str, ChartPayload]:
         """
         Calculate histogram data with mean/std statistics.
 
