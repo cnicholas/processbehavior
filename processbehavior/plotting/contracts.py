@@ -129,7 +129,7 @@ def build_render_spec(
         )
 
     chart_type = metadata.get('chart_type', chart_name.split('_')[0])
-    limits_vary = stats.get('upl') == 'Varies' or stats.get('lpl') == 'Varies'
+    limits_vary = bool(stats.get('limits_vary'))
 
     return ChartRenderSpec(
         chart_type=chart_type,

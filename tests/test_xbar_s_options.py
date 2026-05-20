@@ -181,7 +181,7 @@ class TestNModeAverage:
         assert data['upl'].nunique() == 1, f"Expected 1 unique upl, got {data['upl'].nunique()}"
 
     def test_average_mode_scalar_statistics(self, sds1_varying_n_study):
-        """With n_mode='average', statistics show scalar values (not 'Varies')."""
+        """With n_mode='average', statistics show scalar values (not None)."""
         result = sds1_varying_n_study.execute(chart='Xbar', n_mode="average")
         stats = result.charts['Xbar']['statistics']
 

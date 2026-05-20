@@ -64,14 +64,15 @@ class TestPhasedXmRLimits:
         mr_values = r_data['mr']
         assert mr_values.isna().any(), "mR should have NaN at phase boundaries"
 
-    def test_phased_statistics_are_varies(self, sds1_study):
-        """Statistics should report 'Varies' for phased charts."""
+    def test_phased_statistics_signal_variable_limits(self, sds1_study):
+        """Phased charts emit limits_vary=True with None for the scalar fields."""
         result = sds1_study.execute(chart='X', by=[], phased=True)
         stats = result.get_statistics('X')
 
-        assert stats['center'] == 'Varies'
-        assert stats['lpl'] == 'Varies'
-        assert stats['upl'] == 'Varies'
+        assert stats['center'] is None
+        assert stats['lpl'] is None
+        assert stats['upl'] is None
+        assert stats['limits_vary'] is True
 
     def test_phased_metadata_flag(self, sds1_study):
         """Metadata should include phased=True."""
@@ -123,11 +124,13 @@ class TestPhasedCompanion:
         assert xmr_data is not None
         assert r_data is not None
 
-        # Both should have 'Varies' statistics
+        # Both should signal variable limits
         xmr_stats = result.get_statistics('X')
         r_stats = result.get_statistics('mR')
-        assert xmr_stats['center'] == 'Varies'
-        assert r_stats['center'] == 'Varies'
+        assert xmr_stats['center'] is None
+        assert r_stats['center'] is None
+        assert xmr_stats['limits_vary'] is True
+        assert r_stats['limits_vary'] is True
 
         # Both should have phased metadata
         assert result.charts['X']['metadata'].get('phased') is True
@@ -277,20 +280,21 @@ class TestPhasedStratified:
         assert xmr_data['center'].nunique() > 1, \
             "Center should vary across phases within strata"
 
-    def test_phased_stratified_statistics_are_varies(self, sds1_study):
-        """Per-stratum stats dict has 'Varies' values."""
+    def test_phased_stratified_statistics_signal_variable_limits(self, sds1_study):
+        """Per-stratum stats dict signals variable limits."""
         result = sds1_study.execute(
             chart='X', by=['factor 1'], phased=True
         )
         stats = result.get_statistics('X')
 
-        # Statistics are nested {stratum: {center: 'Varies', ...}}
+        # Statistics are nested {stratum: {limits_vary: True, ...}}
         assert isinstance(stats, dict)
         for stratum, stratum_stats in stats.items():
-            assert stratum_stats['center'] == 'Varies', \
-                f"Stratum {stratum} center should be 'Varies'"
-            assert stratum_stats['lpl'] == 'Varies'
-            assert stratum_stats['upl'] == 'Varies'
+            assert stratum_stats['center'] is None, \
+                f"Stratum {stratum} center should be None for phased"
+            assert stratum_stats['lpl'] is None
+            assert stratum_stats['upl'] is None
+            assert stratum_stats['limits_vary'] is True
 
     def test_phased_stratified_mr_resets_at_phase_boundaries(self, sds1_study):
         """mR NaN at start of each phase within stratum (mR chart)."""
@@ -315,14 +319,16 @@ class TestPhasedStratified:
         assert xmr_data is not None
         assert r_data is not None
 
-        # Both should have 'Varies' statistics for each stratum
+        # Both should signal variable limits per stratum
         xmr_stats = result.get_statistics('X')
         r_stats = result.get_statistics('mR')
 
         for stratum in xmr_stats:
-            assert xmr_stats[stratum]['center'] == 'Varies'
+            assert xmr_stats[stratum]['center'] is None
+            assert xmr_stats[stratum]['limits_vary'] is True
         for stratum in r_stats:
-            assert r_stats[stratum]['center'] == 'Varies'
+            assert r_stats[stratum]['center'] is None
+            assert r_stats[stratum]['limits_vary'] is True
 
         # Both should have phased metadata
         assert result.charts['X']['metadata'].get('phased') is True

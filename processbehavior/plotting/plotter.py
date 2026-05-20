@@ -1361,9 +1361,9 @@ class Plotter:
 
             ucl = stats.get('upl')
             lcl = stats.get('lpl')
-            if ucl is not None and ucl != 'Varies':
+            if ucl is not None:
                 global_max = max(global_max, ucl)
-            if lcl is not None and lcl != 'Varies':
+            if lcl is not None:
                 global_min = min(global_min, lcl)
 
         data_range = global_max - global_min

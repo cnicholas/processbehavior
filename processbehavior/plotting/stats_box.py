@@ -75,22 +75,22 @@ def build_stats_text(
     if compact:
         parts = [f"n={n}"]
         center = stats.get('center')
-        if center is not None and center != 'Varies':
+        if center is not None:
             parts.append(f"CL={format_stat_value(center, compact=True)}")
         return ' | '.join(parts) if parts else None
     else:
         lines = [f"n = {n}"]
 
         center = stats.get('center')
-        if center is not None and center != 'Varies':
+        if center is not None:
             lines.append(f"CL = {format_stat_value(center)}")
 
         ucl = stats.get('upl')
-        if ucl is not None and ucl != 'Varies':
+        if ucl is not None:
             lines.append(f"UPL = {format_stat_value(ucl)}")
 
         lcl = stats.get('lpl')
-        if lcl is not None and lcl != 'Varies':
+        if lcl is not None:
             lines.append(f"LPL = {format_stat_value(lcl)}")
 
         return '<br>'.join(lines) if lines else None

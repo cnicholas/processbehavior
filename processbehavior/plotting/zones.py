@@ -41,7 +41,7 @@ def calculate_zone_boundaries(
         List of (y0, y1, color) tuples defining zone rectangles,
         or None if zones cannot be calculated
     """
-    if stats.get('upl') == 'Varies' or stats.get('lpl') == 'Varies':
+    if stats.get('limits_vary'):
         logger.debug("Zone shading skipped: limits vary")
         return None
 

@@ -57,12 +57,18 @@ class ChartStatistics(TypedDict):
     Every control chart (X, mR, Xbar, S) and the Histogram emit this
     same shape from ``get_statistics()``. Histogram additionally carries
     :class:`HistogramExtras` keys.
+
+    When the control limits and/or subgroup size vary across subgroups
+    (e.g. Xbar/S with ``n_mode='actual'`` on unbalanced data),
+    ``N``, ``lpl``, and ``upl`` are ``None`` and the optional
+    ``limits_vary`` flag is ``True``. ``center`` remains a single scalar.
     """
 
-    N: int
+    N: int | None
     center: float | None
     lpl: float | None
     upl: float | None
+    limits_vary: NotRequired[bool]
 
 
 class HistogramExtras(TypedDict, total=False):

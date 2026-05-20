@@ -157,7 +157,7 @@ class TestCalculateZoneBoundaries:
         assert zones[4] == pytest.approx((35.0, 40.0, theme.zone_a_color))
 
     def test_returns_none_for_varying_limits(self, theme):
-        stats = {'center': 50.0, 'upl': 'Varies', 'lpl': 35.0}
+        stats = {'center': 50.0, 'upl': None, 'lpl': 35.0, 'limits_vary': True}
         assert calculate_zone_boundaries(stats, theme) is None
 
     def test_returns_none_for_missing_keys(self, theme):
@@ -194,7 +194,7 @@ class TestAddZoneShading:
 
     def test_noop_for_varying_limits(self, theme):
         fig = go.Figure()
-        stats = {'center': 50.0, 'upl': 'Varies', 'lpl': 35.0}
+        stats = {'center': 50.0, 'upl': None, 'lpl': 35.0, 'limits_vary': True}
         add_zone_shading(fig, stats, theme)
         assert len(fig.layout.shapes) == 0
 
@@ -274,7 +274,7 @@ class TestBuildStatsText:
         assert 'UPL' not in text
 
     def test_varies_excluded(self):
-        stats = {'center': 'Varies', 'upl': 65.0, 'lpl': 35.0}
+        stats = {'center': None, 'upl': 65.0, 'lpl': 35.0, 'limits_vary': True}
         data = pd.DataFrame({'val': range(5)})
         text = build_stats_text(stats, data, compact=False)
         assert 'CL' not in text.split('n = 5')[1] if 'n = 5' in text else True
