@@ -55,6 +55,7 @@ from .data_preparation import encode_rsg
 from .exceptions import ChartNotAvailableError, ProcessBehaviorError
 from .sds_detector import SDSRegistry
 from .spc_constants import normalize_chart_name
+from .types import Charts
 
 if TYPE_CHECKING:
     from .analysis_dataset import AnalysisDataSet
@@ -138,7 +139,7 @@ class AnalysisResult:
 
     def __init__(
         self,
-        charts: dict[str, dict[str, Any]],
+        charts: Charts,
         analysis_dataset_obj: AnalysisDataSet,
         analysis_type: str | None = None
     ):
@@ -147,8 +148,10 @@ class AnalysisResult:
 
         Parameters
         ----------
-        charts : dict
-            Chart data in nested dict format
+        charts : Charts (dict[str, ChartPayload])
+            Chart-name → :class:`ChartPayload` map. Each payload carries
+            ``data`` (DataFrame), ``statistics`` (flat or by-stratum),
+            ``metadata``, and optional ``strata``.
         analysis_dataset_obj : AnalysisDataSet
             The underlying AnalysisDataSet with all calculations
         analysis_type : str, optional
@@ -156,8 +159,8 @@ class AnalysisResult:
             Passed from Analysis at execute() time so result.summary
             reports the executed chart, not the recommended one.
         """
-        # Store chart data (backward compatible)
-        self.charts = charts
+        # Store chart data
+        self.charts: Charts = charts
 
         # Store reference to full dataset
         self._ads = analysis_dataset_obj

@@ -19,6 +19,7 @@ from plotly.subplots import make_subplots
 from ..data_preparation import encode_rsg
 from ..exceptions import ChartNotAvailableError, ValidationError
 from ..spc_constants import normalize_chart_name
+from ..types import ChartPayload
 from .contracts import PlotError, build_render_context, build_render_spec
 from .control_chart import ControlChartFigure
 from .renderers import render_control_chart, render_histogram
@@ -253,7 +254,7 @@ class Plotter:
 
     def _plot_single_chart(
         self,
-        chart_info: dict,
+        chart_info: ChartPayload,
         chart_name: str,
         highlight_signals: bool,
         show_limits: bool,
@@ -871,7 +872,7 @@ class Plotter:
 
     # ---- Data column helpers ----
 
-    def _get_value_column(self, chart_info: dict, chart_name: str) -> str:
+    def _get_value_column(self, chart_info: ChartPayload, chart_name: str) -> str:
         if 'metadata' not in chart_info:
             raise PlotError(
                 f"Chart '{chart_name}' missing metadata. "
@@ -1434,7 +1435,7 @@ class Plotter:
         """Append ' Chart' unless chart_type already ends with 'Chart'."""
         return chart_type if chart_type.endswith('Chart') else f"{chart_type} Chart"
 
-    def _generate_title(self, chart_name: str, chart_info: dict | None = None) -> str:
+    def _generate_title(self, chart_name: str, chart_info: ChartPayload | None = None) -> str:
         response_var = self.summary.get('response_var', '')
         grouping_vars = self.summary.get('grouping_vars', [])
         chart_type = self._get_chart_type_display(chart_name)
@@ -1463,7 +1464,7 @@ class Plotter:
         return ' '.join(parts)
 
     def _generate_subplot_title(
-        self, chart_name: str, chart_info: dict | None = None,
+        self, chart_name: str, chart_info: ChartPayload | None = None,
     ) -> str:
         chart_type = self._get_chart_type_display(chart_name)
         if chart_info is not None:
