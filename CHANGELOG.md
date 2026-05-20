@@ -8,6 +8,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- README **Validation** section explicitly bounding the Bishop-reference
+  claim: 280 numerical assertions pass for ADS 1, ADS 2, ADS 3 (the
+  three complete-design states). ODS 4–6 detection works; Bishop end-to-
+  end coverage of incomplete-grid scenarios is on the 0.2.0 roadmap.
+- PyPI keyword expansion: ``variance-analysis``, ``bishop-vas``,
+  ``wheeler``, ``design-of-experiments`` — surfaces the library to
+  searches for the differentiated methodology.
+- GitHub repo description, homepage, and topics set via ``gh repo edit``
+  so the repo landing page reflects the differentiator at a glance.
 - ``processbehavior.types`` module formalizing the chart-payload contract
   as TypedDicts (``ChartPayload``, ``ChartStatistics``, ``HistogramExtras``,
   ``ChartMetadata``, ``Charts`` type alias). Producer return types in

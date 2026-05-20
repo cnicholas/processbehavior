@@ -11,7 +11,17 @@ requires-python = ">=3.9"
 authors = [{name = "cnicholas", email = "chris.nicholas@gmail.com"}]
 license = "Apache-2.0"
 license-files = ["LICENSE"]
-keywords = ["spc", "quality-control", "control-charts", "process-behavior", "shewhart"]
+keywords = [
+  "spc",
+  "quality-control",
+  "control-charts",
+  "process-behavior",
+  "shewhart",
+  "variance-analysis",
+  "bishop-vas",
+  "wheeler",
+  "design-of-experiments",
+]
 classifiers = [
   "Development Status :: 3 - Alpha",
   "Intended Audience :: Science/Research",

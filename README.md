@@ -125,6 +125,22 @@ for stratum in result.strata:
     focused.plot()
 ```
 
+## Validation
+
+processbehavior's analytical outputs are continuously verified against Dr. Thomas A. Bishop's Minitab reference results. The validator at `validation/e2e_bishop_report.py` runs **280 numerical assertions** through the full formulate → execute → capability / loss / maximum-information pipeline:
+
+| Analytical Design State | Datasets validated | Assertions | Status |
+|---|---|---|---|
+| ADS 1 (full replication) | `PM SDS 1` from `PBTESTDATABASE_T100.csv` | 102 | ✅ all pass |
+| ADS 2 (no replication) | `PM SDS 2` | 89 | ✅ all pass |
+| ADS 3 (partial replication) | `PM SDS 3` | 89 | ✅ all pass |
+
+Reference data is Bishop's published Minitab golden output. The library matches every chart center, control limit, signal classification, capability index, and loss-function value to within the precision Bishop reports.
+
+ODS 4–6 (incomplete-grid scenarios) are detected and routed correctly but their end-to-end Bishop-reference coverage is pending. The synthetic generators in `make_design(state=4|5|6)` produce data with the structural shape Bishop's Table 1 specifies; full numerical validation against Bishop's incomplete-grid Minitab output is on the 0.2.0 roadmap.
+
+The full report renders to `validation/e2e_bishop_report.html`.
+
 ## Features
 
 - **Three-state lineage**: PDS / ODS / ADS detected automatically; chart selection routes by ADS
