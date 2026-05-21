@@ -371,11 +371,12 @@ def run_sds_validation(sds_num, pb, study, json_data):  # noqa: C901
 
         def stats_from(result_obj, chart_type):
             stats = result_obj.get_statistics(chart_type)
-            cl = float(stats['center']) if stats['center'] != 'Varies' else None
-            lpl_val = stats.get('lpl', 0)
-            upl_val = stats.get('upl', 0)
-            lpl = float(lpl_val) if lpl_val != 'Varies' else None
-            upl = float(upl_val) if upl_val != 'Varies' else None
+            center = stats['center']
+            lpl_val = stats.get('lpl')
+            upl_val = stats.get('upl')
+            cl = float(center) if center is not None else None
+            lpl = float(lpl_val) if lpl_val is not None else None
+            upl = float(upl_val) if upl_val is not None else None
             return cl, lpl, upl
 
         def primary_chart_type(_loc=is_location):

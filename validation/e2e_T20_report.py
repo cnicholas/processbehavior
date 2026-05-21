@@ -103,16 +103,16 @@ def analysis_catalogue(ads: int, factor1: str, factor2: str, time_var: str) -> l
 # --- Per-column analysis runner ---
 
 def _extract_stats(result, chart_type: str) -> tuple[Any, Any, Any]:
-    """Return (CL, LPL, UPL) for a chart in result. None for 'Varies'."""
+    """Return (CL, LPL, UPL) for a chart in result. None when limits vary."""
     stats = result.get_statistics(chart_type)
     def _f(v):
-        if v is None or v == 'Varies':
-            return v if v == 'Varies' else None
+        if v is None:
+            return None
         try:
             return float(v)
         except (TypeError, ValueError):
             return v
-    return _f(stats.get('center')), _f(stats.get('lpl', None)), _f(stats.get('upl', None))
+    return _f(stats.get('center')), _f(stats.get('lpl')), _f(stats.get('upl'))
 
 
 def _safe_chart_table(result, chart_type: str):
