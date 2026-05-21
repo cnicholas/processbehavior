@@ -15,7 +15,7 @@ project:
     - name: Tom Bishop
   github: https://github.com/cnicholas/processbehavior
   license: Apache-2.0
-  copyright: "2025"
+  copyright: "2025-2026"
   toc:
     - file: intro.md
     - title: Getting Started
@@ -35,6 +35,10 @@ project:
           title: Xbar-S Analysis
         - file: tutorials/stratified-analysis.ipynb
           title: Stratified Analysis
+        - file: tutorials/process-capability.ipynb
+          title: Process Capability
+        - file: tutorials/loss-function.ipynb
+          title: Loss Function
         - file: tutorials/sds-validation.ipynb
           title: SDS Validation
         - file: tutorials/sds1-complete-analysis.ipynb
@@ -44,7 +48,7 @@ project:
         - file: user-guide/formulation.md
           title: Data Formulation
         - file: user-guide/sds-detection.md
-          title: Sampling Design States
+          title: Design-State Lineage (PDS / ODS / ADS)
         - file: user-guide/chart-types.md
           title: Chart Types
         - file: user-guide/plotting.md
