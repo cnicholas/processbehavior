@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Two tutorial notebooks added to the published docs site:
+  ``docs/tutorials/process-capability.ipynb`` and
+  ``docs/tutorials/loss-function.ipynb``. Both existed on disk but
+  weren't in the MyST TOC, so they didn't deploy. Re-executed against
+  the current API.
 - README **Validation** section explicitly bounding the Bishop-reference
   claim: 280 numerical assertions pass for ADS 1, ADS 2, ADS 3 (the
   three complete-design states). ODS 4–6 detection works; Bishop end-to-
@@ -42,7 +47,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the valid values; arbitrary strings still work for custom themes /
   forward-compat.
 
+### Removed
+- 5 stale planning docs at the root of ``docs/`` removed from the
+  source tree: ``release_gate_0_1_0.md``, ``pre_release_audit.md``,
+  ``api_ux_review.md``, ``chart_statistics.md``,
+  ``sampling_plan_design.md``. They were never linked from the MyST
+  TOC but would have deployed as orphan pages.
+
 ### Changed
+- ``docs/myst.yml`` navigation label "Sampling Design States" renamed
+  to "Design-State Lineage (PDS / ODS / ADS)" to match the
+  three-state vocabulary the page now teaches. Copyright bumped to
+  ``2025-2026``.
 - **`AnalysisResult.get_statistics()` no longer uses the string literal
   `'Varies'` as a sentinel for variable limits.** The affected stats
   fields (`N`, `lpl`, `upl`) are now `None` when limits vary, and a new
