@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 import logging
@@ -13,6 +12,7 @@ from .sds_detector import SDSRegistry, SDSResult, StructureStats
 
 # Configure module logger
 logger = logging.getLogger(__name__)
+
 
 class AnalysisDataSet:
     """
@@ -30,12 +30,7 @@ class AnalysisDataSet:
     Uses composition pattern - delegates to focused classes for each concern.
     """
 
-    def __init__(
-        self,
-        df: pd.DataFrame,
-        spec: FormulationSpec,
-        observed_sds: int
-    ):
+    def __init__(self, df: pd.DataFrame, spec: FormulationSpec, observed_sds: int):
         """
         Initialize analysis with data and specification.
 
@@ -92,20 +87,15 @@ class AnalysisDataSet:
         5. Calculate effects and interactions (if appropriate)
         """
         # Step 1: Validate and prepare data
-        logger.debug("Preparing dataset")
+        logger.debug('Preparing dataset')
         self._prep.validate_columns(raw_df, self.spec)
         self.analysis_dataset = self._prep.prepare_dataset(raw_df, self.spec)
         self.analysis_dataset = self._prep.build_keys(self.analysis_dataset, self.spec)
 
         # Step 2: Use the provided ODS (detected at entry point on raw data)
-        logger.debug(f"Using ODS: {self.observed_design_state}")
-        self.raw_sds_characteristics = self._sds_registry.get_sds_characteristics(
-            self.observed_design_state
-        )
-        logger.debug(
-            f"ODS {self.observed_design_state} - "
-            f"{self.raw_sds_characteristics['description']}"
-        )
+        logger.debug(f'Using ODS: {self.observed_design_state}')
+        self.raw_sds_characteristics = self._sds_registry.get_sds_characteristics(self.observed_design_state)
+        logger.debug(f'ODS {self.observed_design_state} - {self.raw_sds_characteristics["description"]}')
 
         # Step 3: Compute structure stats once on tidy data (single source of truth)
         # This enables R2 method selection and availability checks.
@@ -122,14 +112,16 @@ class AnalysisDataSet:
         needs_residuals = self.spec.has_grouping and self.spec.has_time
 
         if needs_residuals:
-            logger.debug("Calculating VAS residuals (R1-R5)")
+            logger.debug('Calculating VAS residuals (R1-R5)')
 
             # Get R2 method based on observed tidy structure (not raw SDS)
             r2_method = self._sds_registry.get_r2_method(self._structure_stats)
-            logger.debug(f"Using R2 method: {r2_method}")
+            logger.debug(f'Using R2 method: {r2_method}')
 
             self.analysis_dataset = calculate_vas_residuals(
-                self.analysis_dataset, self.spec, r2_method,
+                self.analysis_dataset,
+                self.spec,
+                r2_method,
                 n_per_cell=self._n_per_cell,
                 ybar_kt=self._ybar_kt,
             )
@@ -139,18 +131,15 @@ class AnalysisDataSet:
 
             # Step 5: Calculate effects and interactions
             # ADS drives method selection (not ODS)
-            logger.debug("Calculating effects and interactions")
-            self.effects = self._effects_calc.calculate_all_effects(
-                self.analysis_dataset, self.spec
-            )
+            logger.debug('Calculating effects and interactions')
+            self.effects = self._effects_calc.calculate_all_effects(self.analysis_dataset, self.spec)
             self.interactions = self._effects_calc.calculate_interactions(
-                self.analysis_dataset, self.spec, self._ads_result.sds,
-                effects=self.effects
+                self.analysis_dataset, self.spec, self._ads_result.sds, effects=self.effects
             )
         else:
             logger.debug(
-                f"Skipping VAS residuals: requires both grouping and time. "
-                f"has_grouping={self.spec.has_grouping}, has_time={self.spec.has_time}"
+                f'Skipping VAS residuals: requires both grouping and time. '
+                f'has_grouping={self.spec.has_grouping}, has_time={self.spec.has_time}'
             )
 
         # Log final analysis summary (after all calculations are complete)
@@ -218,8 +207,8 @@ class AnalysisDataSet:
         y = self.spec.response_var
 
         # Compute n_per_cell and cell means once
-        self._n_per_cell = df.groupby("cell_key", observed=True)[y].transform("size")
-        self._ybar_kt = df.groupby("cell_key", observed=True)[y].transform("mean")
+        self._n_per_cell = df.groupby('cell_key', observed=True)[y].transform('size')
+        self._ybar_kt = df.groupby('cell_key', observed=True)[y].transform('mean')
 
         # Handle edge case: empty data or all NaN
         if len(self._n_per_cell) == 0 or self._n_per_cell.isna().all():
@@ -232,19 +221,19 @@ class AnalysisDataSet:
         # Compute structure stats
         self._structure_stats = StructureStats(
             has_grouping=bool(self.spec.rsg_vars),
-            has_order="obs_id" in df.columns,
+            has_order='obs_id' in df.columns,
             n_cell_min=n_cell_min,
             n_cell_max=n_cell_max,
-            K_obs=df["rsg_key"].nunique() if "rsg_key" in df.columns else 0
+            K_obs=df['rsg_key'].nunique() if 'rsg_key' in df.columns else 0,
         )
 
         r2_method = self._sds_registry.get_r2_method(self._structure_stats)
 
         logger.debug(
-            f"Tidy structure: n_cell_min={n_cell_min}, "
-            f"n_cell_max={n_cell_max}, "
-            f"K_obs={self._structure_stats.K_obs}, "
-            f"effective R2 method: {r2_method}"
+            f'Tidy structure: n_cell_min={n_cell_min}, '
+            f'n_cell_max={n_cell_max}, '
+            f'K_obs={self._structure_stats.K_obs}, '
+            f'effective R2 method: {r2_method}'
         )
 
     def _compute_ads(self) -> None:
@@ -259,15 +248,15 @@ class AnalysisDataSet:
         y = self.spec.response_var
 
         # Compute N_kt from tidy data grouped by cell_key
-        if "cell_key" in df.columns and len(df) > 0:
-            tidy_nkt = df.groupby("cell_key", observed=True)[y].size()
+        if 'cell_key' in df.columns and len(df) > 0:
+            tidy_nkt = df.groupby('cell_key', observed=True)[y].size()
         else:
             tidy_nkt = pd.Series(dtype=int)
 
         # Guard: empty tidy data → ADS 0
         if len(tidy_nkt) == 0:
             self._ads_result = SDSResult(sds=0, reason=None, min_cell_size=0, n_empty_cells=0)
-            logger.debug("ADS 0: no valid observations after tidying")
+            logger.debug('ADS 0: no valid observations after tidying')
             return
 
         has_empty_cells = (tidy_nkt == 0).any()
@@ -276,18 +265,15 @@ class AnalysisDataSet:
         min_cell_size = int(valid_nkt.min()) if len(valid_nkt) > 0 else 0
 
         sds, reason = self._sds_registry._classify_by_nkt(tidy_nkt, has_empty_cells)
-        self._ads_result = SDSResult(
-            sds=sds, min_cell_size=min_cell_size,
-            reason=reason, n_empty_cells=n_empty
-        )
+        self._ads_result = SDSResult(sds=sds, min_cell_size=min_cell_size, reason=reason, n_empty_cells=n_empty)
 
         if self._ads_result.sds != self.observed_design_state:
             logger.info(
-                f"Design state drift: ODS {self.observed_design_state} → "
-                f"ADS {self._ads_result.sds} ({self._ads_result.reason})"
+                f'Design state drift: ODS {self.observed_design_state} → '
+                f'ADS {self._ads_result.sds} ({self._ads_result.reason})'
             )
         else:
-            logger.debug(f"ADS {self._ads_result.sds} ({self._ads_result.reason})")
+            logger.debug(f'ADS {self._ads_result.sds} ({self._ads_result.reason})')
 
     @property
     def analytical_design_state(self) -> SDSResult:
@@ -355,9 +341,9 @@ class AnalysisDataSet:
 
         # Calculate centered residual means
         rsg_time_groups = df.groupby([self.spec.rsg_var_name, self.spec.time_var], observed=True)
-        df["Rbar_kt"] = rsg_time_groups["R1"].transform("mean")
-        df['Rbar_k'] = df.groupby([self.spec.rsg_var_name], observed=True)["R1"].transform('mean')
-        df['Rbar_t'] = df.groupby([self.spec.time_var], observed=True)["R1"].transform("mean")
+        df['Rbar_kt'] = rsg_time_groups['R1'].transform('mean')
+        df['Rbar_k'] = df.groupby([self.spec.rsg_var_name], observed=True)['R1'].transform('mean')
+        df['Rbar_t'] = df.groupby([self.spec.time_var], observed=True)['R1'].transform('mean')
 
         # Calculate RCR (Reconstructed Centered Residuals)
         # These verify that Y can be reconstructed from components

@@ -17,31 +17,25 @@ from processbehavior.datasets import synthetic
 # Fixtures
 # =============================================================================
 
+
 @pytest.fixture
 def sds1_study():
     """SDS1 study with two factors and time - has both Xbar and S available."""
     df = synthetic.make_sds(1, K1=3, K2=2, T=6, n_min=2, n_max=4, seed=42)
-    return ProcessBehavior(df).formulate(
-        response='y',
-        time='time',
-        factors=['factor 1', 'factor 2']
-    )
+    return ProcessBehavior(df).formulate(response='y', time='time', factors=['factor 1', 'factor 2'])
 
 
 @pytest.fixture
 def sds3_study():
     """SDS3 study (single factor, time, partial replication) - has Xbar and S."""
     df = synthetic.make_sds(3, K1=4, T=8, seed=42)
-    return ProcessBehavior(df).formulate(
-        response='y',
-        time='time',
-        factors=['factor 1']
-    )
+    return ProcessBehavior(df).formulate(response='y', time='time', factors=['factor 1'])
 
 
 # =============================================================================
 # SRP COMPLIANCE TESTS
 # =============================================================================
+
 
 class TestSRPCompliance:
     """Test that chart methods follow Single Responsibility Principle.
@@ -94,6 +88,7 @@ class TestSRPCompliance:
 # COMPANION BEHAVIOR TESTS
 # =============================================================================
 
+
 class TestCompanionBehavior:
     """Test that companion=True bundles chart pairs together."""
 
@@ -134,6 +129,7 @@ class TestCompanionBehavior:
 # CONSISTENCY TESTS
 # =============================================================================
 
+
 class TestConsistency:
     """Test that chart data is identical whether calculated companion or uncompanioned."""
 
@@ -146,9 +142,7 @@ class TestConsistency:
         xbar_companion = result_companion.charts['Xbar']['data']
 
         pd.testing.assert_frame_equal(
-            xbar_solo.reset_index(drop=True),
-            xbar_companion.reset_index(drop=True),
-            check_names=False
+            xbar_solo.reset_index(drop=True), xbar_companion.reset_index(drop=True), check_names=False
         )
 
     def test_xbar_statistics_identical_companion_vs_uncompanioned(self, sds1_study):
@@ -170,9 +164,7 @@ class TestConsistency:
         s_companion = result_companion.charts['S']['data']
 
         pd.testing.assert_frame_equal(
-            s_solo.reset_index(drop=True),
-            s_companion.reset_index(drop=True),
-            check_names=False
+            s_solo.reset_index(drop=True), s_companion.reset_index(drop=True), check_names=False
         )
 
     def test_s_statistics_identical_companion_vs_independent(self, sds1_study):
@@ -194,9 +186,7 @@ class TestConsistency:
         xmr_companion = result_companion.charts['X']['data']
 
         pd.testing.assert_frame_equal(
-            xmr_solo.reset_index(drop=True),
-            xmr_companion.reset_index(drop=True),
-            check_names=False
+            xmr_solo.reset_index(drop=True), xmr_companion.reset_index(drop=True), check_names=False
         )
 
     def test_xmr_statistics_identical_companion_vs_uncompanioned(self, sds1_study):
@@ -218,9 +208,7 @@ class TestConsistency:
         r_companion = result_companion.charts['mR']['data']
 
         pd.testing.assert_frame_equal(
-            r_solo.reset_index(drop=True),
-            r_companion.reset_index(drop=True),
-            check_names=False
+            r_solo.reset_index(drop=True), r_companion.reset_index(drop=True), check_names=False
         )
 
     def test_r_statistics_identical_companion_vs_independent(self, sds1_study):
@@ -237,6 +225,7 @@ class TestConsistency:
 # =============================================================================
 # DEFAULT BEHAVIOR TESTS
 # =============================================================================
+
 
 class TestDefaultBehavior:
     """Test that companion=False is the default (SRP-compliant by default)."""
@@ -262,13 +251,15 @@ class TestDefaultBehavior:
     def test_histogram_rejects_companion(self, sds1_study):
         """Histogram should reject companion parameter (no companion histogram)."""
         from processbehavior.exceptions import ValidationError
-        with pytest.raises(ValidationError, match="companion.*Histogram"):
+
+        with pytest.raises(ValidationError, match='companion.*Histogram'):
             sds1_study.execute(chart='Histogram', companion=True)
 
 
 # =============================================================================
 # EDGE CASE TESTS
 # =============================================================================
+
 
 class TestEdgeCases:
     """Test edge cases for the companion parameter."""

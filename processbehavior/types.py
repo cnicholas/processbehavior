@@ -114,13 +114,13 @@ class ChartMetadata(TypedDict, total=False):
     phased: bool
     single_point_phases: int
     run_rules_applicable: bool
-    bins: int                       # Histogram only
-    focused_stratum: str             # After AnalysisResult.focus()
-    stratum_display: str             # Pretty-printed stratum label
-    residual_type: str               # 'R1'..'R6' for residual charts
-    recentered: bool                 # Recentered residual charts
-    limits_source: str               # 'data' | 'calibration' (issue #79)
-    calibration: dict | None         # Mean/sd payload (issue #79)
+    bins: int  # Histogram only
+    focused_stratum: str  # After AnalysisResult.focus()
+    stratum_display: str  # Pretty-printed stratum label
+    residual_type: str  # 'R1'..'R6' for residual charts
+    recentered: bool  # Recentered residual charts
+    limits_source: str  # 'data' | 'calibration' (issue #79)
+    calibration: dict | None  # Mean/sd payload (issue #79)
 
 
 # Statistics can be flat (unstratified) or nested-by-stratum (stratified).
@@ -145,10 +145,10 @@ Charts = dict[str, ChartPayload]
 
 
 __all__ = [
-    "ChartStatistics",
-    "HistogramExtras",
-    "ChartMetadata",
-    "ChartStatisticsValue",
-    "ChartPayload",
-    "Charts",
+    'ChartStatistics',
+    'HistogramExtras',
+    'ChartMetadata',
+    'ChartStatisticsValue',
+    'ChartPayload',
+    'Charts',
 ]

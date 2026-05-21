@@ -13,10 +13,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-def calculate_zone_boundaries(
-    stats: dict,
-    theme: ChartTheme
-) -> list[tuple[float, float, str]] | None:
+def calculate_zone_boundaries(stats: dict, theme: ChartTheme) -> list[tuple[float, float, str]] | None:
     """
     Calculate zone boundaries for Western Electric rules visualization.
 
@@ -42,7 +39,7 @@ def calculate_zone_boundaries(
         or None if zones cannot be calculated
     """
     if stats.get('limits_vary'):
-        logger.debug("Zone shading skipped: limits vary")
+        logger.debug('Zone shading skipped: limits vary')
         return None
 
     center = stats.get('center')
@@ -50,7 +47,7 @@ def calculate_zone_boundaries(
     lcl = stats.get('lpl')
 
     if center is None or ucl is None or lcl is None:
-        logger.debug("Zone shading skipped: missing center/upl/lpl in stats")
+        logger.debug('Zone shading skipped: missing center/upl/lpl in stats')
         return None
 
     sigma = (ucl - center) / 3
@@ -70,7 +67,7 @@ def add_zone_shading(
     theme: ChartTheme,
     row: int | None = None,
     col: int | None = None,
-    ncols: int | None = None
+    ncols: int | None = None,
 ) -> None:
     """
     Add zone shading to a chart figure.
@@ -122,16 +119,9 @@ def add_zone_shading(
                 layer='below',
                 line_width=0,
                 row=row,
-                col=col
+                col=col,
             )
     else:
         # Single chart: use add_hrect
         for y0, y1, color in zones:
-            fig.add_hrect(
-                y0=y0,
-                y1=y1,
-                fillcolor=color,
-                opacity=theme.zone_opacity,
-                layer='below',
-                line_width=0
-            )
+            fig.add_hrect(y0=y0, y1=y1, fillcolor=color, opacity=theme.zone_opacity, layer='below', line_width=0)

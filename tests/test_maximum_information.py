@@ -11,21 +11,21 @@ from processbehavior import MaximumInformationResult, ProcessBehavior, Validatio
 # Helpers
 # ---------------------------------------------------------------------------
 
-VALIDATION_CSV = "validation/PBTESTDATABASE_T100.csv"
+VALIDATION_CSV = 'validation/PBTESTDATABASE_T100.csv'
 
 
 def _make_study(sds: int):
     """Build a Study from the validation dataset for the given PM SDS."""
     df = pd.read_csv(VALIDATION_CSV)
-    col = f"PM SDS {sds}"
+    col = f'PM SDS {sds}'
     if col not in df.columns:
-        pytest.skip(f"{col} not in validation dataset")
+        pytest.skip(f'{col} not in validation dataset')
 
     pb = ProcessBehavior(df)
     study = pb.formulate(
         response=col,
-        factors=["FACTOR 1", "FACTOR 2"],
-        time="PRODUCTION TIME",
+        factors=['FACTOR 1', 'FACTOR 2'],
+        time='PRODUCTION TIME',
     )
     return study
 
@@ -33,6 +33,7 @@ def _make_study(sds: int):
 # ---------------------------------------------------------------------------
 # Core functionality tests
 # ---------------------------------------------------------------------------
+
 
 class TestMaximumInformationSDS1:
     """SDS 1 — fully balanced design."""
@@ -113,6 +114,7 @@ class TestMaximumInformationSDS3:
 # No-VAS guard
 # ---------------------------------------------------------------------------
 
+
 class TestMaximumInformationNoVAS:
     """Study without time → no VAS residuals → should raise."""
 
@@ -120,10 +122,10 @@ class TestMaximumInformationNoVAS:
         df = pd.read_csv(VALIDATION_CSV)
         pb = ProcessBehavior(df)
         study = pb.formulate(
-            response="PM SDS 1",
-            factors=["FACTOR 1", "FACTOR 2"],
+            response='PM SDS 1',
+            factors=['FACTOR 1', 'FACTOR 2'],
         )
-        with pytest.raises(ValidationError, match="R2 residuals"):
+        with pytest.raises(ValidationError, match='R2 residuals'):
             study.maximum_information()
 
 
@@ -131,8 +133,8 @@ class TestMaximumInformationNoVAS:
 # Presentation
 # ---------------------------------------------------------------------------
 
-class TestPresentation:
 
+class TestPresentation:
     @pytest.fixture(autouse=True)
     def setup(self):
         self.study = _make_study(1)
@@ -140,30 +142,30 @@ class TestPresentation:
 
     def test_as_dict_structure(self):
         d = self.result.as_dict()
-        expected_keys = {"n", "r2_mean", "r2_mR", "sigma_hat", "upl", "lpl", "n_signals"}
+        expected_keys = {'n', 'r2_mean', 'r2_mR', 'sigma_hat', 'upl', 'lpl', 'n_signals'}
         assert set(d.keys()) == expected_keys
 
     def test_as_dict_values_rounded(self):
         d = self.result.as_dict(round_to=2)
         # Check that values are actually rounded
-        for key in ("r2_mean", "r2_mR", "sigma_hat", "upl", "lpl"):
+        for key in ('r2_mean', 'r2_mR', 'sigma_hat', 'upl', 'lpl'):
             val = d[key]
             assert val == round(val, 2)
 
     def test_repr_contains_key_info(self):
         s = repr(self.result)
-        assert "MaximumInformationResult" in s
-        assert "sigma_hat" in s
-        assert "NPL" in s
-        assert "Signals" in s
+        assert 'MaximumInformationResult' in s
+        assert 'sigma_hat' in s
+        assert 'NPL' in s
+        assert 'Signals' in s
 
 
 # ---------------------------------------------------------------------------
 # Plot smoke tests
 # ---------------------------------------------------------------------------
 
-class TestPlotting:
 
+class TestPlotting:
     @pytest.fixture(autouse=True)
     def setup(self):
         self.study = _make_study(1)
@@ -174,23 +176,23 @@ class TestPlotting:
         assert isinstance(fig, go.Figure)
 
     def test_plot_xmr(self):
-        fig = self.result.plot(view="xmr")
+        fig = self.result.plot(view='xmr')
         assert isinstance(fig, go.Figure)
 
     def test_plot_histogram(self):
-        fig = self.result.plot(view="histogram")
+        fig = self.result.plot(view='histogram')
         assert isinstance(fig, go.Figure)
 
     def test_plot_invalid_view(self):
-        with pytest.raises(ValueError, match="view must be"):
-            self.result.plot(view="invalid")
+        with pytest.raises(ValueError, match='view must be'):
+            self.result.plot(view='invalid')
 
     def test_plot_custom_title(self):
-        fig = self.result.plot(title="Custom Title")
-        assert fig.layout.title.text == "Custom Title"
+        fig = self.result.plot(title='Custom Title')
+        assert fig.layout.title.text == 'Custom Title'
 
     def test_plot_with_string_theme(self):
-        fig = self.result.plot(theme="ggplot")
+        fig = self.result.plot(theme='ggplot')
         assert isinstance(fig, go.Figure)
 
     def test_plot_with_bins(self):

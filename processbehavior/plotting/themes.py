@@ -167,7 +167,7 @@ class ChartTheme:
     # Both tiers use same marker style/size as data (circle, size 5), differentiated only by color
     # Tier 1 (Rule 1): Red - points outside control limits
     signal_color: str = 'red'
-    signal_marker_size: int = 5    # Same size as data points
+    signal_marker_size: int = 5  # Same size as data points
     signal_marker_symbol: str = 'circle'  # Same as data points
     signal_marker_line_width: float = 0.5
     signal_marker_line_color: str = 'darkred'
@@ -232,18 +232,11 @@ class ChartTheme:
         return {
             'plot_bgcolor': self.plot_bgcolor,
             'paper_bgcolor': self.paper_bgcolor,
-            'font': {
-                'family': self.font_family,
-                'size': self.font_size,
-                'color': self.font_color
-            },
+            'font': {'family': self.font_family, 'size': self.font_size, 'color': self.font_color},
             'title': {
-                'font': {
-                    'size': self.title_font_size,
-                    'color': self.title_font_color
-                },
+                'font': {'size': self.title_font_size, 'color': self.title_font_color},
                 'x': 0.5,
-                'xanchor': 'center'
+                'xanchor': 'center',
             },
             'xaxis': {
                 'showgrid': self.show_grid,
@@ -251,7 +244,7 @@ class ChartTheme:
                 'gridwidth': self.grid_width,
                 'showline': self.show_axis_line,
                 'linecolor': self.axis_line_color,
-                'linewidth': self.axis_line_width
+                'linewidth': self.axis_line_width,
             },
             'yaxis': {
                 'showgrid': self.show_grid,
@@ -260,14 +253,15 @@ class ChartTheme:
                 'showline': self.show_axis_line,
                 'linecolor': self.axis_line_color,
                 'linewidth': self.axis_line_width,
-                'zeroline': False
-            }
+                'zeroline': False,
+            },
         }
 
 
 # =============================================================================
 # Built-in Themes
 # =============================================================================
+
 
 def _create_processbehavior_theme() -> ChartTheme:
     """Default theme with professional, balanced appearance."""
@@ -403,7 +397,7 @@ def _create_publication_theme() -> ChartTheme:
         center_line_width=1.0,
         # Signals - red to stand out against black data
         signal_color='red',
-        signal_marker_size=5,   # Same as data_marker_size
+        signal_marker_size=5,  # Same as data_marker_size
         signal_marker_symbol='circle',
         signal_marker_line_width=0.5,
         signal_marker_line_color='darkred',
@@ -477,13 +471,11 @@ def get_theme(name: str) -> ChartTheme:
 
     if name not in _THEME_REGISTRY:
         available = list(_THEME_REGISTRY.keys())
-        raise ValueError(
-            f"Unknown theme: '{name}'.\n"
-            f"Available themes: {available}"
-        )
+        raise ValueError(f"Unknown theme: '{name}'.\nAvailable themes: {available}")
 
     # Return a copy so modifications don't affect the registry
     import copy
+
     return copy.copy(_THEME_REGISTRY[name])
 
 
@@ -548,5 +540,3 @@ def apply_theme(fig: go.Figure, theme: str | ChartTheme = 'processbehavior') -> 
     fig.update_layout(**theme.to_layout_dict())
 
     return fig
-
-

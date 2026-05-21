@@ -48,6 +48,7 @@ logger = logging.getLogger(__name__)
 # MR-Family Chart Specification
 # ============================================================================
 
+
 @dataclass(frozen=True)
 class _MRChartSpec:
     """Captures what makes an MR-family chart different from its sibling.
@@ -56,23 +57,30 @@ class _MRChartSpec:
     are behavioral, not parametric — this dataclass encodes those differences
     so a single shared method can serve both chart types.
     """
-    chart_type: str         # 'X' or 'mR'
-    limits_type: str        # "XmR" or "R" — passed to calculate_limits()
-    plot_col: str           # Which column to plot: 'raw' (use value_col) or 'mr'
-    center_source: str      # What the center line represents: 'mean' or 'mR'
-    drops_first_mr: bool    # False for X, True for mR
+
+    chart_type: str  # 'X' or 'mR'
+    limits_type: str  # "XmR" or "R" — passed to calculate_limits()
+    plot_col: str  # Which column to plot: 'raw' (use value_col) or 'mr'
+    center_source: str  # What the center line represents: 'mean' or 'mR'
+    drops_first_mr: bool  # False for X, True for mR
     lane_boundary_offset: int  # 0 for X, -1 for mR
 
 
 _XMR_SPEC = _MRChartSpec(
-    chart_type='X', limits_type='XmR',
-    plot_col='raw', center_source='mean',
-    drops_first_mr=False, lane_boundary_offset=0,
+    chart_type='X',
+    limits_type='XmR',
+    plot_col='raw',
+    center_source='mean',
+    drops_first_mr=False,
+    lane_boundary_offset=0,
 )
 _R_SPEC = _MRChartSpec(
-    chart_type='mR', limits_type='R',
-    plot_col='mr', center_source='mR',
-    drops_first_mr=True, lane_boundary_offset=-1,
+    chart_type='mR',
+    limits_type='R',
+    plot_col='mr',
+    center_source='mR',
+    drops_first_mr=True,
+    lane_boundary_offset=-1,
 )
 
 
@@ -121,7 +129,7 @@ class Analysis:
         request: ChartRequest,
         analysis_dataset: AnalysisDataSet | None = None,
         sds: int | None = None,
-        df: pd.DataFrame | None = None
+        df: pd.DataFrame | None = None,
     ):
         """
         Initialize analysis with spec and chart request.
@@ -150,14 +158,12 @@ class Analysis:
         else:
             if sds is None:
                 raise ValidationError(
-                    "sds is required when analysis_dataset is not provided. "
-                    "SDS should be detected at the entry point (ProcessBehavior) "
-                    "and passed to Analysis."
+                    'sds is required when analysis_dataset is not provided. '
+                    'SDS should be detected at the entry point (ProcessBehavior) '
+                    'and passed to Analysis.'
                 )
             if df is None:
-                raise ValidationError(
-                    "df is required when analysis_dataset is not provided."
-                )
+                raise ValidationError('df is required when analysis_dataset is not provided.')
             self.ads = AnalysisDataSet(df, spec, observed_sds=sds)
 
     def calculate(self) -> AnalysisResult:
@@ -201,14 +207,15 @@ class Analysis:
 
             # Validate column exists
             if col_name not in self.ads.analysis_dataset.columns:
-                available = [c for c in self.ads.analysis_dataset.columns
-                            if c.startswith('R') or c == self.spec.response_var]
+                available = [
+                    c for c in self.ads.analysis_dataset.columns if c.startswith('R') or c == self.spec.response_var
+                ]
                 raise ChartNotAvailableError(
                     f"Residual column '{col_name}' not found.\n"
-                    f"Available columns: {available}\n"
+                    f'Available columns: {available}\n'
                     f"This may indicate the analytical design state (ADS) doesn't support this residual type.",
                     chart=col_name,
-                    available=available
+                    available=available,
                 )
 
             # Validate chart type
@@ -216,9 +223,9 @@ class Analysis:
             if chart_type not in valid_chart_types:
                 raise ChartNotAvailableError(
                     f"Chart type '{chart_type}' not supported for residual charts.\n"
-                    f"Valid types: {', '.join(sorted(valid_chart_types))}",
+                    f'Valid types: {", ".join(sorted(valid_chart_types))}',
                     chart=chart_type,
-                    available=sorted(valid_chart_types)
+                    available=sorted(valid_chart_types),
                 )
 
             # Question answered by each residual
@@ -226,7 +233,7 @@ class Analysis:
                 'R2': 'Is within-subgroup variation stable?',
                 'R3': 'Is there interaction between factors and time?',
                 'R4': 'Does time have a significant effect?',
-                'R5': 'Do factors have a significant effect?'
+                'R5': 'Do factors have a significant effect?',
             }
 
             # Calculate using base method with value_col
@@ -247,9 +254,7 @@ class Analysis:
                     'Histogram': self._calculate_histogram,
                 }
             chart_data = residual_strategies[chart_type](value_col=col_name)
-            chart_data = self._add_residual_metadata(
-                chart_data, residual, recentered, questions
-            )
+            chart_data = self._add_residual_metadata(chart_data, residual, recentered, questions)
 
         else:
             # Standard chart analysis
@@ -263,7 +268,7 @@ class Analysis:
                     'S': self._calculate_xbar_s,
                     'X': self._calculate_xmr_r,  # Bundled X+mR
                     'mR': self._calculate_xmr_r,
-                    'Histogram': self._calculate_histogram  # No companion for Histogram
+                    'Histogram': self._calculate_histogram,  # No companion for Histogram
                 }
             else:
                 # SRP-compliant mode: return only the requested chart
@@ -272,15 +277,14 @@ class Analysis:
                     'S': self._calculate_s,
                     'X': self._calculate_xmr,  # SRP: X only
                     'mR': self._calculate_r,  # SRP: mR only
-                    'Histogram': self._calculate_histogram
+                    'Histogram': self._calculate_histogram,
                 }
 
             if self.analysis_type not in strategies:
                 raise ChartNotAvailableError(
-                    f'Analysis type {self.analysis_type} not supported! '
-                    f'Valid types: {list(strategies.keys())}',
+                    f'Analysis type {self.analysis_type} not supported! Valid types: {list(strategies.keys())}',
                     chart=self.analysis_type,
-                    available=list(strategies.keys())
+                    available=list(strategies.keys()),
                 )
 
             # Execute analysis strategy
@@ -288,11 +292,7 @@ class Analysis:
 
         # Wrap in AnalysisResult for unified access
         # Pass analysis_type so result.summary reports the executed chart type, not the recommended one
-        return AnalysisResult(
-            charts=chart_data,
-            analysis_dataset_obj=self.ads,
-            analysis_type=self.analysis_type
-        )
+        return AnalysisResult(charts=chart_data, analysis_dataset_obj=self.ads, analysis_type=self.analysis_type)
 
     # =========================================================================
     # Helper Methods (DRY principle)
@@ -315,11 +315,7 @@ class Analysis:
         return result
 
     def _add_beyond_limits_flag(
-        self,
-        df: pd.DataFrame,
-        value_col: str,
-        lpl_col: str = 'lpl',
-        upl_col: str = 'upl'
+        self, df: pd.DataFrame, value_col: str, lpl_col: str = 'lpl', upl_col: str = 'upl'
     ) -> pd.DataFrame:
         """
         Add beyond_limits flag column.
@@ -347,12 +343,7 @@ class Analysis:
         result = df.copy()
 
         result['beyond_limits'] = result.apply(
-            lambda row: detect_beyond_limits(
-                x=row[value_col],
-                upl=row[upl_col],
-                lpl=row[lpl_col]
-            ),
-            axis=1
+            lambda row: detect_beyond_limits(x=row[value_col], upl=row[upl_col], lpl=row[lpl_col]), axis=1
         )
 
         return result
@@ -381,13 +372,9 @@ class Analysis:
         >>> # Use max_n for statistics, n_to_use for per-row calculations
         """
         n_max = df[n_col].max()
-        n_to_use = "N" if df[n_col].eq(n_max).all() else "n"
+        n_to_use = 'N' if df[n_col].eq(n_max).all() else 'n'
 
-        logger.debug(
-            'Analysis using %s for calculations (Scenario: %s)',
-            n_to_use,
-            1 if n_to_use == "N" else 2
-        )
+        logger.debug('Analysis using %s for calculations (Scenario: %s)', n_to_use, 1 if n_to_use == 'N' else 2)
 
         return n_to_use, n_max
 
@@ -449,10 +436,7 @@ class Analysis:
             return 'R2'
         return value_col
 
-    def _resolve_by_grouping(
-        self,
-        value_col: str
-    ) -> tuple[list[str], str | None, list[str]]:
+    def _resolve_by_grouping(self, value_col: str) -> tuple[list[str], str | None, list[str]]:
         """
         Resolve groupby columns and pre-calculated Ybar column based on `by` parameter.
 
@@ -551,11 +535,7 @@ class Analysis:
         groupby_cols = list(by)
         return groupby_cols, None, []
 
-    def _calculate_lane_boundaries(
-        self,
-        df: pd.DataFrame,
-        collapsed_vars: list[str]
-    ) -> list[dict]:
+    def _calculate_lane_boundaries(self, df: pd.DataFrame, collapsed_vars: list[str]) -> list[dict]:
         """
         Calculate lane boundaries where collapsed factors change.
 
@@ -604,19 +584,17 @@ class Analysis:
         for pos in change_positions:
             idx = df.index.get_loc(pos)
             label = combined.loc[pos]
-            boundaries.append({
-                'position': idx,  # 0-based position in the sorted data
-                'label': label,
-                'variables': collapsed_vars
-            })
+            boundaries.append(
+                {
+                    'position': idx,  # 0-based position in the sorted data
+                    'label': label,
+                    'variables': collapsed_vars,
+                }
+            )
 
         return boundaries
 
-    def _build_output_columns(
-        self,
-        df: pd.DataFrame,
-        value_cols: list[str]
-    ) -> pd.DataFrame:
+    def _build_output_columns(self, df: pd.DataFrame, value_cols: list[str]) -> pd.DataFrame:
         """
         Select output columns with appropriate time/grouping columns.
 
@@ -689,9 +667,7 @@ class Analysis:
     # =========================================================================
 
     def _calculate_xbar(  # noqa: C901
-        self,
-        value_col: str = None,
-        _return_intermediates: bool = False
+        self, value_col: str = None, _return_intermediates: bool = False
     ) -> dict:
         """
         Calculate Xbar (mean) chart statistics.
@@ -732,7 +708,9 @@ class Analysis:
         # Stratified path: separate chart per factor combination
         if stratify_by:
             return self._calculate_xbar_stratified(
-                value_col, groupby_cols, stratify_by,
+                value_col,
+                groupby_cols,
+                stratify_by,
                 _return_intermediates=_return_intermediates,
             )
 
@@ -755,11 +733,7 @@ class Analysis:
         else:
             grain_cols = self._residual_grain(value_col)
             if grain_cols and value_col in df.columns:
-                _Ybar = (
-                    df.groupby(grain_cols, observed=True)[value_col]
-                    .mean()
-                    .mean()
-                )
+                _Ybar = df.groupby(grain_cols, observed=True)[value_col].mean().mean()
             else:
                 _Ybar = df[value_col].mean()
 
@@ -768,26 +742,20 @@ class Analysis:
             # Single aggregation across all data
             _S = df[_limits_col].std()
             _N = len(df)
-            out_dict = {
-                'group': ['All'],
-                'xbar': [_Ybar],
-                's': [_S],
-                'n': [_N],
-                'N': [_N]
-            }
+            out_dict = {'group': ['All'], 'xbar': [_Ybar], 's': [_S], 'n': [_N], 'N': [_N]}
             if _limits_col != value_col:
                 out_dict['s_value'] = [df[value_col].std()]
             out = pd.DataFrame(out_dict)
         else:
             # Group by specified columns
             agg_dict = {
-                's': pd.NamedAgg(column=_limits_col, aggfunc="std"),
-                'mean': pd.NamedAgg(column=value_col, aggfunc="mean"),
+                's': pd.NamedAgg(column=_limits_col, aggfunc='std'),
+                'mean': pd.NamedAgg(column=value_col, aggfunc='mean'),
                 # Count on response_var (not value_col) to avoid NaN issues with residuals
-                'n': pd.NamedAgg(column=spec.response_var, aggfunc="count"),
+                'n': pd.NamedAgg(column=spec.response_var, aggfunc='count'),
             }
             if _limits_col != value_col:
-                agg_dict['s_value'] = pd.NamedAgg(column=value_col, aggfunc="std")
+                agg_dict['s_value'] = pd.NamedAgg(column=value_col, aggfunc='std')
             out = df.groupby(groupby_cols, as_index=False, observed=True).agg(**agg_dict)
 
             # If we have pre-calculated Ybar, use it for xbar values
@@ -810,22 +778,22 @@ class Analysis:
         mask_n1 = out['n'].eq(1)
         if mask_n1.any():
             n_filtered = mask_n1.sum()
-            logger.info(f"Filtered {n_filtered} subgroup(s) with n=1 from Xbar calculation")
+            logger.info(f'Filtered {n_filtered} subgroup(s) with n=1 from Xbar calculation')
             out = out[~mask_n1].copy()
 
         # Handle case where no subgroups have >1 observation
         if out.shape[0] == 0:
             sds = self.ads._ads_result.sds if self.ads._ads_result else '?'
             raise ValidationError(
-                f"No subgroups with n > 1 found — Xbar chart requires replicated observations.\n"
-                f"This data has Analytical Design State {sds}.\n"
+                f'No subgroups with n > 1 found — Xbar chart requires replicated observations.\n'
+                f'This data has Analytical Design State {sds}.\n'
                 f"Use chart='X' for individual values, or chart='Xbar' with value='R6' "
-                f"for effects analysis."
+                f'for effects analysis.'
             )
 
         # Use Bishop VAS grand mean (mean of cell means on value_col) as center
         _Xbar = _Ybar
-        _S = out["s"].mean()
+        _S = out['s'].mean()
         _N = out['n'].max()
         if 'N' not in out.columns:
             out['N'] = _N
@@ -836,10 +804,10 @@ class Analysis:
         # Override n_to_use if n_mode="average"
         n_mode = self.request.n_mode
         n_avg = None
-        if n_mode == "average":
+        if n_mode == 'average':
             n_avg = out['n'].mean()
-            out['N'] = n_avg      # overwrite N column with average
-            n_to_use = 'N'        # force constant-N path
+            out['N'] = n_avg  # overwrite N column with average
+            n_to_use = 'N'  # force constant-N path
 
         # CALCULATE XBAR
         xbar = out.copy()
@@ -852,7 +820,8 @@ class Analysis:
                 limits_type='Xbar',
                 round_to=spec.round_to,
                 sigma_multiplier=self.request.n_sigma,
-            ), axis=1
+            ),
+            axis=1,
         )
 
         # Detect beyond limits signals
@@ -860,7 +829,7 @@ class Analysis:
         xbar = xbar.round(spec.round_to)
 
         statistics['center'] = round(_Xbar, spec.round_to)
-        if n_to_use == "N":
+        if n_to_use == 'N':
             statistics['N'] = round(n_avg, spec.round_to) if n_avg is not None else _N
             statistics['upl'] = xbar['upl'].max()
             statistics['lpl'] = xbar['lpl'].max()
@@ -905,7 +874,7 @@ class Analysis:
                 'n_sigma': self.request.n_sigma,
                 'n_mode': n_mode,
                 **({'n_avg': round(n_avg, spec.round_to)} if n_avg is not None else {}),
-            }
+            },
         }
 
         # Optionally include intermediates for companion calculation
@@ -975,12 +944,12 @@ class Analysis:
             # Note: we always compute mean directly from filtered data, NOT using
             # Ybar_t (which is the marginal time mean across ALL factors).
             agg_dict = {
-                's': pd.NamedAgg(column=_limits_col, aggfunc="std"),
-                'xbar': pd.NamedAgg(column=value_col, aggfunc="mean"),
-                'n': pd.NamedAgg(column=spec.response_var, aggfunc="count"),
+                's': pd.NamedAgg(column=_limits_col, aggfunc='std'),
+                'xbar': pd.NamedAgg(column=value_col, aggfunc='mean'),
+                'n': pd.NamedAgg(column=spec.response_var, aggfunc='count'),
             }
             if _limits_col != value_col:
-                agg_dict['s_value'] = pd.NamedAgg(column=value_col, aggfunc="std")
+                agg_dict['s_value'] = pd.NamedAgg(column=value_col, aggfunc='std')
             out = sdf.groupby(groupby_cols, as_index=False, observed=True).agg(**agg_dict)
 
             out['N'] = out['n'].max()
@@ -1000,7 +969,7 @@ class Analysis:
 
             n_mode = self.request.n_mode
             n_avg = None
-            if n_mode == "average":
+            if n_mode == 'average':
                 n_avg = out['n'].mean()
                 out['N'] = n_avg
                 n_to_use = 'N'
@@ -1014,7 +983,8 @@ class Analysis:
                     limits_type='Xbar',
                     round_to=spec.round_to,
                     sigma_multiplier=self.request.n_sigma,
-                ), axis=1
+                ),
+                axis=1,
             )
 
             out = self._add_beyond_limits_flag(out, value_col='xbar')
@@ -1032,9 +1002,7 @@ class Analysis:
             _has_fixed_n = n_to_use == 'N'
             chart_statistics[stratum] = {
                 'center': round(_Xbar, spec.round_to),
-                'N': round(n_avg, spec.round_to) if n_avg is not None else (
-                    out['N'].iloc[0] if _has_fixed_n else None
-                ),
+                'N': round(n_avg, spec.round_to) if n_avg is not None else (out['N'].iloc[0] if _has_fixed_n else None),
                 'lpl': round(out['lpl'].iloc[0], spec.round_to) if _has_fixed_n else None,
                 'upl': round(out['upl'].iloc[0], spec.round_to) if _has_fixed_n else None,
                 **({'limits_vary': True} if not _has_fixed_n else {}),
@@ -1052,11 +1020,11 @@ class Analysis:
         if not all_xbar_frames:
             sds = self.ads._ads_result.sds if self.ads._ads_result else '?'
             raise ValidationError(
-                f"No subgroups with n > 1 found — Xbar chart requires replicated observations.\n"
-                f"This data has Analytical Design State {sds} "
-                f"({'no replication' if sds == 2 else 'partial replication' if sds == 3 else ''}).\n"
+                f'No subgroups with n > 1 found — Xbar chart requires replicated observations.\n'
+                f'This data has Analytical Design State {sds} '
+                f'({"no replication" if sds == 2 else "partial replication" if sds == 3 else ""}).\n'
                 f"Use chart='X' for individual values, or chart='Xbar' with value='R6' "
-                f"for effects analysis."
+                f'for effects analysis.'
             )
         chart_out = pd.concat(all_xbar_frames, ignore_index=True)
 
@@ -1156,8 +1124,8 @@ class Analysis:
                 sdf = df[df[stratify_col] == stratum].copy()
                 _limits_col = self._resolve_limits_column(value_col, sdf)
                 agg_dict = {
-                    's': pd.NamedAgg(column=_limits_col, aggfunc="std"),
-                    'n': pd.NamedAgg(column=spec.response_var, aggfunc="count"),
+                    's': pd.NamedAgg(column=_limits_col, aggfunc='std'),
+                    'n': pd.NamedAgg(column=spec.response_var, aggfunc='count'),
                 }
                 out = sdf.groupby(groupby_cols, as_index=False, observed=True).agg(**agg_dict)
                 mask = out['n'].eq(1)
@@ -1169,7 +1137,7 @@ class Analysis:
                 _S = out['s'].mean()
                 n_to_use, n_max = self._determine_n_to_use(out)
                 n_avg = None
-                if self.request.n_mode == "average":
+                if self.request.n_mode == 'average':
                     n_avg = out['n'].mean()
                     out['N'] = n_avg
                     n_to_use = 'N'
@@ -1187,7 +1155,8 @@ class Analysis:
                     limits_type='S',
                     round_to=spec.round_to,
                     sigma_multiplier=self.request.n_sigma,
-                ), axis=1
+                ),
+                axis=1,
             )
 
             out = self._add_beyond_limits_flag(out, value_col='s')
@@ -1199,9 +1168,7 @@ class Analysis:
             _has_fixed_n = n_to_use == 'N'
             chart_statistics[stratum] = {
                 'center': round(_S, spec.round_to),
-                'N': round(n_avg, spec.round_to) if n_avg is not None else (
-                    out['N'].iloc[0] if _has_fixed_n else None
-                ),
+                'N': round(n_avg, spec.round_to) if n_avg is not None else (out['N'].iloc[0] if _has_fixed_n else None),
                 'lpl': round(out['lpl'].iloc[0], spec.round_to) if _has_fixed_n else None,
                 'upl': round(out['upl'].iloc[0], spec.round_to) if _has_fixed_n else None,
                 **({'limits_vary': True} if not _has_fixed_n else {}),
@@ -1233,9 +1200,7 @@ class Analysis:
         }
 
     def _calculate_s(  # noqa: C901
-        self,
-        value_col: str = None,
-        _precomputed: dict = None
+        self, value_col: str = None, _precomputed: dict = None
     ) -> dict:
         """
         Calculate S (standard deviation) chart statistics.
@@ -1285,9 +1250,10 @@ class Analysis:
             # Stratified path: separate chart per factor combination
             if stratify_by:
                 return self._calculate_s_stratified(
-                    value_col, groupby_cols, stratify_by,
+                    value_col,
+                    groupby_cols,
+                    stratify_by,
                 )
-
 
             _limits_col = self._resolve_limits_column(value_col, df)
 
@@ -1295,17 +1261,12 @@ class Analysis:
             if groupby_cols == []:
                 _S = df[_limits_col].std()
                 _N = len(df)
-                out = pd.DataFrame({
-                    'group': ['All'],
-                    's': [_S],
-                    'n': [_N],
-                    'N': [_N]
-                })
+                out = pd.DataFrame({'group': ['All'], 's': [_S], 'n': [_N], 'N': [_N]})
             else:
                 agg_dict = {
-                    's': pd.NamedAgg(column=_limits_col, aggfunc="std"),
+                    's': pd.NamedAgg(column=_limits_col, aggfunc='std'),
                     # Count on response_var (not value_col) to avoid NaN issues with residuals
-                    'n': pd.NamedAgg(column=spec.response_var, aggfunc="count"),
+                    'n': pd.NamedAgg(column=spec.response_var, aggfunc='count'),
                 }
                 out = df.groupby(groupby_cols, as_index=False, observed=True).agg(**agg_dict)
 
@@ -1317,15 +1278,15 @@ class Analysis:
                 if out.shape[0] == 0:
                     sds = self.ads._ads_result.sds if self.ads._ads_result else '?'
                     raise ValidationError(
-                        f"No subgroups with n > 1 found — S chart requires replicated observations.\n"
-                        f"This data has Analytical Design State {sds}.\n"
+                        f'No subgroups with n > 1 found — S chart requires replicated observations.\n'
+                        f'This data has Analytical Design State {sds}.\n'
                         f"Use chart='X' for individual values."
                     )
 
                 out['N'] = out['n'].max()
 
             # CL from R2-based std — S chart plots same basis
-            _S = out["s"].mean()
+            _S = out['s'].mean()
 
             # Determine if subgroup sizes are constant or variable
             n_to_use, n_max = self._determine_n_to_use(out)
@@ -1333,7 +1294,7 @@ class Analysis:
             # Override n_to_use if n_mode="average"
             n_mode = self.request.n_mode
             n_avg = None
-            if n_mode == "average":
+            if n_mode == 'average':
                 n_avg = out['n'].mean()
                 out['N'] = n_avg
                 n_to_use = 'N'
@@ -1357,7 +1318,7 @@ class Analysis:
 
         # Calculate S chart (common path for both precomputed and independent)
         out['center'] = _S
-        out['groups'] = out["n"].count()
+        out['groups'] = out['n'].count()
         n_mode = self.request.n_mode
 
         # Add limits columns
@@ -1366,10 +1327,11 @@ class Analysis:
                 mean=0,
                 sd=row['center'],
                 N=row[n_to_use],
-                limits_type="S",
+                limits_type='S',
                 round_to=spec.round_to,
                 sigma_multiplier=self.request.n_sigma,
-            ), axis=1
+            ),
+            axis=1,
         )
 
         # Detect beyond limits signals
@@ -1401,7 +1363,7 @@ class Analysis:
         _S_stat = out['center'].iloc[0] if len(out) > 0 else None
 
         statistics = {'center': round(_S_stat, spec.round_to) if _S_stat is not None else None}
-        if n_to_use == "N":
+        if n_to_use == 'N':
             statistics['N'] = round(n_avg, spec.round_to) if n_avg is not None else n_max
             statistics['upl'] = out['upl'].max()
             statistics['lpl'] = out['lpl'].max()
@@ -1422,7 +1384,7 @@ class Analysis:
                     'n_sigma': self.request.n_sigma,
                     'n_mode': n_mode,
                     **({'n_avg': round(n_avg, spec.round_to)} if n_avg is not None else {}),
-                }
+                },
             }
         }
 
@@ -1540,16 +1502,25 @@ class Analysis:
 
         if is_stratified:
             return self._calculate_mr_chart_stratified(
-                mr_spec, value_col, plot_col, mr_source_col,
-                stratify_by, collapsed_factors,
-                _return_intermediates, _precomputed,
+                mr_spec,
+                value_col,
+                plot_col,
+                mr_source_col,
+                stratify_by,
+                collapsed_factors,
+                _return_intermediates,
+                _precomputed,
                 phased=self.request.phased,
             )
         else:
             return self._calculate_mr_chart_ungrouped(
-                mr_spec, value_col, plot_col, mr_source_col,
+                mr_spec,
+                value_col,
+                plot_col,
+                mr_source_col,
                 collapsed_factors,
-                _return_intermediates, _precomputed,
+                _return_intermediates,
+                _precomputed,
                 phased=self.request.phased,
             )
 
@@ -1576,10 +1547,14 @@ class Analysis:
             r_phase_stats = phase_stats[[stratify_col, '_phase_id', 'mR']].copy()
             r_lims = r_phase_stats.apply(
                 lambda row: calculate_limits(
-                    mean=0, sd=0, N=0, mR=row['mR'],
+                    mean=0,
+                    sd=0,
+                    N=0,
+                    mR=row['mR'],
                     limits_type=mr_spec.limits_type,
                     round_to=spec.round_to,
-                ), axis=1,
+                ),
+                axis=1,
             )
             r_phase_stats = _join_limits(r_phase_stats, r_lims)
             r_phase_stats['center'] = r_phase_stats['mR']
@@ -1588,11 +1563,13 @@ class Analysis:
             out = out.drop(columns=['center', 'lpl', 'upl', 'beyond_limits'], errors='ignore')
             out = out.merge(
                 r_phase_stats[[stratify_col, '_phase_id', 'center', 'lpl', 'upl']],
-                on=[stratify_col, '_phase_id'], how='left', validate='many_to_one',
+                on=[stratify_col, '_phase_id'],
+                how='left',
+                validate='many_to_one',
             )
 
             # Re-detect beyond limits
-            assert plot_col in out.columns, f"plot_col {plot_col!r} not in DataFrame"
+            assert plot_col in out.columns, f'plot_col {plot_col!r} not in DataFrame'
             out = self._add_beyond_limits_flag(out, value_col=plot_col)
 
             # Format output
@@ -1604,7 +1581,10 @@ class Analysis:
             chart_statistics = {}
             for stratum in strata:
                 chart_statistics[stratum] = {
-                    'N': None, 'center': None, 'lpl': None, 'upl': None,
+                    'N': None,
+                    'center': None,
+                    'lpl': None,
+                    'upl': None,
                     'limits_vary': True,
                 }
 
@@ -1637,7 +1617,9 @@ class Analysis:
 
         r_lims = r_grouped.apply(
             lambda row: calculate_limits(
-                mean=0, sd=0, N=0,
+                mean=0,
+                sd=0,
+                N=0,
                 mR=row['center'],
                 limits_type=mr_spec.limits_type,
                 round_to=spec.round_to,
@@ -1697,10 +1679,7 @@ class Analysis:
                     lane_boundaries[stratum] = adjusted
 
         # Identify strata with insufficient data (< 2 observations)
-        insufficient_strata = [
-            s for s in strata
-            if len(r_out[r_out[stratify_col] == s]) < 2
-        ]
+        insufficient_strata = [s for s in strata if len(r_out[r_out[stratify_col] == s]) < 2]
 
         # Drop strata that lost all rows post-mR (single-obs cells) from the
         # published strata list. The focus()/strata contract requires every
@@ -1743,7 +1722,9 @@ class Analysis:
 
         if _precomputed is not None and _precomputed['is_stratified']:
             return self._calculate_mr_chart_from_precomputed(
-                mr_spec, plot_col, _precomputed,
+                mr_spec,
+                plot_col,
+                _precomputed,
             )
 
         # --- Independent calculation (no precomputed values) ---
@@ -1782,10 +1763,7 @@ class Analysis:
             )
 
             # 3. Per-phase mR (reset at phase boundaries within each stratum)
-            out['mr'] = (
-                out.groupby([stratify_col, '_phase_id'], sort=False)[mr_source_col]
-                .diff().abs()
-            )
+            out['mr'] = out.groupby([stratify_col, '_phase_id'], sort=False)[mr_source_col].diff().abs()
 
             # 4. Per-phase aggregation
             phase_stats = (
@@ -1800,32 +1778,42 @@ class Analysis:
                 phase_stats['center'] = phase_stats['_mean']
                 phase_lims = phase_stats.apply(
                     lambda row: calculate_limits(
-                        mean=row['_mean'], sd=0, N=0, mR=row['mR'],
+                        mean=row['_mean'],
+                        sd=0,
+                        N=0,
+                        mR=row['mR'],
                         limits_type=mr_spec.limits_type,
                         round_to=spec.round_to,
-                    ), axis=1,
+                    ),
+                    axis=1,
                 )
             else:  # center_source == 'mR' (R chart)
                 phase_stats['center'] = phase_stats['mR']
                 phase_lims = phase_stats.apply(
                     lambda row: calculate_limits(
-                        mean=0, sd=0, N=0, mR=row['mR'],
+                        mean=0,
+                        sd=0,
+                        N=0,
+                        mR=row['mR'],
                         limits_type=mr_spec.limits_type,
                         round_to=spec.round_to,
-                    ), axis=1,
+                    ),
+                    axis=1,
                 )
             phase_stats = _join_limits(phase_stats, phase_lims)
 
             # 6. Merge per-phase limits back to row-level data
             out = out.merge(
                 phase_stats[[stratify_col, '_phase_id', 'center', 'mR', 'lpl', 'upl']],
-                on=[stratify_col, '_phase_id'], how='left', validate='many_to_one',
+                on=[stratify_col, '_phase_id'],
+                how='left',
+                validate='many_to_one',
             )
 
             # 7. Phased path: NEVER drop rows. NaN mR at phase boundaries preserved.
 
             # 8. Signal detection (per-row, uses row-level lpl/upl)
-            assert plot_col in out.columns, f"plot_col {plot_col!r} not in DataFrame"
+            assert plot_col in out.columns, f'plot_col {plot_col!r} not in DataFrame'
             out = self._add_beyond_limits_flag(out, value_col=plot_col)
 
             # 9. Lane boundaries per stratum
@@ -1841,7 +1829,10 @@ class Analysis:
             chart_statistics = {}
             for stratum in strata:
                 chart_statistics[stratum] = {
-                    'N': None, 'center': None, 'lpl': None, 'upl': None,
+                    'N': None,
+                    'center': None,
+                    'lpl': None,
+                    'upl': None,
                     'limits_vary': True,
                 }
 
@@ -1849,8 +1840,7 @@ class Analysis:
             n_single_point = int((phase_stats['_n'] < 2).sum())
 
             # Format output
-            extra_cols = [c for c in stratify_by
-                          if c != spec.rsg_var_name and c != spec.time_var]
+            extra_cols = [c for c in stratify_by if c != spec.rsg_var_name and c != spec.time_var]
             chart_out = self._build_output_columns(
                 df=out,
                 value_cols=extra_cols + [plot_col, 'center', 'lpl', 'upl', 'beyond_limits'],
@@ -1904,15 +1894,11 @@ class Analysis:
 
         if not agg:
             raise RuntimeError(
-                f"{mr_spec.chart_type} aggregation spec is empty. "
-                f"Have columns: {out.columns.tolist()}, value_col={value_col!r}"
+                f'{mr_spec.chart_type} aggregation spec is empty. '
+                f'Have columns: {out.columns.tolist()}, value_col={value_col!r}'
             )
 
-        grouped = (
-            out.groupby(stratify_col, sort=False, observed=True)
-            .agg(**agg)
-            .reset_index()
-        )
+        grouped = out.groupby(stratify_col, sort=False, observed=True).agg(**agg).reset_index()
 
         # Compute limits per group
         # For X:  center=mean, limits based on mean ± E2*mR
@@ -1921,7 +1907,8 @@ class Analysis:
             lims = grouped.apply(
                 lambda row: calculate_limits(
                     mean=row['mean'],
-                    sd=0, N=0,
+                    sd=0,
+                    N=0,
                     mR=(row['mR'] if pd.notna(row['mR']) else 0.0),
                     limits_type=mr_spec.limits_type,
                     round_to=spec.round_to,
@@ -1931,7 +1918,9 @@ class Analysis:
         else:  # center_source == 'mR'
             lims = grouped.apply(
                 lambda row: calculate_limits(
-                    mean=0, sd=0, N=0,
+                    mean=0,
+                    sd=0,
+                    N=0,
                     mR=row['mR'],
                     limits_type=mr_spec.limits_type,
                     round_to=spec.round_to,
@@ -1951,7 +1940,9 @@ class Analysis:
         # Merge limits back to row-level data
         out = out.merge(
             grouped[[stratify_col, 'center', 'mR', 'lpl', 'upl']],
-            on=stratify_col, how='left', validate='many_to_one',
+            on=stratify_col,
+            how='left',
+            validate='many_to_one',
         )
 
         # R chart: drop first observation per stratum (NaN moving range)
@@ -1984,18 +1975,14 @@ class Analysis:
             }
 
         # Format output
-        extra_cols = [c for c in stratify_by
-                      if c != spec.rsg_var_name and c != spec.time_var]
+        extra_cols = [c for c in stratify_by if c != spec.rsg_var_name and c != spec.time_var]
         chart_out = self._build_output_columns(
             df=out,
             value_cols=extra_cols + [plot_col, 'center', 'lpl', 'upl', 'beyond_limits'],
         )
 
         # Identify strata with insufficient data (< 2 observations)
-        insufficient_strata = [
-            s for s in strata
-            if len(out[out[stratify_col] == s]) < 2
-        ]
+        insufficient_strata = [s for s in strata if len(out[out[stratify_col] == s]) < 2]
 
         # Drop strata that lost all rows post-mR (single-obs cells) from the
         # published strata list. The focus()/strata contract requires every
@@ -2061,10 +2048,14 @@ class Analysis:
                 r_phase_stats = phase_stats[['_phase_id', 'mR']].copy()
                 r_lims = r_phase_stats.apply(
                     lambda row: calculate_limits(
-                        mean=0, sd=0, N=0, mR=row['mR'],
+                        mean=0,
+                        sd=0,
+                        N=0,
+                        mR=row['mR'],
                         limits_type=mr_spec.limits_type,
                         round_to=spec.round_to,
-                    ), axis=1,
+                    ),
+                    axis=1,
                 )
                 r_phase_stats = _join_limits(r_phase_stats, r_lims)
                 r_phase_stats['center'] = r_phase_stats['mR']
@@ -2073,12 +2064,14 @@ class Analysis:
                 out = out.drop(columns=['center', 'lpl', 'upl'], errors='ignore')
                 out = out.merge(
                     r_phase_stats[['_phase_id', 'center', 'lpl', 'upl']],
-                    on='_phase_id', how='left', validate='many_to_one',
+                    on='_phase_id',
+                    how='left',
+                    validate='many_to_one',
                 )
 
                 # Re-detect beyond limits
                 out = out.drop(columns=['beyond_limits'], errors='ignore')
-                assert plot_col in out.columns, f"plot_col {plot_col!r} not in DataFrame"
+                assert plot_col in out.columns, f'plot_col {plot_col!r} not in DataFrame'
                 out = self._add_beyond_limits_flag(out, value_col=plot_col)
 
                 chart_out = self._build_output_columns(
@@ -2123,8 +2116,12 @@ class Analysis:
 
             # Compute R-specific limits
             r_lims = calculate_limits(
-                mean=0, sd=0, N=0, mR=mR,
-                limits_type=mr_spec.limits_type, round_to=spec.round_to,
+                mean=0,
+                sd=0,
+                N=0,
+                mR=mR,
+                limits_type=mr_spec.limits_type,
+                round_to=spec.round_to,
             )
             out['center'] = mR
             out['lpl'] = r_lims['lpl']
@@ -2183,17 +2180,10 @@ class Analysis:
         # === Phased limits path ===
         if phased and collapsed_factors:
             # 1. Assign phase_id: contiguous runs of the same rsg_key
-            out['_phase_id'] = (
-                (out['rsg_key'] != out['rsg_key'].shift())
-                .cumsum()
-                .astype('int64')
-            )
+            out['_phase_id'] = (out['rsg_key'] != out['rsg_key'].shift()).cumsum().astype('int64')
 
             # 2. Per-phase moving range (reset at boundaries)
-            out['mr'] = (
-                out.groupby('_phase_id', sort=False)[mr_source_col]
-                .diff().abs()
-            )
+            out['mr'] = out.groupby('_phase_id', sort=False)[mr_source_col].diff().abs()
 
             # 3. Per-phase aggregation
             phase_stats = (
@@ -2214,33 +2204,43 @@ class Analysis:
                 phase_stats['center'] = phase_stats['_mean']
                 phase_lims = phase_stats.apply(
                     lambda row: calculate_limits(
-                        mean=row['_mean'], sd=0, N=0, mR=row['mR'],
+                        mean=row['_mean'],
+                        sd=0,
+                        N=0,
+                        mR=row['mR'],
                         limits_type=mr_spec.limits_type,
                         round_to=spec.round_to,
-                    ), axis=1,
+                    ),
+                    axis=1,
                 )
             else:  # center_source == 'mR' (R chart)
                 phase_stats['center'] = phase_stats['mR']
                 phase_lims = phase_stats.apply(
                     lambda row: calculate_limits(
-                        mean=0, sd=0, N=0, mR=row['mR'],
+                        mean=0,
+                        sd=0,
+                        N=0,
+                        mR=row['mR'],
                         limits_type=mr_spec.limits_type,
                         round_to=spec.round_to,
-                    ), axis=1,
+                    ),
+                    axis=1,
                 )
             phase_stats = _join_limits(phase_stats, phase_lims)
 
             # 6. Merge per-phase limits back to row-level data
             out = out.merge(
                 phase_stats[['_phase_id', 'center', 'mR', 'lpl', 'upl']],
-                on='_phase_id', how='left', validate='many_to_one',
+                on='_phase_id',
+                how='left',
+                validate='many_to_one',
             )
 
             # 7. Phased path: NEVER drop rows. NaN mR values at phase boundaries
             #    stay in the DataFrame. Plotly skips NaN naturally.
 
             # 8. Signal detection (per-row, uses row-level lpl/upl)
-            assert plot_col in out.columns, f"plot_col {plot_col!r} not in DataFrame"
+            assert plot_col in out.columns, f'plot_col {plot_col!r} not in DataFrame'
             out = self._add_beyond_limits_flag(out, value_col=plot_col)
 
             # 9. Format output
@@ -2301,14 +2301,22 @@ class Analysis:
         if mr_spec.center_source == 'mean':
             center_val = mean_
             lims = calculate_limits(
-                mean=mean_, sd=0, N=0, mR=mR,
-                limits_type=mr_spec.limits_type, round_to=spec.round_to,
+                mean=mean_,
+                sd=0,
+                N=0,
+                mR=mR,
+                limits_type=mr_spec.limits_type,
+                round_to=spec.round_to,
             )
         else:
             center_val = mR
             lims = calculate_limits(
-                mean=0, sd=0, N=0, mR=mR,
-                limits_type=mr_spec.limits_type, round_to=spec.round_to,
+                mean=0,
+                sd=0,
+                N=0,
+                mR=mR,
+                limits_type=mr_spec.limits_type,
+                round_to=spec.round_to,
             )
 
         out['center'] = center_val
@@ -2385,7 +2393,8 @@ class Analysis:
             Chart data: {'X': {'data': df, 'statistics': dict, 'metadata': dict}}
         """
         return self._calculate_mr_chart(
-            _XMR_SPEC, value_col=value_col,
+            _XMR_SPEC,
+            value_col=value_col,
             _return_intermediates=_return_intermediates,
         )
 
@@ -2412,7 +2421,8 @@ class Analysis:
             Chart data: {'mR': {'data': df, 'statistics': dict, 'metadata': dict}}
         """
         return self._calculate_mr_chart(
-            _R_SPEC, value_col=value_col,
+            _R_SPEC,
+            value_col=value_col,
             _precomputed=_precomputed,
         )
 
@@ -2509,12 +2519,8 @@ class Analysis:
                 stratum_n = len(stratum_vals)
                 stratum_mean = stratum_vals.mean() if stratum_n > 0 else float('nan')
                 stratum_std = stratum_vals.std() if stratum_n >= 2 else float('nan')
-                _mean_rounded = (
-                    round(stratum_mean, spec.round_to) if pd.notna(stratum_mean) else None
-                )
-                _std_rounded = (
-                    round(stratum_std, spec.round_to) if pd.notna(stratum_std) else None
-                )
+                _mean_rounded = round(stratum_mean, spec.round_to) if pd.notna(stratum_mean) else None
+                _std_rounded = round(stratum_std, spec.round_to) if pd.notna(stratum_std) else None
                 # Unified stats shape ({N, center, lpl, upl}) plus histogram
                 # extras (mean alias, std). Histogram has no control limits.
                 per_stratum_stats[key] = {
@@ -2534,13 +2540,9 @@ class Analysis:
             # Add rsg column so focus() can filter consistently with other chart types
 
             if len(by) == 1:
-                output_data['rsg'] = output_data[by[0]].apply(
-                    lambda v: encode_rsg(_py(v))
-                )
+                output_data['rsg'] = output_data[by[0]].apply(lambda v: encode_rsg(_py(v)))
             else:
-                output_data['rsg'] = output_data[by].apply(
-                    lambda row: encode_rsg(tuple(_py(v) for v in row)), axis=1
-                )
+                output_data['rsg'] = output_data[by].apply(lambda row: encode_rsg(tuple(_py(v) for v in row)), axis=1)
 
             return {
                 'Histogram': {
@@ -2552,18 +2554,16 @@ class Analysis:
                         'bins': self.request.bins,
                         'stratified': True,
                         'stratify_col': by[0] if len(by) == 1 else '_stratify_key',
-                        'stratify_by': list(by)
+                        'stratify_by': list(by),
                     },
-                    'strata': strata
+                    'strata': strata,
                 }
             }
 
         # Unstratified (by=[]) - full distribution
         output_data = data[[value_col]].copy()
         _mean_rounded = round(mean, spec.round_to) if pd.notna(mean) else None
-        _std_rounded = (
-            round(std, spec.round_to) if n >= 2 and pd.notna(std) else None
-        )
+        _std_rounded = round(std, spec.round_to) if n >= 2 and pd.notna(std) else None
 
         return {
             'Histogram': {
@@ -2579,10 +2579,6 @@ class Analysis:
                     'std': _std_rounded,
                     'n': n,
                 },
-                'metadata': {
-                    'chart_type': 'Histogram',
-                    'value_col': value_col,
-                    'bins': self.request.bins
-                }
+                'metadata': {'chart_type': 'Histogram', 'value_col': value_col, 'bins': self.request.bins},
             }
         }

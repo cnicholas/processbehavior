@@ -50,8 +50,7 @@ class ChartRenderSpec:
     def __post_init__(self) -> None:
         if self.chart_type not in VALID_CHART_TYPES:
             raise ChartNotAvailableError(
-                f"Unknown chart type: '{self.chart_type}'.\n"
-                f"Valid types: {sorted(VALID_CHART_TYPES)}",
+                f"Unknown chart type: '{self.chart_type}'.\nValid types: {sorted(VALID_CHART_TYPES)}",
                 chart=self.chart_type,
                 available=sorted(VALID_CHART_TYPES),
             )
@@ -117,15 +116,14 @@ def build_render_spec(
     if 'metadata' not in chart_info:
         raise PlotError(
             f"Chart '{chart_name}' missing metadata. "
-            f"This indicates a bug in chart calculation. "
+            f'This indicates a bug in chart calculation. '
             f"All charts must have metadata with 'value_col'."
         )
 
     value_col = metadata.get('value_col')
     if not value_col:
         raise PlotError(
-            f"Chart '{chart_name}' metadata missing 'value_col'. "
-            f"This indicates a bug in chart calculation."
+            f"Chart '{chart_name}' metadata missing 'value_col'. This indicates a bug in chart calculation."
         )
 
     chart_type = metadata.get('chart_type', chart_name.split('_')[0])

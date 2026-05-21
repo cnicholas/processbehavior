@@ -300,6 +300,7 @@ def xmr_only_data():
     Use for: Simplest XmR scenario, response-only formulation tests
     """
     import pandas as pd
+
     # Use make_sds4 but drop the time column to simulate response-only input
     df = synthetic.make_sds(4, T=15, seed=42)
     return pd.DataFrame({'y': df['y'].values})
@@ -318,11 +319,14 @@ def simple_values():
     Use for: Testing Study properties, basic formulate() behavior
     """
     import pandas as pd
-    return pd.DataFrame({
-        'Value': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
-        'Factor': ['A', 'A', 'A', 'A', 'A', 'B', 'B', 'B', 'B', 'B'],
-        'Time': [1, 2, 3, 4, 5, 1, 2, 3, 4, 5]
-    })
+
+    return pd.DataFrame(
+        {
+            'Value': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+            'Factor': ['A', 'A', 'A', 'A', 'A', 'B', 'B', 'B', 'B', 'B'],
+            'Time': [1, 2, 3, 4, 5, 1, 2, 3, 4, 5],
+        }
+    )
 
 
 @pytest.fixture
@@ -333,6 +337,7 @@ def simple_values_10():
     Use for: Tests requiring valid XmR calculation (needs >2 points for mR)
     """
     import pandas as pd
+
     return pd.DataFrame({'Value': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]})
 
 
@@ -345,11 +350,9 @@ def simple_timeseries():
     Use for: Time series tests with explicit ordering
     """
     import pandas as pd
+
     np.random.seed(42)
-    return pd.DataFrame({
-        'Measurement': np.random.normal(100, 5, 30),
-        'Time': range(1, 31)
-    })
+    return pd.DataFrame({'Measurement': np.random.normal(100, 5, 30), 'Time': range(1, 31)})
 
 
 # ============================================================================
@@ -368,16 +371,13 @@ def grouped_single_factor():
     Use for: Single-factor Xbar/S tests, Study properties with grouping
     """
     import pandas as pd
+
     np.random.seed(42)
     data_rows = []
     for batch in ['A', 'B']:
         for time in range(1, 6):
             for _ in range(3):
-                data_rows.append({
-                    'Value': np.random.normal(50, 3),
-                    'Batch': batch,
-                    'Time': time
-                })
+                data_rows.append({'Value': np.random.normal(50, 3), 'Batch': batch, 'Time': time})
     return pd.DataFrame(data_rows)
 
 
@@ -392,16 +392,13 @@ def grouped_for_residuals():
     Use for: R4_Xbar, R4_S, R5_Xbar, R5_S, R3_Xbar, R3_S tests
     """
     import pandas as pd
+
     np.random.seed(42)
     data_rows = []
     for factor in ['A', 'B', 'C']:
         for time in range(1, 6):
             for _ in range(2):
-                data_rows.append({
-                    'Value': np.random.normal(50, 3),
-                    'Factor': factor,
-                    'Time': time
-                })
+                data_rows.append({'Value': np.random.normal(50, 3), 'Factor': factor, 'Time': time})
     return pd.DataFrame(data_rows)
 
 
@@ -416,14 +413,11 @@ def grouped_four_factors():
     Use for: Tests verifying R4 has time-based subgroups, R5 has factor-based
     """
     import pandas as pd
+
     np.random.seed(42)
     data_rows = []
     for factor in ['A', 'B', 'C', 'D']:
         for time in range(1, 7):
             for _ in range(2):
-                data_rows.append({
-                    'Value': np.random.normal(50, 3),
-                    'Factor': factor,
-                    'Time': time
-                })
+                data_rows.append({'Value': np.random.normal(50, 3), 'Factor': factor, 'Time': time})
     return pd.DataFrame(data_rows)

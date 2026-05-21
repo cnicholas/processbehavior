@@ -45,7 +45,7 @@ class TestDataGenerationPerformance:
         elapsed = time.perf_counter() - start
 
         assert len(df) == 1_000_000
-        print(f'\nGenerated 1M rows in {elapsed:.2f}s ({len(df)/elapsed:,.0f} rows/sec)')
+        print(f'\nGenerated 1M rows in {elapsed:.2f}s ({len(df) / elapsed:,.0f} rows/sec)')
 
     def test_add_extra_columns_performance(self, large_dataset_10k):
         """Measure overhead of adding 46 extra columns."""
@@ -273,7 +273,7 @@ class TestComponentPerformance:
         memory_full = df.memory_usage(deep=True).sum() / (1024 * 1024)
         memory_subset = result.memory_usage(deep=True).sum() / (1024 * 1024)
         print(f'\nColumn subset: {elapsed:.3f}s')
-        print(f'Memory: {memory_full:.1f}MB -> {memory_subset:.1f}MB ({memory_subset/memory_full:.1%})')
+        print(f'Memory: {memory_full:.1f}MB -> {memory_subset:.1f}MB ({memory_subset / memory_full:.1%})')
 
 
 # ============================================================================

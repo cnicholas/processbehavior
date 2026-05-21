@@ -23,8 +23,9 @@ from processbehavior.spc_constants import (
 # Test: c4 (bias correction constant)
 # ============================================================================
 
+
 @pytest.mark.parametrize(
-    "n, expected, tol",
+    'n, expected, tol',
     [
         (2, 0.7979, 0.001),
         (3, 0.8862, 0.001),
@@ -32,18 +33,18 @@ from processbehavior.spc_constants import (
         (5, 0.9400, 0.001),
         (10, 0.9727, 0.001),
         (25, 0.9896, 0.001),
-        (100, None, None),   # monotonic check only
+        (100, None, None),  # monotonic check only
         (1000, None, None),  # monotonic + close-to-1 check
     ],
     ids=[
-        "c4(2)=0.7979",
-        "c4(3)=0.8862",
-        "c4(4)=0.9213",
-        "c4(5)=0.9400",
-        "c4(10)=0.9727",
-        "c4(25)=0.9896",
-        "c4(100)-monotonic",
-        "c4(1000)-approaches-1",
+        'c4(2)=0.7979',
+        'c4(3)=0.8862',
+        'c4(4)=0.9213',
+        'c4(5)=0.9400',
+        'c4(10)=0.9727',
+        'c4(25)=0.9896',
+        'c4(100)-monotonic',
+        'c4(1000)-approaches-1',
     ],
 )
 def test_c4_values(n, expected, tol):
@@ -59,10 +60,10 @@ def test_c4_values(n, expected, tol):
         assert val > 0.999
 
 
-@pytest.mark.parametrize("n", [1, 0, -5], ids=["n=1", "n=0", "n=-5"])
+@pytest.mark.parametrize('n', [1, 0, -5], ids=['n=1', 'n=0', 'n=-5'])
 def test_c4_raises_on_invalid_n(n):
     """c4 should raise error for n < 2."""
-    with pytest.raises(ValueError, match="Subgroup size must be >= 2"):
+    with pytest.raises(ValueError, match='Subgroup size must be >= 2'):
         c4(n)
 
 
@@ -70,8 +71,9 @@ def test_c4_raises_on_invalid_n(n):
 # Test: b3 and b4 (S chart limit constants)
 # ============================================================================
 
+
 @pytest.mark.parametrize(
-    "func, n, expected, tol",
+    'func, n, expected, tol',
     [
         # b3: clamped to 0 for small n
         (b3, 2, 0, 0.001),
@@ -89,17 +91,17 @@ def test_c4_raises_on_invalid_n(n):
         (b4, 25, 1.435, 0.01),
     ],
     ids=[
-        "b3(2)=0-clamped",
-        "b3(3)=0-clamped",
-        "b3(4)=0-clamped",
-        "b3(5)=0-clamped",
-        "b3(6)=0.030",
-        "b3(10)=0.284",
-        "b3(25)=0.565",
-        "b4(2)=3.267",
-        "b4(5)=2.089",
-        "b4(10)=1.716",
-        "b4(25)=1.435",
+        'b3(2)=0-clamped',
+        'b3(3)=0-clamped',
+        'b3(4)=0-clamped',
+        'b3(5)=0-clamped',
+        'b3(6)=0.030',
+        'b3(10)=0.284',
+        'b3(25)=0.565',
+        'b4(2)=3.267',
+        'b4(5)=2.089',
+        'b4(10)=1.716',
+        'b4(25)=1.435',
     ],
 )
 def test_b3_b4_known_values(func, n, expected, tol):
@@ -112,10 +114,10 @@ def test_b4_decreases_with_n():
     assert b4(2) > b4(10) > b4(100)
 
 
-@pytest.mark.parametrize("func", [b3, b4], ids=["b3", "b4"])
+@pytest.mark.parametrize('func', [b3, b4], ids=['b3', 'b4'])
 def test_b3_b4_raises_on_invalid_n(func):
     """b3/b4 should raise error for n < 2."""
-    with pytest.raises(ValueError, match="Subgroup size must be >= 2"):
+    with pytest.raises(ValueError, match='Subgroup size must be >= 2'):
         func(1)
 
 
@@ -123,19 +125,20 @@ def test_b3_b4_raises_on_invalid_n(func):
 # Test: calculate_limits
 # ============================================================================
 
+
 @pytest.mark.parametrize(
-    "limits_type, kwargs, expected_lpl, expected_upl, lpl_tol, upl_tol",
+    'limits_type, kwargs, expected_lpl, expected_upl, lpl_tol, upl_tol',
     [
         # Xbar: mean=10, sd=0.5, N=5 → Wd=0.5/c4(5)≈0.5319, limits=10±(3*0.5319)/√5≈10±0.714
-        ("Xbar", dict(mean=10.0, sd=0.5, N=5), 9.286, 10.714, 0.01, 0.01),
+        ('Xbar', dict(mean=10.0, sd=0.5, N=5), 9.286, 10.714, 0.01, 0.01),
         # S: sd=0.5, N=5 → LPL=0.5*b3(5)=0, UPL=0.5*b4(5)≈1.044
-        ("S", dict(sd=0.5, N=5), 0.0, 1.044, 0.001, 0.01),
+        ('S', dict(sd=0.5, N=5), 0.0, 1.044, 0.001, 0.01),
         # XmR: mean=10, mR=0.3 → 10±2.66*0.3=10±0.798
-        ("XmR", dict(mean=10.0, mR=0.3), 10.0 - 2.66 * 0.3, 10.0 + 2.66 * 0.3, 0.001, 0.001),
+        ('XmR', dict(mean=10.0, mR=0.3), 10.0 - 2.66 * 0.3, 10.0 + 2.66 * 0.3, 0.001, 0.001),
         # R: mR=0.3 → LPL=0, UPL=0.3*3.268
-        ("R", dict(mR=0.3), 0.0, 0.3 * 3.268, 0.001, 0.001),
+        ('R', dict(mR=0.3), 0.0, 0.3 * 3.268, 0.001, 0.001),
     ],
-    ids=["Xbar", "S", "XmR", "R"],
+    ids=['Xbar', 'S', 'XmR', 'R'],
 )
 def test_calculate_limits(limits_type, kwargs, expected_lpl, expected_upl, lpl_tol, upl_tol):
     """Should calculate chart limits correctly for each chart type."""
@@ -148,30 +151,30 @@ def test_calculate_limits(limits_type, kwargs, expected_lpl, expected_upl, lpl_t
 
 
 @pytest.mark.parametrize(
-    "limits_type, kwargs, match_pattern",
+    'limits_type, kwargs, match_pattern',
     [
-        ("Xbar", dict(mean=10.0, sd=0.5), r"requires \(mean, sd, and N\)"),
-        ("Xbar", dict(mean=10.0, N=5), r"requires \(mean, sd, and N\)"),
-        ("Xbar", dict(sd=0.5, N=5), r"requires \(mean, sd, and N\)"),
-        ("S", dict(sd=0.5), r"requires \(sd, and N\)"),
-        ("S", dict(N=5), r"requires \(sd, and N\)"),
-        ("XmR", dict(mean=10.0), r"requires \(mean, and mR\)"),
-        ("XmR", dict(mR=0.3), r"requires \(mean, and mR\)"),
-        ("R", dict(), r"requires \(mR\)"),
-        ("Invalid", dict(mean=10.0, sd=1.0, N=5), "not supported"),
-        ("p", dict(mean=0.5, N=100), "not supported"),
+        ('Xbar', dict(mean=10.0, sd=0.5), r'requires \(mean, sd, and N\)'),
+        ('Xbar', dict(mean=10.0, N=5), r'requires \(mean, sd, and N\)'),
+        ('Xbar', dict(sd=0.5, N=5), r'requires \(mean, sd, and N\)'),
+        ('S', dict(sd=0.5), r'requires \(sd, and N\)'),
+        ('S', dict(N=5), r'requires \(sd, and N\)'),
+        ('XmR', dict(mean=10.0), r'requires \(mean, and mR\)'),
+        ('XmR', dict(mR=0.3), r'requires \(mean, and mR\)'),
+        ('R', dict(), r'requires \(mR\)'),
+        ('Invalid', dict(mean=10.0, sd=1.0, N=5), 'not supported'),
+        ('p', dict(mean=0.5, N=100), 'not supported'),
     ],
     ids=[
-        "Xbar-missing-N",
-        "Xbar-missing-sd",
-        "Xbar-missing-mean",
-        "S-missing-N",
-        "S-missing-sd",
-        "XmR-missing-mR",
-        "XmR-missing-mean",
-        "R-missing-mR",
-        "invalid-type",
-        "unsupported-p-chart",
+        'Xbar-missing-N',
+        'Xbar-missing-sd',
+        'Xbar-missing-mean',
+        'S-missing-N',
+        'S-missing-sd',
+        'XmR-missing-mR',
+        'XmR-missing-mean',
+        'R-missing-mR',
+        'invalid-type',
+        'unsupported-p-chart',
     ],
 )
 def test_calculate_limits_missing_or_invalid(limits_type, kwargs, match_pattern):
@@ -181,12 +184,12 @@ def test_calculate_limits_missing_or_invalid(limits_type, kwargs, match_pattern)
 
 
 @pytest.mark.parametrize(
-    "limits_type, kwargs",
+    'limits_type, kwargs',
     [
-        ("Xbar", dict(mean=100.0, sd=2.0, N=10)),
-        ("XmR", dict(mean=50.0, mR=1.5)),
+        ('Xbar', dict(mean=100.0, sd=2.0, N=10)),
+        ('XmR', dict(mean=50.0, mR=1.5)),
     ],
-    ids=["Xbar-symmetric", "XmR-symmetric"],
+    ids=['Xbar-symmetric', 'XmR-symmetric'],
 )
 def test_calculate_limits_symmetric(limits_type, kwargs):
     """Xbar and XmR limits should be symmetric around mean."""
@@ -219,8 +222,9 @@ def test_calculate_limits_r_lcl_always_zero():
 # Test: detect_beyond_limits
 # ============================================================================
 
+
 @pytest.mark.parametrize(
-    "value, lpl, upl, expected",
+    'value, lpl, upl, expected',
     [
         # Within limits
         (10.0, 9.0, 11.0, 0),
@@ -247,23 +251,23 @@ def test_calculate_limits_r_lcl_always_zero():
         (8.999, 9.0, 11.0, -1),
     ],
     ids=[
-        "within-center",
-        "within-low",
-        "within-high",
-        "at-lpl",
-        "at-upl",
-        "below-lpl-near",
-        "below-lpl-far",
-        "below-lpl-zero",
-        "above-upl-near",
-        "above-upl-far",
-        "above-upl-extreme",
-        "negative-limits-within",
-        "negative-limits-below",
-        "negative-limits-above",
-        "float-within",
-        "float-above",
-        "float-below",
+        'within-center',
+        'within-low',
+        'within-high',
+        'at-lpl',
+        'at-upl',
+        'below-lpl-near',
+        'below-lpl-far',
+        'below-lpl-zero',
+        'above-upl-near',
+        'above-upl-far',
+        'above-upl-extreme',
+        'negative-limits-within',
+        'negative-limits-below',
+        'negative-limits-above',
+        'float-within',
+        'float-above',
+        'float-below',
     ],
 )
 def test_detect_beyond_limits(value, lpl, upl, expected):
@@ -274,6 +278,7 @@ def test_detect_beyond_limits(value, lpl, upl, expected):
 # ============================================================================
 # Test: Integration - Full workflow
 # ============================================================================
+
 
 def test_full_xbar_workflow():
     """Test complete workflow: calculate limits and detect signals."""
@@ -302,14 +307,15 @@ def test_full_xmr_workflow():
 # Test: Edge Cases
 # ============================================================================
 
+
 @pytest.mark.parametrize(
-    "mean, sd, N",
+    'mean, sd, N',
     [
         (10.0, 0.0, 5),
         (1e6, 1e3, 5),
         (1e-6, 1e-8, 5),
     ],
-    ids=["zero-sd", "large-values", "small-values"],
+    ids=['zero-sd', 'large-values', 'small-values'],
 )
 def test_calculate_limits_edge_cases(mean, sd, N):
     """Should handle edge-case numeric values."""

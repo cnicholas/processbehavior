@@ -33,7 +33,7 @@ def _make_cap_two_sided(*, with_r2: bool = True, sigma_hat: float = 1.5) -> Capa
 
     cp = cpk = cpk_lower = cpk_upper = sigma_hat_r2 = None
     potential_values = None
-    reason = "no R2" if not with_r2 else None
+    reason = 'no R2' if not with_r2 else None
     if with_r2:
         sigma_hat_r2 = 0.8
         cp = (243 - 233) / (6 * sigma_hat_r2)
@@ -53,17 +53,34 @@ def _make_cap_two_sided(*, with_r2: bool = True, sigma_hat: float = 1.5) -> Capa
         pot_pct_above = pot_n_above / n * 100
 
     return CapabilityResult(
-        specs=specs, n=n, y_bar=y_bar, s=sigma_hat * 0.99, sigma_hat=sigma_hat,
-        pp=pp, ppk_lower=ppk_lower, ppk_upper=ppk_upper, ppk=ppk,
-        sigma_hat_r2=sigma_hat_r2, cp=cp, cpk_lower=cpk_lower,
-        cpk_upper=cpk_upper, cpk=cpk,
+        specs=specs,
+        n=n,
+        y_bar=y_bar,
+        s=sigma_hat * 0.99,
+        sigma_hat=sigma_hat,
+        pp=pp,
+        ppk_lower=ppk_lower,
+        ppk_upper=ppk_upper,
+        ppk=ppk,
+        sigma_hat_r2=sigma_hat_r2,
+        cp=cp,
+        cpk_lower=cpk_lower,
+        cpk_upper=cpk_upper,
+        cpk=cpk,
         potential_unavailable_reason=reason,
         potential_values=potential_values,
-        z_lower=(y_bar - 233) / sigma_hat, z_upper=(243 - y_bar) / sigma_hat,
-        n_below_lsl=2, n_above_usl=3, n_outside=5,
-        pct_below_lsl=2.0, pct_above_usl=3.0, pct_outside=5.0,
-        potential_n_below_lsl=pot_n_below, potential_n_above_usl=pot_n_above,
-        potential_pct_below_lsl=pot_pct_below, potential_pct_above_usl=pot_pct_above,
+        z_lower=(y_bar - 233) / sigma_hat,
+        z_upper=(243 - y_bar) / sigma_hat,
+        n_below_lsl=2,
+        n_above_usl=3,
+        n_outside=5,
+        pct_below_lsl=2.0,
+        pct_above_usl=3.0,
+        pct_outside=5.0,
+        potential_n_below_lsl=pot_n_below,
+        potential_n_above_usl=pot_n_above,
+        potential_pct_below_lsl=pot_pct_below,
+        potential_pct_above_usl=pot_pct_above,
         round_to=3,
     )
 
@@ -74,16 +91,29 @@ def _make_cap_usl_only() -> CapabilityResult:
     y_bar = 238.0
     sigma_hat = 1.5
     return CapabilityResult(
-        specs=specs, n=100, y_bar=y_bar, s=1.485, sigma_hat=sigma_hat,
-        pp=None, ppk_lower=None,
+        specs=specs,
+        n=100,
+        y_bar=y_bar,
+        s=1.485,
+        sigma_hat=sigma_hat,
+        pp=None,
+        ppk_lower=None,
         ppk_upper=(242 - y_bar) / (3 * sigma_hat),
         ppk=(242 - y_bar) / (3 * sigma_hat),
-        sigma_hat_r2=None, cp=None, cpk_lower=None,
-        cpk_upper=None, cpk=None,
-        potential_unavailable_reason="no R2",
-        z_lower=None, z_upper=(242 - y_bar) / sigma_hat,
-        n_below_lsl=None, n_above_usl=5, n_outside=5,
-        pct_below_lsl=None, pct_above_usl=5.0, pct_outside=5.0,
+        sigma_hat_r2=None,
+        cp=None,
+        cpk_lower=None,
+        cpk_upper=None,
+        cpk=None,
+        potential_unavailable_reason='no R2',
+        z_lower=None,
+        z_upper=(242 - y_bar) / sigma_hat,
+        n_below_lsl=None,
+        n_above_usl=5,
+        n_outside=5,
+        pct_below_lsl=None,
+        pct_above_usl=5.0,
+        pct_outside=5.0,
         round_to=3,
     )
 
@@ -94,17 +124,29 @@ def _make_cap_lsl_only() -> CapabilityResult:
     y_bar = 238.0
     sigma_hat = 1.5
     return CapabilityResult(
-        specs=specs, n=100, y_bar=y_bar, s=1.485, sigma_hat=sigma_hat,
+        specs=specs,
+        n=100,
+        y_bar=y_bar,
+        s=1.485,
+        sigma_hat=sigma_hat,
         pp=None,
         ppk_lower=(y_bar - 234) / (3 * sigma_hat),
         ppk_upper=None,
         ppk=(y_bar - 234) / (3 * sigma_hat),
-        sigma_hat_r2=None, cp=None, cpk_lower=None,
-        cpk_upper=None, cpk=None,
-        potential_unavailable_reason="no R2",
-        z_lower=(y_bar - 234) / sigma_hat, z_upper=None,
-        n_below_lsl=3, n_above_usl=None, n_outside=3,
-        pct_below_lsl=3.0, pct_above_usl=None, pct_outside=3.0,
+        sigma_hat_r2=None,
+        cp=None,
+        cpk_lower=None,
+        cpk_upper=None,
+        cpk=None,
+        potential_unavailable_reason='no R2',
+        z_lower=(y_bar - 234) / sigma_hat,
+        z_upper=None,
+        n_below_lsl=3,
+        n_above_usl=None,
+        n_outside=3,
+        pct_below_lsl=3.0,
+        pct_above_usl=None,
+        pct_outside=3.0,
         round_to=3,
     )
 
@@ -113,15 +155,29 @@ def _make_cap_sigma_zero() -> CapabilityResult:
     """CapabilityResult with sigma_hat=0 (all identical values)."""
     specs = SpecLimits(usl=243, lsl=233)
     return CapabilityResult(
-        specs=specs, n=50, y_bar=238.0, s=0.0, sigma_hat=0.0,
-        pp=float("inf"), ppk_lower=float("inf"),
-        ppk_upper=float("inf"), ppk=float("inf"),
-        sigma_hat_r2=None, cp=None, cpk_lower=None,
-        cpk_upper=None, cpk=None,
-        potential_unavailable_reason="no R2",
-        z_lower=float("inf"), z_upper=float("inf"),
-        n_below_lsl=0, n_above_usl=0, n_outside=0,
-        pct_below_lsl=0.0, pct_above_usl=0.0, pct_outside=0.0,
+        specs=specs,
+        n=50,
+        y_bar=238.0,
+        s=0.0,
+        sigma_hat=0.0,
+        pp=float('inf'),
+        ppk_lower=float('inf'),
+        ppk_upper=float('inf'),
+        ppk=float('inf'),
+        sigma_hat_r2=None,
+        cp=None,
+        cpk_lower=None,
+        cpk_upper=None,
+        cpk=None,
+        potential_unavailable_reason='no R2',
+        z_lower=float('inf'),
+        z_upper=float('inf'),
+        n_below_lsl=0,
+        n_above_usl=0,
+        n_outside=0,
+        pct_below_lsl=0.0,
+        pct_above_usl=0.0,
+        pct_outside=0.0,
         round_to=3,
     )
 
@@ -155,8 +211,8 @@ class TestHistogram:
 
     def test_x_label_applied(self, sample_values):
         cap = _make_cap_two_sided()
-        fig = create_capability_chart(cap, sample_values, x_label="Measurement (mm)")
-        assert fig.layout.xaxis.title.text == "Measurement (mm)"
+        fig = create_capability_chart(cap, sample_values, x_label='Measurement (mm)')
+        assert fig.layout.xaxis.title.text == 'Measurement (mm)'
 
 
 # ============================================================================
@@ -166,37 +222,37 @@ class TestHistogram:
 
 def _get_vline_shapes(fig: go.Figure) -> list:
     """Extract vline shapes from figure (type='line', x0==x1)."""
-    return [
-        s for s in (fig.layout.shapes or [])
-        if s.type == "line" and s.x0 == s.x1
-    ]
+    return [s for s in (fig.layout.shapes or []) if s.type == 'line' and s.x0 == s.x1]
 
 
 def _get_vrect_shapes(fig: go.Figure) -> list:
     """Extract vrect shapes from figure (type='rect')."""
-    return [
-        s for s in (fig.layout.shapes or [])
-        if s.type == "rect"
-    ]
+    return [s for s in (fig.layout.shapes or []) if s.type == 'rect']
 
 
 class TestSpecLines:
     """Verify spec limit vertical lines."""
 
     @pytest.mark.parametrize(
-        "make_cap, expected_present, expected_absent",
+        'make_cap, expected_present, expected_absent',
         [
             pytest.param(
-                _make_cap_two_sided, [233, 243], [],
-                id="two_sided-lsl_and_usl",
+                _make_cap_two_sided,
+                [233, 243],
+                [],
+                id='two_sided-lsl_and_usl',
             ),
             pytest.param(
-                _make_cap_usl_only, [242], [234],
-                id="usl_only-usl_no_lsl",
+                _make_cap_usl_only,
+                [242],
+                [234],
+                id='usl_only-usl_no_lsl',
             ),
             pytest.param(
-                _make_cap_lsl_only, [234], [],
-                id="lsl_only-lsl_present",
+                _make_cap_lsl_only,
+                [234],
+                [],
+                id='lsl_only-lsl_present',
             ),
         ],
     )
@@ -206,9 +262,9 @@ class TestSpecLines:
         vlines = _get_vline_shapes(fig)
         x_values = [s.x0 for s in vlines]
         for val in expected_present:
-            assert val in x_values, f"Expected {val} in vline x-values"
+            assert val in x_values, f'Expected {val} in vline x-values'
         for val in expected_absent:
-            assert val not in x_values, f"Expected {val} NOT in vline x-values"
+            assert val not in x_values, f'Expected {val} NOT in vline x-values'
 
     def test_target_line_present(self, sample_values):
         """Two-sided with target=238 → target vline present."""
@@ -234,19 +290,25 @@ class TestOutOfSpecShading:
     """Verify vrect shading for out-of-spec regions."""
 
     @pytest.mark.parametrize(
-        "make_cap, expected_count, check_fn",
+        'make_cap, expected_count, check_fn',
         [
             pytest.param(
-                _make_cap_two_sided, 2, None,
-                id="two_sided-two_vrects",
+                _make_cap_two_sided,
+                2,
+                None,
+                id='two_sided-two_vrects',
             ),
             pytest.param(
-                _make_cap_usl_only, 1, lambda vrects: vrects[0].x0 >= 240,
-                id="usl_only-usl_vrect",
+                _make_cap_usl_only,
+                1,
+                lambda vrects: vrects[0].x0 >= 240,
+                id='usl_only-usl_vrect',
             ),
             pytest.param(
-                _make_cap_lsl_only, 1, lambda vrects: vrects[0].x1 <= 236,
-                id="lsl_only-lsl_vrect",
+                _make_cap_lsl_only,
+                1,
+                lambda vrects: vrects[0].x1 <= 236,
+                id='lsl_only-lsl_vrect',
             ),
         ],
     )
@@ -308,46 +370,54 @@ class TestNPLLines:
 def _get_annotation_text(fig: go.Figure) -> str:
     """Get text from the capability index annotation (top-right, monospace)."""
     for ann in fig.layout.annotations:
-        if hasattr(ann, 'font') and ann.font and ann.font.family == "monospace":
+        if hasattr(ann, 'font') and ann.font and ann.font.family == 'monospace':
             return ann.text
-    return ""
+    return ''
 
 
 class TestAnnotationBox:
     """Verify capability index annotation content."""
 
     @pytest.mark.parametrize(
-        "make_cap_kwargs, chart_kwargs, expected_present, expected_absent",
+        'make_cap_kwargs, chart_kwargs, expected_present, expected_absent',
         [
             pytest.param(
-                {}, {},
-                ["PP  Index", "PPL Index", "PPU Index"],
+                {},
+                {},
+                ['PP  Index', 'PPL Index', 'PPU Index'],
                 [],
-                id="two_sided-shows_pp_ppl_ppu",
+                id='two_sided-shows_pp_ppl_ppu',
             ),
             pytest.param(
-                {"with_r2": True}, {},
-                ["PP  Index"],
-                ["Cp ", "Cpk"],
-                id="two_sided_with_r2-current_omits_cp_cpk",
+                {'with_r2': True},
+                {},
+                ['PP  Index'],
+                ['Cp ', 'Cpk'],
+                id='two_sided_with_r2-current_omits_cp_cpk',
             ),
             pytest.param(
-                {"with_r2": False}, {},
-                ["PP  Index", "PPL Index", "PPU Index"],
-                ["Cp ", "Cpk"],
-                id="no_r2-omits_cp_cpk",
+                {'with_r2': False},
+                {},
+                ['PP  Index', 'PPL Index', 'PPU Index'],
+                ['Cp ', 'Cpk'],
+                id='no_r2-omits_cp_cpk',
             ),
             pytest.param(
-                {"with_r2": True}, {"show_potential": False},
-                ["PP  Index"],
-                ["Cp ", "Cpk"],
-                id="show_potential_false-omits_cp_cpk",
+                {'with_r2': True},
+                {'show_potential': False},
+                ['PP  Index'],
+                ['Cp ', 'Cpk'],
+                id='show_potential_false-omits_cp_cpk',
             ),
         ],
     )
     def test_annotation_indices(
-        self, sample_values, make_cap_kwargs, chart_kwargs,
-        expected_present, expected_absent,
+        self,
+        sample_values,
+        make_cap_kwargs,
+        chart_kwargs,
+        expected_present,
+        expected_absent,
     ):
         cap = _make_cap_two_sided(**make_cap_kwargs)
         fig = create_capability_chart(cap, sample_values, **chart_kwargs)
@@ -358,10 +428,10 @@ class TestAnnotationBox:
             assert label not in text, f"Expected '{label}' NOT in annotation"
 
     @pytest.mark.parametrize(
-        "make_cap, expected_labels",
+        'make_cap, expected_labels',
         [
-            pytest.param(_make_cap_usl_only, ["PPU Index", "Pct Above USL"], id="usl_only"),
-            pytest.param(_make_cap_lsl_only, ["PPL Index", "Pct Below LSL"], id="lsl_only"),
+            pytest.param(_make_cap_usl_only, ['PPU Index', 'Pct Above USL'], id='usl_only'),
+            pytest.param(_make_cap_lsl_only, ['PPL Index', 'Pct Below LSL'], id='lsl_only'),
         ],
     )
     def test_one_sided_annotations(self, sample_values, make_cap, expected_labels):
@@ -375,15 +445,15 @@ class TestAnnotationBox:
         cap = _make_cap_two_sided()
         fig = create_capability_chart(cap, sample_values)
         text = _get_annotation_text(fig)
-        assert "n = 100" in text
-        assert "\u03c3\u0302" in text
+        assert 'n = 100' in text
+        assert '\u03c3\u0302' in text
 
     def test_two_sided_shows_pct_below_and_above(self, sample_values):
         cap = _make_cap_two_sided()
         fig = create_capability_chart(cap, sample_values)
         text = _get_annotation_text(fig)
-        assert "Pct Below LSL" in text
-        assert "Pct Above USL" in text
+        assert 'Pct Below LSL' in text
+        assert 'Pct Above USL' in text
 
 
 # ============================================================================
@@ -395,15 +465,17 @@ class TestTitle:
     """Verify title generation."""
 
     @pytest.mark.parametrize(
-        "make_cap, expected_substrings",
+        'make_cap, expected_substrings',
         [
             pytest.param(
-                _make_cap_two_sided, ["LSL=233", "USL=243", "Target=238"],
-                id="two_sided",
+                _make_cap_two_sided,
+                ['LSL=233', 'USL=243', 'Target=238'],
+                id='two_sided',
             ),
             pytest.param(
-                _make_cap_usl_only, ["USL=242"],
-                id="usl_only",
+                _make_cap_usl_only,
+                ['USL=242'],
+                id='usl_only',
             ),
         ],
     )
@@ -415,8 +487,8 @@ class TestTitle:
 
     def test_custom_title(self, sample_values):
         cap = _make_cap_two_sided()
-        fig = create_capability_chart(cap, sample_values, title="Custom Title")
-        assert fig.layout.title.text == "Custom Title"
+        fig = create_capability_chart(cap, sample_values, title='Custom Title')
+        assert fig.layout.title.text == 'Custom Title'
 
 
 # ============================================================================
@@ -428,10 +500,10 @@ class TestTheme:
     """Verify theme colors are applied."""
 
     @pytest.mark.parametrize(
-        "theme_name, chart_kwargs",
+        'theme_name, chart_kwargs',
         [
-            pytest.param("dark", {"theme": get_theme("dark")}, id="custom_dark"),
-            pytest.param("processbehavior", {}, id="default"),
+            pytest.param('dark', {'theme': get_theme('dark')}, id='custom_dark'),
+            pytest.param('processbehavior', {}, id='default'),
         ],
     )
     def test_theme_data_color(self, sample_values, theme_name, chart_kwargs):
@@ -456,8 +528,8 @@ class TestConvenienceMethod:
 
     def test_plot_passes_kwargs(self, sample_values):
         cap = _make_cap_two_sided()
-        fig = cap.plot(sample_values, title="Via .plot()", nbins=15)
-        assert fig.layout.title.text == "Via .plot()"
+        fig = cap.plot(sample_values, title='Via .plot()', nbins=15)
+        assert fig.layout.title.text == 'Via .plot()'
         assert fig.data[0].nbinsx == 15
 
 
@@ -479,12 +551,12 @@ class TestEdgeCases:
         assert len(fig.data[0].x) == 3
 
     @pytest.mark.parametrize(
-        "make_values",
+        'make_values',
         [
-            pytest.param(lambda: [237.0, 238.0, 239.0, 240.0], id="list"),
+            pytest.param(lambda: [237.0, 238.0, 239.0, 240.0], id='list'),
             pytest.param(
-                lambda: __import__("pandas").Series([237.0, 238.0, 239.0, 240.0]),
-                id="pandas_series",
+                lambda: __import__('pandas').Series([237.0, 238.0, 239.0, 240.0]),
+                id='pandas_series',
             ),
         ],
     )
@@ -514,7 +586,7 @@ class TestViewParameter:
         """cap.plot(values) produces same output as cap.plot(values, view='current')."""
         cap = _make_cap_two_sided(with_r2=True)
         fig_default = create_capability_chart(cap, sample_values)
-        fig_explicit = create_capability_chart(cap, sample_values, view="current")
+        fig_explicit = create_capability_chart(cap, sample_values, view='current')
         # Same annotation text
         assert _get_annotation_text(fig_default) == _get_annotation_text(fig_explicit)
         # Same number of shapes (vlines)
@@ -523,7 +595,7 @@ class TestViewParameter:
     def test_view_potential_histograms_recentered_r2(self, sample_values):
         """view='potential' → histogram uses y_bar + R2, not raw Y values."""
         cap = _make_cap_two_sided(with_r2=True)
-        fig = create_capability_chart(cap, sample_values, view="potential")
+        fig = create_capability_chart(cap, sample_values, view='potential')
         hist = [t for t in fig.data if isinstance(t, go.Histogram)][0]
         # Histogram x-data should be potential_values, not raw sample_values
         np.testing.assert_array_equal(hist.x, cap.potential_values)
@@ -531,7 +603,7 @@ class TestViewParameter:
     def test_view_potential_no_npl_lines(self, sample_values):
         """view='potential' → no NPL vlines (only spec lines + mean)."""
         cap = _make_cap_two_sided(with_r2=True)
-        fig = create_capability_chart(cap, sample_values, view="potential")
+        fig = create_capability_chart(cap, sample_values, view='potential')
         vlines = _get_vline_shapes(fig)
         x_values = [s.x0 for s in vlines]
 
@@ -545,25 +617,26 @@ class TestViewParameter:
         assert cap.y_bar in x_values
 
     @pytest.mark.parametrize(
-        "extra_kwargs, expected_yaxis",
+        'extra_kwargs, expected_yaxis',
         [
-            pytest.param({}, "Percent", id="default_percent"),
+            pytest.param({}, 'Percent', id='default_percent'),
             pytest.param(
-                {"histnorm": "probability density"}, "Probability Density",
-                id="histnorm_override",
+                {'histnorm': 'probability density'},
+                'Probability Density',
+                id='histnorm_override',
             ),
         ],
     )
     def test_view_potential_yaxis_label(self, sample_values, extra_kwargs, expected_yaxis):
         """view='potential' y-axis label reflects histnorm setting."""
         cap = _make_cap_two_sided(with_r2=True)
-        fig = create_capability_chart(cap, sample_values, view="potential", **extra_kwargs)
+        fig = create_capability_chart(cap, sample_values, view='potential', **extra_kwargs)
         assert fig.layout.yaxis.title.text == expected_yaxis
 
     def test_view_current_still_shows_npl_lines(self, sample_values):
         """Regression: current view still has NPL lines."""
         cap = _make_cap_two_sided(with_r2=True)
-        fig = create_capability_chart(cap, sample_values, view="current")
+        fig = create_capability_chart(cap, sample_values, view='current')
         vlines = _get_vline_shapes(fig)
         x_values = [s.x0 for s in vlines]
 
@@ -575,37 +648,37 @@ class TestViewParameter:
     def test_view_potential_annotation_shows_cp_cpl_cpu(self, sample_values):
         """view='potential' → annotation has CP/CPL/CPU Index, not PP/PPL/PPU."""
         cap = _make_cap_two_sided(with_r2=True)
-        fig = create_capability_chart(cap, sample_values, view="potential")
+        fig = create_capability_chart(cap, sample_values, view='potential')
         text = _get_annotation_text(fig)
-        assert "CP  Index" in text
-        assert "CPL Index" in text
-        assert "CPU Index" in text
-        assert "PP  Index" not in text
-        assert "PPL Index" not in text
-        assert "PPU Index" not in text
-        assert "\u03c3\u0302(R2)" in text
-        assert "Pct Below LSL" in text
-        assert "Pct Above USL" in text
+        assert 'CP  Index' in text
+        assert 'CPL Index' in text
+        assert 'CPU Index' in text
+        assert 'PP  Index' not in text
+        assert 'PPL Index' not in text
+        assert 'PPU Index' not in text
+        assert '\u03c3\u0302(R2)' in text
+        assert 'Pct Below LSL' in text
+        assert 'Pct Above USL' in text
 
     def test_view_potential_without_r2_raises(self, sample_values):
         """SDS without R2 → ValidationError with helpful message."""
         from processbehavior.exceptions import ValidationError
 
         cap = _make_cap_two_sided(with_r2=False)
-        with pytest.raises(ValidationError, match="Cannot plot potential capability"):
-            create_capability_chart(cap, sample_values, view="potential")
+        with pytest.raises(ValidationError, match='Cannot plot potential capability'):
+            create_capability_chart(cap, sample_values, view='potential')
 
     def test_invalid_view_raises(self, sample_values):
         """view='foo' → ValueError."""
         cap = _make_cap_two_sided()
-        with pytest.raises(ValueError, match="view must be"):
-            create_capability_chart(cap, sample_values, view="foo")
+        with pytest.raises(ValueError, match='view must be'):
+            create_capability_chart(cap, sample_values, view='foo')
 
     def test_view_potential_title(self, sample_values):
         """view='potential' auto-title says 'Potential Capability'."""
         cap = _make_cap_two_sided(with_r2=True)
-        fig = create_capability_chart(cap, sample_values, view="potential")
-        assert "Potential Capability" in fig.layout.title.text
+        fig = create_capability_chart(cap, sample_values, view='potential')
+        assert 'Potential Capability' in fig.layout.title.text
 
 
 # ============================================================================
@@ -629,15 +702,14 @@ class TestPairedParameter:
         assert len(histograms) == 2
         # Two monospace annotation boxes
         mono_annotations = [
-            a for a in fig.layout.annotations
-            if hasattr(a, "font") and a.font and a.font.family == "monospace"
+            a for a in fig.layout.annotations if hasattr(a, 'font') and a.font and a.font.family == 'monospace'
         ]
         assert len(mono_annotations) == 2
 
     def test_paired_without_r2_warns_and_falls_back(self, sample_values):
         """No R2 → warning + single current panel."""
         cap = _make_cap_two_sided(with_r2=False)
-        with pytest.warns(UserWarning, match="Potential capability unavailable"):
+        with pytest.warns(UserWarning, match='Potential capability unavailable'):
             fig = create_capability_chart(cap, sample_values, paired=True)
         # Falls back to single chart — only one histogram
         histograms = [t for t in fig.data if isinstance(t, go.Histogram)]
@@ -648,5 +720,5 @@ class TestPairedParameter:
         cap = _make_cap_two_sided(with_r2=True)
         fig = create_capability_chart(cap, sample_values, paired=True)
         annotation_texts = [a.text for a in fig.layout.annotations]
-        assert "Current Capability" in annotation_texts
-        assert "Potential Capability" in annotation_texts
+        assert 'Current Capability' in annotation_texts
+        assert 'Potential Capability' in annotation_texts

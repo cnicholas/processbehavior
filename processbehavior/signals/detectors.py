@@ -10,12 +10,7 @@ from __future__ import annotations
 import pandas as pd
 
 
-def detect_beyond_limits(
-    data: pd.DataFrame,
-    stats: dict,
-    value_col: str,
-    limits_vary: bool = False
-) -> pd.Series:
+def detect_beyond_limits(data: pd.DataFrame, stats: dict, value_col: str, limits_vary: bool = False) -> pd.Series:
     """
     Rule 1: Points beyond control limits.
 
@@ -55,7 +50,7 @@ def detect_zone_a_2_of_3(
     stats: dict,
     value_col: str,
     zones,  # dict or DataFrame
-    limits_vary: bool = False
+    limits_vary: bool = False,
 ) -> pd.Series:
     """
     Rule 2: 2 of 3 consecutive points in Zone A.
@@ -108,7 +103,7 @@ def detect_zone_b_4_of_5(
     stats: dict,
     value_col: str,
     zones,  # dict or DataFrame
-    limits_vary: bool = False
+    limits_vary: bool = False,
 ) -> pd.Series:
     """
     Rule 3: 4 of 5 consecutive points in Zone B or beyond.
@@ -153,12 +148,7 @@ def detect_zone_b_4_of_5(
     return violations.fillna(False)
 
 
-def detect_run(
-    data: pd.DataFrame,
-    stats: dict,
-    value_col: str,
-    length: int = 8
-) -> pd.Series:
+def detect_run(data: pd.DataFrame, stats: dict, value_col: str, length: int = 8) -> pd.Series:
     """
     Rule 4: Run of points on same side of centerline.
 
@@ -197,11 +187,7 @@ def detect_run(
 
 
 def detect_trend(
-    data: pd.DataFrame,
-    stats: dict,
-    value_col: str,
-    length: int = 6,
-    direction: str = 'both'
+    data: pd.DataFrame, stats: dict, value_col: str, length: int = 6, direction: str = 'both'
 ) -> pd.Series:
     """
     Rule 5: Trending sequence.
@@ -236,27 +222,18 @@ def detect_trend(
     down_trend = pd.Series(False, index=values.index)
 
     if direction in ['up', 'both']:
-        increasing = (diffs > 0).astype(int).rolling(
-            window=length, min_periods=length
-        ).sum()
+        increasing = (diffs > 0).astype(int).rolling(window=length, min_periods=length).sum()
         up_trend = increasing == length
 
     if direction in ['down', 'both']:
-        decreasing = (diffs < 0).astype(int).rolling(
-            window=length, min_periods=length
-        ).sum()
+        decreasing = (diffs < 0).astype(int).rolling(window=length, min_periods=length).sum()
         down_trend = decreasing == length
 
     violations = up_trend | down_trend
     return violations.fillna(False)
 
 
-def detect_oscillation(
-    data: pd.DataFrame,
-    stats: dict,
-    value_col: str,
-    length: int = 14
-) -> pd.Series:
+def detect_oscillation(data: pd.DataFrame, stats: dict, value_col: str, length: int = 14) -> pd.Series:
     """
     Rule 6: Alternating up-down pattern.
 
@@ -297,7 +274,7 @@ def detect_reduced_variation(
     value_col: str,
     zones,  # dict or DataFrame
     limits_vary: bool = False,
-    length: int = 15
+    length: int = 15,
 ) -> pd.Series:
     """
     Rule 7: Points within Zone C (reduced variation).
@@ -330,20 +307,12 @@ def detect_reduced_variation(
     # Within Zone C
     if limits_vary:
         # Per-row zones
-        in_zone_c = (
-            (values > zones['C_lower_lower']) &
-            (values < zones['C_upper_upper'])
-        )
+        in_zone_c = (values > zones['C_lower_lower']) & (values < zones['C_upper_upper'])
     else:
         # Constant zones
-        in_zone_c = (
-            (values > zones['C_lower'][0]) &
-            (values < zones['C_upper'][1])
-        )
+        in_zone_c = (values > zones['C_lower'][0]) & (values < zones['C_upper'][1])
 
-    in_c_count = in_zone_c.astype(int).rolling(
-        window=length, min_periods=length
-    ).sum()
+    in_c_count = in_zone_c.astype(int).rolling(window=length, min_periods=length).sum()
 
     violations = in_c_count == length
     return violations.fillna(False)
@@ -355,7 +324,7 @@ def detect_avoiding_center(
     value_col: str,
     zones,  # dict or DataFrame
     limits_vary: bool = False,
-    length: int = 8
+    length: int = 8,
 ) -> pd.Series:
     """
     Rule 8: Points avoiding Zone C.
@@ -388,20 +357,12 @@ def detect_avoiding_center(
     # Outside Zone C
     if limits_vary:
         # Per-row zones
-        outside_c = (
-            (values <= zones['C_lower_lower']) |
-            (values >= zones['C_upper_upper'])
-        )
+        outside_c = (values <= zones['C_lower_lower']) | (values >= zones['C_upper_upper'])
     else:
         # Constant zones
-        outside_c = (
-            (values <= zones['C_lower'][0]) |
-            (values >= zones['C_upper'][1])
-        )
+        outside_c = (values <= zones['C_lower'][0]) | (values >= zones['C_upper'][1])
 
-    outside_count = outside_c.astype(int).rolling(
-        window=length, min_periods=length
-    ).sum()
+    outside_count = outside_c.astype(int).rolling(window=length, min_periods=length).sum()
 
     violations = outside_count == length
     return violations.fillna(False)

@@ -55,7 +55,7 @@ def create_main_effects_chart(
     theme: ChartTheme,
     factors: list[str] | None = None,
     width: int = 1000,
-    height: int | None = None
+    height: int | None = None,
 ) -> go.Figure:
     """
     Create horizontal bar chart showing all main effects.
@@ -112,10 +112,9 @@ def create_main_effects_chart(
 
     if not factor_effects and time_effects is None:
         raise ChartNotAvailableError(
-            "No main effects found to plot.\n"
-            f"Available effects keys: {list(effects.keys())}",
+            f'No main effects found to plot.\nAvailable effects keys: {list(effects.keys())}',
             chart='main_effects',
-            available=list(effects.keys())
+            available=list(effects.keys()),
         )
 
     # Build combined data for horizontal bar chart
@@ -131,7 +130,7 @@ def create_main_effects_chart(
         color = factor_colors[i % len(factor_colors)]
 
         for _, row in data.iterrows():
-            label = f"{factor_name}: {row[factor_col]}"
+            label = f'{factor_name}: {row[factor_col]}'
             all_labels.append(label)
             all_values.append(row['Main_Effect'])
             all_colors.append(color)
@@ -141,7 +140,7 @@ def create_main_effects_chart(
         name, data = time_effects
         time_col = data.columns[0]
         for _, row in data.iterrows():
-            label = f"Time: {row[time_col]}"
+            label = f'Time: {row[time_col]}'
             all_labels.append(label)
             all_values.append(row['PT_ME'])
             all_colors.append(theme.pattern_signal_color)
@@ -153,23 +152,20 @@ def create_main_effects_chart(
     # Create horizontal bar chart
     fig = go.Figure()
 
-    fig.add_trace(go.Bar(
-        y=all_labels,
-        x=all_values,
-        orientation='h',
-        marker_color=all_colors,
-        text=[f'{v:.3f}' for v in all_values],
-        textposition='outside',
-        hovertemplate='%{y}<br>Effect: %{x:.4f}<extra></extra>'
-    ))
+    fig.add_trace(
+        go.Bar(
+            y=all_labels,
+            x=all_values,
+            orientation='h',
+            marker_color=all_colors,
+            text=[f'{v:.3f}' for v in all_values],
+            textposition='outside',
+            hovertemplate='%{y}<br>Effect: %{x:.4f}<extra></extra>',
+        )
+    )
 
     # Add vertical line at 0
-    fig.add_vline(
-        x=0,
-        line_dash='dash',
-        line_color='gray',
-        line_width=1
-    )
+    fig.add_vline(x=0, line_dash='dash', line_color='gray', line_width=1)
 
     fig.update_layout(
         title='Main Effects',
@@ -178,7 +174,7 @@ def create_main_effects_chart(
         width=width,
         height=height,
         yaxis=dict(autorange='reversed'),  # Top-to-bottom order
-        showlegend=False
+        showlegend=False,
     )
 
     return fig
@@ -189,7 +185,7 @@ def create_factor_effects_chart(
     theme: ChartTheme,
     factors: list[str] | None = None,
     width: int = 1000,
-    height: int = 500
+    height: int = 500,
 ) -> go.Figure:
     """
     Create vertical bar chart showing factor main effects only.
@@ -244,10 +240,9 @@ def create_factor_effects_chart(
 
     if not factor_effects:
         raise ChartNotAvailableError(
-            "No factor main effects found to plot.\n"
-            f"Available effects keys: {list(effects.keys())}",
+            f'No factor main effects found to plot.\nAvailable effects keys: {list(effects.keys())}',
             chart='factor_effects',
-            available=list(effects.keys())
+            available=list(effects.keys()),
         )
 
     # Build combined data for vertical bar chart
@@ -263,7 +258,7 @@ def create_factor_effects_chart(
         color = factor_colors[i % len(factor_colors)]
 
         for _, row in data.iterrows():
-            label = f"{factor_name}: {row[factor_col]}"
+            label = f'{factor_name}: {row[factor_col]}'
             all_labels.append(label)
             all_values.append(row['Main_Effect'])
             all_colors.append(color)
@@ -271,22 +266,19 @@ def create_factor_effects_chart(
     # Create vertical bar chart
     fig = go.Figure()
 
-    fig.add_trace(go.Bar(
-        x=all_labels,
-        y=all_values,
-        marker_color=all_colors,
-        text=[f'{v:.3f}' for v in all_values],
-        textposition='outside',
-        hovertemplate='%{x}<br>Effect: %{y:.4f}<extra></extra>'
-    ))
+    fig.add_trace(
+        go.Bar(
+            x=all_labels,
+            y=all_values,
+            marker_color=all_colors,
+            text=[f'{v:.3f}' for v in all_values],
+            textposition='outside',
+            hovertemplate='%{x}<br>Effect: %{y:.4f}<extra></extra>',
+        )
+    )
 
     # Add horizontal line at 0
-    fig.add_hline(
-        y=0,
-        line_dash='dash',
-        line_color='gray',
-        line_width=1
-    )
+    fig.add_hline(y=0, line_dash='dash', line_color='gray', line_width=1)
 
     fig.update_layout(
         title='Factor Main Effects',
@@ -294,17 +286,14 @@ def create_factor_effects_chart(
         yaxis_title='Effect Magnitude',
         width=width,
         height=height,
-        showlegend=False
+        showlegend=False,
     )
 
     return fig
 
 
 def create_time_effects_chart(
-    effects: Mapping[str, Any],
-    theme: ChartTheme,
-    width: int = 1000,
-    height: int | None = None
+    effects: Mapping[str, Any], theme: ChartTheme, width: int = 1000, height: int | None = None
 ) -> go.Figure:
     """
     Create horizontal bar chart showing time effects only.
@@ -354,11 +343,11 @@ def create_time_effects_chart(
 
     if time_effects is None:
         raise ChartNotAvailableError(
-            "No time effects found to plot.\n"
-            "This requires a time variable in the analysis.\n"
-            f"Available effects keys: {list(effects.keys())}",
+            'No time effects found to plot.\n'
+            'This requires a time variable in the analysis.\n'
+            f'Available effects keys: {list(effects.keys())}',
             chart='time_effects',
-            available=list(effects.keys())
+            available=list(effects.keys()),
         )
 
     # Build data for horizontal bar chart
@@ -368,7 +357,7 @@ def create_time_effects_chart(
     name, data = time_effects
     time_col = data.columns[0]
     for _, row in data.iterrows():
-        label = f"Time: {row[time_col]}"
+        label = f'Time: {row[time_col]}'
         all_labels.append(label)
         all_values.append(row['PT_ME'])
 
@@ -379,23 +368,20 @@ def create_time_effects_chart(
     # Create horizontal bar chart
     fig = go.Figure()
 
-    fig.add_trace(go.Bar(
-        y=all_labels,
-        x=all_values,
-        orientation='h',
-        marker_color=theme.pattern_signal_color,
-        text=[f'{v:.3f}' for v in all_values],
-        textposition='outside',
-        hovertemplate='%{y}<br>Effect: %{x:.4f}<extra></extra>'
-    ))
+    fig.add_trace(
+        go.Bar(
+            y=all_labels,
+            x=all_values,
+            orientation='h',
+            marker_color=theme.pattern_signal_color,
+            text=[f'{v:.3f}' for v in all_values],
+            textposition='outside',
+            hovertemplate='%{y}<br>Effect: %{x:.4f}<extra></extra>',
+        )
+    )
 
     # Add vertical line at 0
-    fig.add_vline(
-        x=0,
-        line_dash='dash',
-        line_color='gray',
-        line_width=1
-    )
+    fig.add_vline(x=0, line_dash='dash', line_color='gray', line_width=1)
 
     fig.update_layout(
         title='Time Effects',
@@ -404,7 +390,7 @@ def create_time_effects_chart(
         width=width,
         height=height,
         yaxis=dict(autorange='reversed'),  # Top-to-bottom order
-        showlegend=False
+        showlegend=False,
     )
 
     return fig
@@ -418,7 +404,7 @@ def create_time_interaction_chart(
     dataset: pd.DataFrame,
     theme: ChartTheme,
     width: int = 1000,
-    height: int = 500
+    height: int = 500,
 ) -> go.Figure:
     """
     Create line plot showing factor × time interaction.
@@ -471,10 +457,9 @@ def create_time_interaction_chart(
     """
     if 'factor_time' not in interactions:
         raise ChartNotAvailableError(
-            "Factor × time interaction not available.\n"
-            "This requires both factors and time variable in the analysis.",
+            'Factor × time interaction not available.\nThis requires both factors and time variable in the analysis.',
             chart='factor_time_interaction',
-            available=list(interactions.keys())
+            available=list(interactions.keys()),
         )
 
     pdc = interactions['factor_time']
@@ -487,8 +472,7 @@ def create_time_interaction_chart(
     df = dataset.copy()
     if len(pdc) != len(df):
         raise ValueError(
-            "Interaction chart requires PDC aligned to plotted data: "
-            f"len(pdc)={len(pdc)} != len(df)={len(df)}"
+            f'Interaction chart requires PDC aligned to plotted data: len(pdc)={len(pdc)} != len(df)={len(df)}'
         )
     df['_pdc'] = pdc.values
 
@@ -499,9 +483,7 @@ def create_time_interaction_chart(
     if len(factors) == 1:
         agg_data['_factor_key'] = agg_data[factors[0]].astype(str)
     else:
-        agg_data['_factor_key'] = agg_data[list(factors)].apply(
-            lambda x: '_'.join(str(v) for v in x), axis=1
-        )
+        agg_data['_factor_key'] = agg_data[list(factors)].apply(lambda x: '_'.join(str(v) for v in x), axis=1)
 
     # Sort by time
     agg_data = agg_data.sort_values(time_var)
@@ -518,23 +500,20 @@ def create_time_interaction_chart(
         mask = agg_data['_factor_key'] == factor_key
         subset = agg_data[mask]
 
-        fig.add_trace(go.Scatter(
-            x=subset[time_var],
-            y=subset['_pdc'],
-            mode='lines+markers',
-            name=str(factor_key),
-            line=dict(color=colors[i % len(colors)], width=2),
-            marker=dict(size=8, color=colors[i % len(colors)]),
-            hovertemplate=f'{factor_key}<br>Time: %{{x}}<br>Effect: %{{y:.4f}}<extra></extra>'
-        ))
+        fig.add_trace(
+            go.Scatter(
+                x=subset[time_var],
+                y=subset['_pdc'],
+                mode='lines+markers',
+                name=str(factor_key),
+                line=dict(color=colors[i % len(colors)], width=2),
+                marker=dict(size=8, color=colors[i % len(colors)]),
+                hovertemplate=f'{factor_key}<br>Time: %{{x}}<br>Effect: %{{y:.4f}}<extra></extra>',
+            )
+        )
 
     # Add horizontal line at 0
-    fig.add_hline(
-        y=0,
-        line_dash='dash',
-        line_color='gray',
-        line_width=1
-    )
+    fig.add_hline(y=0, line_dash='dash', line_color='gray', line_width=1)
 
     factor_label = ', '.join(factors)
     fig.update_layout(
@@ -544,18 +523,14 @@ def create_time_interaction_chart(
         width=width,
         height=height,
         legend_title=factor_label,
-        hovermode='closest'
+        hovermode='closest',
     )
 
     return fig
 
 
 def create_factor_interaction_chart(
-    interactions: Mapping[str, Any],
-    factors: list[str],
-    theme: ChartTheme,
-    width: int = 800,
-    height: int = 600
+    interactions: Mapping[str, Any], factors: list[str], theme: ChartTheme, width: int = 800, height: int = 600
 ) -> go.Figure:
     """
     Create line chart for factor × factor interaction.
@@ -604,25 +579,19 @@ def create_factor_interaction_chart(
     """
     if 'factor_factor' not in interactions:
         raise ChartNotAvailableError(
-            "Factor × factor interaction not available.\n"
-            "This requires at least 2 factors in the analysis.",
+            'Factor × factor interaction not available.\nThis requires at least 2 factors in the analysis.',
             chart='factor_factor_interaction',
-            available=list(interactions.keys())
+            available=list(interactions.keys()),
         )
 
     if len(factors) < 2:
-        raise ValidationError(
-            f"Factor interaction requires at least 2 factors, got {len(factors)}."
-        )
+        raise ValidationError(f'Factor interaction requires at least 2 factors, got {len(factors)}.')
 
     fi = interactions['factor_factor']
     factor1, factor2 = factors[0], factors[1]
 
     if factor1 not in fi.columns or factor2 not in fi.columns:
-        raise ValueError(
-            f"Expected columns {factor1}, {factor2} in interaction data.\n"
-            f"Found: {list(fi.columns)}"
-        )
+        raise ValueError(f'Expected columns {factor1}, {factor2} in interaction data.\nFound: {list(fi.columns)}')
 
     fig = go.Figure()
 
@@ -643,19 +612,17 @@ def create_factor_interaction_chart(
         # for interaction residuals (Rx), since absence = no interaction effect.
         y_values = [subset.loc[lv, 'Rx'] if lv in subset.index else 0 for lv in levels1]
 
-        fig.add_trace(go.Scatter(
-            x=x_values,
-            y=y_values,
-            mode='lines+markers',
-            name=str(level2),
-            line=dict(color=colors[i % len(colors)], width=2),
-            marker=dict(size=8, color=colors[i % len(colors)]),
-            hovertemplate=(
-                f'{factor1}: %{{x}}<br>'
-                f'{factor2}: {level2}<br>'
-                'Interaction: %{y:.4f}<extra></extra>'
+        fig.add_trace(
+            go.Scatter(
+                x=x_values,
+                y=y_values,
+                mode='lines+markers',
+                name=str(level2),
+                line=dict(color=colors[i % len(colors)], width=2),
+                marker=dict(size=8, color=colors[i % len(colors)]),
+                hovertemplate=(f'{factor1}: %{{x}}<br>{factor2}: {level2}<br>Interaction: %{{y:.4f}}<extra></extra>'),
             )
-        ))
+        )
 
     # Add horizontal reference line at 0
     fig.add_hline(y=0, line_dash='dash', line_color='gray', line_width=1)
@@ -667,7 +634,7 @@ def create_factor_interaction_chart(
         width=width,
         height=height,
         legend_title=factor2,
-        hovermode='closest'
+        hovermode='closest',
     )
 
     return fig

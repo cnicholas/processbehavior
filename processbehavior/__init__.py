@@ -51,7 +51,7 @@ its ``.sds`` field. Internally some modules still use the legacy "SDS"
 prefix (e.g. ``sds_detector.py``); the model itself is three-state.
 """
 
-__version__ = "0.1.1"
+__version__ = '0.1.1'
 
 # Result object
 from processbehavior.analysis_result import AnalysisResult
@@ -91,20 +91,17 @@ __all__ = [
     'CapabilityResult',
     'LossResult',
     'MaximumInformationResult',
-
     # Exceptions
     'ProcessBehaviorError',
     'ValidationError',
     'ColumnNotFoundError',
     'FactorNotFoundError',
     'ChartNotAvailableError',
-
     # Plotting/theming
     'ChartTheme',
     'get_theme',
     'list_themes',
     'register_theme',
-
     # Datasets
     'make_design',
     'make_sds',

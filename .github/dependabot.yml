@@ -23,3 +23,10 @@ updates:
         dependency-type: development
     commit-message:
       prefix: "deps"
+
+  - package-ecosystem: pre-commit
+    directory: "/"
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: "ci"

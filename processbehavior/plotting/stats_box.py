@@ -33,25 +33,21 @@ def format_stat_value(value: float, compact: bool = False) -> str:
     """
     if compact:
         if abs(value) >= 100:
-            return f"{value:.0f}"
+            return f'{value:.0f}'
         elif abs(value) >= 10:
-            return f"{value:.1f}"
+            return f'{value:.1f}'
         else:
-            return f"{value:.2f}"
+            return f'{value:.2f}'
     else:
         if abs(value) >= 100:
-            return f"{value:.2f}"
+            return f'{value:.2f}'
         elif abs(value) >= 10:
-            return f"{value:.3f}"
+            return f'{value:.3f}'
         else:
-            return f"{value:.4f}"
+            return f'{value:.4f}'
 
 
-def build_stats_text(
-    stats: dict,
-    data: pd.DataFrame,
-    compact: bool = False
-) -> str | None:
+def build_stats_text(stats: dict, data: pd.DataFrame, compact: bool = False) -> str | None:
     """
     Build statistics text for display in a stats box.
 
@@ -73,25 +69,25 @@ def build_stats_text(
     n = len(data)
 
     if compact:
-        parts = [f"n={n}"]
+        parts = [f'n={n}']
         center = stats.get('center')
         if center is not None:
-            parts.append(f"CL={format_stat_value(center, compact=True)}")
+            parts.append(f'CL={format_stat_value(center, compact=True)}')
         return ' | '.join(parts) if parts else None
     else:
-        lines = [f"n = {n}"]
+        lines = [f'n = {n}']
 
         center = stats.get('center')
         if center is not None:
-            lines.append(f"CL = {format_stat_value(center)}")
+            lines.append(f'CL = {format_stat_value(center)}')
 
         ucl = stats.get('upl')
         if ucl is not None:
-            lines.append(f"UPL = {format_stat_value(ucl)}")
+            lines.append(f'UPL = {format_stat_value(ucl)}')
 
         lcl = stats.get('lpl')
         if lcl is not None:
-            lines.append(f"LPL = {format_stat_value(lcl)}")
+            lines.append(f'LPL = {format_stat_value(lcl)}')
 
         return '<br>'.join(lines) if lines else None
 
@@ -104,7 +100,7 @@ def add_stats_box(
     row: int | None = None,
     col: int | None = None,
     nrows: int | None = None,
-    ncols: int | None = None
+    ncols: int | None = None,
 ) -> None:
     """
     Add a statistics box annotation to a chart.
@@ -134,7 +130,7 @@ def add_stats_box(
     """
     if row is not None and col is not None:
         if not ncols or not nrows or ncols <= 0 or nrows <= 0:
-            logger.debug("Invalid grid dimensions (nrows=%s, ncols=%s); skipping stats box", nrows, ncols)
+            logger.debug('Invalid grid dimensions (nrows=%s, ncols=%s); skipping stats box', nrows, ncols)
             return
 
         # Faceted: compact text, subplot-relative position, smaller font
@@ -156,16 +152,12 @@ def add_stats_box(
             xanchor='left',
             yanchor='top',
             showarrow=False,
-            font=dict(
-                size=theme.stats_box_font_size - 1,
-                color=theme.stats_box_font_color,
-                family='monospace'
-            ),
+            font=dict(size=theme.stats_box_font_size - 1, color=theme.stats_box_font_color, family='monospace'),
             bgcolor=theme.stats_box_bgcolor,
             bordercolor=theme.stats_box_bordercolor,
             borderwidth=theme.stats_box_borderwidth,
             borderpad=3,
-            align='left'
+            align='left',
         )
     else:
         # Single chart: full text, fixed position, standard font
@@ -182,14 +174,10 @@ def add_stats_box(
             xanchor='left',
             yanchor='top',
             showarrow=False,
-            font=dict(
-                size=theme.stats_box_font_size,
-                color=theme.stats_box_font_color,
-                family='monospace'
-            ),
+            font=dict(size=theme.stats_box_font_size, color=theme.stats_box_font_color, family='monospace'),
             bgcolor=theme.stats_box_bgcolor,
             bordercolor=theme.stats_box_bordercolor,
             borderwidth=theme.stats_box_borderwidth,
             borderpad=6,
-            align='left'
+            align='left',
         )

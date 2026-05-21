@@ -17,22 +17,22 @@ from processbehavior import ProcessBehavior
 class TestDefaultGarbageCharacterHandling:
     """Test automatic handling of common garbage characters."""
 
-    @pytest.mark.parametrize("garbage_value, column, values_before_after", [
-        pytest.param('*', 'Y', (235.5, 237.2), id='asterisk'),
-        pytest.param('?', 'Y', (235.5, 237.2), id='question_mark'),
-        pytest.param('--', 'FACTOR', ('A', 'C'), id='double_dash'),
-        pytest.param('ND', 'Y', (235.5, 237.2), id='nd_not_detected'),
-        pytest.param('BDL', 'Y', (235.5, 237.2), id='bdl_below_detection_limit'),
-        pytest.param('BQL', 'Y', (235.5, 237.2), id='bql_below_quantification_limit'),
-        pytest.param('<LOD', 'Y', (235.5, 237.2), id='lod_below_limit_of_detection'),
-    ])
+    @pytest.mark.parametrize(
+        'garbage_value, column, values_before_after',
+        [
+            pytest.param('*', 'Y', (235.5, 237.2), id='asterisk'),
+            pytest.param('?', 'Y', (235.5, 237.2), id='question_mark'),
+            pytest.param('--', 'FACTOR', ('A', 'C'), id='double_dash'),
+            pytest.param('ND', 'Y', (235.5, 237.2), id='nd_not_detected'),
+            pytest.param('BDL', 'Y', (235.5, 237.2), id='bdl_below_detection_limit'),
+            pytest.param('BQL', 'Y', (235.5, 237.2), id='bql_below_quantification_limit'),
+            pytest.param('<LOD', 'Y', (235.5, 237.2), id='lod_below_limit_of_detection'),
+        ],
+    )
     def test_garbage_char_treated_as_na(self, garbage_value, column, values_before_after):
         """Test that garbage characters are automatically converted to NA."""
         before, after = values_before_after
-        df = pd.DataFrame({
-            'TIME': [1, 2, 3],
-            column: [before, garbage_value, after]
-        })
+        df = pd.DataFrame({'TIME': [1, 2, 3], column: [before, garbage_value, after]})
 
         pdf = ProcessBehavior(df)
 
@@ -42,10 +42,7 @@ class TestDefaultGarbageCharacterHandling:
 
     def test_multiple_garbage_characters_in_same_column(self):
         """Test handling multiple types of garbage in one column."""
-        df = pd.DataFrame({
-            'TIME': [1, 2, 3, 4, 5, 6],
-            'Y': [235.5, '*', '?', 'ND', 'BDL', 237.2]
-        })
+        df = pd.DataFrame({'TIME': [1, 2, 3, 4, 5, 6], 'Y': [235.5, '*', '?', 'ND', 'BDL', 237.2]})
 
         pdf = ProcessBehavior(df)
 
@@ -60,11 +57,7 @@ class TestDefaultGarbageCharacterHandling:
 
     def test_garbage_characters_across_multiple_columns(self):
         """Test garbage character handling across multiple columns."""
-        df = pd.DataFrame({
-            'TIME': [1, 2, 3, 4],
-            'Y': [235.5, '*', 237.2, 239.1],
-            'FACTOR': ['A', 'B', '--', 'D']
-        })
+        df = pd.DataFrame({'TIME': [1, 2, 3, 4], 'Y': [235.5, '*', 237.2, 239.1], 'FACTOR': ['A', 'B', '--', 'D']})
 
         pdf = ProcessBehavior(df)
 
@@ -75,10 +68,7 @@ class TestDefaultGarbageCharacterHandling:
 
     def test_case_variations_treated_as_na(self):
         """Test that case variations are handled (ND vs n/d)."""
-        df = pd.DataFrame({
-            'TIME': [1, 2, 3, 4],
-            'Y': [235.5, 'ND', 'n/d', 'N/D']
-        })
+        df = pd.DataFrame({'TIME': [1, 2, 3, 4], 'Y': [235.5, 'ND', 'n/d', 'N/D']})
 
         pdf = ProcessBehavior(df)
 
@@ -93,10 +83,7 @@ class TestCustomNAValues:
 
     def test_custom_na_values_are_handled(self):
         """Test that custom NA values are properly converted."""
-        df = pd.DataFrame({
-            'TIME': [1, 2, 3, 4],
-            'Y': [235.5, '-999', 237.2, '9999']
-        })
+        df = pd.DataFrame({'TIME': [1, 2, 3, 4], 'Y': [235.5, '-999', 237.2, '9999']})
 
         pdf = ProcessBehavior(df, na_values=['-999', '9999'])
 
@@ -109,10 +96,7 @@ class TestCustomNAValues:
 
     def test_custom_na_combined_with_defaults(self):
         """Test that custom NA values are combined with default garbage characters."""
-        df = pd.DataFrame({
-            'TIME': [1, 2, 3, 4, 5],
-            'Y': [235.5, '*', '-999', 'ND', 237.2]
-        })
+        df = pd.DataFrame({'TIME': [1, 2, 3, 4, 5], 'Y': [235.5, '*', '-999', 'ND', 237.2]})
 
         pdf = ProcessBehavior(df, na_values=['-999'])
 
@@ -123,10 +107,7 @@ class TestCustomNAValues:
 
     def test_empty_na_values_list(self):
         """Test that passing empty list still uses defaults."""
-        df = pd.DataFrame({
-            'TIME': [1, 2, 3],
-            'Y': [235.5, '*', 237.2]
-        })
+        df = pd.DataFrame({'TIME': [1, 2, 3], 'Y': [235.5, '*', 237.2]})
 
         pdf = ProcessBehavior(df, na_values=[])
 
@@ -139,10 +120,7 @@ class TestDataIntegrity:
 
     def test_numeric_data_unchanged(self):
         """Test that numeric data is not affected."""
-        df = pd.DataFrame({
-            'TIME': [1, 2, 3, 4],
-            'Y': [235.5, 237.2, 239.1, 236.8]
-        })
+        df = pd.DataFrame({'TIME': [1, 2, 3, 4], 'Y': [235.5, 237.2, 239.1, 236.8]})
 
         pdf = ProcessBehavior(df)
 
@@ -151,10 +129,7 @@ class TestDataIntegrity:
 
     def test_valid_string_data_unchanged(self):
         """Test that valid string data is not affected."""
-        df = pd.DataFrame({
-            'TIME': [1, 2, 3, 4],
-            'FACTOR': ['A', 'B', 'C', 'D']
-        })
+        df = pd.DataFrame({'TIME': [1, 2, 3, 4], 'FACTOR': ['A', 'B', 'C', 'D']})
 
         pdf = ProcessBehavior(df)
 
@@ -163,10 +138,7 @@ class TestDataIntegrity:
 
     def test_negative_numbers_not_treated_as_na(self):
         """Test that negative numbers are preserved (single dash is NOT treated as NA)."""
-        df = pd.DataFrame({
-            'TIME': [1, 2, 3, 4],
-            'Y': [235.5, -5.2, 237.2, -10.8]
-        })
+        df = pd.DataFrame({'TIME': [1, 2, 3, 4], 'Y': [235.5, -5.2, 237.2, -10.8]})
 
         pdf = ProcessBehavior(df)
 
@@ -176,10 +148,7 @@ class TestDataIntegrity:
 
     def test_original_dataframe_not_modified(self):
         """Test that the original DataFrame is not modified (immutability)."""
-        df = pd.DataFrame({
-            'TIME': [1, 2, 3],
-            'Y': [235.5, '*', 237.2]
-        })
+        df = pd.DataFrame({'TIME': [1, 2, 3], 'Y': [235.5, '*', 237.2]})
 
         original_values = df['Y'].copy()
         ProcessBehavior(df)
@@ -193,10 +162,7 @@ class TestWarningMessages:
 
     def test_warning_logged_when_garbage_found(self, caplog):
         """Test that a warning is logged when garbage characters are found."""
-        df = pd.DataFrame({
-            'TIME': [1, 2, 3],
-            'Y': [235.5, '*', 237.2]
-        })
+        df = pd.DataFrame({'TIME': [1, 2, 3], 'Y': [235.5, '*', 237.2]})
 
         with caplog.at_level('WARNING'):
             ProcessBehavior(df)
@@ -207,11 +173,7 @@ class TestWarningMessages:
 
     def test_warning_shows_column_counts(self, caplog):
         """Test that warning shows how many values per column."""
-        df = pd.DataFrame({
-            'TIME': [1, 2, 3, 4],
-            'Y': [235.5, '*', '?', 237.2],
-            'FACTOR': ['A', '--', 'C', 'D']
-        })
+        df = pd.DataFrame({'TIME': [1, 2, 3, 4], 'Y': [235.5, '*', '?', 237.2], 'FACTOR': ['A', '--', 'C', 'D']})
 
         with caplog.at_level('WARNING'):
             ProcessBehavior(df)
@@ -222,10 +184,7 @@ class TestWarningMessages:
 
     def test_no_warning_when_no_garbage(self, caplog):
         """Test that no warning is logged for clean data."""
-        df = pd.DataFrame({
-            'TIME': [1, 2, 3, 4],
-            'Y': [235.5, 237.2, 239.1, 236.8]
-        })
+        df = pd.DataFrame({'TIME': [1, 2, 3, 4], 'Y': [235.5, 237.2, 239.1, 236.8]})
 
         with caplog.at_level('WARNING'):
             ProcessBehavior(df)
@@ -247,20 +206,18 @@ class TestIntegrationWithAnalysis:
         This creates an incomplete structure (SDS 5: incomplete, no replication).
         SDS 5 supports XmR chart, not Xbar.
         """
-        df = pd.DataFrame({
-            'TIME': [1, 1, 2, 2, 3, 3, 4, 4],
-            'FACTOR': ['A', 'B', 'A', 'B', 'A', 'B', 'A', 'B'],
-            'Y': [235.5, 237.2, '*', 239.1, 236.8, 'ND', 238.3, 237.5]
-        })
+        df = pd.DataFrame(
+            {
+                'TIME': [1, 1, 2, 2, 3, 3, 4, 4],
+                'FACTOR': ['A', 'B', 'A', 'B', 'A', 'B', 'A', 'B'],
+                'Y': [235.5, 237.2, '*', 239.1, 236.8, 'ND', 238.3, 237.5],
+            }
+        )
 
         pdf = ProcessBehavior(df)
 
         # Analysis should run without crashing
-        study = pdf.formulate(
-            response=pdf.cols.Y,
-            factors=[pdf.cols.FACTOR],
-            time=pdf.cols.TIME
-        )
+        study = pdf.formulate(response=pdf.cols.Y, factors=[pdf.cols.FACTOR], time=pdf.cols.TIME)
 
         # SDS 5 detected due to empty cells (NA responses, no replication)
         assert study.observed_design_state.sds == 5
@@ -274,11 +231,13 @@ class TestIntegrationWithAnalysis:
 
     def test_mixed_garbage_in_real_world_scenario(self):
         """Test realistic scenario with various garbage characters."""
-        df = pd.DataFrame({
-            'TIME': [1, 2, 3, 4, 5, 6, 7, 8],
-            'LANE': ['L1', 'L2', 'L1', 'L2', 'L1', 'L2', 'L1', 'L2'],
-            'WEIGHT': [236.5, '*', 237.8, '?', 'BDL', 238.2, '--', 239.1]
-        })
+        df = pd.DataFrame(
+            {
+                'TIME': [1, 2, 3, 4, 5, 6, 7, 8],
+                'LANE': ['L1', 'L2', 'L1', 'L2', 'L1', 'L2', 'L1', 'L2'],
+                'WEIGHT': [236.5, '*', 237.8, '?', 'BDL', 238.2, '--', 239.1],
+            }
+        )
 
         pdf = ProcessBehavior(df, na_values=['-999'])
 
@@ -295,50 +254,34 @@ class TestIntegrationWithAnalysis:
 # Numeric String Cleaning (currency, thousands sep, accounting negatives)
 # =========================================================================
 
+
 class TestNumericStringCleaning:
     """Test automatic cleaning of formatted numeric strings."""
 
-    @pytest.mark.parametrize("input_values, expected_values", [
-        pytest.param(
-            ['$1.50', '$2.00', '$3.50'], [1.50, 2.00, 3.50],
-            id='dollar_sign'),
-        pytest.param(
-            ['$ 1.50', '$ 2.00', '$ 3.50'], [1.50, 2.00, 3.50],
-            id='dollar_sign_with_space'),
-        pytest.param(
-            ['-$1.50', '-$ 2.00', '-$3.50'], [-1.50, -2.00, -3.50],
-            id='negative_dollar'),
-        pytest.param(
-            ['(1.50)', '(2.00)', '(3.50)'], [-1.50, -2.00, -3.50],
-            id='accounting_negative'),
-        pytest.param(
-            ['($1.50)', '($ 2.00)', '($3.50)'], [-1.50, -2.00, -3.50],
-            id='accounting_negative_with_dollar'),
-        pytest.param(
-            ['$1,234.56', '1,000', '$1,234,567.89'], [1234.56, 1000.0, 1234567.89],
-            id='thousands_separator'),
-        pytest.param(
-            ['\u20ac100', '\u20ac200', '\u20ac300'], [100, 200, 300],
-            id='euro_symbol'),
-        pytest.param(
-            ['\u00a3100', '\u00a3200', '\u00a3300'], [100, 200, 300],
-            id='pound_symbol'),
-        pytest.param(
-            ['\u00a5100', '\u00a5200', '\u00a5300'], [100, 200, 300],
-            id='yen_symbol'),
-        pytest.param(
-            ['25.5%', '30%', '100%'], [25.5, 30.0, 100.0],
-            id='percentage_sign'),
-        pytest.param(
-            [' $1.50 ', '  $2.00  ', ' $3.50'], [1.50, 2.00, 3.50],
-            id='whitespace_around_values'),
-        pytest.param(
-            ['($ 1,234.56)', '$ 2,345.67', '-$ 3,456.78'], [-1234.56, 2345.67, -3456.78],
-            id='compound_format'),
-        pytest.param(
-            ['1.50', '2.00', '3.50'], [1.50, 2.00, 3.50],
-            id='plain_numeric_strings'),
-    ])
+    @pytest.mark.parametrize(
+        'input_values, expected_values',
+        [
+            pytest.param(['$1.50', '$2.00', '$3.50'], [1.50, 2.00, 3.50], id='dollar_sign'),
+            pytest.param(['$ 1.50', '$ 2.00', '$ 3.50'], [1.50, 2.00, 3.50], id='dollar_sign_with_space'),
+            pytest.param(['-$1.50', '-$ 2.00', '-$3.50'], [-1.50, -2.00, -3.50], id='negative_dollar'),
+            pytest.param(['(1.50)', '(2.00)', '(3.50)'], [-1.50, -2.00, -3.50], id='accounting_negative'),
+            pytest.param(
+                ['($1.50)', '($ 2.00)', '($3.50)'], [-1.50, -2.00, -3.50], id='accounting_negative_with_dollar'
+            ),
+            pytest.param(
+                ['$1,234.56', '1,000', '$1,234,567.89'], [1234.56, 1000.0, 1234567.89], id='thousands_separator'
+            ),
+            pytest.param(['\u20ac100', '\u20ac200', '\u20ac300'], [100, 200, 300], id='euro_symbol'),
+            pytest.param(['\u00a3100', '\u00a3200', '\u00a3300'], [100, 200, 300], id='pound_symbol'),
+            pytest.param(['\u00a5100', '\u00a5200', '\u00a5300'], [100, 200, 300], id='yen_symbol'),
+            pytest.param(['25.5%', '30%', '100%'], [25.5, 30.0, 100.0], id='percentage_sign'),
+            pytest.param([' $1.50 ', '  $2.00  ', ' $3.50'], [1.50, 2.00, 3.50], id='whitespace_around_values'),
+            pytest.param(
+                ['($ 1,234.56)', '$ 2,345.67', '-$ 3,456.78'], [-1234.56, 2345.67, -3456.78], id='compound_format'
+            ),
+            pytest.param(['1.50', '2.00', '3.50'], [1.50, 2.00, 3.50], id='plain_numeric_strings'),
+        ],
+    )
     def test_formatted_numeric_string_cleaned(self, input_values, expected_values):
         """Test that formatted numeric strings are converted to expected numeric values."""
         df = pd.DataFrame({'Y': input_values})
@@ -350,26 +293,24 @@ class TestNumericStringCleaning:
 class TestNumericStringDataIntegrity:
     """Ensure numeric string cleaning doesn't produce false positives."""
 
-    @pytest.mark.parametrize("column, input_values, expected_dtype, expected_values", [
-        pytest.param(
-            'LABEL', ['Red', 'Blue', 'Green'], 'string', ['Red', 'Blue', 'Green'],
-            id='pure_text_unchanged'),
-        pytest.param(
-            'Y', [1.0, 2.0, 3.0], 'float64', [1.0, 2.0, 3.0],
-            id='numeric_column_unchanged'),
-        pytest.param(
-            'Y', [1, 2, 3], 'int64', [1, 2, 3],
-            id='integer_column_unchanged'),
-        pytest.param(
-            'LABEL',
-            ['Red', '$1.50', 'Blue', 'Green', 'Orange',
-             'Yellow', 'Purple', 'Pink', 'Brown', 'Black'],
-            'string', None,
-            id='below_threshold_unchanged'),
-        pytest.param(
-            'Y', [-1.5, -2.0, -3.5], 'float64', [-1.5, -2.0, -3.5],
-            id='negative_numbers_not_mangled'),
-    ])
+    @pytest.mark.parametrize(
+        'column, input_values, expected_dtype, expected_values',
+        [
+            pytest.param(
+                'LABEL', ['Red', 'Blue', 'Green'], 'string', ['Red', 'Blue', 'Green'], id='pure_text_unchanged'
+            ),
+            pytest.param('Y', [1.0, 2.0, 3.0], 'float64', [1.0, 2.0, 3.0], id='numeric_column_unchanged'),
+            pytest.param('Y', [1, 2, 3], 'int64', [1, 2, 3], id='integer_column_unchanged'),
+            pytest.param(
+                'LABEL',
+                ['Red', '$1.50', 'Blue', 'Green', 'Orange', 'Yellow', 'Purple', 'Pink', 'Brown', 'Black'],
+                'string',
+                None,
+                id='below_threshold_unchanged',
+            ),
+            pytest.param('Y', [-1.5, -2.0, -3.5], 'float64', [-1.5, -2.0, -3.5], id='negative_numbers_not_mangled'),
+        ],
+    )
     def test_data_identity_preserved(self, column, input_values, expected_dtype, expected_values):
         """Test that data that is already correct is not changed."""
         df = pd.DataFrame({column: input_values})
@@ -400,10 +341,7 @@ class TestNumericStringWithGarbageChars:
     """Test interaction between garbage character cleaning and numeric string cleaning."""
 
     def test_garbage_and_monetary_combined(self):
-        df = pd.DataFrame({
-            'TIME': [1, 2, 3, 4],
-            'Y': ['$1.50', '*', '(3.00)', 'ND']
-        })
+        df = pd.DataFrame({'TIME': [1, 2, 3, 4], 'Y': ['$1.50', '*', '(3.00)', 'ND']})
         pdf = ProcessBehavior(df)
         assert pdf.data['Y'].iloc[0] == 1.50
         assert pd.isna(pdf.data['Y'].iloc[1])
@@ -412,10 +350,7 @@ class TestNumericStringWithGarbageChars:
 
     def test_garbage_cleaned_before_monetary(self):
         """Garbage chars become NA first, then monetary cleaning on the rest."""
-        df = pd.DataFrame({
-            'TIME': [1, 2, 3, 4, 5],
-            'Y': ['$10.00', '*', '$20.00', 'BDL', '$30.00']
-        })
+        df = pd.DataFrame({'TIME': [1, 2, 3, 4, 5], 'Y': ['$10.00', '*', '$20.00', 'BDL', '$30.00']})
         pdf = ProcessBehavior(df)
         assert pdf.data['Y'].dtype == 'float64'
         assert pdf.data['Y'].iloc[0] == 10.0
@@ -442,10 +377,7 @@ class TestNumericStringWarnings:
         assert 'Cleaned numeric formatting' not in caplog.text
 
     def test_warning_shows_column_names(self, caplog):
-        df = pd.DataFrame({
-            'REVENUE': ['$100', '$200'],
-            'COST': ['$50', '$75']
-        })
+        df = pd.DataFrame({'REVENUE': ['$100', '$200'], 'COST': ['$50', '$75']})
         with caplog.at_level('WARNING'):
             ProcessBehavior(df)
         assert 'REVENUE' in caplog.text
@@ -491,11 +423,7 @@ class TestGrossRevenueDatabase:
 
     def test_end_to_end_formulate_execute(self, gross_rev_df):
         pdf = ProcessBehavior(gross_rev_df)
-        study = pdf.formulate(
-            response='GROSS REVENUE ERROR',
-            factors=['HOME TEAM'],
-            time='YR-WEEK'
-        )
+        study = pdf.formulate(response='GROSS REVENUE ERROR', factors=['HOME TEAM'], time='YR-WEEK')
         # XmR with factors requires explicit by parameter
         result = study.execute(chart='X', by=['HOME TEAM'])
         assert result is not None

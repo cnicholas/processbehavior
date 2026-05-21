@@ -73,7 +73,7 @@ class SignalDetector:
         config: SignalConfig | None = None,
         value_col: str = 'mean',
         chart_name: str = 'Chart',
-        chart_type: str = 'Xbar'
+        chart_type: str = 'Xbar',
     ) -> SignalResult:
         """
         Detect signals in control chart data.
@@ -116,19 +116,14 @@ class SignalDetector:
             if skipped_rules:
                 logger.info(
                     f"Chart '{chart_name}' (type: {chart_type}): "
-                    f"Applying rules {applicable_rules}. "
-                    f"Skipped {skipped_rules} (not applicable for {chart_type} charts)"
+                    f'Applying rules {applicable_rules}. '
+                    f'Skipped {skipped_rules} (not applicable for {chart_type} charts)'
                 )
             else:
-                logger.info(
-                    f"Chart '{chart_name}' (type: {chart_type}): "
-                    f"Applying all rules {applicable_rules}"
-                )
+                logger.info(f"Chart '{chart_name}' (type: {chart_type}): Applying all rules {applicable_rules}")
 
         # Calculate minimum observations needed for applicable rules
-        min_obs_needed = max(
-            self._get_min_observations(rule) for rule in applicable_rules
-        ) if applicable_rules else 1
+        min_obs_needed = max(self._get_min_observations(rule) for rule in applicable_rules) if applicable_rules else 1
 
         # Validate data (using rule-based minimum, not global config)
         self._validate_inputs(data, stats, config, min_obs_needed)
@@ -154,15 +149,14 @@ class SignalDetector:
 
         for rule_name in applicable_rules:
             if rule_name not in self.RULE_DETECTORS:
-                logger.warning(f"Unknown rule: {rule_name}, skipping")
+                logger.warning(f'Unknown rule: {rule_name}, skipping')
                 continue
 
             # Check minimum observations
             min_obs = self._get_min_observations(rule_name)
             if len(filtered_data) < min_obs:
                 logger.warning(
-                    f"Skipping {rule_name}: insufficient observations "
-                    f"(need {min_obs}, have {len(filtered_data)})"
+                    f'Skipping {rule_name}: insufficient observations (need {min_obs}, have {len(filtered_data)})'
                 )
                 continue
 
@@ -172,76 +166,53 @@ class SignalDetector:
             try:
                 if rule_name in ['rule_2', 'rule_3', 'rule_7', 'rule_8']:
                     # Zone-based rules
-                    violations = detector(
-                        filtered_data, stats, value_col, zones, limits_vary
-                    )
+                    violations = detector(filtered_data, stats, value_col, zones, limits_vary)
                 elif rule_name == 'rule_1':
                     # Rule 1 can use per-row limits
-                    violations = detector(
-                        filtered_data, stats, value_col, limits_vary
-                    )
+                    violations = detector(filtered_data, stats, value_col, limits_vary)
                 else:
                     # Other rules (4, 5, 6) don't use zones
-                    violations = detector(
-                        filtered_data, stats, value_col
-                    )
+                    violations = detector(filtered_data, stats, value_col)
 
                 all_violations[rule_name] = violations
 
             except Exception as e:
-                logger.error(f"Error detecting {rule_name}: {e}")
+                logger.error(f'Error detecting {rule_name}: {e}')
                 all_violations[rule_name] = False
 
         # Build result
         return self._build_result(
-            data=filtered_data,
-            violations=all_violations,
-            stats=stats,
-            value_col=value_col,
-            chart_name=chart_name
+            data=filtered_data, violations=all_violations, stats=stats, value_col=value_col, chart_name=chart_name
         )
 
-    def _validate_inputs(
-        self,
-        data: pd.DataFrame,
-        stats: dict,
-        config: SignalConfig,
-        min_obs_for_rules: int = 1
-    ):
+    def _validate_inputs(self, data: pd.DataFrame, stats: dict, config: SignalConfig, min_obs_for_rules: int = 1):
         """Validate inputs and provide helpful errors."""
         if data.empty:
-            raise ValueError("Cannot detect signals on empty DataFrame")
+            raise ValueError('Cannot detect signals on empty DataFrame')
 
         required_stats = ['upl', 'lpl', 'center']
         missing = [s for s in required_stats if s not in stats]
         if missing:
-            raise ValueError(
-                f"Missing required statistics: {missing}\n"
-                f"Available: {list(stats.keys())}"
-            )
+            raise ValueError(f'Missing required statistics: {missing}\nAvailable: {list(stats.keys())}')
 
         # Use the minimum observations needed for applicable rules
         # This respects chart-type-specific rule filtering (e.g., S charts only need Rule 1)
         if len(data) < min_obs_for_rules:
             raise ValueError(
-                f"Insufficient observations for signal detection.\n"
-                f"Required: {min_obs_for_rules}, provided: {len(data)}\n"
-                f"Hint: Provide more data"
+                f'Insufficient observations for signal detection.\n'
+                f'Required: {min_obs_for_rules}, provided: {len(data)}\n'
+                f'Hint: Provide more data'
             )
 
-    def _filter_data(
-        self,
-        data: pd.DataFrame,
-        config: SignalConfig
-    ) -> pd.DataFrame:
+    def _filter_data(self, data: pd.DataFrame, config: SignalConfig) -> pd.DataFrame:
         """Apply filtering options."""
         filtered = data.copy()
 
         if config.ignore_first_n > 0:
-            filtered = filtered.iloc[config.ignore_first_n:]
+            filtered = filtered.iloc[config.ignore_first_n :]
 
         if config.ignore_last_n > 0:
-            filtered = filtered.iloc[:-config.ignore_last_n]
+            filtered = filtered.iloc[: -config.ignore_last_n]
 
         return filtered
 
@@ -260,12 +231,7 @@ class SignalDetector:
         return minimums.get(rule_name, 1)
 
     def _build_result(
-        self,
-        data: pd.DataFrame,
-        violations: pd.DataFrame,
-        stats: dict,
-        value_col: str,
-        chart_name: str
+        self, data: pd.DataFrame, violations: pd.DataFrame, stats: dict, value_col: str, chart_name: str
     ) -> SignalResult:
         """Build SignalResult from violation matrix."""
         # Create violation records
@@ -285,36 +251,28 @@ class SignalDetector:
                         ucl = stats['upl']
                         lcl = stats['lpl']
 
-                    records.append({
-                        'obs_id': idx,
-                        'rule_name': rule_name,
-                        'rule_number': int(rule_name.split('_')[1]),
-                        'description': self.RULE_DESCRIPTIONS[rule_name],
-                        'value': data.loc[idx, value_col],
-                        'center': stats['center'],
-                        'upl': ucl,
-                        'lpl': lcl
-                    })
+                    records.append(
+                        {
+                            'obs_id': idx,
+                            'rule_name': rule_name,
+                            'rule_number': int(rule_name.split('_')[1]),
+                            'description': self.RULE_DESCRIPTIONS[rule_name],
+                            'value': data.loc[idx, value_col],
+                            'center': stats['center'],
+                            'upl': ucl,
+                            'lpl': lcl,
+                        }
+                    )
 
         violation_df = pd.DataFrame(records) if records else pd.DataFrame()
 
-        return SignalResult(
-            violations=violation_df,
-            chart_name=chart_name,
-            data=data,
-            stats=stats
-        )
+        return SignalResult(violations=violation_df, chart_name=chart_name, data=data, stats=stats)
 
     def _limits_vary(self, stats: dict) -> bool:
         """Check if control limits vary (per-row limits)."""
         return bool(stats.get('limits_vary'))
 
-    def _calculate_per_row_zones(
-        self,
-        data: pd.DataFrame,
-        stats: dict,
-        config: SignalConfig
-    ) -> pd.DataFrame:
+    def _calculate_per_row_zones(self, data: pd.DataFrame, stats: dict, config: SignalConfig) -> pd.DataFrame:
         """
         Calculate per-row zone boundaries for varying process limits.
 
@@ -337,9 +295,7 @@ class SignalDetector:
             Per-row zone boundaries with columns like 'A_upper_lower', 'A_upper_upper', etc.
         """
         if 'upl' not in data.columns or 'lpl' not in data.columns:
-            raise ValueError(
-                "Cannot calculate per-row zones: data missing 'upl' or 'lpl' columns"
-            )
+            raise ValueError("Cannot calculate per-row zones: data missing 'upl' or 'lpl' columns")
 
         center = stats['center']
         zone_def = config.zone_definition

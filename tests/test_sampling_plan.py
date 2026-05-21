@@ -23,43 +23,50 @@ from processbehavior.data_preparation import encode_rsg
 # Test Fixtures
 # =============================================================================
 
+
 @pytest.fixture
 def simple_df():
     """Simple DataFrame with Lane and Phase factors."""
-    return pd.DataFrame({
-        'Weight': [10.1, 10.2, 10.3, 10.4, 10.5, 10.6, 10.7, 10.8],
-        'Lane': [1, 1, 2, 2, 1, 1, 2, 2],
-        'Phase': [1, 1, 1, 1, 2, 2, 2, 2],
-        'Pull': [1, 1, 1, 1, 2, 2, 2, 2]
-    })
+    return pd.DataFrame(
+        {
+            'Weight': [10.1, 10.2, 10.3, 10.4, 10.5, 10.6, 10.7, 10.8],
+            'Lane': [1, 1, 2, 2, 1, 1, 2, 2],
+            'Phase': [1, 1, 1, 1, 2, 2, 2, 2],
+            'Pull': [1, 1, 1, 1, 2, 2, 2, 2],
+        }
+    )
 
 
 @pytest.fixture
 def missing_phase_df():
     """DataFrame where Phase 3 is missing (not observed)."""
-    return pd.DataFrame({
-        'Weight': [10.1, 10.2, 10.3, 10.4, 10.5, 10.6, 10.7, 10.8],
-        'Lane': [1, 1, 2, 2, 1, 1, 2, 2],
-        'Phase': [1, 1, 1, 1, 2, 2, 2, 2],  # Phase 3 missing
-        'Pull': [1, 1, 1, 1, 2, 2, 2, 2]
-    })
+    return pd.DataFrame(
+        {
+            'Weight': [10.1, 10.2, 10.3, 10.4, 10.5, 10.6, 10.7, 10.8],
+            'Lane': [1, 1, 2, 2, 1, 1, 2, 2],
+            'Phase': [1, 1, 1, 1, 2, 2, 2, 2],  # Phase 3 missing
+            'Pull': [1, 1, 1, 1, 2, 2, 2, 2],
+        }
+    )
 
 
 @pytest.fixture
 def extra_phase_df():
     """DataFrame with extra Phase level not in plan, with replication."""
-    return pd.DataFrame({
-        'Weight': [10.1, 10.2, 10.3, 10.4, 10.5, 10.6, 10.7, 10.8,
-                   10.9, 11.0, 11.1, 11.2, 11.3, 11.4, 11.5, 11.6],
-        'Lane': [1, 1, 1, 1, 2, 2, 2, 2, 1, 1, 1, 1, 2, 2, 2, 2],
-        'Phase': [1, 1, 2, 2, 1, 1, 2, 2, 5, 5, 5, 5, 5, 5, 5, 5],  # Phase 5 is extra
-        'Pull': [1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2]
-    })
+    return pd.DataFrame(
+        {
+            'Weight': [10.1, 10.2, 10.3, 10.4, 10.5, 10.6, 10.7, 10.8, 10.9, 11.0, 11.1, 11.2, 11.3, 11.4, 11.5, 11.6],
+            'Lane': [1, 1, 1, 1, 2, 2, 2, 2, 1, 1, 1, 1, 2, 2, 2, 2],
+            'Phase': [1, 1, 2, 2, 1, 1, 2, 2, 5, 5, 5, 5, 5, 5, 5, 5],  # Phase 5 is extra
+            'Pull': [1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2],
+        }
+    )
 
 
 # =============================================================================
 # encode_rsg Tests
 # =============================================================================
+
 
 class TestEncodeRsg:
     """Tests for encode_rsg() helper function."""
@@ -83,11 +90,7 @@ class TestEncodeRsg:
         """encode_rsg() output should match observed RSG values in DataFrame."""
         # Create a study with factors
         pb = ProcessBehavior(simple_df)
-        study = pb.formulate(
-            response='Weight',
-            factors=['Lane', 'Phase'],
-            time='Pull'
-        )
+        study = pb.formulate(response='Weight', factors=['Lane', 'Phase'], time='Pull')
 
         # Get the analysis dataset and its RSG values
         result = study.execute()
@@ -103,18 +106,16 @@ class TestEncodeRsg:
     def test_encode_rsg_plan_expansion_matches_observed(self):
         """Plan expansion with encode_rsg() should match observed RSG."""
         # Create data with known factor combinations
-        df = pd.DataFrame({
-            'Weight': [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0],
-            'Lane': [1, 1, 2, 2, 1, 1, 2, 2],
-            'Phase': ['A', 'A', 'A', 'A', 'B', 'B', 'B', 'B'],
-            'Pull': [1, 1, 1, 1, 2, 2, 2, 2]
-        })
-        pb = ProcessBehavior(df)
-        study = pb.formulate(
-            response='Weight',
-            factors=['Lane', 'Phase'],
-            time='Pull'
+        df = pd.DataFrame(
+            {
+                'Weight': [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0],
+                'Lane': [1, 1, 2, 2, 1, 1, 2, 2],
+                'Phase': ['A', 'A', 'A', 'A', 'B', 'B', 'B', 'B'],
+                'Pull': [1, 1, 1, 1, 2, 2, 2, 2],
+            }
         )
+        pb = ProcessBehavior(df)
+        study = pb.formulate(response='Weight', factors=['Lane', 'Phase'], time='Pull')
 
         # Get observed RSG values
         result = study.execute()
@@ -156,6 +157,7 @@ class TestEncodeRsg:
 # =============================================================================
 # ColumnRef Tests
 # =============================================================================
+
 
 class TestColumnRef:
     """Tests for ColumnRef class."""
@@ -233,6 +235,7 @@ class TestColumnRef:
 # Formulate with Plain Strings Tests
 # =============================================================================
 
+
 class TestFormulateAcceptsStrings:
     """Tests that formulate() accepts plain strings (backward compatibility)."""
 
@@ -246,21 +249,14 @@ class TestFormulateAcceptsStrings:
     def test_formulate_accepts_plain_string_factors(self, simple_df):
         """formulate() should accept plain strings for factors."""
         pb = ProcessBehavior(simple_df)
-        study = pb.formulate(
-            response='Weight',
-            factors=['Lane', 'Phase']
-        )
+        study = pb.formulate(response='Weight', factors=['Lane', 'Phase'])
 
         assert study.factors == ['Lane', 'Phase']
 
     def test_formulate_accepts_plain_string_time(self, simple_df):
         """formulate() should accept plain string for time."""
         pb = ProcessBehavior(simple_df)
-        study = pb.formulate(
-            response='Weight',
-            factors=['Lane'],
-            time='Pull'
-        )
+        study = pb.formulate(response='Weight', factors=['Lane'], time='Pull')
 
         assert study.time == 'Pull'
 
@@ -268,6 +264,7 @@ class TestFormulateAcceptsStrings:
 # =============================================================================
 # Plan Validation Tests
 # =============================================================================
+
 
 class TestPlanValidation:
     """Tests for plan parameter validation."""
@@ -278,12 +275,10 @@ class TestPlanValidation:
 
         with pytest.raises(ValidationError) as exc_info:
             pb.formulate(
-                response='Weight',
-                factors=['Lane'],
-                plan={'factors': {pb.cols.Lane: [1, 2, 3, 4]}, 'T': 1, 'N': 1}
+                response='Weight', factors=['Lane'], plan={'factors': {pb.cols.Lane: [1, 2, 3, 4]}, 'T': 1, 'N': 1}
             )
 
-        assert "Cannot specify both" in str(exc_info.value)
+        assert 'Cannot specify both' in str(exc_info.value)
 
     def test_plan_extracts_factors_from_keys(self, simple_df):
         """Factors should be extracted from plan keys."""
@@ -291,13 +286,10 @@ class TestPlanValidation:
         study = pb.formulate(
             response=pb.cols.Weight,
             plan={
-                'factors': {
-                    pb.cols.Lane: [1, 2],
-                    pb.cols.Phase: [1, 2]
-                },
+                'factors': {pb.cols.Lane: [1, 2], pb.cols.Phase: [1, 2]},
                 'T': 1,
                 'N': 2,
-            }
+            },
         )
 
         assert study.factors == ['Lane', 'Phase']
@@ -314,11 +306,11 @@ class TestPlanValidation:
                 plan={
                     'factors': {
                         pb.cols.Lane: [1, 2],
-                        pb.cols.Phase: [1, 2]  # Phase 5 is in data but not plan
+                        pb.cols.Phase: [1, 2],  # Phase 5 is in data but not plan
                     },
                     'T': 1,
                     'N': 2,
-                }
+                },
             )
 
             # Check warning was issued via logging
@@ -329,30 +321,21 @@ class TestPlanValidation:
         pb = ProcessBehavior(simple_df)
 
         with pytest.raises(ColumnNotFoundError) as exc_info:
-            pb.formulate(
-                response=pb.cols.Weight,
-                plan={'factors': {'NonexistentColumn': [1, 2, 3]}, 'T': 1, 'N': 1}
-            )
+            pb.formulate(response=pb.cols.Weight, plan={'factors': {'NonexistentColumn': [1, 2, 3]}, 'T': 1, 'N': 1})
 
         assert 'NonexistentColumn' in str(exc_info.value)
 
     def test_plan_accepts_column_ref_keys(self, simple_df):
         """Plan should accept ColumnRef objects as keys."""
         pb = ProcessBehavior(simple_df)
-        study = pb.formulate(
-            response=pb.cols.Weight,
-            plan={'factors': {pb.cols.Lane: [1, 2]}, 'T': 1, 'N': 2}
-        )
+        study = pb.formulate(response=pb.cols.Weight, plan={'factors': {pb.cols.Lane: [1, 2]}, 'T': 1, 'N': 2})
 
         assert study.factors == ['Lane']
 
     def test_plan_accepts_string_keys(self, simple_df):
         """Plan should accept plain string keys."""
         pb = ProcessBehavior(simple_df)
-        study = pb.formulate(
-            response=pb.cols.Weight,
-            plan={'factors': {'Lane': [1, 2]}, 'T': 1, 'N': 2}
-        )
+        study = pb.formulate(response=pb.cols.Weight, plan={'factors': {'Lane': [1, 2]}, 'T': 1, 'N': 2})
 
         assert study.factors == ['Lane']
 
@@ -364,7 +347,7 @@ class TestPlanValidation:
         with pytest.raises(ValidationError) as exc_info:
             pb.formulate(
                 response='Weight',
-                plan={'Lane': [1, 2, 3, 4], 'T': 1, 'N': 1}  # Old structure, no 'factors' key
+                plan={'Lane': [1, 2, 3, 4], 'T': 1, 'N': 1},  # Old structure, no 'factors' key
             )
 
         assert "must have 'factors' key" in str(exc_info.value)
@@ -374,6 +357,7 @@ class TestPlanValidation:
 # DesignReport Tests
 # =============================================================================
 
+
 class TestDesignReport:
     """Tests for DesignReport class."""
 
@@ -381,8 +365,7 @@ class TestDesignReport:
         """design().factors should return a DataFrame."""
         pb = ProcessBehavior(simple_df)
         study = pb.formulate(
-            response=pb.cols.Weight,
-            plan={'factors': {pb.cols.Lane: [1, 2], pb.cols.Phase: [1, 2]}, 'T': 1, 'N': 2}
+            response=pb.cols.Weight, plan={'factors': {pb.cols.Lane: [1, 2], pb.cols.Phase: [1, 2]}, 'T': 1, 'N': 2}
         )
 
         design = study.design()
@@ -403,11 +386,11 @@ class TestDesignReport:
             plan={
                 'factors': {
                     pb.cols.Lane: [1, 2],
-                    pb.cols.Phase: [1, 2, 3]  # Phase 3 not in data
+                    pb.cols.Phase: [1, 2, 3],  # Phase 3 not in data
                 },
                 'T': 1,
                 'N': 2,
-            }
+            },
         )
 
         design = study.design()
@@ -421,17 +404,17 @@ class TestDesignReport:
 
         # Suppress warning for this test
         with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
+            warnings.simplefilter('ignore')
             study = pb.formulate(
                 response=pb.cols.Weight,
                 plan={
                     'factors': {
                         pb.cols.Lane: [1, 2],
-                        pb.cols.Phase: [1, 2]  # Phase 5 is extra
+                        pb.cols.Phase: [1, 2],  # Phase 5 is extra
                     },
                     'T': 1,
                     'N': 2,
-                }
+                },
             )
 
         design = study.design()
@@ -442,10 +425,7 @@ class TestDesignReport:
     def test_design_report_no_plan_uses_observed(self, simple_df):
         """Without plan, design() should show observed structure only."""
         pb = ProcessBehavior(simple_df)
-        study = pb.formulate(
-            response=pb.cols.Weight,
-            factors=['Lane', 'Phase']
-        )
+        study = pb.formulate(response=pb.cols.Weight, factors=['Lane', 'Phase'])
 
         design = study.design()
 
@@ -457,8 +437,7 @@ class TestDesignReport:
         """DesignReport repr should show summary."""
         pb = ProcessBehavior(simple_df)
         study = pb.formulate(
-            response=pb.cols.Weight,
-            plan={'factors': {pb.cols.Lane: [1, 2], pb.cols.Phase: [1, 2]}, 'T': 1, 'N': 2}
+            response=pb.cols.Weight, plan={'factors': {pb.cols.Lane: [1, 2], pb.cols.Phase: [1, 2]}, 'T': 1, 'N': 2}
         )
 
         design = study.design()
@@ -471,8 +450,7 @@ class TestDesignReport:
         """No missing/extra when plan exactly matches observed."""
         pb = ProcessBehavior(simple_df)
         study = pb.formulate(
-            response=pb.cols.Weight,
-            plan={'factors': {pb.cols.Lane: [1, 2], pb.cols.Phase: [1, 2]}, 'T': 1, 'N': 2}
+            response=pb.cols.Weight, plan={'factors': {pb.cols.Lane: [1, 2], pb.cols.Phase: [1, 2]}, 'T': 1, 'N': 2}
         )
 
         design = study.design()
@@ -483,20 +461,14 @@ class TestDesignReport:
     def test_design_report_has_plan_true_with_plan(self, simple_df):
         """has_plan should be True when plan was provided."""
         pb = ProcessBehavior(simple_df)
-        study = pb.formulate(
-            response=pb.cols.Weight,
-            plan={'factors': {pb.cols.Lane: [1, 2]}, 'T': 1, 'N': 2}
-        )
+        study = pb.formulate(response=pb.cols.Weight, plan={'factors': {pb.cols.Lane: [1, 2]}, 'T': 1, 'N': 2})
 
         assert study.design().has_plan is True
 
     def test_design_report_has_plan_false_without_plan(self, simple_df):
         """has_plan should be False when no plan was provided."""
         pb = ProcessBehavior(simple_df)
-        study = pb.formulate(
-            response=pb.cols.Weight,
-            factors=['Lane']
-        )
+        study = pb.formulate(response=pb.cols.Weight, factors=['Lane'])
 
         assert study.design().has_plan is False
 
@@ -505,17 +477,14 @@ class TestDesignReport:
 # SDS Integration Tests
 # =============================================================================
 
+
 class TestSDSIntegration:
     """Tests for SDS detection with and without plan."""
 
     def test_sds_detection_without_plan_works(self, simple_df):
         """SDS detection should work without plan (existing behavior)."""
         pb = ProcessBehavior(simple_df)
-        study = pb.formulate(
-            response=pb.cols.Weight,
-            factors=['Lane', 'Phase'],
-            time='Pull'
-        )
+        study = pb.formulate(response=pb.cols.Weight, factors=['Lane', 'Phase'], time='Pull')
 
         # Should detect some SDS (exact value depends on data structure)
         assert study.observed_design_state.sds in [0, 1, 2, 3, 4, 5, 6]
@@ -526,7 +495,7 @@ class TestSDSIntegration:
         study = pb.formulate(
             response=pb.cols.Weight,
             time=pb.cols.Pull,
-            plan={'factors': {pb.cols.Lane: [1, 2], pb.cols.Phase: [1, 2]}, 'T': 2, 'N': 1}
+            plan={'factors': {pb.cols.Lane: [1, 2], pb.cols.Phase: [1, 2]}, 'T': 2, 'N': 1},
         )
 
         # Should detect some SDS
@@ -538,21 +507,23 @@ class TestSDSIntegration:
         # Plan says Lane=[1,2,3,4] and Phase=[1,2,3] (12 combinations)
         # → Only 4 of 12 expected cells present → coverage ~33% < 95%
         # → Has replication (n=2 per cell) → SDS 4
-        df = pd.DataFrame({
-            'Weight': [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0],
-            'Lane': [1, 1, 2, 2, 1, 1, 2, 2],
-            'Phase': [1, 1, 2, 2, 1, 1, 2, 2],
-            'Pull': [1, 1, 1, 1, 2, 2, 2, 2]
-        })
+        df = pd.DataFrame(
+            {
+                'Weight': [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0],
+                'Lane': [1, 1, 2, 2, 1, 1, 2, 2],
+                'Phase': [1, 1, 2, 2, 1, 1, 2, 2],
+                'Pull': [1, 1, 1, 1, 2, 2, 2, 2],
+            }
+        )
         pb = ProcessBehavior(df)
 
         # Suppress warning about extra levels (we expect this warning)
         with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
+            warnings.simplefilter('ignore')
             study = pb.formulate(
                 response='Weight',
                 time='Pull',
-                plan={'factors': {'Lane': [1, 2, 3, 4], 'Phase': [1, 2, 3]}, 'T': 2, 'N': 2}
+                plan={'factors': {'Lane': [1, 2, 3, 4], 'Phase': [1, 2, 3]}, 'T': 2, 'N': 2},
             )
 
         assert study.observed_design_state.sds == 4  # Incomplete grid WITH replication
@@ -564,22 +535,23 @@ class TestSDSIntegration:
         # Plan says Lane=[1,2,3,4] and Phase=[1,2,3] (12 combinations)
         # → Only 4 of 12 expected factor combos × 4 time points = 16 of 48 cells
         # → Coverage ~33% < 95%, no replication (n=1 per cell) → SDS 5
-        df = pd.DataFrame({
-            'Weight': [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0,
-                       9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0],
-            'Lane': [1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2],
-            'Phase': [1, 1, 2, 2, 1, 1, 2, 2, 1, 1, 2, 2, 1, 1, 2, 2],
-            'Pull': [1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4]
-        })
+        df = pd.DataFrame(
+            {
+                'Weight': [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0],
+                'Lane': [1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2],
+                'Phase': [1, 1, 2, 2, 1, 1, 2, 2, 1, 1, 2, 2, 1, 1, 2, 2],
+                'Pull': [1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4],
+            }
+        )
         pb = ProcessBehavior(df)
 
         # Suppress warning about extra levels (we expect this warning)
         with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
+            warnings.simplefilter('ignore')
             study = pb.formulate(
                 response='Weight',
                 time='Pull',
-                plan={'factors': {'Lane': [1, 2, 3, 4], 'Phase': [1, 2, 3]}, 'T': 4, 'N': 1}
+                plan={'factors': {'Lane': [1, 2, 3, 4], 'Phase': [1, 2, 3]}, 'T': 4, 'N': 1},
             )
 
         assert study.observed_design_state.sds == 5  # Incomplete grid with NO replication
@@ -590,26 +562,32 @@ class TestSDSIntegration:
         # Some cells have n=2 (replication), some have n=1 (singleton)
         # Plan says Lane=[1,2,3,4] and Phase=[1,2,3] (12 combinations)
         # → Incomplete (has empty cells) + has singletons + has replicated → SDS 6
-        df = pd.DataFrame({
-            # (Lane=1, Phase=1): n=2 at Pull=1, n=2 at Pull=2 (replicated)
-            # (Lane=2, Phase=2): n=1 at Pull=1, n=1 at Pull=2 (singletons)
-            'Weight': [1.0, 1.1,   # Lane=1, Phase=1, Pull=1 (n=2)
-                       2.0, 2.1,   # Lane=1, Phase=1, Pull=2 (n=2)
-                       3.0,        # Lane=2, Phase=2, Pull=1 (n=1)
-                       4.0],       # Lane=2, Phase=2, Pull=2 (n=1)
-            'Lane':  [1, 1, 1, 1, 2, 2],
-            'Phase': [1, 1, 1, 1, 2, 2],
-            'Pull':  [1, 1, 2, 2, 1, 2]
-        })
+        df = pd.DataFrame(
+            {
+                # (Lane=1, Phase=1): n=2 at Pull=1, n=2 at Pull=2 (replicated)
+                # (Lane=2, Phase=2): n=1 at Pull=1, n=1 at Pull=2 (singletons)
+                'Weight': [
+                    1.0,
+                    1.1,  # Lane=1, Phase=1, Pull=1 (n=2)
+                    2.0,
+                    2.1,  # Lane=1, Phase=1, Pull=2 (n=2)
+                    3.0,  # Lane=2, Phase=2, Pull=1 (n=1)
+                    4.0,
+                ],  # Lane=2, Phase=2, Pull=2 (n=1)
+                'Lane': [1, 1, 1, 1, 2, 2],
+                'Phase': [1, 1, 1, 1, 2, 2],
+                'Pull': [1, 1, 2, 2, 1, 2],
+            }
+        )
         pb = ProcessBehavior(df)
 
         # Suppress warning about extra levels (we expect this warning)
         with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
+            warnings.simplefilter('ignore')
             study = pb.formulate(
                 response='Weight',
                 time='Pull',
-                plan={'factors': {'Lane': [1, 2, 3, 4], 'Phase': [1, 2, 3]}, 'T': 2, 'N': 2}
+                plan={'factors': {'Lane': [1, 2, 3, 4], 'Phase': [1, 2, 3]}, 'T': 2, 'N': 2},
             )
 
         # Per Table 1: Incomplete + has singletons + has replicated → SDS 6
@@ -619,6 +597,7 @@ class TestSDSIntegration:
 # =============================================================================
 # Integration Tests
 # =============================================================================
+
 
 class TestIntegration:
     """End-to-end integration tests."""
@@ -636,13 +615,10 @@ class TestIntegration:
             response=pb.cols.Weight,
             time=pb.cols.Pull,
             plan={
-                'factors': {
-                    pb.cols.Lane: [1, 2],
-                    pb.cols.Phase: [1, 2]
-                },
+                'factors': {pb.cols.Lane: [1, 2], pb.cols.Phase: [1, 2]},
                 'T': 2,
                 'N': 1,
-            }
+            },
         )
 
         # Check design
@@ -658,11 +634,7 @@ class TestIntegration:
         pb = ProcessBehavior(simple_df)
 
         # Formulate with factors (not plan)
-        study = pb.formulate(
-            response=pb.cols.Weight,
-            factors=[pb.cols.Lane, pb.cols.Phase],
-            time=pb.cols.Pull
-        )
+        study = pb.formulate(response=pb.cols.Weight, factors=[pb.cols.Lane, pb.cols.Phase], time=pb.cols.Pull)
 
         # Check design (should work without plan)
         design = study.design()
@@ -678,6 +650,7 @@ class TestIntegration:
 # Coverage Ratio Edge Cases
 # =============================================================================
 
+
 class TestCoverageRatioEdgeCases:
     """Tests for coverage ratio calculation edge cases."""
 
@@ -688,12 +661,14 @@ class TestCoverageRatioEdgeCases:
         dict insertion order, to generate expected combinations.
         """
         # Data has Lane first, Phase second in rsg encoding
-        df = pd.DataFrame({
-            'Lane': [1, 1, 2, 2] * 2,
-            'Phase': [1, 2, 1, 2] * 2,
-            'Pull': [1, 1, 1, 1, 2, 2, 2, 2],
-            'Weight': [10.0] * 8
-        })
+        df = pd.DataFrame(
+            {
+                'Lane': [1, 1, 2, 2] * 2,
+                'Phase': [1, 2, 1, 2] * 2,
+                'Pull': [1, 1, 1, 1, 2, 2, 2, 2],
+                'Weight': [10.0] * 8,
+            }
+        )
         pb = ProcessBehavior(df)
 
         # Plan with keys in REVERSE order (Phase first, Lane second)
@@ -701,17 +676,13 @@ class TestCoverageRatioEdgeCases:
         plan_reversed = {
             'factors': {
                 'Phase': [1, 2],  # Phase first
-                'Lane': [1, 2],   # Lane second
+                'Lane': [1, 2],  # Lane second
             },
             'T': 2,
             'N': 1,
         }
 
-        study = pb.formulate(
-            response='Weight',
-            time='Pull',
-            plan=plan_reversed
-        )
+        study = pb.formulate(response='Weight', time='Pull', plan=plan_reversed)
 
         # Should detect complete grid (SDS 1, 2, or 3 based on replication)
         # NOT SDS 5/6 which would indicate incomplete coverage
@@ -727,27 +698,29 @@ class TestCoverageRatioEdgeCases:
         # Data has Lane 1 and 3, but NOT Lane 2
         # Plan expects Lane 1 and 2
         # Need n≥2 per cell to avoid subgroup size validation errors
-        df = pd.DataFrame({
-            'Lane': [1, 1, 1, 1, 3, 3, 3, 3],  # Lane 2 is MISSING, Lane 3 is EXTRA
-            'Phase': [1, 1, 2, 2, 1, 1, 2, 2],
-            'Pull': [1, 1, 1, 1, 1, 1, 1, 1],
-            'Weight': [10.0] * 8
-        })
+        df = pd.DataFrame(
+            {
+                'Lane': [1, 1, 1, 1, 3, 3, 3, 3],  # Lane 2 is MISSING, Lane 3 is EXTRA
+                'Phase': [1, 1, 2, 2, 1, 1, 2, 2],
+                'Pull': [1, 1, 1, 1, 1, 1, 1, 1],
+                'Weight': [10.0] * 8,
+            }
+        )
         pb = ProcessBehavior(df)
 
         with warnings.catch_warnings():
-            warnings.simplefilter("ignore")  # Ignore extra levels warning
+            warnings.simplefilter('ignore')  # Ignore extra levels warning
             study = pb.formulate(
                 response='Weight',
                 time='Pull',
                 plan={
                     'factors': {
-                        'Lane': [1, 2],   # Expects Lane 1 and 2
+                        'Lane': [1, 2],  # Expects Lane 1 and 2
                         'Phase': [1, 2],
                     },
                     'T': 1,
                     'N': 2,
-                }
+                },
             )
 
         # Lane=2 is missing from plan, so grid is incomplete
@@ -759,6 +732,7 @@ class TestCoverageRatioEdgeCases:
 # SDSResult Reason Field Tests
 # =============================================================================
 
+
 class TestSDSResultReason:
     """Tests for SDSResult.reason field disambiguation."""
 
@@ -766,12 +740,14 @@ class TestSDSResultReason:
         """Nested design should return reason='nested'."""
         # Heads nested in lanes (each head belongs to one lane only)
         # With very incomplete temporal coverage (< 90%)
-        df = pd.DataFrame({
-            'lane': ['A'] * 5 + ['B'] * 5,
-            'head': [1] * 5 + [2] * 5,  # Head 1 only with lane A, head 2 only with B
-            'pull': [1, 2, 1, 2, 1, 1, 2, 1, 2, 1],  # Sparse time coverage
-            'weight': [10.0] * 10
-        })
+        df = pd.DataFrame(
+            {
+                'lane': ['A'] * 5 + ['B'] * 5,
+                'head': [1] * 5 + [2] * 5,  # Head 1 only with lane A, head 2 only with B
+                'pull': [1, 2, 1, 2, 1, 1, 2, 1, 2, 1],  # Sparse time coverage
+                'weight': [10.0] * 10,
+            }
+        )
 
         from processbehavior.data_preparation import DataPreparation
         from processbehavior.formulation_spec import FormulationSpec
@@ -802,12 +778,14 @@ class TestSDSResultReason:
         from processbehavior.sds_detector import SDSRegistry
 
         # Incomplete grid (missing Lane 3) with replication (n=2 per cell)
-        df = pd.DataFrame({
-            'Lane': [1, 1, 2, 2] * 2,  # Lane 3 is missing
-            'Phase': [1, 1, 1, 1, 2, 2, 2, 2],
-            'Pull': [1, 1, 1, 1, 1, 1, 1, 1],
-            'Weight': [10.0] * 8
-        })
+        df = pd.DataFrame(
+            {
+                'Lane': [1, 1, 2, 2] * 2,  # Lane 3 is missing
+                'Phase': [1, 1, 1, 1, 2, 2, 2, 2],
+                'Pull': [1, 1, 1, 1, 1, 1, 1, 1],
+                'Weight': [10.0] * 8,
+            }
+        )
 
         config = FormulationSpec(
             response_var='Weight',
@@ -820,10 +798,7 @@ class TestSDSResultReason:
         prepared_df = prep.prepare_dataset(df, config)
 
         detector = SDSRegistry()
-        result = detector.detect_sds(
-            prepared_df, config,
-            plan={'Lane': [1, 2, 3], 'Phase': [1, 2]}
-        )
+        result = detector.detect_sds(prepared_df, config, plan={'Lane': [1, 2, 3], 'Phase': [1, 2]})
 
         assert result.sds == 4
         # SDS 4: Incomplete grid without singletons (all observed cells replicated)
@@ -836,12 +811,14 @@ class TestSDSResultReason:
         from processbehavior.sds_detector import SDSRegistry
 
         # Incomplete grid (missing Lane 3) with NO replication (n=1 per cell)
-        df = pd.DataFrame({
-            'Lane': [1, 1, 2, 2],  # Lane 3 is missing
-            'Phase': [1, 2, 1, 2],
-            'Pull': [1, 2, 3, 4],  # Different time points, so each cell has n=1
-            'Weight': [10.0] * 4
-        })
+        df = pd.DataFrame(
+            {
+                'Lane': [1, 1, 2, 2],  # Lane 3 is missing
+                'Phase': [1, 2, 1, 2],
+                'Pull': [1, 2, 3, 4],  # Different time points, so each cell has n=1
+                'Weight': [10.0] * 4,
+            }
+        )
 
         config = FormulationSpec(
             response_var='Weight',
@@ -854,10 +831,7 @@ class TestSDSResultReason:
         prepared_df = prep.prepare_dataset(df, config)
 
         detector = SDSRegistry()
-        result = detector.detect_sds(
-            prepared_df, config,
-            plan={'Lane': [1, 2, 3], 'Phase': [1, 2]}
-        )
+        result = detector.detect_sds(prepared_df, config, plan={'Lane': [1, 2, 3], 'Phase': [1, 2]})
 
         assert result.sds == 5
         assert result.reason == 'incomplete_no_replication'
@@ -866,6 +840,7 @@ class TestSDSResultReason:
 # =============================================================================
 # Documentation Alignment Tests
 # =============================================================================
+
 
 class TestDocsAlignment:
     """Tests to verify SDS definitions are consistent across all sources."""
@@ -894,7 +869,7 @@ class TestDocsAlignment:
         chars = SDSRegistry().get_sds_characteristics(4)
         assert 'Incomplete' in chars['description'] and 'without singletons' in chars['description'].lower()
 
-        with pytest.raises(ValueError, match="analytical SDS"):
+        with pytest.raises(ValueError, match='analytical SDS'):
             SDSRegistry.get_analysis_plan(4)
 
     def test_sds_5_characteristics_still_exist(self):
@@ -906,7 +881,7 @@ class TestDocsAlignment:
         chars = SDSRegistry().get_sds_characteristics(5)
         assert 'without replication' in chars['description'].lower()
 
-        with pytest.raises(ValueError, match="analytical SDS"):
+        with pytest.raises(ValueError, match='analytical SDS'):
             SDSRegistry.get_analysis_plan(5)
 
     def test_sds_6_characteristics_still_exist(self):
@@ -918,7 +893,7 @@ class TestDocsAlignment:
         chars = SDSRegistry().get_sds_characteristics(6)
         assert 'Incomplete' in chars['description'] and 'singletons' in chars['description'].lower()
 
-        with pytest.raises(ValueError, match="analytical SDS"):
+        with pytest.raises(ValueError, match='analytical SDS'):
             SDSRegistry.get_analysis_plan(6)
 
 
@@ -926,24 +901,25 @@ class TestDocsAlignment:
 # K, T, N Tests
 # =============================================================================
 
+
 class TestDesignReportKTN:
     """Tests for K, T, N in DesignReport."""
 
     def test_K_derived_from_factors(self):
         """K should be product of factor level counts."""
-        df = pd.DataFrame({
-            'Lane': [1, 1, 2, 2, 3, 3, 4, 4] * 2,
-            'Phase': [1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2],
-            'Pull': [1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2],
-            'Weight': [10.0] * 16
-        })
+        df = pd.DataFrame(
+            {
+                'Lane': [1, 1, 2, 2, 3, 3, 4, 4] * 2,
+                'Phase': [1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2],
+                'Pull': [1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2],
+                'Weight': [10.0] * 16,
+            }
+        )
         pb = ProcessBehavior(df)
 
         # Plan: Lane=[1,2,3,4] (4), Phase=[1,2,3] (3) → K = 4 × 3 = 12
         study = pb.formulate(
-            response='Weight',
-            time='Pull',
-            plan={'factors': {'Lane': [1, 2, 3, 4], 'Phase': [1, 2, 3]}, 'T': 2, 'N': 1}
+            response='Weight', time='Pull', plan={'factors': {'Lane': [1, 2, 3, 4], 'Phase': [1, 2, 3]}, 'T': 2, 'N': 1}
         )
 
         design = study.design()
@@ -952,18 +928,18 @@ class TestDesignReportKTN:
     def test_K_observed_from_data(self):
         """K_observed should reflect actual unique RSG groups (nunique)."""
         # Create data with 4 unique RSG combinations: (1,1), (1,2), (2,1), (2,2)
-        df = pd.DataFrame({
-            'Lane': [1, 1, 1, 1, 2, 2, 2, 2],
-            'Phase': [1, 1, 2, 2, 1, 1, 2, 2],
-            'Pull': [1, 1, 1, 1, 1, 1, 1, 1],
-            'Weight': [10.0] * 8
-        })
+        df = pd.DataFrame(
+            {
+                'Lane': [1, 1, 1, 1, 2, 2, 2, 2],
+                'Phase': [1, 1, 2, 2, 1, 1, 2, 2],
+                'Pull': [1, 1, 1, 1, 1, 1, 1, 1],
+                'Weight': [10.0] * 8,
+            }
+        )
         pb = ProcessBehavior(df)
 
         study = pb.formulate(
-            response='Weight',
-            time='Pull',
-            plan={'factors': {'Lane': [1, 2, 3, 4], 'Phase': [1, 2, 3]}, 'T': 1, 'N': 2}
+            response='Weight', time='Pull', plan={'factors': {'Lane': [1, 2, 3, 4], 'Phase': [1, 2, 3]}, 'T': 1, 'N': 2}
         )
 
         design = study.design()
@@ -973,18 +949,18 @@ class TestDesignReportKTN:
 
     def test_K_missing_from_missing_combos(self):
         """K_missing should equal len(missing_combos)."""
-        df = pd.DataFrame({
-            'Lane': [1, 1, 2, 2] * 2,
-            'Phase': [1, 1, 2, 2] * 2,
-            'Pull': [1, 1, 1, 1, 2, 2, 2, 2],
-            'Weight': [10.0] * 8
-        })
+        df = pd.DataFrame(
+            {
+                'Lane': [1, 1, 2, 2] * 2,
+                'Phase': [1, 1, 2, 2] * 2,
+                'Pull': [1, 1, 1, 1, 2, 2, 2, 2],
+                'Weight': [10.0] * 8,
+            }
+        )
         pb = ProcessBehavior(df)
 
         study = pb.formulate(
-            response='Weight',
-            time='Pull',
-            plan={'factors': {'Lane': [1, 2, 3, 4], 'Phase': [1, 2, 3]}, 'T': 2, 'N': 2}
+            response='Weight', time='Pull', plan={'factors': {'Lane': [1, 2, 3, 4], 'Phase': [1, 2, 3]}, 'T': 2, 'N': 2}
         )
 
         design = study.design()
@@ -998,46 +974,41 @@ class TestDesignReportKTN:
         fail because 'F1_1_F2_1'.split('_') = ['F1', '1', 'F2', '1'] has
         4 parts but only 2 factors exist.
         """
-        df = pd.DataFrame({
-            'factor 1': ['F1_1', 'F1_1', 'F1_2', 'F1_2'] * 2,
-            'factor 2': ['F2_1', 'F2_2', 'F2_1', 'F2_2'] * 2,
-            'time': [1, 1, 1, 1, 2, 2, 2, 2],
-            'y': [10.0] * 8
-        })
+        df = pd.DataFrame(
+            {
+                'factor 1': ['F1_1', 'F1_1', 'F1_2', 'F1_2'] * 2,
+                'factor 2': ['F2_1', 'F2_2', 'F2_1', 'F2_2'] * 2,
+                'time': [1, 1, 1, 1, 2, 2, 2, 2],
+                'y': [10.0] * 8,
+            }
+        )
         pb = ProcessBehavior(df)
 
         # Plan exactly matches observed factor levels
         study = pb.formulate(
             response='y',
             time='time',
-            plan={'factors': {
-                'factor 1': ['F1_1', 'F1_2'],
-                'factor 2': ['F2_1', 'F2_2']
-            }, 'T': 2, 'N': 1}
+            plan={'factors': {'factor 1': ['F1_1', 'F1_2'], 'factor 2': ['F2_1', 'F2_2']}, 'T': 2, 'N': 1},
         )
 
         design = study.design()
         # K = 2 × 2 = 4, all observed → K_missing should be 0
         assert design.K == 4
         assert design.K_observed == 4
-        assert design.K_missing == 0, (
-            f"K_missing should be 0 when all RSGs observed, got {design.K_missing}"
-        )
+        assert design.K_missing == 0, f'K_missing should be 0 when all RSGs observed, got {design.K_missing}'
 
     def test_T_planned_vs_observed(self):
         """T should show planned vs observed time points."""
-        df = pd.DataFrame({
-            'Lane': [1] * 16,
-            'Pull': list(range(1, 9)) * 2,  # 8 unique time points
-            'Weight': [10.0] * 16
-        })
+        df = pd.DataFrame(
+            {
+                'Lane': [1] * 16,
+                'Pull': list(range(1, 9)) * 2,  # 8 unique time points
+                'Weight': [10.0] * 16,
+            }
+        )
         pb = ProcessBehavior(df)
 
-        study = pb.formulate(
-            response='Weight',
-            time='Pull',
-            plan={'factors': {'Lane': [1]}, 'T': 10, 'N': 2}
-        )
+        study = pb.formulate(response='Weight', time='Pull', plan={'factors': {'Lane': [1]}, 'T': 10, 'N': 2})
 
         design = study.design()
         assert design.T == 10
@@ -1046,18 +1017,16 @@ class TestDesignReportKTN:
 
     def test_N_planned_vs_observed(self):
         """N should show planned vs observed cell sizes."""
-        df = pd.DataFrame({
-            'Lane': [1, 1, 1, 2, 2] * 2,  # Lane 1 has 3 obs/cell, Lane 2 has 2
-            'Pull': [1, 1, 1, 1, 1, 2, 2, 2, 2, 2],
-            'Weight': [10.0] * 10
-        })
+        df = pd.DataFrame(
+            {
+                'Lane': [1, 1, 1, 2, 2] * 2,  # Lane 1 has 3 obs/cell, Lane 2 has 2
+                'Pull': [1, 1, 1, 1, 1, 2, 2, 2, 2, 2],
+                'Weight': [10.0] * 10,
+            }
+        )
         pb = ProcessBehavior(df)
 
-        study = pb.formulate(
-            response='Weight',
-            time='Pull',
-            plan={'factors': {'Lane': [1, 2]}, 'T': 2, 'N': 2}
-        )
+        study = pb.formulate(response='Weight', time='Pull', plan={'factors': {'Lane': [1, 2]}, 'T': 2, 'N': 2})
 
         design = study.design()
         assert design.N == 2
@@ -1069,58 +1038,58 @@ class TestDesignReportKTN:
 
     def test_structure_summary_complete(self):
         """structure_summary should be 'Complete structure' when all match."""
-        df = pd.DataFrame({
-            'Lane': [1, 1, 2, 2] * 2,
-            'Phase': [1, 2, 1, 2] * 2,
-            'Pull': [1, 1, 1, 1, 2, 2, 2, 2],
-            'Weight': [10.0] * 8
-        })
+        df = pd.DataFrame(
+            {
+                'Lane': [1, 1, 2, 2] * 2,
+                'Phase': [1, 2, 1, 2] * 2,
+                'Pull': [1, 1, 1, 1, 2, 2, 2, 2],
+                'Weight': [10.0] * 8,
+            }
+        )
         pb = ProcessBehavior(df)
 
         study = pb.formulate(
-            response='Weight',
-            time='Pull',
-            plan={'factors': {'Lane': [1, 2], 'Phase': [1, 2]}, 'T': 2, 'N': 1}
+            response='Weight', time='Pull', plan={'factors': {'Lane': [1, 2], 'Phase': [1, 2]}, 'T': 2, 'N': 1}
         )
 
         design = study.design()
-        assert design.structure_summary == "Complete structure"
+        assert design.structure_summary == 'Complete structure'
 
     def test_structure_summary_incomplete(self):
         """structure_summary should explain discrepancies."""
-        df = pd.DataFrame({
-            'Lane': [1, 1, 2, 2] * 2,
-            'Phase': [1, 1, 2, 2] * 2,  # Phase 3 missing
-            'Pull': [1, 1, 1, 1, 2, 2, 2, 2],
-            'Weight': [10.0] * 8
-        })
+        df = pd.DataFrame(
+            {
+                'Lane': [1, 1, 2, 2] * 2,
+                'Phase': [1, 1, 2, 2] * 2,  # Phase 3 missing
+                'Pull': [1, 1, 1, 1, 2, 2, 2, 2],
+                'Weight': [10.0] * 8,
+            }
+        )
         pb = ProcessBehavior(df)
 
         study = pb.formulate(
-            response='Weight',
-            time='Pull',
-            plan={'factors': {'Lane': [1, 2], 'Phase': [1, 2, 3]}, 'T': 2, 'N': 2}
+            response='Weight', time='Pull', plan={'factors': {'Lane': [1, 2], 'Phase': [1, 2, 3]}, 'T': 2, 'N': 2}
         )
 
         design = study.design()
-        assert "missing" in design.structure_summary.lower()
+        assert 'missing' in design.structure_summary.lower()
 
     def test_missing_combos_from_cartesian_product(self):
         """missing_combos should be cartesian product minus observed."""
-        df = pd.DataFrame({
-            'Lane': [1, 1] * 2,  # Only Lane 1
-            'Phase': [1, 1, 2, 2],  # Both phases
-            'Pull': [1, 1, 2, 2],
-            'Weight': [10.0] * 4
-        })
+        df = pd.DataFrame(
+            {
+                'Lane': [1, 1] * 2,  # Only Lane 1
+                'Phase': [1, 1, 2, 2],  # Both phases
+                'Pull': [1, 1, 2, 2],
+                'Weight': [10.0] * 4,
+            }
+        )
         pb = ProcessBehavior(df)
 
         # Plan expects Lane 1,2 × Phase 1,2 = 4 combos
         # Data only has Lane 1 × Phase 1,2 = 2 combos
         study = pb.formulate(
-            response='Weight',
-            time='Pull',
-            plan={'factors': {'Lane': [1, 2], 'Phase': [1, 2]}, 'T': 2, 'N': 1}
+            response='Weight', time='Pull', plan={'factors': {'Lane': [1, 2], 'Phase': [1, 2]}, 'T': 2, 'N': 1}
         )
 
         design = study.design()
@@ -1133,18 +1102,14 @@ class TestDesignReportKTN:
         """missing_combos should be naturally sorted."""
         from processbehavior.data_preparation import natural_sort_key
 
-        df = pd.DataFrame({
-            'Item': [1] * 4,
-            'Pull': [1, 1, 2, 2],
-            'Weight': [10.0] * 4
-        })
+        df = pd.DataFrame({'Item': [1] * 4, 'Pull': [1, 1, 2, 2], 'Weight': [10.0] * 4})
         pb = ProcessBehavior(df)
 
         # Plan with numeric levels that need natural sort
         study = pb.formulate(
             response='Weight',
             time='Pull',
-            plan={'factors': {'Item': [1, 2, 10, 20]}, 'T': 2, 'N': 2}  # 10 should come after 2
+            plan={'factors': {'Item': [1, 2, 10, 20]}, 'T': 2, 'N': 2},  # 10 should come after 2
         )
 
         design = study.design()
@@ -1154,19 +1119,19 @@ class TestDesignReportKTN:
 
     def test_sds_reason_in_design_report(self):
         """sds_reason should come from SDSResult."""
-        df = pd.DataFrame({
-            'Lane': [1, 1, 2, 2] * 2,
-            'Phase': [1, 1, 2, 2] * 2,
-            'Pull': [1, 1, 1, 1, 2, 2, 2, 2],
-            'Weight': [10.0] * 8
-        })
+        df = pd.DataFrame(
+            {
+                'Lane': [1, 1, 2, 2] * 2,
+                'Phase': [1, 1, 2, 2] * 2,
+                'Pull': [1, 1, 1, 1, 2, 2, 2, 2],
+                'Weight': [10.0] * 8,
+            }
+        )
         pb = ProcessBehavior(df)
 
         # Create study with full plan to get specific SDS reason
         study = pb.formulate(
-            response='Weight',
-            time='Pull',
-            plan={'factors': {'Lane': [1, 2], 'Phase': [1, 2]}, 'T': 2, 'N': 2}
+            response='Weight', time='Pull', plan={'factors': {'Lane': [1, 2], 'Phase': [1, 2]}, 'T': 2, 'N': 2}
         )
 
         design = study.design()
@@ -1175,18 +1140,18 @@ class TestDesignReportKTN:
 
     def test_repr_shows_K_T_N(self):
         """DesignReport __repr__ should show K, T, N info."""
-        df = pd.DataFrame({
-            'Lane': [1, 1, 2, 2] * 2,
-            'Phase': [1, 2, 1, 2] * 2,
-            'Pull': [1, 1, 1, 1, 2, 2, 2, 2],
-            'Weight': [10.0] * 8
-        })
+        df = pd.DataFrame(
+            {
+                'Lane': [1, 1, 2, 2] * 2,
+                'Phase': [1, 2, 1, 2] * 2,
+                'Pull': [1, 1, 1, 1, 2, 2, 2, 2],
+                'Weight': [10.0] * 8,
+            }
+        )
         pb = ProcessBehavior(df)
 
         study = pb.formulate(
-            response='Weight',
-            time='Pull',
-            plan={'factors': {'Lane': [1, 2], 'Phase': [1, 2]}, 'T': 3, 'N': 2}
+            response='Weight', time='Pull', plan={'factors': {'Lane': [1, 2], 'Phase': [1, 2]}, 'T': 3, 'N': 2}
         )
 
         design = study.design()
@@ -1200,20 +1165,22 @@ class TestDesignReportKTN:
 
     def test_extra_combos_detected(self):
         """extra_combos should show RSG combos observed but not in plan."""
-        df = pd.DataFrame({
-            'Lane': [1, 1, 2, 2, 3, 3] * 2,  # Lane 3 is extra
-            'Phase': [1, 2, 1, 2, 1, 2] * 2,
-            'Pull': [1] * 6 + [2] * 6,
-            'Weight': [10.0] * 12
-        })
+        df = pd.DataFrame(
+            {
+                'Lane': [1, 1, 2, 2, 3, 3] * 2,  # Lane 3 is extra
+                'Phase': [1, 2, 1, 2, 1, 2] * 2,
+                'Pull': [1] * 6 + [2] * 6,
+                'Weight': [10.0] * 12,
+            }
+        )
         pb = ProcessBehavior(df)
 
         with warnings.catch_warnings():
-            warnings.simplefilter("ignore")  # Extra levels warning
+            warnings.simplefilter('ignore')  # Extra levels warning
             study = pb.formulate(
                 response='Weight',
                 time='Pull',
-                plan={'factors': {'Lane': [1, 2], 'Phase': [1, 2]}, 'T': 2, 'N': 1}  # No Lane 3
+                plan={'factors': {'Lane': [1, 2], 'Phase': [1, 2]}, 'T': 2, 'N': 1},  # No Lane 3
             )
 
         design = study.design()
@@ -1224,19 +1191,17 @@ class TestDesignReportKTN:
 
     def test_no_plan_has_K_observed_only(self):
         """Without plan, K should equal K_observed."""
-        df = pd.DataFrame({
-            'Lane': [1, 1, 2, 2] * 2,
-            'Phase': [1, 2, 1, 2] * 2,
-            'Pull': [1, 1, 1, 1, 2, 2, 2, 2],
-            'Weight': [10.0] * 8
-        })
+        df = pd.DataFrame(
+            {
+                'Lane': [1, 1, 2, 2] * 2,
+                'Phase': [1, 2, 1, 2] * 2,
+                'Pull': [1, 1, 1, 1, 2, 2, 2, 2],
+                'Weight': [10.0] * 8,
+            }
+        )
         pb = ProcessBehavior(df)
 
-        study = pb.formulate(
-            response='Weight',
-            factors=['Lane', 'Phase'],
-            time='Pull'
-        )
+        study = pb.formulate(response='Weight', factors=['Lane', 'Phase'], time='Pull')
 
         design = study.design()
         assert design.K_observed == design.K  # K falls back to K_observed
@@ -1246,19 +1211,19 @@ class TestDesignReportKTN:
 
     def test_R_from_K_and_T(self):
         """R should be K × T when both are specified in plan."""
-        df = pd.DataFrame({
-            'Lane': [1, 1, 2, 2] * 4,
-            'Phase': [1, 2, 1, 2] * 4,
-            'Pull': [1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4],
-            'Weight': [10.0] * 16
-        })
+        df = pd.DataFrame(
+            {
+                'Lane': [1, 1, 2, 2] * 4,
+                'Phase': [1, 2, 1, 2] * 4,
+                'Pull': [1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4],
+                'Weight': [10.0] * 16,
+            }
+        )
         pb = ProcessBehavior(df)
 
         # K = 2 × 2 = 4, T = 4 → R = 16
         study = pb.formulate(
-            response='Weight',
-            time='Pull',
-            plan={'factors': {'Lane': [1, 2], 'Phase': [1, 2]}, 'T': 4, 'N': 1}
+            response='Weight', time='Pull', plan={'factors': {'Lane': [1, 2], 'Phase': [1, 2]}, 'T': 4, 'N': 1}
         )
 
         design = study.design()
@@ -1268,18 +1233,16 @@ class TestDesignReportKTN:
 
     def test_R_observed_counts_unique_cells(self):
         """R_observed should count unique (rsg, time) cells."""
-        df = pd.DataFrame({
-            'Lane': [1, 1, 2, 2] * 2,  # 2 lanes × 2 times = 4 cells
-            'Pull': [1, 1, 1, 1, 2, 2, 2, 2],
-            'Weight': [10.0] * 8
-        })
+        df = pd.DataFrame(
+            {
+                'Lane': [1, 1, 2, 2] * 2,  # 2 lanes × 2 times = 4 cells
+                'Pull': [1, 1, 1, 1, 2, 2, 2, 2],
+                'Weight': [10.0] * 8,
+            }
+        )
         pb = ProcessBehavior(df)
 
-        study = pb.formulate(
-            response='Weight',
-            time='Pull',
-            plan={'factors': {'Lane': [1, 2]}, 'T': 2, 'N': 2}
-        )
+        study = pb.formulate(response='Weight', time='Pull', plan={'factors': {'Lane': [1, 2]}, 'T': 2, 'N': 2})
 
         design = study.design()
         # 2 lanes × 2 time points = 4 unique cells
@@ -1287,20 +1250,18 @@ class TestDesignReportKTN:
 
     def test_R_missing_when_cells_incomplete(self):
         """R_missing should show expected - observed cells."""
-        df = pd.DataFrame({
-            'Lane': [1, 1] * 2,  # Only Lane 1, missing Lane 2
-            'Pull': [1, 1, 2, 2],
-            'Weight': [10.0] * 4
-        })
+        df = pd.DataFrame(
+            {
+                'Lane': [1, 1] * 2,  # Only Lane 1, missing Lane 2
+                'Pull': [1, 1, 2, 2],
+                'Weight': [10.0] * 4,
+            }
+        )
         pb = ProcessBehavior(df)
 
         # Plan expects 2 lanes × 2 times = 4 cells
         # Data only has 1 lane × 2 times = 2 cells
-        study = pb.formulate(
-            response='Weight',
-            time='Pull',
-            plan={'factors': {'Lane': [1, 2]}, 'T': 2, 'N': 2}
-        )
+        study = pb.formulate(response='Weight', time='Pull', plan={'factors': {'Lane': [1, 2]}, 'T': 2, 'N': 2})
 
         design = study.design()
         assert design.R == 4  # Expected: 2 lanes × 2 times
@@ -1309,19 +1270,11 @@ class TestDesignReportKTN:
 
     def test_R_none_without_T(self):
         """R should be None when T is not specified in plan."""
-        df = pd.DataFrame({
-            'Lane': [1, 1, 2, 2] * 2,
-            'Pull': [1, 1, 1, 1, 2, 2, 2, 2],
-            'Weight': [10.0] * 8
-        })
+        df = pd.DataFrame({'Lane': [1, 1, 2, 2] * 2, 'Pull': [1, 1, 1, 1, 2, 2, 2, 2], 'Weight': [10.0] * 8})
         pb = ProcessBehavior(df)
 
         # T and N specified → R can be computed
-        study = pb.formulate(
-            response='Weight',
-            time='Pull',
-            plan={'factors': {'Lane': [1, 2]}, 'T': 2, 'N': 2}
-        )
+        study = pb.formulate(response='Weight', time='Pull', plan={'factors': {'Lane': [1, 2]}, 'T': 2, 'N': 2})
 
         design = study.design()
         assert design.R is not None
@@ -1332,21 +1285,23 @@ class TestDesignReportKTN:
 # Gate Metrics Tests
 # =============================================================================
 
+
 class TestDesignReportGateMetrics:
     """Tests for gate metrics (min_cell_size, n_empty_cells, coverage)."""
 
     def test_min_cell_size_propagated_sds1(self):
         """SDS 1 fixture → design().min_cell_size >= 2."""
-        df = pd.DataFrame({
-            'Lane': [1, 1, 2, 2] * 2,
-            'Phase': [1, 1, 2, 2] * 2,
-            'Pull': [1, 1, 1, 1, 2, 2, 2, 2],
-            'Weight': [10.0] * 8
-        })
+        df = pd.DataFrame(
+            {
+                'Lane': [1, 1, 2, 2] * 2,
+                'Phase': [1, 1, 2, 2] * 2,
+                'Pull': [1, 1, 1, 1, 2, 2, 2, 2],
+                'Weight': [10.0] * 8,
+            }
+        )
         pb = ProcessBehavior(df)
         study = pb.formulate(
-            response='Weight', time='Pull',
-            plan={'factors': {'Lane': [1, 2], 'Phase': [1, 2]}, 'T': 2, 'N': 2}
+            response='Weight', time='Pull', plan={'factors': {'Lane': [1, 2], 'Phase': [1, 2]}, 'T': 2, 'N': 2}
         )
         design = study.design()
         assert design.min_cell_size is not None
@@ -1354,18 +1309,12 @@ class TestDesignReportGateMetrics:
 
     def test_min_cell_size_sds6(self):
         """SDS 6 fixture → design().min_cell_size == 1."""
-        df = pd.DataFrame({
-            'Lane': [1, 2, 1, 2],
-            'Phase': [1, 1, 2, 2],
-            'Pull': [1, 1, 2, 2],
-            'Weight': [10.0] * 4
-        })
+        df = pd.DataFrame({'Lane': [1, 2, 1, 2], 'Phase': [1, 1, 2, 2], 'Pull': [1, 1, 2, 2], 'Weight': [10.0] * 4})
         pb = ProcessBehavior(df)
         with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
+            warnings.simplefilter('ignore')
             study = pb.formulate(
-                response='Weight', time='Pull',
-                plan={'factors': {'Lane': [1, 2, 3], 'Phase': [1, 2]}, 'T': 2, 'N': 1}
+                response='Weight', time='Pull', plan={'factors': {'Lane': [1, 2, 3], 'Phase': [1, 2]}, 'T': 2, 'N': 1}
             )
         design = study.design()
         assert design.min_cell_size == 1
@@ -1373,16 +1322,17 @@ class TestDesignReportGateMetrics:
     def test_n_empty_cells_zero_for_complete(self):
         """SDS 1 fixture → design().n_empty_cells == 0."""
         # All 4 RSG combos present with n=2 per cell per time point
-        df = pd.DataFrame({
-            'Lane':  [1, 1, 1, 1, 2, 2, 2, 2, 1, 1, 1, 1, 2, 2, 2, 2],
-            'Phase': [1, 1, 2, 2, 1, 1, 2, 2, 1, 1, 2, 2, 1, 1, 2, 2],
-            'Pull':  [1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2],
-            'Weight': [10.0] * 16
-        })
+        df = pd.DataFrame(
+            {
+                'Lane': [1, 1, 1, 1, 2, 2, 2, 2, 1, 1, 1, 1, 2, 2, 2, 2],
+                'Phase': [1, 1, 2, 2, 1, 1, 2, 2, 1, 1, 2, 2, 1, 1, 2, 2],
+                'Pull': [1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2],
+                'Weight': [10.0] * 16,
+            }
+        )
         pb = ProcessBehavior(df)
         study = pb.formulate(
-            response='Weight', time='Pull',
-            plan={'factors': {'Lane': [1, 2], 'Phase': [1, 2]}, 'T': 2, 'N': 2}
+            response='Weight', time='Pull', plan={'factors': {'Lane': [1, 2], 'Phase': [1, 2]}, 'T': 2, 'N': 2}
         )
         assert study.observed_design_state.sds == 1
         design = study.design()
@@ -1390,18 +1340,21 @@ class TestDesignReportGateMetrics:
 
     def test_n_empty_cells_positive_for_incomplete(self):
         """SDS 5 fixture with plan → design().n_empty_cells > 0."""
-        df = pd.DataFrame({
-            'Weight': [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0],
-            'Lane': [1, 1, 2, 2, 1, 1, 2, 2],
-            'Phase': [1, 1, 2, 2, 1, 1, 2, 2],
-            'Pull': [1, 1, 1, 1, 2, 2, 2, 2]
-        })
+        df = pd.DataFrame(
+            {
+                'Weight': [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0],
+                'Lane': [1, 1, 2, 2, 1, 1, 2, 2],
+                'Phase': [1, 1, 2, 2, 1, 1, 2, 2],
+                'Pull': [1, 1, 1, 1, 2, 2, 2, 2],
+            }
+        )
         pb = ProcessBehavior(df)
         with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
+            warnings.simplefilter('ignore')
             study = pb.formulate(
-                response='Weight', time='Pull',
-                plan={'factors': {'Lane': [1, 2, 3, 4], 'Phase': [1, 2, 3]}, 'T': 2, 'N': 2}
+                response='Weight',
+                time='Pull',
+                plan={'factors': {'Lane': [1, 2, 3, 4], 'Phase': [1, 2, 3]}, 'T': 2, 'N': 2},
             )
         design = study.design()
         assert design.n_empty_cells is not None
@@ -1410,16 +1363,17 @@ class TestDesignReportGateMetrics:
     def test_coverage_complete_plan_is_1(self):
         """SDS 1 with matching plan + time → design().coverage == 1.0."""
         # All 4 RSG combos present with n=2 per cell per time point
-        df = pd.DataFrame({
-            'Lane':  [1, 1, 1, 1, 2, 2, 2, 2, 1, 1, 1, 1, 2, 2, 2, 2],
-            'Phase': [1, 1, 2, 2, 1, 1, 2, 2, 1, 1, 2, 2, 1, 1, 2, 2],
-            'Pull':  [1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2],
-            'Weight': [10.0] * 16
-        })
+        df = pd.DataFrame(
+            {
+                'Lane': [1, 1, 1, 1, 2, 2, 2, 2, 1, 1, 1, 1, 2, 2, 2, 2],
+                'Phase': [1, 1, 2, 2, 1, 1, 2, 2, 1, 1, 2, 2, 1, 1, 2, 2],
+                'Pull': [1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2],
+                'Weight': [10.0] * 16,
+            }
+        )
         pb = ProcessBehavior(df)
         study = pb.formulate(
-            response='Weight', time='Pull',
-            plan={'factors': {'Lane': [1, 2], 'Phase': [1, 2]}, 'T': 2, 'N': 2}
+            response='Weight', time='Pull', plan={'factors': {'Lane': [1, 2], 'Phase': [1, 2]}, 'T': 2, 'N': 2}
         )
         assert study.observed_design_state.sds == 1
         design = study.design()
@@ -1427,18 +1381,21 @@ class TestDesignReportGateMetrics:
 
     def test_coverage_incomplete(self):
         """SDS 5 fixture with plan → 0 < design().coverage < 1.0."""
-        df = pd.DataFrame({
-            'Weight': [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0],
-            'Lane': [1, 1, 2, 2, 1, 1, 2, 2],
-            'Phase': [1, 1, 2, 2, 1, 1, 2, 2],
-            'Pull': [1, 1, 1, 1, 2, 2, 2, 2]
-        })
+        df = pd.DataFrame(
+            {
+                'Weight': [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0],
+                'Lane': [1, 1, 2, 2, 1, 1, 2, 2],
+                'Phase': [1, 1, 2, 2, 1, 1, 2, 2],
+                'Pull': [1, 1, 1, 1, 2, 2, 2, 2],
+            }
+        )
         pb = ProcessBehavior(df)
         with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
+            warnings.simplefilter('ignore')
             study = pb.formulate(
-                response='Weight', time='Pull',
-                plan={'factors': {'Lane': [1, 2, 3, 4], 'Phase': [1, 2, 3]}, 'T': 2, 'N': 2}
+                response='Weight',
+                time='Pull',
+                plan={'factors': {'Lane': [1, 2, 3, 4], 'Phase': [1, 2, 3]}, 'T': 2, 'N': 2},
             )
         design = study.design()
         assert design.coverage is not None
@@ -1446,48 +1403,44 @@ class TestDesignReportGateMetrics:
 
     def test_coverage_none_without_plan(self):
         """SDS 1 without plan → design().coverage is None."""
-        df = pd.DataFrame({
-            'Lane': [1, 1, 2, 2] * 2,
-            'Phase': [1, 1, 2, 2] * 2,
-            'Pull': [1, 1, 1, 1, 2, 2, 2, 2],
-            'Weight': [10.0] * 8
-        })
-        pb = ProcessBehavior(df)
-        study = pb.formulate(
-            response='Weight', factors=['Lane', 'Phase'], time='Pull'
+        df = pd.DataFrame(
+            {
+                'Lane': [1, 1, 2, 2] * 2,
+                'Phase': [1, 1, 2, 2] * 2,
+                'Pull': [1, 1, 1, 1, 2, 2, 2, 2],
+                'Weight': [10.0] * 8,
+            }
         )
+        pb = ProcessBehavior(df)
+        study = pb.formulate(response='Weight', factors=['Lane', 'Phase'], time='Pull')
         design = study.design()
         assert design.coverage is None
 
     def test_coverage_none_without_time(self):
         """No time var → design().coverage is None."""
-        df = pd.DataFrame({
-            'Lane': [1, 1, 2, 2],
-            'Weight': [10.0] * 4
-        })
+        df = pd.DataFrame({'Lane': [1, 1, 2, 2], 'Weight': [10.0] * 4})
         pb = ProcessBehavior(df)
-        study = pb.formulate(
-            response='Weight',
-            plan={'factors': {'Lane': [1, 2]}, 'T': 1, 'N': 2}
-        )
+        study = pb.formulate(response='Weight', plan={'factors': {'Lane': [1, 2]}, 'T': 1, 'N': 2})
         design = study.design()
         assert design.coverage is None
 
     def test_min_cell_size_zero_suppressed_in_repr(self):
         """DesignReport with _min_cell_size=0 → 'Min cell size' not in repr."""
         from processbehavior.study import DesignReport
+
         report = DesignReport(
             _sampling_plan=None,
             _observed_levels={'f': [1]},
             _factors=['f'],
             _min_cell_size=0,
         )
-        assert "Min cell size" not in repr(report)
+        assert 'Min cell size' not in repr(report)
 
 
 # =============================================================================
 # SDS 4-6 ODS/ADS Divergence Tests
 # =============================================================================
+
 
 class TestSDS6Divergence:
     """ODS→ADS divergence: incomplete states tidy to complete counterparts."""
@@ -1498,38 +1451,26 @@ class TestSDS6Divergence:
 
     def test_ods_5_ads_2_chart_unlock(self, pb_validation):
         """ADS 2 unlocks Xbar/S that ODS 5 would have blocked."""
-        study = pb_validation.formulate(
-            response='PM SDS 5', factors=['FACTOR 1', 'FACTOR 2'],
-            time='PRODUCTION TIME'
-        )
+        study = pb_validation.formulate(response='PM SDS 5', factors=['FACTOR 1', 'FACTOR 2'], time='PRODUCTION TIME')
         assert study.observed_design_state.sds == 5
         assert study.analytical_design_state.sds == 2
         assert 'Xbar' in study.valid_charts
 
     def test_ods_4_ads_1_interactions_enabled(self, pb_validation):
         """ADS 1 enables interaction effects that ODS 4 would have blocked."""
-        study = pb_validation.formulate(
-            response='PM SDS 4', factors=['FACTOR 1', 'FACTOR 2'],
-            time='PRODUCTION TIME'
-        )
+        study = pb_validation.formulate(response='PM SDS 4', factors=['FACTOR 1', 'FACTOR 2'], time='PRODUCTION TIME')
         assert study.observed_design_state.sds == 4
         assert study.analytical_design_state.sds == 1
 
     def test_ods_6_ads_3_min_cell_size(self, pb_validation):
         """ADS 3 reflects tidy min_cell_size, not raw incomplete structure."""
-        study = pb_validation.formulate(
-            response='PM SDS 6', factors=['FACTOR 1', 'FACTOR 2'],
-            time='PRODUCTION TIME'
-        )
+        study = pb_validation.formulate(response='PM SDS 6', factors=['FACTOR 1', 'FACTOR 2'], time='PRODUCTION TIME')
         assert study.observed_design_state.sds == 6
         assert study.analytical_design_state.sds == 3
 
     def test_ods_5_why_not_reflects_ads(self, pb_validation):
         """why_not() reasoning must reflect ADS capability, not ODS limitations."""
-        study = pb_validation.formulate(
-            response='PM SDS 5', factors=['FACTOR 1', 'FACTOR 2'],
-            time='PRODUCTION TIME'
-        )
+        study = pb_validation.formulate(response='PM SDS 5', factors=['FACTOR 1', 'FACTOR 2'], time='PRODUCTION TIME')
         # Xbar is valid under ADS 2
         explanation = study.why_not('Xbar')
         # Should indicate it IS available (not blocked)
@@ -1538,28 +1479,19 @@ class TestSDS6Divergence:
 
     def test_no_drift_sds_1(self, pb_validation):
         """SDS 1 data: ODS and ADS should agree."""
-        study = pb_validation.formulate(
-            response='PM SDS 1', factors=['FACTOR 1', 'FACTOR 2'],
-            time='PRODUCTION TIME'
-        )
+        study = pb_validation.formulate(response='PM SDS 1', factors=['FACTOR 1', 'FACTOR 2'], time='PRODUCTION TIME')
         assert study.observed_design_state.sds == 1
         assert study.analytical_design_state.sds == 1
 
     def test_no_drift_sds_2(self, pb_validation):
         """SDS 2 data: ODS and ADS should agree."""
-        study = pb_validation.formulate(
-            response='PM SDS 2', factors=['FACTOR 1', 'FACTOR 2'],
-            time='PRODUCTION TIME'
-        )
+        study = pb_validation.formulate(response='PM SDS 2', factors=['FACTOR 1', 'FACTOR 2'], time='PRODUCTION TIME')
         assert study.observed_design_state.sds == 2
         assert study.analytical_design_state.sds == 2
 
     def test_no_drift_sds_3(self, pb_validation):
         """SDS 3 data: ODS and ADS should agree."""
-        study = pb_validation.formulate(
-            response='PM SDS 3', factors=['FACTOR 1', 'FACTOR 2'],
-            time='PRODUCTION TIME'
-        )
+        study = pb_validation.formulate(response='PM SDS 3', factors=['FACTOR 1', 'FACTOR 2'], time='PRODUCTION TIME')
         assert study.observed_design_state.sds == 3
         assert study.analytical_design_state.sds == 3
 
@@ -1567,6 +1499,7 @@ class TestSDS6Divergence:
 # =============================================================================
 # T/N Validation Tests
 # =============================================================================
+
 
 class TestTNValidation:
     """T and N are required when a sampling plan is supplied."""
@@ -1581,7 +1514,7 @@ class TestTNValidation:
             pb_validation.formulate(
                 response='PM SDS 1',
                 time='PRODUCTION TIME',
-                plan={'factors': {'FACTOR 1': [1, 2, 3, 4], 'FACTOR 2': [1, 2, 3]}, 'T': 10}
+                plan={'factors': {'FACTOR 1': [1, 2, 3, 4], 'FACTOR 2': [1, 2, 3]}, 'T': 10},
             )
 
     def test_plan_without_T_raises(self, pb_validation):
@@ -1590,7 +1523,7 @@ class TestTNValidation:
             pb_validation.formulate(
                 response='PM SDS 1',
                 time='PRODUCTION TIME',
-                plan={'factors': {'FACTOR 1': [1, 2, 3, 4], 'FACTOR 2': [1, 2, 3]}, 'N': 2}
+                plan={'factors': {'FACTOR 1': [1, 2, 3, 4], 'FACTOR 2': [1, 2, 3]}, 'N': 2},
             )
 
     def test_plan_without_T_and_N_raises(self, pb_validation):
@@ -1599,13 +1532,14 @@ class TestTNValidation:
             pb_validation.formulate(
                 response='PM SDS 1',
                 time='PRODUCTION TIME',
-                plan={'factors': {'FACTOR 1': [1, 2, 3, 4], 'FACTOR 2': [1, 2, 3]}}
+                plan={'factors': {'FACTOR 1': [1, 2, 3, 4], 'FACTOR 2': [1, 2, 3]}},
             )
 
 
 # =============================================================================
 # Plan Design State (PDS) Tests
 # =============================================================================
+
 
 class TestPlanDesignState:
     """PDS is computed from plan parameters when plan is supplied."""
@@ -1619,7 +1553,7 @@ class TestPlanDesignState:
         study = pb_validation.formulate(
             response='PM SDS 1',
             time='PRODUCTION TIME',
-            plan={'factors': {'FACTOR 1': [1, 2, 3, 4], 'FACTOR 2': [1, 2, 3]}, 'T': 10, 'N': 2}
+            plan={'factors': {'FACTOR 1': [1, 2, 3, 4], 'FACTOR 2': [1, 2, 3]}, 'T': 10, 'N': 2},
         )
         assert study.plan_design_state is not None
         assert study.plan_design_state.sds == 1
@@ -1629,24 +1563,21 @@ class TestPlanDesignState:
         study = pb_validation.formulate(
             response='PM SDS 1',
             time='PRODUCTION TIME',
-            plan={'factors': {'FACTOR 1': [1, 2, 3, 4], 'FACTOR 2': [1, 2, 3]}, 'T': 10, 'N': 1}
+            plan={'factors': {'FACTOR 1': [1, 2, 3, 4], 'FACTOR 2': [1, 2, 3]}, 'T': 10, 'N': 1},
         )
         assert study.plan_design_state is not None
         assert study.plan_design_state.sds == 2
 
     def test_no_plan_PDS_is_None(self, pb_validation):
         """Without a plan, PDS is None."""
-        study = pb_validation.formulate(
-            response='PM SDS 1',
-            factors=['FACTOR 1', 'FACTOR 2'],
-            time='PRODUCTION TIME'
-        )
+        study = pb_validation.formulate(response='PM SDS 1', factors=['FACTOR 1', 'FACTOR 2'], time='PRODUCTION TIME')
         assert study.plan_design_state is None
 
 
 # =============================================================================
 # Design Report Lineage Tests
 # =============================================================================
+
 
 class TestDesignReportLineage:
     """DesignReport must show design lineage."""
@@ -1657,20 +1588,14 @@ class TestDesignReportLineage:
 
     def test_divergent_report_shows_both(self, pb_validation):
         """When ODS != ADS, DesignReport must show both."""
-        study = pb_validation.formulate(
-            response='PM SDS 5', factors=['FACTOR 1', 'FACTOR 2'],
-            time='PRODUCTION TIME'
-        )
+        study = pb_validation.formulate(response='PM SDS 5', factors=['FACTOR 1', 'FACTOR 2'], time='PRODUCTION TIME')
         report = repr(study.design())
         assert 'Observed' in report
         assert 'Analytical' in report
 
     def test_agreeing_report_shows_single(self, pb_validation):
         """When ODS == ADS, DesignReport shows the design-state lineage block."""
-        study = pb_validation.formulate(
-            response='PM SDS 1', factors=['FACTOR 1', 'FACTOR 2'],
-            time='PRODUCTION TIME'
-        )
+        study = pb_validation.formulate(response='PM SDS 1', factors=['FACTOR 1', 'FACTOR 2'], time='PRODUCTION TIME')
         report = repr(study.design())
         assert 'Design-state lineage' in report
         assert 'ODS (Observed):' in report
@@ -1680,6 +1605,7 @@ class TestDesignReportLineage:
 # =============================================================================
 # Gate Metric Divergence Tests
 # =============================================================================
+
 
 class TestDesignReportGateMetricDivergence:
     """Tests documenting intentional divergence between gate metrics."""
@@ -1691,17 +1617,18 @@ class TestDesignReportGateMetricDivergence:
         raw-data min_cell_size counts those rows as present but N_observed
         (post-filtering) does not.
         """
-        df = pd.DataFrame({
-            'Lane': [1, 1, 2, 2] * 2,
-            'Phase': [1, 1, 2, 2] * 2,
-            'Pull': [1, 1, 1, 1, 2, 2, 2, 2],
-            # Lane=1,Phase=1,Pull=1: one valid + one garbage = raw n=2, clean n=1
-            'Weight': [10.0, '*', 10.3, 10.4, 10.5, 10.6, 10.7, 10.8]
-        })
+        df = pd.DataFrame(
+            {
+                'Lane': [1, 1, 2, 2] * 2,
+                'Phase': [1, 1, 2, 2] * 2,
+                'Pull': [1, 1, 1, 1, 2, 2, 2, 2],
+                # Lane=1,Phase=1,Pull=1: one valid + one garbage = raw n=2, clean n=1
+                'Weight': [10.0, '*', 10.3, 10.4, 10.5, 10.6, 10.7, 10.8],
+            }
+        )
         pb = ProcessBehavior(df)
         study = pb.formulate(
-            response='Weight', time='Pull',
-            plan={'factors': {'Lane': [1, 2], 'Phase': [1, 2]}, 'T': 2, 'N': 2}
+            response='Weight', time='Pull', plan={'factors': {'Lane': [1, 2], 'Phase': [1, 2]}, 'T': 2, 'N': 2}
         )
         design = study.design()
         # min_cell_size is from raw data (SDS detection sees the '*' row)
@@ -1719,22 +1646,24 @@ class TestDesignReportGateMetricDivergence:
 # Remediation Tests
 # =============================================================================
 
+
 class TestDesignReportRemediation:
     """Tests for the remediation property."""
 
     def test_remediation_none_for_full_replication(self):
         """SDS 1 → design().remediation is None."""
         # All 4 RSG combos present with n=2 per cell per time point
-        df = pd.DataFrame({
-            'Lane':  [1, 1, 1, 1, 2, 2, 2, 2, 1, 1, 1, 1, 2, 2, 2, 2],
-            'Phase': [1, 1, 2, 2, 1, 1, 2, 2, 1, 1, 2, 2, 1, 1, 2, 2],
-            'Pull':  [1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2],
-            'Weight': [10.0] * 16
-        })
+        df = pd.DataFrame(
+            {
+                'Lane': [1, 1, 1, 1, 2, 2, 2, 2, 1, 1, 1, 1, 2, 2, 2, 2],
+                'Phase': [1, 1, 2, 2, 1, 1, 2, 2, 1, 1, 2, 2, 1, 1, 2, 2],
+                'Pull': [1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2],
+                'Weight': [10.0] * 16,
+            }
+        )
         pb = ProcessBehavior(df)
         study = pb.formulate(
-            response='Weight', time='Pull',
-            plan={'factors': {'Lane': [1, 2], 'Phase': [1, 2]}, 'T': 2, 'N': 2}
+            response='Weight', time='Pull', plan={'factors': {'Lane': [1, 2], 'Phase': [1, 2]}, 'T': 2, 'N': 2}
         )
         assert study.observed_design_state.sds == 1
         design = study.design()
@@ -1743,130 +1672,135 @@ class TestDesignReportRemediation:
     def test_remediation_for_no_replication(self):
         """SDS 2 → contains '>= 2 observations'."""
         # All 4 RSG combos present, each with n=1 per time point → SDS 2
-        df = pd.DataFrame({
-            'Lane':  [1, 1, 2, 2, 1, 1, 2, 2],
-            'Phase': [1, 2, 1, 2, 1, 2, 1, 2],
-            'Pull':  [1, 1, 1, 1, 2, 2, 2, 2],
-            'Weight': [10.0] * 8
-        })
+        df = pd.DataFrame(
+            {
+                'Lane': [1, 1, 2, 2, 1, 1, 2, 2],
+                'Phase': [1, 2, 1, 2, 1, 2, 1, 2],
+                'Pull': [1, 1, 1, 1, 2, 2, 2, 2],
+                'Weight': [10.0] * 8,
+            }
+        )
         pb = ProcessBehavior(df)
         study = pb.formulate(
-            response='Weight', time='Pull',
-            plan={'factors': {'Lane': [1, 2], 'Phase': [1, 2]}, 'T': 2, 'N': 1}
+            response='Weight', time='Pull', plan={'factors': {'Lane': [1, 2], 'Phase': [1, 2]}, 'T': 2, 'N': 1}
         )
         assert study.observed_design_state.sds == 2
         design = study.design()
         assert design.remediation is not None
-        assert ">= 2 observations" in design.remediation
+        assert '>= 2 observations' in design.remediation
 
     def test_remediation_for_partial_replication(self):
         """SDS 3 → contains 'all cells'."""
         # All 4 RSG combos present, mixed cell sizes (some n=1, some n=2) → SDS 3
-        df = pd.DataFrame({
-            # Pull=1: (1,1) n=2, (1,2) n=1, (2,1) n=1, (2,2) n=1
-            # Pull=2: (1,1) n=2, (1,2) n=1, (2,1) n=1, (2,2) n=1
-            'Lane':  [1, 1, 1, 2, 2, 1, 1, 1, 2, 2],
-            'Phase': [1, 1, 2, 1, 2, 1, 1, 2, 1, 2],
-            'Pull':  [1, 1, 1, 1, 1, 2, 2, 2, 2, 2],
-            'Weight': [10.0] * 10
-        })
+        df = pd.DataFrame(
+            {
+                # Pull=1: (1,1) n=2, (1,2) n=1, (2,1) n=1, (2,2) n=1
+                # Pull=2: (1,1) n=2, (1,2) n=1, (2,1) n=1, (2,2) n=1
+                'Lane': [1, 1, 1, 2, 2, 1, 1, 1, 2, 2],
+                'Phase': [1, 1, 2, 1, 2, 1, 1, 2, 1, 2],
+                'Pull': [1, 1, 1, 1, 1, 2, 2, 2, 2, 2],
+                'Weight': [10.0] * 10,
+            }
+        )
         pb = ProcessBehavior(df)
         study = pb.formulate(
-            response='Weight', time='Pull',
-            plan={'factors': {'Lane': [1, 2], 'Phase': [1, 2]}, 'T': 2, 'N': 2}
+            response='Weight', time='Pull', plan={'factors': {'Lane': [1, 2], 'Phase': [1, 2]}, 'T': 2, 'N': 2}
         )
         assert study.observed_design_state.sds == 3
         design = study.design()
         assert design.remediation is not None
-        assert "all cells" in design.remediation
+        assert 'all cells' in design.remediation
 
     def test_remediation_for_incomplete_with_singletons(self):
         """SDS 6 → contains 'fill missing'."""
-        df = pd.DataFrame({
-            'Weight': [1.0, 1.1, 2.0, 2.1, 3.0, 4.0],
-            'Lane': [1, 1, 1, 1, 2, 2],
-            'Phase': [1, 1, 1, 1, 2, 2],
-            'Pull': [1, 1, 2, 2, 1, 2]
-        })
+        df = pd.DataFrame(
+            {
+                'Weight': [1.0, 1.1, 2.0, 2.1, 3.0, 4.0],
+                'Lane': [1, 1, 1, 1, 2, 2],
+                'Phase': [1, 1, 1, 1, 2, 2],
+                'Pull': [1, 1, 2, 2, 1, 2],
+            }
+        )
         pb = ProcessBehavior(df)
         with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
+            warnings.simplefilter('ignore')
             study = pb.formulate(
-                response='Weight', time='Pull',
-                plan={'factors': {'Lane': [1, 2, 3, 4], 'Phase': [1, 2, 3]}, 'T': 2, 'N': 2}
+                response='Weight',
+                time='Pull',
+                plan={'factors': {'Lane': [1, 2, 3, 4], 'Phase': [1, 2, 3]}, 'T': 2, 'N': 2},
             )
         design = study.design()
         assert study.observed_design_state.sds == 6
         assert design.remediation is not None
-        assert "fill missing" in design.remediation
+        assert 'fill missing' in design.remediation
 
     def test_remediation_for_incomplete_no_singletons(self):
         """SDS 4 → contains 'fill missing'."""
-        df = pd.DataFrame({
-            'Weight': [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0],
-            'Lane': [1, 1, 2, 2, 1, 1, 2, 2],
-            'Phase': [1, 1, 2, 2, 1, 1, 2, 2],
-            'Pull': [1, 1, 1, 1, 2, 2, 2, 2]
-        })
+        df = pd.DataFrame(
+            {
+                'Weight': [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0],
+                'Lane': [1, 1, 2, 2, 1, 1, 2, 2],
+                'Phase': [1, 1, 2, 2, 1, 1, 2, 2],
+                'Pull': [1, 1, 1, 1, 2, 2, 2, 2],
+            }
+        )
         pb = ProcessBehavior(df)
         with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
+            warnings.simplefilter('ignore')
             study = pb.formulate(
-                response='Weight', time='Pull',
-                plan={'factors': {'Lane': [1, 2, 3, 4], 'Phase': [1, 2, 3]}, 'T': 2, 'N': 2}
+                response='Weight',
+                time='Pull',
+                plan={'factors': {'Lane': [1, 2, 3, 4], 'Phase': [1, 2, 3]}, 'T': 2, 'N': 2},
             )
         design = study.design()
         assert study.observed_design_state.sds == 4
         assert design.remediation is not None
-        assert "fill missing" in design.remediation
+        assert 'fill missing' in design.remediation
 
     def test_remediation_for_incomplete_no_replication(self):
         """SDS 5 → contains 'Xbar/S'."""
-        df = pd.DataFrame({
-            'Weight': [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0,
-                       9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0],
-            'Lane': [1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2],
-            'Phase': [1, 1, 2, 2, 1, 1, 2, 2, 1, 1, 2, 2, 1, 1, 2, 2],
-            'Pull': [1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4]
-        })
+        df = pd.DataFrame(
+            {
+                'Weight': [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0],
+                'Lane': [1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2],
+                'Phase': [1, 1, 2, 2, 1, 1, 2, 2, 1, 1, 2, 2, 1, 1, 2, 2],
+                'Pull': [1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4],
+            }
+        )
         pb = ProcessBehavior(df)
         with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
+            warnings.simplefilter('ignore')
             study = pb.formulate(
-                response='Weight', time='Pull',
-                plan={'factors': {'Lane': [1, 2, 3, 4], 'Phase': [1, 2, 3]}, 'T': 4, 'N': 1}
+                response='Weight',
+                time='Pull',
+                plan={'factors': {'Lane': [1, 2, 3, 4], 'Phase': [1, 2, 3]}, 'T': 4, 'N': 1},
             )
         design = study.design()
         assert study.observed_design_state.sds == 5
         assert design.remediation is not None
-        assert "Xbar/S" in design.remediation
+        assert 'Xbar/S' in design.remediation
 
     def test_remediation_not_in_repr(self):
         """Remediation hint is not shown in repr (accessible via property only)."""
         # SDS 2 has a remediation hint
-        df = pd.DataFrame({
-            'Lane': [1, 2, 1, 2],
-            'Phase': [1, 1, 2, 2],
-            'Pull': [1, 1, 2, 2],
-            'Weight': [10.0] * 4
-        })
+        df = pd.DataFrame({'Lane': [1, 2, 1, 2], 'Phase': [1, 1, 2, 2], 'Pull': [1, 1, 2, 2], 'Weight': [10.0] * 4})
         pb = ProcessBehavior(df)
         study = pb.formulate(
-            response='Weight', time='Pull',
-            plan={'factors': {'Lane': [1, 2], 'Phase': [1, 2]}, 'T': 2, 'N': 1}
+            response='Weight', time='Pull', plan={'factors': {'Lane': [1, 2], 'Phase': [1, 2]}, 'T': 2, 'N': 1}
         )
         design = study.design()
-        assert "Hint:" not in repr(design)
+        assert 'Hint:' not in repr(design)
         assert design.remediation is not None
 
     def test_remediation_unknown_reason_returns_none(self):
         """DesignReport with unknown sds_reason → remediation is None."""
         from processbehavior.study import DesignReport
+
         report = DesignReport(
             _sampling_plan=None,
             _observed_levels={'f': [1]},
             _factors=['f'],
-            _sds_reason="unknown_future_reason",
+            _sds_reason='unknown_future_reason',
         )
         assert report.remediation is None
 
@@ -1875,78 +1809,88 @@ class TestDesignReportRemediation:
 # SDS Reason Detail Fix Tests
 # =============================================================================
 
+
 class TestSdsReasonDetailFix:
     """Tests for sds_reason_detail after fixing stale keys."""
 
     def test_sds_reason_detail_sds6(self):
         """SDS 6 (incomplete_with_singletons) fixture → sds_reason_detail contains 'empty cells' and 'mixed'."""
-        df = pd.DataFrame({
-            'Weight': [1.0, 1.1, 2.0, 2.1, 3.0, 4.0],
-            'Lane': [1, 1, 1, 1, 2, 2],
-            'Phase': [1, 1, 1, 1, 2, 2],
-            'Pull': [1, 1, 2, 2, 1, 2]
-        })
+        df = pd.DataFrame(
+            {
+                'Weight': [1.0, 1.1, 2.0, 2.1, 3.0, 4.0],
+                'Lane': [1, 1, 1, 1, 2, 2],
+                'Phase': [1, 1, 1, 1, 2, 2],
+                'Pull': [1, 1, 2, 2, 1, 2],
+            }
+        )
         pb = ProcessBehavior(df)
         with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
+            warnings.simplefilter('ignore')
             study = pb.formulate(
-                response='Weight', time='Pull',
-                plan={'factors': {'Lane': [1, 2, 3, 4], 'Phase': [1, 2, 3]}, 'T': 2, 'N': 2}
+                response='Weight',
+                time='Pull',
+                plan={'factors': {'Lane': [1, 2, 3, 4], 'Phase': [1, 2, 3]}, 'T': 2, 'N': 2},
             )
         design = study.design()
         assert study.observed_design_state.sds == 6
         detail = design.sds_reason_detail
         assert detail is not None
-        assert "empty cells" in detail
-        assert "mixed" in detail
+        assert 'empty cells' in detail
+        assert 'mixed' in detail
 
     def test_sds_reason_detail_sds4(self):
         """SDS 4 (incomplete_no_singletons) fixture → sds_reason_detail contains 'all observed cells replicated'."""
-        df = pd.DataFrame({
-            'Weight': [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0],
-            'Lane': [1, 1, 2, 2, 1, 1, 2, 2],
-            'Phase': [1, 1, 2, 2, 1, 1, 2, 2],
-            'Pull': [1, 1, 1, 1, 2, 2, 2, 2]
-        })
+        df = pd.DataFrame(
+            {
+                'Weight': [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0],
+                'Lane': [1, 1, 2, 2, 1, 1, 2, 2],
+                'Phase': [1, 1, 2, 2, 1, 1, 2, 2],
+                'Pull': [1, 1, 1, 1, 2, 2, 2, 2],
+            }
+        )
         pb = ProcessBehavior(df)
         with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
+            warnings.simplefilter('ignore')
             study = pb.formulate(
-                response='Weight', time='Pull',
-                plan={'factors': {'Lane': [1, 2, 3, 4], 'Phase': [1, 2, 3]}, 'T': 2, 'N': 2}
+                response='Weight',
+                time='Pull',
+                plan={'factors': {'Lane': [1, 2, 3, 4], 'Phase': [1, 2, 3]}, 'T': 2, 'N': 2},
             )
         design = study.design()
         assert study.observed_design_state.sds == 4
         detail = design.sds_reason_detail
         assert detail is not None
-        assert "all observed cells replicated" in detail
+        assert 'all observed cells replicated' in detail
 
     def test_sds_reason_detail_sds5(self):
         """SDS 5 (incomplete_no_replication) fixture → sds_reason_detail contains 'all observed cells n = 1'."""
-        df = pd.DataFrame({
-            'Weight': [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0,
-                       9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0],
-            'Lane': [1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2],
-            'Phase': [1, 1, 2, 2, 1, 1, 2, 2, 1, 1, 2, 2, 1, 1, 2, 2],
-            'Pull': [1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4]
-        })
+        df = pd.DataFrame(
+            {
+                'Weight': [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0],
+                'Lane': [1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2],
+                'Phase': [1, 1, 2, 2, 1, 1, 2, 2, 1, 1, 2, 2, 1, 1, 2, 2],
+                'Pull': [1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4],
+            }
+        )
         pb = ProcessBehavior(df)
         with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
+            warnings.simplefilter('ignore')
             study = pb.formulate(
-                response='Weight', time='Pull',
-                plan={'factors': {'Lane': [1, 2, 3, 4], 'Phase': [1, 2, 3]}, 'T': 4, 'N': 1}
+                response='Weight',
+                time='Pull',
+                plan={'factors': {'Lane': [1, 2, 3, 4], 'Phase': [1, 2, 3]}, 'T': 4, 'N': 1},
             )
         design = study.design()
         assert study.observed_design_state.sds == 5
         detail = design.sds_reason_detail
         assert detail is not None
-        assert "all observed cells n = 1" in detail
+        assert 'all observed cells n = 1' in detail
 
 
 # =============================================================================
 # SDS Column Label Alignment Tests
 # =============================================================================
+
 
 class TestSDSColumnLabelAlignment:
     """PM SDS N column name aligns with the detector's classification.
@@ -1967,9 +1911,11 @@ class TestSDSColumnLabelAlignment:
     def _formulate(self, pb_validation):
         def _f(col):
             return pb_validation.formulate(
-                response=col, factors=['FACTOR 1', 'FACTOR 2'],
+                response=col,
+                factors=['FACTOR 1', 'FACTOR 2'],
                 time='PRODUCTION TIME',
             )
+
         return _f
 
     @pytest.mark.parametrize('sds', [1, 2, 3, 4, 5, 6])

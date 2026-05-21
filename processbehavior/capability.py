@@ -41,6 +41,7 @@ if TYPE_CHECKING:
 # Data Classes
 # ============================================================================
 
+
 @dataclass(frozen=True)
 class SpecLimits:
     """
@@ -65,14 +66,10 @@ class SpecLimits:
 
     def __post_init__(self) -> None:
         if self.usl is None and self.lsl is None:
-            raise ValidationError(
-                "At least one specification limit (usl or lsl) must be provided."
-            )
+            raise ValidationError('At least one specification limit (usl or lsl) must be provided.')
 
         if self.usl is not None and self.lsl is not None and self.lsl >= self.usl:
-            raise ValidationError(
-                f"LSL ({self.lsl}) must be less than USL ({self.usl})."
-            )
+            raise ValidationError(f'LSL ({self.lsl}) must be less than USL ({self.usl}).')
 
         if (
             self.target is not None
@@ -80,10 +77,7 @@ class SpecLimits:
             and self.lsl is not None
             and not (self.lsl <= self.target <= self.usl)
         ):
-            raise ValidationError(
-                f"Target ({self.target}) must be between "
-                f"LSL ({self.lsl}) and USL ({self.usl})."
-            )
+            raise ValidationError(f'Target ({self.target}) must be between LSL ({self.lsl}) and USL ({self.usl}).')
 
     @property
     def is_two_sided(self) -> bool:
@@ -193,10 +187,21 @@ class CapabilityResult:
     # Visualization
     # ------------------------------------------------------------------
 
-    def plot(self, values, *, theme=None, show_potential=True,
-             view: Literal["current", "potential"] = "current", paired=False,
-             x_label=None, nbins=None, histnorm="", width=900, height=500,
-             title=None):
+    def plot(
+        self,
+        values,
+        *,
+        theme=None,
+        show_potential=True,
+        view: Literal['current', 'potential'] = 'current',
+        paired=False,
+        x_label=None,
+        nbins=None,
+        histnorm='',
+        width=900,
+        height=500,
+        title=None,
+    ):
         """
         Create a capability histogram with spec lines and index annotations.
 
@@ -223,10 +228,18 @@ class CapabilityResult:
         from .plotting.capability_chart import create_capability_chart
 
         return create_capability_chart(
-            self, values, theme=theme, show_potential=show_potential,
-            view=view, paired=paired,
-            x_label=x_label, nbins=nbins, histnorm=histnorm,
-            width=width, height=height, title=title,
+            self,
+            values,
+            theme=theme,
+            show_potential=show_potential,
+            view=view,
+            paired=paired,
+            x_label=x_label,
+            nbins=nbins,
+            histnorm=histnorm,
+            width=width,
+            height=height,
+            title=title,
         )
 
     # ------------------------------------------------------------------
@@ -245,89 +258,86 @@ class CapabilityResult:
             return round(v, r)
 
         return {
-            "usl": self.specs.usl,
-            "lsl": self.specs.lsl,
-            "target": self.specs.target,
-            "n": self.n,
-            "y_bar": _r(self.y_bar),
-            "s": _r(self.s),
-            "sigma_hat": _r(self.sigma_hat),
-            "pp": _r(self.pp),
-            "ppk_lower": _r(self.ppk_lower),
-            "ppk_upper": _r(self.ppk_upper),
-            "ppk": _r(self.ppk),
-            "sigma_hat_r2": _r(self.sigma_hat_r2),
-            "cp": _r(self.cp),
-            "cpk_lower": _r(self.cpk_lower),
-            "cpk_upper": _r(self.cpk_upper),
-            "cpk": _r(self.cpk),
-            "potential_unavailable_reason": self.potential_unavailable_reason,
-            "z_lower": _r(self.z_lower),
-            "z_upper": _r(self.z_upper),
-            "n_below_lsl": self.n_below_lsl,
-            "n_above_usl": self.n_above_usl,
-            "n_outside": self.n_outside,
-            "pct_below_lsl": _r(self.pct_below_lsl),
-            "pct_above_usl": _r(self.pct_above_usl),
-            "pct_outside": _r(self.pct_outside),
-            "potential_n_below_lsl": self.potential_n_below_lsl,
-            "potential_n_above_usl": self.potential_n_above_usl,
-            "potential_pct_below_lsl": _r(self.potential_pct_below_lsl),
-            "potential_pct_above_usl": _r(self.potential_pct_above_usl),
+            'usl': self.specs.usl,
+            'lsl': self.specs.lsl,
+            'target': self.specs.target,
+            'n': self.n,
+            'y_bar': _r(self.y_bar),
+            's': _r(self.s),
+            'sigma_hat': _r(self.sigma_hat),
+            'pp': _r(self.pp),
+            'ppk_lower': _r(self.ppk_lower),
+            'ppk_upper': _r(self.ppk_upper),
+            'ppk': _r(self.ppk),
+            'sigma_hat_r2': _r(self.sigma_hat_r2),
+            'cp': _r(self.cp),
+            'cpk_lower': _r(self.cpk_lower),
+            'cpk_upper': _r(self.cpk_upper),
+            'cpk': _r(self.cpk),
+            'potential_unavailable_reason': self.potential_unavailable_reason,
+            'z_lower': _r(self.z_lower),
+            'z_upper': _r(self.z_upper),
+            'n_below_lsl': self.n_below_lsl,
+            'n_above_usl': self.n_above_usl,
+            'n_outside': self.n_outside,
+            'pct_below_lsl': _r(self.pct_below_lsl),
+            'pct_above_usl': _r(self.pct_above_usl),
+            'pct_outside': _r(self.pct_outside),
+            'potential_n_below_lsl': self.potential_n_below_lsl,
+            'potential_n_above_usl': self.potential_n_above_usl,
+            'potential_pct_below_lsl': _r(self.potential_pct_below_lsl),
+            'potential_pct_above_usl': _r(self.potential_pct_above_usl),
         }
 
     def __repr__(self) -> str:
         """Formatted summary using self.round_to."""
         d = self.as_dict()
-        lines = ["CapabilityResult:"]
-        lines.append(f"  Specs: LSL={d['lsl']}, USL={d['usl']}, Target={d['target']}")
-        lines.append(f"  N={d['n']}, Ybar={d['y_bar']}, S={d['s']}, sigma_hat={d['sigma_hat']}")
-        lines.append("")
+        lines = ['CapabilityResult:']
+        lines.append(f'  Specs: LSL={d["lsl"]}, USL={d["usl"]}, Target={d["target"]}')
+        lines.append(f'  N={d["n"]}, Ybar={d["y_bar"]}, S={d["s"]}, sigma_hat={d["sigma_hat"]}')
+        lines.append('')
 
-        lines.append("  Current Capability (overall sigma):")
-        lines.append(f"    Pp={d['pp']}  Ppk={d['ppk']}  (lower={d['ppk_lower']}, upper={d['ppk_upper']})")
+        lines.append('  Current Capability (overall sigma):')
+        lines.append(f'    Pp={d["pp"]}  Ppk={d["ppk"]}  (lower={d["ppk_lower"]}, upper={d["ppk_upper"]})')
 
-        lines.append("")
+        lines.append('')
         if self.potential_unavailable_reason:
-            lines.append(f"  Potential Capability: {self.potential_unavailable_reason}")
+            lines.append(f'  Potential Capability: {self.potential_unavailable_reason}')
         else:
-            lines.append("  Potential Capability (R2 sigma):")
-            lines.append(
-                f"    Cp={d['cp']}  Cpk={d['cpk']}  "
-                f"(lower={d['cpk_lower']}, upper={d['cpk_upper']})"
-            )
+            lines.append('  Potential Capability (R2 sigma):')
+            lines.append(f'    Cp={d["cp"]}  Cpk={d["cpk"]}  (lower={d["cpk_lower"]}, upper={d["cpk_upper"]})')
 
-        lines.append("")
-        lines.append("  Z-scores:")
-        lines.append(f"    Z_lower={d['z_lower']}, Z_upper={d['z_upper']}")
+        lines.append('')
+        lines.append('  Z-scores:')
+        lines.append(f'    Z_lower={d["z_lower"]}, Z_upper={d["z_upper"]}')
 
-        lines.append("")
-        lines.append("  Empirical (current):")
+        lines.append('')
+        lines.append('  Empirical (current):')
         lines.append(
-            f"    Below LSL: {d['n_below_lsl']} ({d['pct_below_lsl']}%)"
-            f"  Above USL: {d['n_above_usl']} ({d['pct_above_usl']}%)"
-            f"  Total outside: {d['n_outside']} ({d['pct_outside']}%)"
+            f'    Below LSL: {d["n_below_lsl"]} ({d["pct_below_lsl"]}%)'
+            f'  Above USL: {d["n_above_usl"]} ({d["pct_above_usl"]}%)'
+            f'  Total outside: {d["n_outside"]} ({d["pct_outside"]}%)'
         )
         if self.potential_pct_below_lsl is not None or self.potential_pct_above_usl is not None:
-            lines.append("  Empirical (potential):")
+            lines.append('  Empirical (potential):')
             lines.append(
-                f"    Below LSL: {d['potential_n_below_lsl']} ({d['potential_pct_below_lsl']}%)"
-                f"  Above USL: {d['potential_n_above_usl']} ({d['potential_pct_above_usl']}%)"
+                f'    Below LSL: {d["potential_n_below_lsl"]} ({d["potential_pct_below_lsl"]}%)'
+                f'  Above USL: {d["potential_n_above_usl"]} ({d["potential_pct_above_usl"]}%)'
             )
 
         if not self.stability_evaluated:
-            lines.append("")
+            lines.append('')
             lines.append(
-                "  Note: Stability not assessed; run study.execute() "
-                "and review signals before interpreting indices."
+                '  Note: Stability not assessed; run study.execute() and review signals before interpreting indices.'
             )
 
-        return "\n".join(lines)
+        return '\n'.join(lines)
 
 
 # ============================================================================
 # Pure Functions
 # ============================================================================
+
 
 def compute_sigma_hat(values: np.ndarray) -> tuple[float, float]:
     """
@@ -384,7 +394,7 @@ def compute_capability_indices(
     def _safe_div(numerator: float, denominator: float) -> float:
         """Divide, returning inf when denominator is zero."""
         if denominator == 0.0:
-            return float("inf")
+            return float('inf')
         return numerator / denominator
 
     pp = None
@@ -411,12 +421,12 @@ def compute_capability_indices(
         ppk = ppk_upper
 
     return {
-        "pp": pp,
-        "ppk_lower": ppk_lower,
-        "ppk_upper": ppk_upper,
-        "ppk": ppk,
-        "z_lower": z_lower,
-        "z_upper": z_upper,
+        'pp': pp,
+        'ppk_lower': ppk_lower,
+        'ppk_upper': ppk_upper,
+        'ppk': ppk,
+        'z_lower': z_lower,
+        'z_upper': z_upper,
     }
 
 
@@ -465,18 +475,19 @@ def compute_pct_outside(values: np.ndarray, specs: SpecLimits) -> dict:
         pct_outside = pct_above
 
     return {
-        "n_below_lsl": n_below,
-        "n_above_usl": n_above,
-        "n_outside": n_outside,
-        "pct_below_lsl": pct_below,
-        "pct_above_usl": pct_above,
-        "pct_outside": pct_outside,
+        'n_below_lsl': n_below,
+        'n_above_usl': n_above,
+        'n_outside': n_outside,
+        'pct_below_lsl': pct_below,
+        'pct_above_usl': pct_above,
+        'pct_outside': pct_outside,
     }
 
 
 # ============================================================================
 # Coercion
 # ============================================================================
+
 
 def _coerce_ads(source: Study | AnalysisDataSet) -> AnalysisDataSet:
     """
@@ -486,7 +497,7 @@ def _coerce_ads(source: Study | AnalysisDataSet) -> AnalysisDataSet:
     internals shift.
     """
     # Avoid circular import by checking attribute
-    if hasattr(source, "_ads"):
+    if hasattr(source, '_ads'):
         return source._ads
     return source
 
@@ -494,6 +505,7 @@ def _coerce_ads(source: Study | AnalysisDataSet) -> AnalysisDataSet:
 # ============================================================================
 # Orchestrator
 # ============================================================================
+
 
 def assess_capability(
     source: Study | AnalysisDataSet,
@@ -536,9 +548,7 @@ def assess_capability(
     n = len(y_values)
 
     if n < 2:
-        raise ValidationError(
-            f"Capability analysis requires at least 2 valid observations, got {n}."
-        )
+        raise ValidationError(f'Capability analysis requires at least 2 valid observations, got {n}.')
 
     # --- Current capability ---
     y_bar = float(np.mean(y_values))
@@ -557,28 +567,27 @@ def assess_capability(
     potential_values = None
     potential_outside = {}
 
-    if ads.has_vas_residuals and "R2" in df.columns:
-        r2_values = df["R2"].dropna().to_numpy(dtype=float)
+    if ads.has_vas_residuals and 'R2' in df.columns:
+        r2_values = df['R2'].dropna().to_numpy(dtype=float)
         n_r2 = len(r2_values)
 
         if n_r2 >= 2:
             _, sigma_hat_r2 = compute_sigma_hat(r2_values)
             pot = compute_capability_indices(y_bar, sigma_hat_r2, specs)
-            cp = pot["pp"]
-            cpk_lower = pot["ppk_lower"]
-            cpk_upper = pot["ppk_upper"]
-            cpk = pot["ppk"]
+            cp = pot['pp']
+            cpk_lower = pot['ppk_lower']
+            cpk_upper = pot['ppk_upper']
+            cpk = pot['ppk']
             potential_values = y_bar + r2_values
             potential_outside = compute_pct_outside(potential_values, specs)
         else:
             potential_unavailable_reason = (
-                f"Too few R2 residual values ({n_r2}) for potential capability; "
-                f"need at least 2"
+                f'Too few R2 residual values ({n_r2}) for potential capability; need at least 2'
             )
     else:
         potential_unavailable_reason = (
-            f"R2 residuals not available (ADS {ads.analytical_design_state.sds}); "
-            f"Cp/Cpk require VAS residuals from a factorial+time design"
+            f'R2 residuals not available (ADS {ads.analytical_design_state.sds}); '
+            f'Cp/Cpk require VAS residuals from a factorial+time design'
         )
 
     return CapabilityResult(
@@ -587,10 +596,10 @@ def assess_capability(
         y_bar=y_bar,
         s=s,
         sigma_hat=sigma_hat,
-        pp=current["pp"],
-        ppk_lower=current["ppk_lower"],
-        ppk_upper=current["ppk_upper"],
-        ppk=current["ppk"],
+        pp=current['pp'],
+        ppk_lower=current['ppk_lower'],
+        ppk_upper=current['ppk_upper'],
+        ppk=current['ppk'],
         sigma_hat_r2=sigma_hat_r2,
         cp=cp,
         cpk_lower=cpk_lower,
@@ -598,18 +607,18 @@ def assess_capability(
         cpk=cpk,
         potential_unavailable_reason=potential_unavailable_reason,
         potential_values=potential_values,
-        z_lower=current["z_lower"],
-        z_upper=current["z_upper"],
-        n_below_lsl=outside["n_below_lsl"],
-        n_above_usl=outside["n_above_usl"],
-        n_outside=outside["n_outside"],
-        pct_below_lsl=outside["pct_below_lsl"],
-        pct_above_usl=outside["pct_above_usl"],
-        pct_outside=outside["pct_outside"],
-        potential_n_below_lsl=potential_outside.get("n_below_lsl"),
-        potential_n_above_usl=potential_outside.get("n_above_usl"),
-        potential_pct_below_lsl=potential_outside.get("pct_below_lsl"),
-        potential_pct_above_usl=potential_outside.get("pct_above_usl"),
+        z_lower=current['z_lower'],
+        z_upper=current['z_upper'],
+        n_below_lsl=outside['n_below_lsl'],
+        n_above_usl=outside['n_above_usl'],
+        n_outside=outside['n_outside'],
+        pct_below_lsl=outside['pct_below_lsl'],
+        pct_above_usl=outside['pct_above_usl'],
+        pct_outside=outside['pct_outside'],
+        potential_n_below_lsl=potential_outside.get('n_below_lsl'),
+        potential_n_above_usl=potential_outside.get('n_above_usl'),
+        potential_pct_below_lsl=potential_outside.get('pct_below_lsl'),
+        potential_pct_above_usl=potential_outside.get('pct_above_usl'),
         response_var=response_var,
         round_to=round_to,
     )

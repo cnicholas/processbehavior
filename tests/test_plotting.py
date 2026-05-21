@@ -53,7 +53,7 @@ class TestThemes:
     def test_apply_theme_invalid(self):
         """Test error handling for invalid theme."""
         fig = go.Figure()
-        with pytest.raises(ValueError, match="Unknown theme"):
+        with pytest.raises(ValueError, match='Unknown theme'):
             apply_theme(fig, 'nonexistent')
 
 
@@ -89,17 +89,12 @@ class TestChartTheme:
 
     def test_get_theme_invalid(self):
         """Test error handling for invalid theme name."""
-        with pytest.raises(ValueError, match="Unknown theme"):
+        with pytest.raises(ValueError, match='Unknown theme'):
             get_theme('nonexistent')
 
     def test_chart_theme_dataclass(self):
         """Test creating a custom ChartTheme."""
-        theme = ChartTheme(
-            name='custom',
-            data_color='navy',
-            signal_color='orange',
-            center_color='darkgreen'
-        )
+        theme = ChartTheme(name='custom', data_color='navy', signal_color='orange', center_color='darkgreen')
         assert theme.name == 'custom'
         assert theme.data_color == 'navy'
         assert theme.signal_color == 'orange'
@@ -153,11 +148,9 @@ class TestControlChartFigure:
     def sample_result(self):
         """Create sample analysis result with factors."""
         np.random.seed(42)
-        df = pd.DataFrame({
-            'value': np.random.normal(100, 5, 30),
-            'group': ['A'] * 15 + ['B'] * 15,
-            'time': list(range(15)) * 2
-        })
+        df = pd.DataFrame(
+            {'value': np.random.normal(100, 5, 30), 'group': ['A'] * 15 + ['B'] * 15, 'time': list(range(15)) * 2}
+        )
         pdf = ProcessBehavior(df)
         study = pdf.formulate(response=pdf.cols.value, factors=[pdf.cols.group], time=pdf.cols.time)
         return study.execute(chart='X', by=['group'])
@@ -218,11 +211,9 @@ class TestPlotter:
     def simple_result(self):
         """Create simple XmR analysis result with a factor."""
         np.random.seed(42)
-        df = pd.DataFrame({
-            'value': np.random.normal(100, 5, 30),
-            'group': ['A'] * 15 + ['B'] * 15,
-            'time': list(range(15)) * 2
-        })
+        df = pd.DataFrame(
+            {'value': np.random.normal(100, 5, 30), 'group': ['A'] * 15 + ['B'] * 15, 'time': list(range(15)) * 2}
+        )
         pdf = ProcessBehavior(df)
         study = pdf.formulate(response=pdf.cols.value, factors=[pdf.cols.group], time=pdf.cols.time)
         return study.execute(chart='X', by=['group'])
@@ -231,11 +222,9 @@ class TestPlotter:
     def xbar_result(self):
         """Create Xbar analysis result."""
         np.random.seed(42)
-        df = pd.DataFrame({
-            'value': np.random.normal(100, 5, 100),
-            'subgroup': np.repeat(range(20), 5),
-            'time': range(100)
-        })
+        df = pd.DataFrame(
+            {'value': np.random.normal(100, 5, 100), 'subgroup': np.repeat(range(20), 5), 'time': range(100)}
+        )
         pdf = ProcessBehavior(df)
         study = pdf.formulate(response=pdf.cols.value, factors=[pdf.cols.subgroup])
         return study.execute()
@@ -325,11 +314,7 @@ class TestPlotter:
         chart_info = {
             'data': pd.DataFrame({'xbar': [1, 2, 3]}),
             'statistics': {},
-            'metadata': {
-                'chart_type': 'Xbar',
-                'value_col': 'xbar',
-                'center_col': 'center'
-            }
+            'metadata': {'chart_type': 'Xbar', 'value_col': 'xbar', 'center_col': 'center'},
         }
 
         value_col = plotter._get_value_column(chart_info, 'Xbar')
@@ -395,7 +380,7 @@ class TestPlotter:
             zone_a_color='#FF0000',
             zone_b_color='#FFFF00',
             zone_c_color='#00FF00',
-            zone_opacity=0.3
+            zone_opacity=0.3,
         )
 
         plotter = Plotter(simple_result)
@@ -433,26 +418,18 @@ class TestPlotter:
         fig = result.plot(chart='Xbar')
 
         # Extract horizontal limit lines (UPL, LPL, centerline)
-        hlines = [
-            s for s in fig._fig.layout.shapes
-            if s.type == 'line' and s.y0 == s.y1
-        ]
-        assert len(hlines) == 3, f"Expected 3 limit lines, got {len(hlines)}"
+        hlines = [s for s in fig._fig.layout.shapes if s.type == 'line' and s.y0 == s.y1]
+        assert len(hlines) == 3, f'Expected 3 limit lines, got {len(hlines)}'
 
         for line in hlines:
-            assert line.x0 == 0, f"Limit line x0={line.x0!r}, expected 0"
-            assert line.x1 == 1, f"Limit line x1={line.x1!r}, expected 1"
-            assert 'domain' in line.xref, f"Expected domain xref, got {line.xref!r}"
+            assert line.x0 == 0, f'Limit line x0={line.x0!r}, expected 0'
+            assert line.x1 == 1, f'Limit line x1={line.x1!r}, expected 1'
+            assert 'domain' in line.xref, f'Expected domain xref, got {line.xref!r}'
 
     def test_plot_with_rules_and_zones(self, simple_result):
         """Test plotting with both show_rules and show_zones enabled."""
         plotter = Plotter(simple_result)
-        fig = plotter.plot(
-            chart='X',
-            show_rules=True,
-            show_zones=True,
-            highlight_signals=True
-        )
+        fig = plotter.plot(chart='X', show_rules=True, show_zones=True, highlight_signals=True)
 
         assert isinstance(fig, ControlChartFigure)
         # Should have zone shapes
@@ -469,11 +446,9 @@ class TestAnalysisResultIntegration:
     def result(self):
         """Create sample analysis result with a factor."""
         np.random.seed(42)
-        df = pd.DataFrame({
-            'value': np.random.normal(100, 5, 30),
-            'group': ['A'] * 15 + ['B'] * 15,
-            'time': list(range(15)) * 2
-        })
+        df = pd.DataFrame(
+            {'value': np.random.normal(100, 5, 30), 'group': ['A'] * 15 + ['B'] * 15, 'time': list(range(15)) * 2}
+        )
         pdf = ProcessBehavior(df)
         study = pdf.formulate(response=pdf.cols.value, factors=[pdf.cols.group], time=pdf.cols.time)
         return study.execute(chart='X', by=['group'])
@@ -490,11 +465,7 @@ class TestAnalysisResultIntegration:
 
     def test_plot_with_kwargs(self, result):
         """Test that plot() accepts keyword arguments."""
-        fig = result.plot(
-            theme='minimal',
-            width=800,
-            highlight_signals=False
-        )
+        fig = result.plot(theme='minimal', width=800, highlight_signals=False)
         assert isinstance(fig, ControlChartFigure)
         assert fig.figure.layout.width == 800
 
@@ -506,11 +477,9 @@ class TestFacetedPlotting:
     def xbar_result(self):
         """Create Xbar result with multiple charts."""
         np.random.seed(42)
-        df = pd.DataFrame({
-            'value': np.random.normal(100, 5, 100),
-            'subgroup': np.repeat(range(20), 5),
-            'time': range(100)
-        })
+        df = pd.DataFrame(
+            {'value': np.random.normal(100, 5, 100), 'subgroup': np.repeat(range(20), 5), 'time': range(100)}
+        )
         pdf = ProcessBehavior(df)
         study = pdf.formulate(response=pdf.cols.value, factors=[pdf.cols.subgroup])
         return study.execute()
@@ -537,18 +506,16 @@ class TestNumericStrataPlotting:
         """Plotting works when strata are numeric tuples like (1, 1)."""
         # This is the original bug: strata were (1, 1), (1, 2) etc. which
         # caused TypeError: sequence item 0: expected str instance, int found
-        df = pd.DataFrame({
-            'value': np.random.normal(100, 5, 40),
-            'factor1': [1, 1, 2, 2] * 10,
-            'factor2': [1, 2, 1, 2] * 10,
-            'time': list(range(10)) * 4
-        })
-        pdf = ProcessBehavior(df)
-        study = pdf.formulate(
-            response=pdf.cols.value,
-            factors=[pdf.cols.factor1, pdf.cols.factor2],
-            time=pdf.cols.time
+        df = pd.DataFrame(
+            {
+                'value': np.random.normal(100, 5, 40),
+                'factor1': [1, 1, 2, 2] * 10,
+                'factor2': [1, 2, 1, 2] * 10,
+                'time': list(range(10)) * 4,
+            }
         )
+        pdf = ProcessBehavior(df)
+        study = pdf.formulate(response=pdf.cols.value, factors=[pdf.cols.factor1, pdf.cols.factor2], time=pdf.cols.time)
         result = study.execute(chart='X', by=['factor1', 'factor2'])
 
         # Verify strata are tuples with numeric values
@@ -563,18 +530,16 @@ class TestNumericStrataPlotting:
 
     def test_plot_with_mixed_type_strata(self):
         """Plotting works with mixed string/int factor values."""
-        df = pd.DataFrame({
-            'value': np.random.normal(100, 5, 20),
-            'machine': ['A', 'A', 'B', 'B'] * 5,
-            'shift': [1, 2, 1, 2] * 5,
-            'time': list(range(5)) * 4
-        })
-        pdf = ProcessBehavior(df)
-        study = pdf.formulate(
-            response=pdf.cols.value,
-            factors=[pdf.cols.machine, pdf.cols.shift],
-            time=pdf.cols.time
+        df = pd.DataFrame(
+            {
+                'value': np.random.normal(100, 5, 20),
+                'machine': ['A', 'A', 'B', 'B'] * 5,
+                'shift': [1, 2, 1, 2] * 5,
+                'time': list(range(5)) * 4,
+            }
         )
+        pdf = ProcessBehavior(df)
+        study = pdf.formulate(response=pdf.cols.value, factors=[pdf.cols.machine, pdf.cols.shift], time=pdf.cols.time)
         result = study.execute(chart='X', by=['machine', 'shift'])
 
         plotter = Plotter(result)
@@ -589,11 +554,9 @@ class TestAspectRatio:
     def simple_result(self):
         """Create simple XmR analysis result with a factor."""
         np.random.seed(42)
-        df = pd.DataFrame({
-            'value': np.random.normal(100, 5, 30),
-            'group': ['A'] * 15 + ['B'] * 15,
-            'time': list(range(15)) * 2
-        })
+        df = pd.DataFrame(
+            {'value': np.random.normal(100, 5, 30), 'group': ['A'] * 15 + ['B'] * 15, 'time': list(range(15)) * 2}
+        )
         pdf = ProcessBehavior(df)
         study = pdf.formulate(response=pdf.cols.value, factors=[pdf.cols.group], time=pdf.cols.time)
         return study.execute(chart='X', by=['group'])
@@ -603,7 +566,7 @@ class TestAspectRatio:
         plotter = Plotter(simple_result)
 
         # 16:9 aspect ratio
-        fig = plotter.plot(chart='X', width=1600, aspect_ratio=16/9)
+        fig = plotter.plot(chart='X', width=1600, aspect_ratio=16 / 9)
         assert fig.figure.layout.width == 1600
         assert fig.figure.layout.height == 900
 
@@ -629,11 +592,9 @@ class TestReportGeneration:
     def simple_result(self):
         """Create simple XmR analysis result with a factor."""
         np.random.seed(42)
-        df = pd.DataFrame({
-            'value': np.random.normal(100, 5, 30),
-            'group': ['A'] * 15 + ['B'] * 15,
-            'time': list(range(15)) * 2
-        })
+        df = pd.DataFrame(
+            {'value': np.random.normal(100, 5, 30), 'group': ['A'] * 15 + ['B'] * 15, 'time': list(range(15)) * 2}
+        )
         pdf = ProcessBehavior(df)
         study = pdf.formulate(response=pdf.cols.value, factors=[pdf.cols.group], time=pdf.cols.time)
         return study.execute(chart='X', by=['group'])
@@ -686,20 +647,18 @@ class TestResidualPlots:
         n_reps = 3
         n_total = n_factors * n_times * n_reps
 
-        df = pd.DataFrame({
-            'value': np.random.normal(100, 5, n_total),
-            'factor': np.tile(np.repeat(['A', 'B', 'C', 'D'], n_reps), n_times),
-            'time': np.repeat(range(n_times), n_factors * n_reps)
-        })
-        pdf = ProcessBehavior(df)
-        study = pdf.formulate(
-            response=pdf.cols.value,
-            factors=[pdf.cols.factor],
-            time=pdf.cols.time
+        df = pd.DataFrame(
+            {
+                'value': np.random.normal(100, 5, n_total),
+                'factor': np.tile(np.repeat(['A', 'B', 'C', 'D'], n_reps), n_times),
+                'time': np.repeat(range(n_times), n_factors * n_reps),
+            }
         )
+        pdf = ProcessBehavior(df)
+        study = pdf.formulate(response=pdf.cols.value, factors=[pdf.cols.factor], time=pdf.cols.time)
         result = study.execute()
         # Verify fixture produces residuals
-        assert result.has_residuals, "Fixture should produce result with residuals"
+        assert result.has_residuals, 'Fixture should produce result with residuals'
         return result
 
     def test_plot_residuals_available(self, result_with_residuals):
@@ -726,6 +685,7 @@ class TestResidualPlots:
         fig = plotter.plot_residuals(plot_type='sequence')
         assert isinstance(fig, ControlChartFigure)
 
+
 class TestEffectsPlots:
     """Test effects visualization functionality."""
 
@@ -733,11 +693,9 @@ class TestEffectsPlots:
     def result_with_effects(self):
         """Create analysis result with effects."""
         np.random.seed(42)
-        df = pd.DataFrame({
-            'value': np.random.normal(100, 5, 100),
-            'subgroup': np.repeat(range(20), 5),
-            'time': range(100)
-        })
+        df = pd.DataFrame(
+            {'value': np.random.normal(100, 5, 100), 'subgroup': np.repeat(range(20), 5), 'time': range(100)}
+        )
         pdf = ProcessBehavior(df)
         study = pdf.formulate(response=pdf.cols.value, factors=[pdf.cols.subgroup])
         return study.execute()
@@ -749,6 +707,7 @@ class TestEffectsPlots:
             fig = plotter.plot_effects()
             assert isinstance(fig, ControlChartFigure)
 
+
 class TestStatsBox:
     """Test statistical annotations (stats box) functionality."""
 
@@ -757,11 +716,13 @@ class TestStatsBox:
         """Create simple Xbar analysis result with replication."""
         np.random.seed(42)
         # Create data with replication within factor levels
-        df = pd.DataFrame({
-            'value': np.random.normal(100, 5, 60),
-            'factor': np.repeat(['A', 'B', 'C'], 20),
-            'time': np.tile(range(1, 11), 6)
-        })
+        df = pd.DataFrame(
+            {
+                'value': np.random.normal(100, 5, 60),
+                'factor': np.repeat(['A', 'B', 'C'], 20),
+                'time': np.tile(range(1, 11), 6),
+            }
+        )
         pdf = ProcessBehavior(df)
         study = pdf.formulate(response=pdf.cols.value, factors=[pdf.cols.factor], time=pdf.cols.time)
         return study.execute()
@@ -770,11 +731,9 @@ class TestStatsBox:
     def xbar_result(self):
         """Create Xbar analysis result with subgroups."""
         np.random.seed(42)
-        df = pd.DataFrame({
-            'value': np.random.normal(100, 5, 100),
-            'subgroup': np.repeat(range(20), 5),
-            'time': range(100)
-        })
+        df = pd.DataFrame(
+            {'value': np.random.normal(100, 5, 100), 'subgroup': np.repeat(range(20), 5), 'time': range(100)}
+        )
         pdf = ProcessBehavior(df)
         study = pdf.formulate(response=pdf.cols.value, factors=[pdf.cols.subgroup])
         return study.execute()
@@ -843,7 +802,7 @@ class TestStatsBox:
             name='custom_stats',
             stats_box_bgcolor='rgba(200, 200, 255, 0.8)',
             stats_box_font_size=14,
-            stats_box_font_color='#0000FF'
+            stats_box_font_color='#0000FF',
         )
 
         plotter = Plotter(simple_result)
@@ -874,13 +833,7 @@ class TestStatsBox:
     def test_stats_box_with_other_options(self, simple_result):
         """Test stats box works with other visualization options."""
         plotter = Plotter(simple_result)
-        fig = plotter.plot(
-            chart='Xbar',
-            show_stats=True,
-            show_zones=True,
-            show_rules=True,
-            highlight_signals=True
-        )
+        fig = plotter.plot(chart='Xbar', show_stats=True, show_zones=True, show_rules=True, highlight_signals=True)
 
         assert isinstance(fig, ControlChartFigure)
         # Should have stats annotation

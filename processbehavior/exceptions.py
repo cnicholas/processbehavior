@@ -80,8 +80,7 @@ class ColumnNotFoundError(ValidationError):
     - Check `df.columns` to see all available columns
     """
 
-    def __init__(self, message: str, column: str | None = None,
-                 available: list[str] | None = None):
+    def __init__(self, message: str, column: str | None = None, available: list[str] | None = None):
         super().__init__(message)
         self.column = column
         self.available = available
@@ -108,8 +107,9 @@ class FactorNotFoundError(ValidationError):
     - Use `study.factors` to see available factor names
     """
 
-    def __init__(self, message: str, factor: str | None = None,
-                 suggestion: str | None = None, available: list[str] | None = None):
+    def __init__(
+        self, message: str, factor: str | None = None, suggestion: str | None = None, available: list[str] | None = None
+    ):
         super().__init__(message)
         self.factor = factor
         self.suggestion = suggestion
@@ -136,8 +136,7 @@ class ChartNotAvailableError(ProcessBehaviorError):
     - Use `study.support` DataFrame for full availability matrix
     """
 
-    def __init__(self, message: str, chart: str | None = None,
-                 available: list[str] | None = None):
+    def __init__(self, message: str, chart: str | None = None, available: list[str] | None = None):
         super().__init__(message)
         self.chart = chart
         self.available = available

@@ -174,13 +174,15 @@ class DesignReport:
             missing = self._safe_sort(list(planned_set - observed_set))
             extra = self._safe_sort(list(observed_set - planned_set))
 
-            rows.append({
-                'factor': factor,
-                'planned': ', '.join(str(v) for v in planned),
-                'observed': ', '.join(str(v) for v in observed),
-                'missing_levels': ', '.join(str(v) for v in missing) if missing else '',
-                'extra_levels': ', '.join(str(v) for v in extra) if extra else '',
-            })
+            rows.append(
+                {
+                    'factor': factor,
+                    'planned': ', '.join(str(v) for v in planned),
+                    'observed': ', '.join(str(v) for v in observed),
+                    'missing_levels': ', '.join(str(v) for v in missing) if missing else '',
+                    'extra_levels': ', '.join(str(v) for v in extra) if extra else '',
+                }
+            )
 
         return pd.DataFrame(rows)
 
@@ -270,6 +272,7 @@ class DesignReport:
         if not self._sampling_plan:
             return self.K_observed
         from math import prod
+
         return prod(len(self._sampling_plan[f]) for f in self._factors)
 
     @property
@@ -294,10 +297,7 @@ class DesignReport:
         if not self._sampling_plan:
             return 0
         # Count observed rsg values that match the plan
-        observed_in_plan = sum(
-            1 for rsg in (self._observed_rsg_values or [])
-            if self._rsg_in_plan(rsg)
-        )
+        observed_in_plan = sum(1 for rsg in (self._observed_rsg_values or []) if self._rsg_in_plan(rsg))
         return max(0, self.K - observed_in_plan)
 
     @property
@@ -419,7 +419,7 @@ class DesignReport:
 
         explanation = explanations.get(self._sds_reason, '')
         if explanation:
-            return f"{self._sds_reason} ({explanation})"
+            return f'{self._sds_reason} ({explanation})'
         return self._sds_reason
 
     @property
@@ -475,23 +475,18 @@ class DesignReport:
         hints: dict[str, str | None] = {
             'full_replication': None,
             'no_replication': (
-                "To enable within-cell variance estimation, "
-                "collect >= 2 observations per factor x time cell."
+                'To enable within-cell variance estimation, collect >= 2 observations per factor x time cell.'
             ),
             'partial_replication': (
-                "To enable consistent variance estimation, "
-                "ensure all cells have >= 2 observations."
+                'To enable consistent variance estimation, ensure all cells have >= 2 observations.'
             ),
             'incomplete_with_singletons': (
-                "To complete the design, fill missing factor x time cells "
-                "and ensure >= 2 observations per cell."
+                'To complete the design, fill missing factor x time cells and ensure >= 2 observations per cell.'
             ),
-            'incomplete_no_singletons': (
-                "To complete the design, fill missing factor x time cells."
-            ),
+            'incomplete_no_singletons': ('To complete the design, fill missing factor x time cells.'),
             'incomplete_no_replication': (
-                "To enable Xbar/S charts and within-cell residuals, "
-                "collect >= 2 observations per cell and fill missing cells."
+                'To enable Xbar/S charts and within-cell residuals, '
+                'collect >= 2 observations per cell and fill missing cells.'
             ),
         }
         return hints.get(self._sds_reason)
@@ -522,22 +517,22 @@ class DesignReport:
         if self._N is not None and self._N_observed is not None:
             min_n, _, _ = self._N_observed
             if min_n < self._N:
-                issues.append(f"underreplicated (min n = {min_n} < planned N = {self._N})")
+                issues.append(f'underreplicated (min n = {min_n} < planned N = {self._N})')
 
         # Check time completeness
         if self._T is not None and self._T_observed is not None and self._T_observed < self._T:
-            issues.append(f"incomplete_time (observed {self._T_observed} of {self._T} time points)")
+            issues.append(f'incomplete_time (observed {self._T_observed} of {self._T} time points)')
 
         # Check factor completeness
         k_observed = self.K_observed
         k_planned = self.K
         if k_observed < k_planned:
-            issues.append(f"incomplete_factors (observed {k_observed} of {k_planned} factor combinations)")
+            issues.append(f'incomplete_factors (observed {k_observed} of {k_planned} factor combinations)')
 
         if not issues:
-            return "complete"
+            return 'complete'
 
-        return "; ".join(issues)
+        return '; '.join(issues)
 
     @property
     def unit_of_analysis(self) -> str | None:
@@ -585,10 +580,7 @@ class DesignReport:
         """
         if not self._sampling_plan:
             return 0
-        return sum(
-            1 for rsg in (self._observed_rsg_values or [])
-            if not self._rsg_in_plan(rsg)
-        )
+        return sum(1 for rsg in (self._observed_rsg_values or []) if not self._rsg_in_plan(rsg))
 
     @property
     def extra_combos(self) -> list[str]:
@@ -605,10 +597,7 @@ class DesignReport:
         from processbehavior.data_preparation import natural_sort_key
 
         # Efficient: check each observed value against plan without cartesian product
-        extras = [
-            rsg for rsg in (self._observed_rsg_values or [])
-            if not self._rsg_in_plan(rsg)
-        ]
+        extras = [rsg for rsg in (self._observed_rsg_values or []) if not self._rsg_in_plan(rsg)]
 
         result = sorted(extras, key=natural_sort_key)
         return result[:MAX_COMBO_DISPLAY]
@@ -623,19 +612,19 @@ class DesignReport:
         """
         issues = []
         if self.K_missing > 0:
-            issues.append(f"{self.K_missing} RSG groups missing")
+            issues.append(f'{self.K_missing} RSG groups missing')
         if self.extra_count > 0:
-            issues.append(f"{self.extra_count} extra RSG groups in data")
+            issues.append(f'{self.extra_count} extra RSG groups in data')
         if self.T_missing and self.T_missing > 0:
-            issues.append(f"{self.T_missing} time points missing")
+            issues.append(f'{self.T_missing} time points missing')
         if self._N is not None and self._N_observed:
             min_n, _, _ = self._N_observed
             if min_n < self._N:
-                issues.append(f"some cells have n={min_n} < planned n={self._N}")
+                issues.append(f'some cells have n={min_n} < planned n={self._N}')
 
         if not issues:
-            return "Complete structure"
-        return "Incomplete: " + "; ".join(issues)
+            return 'Complete structure'
+        return 'Incomplete: ' + '; '.join(issues)
 
     def _repr_metrics_line(self) -> str:
         """Build compact K/T/R/N metrics line for __repr__."""
@@ -643,36 +632,36 @@ class DesignReport:
 
         # Min cell size
         if self._min_cell_size is not None and self._min_cell_size > 0:
-            parts.append(f"Min cell size: {self._min_cell_size}")
+            parts.append(f'Min cell size: {self._min_cell_size}')
 
         # K summary
         if self.has_plan:
-            parts.append(f"K: planned={self.K}, observed={self.K_observed}")
+            parts.append(f'K: planned={self.K}, observed={self.K_observed}')
         else:
-            parts.append(f"K: {self.K_observed}")
+            parts.append(f'K: {self.K_observed}')
 
         # T summary
         if self._T is not None:
-            parts.append(f"T: planned={self._T}, observed={self._T_observed}")
+            parts.append(f'T: planned={self._T}, observed={self._T_observed}')
         elif self._T_observed is not None:
-            parts.append(f"T: {self._T_observed}")
+            parts.append(f'T: {self._T_observed}')
 
         # R = K × T (total cells)
         if self.R is not None:
             if self.has_plan and self._T is not None:
-                parts.append(f"R: planned={self.R}, observed={self.R_observed}")
+                parts.append(f'R: planned={self.R}, observed={self.R_observed}')
             elif self.R_observed is not None:
-                parts.append(f"R: {self.R_observed}")
+                parts.append(f'R: {self.R_observed}')
 
         # N summary
         if self._N is not None and self._N_observed is not None:
             min_n, med_n, max_n = self._N_observed
-            parts.append(f"N: planned={self._N}, observed=(min={min_n}, median={med_n}, max={max_n})")
+            parts.append(f'N: planned={self._N}, observed=(min={min_n}, median={med_n}, max={max_n})')
         elif self._N_observed is not None:
             min_n, med_n, max_n = self._N_observed
-            parts.append(f"N: (min={min_n}, median={med_n}, max={max_n})")
+            parts.append(f'N: (min={min_n}, median={med_n}, max={max_n})')
 
-        return "  " + " | ".join(parts)
+        return '  ' + ' | '.join(parts)
 
     _REASON_DISPLAY = {
         'full_replication': 'Full Replication',
@@ -689,11 +678,11 @@ class DesignReport:
 
     def __repr__(self) -> str:
         """Nice summary showing plan vs observed per factor with K/T/N."""
-        lines = [f"Design Report ({len(self._factors)} factors)"]
+        lines = [f'Design Report ({len(self._factors)} factors)']
 
         # Unit of analysis (if specified)
         if self._unit_of_analysis:
-            lines.append(f"  Unit of analysis: {self._unit_of_analysis}")
+            lines.append(f'  Unit of analysis: {self._unit_of_analysis}')
 
         # Design lineage
         ods = self._ods_result
@@ -701,30 +690,30 @@ class DesignReport:
         pds = self._pds_result
 
         if ods and ads:
-            lines.append("  Design-state lineage:")
+            lines.append('  Design-state lineage:')
             if pds is not None:
-                lines.append(f"    PDS (Planned):    {pds.sds} ({self._humanize_reason(pds.reason)})")
+                lines.append(f'    PDS (Planned):    {pds.sds} ({self._humanize_reason(pds.reason)})')
             else:
-                lines.append("    PDS (Planned):    no plan supplied")
-            empty_detail = f" — {ods.n_empty_cells} empty cells" if ods.n_empty_cells > 0 else ""
+                lines.append('    PDS (Planned):    no plan supplied')
+            empty_detail = f' — {ods.n_empty_cells} empty cells' if ods.n_empty_cells > 0 else ''
             ods_reason = self._humanize_reason(ods.reason)
-            lines.append(f"    ODS (Observed):   {ods.sds} ({ods_reason}){empty_detail}")
-            lines.append(f"    ADS (Analytical): {ads.sds} ({self._humanize_reason(ads.reason)})")
+            lines.append(f'    ODS (Observed):   {ods.sds} ({ods_reason}){empty_detail}')
+            lines.append(f'    ADS (Analytical): {ads.sds} ({self._humanize_reason(ads.reason)})')
         elif self.sds_reason_detail:
-            lines.append(f"  Classification reason: {self.sds_reason_detail}")
+            lines.append(f'  Classification reason: {self.sds_reason_detail}')
         elif self._sds_reason:
-            lines.append(f"  Classification reason: {self._sds_reason}")
+            lines.append(f'  Classification reason: {self._sds_reason}')
 
         # Plan adherence (only shown when plan is provided)
         if self.plan_adherence:
-            lines.append(f"  Plan adherence: {self.plan_adherence}")
+            lines.append(f'  Plan adherence: {self.plan_adherence}')
 
         # Compact metrics line (includes min cell size)
         lines.append(self._repr_metrics_line())
 
         # Factor details
-        lines.append("")
-        lines.append("  Factors:")
+        lines.append('')
+        lines.append('  Factors:')
         for factor in self._factors:
             observed = self._observed_levels.get(factor, [])
             planned = self._sampling_plan.get(factor, observed) if self._sampling_plan is not None else observed
@@ -733,17 +722,17 @@ class DesignReport:
             observed_set = set(observed)
             missing = self._safe_sort(list(planned_set - observed_set))
 
-            line = f"    {factor}: observed={observed}"
+            line = f'    {factor}: observed={observed}'
             if self.has_plan:
-                line = f"    {factor}: planned={planned}, observed={observed}"
+                line = f'    {factor}: planned={planned}, observed={observed}'
             if missing:
-                line += f", missing={missing}"
+                line += f', missing={missing}'
 
             lines.append(line)
 
         # Structure summary (discrepancy details)
-        lines.append("")
-        lines.append(f"  Structure: {self.structure_summary}")
+        lines.append('')
+        lines.append(f'  Structure: {self.structure_summary}')
 
         # Available analyses (derived from ADS)
         if self._ads_result and self._ads_result.sds > 0:
@@ -754,21 +743,20 @@ class DesignReport:
     def _repr_available_analyses(self) -> list[str]:
         """Compact chart×value availability section derived from ADS."""
         ads = self._ads_result
-        plan = SDSRegistry.get_analysis_plan(
-            sds=ads.sds, min_cell_size=ads.min_cell_size
-        )
+        plan = SDSRegistry.get_analysis_plan(sds=ads.sds, min_cell_size=ads.min_cell_size)
 
-        lines = ["", f"  Available analyses (ADS {ads.sds}):"]
+        lines = ['', f'  Available analyses (ADS {ads.sds}):']
 
         # Primary charts with recommended marker
         primaries = []
         for chart in plan.valid_charts:
-            label = f"{chart} *" if chart == plan.recommended_chart else chart
+            label = f'{chart} *' if chart == plan.recommended_chart else chart
             primaries.append(label)
-        lines.append(f"    Primary: {', '.join(primaries)}")
+        lines.append(f'    Primary: {", ".join(primaries)}')
 
         # Residual charts grouped by residual
         from collections import defaultdict
+
         residual_groups: dict[str, list[str]] = defaultdict(list)
         for chart_type, residual in plan.residual_charts:
             residual_groups[residual].append(chart_type)
@@ -776,10 +764,10 @@ class DesignReport:
         for residual in ['R2', 'R3', 'R4', 'R5', 'R6']:
             if residual in residual_groups:
                 charts = ', '.join(residual_groups[residual])
-                lines.append(f"    {residual}: {charts}")
+                lines.append(f'    {residual}: {charts}')
 
         # Analysis methods
-        lines.append("    Methods: Capability, Loss Function, Maximum Information")
+        lines.append('    Methods: Capability, Loss Function, Maximum Information')
 
         return lines
 
@@ -822,7 +810,7 @@ class StudyChartAccessor:
 
     def __repr__(self) -> str:
         """Display available primary chart types."""
-        return f"StudyChartAccessor({', '.join(self._valid_charts)})"
+        return f'StudyChartAccessor({", ".join(self._valid_charts)})'
 
     def __dir__(self) -> list[str]:
         """Support for tab-completion in IPython/Jupyter."""
@@ -857,8 +845,8 @@ class StudyResidualAccessor:
 
     def __repr__(self) -> str:
         if not self._available:
-            return "StudyResidualAccessor(none — requires factors + time)"
-        return f"StudyResidualAccessor({', '.join(self._available)})"
+            return 'StudyResidualAccessor(none — requires factors + time)'
+        return f'StudyResidualAccessor({", ".join(self._available)})'
 
     def __dir__(self) -> list[str]:
         return list(self._available)
@@ -929,6 +917,7 @@ class Study:
     ProcessBehavior.formulate : Create a Study from data
     AnalysisResult : Result of study.execute()
     """
+
     _pdf: ProcessBehavior
     _spec: FormulationSpec
     _plan: SDSAnalysisPlan
@@ -1054,9 +1043,9 @@ class Study:
         """
         if self._sds_result is None:
             raise RuntimeError(
-                "Study has no observed_design_state — it was not built via "
-                "ProcessBehavior.formulate(). Use pb.formulate(...) to "
-                "construct Study; direct construction is not supported."
+                'Study has no observed_design_state — it was not built via '
+                'ProcessBehavior.formulate(). Use pb.formulate(...) to '
+                'construct Study; direct construction is not supported.'
             )
         return self._sds_result
 
@@ -1154,7 +1143,8 @@ class Study:
         # R6 is computed on-the-fly from R5+R2, so check prerequisites instead of column
         r6_available = {'R5', 'R2'}.issubset(ads_cols)
         return [
-            (chart, value) for chart, value in self._plan.residual_charts
+            (chart, value)
+            for chart, value in self._plan.residual_charts
             if value in ads_cols or (value == 'R6' and r6_available)
         ]
 
@@ -1208,9 +1198,7 @@ class Study:
         residual_charts : Full list of residual+chart combinations (internal)
         """
         ads_cols = set(self._ads.analysis_dataset.columns)
-        available = sorted(
-            r for r in ('R1', 'R2', 'R3', 'R4', 'R5') if r in ads_cols
-        )
+        available = sorted(r for r in ('R1', 'R2', 'R3', 'R4', 'R5') if r in ads_cols)
         if self._spec.rsg_vars_list and 'R5' in ads_cols:
             available.append('R6')
         return StudyResidualAccessor(available)
@@ -1291,62 +1279,78 @@ class Study:
 
         # All possible residual charts as (chart_type, residual) tuples
         ALL_RESIDUALS = [
-            ('S', 'R2'), ('X', 'R2'),
-            ('Xbar', 'R3'), ('S', 'R3'), ('X', 'R3'),
-            ('Xbar', 'R4'), ('S', 'R4'), ('X', 'R4'),
-            ('Xbar', 'R5'), ('S', 'R5'), ('X', 'R5'),
-            ('Xbar', 'R6'), ('S', 'R6'),
+            ('S', 'R2'),
+            ('X', 'R2'),
+            ('Xbar', 'R3'),
+            ('S', 'R3'),
+            ('X', 'R3'),
+            ('Xbar', 'R4'),
+            ('S', 'R4'),
+            ('X', 'R4'),
+            ('Xbar', 'R5'),
+            ('S', 'R5'),
+            ('X', 'R5'),
+            ('Xbar', 'R6'),
+            ('S', 'R6'),
         ]
 
         # ADS=0 guard: all charts unavailable
         if self.analytical_design_state.sds == 0:
             for chart in ALL_PRIMARY:
-                rows.append({
-                    'chart': chart,
-                    'value': None,
-                    'category': 'primary',
-                    'available': False,
-                    'recommended': False,
-                    'reason': 'No valid observations after data cleaning',
-                    'question': SDSAnalysisPlan.CHART_QUESTIONS.get(chart, '')
-                })
+                rows.append(
+                    {
+                        'chart': chart,
+                        'value': None,
+                        'category': 'primary',
+                        'available': False,
+                        'recommended': False,
+                        'reason': 'No valid observations after data cleaning',
+                        'question': SDSAnalysisPlan.CHART_QUESTIONS.get(chart, ''),
+                    }
+                )
             for chart, value in ALL_RESIDUALS:
-                rows.append({
-                    'chart': chart,
-                    'value': value,
-                    'category': 'residual',
-                    'available': False,
-                    'recommended': False,
-                    'reason': 'No valid observations after data cleaning',
-                    'question': SDSAnalysisPlan.CHART_QUESTIONS.get((chart, value), '')
-                })
+                rows.append(
+                    {
+                        'chart': chart,
+                        'value': value,
+                        'category': 'residual',
+                        'available': False,
+                        'recommended': False,
+                        'reason': 'No valid observations after data cleaning',
+                        'question': SDSAnalysisPlan.CHART_QUESTIONS.get((chart, value), ''),
+                    }
+                )
             return pd.DataFrame(rows)
 
         # Build invalid_reasons dict from _plan.invalid_charts
         invalid_reasons = self._parse_invalid_charts()
 
         for chart in ALL_PRIMARY:
-            rows.append({
-                'chart': chart,
-                'value': None,
-                'category': 'primary',
-                'available': chart in self.valid_charts,
-                'recommended': chart == self.recommended_chart,
-                'reason': invalid_reasons.get(chart),
-                'question': SDSAnalysisPlan.CHART_QUESTIONS.get(chart, '')
-            })
+            rows.append(
+                {
+                    'chart': chart,
+                    'value': None,
+                    'category': 'primary',
+                    'available': chart in self.valid_charts,
+                    'recommended': chart == self.recommended_chart,
+                    'reason': invalid_reasons.get(chart),
+                    'question': SDSAnalysisPlan.CHART_QUESTIONS.get(chart, ''),
+                }
+            )
 
         for chart, value in ALL_RESIDUALS:
             available = (chart, value) in self.residual_charts
-            rows.append({
-                'chart': chart,
-                'value': value,
-                'category': 'residual',
-                'available': available,
-                'recommended': False,
-                'reason': None if available else 'Not available for this SDS',
-                'question': SDSAnalysisPlan.CHART_QUESTIONS.get((chart, value), '')
-            })
+            rows.append(
+                {
+                    'chart': chart,
+                    'value': value,
+                    'category': 'residual',
+                    'available': available,
+                    'recommended': False,
+                    'reason': None if available else 'Not available for this SDS',
+                    'question': SDSAnalysisPlan.CHART_QUESTIONS.get((chart, value), ''),
+                }
+            )
 
         return pd.DataFrame(rows)
 
@@ -1362,7 +1366,7 @@ class Study:
             # Format: 'ChartType (reason)'
             if '(' in entry and entry.endswith(')'):
                 chart = entry.split('(')[0].strip()
-                reason = entry[entry.index('(') + 1:-1]
+                reason = entry[entry.index('(') + 1 : -1]
                 result[chart] = reason
         return result
 
@@ -1411,7 +1415,7 @@ class Study:
         # ADS=0: no valid observations after cleaning
         if self.analytical_design_state.sds == 0:
             label = f"'{chart}'" if value is None else f"'{chart}' ({value})"
-            return f"{label} unavailable: no valid observations after data cleaning"
+            return f'{label} unavailable: no valid observations after data cleaning'
 
         df = self.support
         if value is not None:
@@ -1422,13 +1426,13 @@ class Study:
         label = f"'{chart}'" if value is None else f"'{chart}' ({value})"
 
         if row.empty:
-            return f"{label} is not a recognized chart type. Use study.support to see all options."
+            return f'{label} is not a recognized chart type. Use study.support to see all options.'
 
         row = row.iloc[0]
         if row['available']:
-            return f"{label} IS available. {row['question']}"
+            return f'{label} IS available. {row["question"]}'
         else:
-            return f"{label} unavailable: {row['reason']}"
+            return f'{label} unavailable: {row["reason"]}'
 
     def design(self) -> DesignReport:
         """
@@ -1540,9 +1544,7 @@ class Study:
 
             # Cell sizes: group by (rsg, time) or just rsg
             if self._spec.time_var and self._spec.time_var in ads_df.columns:
-                cell_sizes = ads_df.groupby(
-                    [rsg_col, self._spec.time_var], observed=True
-                ).size()
+                cell_sizes = ads_df.groupby([rsg_col, self._spec.time_var], observed=True).size()
                 # R_observed = count of unique (rsg, time) cells
                 R_observed = len(cell_sizes)
             else:
@@ -1550,11 +1552,7 @@ class Study:
 
             # N_observed = (min, median, max)
             if len(cell_sizes) > 0:
-                N_observed = (
-                    int(cell_sizes.min()),
-                    float(cell_sizes.median()),
-                    int(cell_sizes.max())
-                )
+                N_observed = (int(cell_sizes.min()), float(cell_sizes.median()), int(cell_sizes.max()))
 
         return DesignReport(
             _sampling_plan=self._sampling_plan,
@@ -1678,7 +1676,7 @@ class Study:
         companion: bool = False,
         phased: bool = False,
         n_sigma: float = 3.0,
-        n_mode: Literal['actual', 'average'] = "actual",
+        n_mode: Literal['actual', 'average'] = 'actual',
     ) -> AnalysisResult:
         """
         Run the analysis and return results.
@@ -1837,11 +1835,11 @@ class Study:
         # Determine chart type
         if chart is None and self.recommended_chart is None:
             raise ValidationError(
-                "No charts available: no valid observations after data cleaning. "
-                "Check your data for missing or invalid response values."
+                'No charts available: no valid observations after data cleaning. '
+                'Check your data for missing or invalid response values.'
             )
         if chart is not None and (not isinstance(chart, str) or chart == ''):
-            raise ValidationError("Chart name must be a non-empty string")
+            raise ValidationError('Chart name must be a non-empty string')
         chart_request = chart or self.recommended_chart
 
         # Parse and validate chart request (returns base chart type only)
@@ -1860,15 +1858,11 @@ class Study:
 
         # companion + Histogram — no companion chart exists for Histogram
         if companion and base_chart == 'Histogram':
-            raise ValidationError(
-                "companion is not applicable to Histogram charts."
-            )
+            raise ValidationError('companion is not applicable to Histogram charts.')
 
         # bins + non-Histogram — bins only makes sense for Histogram
         if bins is not None and base_chart != 'Histogram':
-            raise ValidationError(
-                f"bins is only applicable to Histogram charts, not '{base_chart}'."
-            )
+            raise ValidationError(f"bins is only applicable to Histogram charts, not '{base_chart}'.")
 
         # n_sigma / n_mode validation
         self._validate_n_sigma_n_mode(n_sigma, n_mode, base_chart)
@@ -1882,11 +1876,11 @@ class Study:
             available_list = list(self.valid_charts)
             raise ChartNotAvailableError(
                 f"Chart type '{base_chart}' is not valid for ADS {self.analytical_design_state.sds}.\n"
-                f"Valid charts: {', '.join(available_list)}\n"
-                f"Recommended: {self.recommended_chart}\n"
+                f'Valid charts: {", ".join(available_list)}\n'
+                f'Recommended: {self.recommended_chart}\n'
                 f"Use study.why_not('{base_chart}') for explanation.",
                 chart=base_chart,
-                available=available_list
+                available=available_list,
             )
 
         # Resolve value column (response or residual)
@@ -1897,22 +1891,23 @@ class Study:
 
         # Validate residual availability if charting a residual
         # Skip validation for Histogram - histograms can plot any available numeric column
-        if (value is not None
-                and value.upper().startswith('R')
-                and base_chart != 'Histogram'
-                and value_col not in self._ads.analysis_dataset.columns):
-                available_residuals = [
-                    c for c in self._ads.analysis_dataset.columns
-                    if c.upper().startswith('R') and c[1:2].isdigit()
-                ]
-                raise ChartNotAvailableError(
-                    f"Residual column '{value_col}' not found in the dataset "
-                    f"for ADS {self.analytical_design_state.sds}.\n"
-                    f"Available residual columns: {', '.join(available_residuals) if available_residuals else 'None'}\n"
-                    f"Use study.residuals to see available options.",
-                    chart=value_col,
-                    available=available_residuals
-                )
+        if (
+            value is not None
+            and value.upper().startswith('R')
+            and base_chart != 'Histogram'
+            and value_col not in self._ads.analysis_dataset.columns
+        ):
+            available_residuals = [
+                c for c in self._ads.analysis_dataset.columns if c.upper().startswith('R') and c[1:2].isdigit()
+            ]
+            raise ChartNotAvailableError(
+                f"Residual column '{value_col}' not found in the dataset "
+                f'for ADS {self.analytical_design_state.sds}.\n'
+                f'Available residual columns: {", ".join(available_residuals) if available_residuals else "None"}\n'
+                f'Use study.residuals to see available options.',
+                chart=value_col,
+                available=available_residuals,
+            )
 
         # Determine if this is a residual chart
         is_residual = value is not None and value.upper().startswith('R')
@@ -1929,17 +1924,17 @@ class Study:
                 valid_for_value = [c for c, v in self.residual_charts if v == base_residual]
                 raise ChartNotAvailableError(
                     f"'{base_chart}' with value='{value}' is not valid for "
-                    f"ADS {self.analytical_design_state.sds}.\n"
-                    f"Valid charts for {base_residual}: {', '.join(valid_for_value) if valid_for_value else 'None'}\n"
+                    f'ADS {self.analytical_design_state.sds}.\n'
+                    f'Valid charts for {base_residual}: {", ".join(valid_for_value) if valid_for_value else "None"}\n'
                     f"Use study.why_not('{base_chart}', value='{value}') for details.",
                     chart=base_chart,
-                    available=valid_for_value
+                    available=valid_for_value,
                 )
 
         if is_residual and base_chart == 'mR' and not companion:
             raise ValidationError(
                 f"Chart type 'mR' (moving range) is not supported for residual charts.\n"
-                f"Residual charts support: Xbar, S, X, Histogram.\n"
+                f'Residual charts support: Xbar, S, X, Histogram.\n'
                 f"Use: study.execute(chart='X', value='{value}') or "
                 f"study.execute(chart='mR', value='{value}', companion=True)"
             )
@@ -1971,25 +1966,17 @@ class Study:
         needs_residuals = self._spec.has_grouping and self._spec.has_time
         if not needs_residuals:
             raise ValidationError(
-                "recentered=True requires VAS decomposition (factors + time). "
-                "Recentered residuals (RCR) reconstruct values relative to "
-                "factor and time means, which require both to be specified."
+                'recentered=True requires VAS decomposition (factors + time). '
+                'Recentered residuals (RCR) reconstruct values relative to '
+                'factor and time means, which require both to be specified.'
             )
         recenterable = {'R1', 'R2', 'R3', 'R4', 'R5', 'R6'}
         if value is None:
-            raise ValidationError(
-                "recentered=True requires a residual value (R1-R6), got value=None"
-            )
+            raise ValidationError('recentered=True requires a residual value (R1-R6), got value=None')
         if value.upper() not in recenterable:
-            raise ValidationError(
-                f"recentered=True requires a residual value (R1-R6), got '{value}'"
-            )
+            raise ValidationError(f"recentered=True requires a residual value (R1-R6), got '{value}'")
 
-    def _compute_r6(
-        self,
-        by: list[str] | None,
-        recentered: bool
-    ) -> str:
+    def _compute_r6(self, by: list[str] | None, recentered: bool) -> str:
         """Compute R6 (factor main effect residual) on the fly.
 
         R6 = α_i + R2 where α_i = mean(R5 | factor level(s)).
@@ -1997,17 +1984,15 @@ class Study:
         """
         factors = self._spec.rsg_vars_list
         if not factors:
-            raise ValidationError(
-                "R6 requires factors. No factors defined in this study."
-            )
+            raise ValidationError('R6 requires factors. No factors defined in this study.')
 
         # Determine which factor(s) from by
         if by is not None:
             by_factors = [b for b in by if b in factors]
             if not by_factors:
                 raise ValidationError(
-                    f"R6 requires at least one factor in by=.\n"
-                    f"Available factors: {factors}\n"
+                    f'R6 requires at least one factor in by=.\n'
+                    f'Available factors: {factors}\n'
                     f"Example: study.execute(chart='Xbar', value='R6', by=['{factors[0]}'])"
                 )
             groupby_key = by_factors if len(by_factors) > 1 else by_factors[0]
@@ -2015,8 +2000,8 @@ class Study:
             groupby_key = factors[0]
         else:
             raise ValidationError(
-                f"R6 requires by=[factor(s)] to specify which factor(s).\n"
-                f"Available factors: {factors}\n"
+                f'R6 requires by=[factor(s)] to specify which factor(s).\n'
+                f'Available factors: {factors}\n'
                 f"Example: study.execute(chart='Xbar', value='R6', by=['{factors[0]}'])"
             )
 
@@ -2032,28 +2017,23 @@ class Study:
     def _validate_phased(self, base_chart: str, by_validated: list[str] | None) -> None:
         """Validate phased=True requirements."""
         if base_chart not in ('X', 'mR'):
-            raise ValidationError(
-                f"phased=True is only valid for X or mR charts, "
-                f"got '{base_chart}'."
-            )
+            raise ValidationError(f"phased=True is only valid for X or mR charts, got '{base_chart}'.")
         if by_validated is None:
-            raise ValidationError(
-                "phased=True requires an explicit by= parameter."
-            )
+            raise ValidationError('phased=True requires an explicit by= parameter.')
         if not self._spec.rsg_vars_list:
             raise ValidationError(
-                "phased=True requires factors to define phases (rsg_key). "
-                "This study has no factors; phased limits do not apply."
+                'phased=True requires factors to define phases (rsg_key). '
+                'This study has no factors; phased limits do not apply.'
             )
         if len(by_validated) > 0:
             all_factors = set(self._spec.rsg_vars_list)
             by_set = set(by_validated)
             if not (all_factors - by_set):
                 raise ValidationError(
-                    "phased=True requires collapsed factors to define phases. "
-                    f"by={list(by_validated)} includes all factors; "
-                    "no factors remain to create phase boundaries. "
-                    "Remove factors from by= or set phased=False."
+                    'phased=True requires collapsed factors to define phases. '
+                    f'by={list(by_validated)} includes all factors; '
+                    'no factors remain to create phase boundaries. '
+                    'Remove factors from by= or set phased=False.'
                 )
 
     def _parse_chart_request(self, chart: str) -> str:
@@ -2076,7 +2056,7 @@ class Study:
             For invalid chart types or old residual chart syntax
         """
         if not chart or not isinstance(chart, str):
-            raise ValidationError("Chart name must be a non-empty string")
+            raise ValidationError('Chart name must be a non-empty string')
 
         # Normalize case (e.g. "x" -> "X", "XBAR" -> "Xbar")
         chart = normalize_chart_name(chart)
@@ -2086,7 +2066,7 @@ class Study:
             return chart
 
         # Detect old residual chart syntax and provide migration guidance
-        if "_" in chart:
+        if '_' in chart:
             # Old syntax: R5_Xbar, noise_Xbar, rc_R5_Xbar, RCR5_Xbar
             self._raise_old_syntax_error(chart)
 
@@ -2100,58 +2080,52 @@ class Study:
 
         # Alias without base chart
         if chart in RESIDUAL_ALIASES:
-            residual_id = RESIDUAL_ALIASES[chart]["id"]
+            residual_id = RESIDUAL_ALIASES[chart]['id']
             raise ValidationError(
                 f"'{chart}' is a residual alias for {residual_id}, not a chart type.\n"
                 f"Use: study.execute(chart='Xbar', value='{residual_id}')\n"
                 f"Or: study.execute(chart='X', value='{residual_id}')"
             )
 
-        raise ValidationError(
-            f"Unknown chart '{chart}'. "
-            f"Valid chart types: {', '.join(sorted(VALID_BASE_CHARTS))}"
-        )
+        raise ValidationError(f"Unknown chart '{chart}'. Valid chart types: {', '.join(sorted(VALID_BASE_CHARTS))}")
 
     def _raise_old_syntax_error(self, chart: str) -> None:
         """Raise helpful error for old residual chart syntax."""
         # Strip rc_ prefix if present
         working = chart
         recentered = False
-        if working.startswith("rc_"):
+        if working.startswith('rc_'):
             recentered = True
             working = working[3:]
 
         # Try to parse residual and base chart
-        if "_" in working:
-            residual_part, base_chart = working.rsplit("_", 1)
+        if '_' in working:
+            residual_part, base_chart = working.rsplit('_', 1)
 
             # Check for RCR prefix
-            if residual_part.startswith("RCR"):
-                residual_id = f"R{residual_part[3:]}"
+            if residual_part.startswith('RCR'):
+                residual_id = f'R{residual_part[3:]}'
                 recentered = True
-            elif residual_part.startswith("R") and residual_part[1:].isdigit():
+            elif residual_part.startswith('R') and residual_part[1:].isdigit():
                 residual_id = residual_part
             elif residual_part in RESIDUAL_ALIASES:
-                residual_id = RESIDUAL_ALIASES[residual_part]["id"]
+                residual_id = RESIDUAL_ALIASES[residual_part]['id']
             else:
                 residual_id = residual_part
 
             if base_chart in VALID_BASE_CHARTS:
-                recentered_hint = ", recentered=True" if recentered else ""
+                recentered_hint = ', recentered=True' if recentered else ''
                 raise ValidationError(
                     f"Old residual chart syntax '{chart}' is no longer supported.\n"
                     f"Use: study.execute(chart='{base_chart}', value='{residual_id}'{recentered_hint})"
                 )
 
         raise ValidationError(
-            f"Invalid chart name '{chart}'. "
-            f"Valid chart types: {', '.join(sorted(VALID_BASE_CHARTS))}"
+            f"Invalid chart name '{chart}'. Valid chart types: {', '.join(sorted(VALID_BASE_CHARTS))}"
         )
 
     def _validate_by_parameter(  # noqa: C901
-        self,
-        by: list[str] | None,
-        base_chart: str
+        self, by: list[str] | None, base_chart: str
     ) -> list[str] | None:
         """
         Validate and normalize the `by` parameter.
@@ -2183,8 +2157,7 @@ class Study:
         if not factors:
             if by is not None and by != []:
                 raise ValidationError(
-                    f"Invalid by={by}. No factors defined in this study. "
-                    f"Use by=None or by=[] for single stream."
+                    f'Invalid by={by}. No factors defined in this study. Use by=None or by=[] for single stream.'
                 )
             return []  # Normalize to empty list for no-factor case
 
@@ -2195,10 +2168,10 @@ class Study:
                 factor_str = ', '.join(f"'{f}'" for f in factors)
                 raise ValidationError(
                     f"X/mR charts with factors require explicit 'by' parameter.\n"
-                    f"Specify how to stratify:\n"
-                    f"  by=[{factor_str}] for {self._get_factor_combinations()} charts (one per factor combination)\n"
+                    f'Specify how to stratify:\n'
+                    f'  by=[{factor_str}] for {self._get_factor_combinations()} charts (one per factor combination)\n'
                     f"  by=['{factors[0]}'] for fewer charts (stratify by single factor)\n"
-                    f"  by=[] for single overall chart"
+                    f'  by=[] for single overall chart'
                 )
             # Xbar/S: by=None means full rsg_key (current behavior)
             return None
@@ -2216,15 +2189,15 @@ class Study:
 
         if invalid and time_var and time_var in invalid:  # noqa: SIM102
             # Check if user tried to use time
-                if is_time_series_chart:
-                    raise ValidationError(
-                        f"Cannot use time variable '{time_var}' in by for {base_chart} charts. "
-                        f"Time is the x-axis for {base_chart} charts, not a stratification dimension. "
-                        f"Valid by dimensions: {sorted(factors)}"
-                    )
-                # For Xbar/S, time in by means group by time (one point per time)
-                # This is valid - remove from invalid set
-                invalid = invalid - {time_var}
+            if is_time_series_chart:
+                raise ValidationError(
+                    f"Cannot use time variable '{time_var}' in by for {base_chart} charts. "
+                    f'Time is the x-axis for {base_chart} charts, not a stratification dimension. '
+                    f'Valid by dimensions: {sorted(factors)}'
+                )
+            # For Xbar/S, time in by means group by time (one point per time)
+            # This is valid - remove from invalid set
+            invalid = invalid - {time_var}
 
         if invalid:
             # Build valid dimensions list based on chart type
@@ -2239,14 +2212,10 @@ class Study:
 
             for inv in sorted(invalid):
                 # Check for case-insensitive match first
-                case_match = next(
-                    (v for v in valid_dims if v.lower() == inv.lower()),
-                    None
-                )
+                case_match = next((v for v in valid_dims if v.lower() == inv.lower()), None)
                 if case_match:
                     suggestions.append(
-                        f"'{inv}' is not a valid by variable.\n"
-                        f"Did you mean '{case_match}'? (names are case-sensitive)"
+                        f"'{inv}' is not a valid by variable.\nDid you mean '{case_match}'? (names are case-sensitive)"
                     )
                     if first_invalid is None:
                         first_invalid = inv
@@ -2255,10 +2224,7 @@ class Study:
                     # Try fuzzy matching
                     close = difflib.get_close_matches(inv, valid_dims, n=1, cutoff=0.6)
                     if close:
-                        suggestions.append(
-                            f"'{inv}' is not a valid by variable.\n"
-                            f"Did you mean '{close[0]}'?"
-                        )
+                        suggestions.append(f"'{inv}' is not a valid by variable.\nDid you mean '{close[0]}'?")
                         if first_invalid is None:
                             first_invalid = inv
                             first_suggestion = close[0]
@@ -2267,14 +2233,9 @@ class Study:
                         if first_invalid is None:
                             first_invalid = inv
 
-            msg = "\n".join(suggestions)
-            msg += f"\nValid: {', '.join(valid_dims)}"
-            raise FactorNotFoundError(
-                msg,
-                factor=first_invalid,
-                suggestion=first_suggestion,
-                available=valid_dims
-            )
+            msg = '\n'.join(suggestions)
+            msg += f'\nValid: {", ".join(valid_dims)}'
+            raise FactorNotFoundError(msg, factor=first_invalid, suggestion=first_suggestion, available=valid_dims)
 
         # Deduplicate while preserving order (first occurrence wins)
         seen = set()
@@ -2285,8 +2246,9 @@ class Study:
                 deduped.append(v)
         if len(deduped) < len(by):
             import warnings
+
             warnings.warn(
-                f"Duplicate values in by={list(by)} were removed. Using by={deduped}.",
+                f'Duplicate values in by={list(by)} were removed. Using by={deduped}.',
                 UserWarning,
                 stacklevel=4,
             )
@@ -2295,27 +2257,18 @@ class Study:
         return list(by)
 
     @staticmethod
-    def _validate_n_sigma_n_mode(
-        n_sigma: float, n_mode: str, base_chart: str
-    ) -> None:
+    def _validate_n_sigma_n_mode(n_sigma: float, n_mode: str, base_chart: str) -> None:
         """Validate n_sigma and n_mode parameters for execute()."""
         from .exceptions import ValidationError
 
-        if (n_sigma != 3.0 or n_mode != "actual") and base_chart not in ('Xbar', 'S'):
-            raise ValidationError(
-                f"n_sigma and n_mode are only supported for Xbar/S charts, "
-                f"got '{base_chart}'."
-            )
+        if (n_sigma != 3.0 or n_mode != 'actual') and base_chart not in ('Xbar', 'S'):
+            raise ValidationError(f"n_sigma and n_mode are only supported for Xbar/S charts, got '{base_chart}'.")
 
         if base_chart in ('Xbar', 'S'):
             if not (isinstance(n_sigma, (int, float)) and math.isfinite(n_sigma) and n_sigma > 0):
-                raise ValidationError(
-                    f"n_sigma must be a finite number > 0; got {n_sigma!r}"
-                )
-            if n_mode not in ("actual", "average"):
-                raise ValidationError(
-                    f"n_mode must be 'actual' or 'average'; got {n_mode!r}"
-                )
+                raise ValidationError(f'n_sigma must be a finite number > 0; got {n_sigma!r}')
+            if n_mode not in ('actual', 'average'):
+                raise ValidationError(f"n_mode must be 'actual' or 'average'; got {n_mode!r}")
 
     def _get_factor_combinations(self) -> int:
         """Get count of unique factor combinations in the dataset."""
@@ -2323,11 +2276,7 @@ class Study:
             return 1
         return self._ads.analysis_dataset[self._spec.rsg_var_name].nunique()
 
-    def _resolve_value_column(
-        self,
-        value: str | None,
-        recentered: bool
-    ) -> str:
+    def _resolve_value_column(self, value: str | None, recentered: bool) -> str:
         """
         Resolve the value parameter to a column name.
 
@@ -2369,11 +2318,12 @@ class Study:
 
         # Validate column exists in analysis dataset
         if col_name not in self._ads.analysis_dataset.columns:
-            available = [c for c in self._ads.analysis_dataset.columns
-                        if c.startswith('R') and len(c) == 2 and c[1].isdigit()]
+            available = [
+                c for c in self._ads.analysis_dataset.columns if c.startswith('R') and len(c) == 2 and c[1].isdigit()
+            ]
             raise ValidationError(
                 f"Residual column '{col_name}' not available for ADS {self.analytical_design_state.sds}. "
-                f"Available: {available}"
+                f'Available: {available}'
             )
 
         return col_name
@@ -2396,18 +2346,18 @@ class Study:
 
         ads_sds = self.analytical_design_state.sds
         ods_sds = self.observed_design_state.sds
-        sds_display = f"ads={ads_sds}" if ads_sds == ods_sds else f"ods={ods_sds}, ads={ads_sds}"
+        sds_display = f'ads={ads_sds}' if ads_sds == ods_sds else f'ods={ods_sds}, ads={ads_sds}'
         lines = [
             f"Study(response='{self.response}', factors=[{factors_str}], time='{time_str}', {sds_display})",
         ]
         if self.unit_of_analysis:
-            lines.append(f"  Unit of analysis: {self.unit_of_analysis}")
+            lines.append(f'  Unit of analysis: {self.unit_of_analysis}')
         valid_str = ', '.join(self.valid_charts) if self.valid_charts else 'None'
         rec_str = self.recommended_chart or 'None'
-        lines.append(f"  Valid: {valid_str} | Recommended: {rec_str}")
+        lines.append(f'  Valid: {valid_str} | Recommended: {rec_str}')
         if self.residuals:
-            lines.append(f"  Residuals: {', '.join(self.residuals)}")
-        lines.append("  → study.execute() or study.support for details")
+            lines.append(f'  Residuals: {", ".join(self.residuals)}')
+        lines.append('  → study.execute() or study.support for details')
 
         return '\n'.join(lines)
 
@@ -2417,14 +2367,14 @@ class Study:
         time_str = self.time or 'None'
 
         residuals = self.residuals
-        residual_html = f"<br><strong>Residuals:</strong> {', '.join(residuals)}" if residuals else ""
-        uoa_html = f"<br><strong>Unit of analysis:</strong> {self.unit_of_analysis}" if self.unit_of_analysis else ""
+        residual_html = f'<br><strong>Residuals:</strong> {", ".join(residuals)}' if residuals else ''
+        uoa_html = f'<br><strong>Unit of analysis:</strong> {self.unit_of_analysis}' if self.unit_of_analysis else ''
 
         ads_sds = self.analytical_design_state.sds
         ods_sds = self.observed_design_state.sds
-        sds_display = f"sds={ads_sds}" if ads_sds == ods_sds else f"ods={ods_sds}, ads={ads_sds}"
+        sds_display = f'sds={ads_sds}' if ads_sds == ods_sds else f'ods={ods_sds}, ads={ads_sds}'
 
-        style = "font-family: monospace; padding: 8px; border: 1px solid #ccc; background: #f9f9f9"
+        style = 'font-family: monospace; padding: 8px; border: 1px solid #ccc; background: #f9f9f9'
         valid_charts_str = ', '.join(self.valid_charts) if self.valid_charts else 'None'
         rec_str = self.recommended_chart or 'None'
         html = f"""

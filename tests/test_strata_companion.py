@@ -37,11 +37,13 @@ def df_with_single_obs_cell():
     that stratum (NaN moving range), leaving the stratum empty in mR's data
     while the X chart still carries the single point.
     """
-    return pd.DataFrame({
-        'factor 1': [1, 1, 1, 2, 2, 2, 3],  # factor=3 → single observation
-        'time': [1, 2, 3, 1, 2, 3, 1],
-        'y': [10.0, 11.0, 12.0, 20.0, 21.0, 22.0, 30.0],
-    })
+    return pd.DataFrame(
+        {
+            'factor 1': [1, 1, 1, 2, 2, 2, 3],  # factor=3 → single observation
+            'time': [1, 2, 3, 1, 2, 3, 1],
+            'y': [10.0, 11.0, 12.0, 20.0, 21.0, 22.0, 30.0],
+        }
+    )
 
 
 @pytest.fixture
@@ -69,9 +71,7 @@ class TestStrataExcludesUnfocusable:
         result = study.execute(chart='X', by=['factor 1'], companion=True)
 
         mr_strata = list(result.charts['mR']['strata'])
-        assert '3' not in mr_strata, (
-            f"mR strata still contains the single-obs stratum: {mr_strata}"
-        )
+        assert '3' not in mr_strata, f'mR strata still contains the single-obs stratum: {mr_strata}'
 
     def test_result_strata_is_intersection(self, df_with_single_obs_cell):
         """result.strata returns the intersection across charts."""
@@ -85,7 +85,8 @@ class TestStrataExcludesUnfocusable:
         assert set(result.strata) == expected_intersection
 
     def test_focus_succeeds_for_every_stratum_in_strata(
-        self, df_with_single_obs_cell,
+        self,
+        df_with_single_obs_cell,
     ):
         """The strata/focus contract: focus(s) succeeds for every s in result.strata."""
         pb = ProcessBehavior(df_with_single_obs_cell)
@@ -120,8 +121,11 @@ class TestChartTableDtypeMismatch:
     def test_time_main_effects_xbar_table_non_empty(self, t100_sds4_study):
         """Xbar chart-data-table populates for residual+recentered Time Effects."""
         result = t100_sds4_study.execute(
-            chart='Xbar', by=['PRODUCTION TIME'], value='R4',
-            companion=True, recentered=True,
+            chart='Xbar',
+            by=['PRODUCTION TIME'],
+            value='R4',
+            companion=True,
+            recentered=True,
         )
         table = result.chart_table(chart='Xbar')
         assert len(table) > 0
@@ -131,8 +135,11 @@ class TestChartTableDtypeMismatch:
     def test_time_main_effects_s_table_non_empty(self, t100_sds4_study):
         """S table populates for the same configuration."""
         result = t100_sds4_study.execute(
-            chart='Xbar', by=['PRODUCTION TIME'], value='R4',
-            companion=True, recentered=True,
+            chart='Xbar',
+            by=['PRODUCTION TIME'],
+            value='R4',
+            companion=True,
+            recentered=True,
         )
         table = result.chart_table(chart='S')
         assert len(table) > 0
@@ -140,28 +147,34 @@ class TestChartTableDtypeMismatch:
     def test_xbar_table_n_column_populated(self, t100_sds4_study):
         """The n-join survives dtype coercion — every row has a valid n."""
         result = t100_sds4_study.execute(
-            chart='Xbar', by=['PRODUCTION TIME'], value='R4',
-            companion=True, recentered=True,
+            chart='Xbar',
+            by=['PRODUCTION TIME'],
+            value='R4',
+            companion=True,
+            recentered=True,
         )
         table = result.chart_table(chart='Xbar')
         assert 'n' in table.columns
-        assert table['n'].notna().all(), (
-            f"Found NaN in n column: {table[table['n'].isna()]}"
-        )
+        assert table['n'].notna().all(), f'Found NaN in n column: {table[table["n"].isna()]}'
 
     def test_chart_table_synthetic_dtype_mismatch(self):
         """Unit-level: directly mismatched dtypes between chart_data and ads."""
-        df = pd.DataFrame({
-            'factor 1': [1, 1, 1, 2, 2, 2],
-            'time': [1, 2, 3, 1, 2, 3],
-            'y': [10.0, 11.0, 12.0, 20.0, 21.0, 22.0],
-        })
+        df = pd.DataFrame(
+            {
+                'factor 1': [1, 1, 1, 2, 2, 2],
+                'time': [1, 2, 3, 1, 2, 3],
+                'y': [10.0, 11.0, 12.0, 20.0, 21.0, 22.0],
+            }
+        )
         pb = ProcessBehavior(df)
         study = pb.formulate(response='y', factors=['factor 1'], time='time')
         # by=['time'] residual on Xbar — triggers stringification of time
         result = study.execute(
-            chart='Xbar', by=['time'], value='R4',
-            companion=True, recentered=True,
+            chart='Xbar',
+            by=['time'],
+            value='R4',
+            companion=True,
+            recentered=True,
         )
         # Just confirm it doesn't raise; the table should be non-empty.
         table = result.chart_table(chart='Xbar')

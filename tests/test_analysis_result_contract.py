@@ -19,12 +19,15 @@ from processbehavior.datasets.synthetic import make_sds
 # Module-scoped fixtures (expensive — computed once)
 # ============================================================================
 
+
 @pytest.fixture(scope='module')
 def sds1_xbar_result():
     """SDS 1 with replication — Xbar/S charts available."""
     df = make_sds(1, K1=3, K2=2, T=4, n_min=3, n_max=3, seed=42)
     study = ProcessBehavior(df).formulate(
-        response='y', time='time', factors=['factor 1', 'factor 2'],
+        response='y',
+        time='time',
+        factors=['factor 1', 'factor 2'],
     )
     return study.execute(chart='Xbar')
 
@@ -34,7 +37,9 @@ def sds1_stratified_xmr_result():
     """SDS 1 stratified XmR — strata available."""
     df = make_sds(1, K1=3, K2=2, T=4, n_min=3, n_max=3, seed=42)
     study = ProcessBehavior(df).formulate(
-        response='y', time='time', factors=['factor 1', 'factor 2'],
+        response='y',
+        time='time',
+        factors=['factor 1', 'factor 2'],
     )
     return study.execute(chart='X', by=['factor 1'])
 
@@ -43,13 +48,18 @@ def sds1_stratified_xmr_result():
 def sds4_xmr_result():
     """SDS 4-like — single factor, single level, no residual decomposition."""
     import numpy as np
-    df = pd.DataFrame({
-        'y': np.random.default_rng(42).normal(50, 5, 30),
-        'time': range(1, 31),
-        'group': ['A'] * 30,
-    })
+
+    df = pd.DataFrame(
+        {
+            'y': np.random.default_rng(42).normal(50, 5, 30),
+            'time': range(1, 31),
+            'group': ['A'] * 30,
+        }
+    )
     study = ProcessBehavior(df).formulate(
-        response='y', time='time', factors=['group'],
+        response='y',
+        time='time',
+        factors=['group'],
     )
     return study.execute(chart='X', by=['group'])
 
@@ -57,6 +67,7 @@ def sds4_xmr_result():
 # ============================================================================
 # chart_table()
 # ============================================================================
+
 
 class TestChartTable:
     """Contract tests for chart_table() summary table generation."""
@@ -116,6 +127,7 @@ class TestChartTable:
 # get_statistics()
 # ============================================================================
 
+
 class TestGetStatistics:
     """Contract tests for get_statistics() method."""
 
@@ -136,8 +148,7 @@ class TestGetStatistics:
         if strata:
             # At least one stratum key should be present
             first_value = next(iter(stats.values()))
-            assert isinstance(first_value, dict), \
-                f"Expected nested dict for stratified stats, got {type(first_value)}"
+            assert isinstance(first_value, dict), f'Expected nested dict for stratified stats, got {type(first_value)}'
 
     def test_returns_copy(self, sds1_xbar_result):
         """Returned dict should be a copy — mutations don't affect original."""
@@ -150,6 +161,7 @@ class TestGetStatistics:
 # ============================================================================
 # iter_charts()
 # ============================================================================
+
 
 class TestIterCharts:
     """Contract tests for iter_charts() iterator."""
@@ -177,13 +189,13 @@ class TestIterCharts:
 # list_strata()
 # ============================================================================
 
+
 class TestListStrata:
     """Contract tests for list_strata() method."""
 
     def test_equals_strata_property(self, sds1_stratified_xmr_result):
         """list_strata() should return same value as strata property."""
-        assert sds1_stratified_xmr_result.list_strata() == \
-               sds1_stratified_xmr_result.strata
+        assert sds1_stratified_xmr_result.list_strata() == sds1_stratified_xmr_result.strata
 
     def test_empty_for_nonstratified(self, sds1_xbar_result):
         """Non-stratified result should return empty list."""
@@ -199,6 +211,7 @@ class TestListStrata:
 # FocusedAnalysisResult contract
 # ============================================================================
 
+
 class TestFocusedAnalysisResult:
     """Contract tests for FocusedAnalysisResult behavior."""
 
@@ -206,7 +219,7 @@ class TestFocusedAnalysisResult:
         """Calling focus() on already-focused result should raise ValidationError."""
         stratum = sds1_stratified_xmr_result.strata[0]
         focused = sds1_stratified_xmr_result.focus(stratum)
-        with pytest.raises(ValidationError, match="already focused"):
+        with pytest.raises(ValidationError, match='already focused'):
             focused.focus('anything')
 
     def test_strata_is_empty(self, sds1_stratified_xmr_result):
@@ -231,6 +244,7 @@ class TestFocusedAnalysisResult:
 # ============================================================================
 # Convenience accessors and edge cases
 # ============================================================================
+
 
 class TestConvenienceAccessors:
     """Contract tests for properties and convenience methods."""

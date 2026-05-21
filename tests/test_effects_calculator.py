@@ -31,6 +31,7 @@ from processbehavior.formulation_spec import FormulationSpec
 # Fixtures
 # ============================================================================
 
+
 @pytest.fixture
 def calc():
     """Create EffectsCalculator instance."""
@@ -40,36 +41,40 @@ def calc():
 @pytest.fixture
 def simple_df_with_residuals():
     """Simple DataFrame with VAS residuals."""
-    return pd.DataFrame({
-        'lane': ['A', 'A', 'A', 'A', 'B', 'B', 'B', 'B'],
-        'rsg': ['A', 'A', 'A', 'A', 'B', 'B', 'B', 'B'],  # Added for backward compatibility
-        'pull': [1, 2, 1, 2, 1, 2, 1, 2],
-        'weight': [10.2, 10.4, 10.1, 10.3, 9.8, 10.0, 9.9, 9.7],
-        'R1': [0.1, 0.3, 0.0, 0.2, -0.2, 0.0, -0.1, -0.3],
-        'R2': [0.05, 0.05, -0.05, -0.05, 0.03, 0.03, -0.03, -0.03],
-        'R3': [0.1, -0.1, 0.1, -0.1, 0.05, -0.05, 0.05, -0.05],
-        'R4': [0.02, 0.02, -0.02, -0.02, 0.01, 0.01, -0.01, -0.01],
-        'R5': [0.2, 0.2, 0.2, 0.2, -0.1, -0.1, -0.1, -0.1],
-        'Ybar': [10.1] * 8,
-        'Ybar_k': [10.25, 10.25, 10.25, 10.25, 9.85, 9.85, 9.85, 9.85],
-        'Ybar_t': [10.0, 10.1, 10.0, 10.1, 10.0, 10.1, 10.0, 10.1],
-        'Ybar_kt': [10.15, 10.35, 10.15, 10.35, 9.85, 9.95, 9.85, 9.95]
-    })
+    return pd.DataFrame(
+        {
+            'lane': ['A', 'A', 'A', 'A', 'B', 'B', 'B', 'B'],
+            'rsg': ['A', 'A', 'A', 'A', 'B', 'B', 'B', 'B'],  # Added for backward compatibility
+            'pull': [1, 2, 1, 2, 1, 2, 1, 2],
+            'weight': [10.2, 10.4, 10.1, 10.3, 9.8, 10.0, 9.9, 9.7],
+            'R1': [0.1, 0.3, 0.0, 0.2, -0.2, 0.0, -0.1, -0.3],
+            'R2': [0.05, 0.05, -0.05, -0.05, 0.03, 0.03, -0.03, -0.03],
+            'R3': [0.1, -0.1, 0.1, -0.1, 0.05, -0.05, 0.05, -0.05],
+            'R4': [0.02, 0.02, -0.02, -0.02, 0.01, 0.01, -0.01, -0.01],
+            'R5': [0.2, 0.2, 0.2, 0.2, -0.1, -0.1, -0.1, -0.1],
+            'Ybar': [10.1] * 8,
+            'Ybar_k': [10.25, 10.25, 10.25, 10.25, 9.85, 9.85, 9.85, 9.85],
+            'Ybar_t': [10.0, 10.1, 10.0, 10.1, 10.0, 10.1, 10.0, 10.1],
+            'Ybar_kt': [10.15, 10.35, 10.15, 10.35, 9.85, 9.95, 9.85, 9.95],
+        }
+    )
 
 
 @pytest.fixture
 def multi_factor_df():
     """DataFrame with multiple factors and residuals."""
-    df = pd.DataFrame({
-        'lane': ['A', 'A', 'A', 'A', 'B', 'B', 'B', 'B'],
-        'head': [1, 1, 2, 2, 1, 1, 2, 2],
-        'pull': [1, 2, 1, 2, 1, 2, 1, 2],
-        'R1': [0.1, 0.2, 0.3, 0.4, -0.1, -0.2, -0.3, -0.4],
-        'R2': [0.05, 0.05, 0.1, 0.1, -0.05, -0.05, -0.1, -0.1],
-        'R3': [0.02, -0.02, 0.03, -0.03, 0.01, -0.01, 0.015, -0.015],
-        'R4': [0.15, 0.25, 0.35, 0.45, -0.15, -0.25, -0.35, -0.45],
-        'R5': [0.3, 0.3, 0.4, 0.4, -0.2, -0.2, -0.3, -0.3]
-    })
+    df = pd.DataFrame(
+        {
+            'lane': ['A', 'A', 'A', 'A', 'B', 'B', 'B', 'B'],
+            'head': [1, 1, 2, 2, 1, 1, 2, 2],
+            'pull': [1, 2, 1, 2, 1, 2, 1, 2],
+            'R1': [0.1, 0.2, 0.3, 0.4, -0.1, -0.2, -0.3, -0.4],
+            'R2': [0.05, 0.05, 0.1, 0.1, -0.05, -0.05, -0.1, -0.1],
+            'R3': [0.02, -0.02, 0.03, -0.03, 0.01, -0.01, 0.015, -0.015],
+            'R4': [0.15, 0.25, 0.35, 0.45, -0.15, -0.25, -0.35, -0.45],
+            'R5': [0.3, 0.3, 0.4, 0.4, -0.2, -0.2, -0.3, -0.3],
+        }
+    )
     # Add composite rsg column (for backward compatibility)
     df['rsg'] = df['lane'] + '_' + df['head'].astype(str)
     return df
@@ -108,12 +113,10 @@ def spec_no_grouping():
 # Test: calculate_factor_main_effects (Pure Function)
 # ============================================================================
 
+
 def test_calculate_factor_main_effects_basic():
     """Should calculate mean of R5 per factor level."""
-    df = pd.DataFrame({
-        'lane': ['A', 'A', 'B', 'B'],
-        'R5': [0.2, 0.3, -0.2, -0.3]
-    })
+    df = pd.DataFrame({'lane': ['A', 'A', 'B', 'B'], 'R5': [0.2, 0.3, -0.2, -0.3]})
 
     result = calculate_factor_main_effects(df, 'lane')
 
@@ -130,21 +133,15 @@ def test_calculate_factor_main_effects_basic():
 
 def test_calculate_factor_main_effects_raises_if_no_r5():
     """Should raise helpful error if R5 missing."""
-    df = pd.DataFrame({
-        'lane': ['A', 'B'],
-        'weight': [10.0, 9.0]
-    })
+    df = pd.DataFrame({'lane': ['A', 'B'], 'weight': [10.0, 9.0]})
 
-    with pytest.raises(ValueError, match="R5 column missing"):
+    with pytest.raises(ValueError, match='R5 column missing'):
         calculate_factor_main_effects(df, 'lane')
 
 
 def test_calculate_factor_main_effects_raises_if_factor_missing():
     """Should raise helpful error if factor not found."""
-    df = pd.DataFrame({
-        'lane': ['A', 'B'],
-        'R5': [0.1, -0.1]
-    })
+    df = pd.DataFrame({'lane': ['A', 'B'], 'R5': [0.1, -0.1]})
 
     with pytest.raises(ValueError, match="Factor 'missing' not found"):
         calculate_factor_main_effects(df, 'missing')
@@ -152,10 +149,9 @@ def test_calculate_factor_main_effects_raises_if_factor_missing():
 
 def test_calculate_factor_main_effects_multiple_levels():
     """Should handle factors with many levels."""
-    df = pd.DataFrame({
-        'lane': ['A', 'A', 'B', 'B', 'C', 'C', 'D', 'D'],
-        'R5': [0.1, 0.2, -0.1, -0.2, 0.3, 0.4, -0.3, -0.4]
-    })
+    df = pd.DataFrame(
+        {'lane': ['A', 'A', 'B', 'B', 'C', 'C', 'D', 'D'], 'R5': [0.1, 0.2, -0.1, -0.2, 0.3, 0.4, -0.3, -0.4]}
+    )
 
     result = calculate_factor_main_effects(df, 'lane')
 
@@ -167,12 +163,10 @@ def test_calculate_factor_main_effects_multiple_levels():
 # Test: calculate_time_main_effects (Pure Function)
 # ============================================================================
 
+
 def test_calculate_time_main_effects_basic():
     """Should calculate mean of R4 per time point."""
-    df = pd.DataFrame({
-        'pull': [1, 1, 2, 2],
-        'R4': [0.1, 0.2, -0.1, -0.2]
-    })
+    df = pd.DataFrame({'pull': [1, 1, 2, 2], 'R4': [0.1, 0.2, -0.1, -0.2]})
 
     result = calculate_time_main_effects(df, 'pull')
 
@@ -189,12 +183,9 @@ def test_calculate_time_main_effects_basic():
 
 def test_calculate_time_main_effects_raises_if_no_r4():
     """Should raise helpful error if R4 missing."""
-    df = pd.DataFrame({
-        'pull': [1, 2],
-        'weight': [10.0, 9.0]
-    })
+    df = pd.DataFrame({'pull': [1, 2], 'weight': [10.0, 9.0]})
 
-    with pytest.raises(ValueError, match="R4 column missing"):
+    with pytest.raises(ValueError, match='R4 column missing'):
         calculate_time_main_effects(df, 'pull')
 
 
@@ -202,16 +193,11 @@ def test_calculate_time_main_effects_raises_if_no_r4():
 # Test: calculate_main_effect_scores (Pure Function)
 # ============================================================================
 
+
 def test_calculate_main_effect_scores_basic():
     """Should add main effect to R2 for each row."""
-    df = pd.DataFrame({
-        'lane': ['A', 'A', 'B', 'B'],
-        'R2': [0.1, 0.2, -0.1, -0.2]
-    })
-    main_effects = pd.DataFrame({
-        'lane': ['A', 'B'],
-        'Main_Effect': [0.5, -0.5]
-    })
+    df = pd.DataFrame({'lane': ['A', 'A', 'B', 'B'], 'R2': [0.1, 0.2, -0.1, -0.2]})
+    main_effects = pd.DataFrame({'lane': ['A', 'B'], 'Main_Effect': [0.5, -0.5]})
 
     result = calculate_main_effect_scores(df, 'lane', main_effects)
 
@@ -229,7 +215,7 @@ def test_calculate_main_effect_scores_raises_if_no_r2():
     df = pd.DataFrame({'lane': ['A', 'B']})
     main_effects = pd.DataFrame({'lane': ['A', 'B'], 'Main_Effect': [0.1, -0.1]})
 
-    with pytest.raises(ValueError, match="R2 column missing"):
+    with pytest.raises(ValueError, match='R2 column missing'):
         calculate_main_effect_scores(df, 'lane', main_effects)
 
 
@@ -237,13 +223,16 @@ def test_calculate_main_effect_scores_raises_if_no_r2():
 # Test: calculate_interaction_cell_means (Pure Function)
 # ============================================================================
 
+
 def test_calculate_interaction_cell_means_basic():
     """Should calculate mean of R3 per cell (factor × time)."""
-    df = pd.DataFrame({
-        'lane': ['A', 'A', 'A', 'A', 'B', 'B', 'B', 'B'],
-        'pull': [1, 2, 1, 2, 1, 2, 1, 2],
-        'R3': [0.1, 0.2, 0.15, 0.25, -0.1, -0.2, -0.15, -0.25]
-    })
+    df = pd.DataFrame(
+        {
+            'lane': ['A', 'A', 'A', 'A', 'B', 'B', 'B', 'B'],
+            'pull': [1, 2, 1, 2, 1, 2, 1, 2],
+            'R3': [0.1, 0.2, 0.15, 0.25, -0.1, -0.2, -0.15, -0.25],
+        }
+    )
 
     result = calculate_interaction_cell_means(df, ['lane'], 'pull')
 
@@ -258,12 +247,9 @@ def test_calculate_interaction_cell_means_basic():
 
 def test_calculate_interaction_cell_means_raises_if_no_r3():
     """Should raise helpful error if R3 missing."""
-    df = pd.DataFrame({
-        'lane': ['A', 'B'],
-        'pull': [1, 2]
-    })
+    df = pd.DataFrame({'lane': ['A', 'B'], 'pull': [1, 2]})
 
-    with pytest.raises(ValueError, match="R3 column missing"):
+    with pytest.raises(ValueError, match='R3 column missing'):
         calculate_interaction_cell_means(df, ['lane'], 'pull')
 
 
@@ -271,12 +257,10 @@ def test_calculate_interaction_cell_means_raises_if_no_r3():
 # Test: calculate_pdc_by_time_sds2 (Pure Function)
 # ============================================================================
 
+
 def test_calculate_pdc_by_time_sds2_basic():
     """Should calculate PDC for SDS 2: Ybar_kt - Ybar_k - Ybar_t + Ybar."""
-    df = pd.DataFrame({
-        'pull': [1, 2, 1, 2],
-        'lane': ['A', 'A', 'B', 'B']
-    })
+    df = pd.DataFrame({'pull': [1, 2, 1, 2], 'lane': ['A', 'A', 'B', 'B']})
     ybar_kt = pd.Series([10.2, 10.4, 9.8, 10.0])
     ybar_k = pd.Series([10.3, 10.3, 9.9, 9.9])
     ybar_t = pd.Series([10.0, 10.2, 10.0, 10.2])
@@ -297,13 +281,16 @@ def test_calculate_pdc_by_time_sds2_basic():
 # Test: calculate_factor_interaction_effects (Pure Function)
 # ============================================================================
 
+
 def test_calculate_factor_interaction_effects_two_factors():
     """Should calculate interaction effects between two factors."""
-    df = pd.DataFrame({
-        'lane': ['A', 'A', 'A', 'A', 'B', 'B', 'B', 'B'],
-        'head': [1, 1, 2, 2, 1, 1, 2, 2],
-        'R5': [0.3, 0.3, 0.4, 0.4, -0.2, -0.2, -0.3, -0.3]
-    })
+    df = pd.DataFrame(
+        {
+            'lane': ['A', 'A', 'A', 'A', 'B', 'B', 'B', 'B'],
+            'head': [1, 1, 2, 2, 1, 1, 2, 2],
+            'R5': [0.3, 0.3, 0.4, 0.4, -0.2, -0.2, -0.3, -0.3],
+        }
+    )
 
     # Pre-calculate main effects
     lane_me = calculate_factor_main_effects(df, 'lane')
@@ -332,18 +319,13 @@ def test_calculate_factor_interaction_effects_returns_empty_if_insufficient_fact
 # Test: calculate_factor_interaction_scores (Pure Function)
 # ============================================================================
 
+
 def test_calculate_factor_interaction_scores_basic():
     """Should merge interaction effects back to data."""
-    df = pd.DataFrame({
-        'lane': ['A', 'A', 'B', 'B'],
-        'head': [1, 2, 1, 2],
-        'R2': [0.05, 0.05, -0.05, -0.05]
-    })
-    interaction_effects = pd.DataFrame({
-        'lane': ['A', 'A', 'B', 'B'],
-        'head': [1, 2, 1, 2],
-        'Rx': [0.1, 0.2, -0.1, -0.2]
-    })
+    df = pd.DataFrame({'lane': ['A', 'A', 'B', 'B'], 'head': [1, 2, 1, 2], 'R2': [0.05, 0.05, -0.05, -0.05]})
+    interaction_effects = pd.DataFrame(
+        {'lane': ['A', 'A', 'B', 'B'], 'head': [1, 2, 1, 2], 'Rx': [0.1, 0.2, -0.1, -0.2]}
+    )
 
     result = calculate_factor_interaction_scores(df, ['lane', 'head'], interaction_effects)
 
@@ -356,6 +338,7 @@ def test_calculate_factor_interaction_scores_basic():
 # ============================================================================
 # Test: EffectsCalculator.calculate_all_effects
 # ============================================================================
+
 
 def test_calculate_all_effects_single_factor(calc, simple_df_with_residuals, spec_single_factor):
     """Should calculate all effects for single factor."""
@@ -392,13 +375,15 @@ def test_calculate_all_effects_multi_factor(calc, multi_factor_df, spec_multi_fa
 
 def test_calculate_all_effects_no_grouping(calc, spec_no_grouping):
     """Should return empty dict when no grouping variables."""
-    df = pd.DataFrame({
-        'pull': [1, 2, 3],
-        'weight': [10.1, 10.2, 10.3],
-        'R1': [0.0, 0.1, 0.2],
-        'R2': [0.0, 0.0, 0.0],
-        'R5': [0.0, 0.0, 0.0]
-    })
+    df = pd.DataFrame(
+        {
+            'pull': [1, 2, 3],
+            'weight': [10.1, 10.2, 10.3],
+            'R1': [0.0, 0.1, 0.2],
+            'R2': [0.0, 0.0, 0.0],
+            'R5': [0.0, 0.0, 0.0],
+        }
+    )
 
     result = calc.calculate_all_effects(df, spec_no_grouping)
 
@@ -407,18 +392,16 @@ def test_calculate_all_effects_no_grouping(calc, spec_no_grouping):
 
 def test_calculate_all_effects_raises_if_missing_residuals(calc, spec_single_factor):
     """Should raise helpful error if residuals missing."""
-    df = pd.DataFrame({
-        'lane': ['A', 'B'],
-        'weight': [10.0, 9.0]
-    })
+    df = pd.DataFrame({'lane': ['A', 'B'], 'weight': [10.0, 9.0]})
 
-    with pytest.raises(ValueError, match="missing residuals"):
+    with pytest.raises(ValueError, match='missing residuals'):
         calc.calculate_all_effects(df, spec_single_factor)
 
 
 # ============================================================================
 # Test: EffectsCalculator.calculate_interactions
 # ============================================================================
+
 
 def test_calculate_interactions_sds1(calc, simple_df_with_residuals, spec_single_factor):
     """Should calculate PDC using cell means for SDS 1."""
@@ -446,10 +429,7 @@ def test_calculate_interactions_sds3(calc, simple_df_with_residuals, spec_single
 
 def test_calculate_interactions_no_grouping(calc, spec_no_grouping):
     """Should return empty dict when no grouping."""
-    df = pd.DataFrame({
-        'pull': [1, 2],
-        'R3': [0.1, -0.1]
-    })
+    df = pd.DataFrame({'pull': [1, 2], 'R3': [0.1, -0.1]})
 
     result = calc.calculate_interactions(df, spec_no_grouping, sds=1)
 
@@ -458,13 +438,7 @@ def test_calculate_interactions_no_grouping(calc, spec_no_grouping):
 
 def test_calculate_interactions_missing_r3(calc, spec_single_factor, caplog):
     """Should warn and return empty dict if R3 missing."""
-    df = pd.DataFrame({
-        'lane': ['A', 'B'],
-        'pull': [1, 2],
-        'R1': [0.1, -0.1],
-        'R2': [0.1, -0.1],
-        'R5': [0.1, -0.1]
-    })
+    df = pd.DataFrame({'lane': ['A', 'B'], 'pull': [1, 2], 'R1': [0.1, -0.1], 'R2': [0.1, -0.1], 'R5': [0.1, -0.1]})
 
     with caplog.at_level('WARNING'):
         result = calc.calculate_interactions(df, spec_single_factor, sds=1)
@@ -477,15 +451,14 @@ def test_calculate_interactions_missing_r3(calc, spec_single_factor, caplog):
 # Test: Integration Scenarios
 # ============================================================================
 
+
 def test_full_effects_pipeline(calc, simple_df_with_residuals, spec_single_factor):
     """Test complete effects calculation pipeline."""
     # Step 1: Calculate all effects
     effects = calc.calculate_all_effects(simple_df_with_residuals, spec_single_factor)
 
     # Step 2: Calculate interactions (pass effects for factor_factor calculation)
-    interactions = calc.calculate_interactions(
-        simple_df_with_residuals, spec_single_factor, sds=1, effects=effects
-    )
+    interactions = calc.calculate_interactions(simple_df_with_residuals, spec_single_factor, sds=1, effects=effects)
 
     # Verify all expected outputs
     assert 'lane' in effects
@@ -511,9 +484,7 @@ def test_multi_factor_effects_pipeline(calc, multi_factor_df, spec_multi_factor)
     assert 'factor_interaction_effects' in effects
 
     # Calculate interactions to get factor_factor
-    interactions = calc.calculate_interactions(
-        multi_factor_df, spec_multi_factor, sds=1, effects=effects
-    )
+    interactions = calc.calculate_interactions(multi_factor_df, spec_multi_factor, sds=1, effects=effects)
 
     # Should have factor × factor interaction in interactions dict
     assert 'factor_factor' in interactions
@@ -529,12 +500,10 @@ def test_multi_factor_effects_pipeline(calc, multi_factor_df, spec_multi_factor)
 # Test: Edge Cases
 # ============================================================================
 
+
 def test_effects_with_missing_values_in_factors():
     """Should handle NaN values gracefully."""
-    df = pd.DataFrame({
-        'lane': ['A', 'A', np.nan, 'B'],
-        'R5': [0.1, 0.2, 0.3, -0.1]
-    })
+    df = pd.DataFrame({'lane': ['A', 'A', np.nan, 'B'], 'R5': [0.1, 0.2, 0.3, -0.1]})
 
     # Should drop NaN rows during groupby
     result = calculate_factor_main_effects(df, 'lane')
@@ -546,10 +515,7 @@ def test_effects_with_missing_values_in_factors():
 
 def test_effects_with_single_observation_per_level():
     """Should work with single observation per factor level."""
-    df = pd.DataFrame({
-        'lane': ['A', 'B', 'C'],
-        'R5': [0.1, -0.1, 0.2]
-    })
+    df = pd.DataFrame({'lane': ['A', 'B', 'C'], 'R5': [0.1, -0.1, 0.2]})
 
     result = calculate_factor_main_effects(df, 'lane')
 
@@ -560,10 +526,7 @@ def test_effects_with_single_observation_per_level():
 
 def test_effects_preserves_data_types():
     """Should preserve numeric data types."""
-    df = pd.DataFrame({
-        'lane': ['A', 'A', 'B', 'B'],
-        'R5': np.array([0.1, 0.2, -0.1, -0.2], dtype=np.float64)
-    })
+    df = pd.DataFrame({'lane': ['A', 'A', 'B', 'B'], 'R5': np.array([0.1, 0.2, -0.1, -0.2], dtype=np.float64)})
 
     result = calculate_factor_main_effects(df, 'lane')
 

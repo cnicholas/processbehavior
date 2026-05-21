@@ -35,18 +35,15 @@ def format_limit_label(limit_name: str, value: float, show_value: bool) -> str:
     """
     if show_value:
         if abs(value) >= 100:
-            return f"{limit_name} = {value:.1f}"
+            return f'{limit_name} = {value:.1f}'
         elif abs(value) >= 10:
-            return f"{limit_name} = {value:.2f}"
+            return f'{limit_name} = {value:.2f}'
         else:
-            return f"{limit_name} = {value:.3f}"
+            return f'{limit_name} = {value:.3f}'
     return limit_name
 
 
-def build_stepped_coordinates(
-    x_vals: list,
-    limit_vals: list
-) -> tuple[list, list]:
+def build_stepped_coordinates(x_vals: list, limit_vals: list) -> tuple[list, list]:
     """
     Build stepped line coordinates from x values and limit values.
 
@@ -66,10 +63,7 @@ def build_stepped_coordinates(
         (x_stepped, y_stepped) coordinate lists for the stepped line
     """
     if len(x_vals) != len(limit_vals):
-        raise ValueError(
-            f"x_vals and limit_vals must have equal length: "
-            f"{len(x_vals)} != {len(limit_vals)}"
-        )
+        raise ValueError(f'x_vals and limit_vals must have equal length: {len(x_vals)} != {len(limit_vals)}')
 
     x_stepped = []
     y_stepped = []
@@ -96,7 +90,7 @@ def add_stepped_limit_line(
     limit_name: str,
     theme: ChartTheme,
     row: int | None = None,
-    col: int | None = None
+    col: int | None = None,
 ) -> go.Figure:
     """
     Add a stepped limit line that follows varying per-row limits.
@@ -152,7 +146,7 @@ def add_stepped_limit_line(
         name=f'{limit_name} (varies)',
         line=dict(color=line_color, dash=line_dash, width=line_width),
         hovertemplate=f'{limit_name}: %{{y:.3f}}<extra></extra>',
-        showlegend=False
+        showlegend=False,
     )
 
     if row is not None and col is not None:

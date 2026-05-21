@@ -38,7 +38,7 @@ def add_run_rules_visualization(
     theme: ChartTheme,
     result: AnalysisResult,
     row: int | None = None,
-    col: int | None = None
+    col: int | None = None,
 ) -> go.Figure:
     """
     Add visualization for Western Electric run rules (Rules 2-8).
@@ -91,7 +91,7 @@ def add_run_rules_visualization(
             if obs_id in data.index:
                 obs_data = data.loc[obs_id]
                 if isinstance(obs_data, pd.DataFrame):
-                    logger.debug("Skipping obs_id=%s: MultiIndex expanded to DataFrame", obs_id)
+                    logger.debug('Skipping obs_id=%s: MultiIndex expanded to DataFrame', obs_id)
                     continue
             else:
                 continue
@@ -102,25 +102,22 @@ def add_run_rules_visualization(
             rules = obs_violations['rule_name'].unique().tolist()
             rule_nums = [r.split('_')[1] if '_' in r else r for r in rules]
 
-            annotated_points.append({
-                'x': x_val,
-                'y': y_val,
-                'rules': rules,
-                'rule_nums': rule_nums,
-                'hover': '<br>'.join([
-                    _RULE_SHORT_NAMES.get(r, r) for r in rules
-                ])
-            })
+            annotated_points.append(
+                {
+                    'x': x_val,
+                    'y': y_val,
+                    'rules': rules,
+                    'rule_nums': rule_nums,
+                    'hover': '<br>'.join([_RULE_SHORT_NAMES.get(r, r) for r in rules]),
+                }
+            )
 
         if not annotated_points:
             return fig
 
         x_vals = [p['x'] for p in annotated_points]
         y_vals = [p['y'] for p in annotated_points]
-        hover_texts = [
-            f"Rule violations:<br>{p['hover']}<br>Value: {p['y']:.3f}"
-            for p in annotated_points
-        ]
+        hover_texts = [f'Rule violations:<br>{p["hover"]}<br>Value: {p["y"]:.3f}' for p in annotated_points]
 
         scatter_kwargs = dict(
             x=x_vals,
@@ -131,11 +128,11 @@ def add_run_rules_visualization(
                 size=theme.data_marker_size,
                 color=theme.pattern_signal_color,
                 symbol='circle',
-                line=dict(width=1, color='darkorange')
+                line=dict(width=1, color='darkorange'),
             ),
             hovertext=hover_texts,
             hoverinfo='text',
-            showlegend=False
+            showlegend=False,
         )
 
         if row is not None and col is not None:
@@ -146,8 +143,8 @@ def add_run_rules_visualization(
 
         return fig
     except (AttributeError, KeyError, ValueError, ProcessBehaviorError) as e:
-        logger.info("Skipping run-rule annotations: %s", e)
+        logger.info('Skipping run-rule annotations: %s', e)
         return fig
     except Exception:
-        logger.exception("Run-rule annotation failed unexpectedly")
+        logger.exception('Run-rule annotation failed unexpectedly')
         raise

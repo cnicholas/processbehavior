@@ -163,16 +163,29 @@ def render_control_chart(
     # 5. Run rules (Rules 2-8)
     if ctx.show_rules and spec.run_rules_applicable:
         add_run_rules_visualization(
-            fig, data, stats, ctx.chart_name,
-            value_col, x_col, theme,
-            result=ctx.result, row=row, col=col,
+            fig,
+            data,
+            stats,
+            ctx.chart_name,
+            value_col,
+            x_col,
+            theme,
+            result=ctx.result,
+            row=row,
+            col=col,
         )
 
     # 6. Stats box
     if ctx.show_stats:
         add_stats_box(
-            fig, stats, data, theme,
-            row=row, col=col, nrows=nrows, ncols=ncols,
+            fig,
+            stats,
+            data,
+            theme,
+            row=row,
+            col=col,
+            nrows=nrows,
+            ncols=ncols,
         )
 
     # 7. Lane boundaries
@@ -191,8 +204,13 @@ def render_control_chart(
             # top-of-plot lane labels here. Faceted mode keeps top labels
             # per panel.
             add_lane_boundaries(
-                fig, lane_boundaries, y_range, theme,
-                row=row, col=col, show_labels=ctx.is_faceted,
+                fig,
+                lane_boundaries,
+                y_range,
+                theme,
+                row=row,
+                col=col,
+                show_labels=ctx.is_faceted,
             )
 
 
@@ -211,7 +229,7 @@ def render_histogram(
     col: int | None = None,
     shared_bin_edges: np.ndarray | None = None,
     is_faceted: bool = False,
-    histnorm: str = "",
+    histnorm: str = '',
 ) -> None:
     """Render one histogram panel onto *fig*.
 
@@ -288,9 +306,7 @@ def render_histogram(
 # ---------------------------------------------------------------------------
 
 
-def _subplot_kwargs(
-    row: int | None, col: int | None
-) -> dict:
+def _subplot_kwargs(row: int | None, col: int | None) -> dict:
     """Build ``**subplot_kwargs`` for Plotly calls that accept row/col."""
     if row is not None and col is not None:
         return {'row': row, 'col': col}
@@ -339,9 +355,11 @@ def _add_fixed_limit(
 
     fig.add_shape(
         type='line',
-        x0=0, x1=1,
+        x0=0,
+        x1=1,
         xref=xref,
-        y0=y, y1=y,
+        y0=y,
+        y1=y,
         line=dict(color=color, dash=dash, width=width),
         **subplot_kw,
     )
@@ -400,8 +418,10 @@ def _add_limit_summary_annotation(
         x_pos, y_pos, yanchor = 1.0, 1.04, 'bottom'
 
     fig.add_annotation(
-        x=x_pos, xref=xref,
-        y=y_pos, yref=yref,
+        x=x_pos,
+        xref=xref,
+        y=y_pos,
+        yref=yref,
         yanchor=yanchor,
         xanchor='right',
         text=text,
@@ -436,15 +456,30 @@ def _add_limits(
         if stats['upl'] is not None:
             label = format_limit_label('UPL', stats['upl'], ctx.show_limit_values)
             _add_fixed_limit(
-                fig, stats['upl'], label,
-                theme.ucl_color, theme.limit_line_dash, theme.limit_line_width,
-                font_size, row, col, ncols,
+                fig,
+                stats['upl'],
+                label,
+                theme.ucl_color,
+                theme.limit_line_dash,
+                theme.limit_line_width,
+                font_size,
+                row,
+                col,
+                ncols,
             )
         elif 'upl' in data.columns:
             add_stepped_limit_line(
-                fig, data, x_col, 'upl',
-                theme.ucl_color, theme.limit_line_dash, theme.limit_line_width,
-                'UPL', theme, row=row, col=col,
+                fig,
+                data,
+                x_col,
+                'upl',
+                theme.ucl_color,
+                theme.limit_line_dash,
+                theme.limit_line_width,
+                'UPL',
+                theme,
+                row=row,
+                col=col,
             )
 
     # ---- LPL ----
@@ -452,27 +487,44 @@ def _add_limits(
         if stats['lpl'] is not None:
             label = format_limit_label('LPL', stats['lpl'], ctx.show_limit_values)
             _add_fixed_limit(
-                fig, stats['lpl'], label,
-                theme.lcl_color, theme.limit_line_dash, theme.limit_line_width,
-                font_size, row, col, ncols,
+                fig,
+                stats['lpl'],
+                label,
+                theme.lcl_color,
+                theme.limit_line_dash,
+                theme.limit_line_width,
+                font_size,
+                row,
+                col,
+                ncols,
             )
         elif 'lpl' in data.columns:
             add_stepped_limit_line(
-                fig, data, x_col, 'lpl',
-                theme.lcl_color, theme.limit_line_dash, theme.limit_line_width,
-                'LPL', theme, row=row, col=col,
+                fig,
+                data,
+                x_col,
+                'lpl',
+                theme.lcl_color,
+                theme.limit_line_dash,
+                theme.limit_line_width,
+                'LPL',
+                theme,
+                row=row,
+                col=col,
             )
 
     # ---- "Limits vary" annotation (single chart only) ----
     if spec.limits_vary and not ctx.is_faceted:
-        vary_text = "Process limits computed per phase" if spec.phased else "Process limits vary by subgroup size (n)"
+        vary_text = 'Process limits computed per phase' if spec.phased else 'Process limits vary by subgroup size (n)'
         fig.add_annotation(
             text=vary_text,
-            xref="paper", yref="paper",
-            x=0.02, y=0.98,
+            xref='paper',
+            yref='paper',
+            x=0.02,
+            y=0.98,
             showarrow=False,
-            font=dict(size=10, color="gray"),
-            bgcolor="rgba(255,255,255,0.8)",
+            font=dict(size=10, color='gray'),
+            bgcolor='rgba(255,255,255,0.8)',
             borderpad=3,
         )
 
@@ -482,16 +534,31 @@ def _add_limits(
         if stats[center_key] is None:
             if 'center' in data.columns:
                 add_stepped_limit_line(
-                    fig, data, x_col, 'center',
-                    theme.center_color, 'solid', theme.center_line_width,
-                    'CL', theme, row=row, col=col,
+                    fig,
+                    data,
+                    x_col,
+                    'center',
+                    theme.center_color,
+                    'solid',
+                    theme.center_line_width,
+                    'CL',
+                    theme,
+                    row=row,
+                    col=col,
                 )
         else:
             label = format_limit_label('CL', stats[center_key], ctx.show_limit_values)
             _add_fixed_limit(
-                fig, stats[center_key], label,
-                theme.center_color, 'solid', theme.center_line_width,
-                font_size, row, col, ncols,
+                fig,
+                stats[center_key],
+                label,
+                theme.center_color,
+                'solid',
+                theme.center_line_width,
+                font_size,
+                row,
+                col,
+                ncols,
             )
 
     # ---- Limit summary annotation ----
@@ -563,13 +630,13 @@ def _add_histogram_stats(
     # Mean line
     vline_kw = dict(
         x=mean,
-        line_dash="solid",
+        line_dash='solid',
         line_color=theme.center_color,
         line_width=2,
     )
     if not is_faceted:
-        vline_kw['annotation_text'] = f"Mean: {mean:.3f}"
-        vline_kw['annotation_position'] = "top"
+        vline_kw['annotation_text'] = f'Mean: {mean:.3f}'
+        vline_kw['annotation_position'] = 'top'
         vline_kw['annotation_font_size'] = theme.annotation_font_size
     fig.add_vline(**vline_kw, **subplot_kw)
 
@@ -581,13 +648,13 @@ def _add_histogram_stats(
         for sign in [1, -1]:
             vline_kw = dict(
                 x=mean + sign * mult * std,
-                line_dash="dash",
-                line_color="orange",
+                line_dash='dash',
+                line_color='orange',
                 line_width=1,
             )
             if not is_faceted:
-                label = f"+{mult}σ" if sign > 0 else f"-{mult}σ"
+                label = f'+{mult}σ' if sign > 0 else f'-{mult}σ'
                 vline_kw['annotation_text'] = label
-                vline_kw['annotation_position'] = "top"
+                vline_kw['annotation_position'] = 'top'
                 vline_kw['annotation_font_size'] = theme.annotation_font_size
             fig.add_vline(**vline_kw, **subplot_kw)

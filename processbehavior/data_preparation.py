@@ -53,6 +53,7 @@ def natural_sort_key(s: str) -> list:
     ['1_1', '1_2', '1_10']
     """
     import re
+
     return [int(text) if text.isdigit() else text.lower() for text in re.split(r'(\d+)', s)]
 
 
@@ -157,11 +158,7 @@ class DataPreparation:
             cols.insert(0, spec.time_var)
         return cols
 
-    def prepare_dataset(
-        self,
-        df: pd.DataFrame,
-        spec: FormulationSpec
-    ) -> pd.DataFrame:
+    def prepare_dataset(self, df: pd.DataFrame, spec: FormulationSpec) -> pd.DataFrame:
         """
         Prepare raw data for analysis with automatic type conversion.
 
@@ -233,10 +230,7 @@ class DataPreparation:
         # Convert types for correct sorting (time_var and factor columns)
         # This handles string-numeric ('1', '10') and string-dates
         if spec.has_time:
-            out[spec.time_var], msg = self._detect_and_convert_type(
-                out[spec.time_var],
-                spec.time_var
-            )
+            out[spec.time_var], msg = self._detect_and_convert_type(out[spec.time_var], spec.time_var)
 
         if spec.has_grouping:
             for col in spec.rsg_vars:
@@ -261,10 +255,7 @@ class DataPreparation:
 
             # Make RSG categorical with natural sort order
             # This ensures 'Lane_1', 'Lane_2', 'Lane_10' (not 'Lane_1', 'Lane_10', 'Lane_2')
-            out[spec.rsg_var_name] = self._make_categorical_rsg(
-                out[spec.rsg_var_name],
-                spec.rsg_var_name
-            )
+            out[spec.rsg_var_name] = self._make_categorical_rsg(out[spec.rsg_var_name], spec.rsg_var_name)
 
         # Sort if required
         sort_cols = self._get_sort_cols(spec)
@@ -281,11 +272,7 @@ class DataPreparation:
 
         return out
 
-    def validate_columns(
-        self,
-        df: pd.DataFrame,
-        spec: FormulationSpec
-    ) -> None:
+    def validate_columns(self, df: pd.DataFrame, spec: FormulationSpec) -> None:
         """
         Validate that required columns exist and have correct types.
 
@@ -331,50 +318,46 @@ class DataPreparation:
             missing = set(spec.rsg_vars) - set(df_cols)
             if missing:
                 raise FactorNotFoundError(
-                    f"One or more grouping variables not found in dataset.\n"
-                    f"Missing: {sorted(missing)}\n"
-                    f"Required: {spec.rsg_vars}\n"
-                    f"Available columns: {df_cols}\n"
-                    f"Fix: Check spelling or provide correct column names",
+                    f'One or more grouping variables not found in dataset.\n'
+                    f'Missing: {sorted(missing)}\n'
+                    f'Required: {spec.rsg_vars}\n'
+                    f'Available columns: {df_cols}\n'
+                    f'Fix: Check spelling or provide correct column names',
                     factor=str(sorted(missing)),
-                    available=df_cols
+                    available=df_cols,
                 )
 
         # Validate time variable
         if spec.has_time and spec.time_var not in df_cols:
             raise ColumnNotFoundError(
                 f"Time variable '{spec.time_var}' not found in dataset.\n"
-                f"Available columns: {df_cols}\n"
-                f"Fix: Check spelling or specify correct time column",
+                f'Available columns: {df_cols}\n'
+                f'Fix: Check spelling or specify correct time column',
                 column=spec.time_var,
-                available=df_cols
+                available=df_cols,
             )
 
         # Validate response variable
         if spec.response_var not in df_cols:
             raise ColumnNotFoundError(
                 f"Response variable '{spec.response_var}' not found in dataset.\n"
-                f"Available columns: {df_cols}\n"
-                f"Fix: Check spelling or specify correct measurement column",
+                f'Available columns: {df_cols}\n'
+                f'Fix: Check spelling or specify correct measurement column',
                 column=spec.response_var,
-                available=df_cols
+                available=df_cols,
             )
 
         # Validate response variable is numeric
         if not is_numeric_dtype(df[spec.response_var]):
             raise ValidationError(
                 f"Response variable '{spec.response_var}' must be numeric.\n"
-                f"Current type: {df[spec.response_var].dtype}\n"
-                f"Fix: Convert to numeric or choose a different column"
+                f'Current type: {df[spec.response_var].dtype}\n'
+                f'Fix: Convert to numeric or choose a different column'
             )
 
         logger.debug('Column validation passed')
 
-    def build_keys(
-        self,
-        df: pd.DataFrame,
-        spec: FormulationSpec
-    ) -> pd.DataFrame:
+    def build_keys(self, df: pd.DataFrame, spec: FormulationSpec) -> pd.DataFrame:
         """
         Add stable key columns for reproducible analysis.
 
@@ -462,11 +445,7 @@ class DataPreparation:
     # Private Helper Methods
     # ========================================================================
 
-    def _add_grouping_column(
-        self,
-        df: pd.DataFrame,
-        spec: FormulationSpec
-    ) -> pd.DataFrame:
+    def _add_grouping_column(self, df: pd.DataFrame, spec: FormulationSpec) -> pd.DataFrame:
         """
         Add composite grouping column (e.g., 'lane_head').
 
@@ -489,28 +468,17 @@ class DataPreparation:
         if len(spec.rsg_vars) > 1:
             # Multiple factors: combine with delimiter
             out = self._add_composite_column(
-                df=out,
-                cols_to_combine=spec.rsg_vars_list,
-                col_name=spec.rsg_var_name,
-                col_delim=spec.rsg_var_delim
+                df=out, cols_to_combine=spec.rsg_vars_list, col_name=spec.rsg_var_name, col_delim=spec.rsg_var_delim
             )
         else:
             # Single factor: copy with standard name, convert to string
-            out = self._add_column(
-                df=out,
-                new_col_name=spec.rsg_var_name,
-                existing_column=spec.rsg_vars[0]
-            )
+            out = self._add_column(df=out, new_col_name=spec.rsg_var_name, existing_column=spec.rsg_vars[0])
             # Ensure RSG is string (even if source column is numeric)
             out[spec.rsg_var_name] = out[spec.rsg_var_name].astype(str)
 
         return out
 
-    def _add_group_sizes(
-        self,
-        df: pd.DataFrame,
-        spec: FormulationSpec
-    ) -> pd.DataFrame:
+    def _add_group_sizes(self, df: pd.DataFrame, spec: FormulationSpec) -> pd.DataFrame:
         """
         Add 'n' column with kt cell sizes without filtering.
 
@@ -526,17 +494,11 @@ class DataPreparation:
         out = pd.merge(df, grouped, how='left', on=kt_cols)
         return out
 
-    def _add_column(
-        self,
-        df: pd.DataFrame,
-        new_col_name: str,
-        existing_column: str
-    ) -> pd.DataFrame:
+    def _add_column(self, df: pd.DataFrame, new_col_name: str, existing_column: str) -> pd.DataFrame:
         """Copy an existing column with a new name."""
         if existing_column not in df.columns:
             raise ValueError(
-                f"Cannot copy column '{existing_column}' - not in dataset.\n"
-                f"Available: {df.columns.tolist()}"
+                f"Cannot copy column '{existing_column}' - not in dataset.\nAvailable: {df.columns.tolist()}"
             )
 
         out = df.copy()
@@ -544,11 +506,7 @@ class DataPreparation:
         return out
 
     def _add_composite_column(
-        self,
-        df: pd.DataFrame,
-        cols_to_combine: list[str],
-        col_name: str,
-        col_delim: str = '_'
+        self, df: pd.DataFrame, cols_to_combine: list[str], col_name: str, col_delim: str = '_'
     ) -> pd.DataFrame:
         """
         Create composite column by combining multiple columns.
@@ -560,9 +518,9 @@ class DataPreparation:
         missing = set(cols_to_combine) - set(df.columns)
         if missing:
             raise ValueError(
-                f"Cannot create composite column - some columns missing.\n"
-                f"Missing: {sorted(missing)}\n"
-                f"Available: {df.columns.tolist()}"
+                f'Cannot create composite column - some columns missing.\n'
+                f'Missing: {sorted(missing)}\n'
+                f'Available: {df.columns.tolist()}'
             )
 
         # Validate no missing values in source columns before encoding
@@ -572,7 +530,7 @@ class DataPreparation:
             missing_counts = df[cols_to_combine].isna().sum()
             raise ValueError(
                 f"Cannot build RSG '{col_name}': missing values in factor columns. "
-                f"Missing counts: {missing_counts.to_dict()}"
+                f'Missing counts: {missing_counts.to_dict()}'
             )
 
         if len(cols_to_combine) == 1:
@@ -581,18 +539,11 @@ class DataPreparation:
 
         # Multiple columns - combine with delimiter using shared encode_rsg()
         out = df.copy()
-        out[col_name] = df[cols_to_combine].apply(
-            lambda row: encode_rsg(tuple(row), delimiter=col_delim),
-            axis=1
-        )
+        out[col_name] = df[cols_to_combine].apply(lambda row: encode_rsg(tuple(row), delimiter=col_delim), axis=1)
 
         return out
 
-    def _detect_and_convert_type(
-        self,
-        series: pd.Series,
-        col_name: str
-    ) -> tuple[pd.Series, str | None]:
+    def _detect_and_convert_type(self, series: pd.Series, col_name: str) -> tuple[pd.Series, str | None]:
         """
         Detect and convert string columns to appropriate types.
 
@@ -650,6 +601,7 @@ class DataPreparation:
 
         if first_val is not None:
             import datetime
+
             if isinstance(first_val, (datetime.date, datetime.datetime)):
                 return series, None
 
@@ -677,10 +629,7 @@ class DataPreparation:
             # Only convert if most values succeeded
             success_rate = datetime_vals.notna().sum() / len(series)
             if success_rate > 0.5:  # At least 50% converted
-                msg = (
-                    f"Converted column '{col_name}' from string to datetime "
-                    f"for correct chronological sorting"
-                )
+                msg = f"Converted column '{col_name}' from string to datetime for correct chronological sorting"
                 logger.info(msg)
                 return datetime_vals, msg
         except (ValueError, TypeError):
@@ -689,11 +638,7 @@ class DataPreparation:
         # No conversion possible/needed
         return series, None
 
-    def _make_categorical_rsg(
-        self,
-        series: pd.Series,
-        col_name: str
-    ) -> pd.Series:
+    def _make_categorical_rsg(self, series: pd.Series, col_name: str) -> pd.Series:
         """
         Convert RSG column to categorical with natural sort order.
 
@@ -731,15 +676,10 @@ class DataPreparation:
         sorted_categories = natsorted(unique_vals)
 
         # Create ordered categorical
-        categorical = pd.Categorical(
-            series,
-            categories=sorted_categories,
-            ordered=True
-        )
+        categorical = pd.Categorical(series, categories=sorted_categories, ordered=True)
 
         logger.info(
-            f"Created categorical column '{col_name}' with natural sort order "
-            f"({len(sorted_categories)} categories)"
+            f"Created categorical column '{col_name}' with natural sort order ({len(sorted_categories)} categories)"
         )
 
         return pd.Series(categorical, index=series.index)

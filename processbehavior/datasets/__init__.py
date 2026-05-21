@@ -33,5 +33,5 @@ __all__ = [
     'compare_sds_characteristics',
     'generate_test_suite',
     'get_sds_info',
-    'print_sds_summary'
+    'print_sds_summary',
 ]
