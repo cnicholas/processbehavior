@@ -67,26 +67,20 @@ class TestSChartStratified:
     """Companion S chart must also be stratified."""
 
     def test_companion_s_stratified(self, sds1_study):
-        result = sds1_study.execute(
-            chart='Xbar', by=['PRODUCTION TIME'], companion=True
-        )
+        result = sds1_study.execute(chart='Xbar', by=['PRODUCTION TIME'], companion=True)
         s_chart = result.charts['S']
         assert 'strata' in s_chart
         assert s_chart['metadata']['stratified'] is True
 
     def test_companion_s_matching_strata(self, sds1_study):
-        result = sds1_study.execute(
-            chart='Xbar', by=['PRODUCTION TIME'], companion=True
-        )
+        result = sds1_study.execute(chart='Xbar', by=['PRODUCTION TIME'], companion=True)
         xbar_strata = result.charts['Xbar']['strata']
         s_strata = result.charts['S']['strata']
         assert xbar_strata == s_strata
 
     def test_s_reference_values_combo_1_2(self, sds1_study):
         """Validate S chart statistics for combo 1_2."""
-        result = sds1_study.execute(
-            chart='Xbar', by=['PRODUCTION TIME'], companion=True
-        )
+        result = sds1_study.execute(chart='Xbar', by=['PRODUCTION TIME'], companion=True)
         stats = result.charts['S']['statistics']['1_2']
         assert stats['center'] == pytest.approx(0.80, abs=0.01)
         assert stats['lpl'] == pytest.approx(0.0, abs=0.01)
@@ -115,17 +109,13 @@ class TestResidualNotStratified:
     """Residuals have factor effects removed — stratification is meaningless."""
 
     def test_r4_by_time_not_stratified(self, sds1_study):
-        result = sds1_study.execute(
-            chart='Xbar', by=['PRODUCTION TIME'], value='R4'
-        )
+        result = sds1_study.execute(chart='Xbar', by=['PRODUCTION TIME'], value='R4')
         xbar = result.charts['Xbar']
         assert 'strata' not in xbar
         assert xbar['metadata'].get('stratified') is None
 
     def test_r5_by_time_not_stratified(self, sds1_study):
-        result = sds1_study.execute(
-            chart='Xbar', by=['PRODUCTION TIME'], value='R5'
-        )
+        result = sds1_study.execute(chart='Xbar', by=['PRODUCTION TIME'], value='R5')
         xbar = result.charts['Xbar']
         assert 'strata' not in xbar
         assert xbar['metadata'].get('stratified') is None
@@ -139,14 +129,9 @@ class TestSharedYAxis:
         result = sds1_study.execute(chart='Xbar', by=['PRODUCTION TIME'])
         plotter = Plotter(result)
         fig = plotter.plot(chart='Xbar').figure
-        ranges = [
-            fig.layout[k].range
-            for k in fig.layout
-            if k.startswith('yaxis') and fig.layout[k].range
-        ]
+        ranges = [fig.layout[k].range for k in fig.layout if k.startswith('yaxis') and fig.layout[k].range]
         assert len(ranges) > 1
-        assert all(r == ranges[0] for r in ranges), \
-            "All Xbar subplots should share y-axis range"
+        assert all(r == ranges[0] for r in ranges), 'All Xbar subplots should share y-axis range'
 
     def test_stratified_xbar_autorange_disabled(self, sds1_study):
         """autorange must be False when shared range is set."""
@@ -160,7 +145,9 @@ class TestSharedYAxis:
     def test_companion_xbar_s_share_within_type(self, sds1_study):
         """Companion: Xbar facets share one range, S facets share another."""
         result = sds1_study.execute(
-            chart='Xbar', by=['PRODUCTION TIME'], companion=True,
+            chart='Xbar',
+            by=['PRODUCTION TIME'],
+            companion=True,
         )
         plotter = Plotter(result)
         fig = plotter.plot().figure
@@ -169,16 +156,17 @@ class TestSharedYAxis:
             if k.startswith('yaxis') and fig.layout[k].range:
                 all_ranges.append(tuple(fig.layout[k].range))
         unique_ranges = set(all_ranges)
-        assert len(unique_ranges) == 2, \
-            "Xbar and S should have different y-axis ranges"
+        assert len(unique_ranges) == 2, 'Xbar and S should have different y-axis ranges'
         for r in unique_ranges:
             count = all_ranges.count(r)
-            assert count > 1, f"Range {r} should appear in multiple subplots"
+            assert count > 1, f'Range {r} should appear in multiple subplots'
 
     def test_companion_autorange_disabled(self, sds1_study):
         """All companion subplots must have autorange=False."""
         result = sds1_study.execute(
-            chart='Xbar', by=['PRODUCTION TIME'], companion=True,
+            chart='Xbar',
+            by=['PRODUCTION TIME'],
+            companion=True,
         )
         plotter = Plotter(result)
         fig = plotter.plot().figure
@@ -189,7 +177,9 @@ class TestSharedYAxis:
     def test_companion_subplot_minimum_height(self, sds1_study):
         """Each subplot in companion chart must get reasonable vertical space."""
         result = sds1_study.execute(
-            chart='Xbar', by=['PRODUCTION TIME'], companion=True,
+            chart='Xbar',
+            by=['PRODUCTION TIME'],
+            companion=True,
         )
         plotter = Plotter(result)
         fig = plotter.plot().figure
@@ -200,35 +190,35 @@ class TestSharedYAxis:
                 domain = fig.layout[k].domain
                 if domain:
                     domains.append(domain)
-        assert len(domains) > 0, "Should have y-axis domains"
+        assert len(domains) > 0, 'Should have y-axis domains'
         for domain in domains:
             height = domain[1] - domain[0]
-            assert height >= 0.03, (
-                f"Subplot domain height {height:.4f} is too small; "
-                f"domain={domain}"
-            )
+            assert height >= 0.03, f'Subplot domain height {height:.4f} is too small; domain={domain}'
 
     def test_companion_all_axes_have_range(self, sds1_study):
         """Every yaxis in companion figure must have an explicit range."""
         result = sds1_study.execute(
-            chart='Xbar', by=['PRODUCTION TIME'], companion=True,
+            chart='Xbar',
+            by=['PRODUCTION TIME'],
+            companion=True,
         )
         plotter = Plotter(result)
         fig = plotter.plot().figure
         yaxis_keys = [k for k in fig.layout if k.startswith('yaxis')]
         assert len(yaxis_keys) > 0
         for k in yaxis_keys:
-            assert fig.layout[k].range is not None, (
-                f"{k} has no explicit range set"
-            )
+            assert fig.layout[k].range is not None, f'{k} has no explicit range set'
 
     def test_companion_ranges_match_standalone(self, sds1_study):
         """Per-type companion ranges should match standalone chart ranges."""
         companion_result = sds1_study.execute(
-            chart='Xbar', by=['PRODUCTION TIME'], companion=True,
+            chart='Xbar',
+            by=['PRODUCTION TIME'],
+            companion=True,
         )
         standalone_result = sds1_study.execute(
-            chart='Xbar', by=['PRODUCTION TIME'],
+            chart='Xbar',
+            by=['PRODUCTION TIME'],
         )
         # Get standalone Xbar range
         standalone_fig = Plotter(standalone_result).plot(chart='Xbar').figure
@@ -248,8 +238,7 @@ class TestSharedYAxis:
                 companion_ranges.append(tuple(companion_fig.layout[k].range))
         # Xbar range should appear in the companion
         assert tuple(standalone_xbar_range) in set(companion_ranges), (
-            f"Standalone Xbar range {standalone_xbar_range} not found in "
-            f"companion ranges {set(companion_ranges)}"
+            f'Standalone Xbar range {standalone_xbar_range} not found in companion ranges {set(companion_ranges)}'
         )
 
     def test_non_shared_yaxis_keeps_autorange(self, sds1_study):
@@ -270,9 +259,8 @@ class TestLimitSummaryAnnotation:
         result = sds1_study.execute(chart='Xbar', by=['PRODUCTION TIME'])
         plotter = Plotter(result)
         fig = plotter.plot(chart='Xbar').figure
-        annotations = [a for a in fig.layout.annotations
-                       if a.text and 'UPL' in a.text and '|' in a.text]
-        assert len(annotations) > 0, "Should have limit summary annotations"
+        annotations = [a for a in fig.layout.annotations if a.text and 'UPL' in a.text and '|' in a.text]
+        assert len(annotations) > 0, 'Should have limit summary annotations'
         for ann in annotations:
             assert 'CL' in ann.text
             assert 'LPL' in ann.text
@@ -284,19 +272,17 @@ class TestLimitSummaryAnnotation:
         result = sds1_study.execute(chart='Xbar', by=['PRODUCTION TIME'])
         plotter = Plotter(result)
         fig = plotter.plot(chart='Xbar').figure
-        right_side = [a for a in fig.layout.annotations
-                      if getattr(a, 'xanchor', None) == 'left'
-                      and getattr(a, 'x', None) == 1]
-        assert len(right_side) == 0, \
-            f"Found {len(right_side)} old right-side limit annotations"
+        right_side = [
+            a for a in fig.layout.annotations if getattr(a, 'xanchor', None) == 'left' and getattr(a, 'x', None) == 1
+        ]
+        assert len(right_side) == 0, f'Found {len(right_side)} old right-side limit annotations'
 
     def test_limit_summary_hidden_when_values_off(self, sds1_study):
         """show_limit_values=False suppresses the summary annotation."""
         result = sds1_study.execute(chart='Xbar', by=['PRODUCTION TIME'])
         plotter = Plotter(result)
         fig = plotter.plot(chart='Xbar', show_limit_values=False).figure
-        annotations = [a for a in fig.layout.annotations
-                       if a.text and 'UPL' in a.text and '|' in a.text]
+        annotations = [a for a in fig.layout.annotations if a.text and 'UPL' in a.text and '|' in a.text]
         assert len(annotations) == 0
 
     def test_limit_summary_hidden_when_limits_off(self, sds1_study):
@@ -304,8 +290,7 @@ class TestLimitSummaryAnnotation:
         result = sds1_study.execute(chart='Xbar', by=['PRODUCTION TIME'])
         plotter = Plotter(result)
         fig = plotter.plot(chart='Xbar', show_limits=False).figure
-        annotations = [a for a in fig.layout.annotations
-                       if a.text and 'UPL' in a.text and '|' in a.text]
+        annotations = [a for a in fig.layout.annotations if a.text and 'UPL' in a.text and '|' in a.text]
         assert len(annotations) == 0
 
 
@@ -323,11 +308,9 @@ class TestFacetedAxisLabels:
             axis_key = 'yaxis' if idx == 0 else f'yaxis{idx + 1}'
             title = fig.layout[axis_key].title
             if c == 1:
-                assert title and title.text, \
-                    f"{axis_key} (col 1) should have y-axis title"
+                assert title and title.text, f'{axis_key} (col 1) should have y-axis title'
             else:
-                assert not (title and title.text), \
-                    f"{axis_key} (col {c}) should NOT have y-axis title"
+                assert not (title and title.text), f'{axis_key} (col {c}) should NOT have y-axis title'
 
     def test_faceted_xlabel_only_bottom_row(self, sds1_study):
         result = sds1_study.execute(chart='Xbar', by=['PRODUCTION TIME'])
@@ -342,11 +325,9 @@ class TestFacetedAxisLabels:
             title = fig.layout[axis_key].title
             is_bottom = (r == nrows) or (idx + ncols >= n_charts)
             if is_bottom:
-                assert title and title.text, \
-                    f"{axis_key} (row {r}) should have x-axis title"
+                assert title and title.text, f'{axis_key} (row {r}) should have x-axis title'
             else:
-                assert not (title and title.text), \
-                    f"{axis_key} (row {r}) should NOT have x-axis title"
+                assert not (title and title.text), f'{axis_key} (row {r}) should NOT have x-axis title'
 
 
 class TestCompanionPairedLayout:
@@ -355,7 +336,9 @@ class TestCompanionPairedLayout:
     def test_companion_paired_layout_ordering(self, sds1_study):
         """Keys should alternate Xbar/S per stratum."""
         result = sds1_study.execute(
-            chart='Xbar', by=['PRODUCTION TIME'], companion=True,
+            chart='Xbar',
+            by=['PRODUCTION TIME'],
+            companion=True,
         )
         plotter = Plotter(result)
         plotter.plot()
@@ -368,11 +351,9 @@ class TestCompanionPairedLayout:
         keys = list(reordered.keys())
         # Should alternate: Xbar_X, S_X, Xbar_Y, S_Y, ...
         for i in range(0, len(keys), 2):
-            assert keys[i].startswith('Xbar'), \
-                f"Even index {i} should be Xbar, got {keys[i]}"
+            assert keys[i].startswith('Xbar'), f'Even index {i} should be Xbar, got {keys[i]}'
             if i + 1 < len(keys):
-                assert keys[i + 1].startswith('S'), \
-                    f"Odd index {i+1} should be S, got {keys[i+1]}"
+                assert keys[i + 1].startswith('S'), f'Odd index {i + 1} should be S, got {keys[i + 1]}'
 
     def test_non_companion_stratified_unchanged(self, sds1_study):
         """Xbar-only stratified (no companion) should not be reordered."""

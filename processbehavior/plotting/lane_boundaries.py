@@ -17,7 +17,7 @@ def add_lane_boundaries(
     theme: ChartTheme,
     row: int | None = None,
     col: int | None = None,
-    show_labels: bool = True
+    show_labels: bool = True,
 ) -> None:
     """
     Add vertical lane boundary lines to a chart figure.
@@ -58,14 +58,12 @@ def add_lane_boundaries(
 
         fig.add_shape(
             type='line',
-            x0=x_pos, x1=x_pos,
-            y0=y_min, y1=y_max,
-            line=dict(
-                color=theme.lane_boundary_color,
-                dash=theme.lane_boundary_dash,
-                width=theme.lane_boundary_width
-            ),
-            **subplot_kwargs
+            x0=x_pos,
+            x1=x_pos,
+            y0=y_min,
+            y1=y_max,
+            line=dict(color=theme.lane_boundary_color, dash=theme.lane_boundary_dash, width=theme.lane_boundary_width),
+            **subplot_kwargs,
         )
 
         if show_labels and label:
@@ -75,9 +73,6 @@ def add_lane_boundaries(
                 text=label,
                 showarrow=False,
                 yanchor='bottom',
-                font=dict(
-                    size=theme.lane_boundary_annotation_size,
-                    color=theme.lane_boundary_color
-                ),
-                **subplot_kwargs
+                font=dict(size=theme.lane_boundary_annotation_size, color=theme.lane_boundary_color),
+                **subplot_kwargs,
             )

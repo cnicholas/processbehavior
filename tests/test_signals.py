@@ -82,12 +82,7 @@ class TestRuleSet:
 
     def test_multiple_rules(self):
         """Test chaining multiple rules."""
-        rules = (
-            RuleSet()
-            .beyond_limits()
-            .zone_a()
-            .trend()
-        )
+        rules = RuleSet().beyond_limits().zone_a().trend()
         assert rules.get_rules() == ['rule_1', 'rule_2', 'rule_5']
 
     def test_all_rules(self):
@@ -115,10 +110,7 @@ class TestSignalDetector:
         np.random.seed(42)
         n = 30
         values = np.random.normal(100, 5, n)
-        return pd.DataFrame({
-            'mean': values,
-            'obs_id': range(n)
-        })
+        return pd.DataFrame({'mean': values, 'obs_id': range(n)})
 
     @pytest.fixture
     def simple_stats(self):
@@ -126,7 +118,7 @@ class TestSignalDetector:
         return {
             'center': 100.0,
             'upl': 115.0,  # center + 3*sigma
-            'lpl': 85.0    # center - 3*sigma
+            'lpl': 85.0,  # center - 3*sigma
         }
 
     def test_no_violations(self, simple_data, simple_stats):
@@ -143,16 +135,14 @@ class TestSignalDetector:
     def test_beyond_limits_detection(self):
         """Test Rule 1: beyond limits detection."""
         # Create data with violations
-        data = pd.DataFrame({
-            'mean': [100, 100, 120, 100, 100],  # 120 is beyond UPL
-            'obs_id': range(5)
-        })
+        data = pd.DataFrame(
+            {
+                'mean': [100, 100, 120, 100, 100],  # 120 is beyond UPL
+                'obs_id': range(5),
+            }
+        )
 
-        stats = {
-            'center': 100.0,
-            'upl': 115.0,
-            'lpl': 85.0
-        }
+        stats = {'center': 100.0, 'upl': 115.0, 'lpl': 85.0}
 
         detector = SignalDetector()
         config = SignalConfig(enabled_rules=['rule_1'], min_observations=1)
@@ -166,16 +156,14 @@ class TestSignalDetector:
     def test_trend_detection(self):
         """Test Rule 5: trend detection."""
         # Create steadily increasing data
-        data = pd.DataFrame({
-            'mean': [90, 92, 94, 96, 98, 100, 102],  # Increasing trend
-            'obs_id': range(7)
-        })
+        data = pd.DataFrame(
+            {
+                'mean': [90, 92, 94, 96, 98, 100, 102],  # Increasing trend
+                'obs_id': range(7),
+            }
+        )
 
-        stats = {
-            'center': 96.0,
-            'upl': 110.0,
-            'lpl': 82.0
-        }
+        stats = {'center': 96.0, 'upl': 110.0, 'lpl': 82.0}
 
         detector = SignalDetector()
         config = SignalConfig(enabled_rules=['rule_5'], min_observations=1)
@@ -190,16 +178,13 @@ class TestSignalDetector:
         """Test error handling for insufficient data."""
         # Only 5 observations, but Rule 4 needs 8 consecutive points
         # For XmR charts, all 8 rules apply including rule 4 (8+ same side)
-        data = pd.DataFrame({
-            'mean': [100, 100, 100, 100, 100],
-            'obs_id': range(5)
-        })
+        data = pd.DataFrame({'mean': [100, 100, 100, 100, 100], 'obs_id': range(5)})
 
         detector = SignalDetector()
         config = SignalConfig()  # Default config
 
         # X charts apply all rules, including rule_4 which needs 8 observations
-        with pytest.raises(ValueError, match="Insufficient observations"):
+        with pytest.raises(ValueError, match='Insufficient observations'):
             detector.detect(data, simple_stats, config, chart_type='X')
 
     def test_missing_stats(self, simple_data):
@@ -209,7 +194,7 @@ class TestSignalDetector:
         detector = SignalDetector()
         config = SignalConfig(min_observations=10)
 
-        with pytest.raises(ValueError, match="Missing required statistics"):
+        with pytest.raises(ValueError, match='Missing required statistics'):
             detector.detect(simple_data, incomplete_stats, config)
 
 
@@ -221,16 +206,18 @@ class TestSignalResult:
         """Create sample result for testing."""
         from processbehavior.signals import SignalResult
 
-        violations = pd.DataFrame({
-            'obs_id': [1, 2, 5, 5],
-            'rule_name': ['rule_1', 'rule_1', 'rule_2', 'rule_5'],
-            'rule_number': [1, 1, 2, 5],
-            'description': ['Beyond limits', 'Beyond limits', 'Zone A', 'Trend'],
-            'value': [120.0, 85.0, 112.0, 108.0],
-            'center': [100.0, 100.0, 100.0, 100.0],
-            'upl': [115.0, 115.0, 115.0, 115.0],
-            'lpl': [85.0, 85.0, 85.0, 85.0]
-        })
+        violations = pd.DataFrame(
+            {
+                'obs_id': [1, 2, 5, 5],
+                'rule_name': ['rule_1', 'rule_1', 'rule_2', 'rule_5'],
+                'rule_number': [1, 1, 2, 5],
+                'description': ['Beyond limits', 'Beyond limits', 'Zone A', 'Trend'],
+                'value': [120.0, 85.0, 112.0, 108.0],
+                'center': [100.0, 100.0, 100.0, 100.0],
+                'upl': [115.0, 115.0, 115.0, 115.0],
+                'lpl': [85.0, 85.0, 85.0, 85.0],
+            }
+        )
 
         data = pd.DataFrame({'mean': [100] * 10})
         stats = {'center': 100, 'upl': 115, 'lpl': 85}

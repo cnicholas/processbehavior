@@ -137,12 +137,7 @@ class AnalysisResult:
     >>> focused.to_excel('machine1.xlsx')
     """
 
-    def __init__(
-        self,
-        charts: Charts,
-        analysis_dataset_obj: AnalysisDataSet,
-        analysis_type: str | None = None
-    ):
+    def __init__(self, charts: Charts, analysis_dataset_obj: AnalysisDataSet, analysis_type: str | None = None):
         """
         Initialize AnalysisResult from chart data and AnalysisDataSet.
 
@@ -184,14 +179,8 @@ class AnalysisResult:
                 self._residuals = self.dataset[available_cols].copy()
 
         # Extract effects and interactions
-        self._effects = (
-            analysis_dataset_obj.effects if analysis_dataset_obj.effects else None
-        )
-        self._interactions = (
-            analysis_dataset_obj.interactions
-            if analysis_dataset_obj.interactions
-            else None
-        )
+        self._effects = analysis_dataset_obj.effects if analysis_dataset_obj.effects else None
+        self._interactions = analysis_dataset_obj.interactions if analysis_dataset_obj.interactions else None
 
         # Build comprehensive summary
         self._summary = self._build_summary()
@@ -226,28 +215,23 @@ class AnalysisResult:
             'analytical_sds_description': self.analytical_sds_info.get('description', 'Unknown'),
             'analytical_sds_capabilities': self.analytical_sds_info.get('capabilities', []),
             'replication_type': self.analytical_sds_info.get('replication_type', 'unknown'),
-
             # Analysis configuration
             'analysis_type': self._analysis_type,
             'response_var': self._ads.spec.response_var,
             'grouping_vars': self._ads.spec.rsg_vars,
             'time_var': self._ads.spec.time_var,
-
             # Data dimensions
             'n_observations': len(self.dataset),
             'n_charts': len(self.charts),
             'chart_types': list(self.charts.keys()),
-
             # Capabilities
             'has_residuals': self.has_residuals,
             'has_effects': self.has_effects,
             'has_interactions': self.has_interactions,
             'variance_decomposition': self.analytical_sds_info.get('variance_decomposition', False),
             'interaction_analysis': self.analytical_sds_info.get('interaction_analysis', False),
-
             # Signals
             'n_signals_total': int(n_signals),
-
             # Stratification
             'is_stratified': self._is_stratified(),
         }
@@ -465,15 +449,11 @@ class AnalysisResult:
 
         if not self.strata:
             raise ValidationError(
-                "Cannot focus: this result is not stratified. "
-                "Use result.strata to check available subgroups."
+                'Cannot focus: this result is not stratified. Use result.strata to check available subgroups.'
             )
 
         if stratum not in self.strata:
-            raise ValidationError(
-                f"Stratum '{stratum}' not found. "
-                f"Available strata: {self.strata}"
-            )
+            raise ValidationError(f"Stratum '{stratum}' not found. Available strata: {self.strata}")
 
         # Build focused charts dict
         focused_charts = {}
@@ -503,8 +483,8 @@ class AnalysisResult:
                 if rsg_col is None:
                     raise ProcessBehaviorError(
                         f"Cannot focus stratified chart '{chart_name}': "
-                        "missing stratification column metadata and no rsg column found. "
-                        "This indicates a bug in chart construction."
+                        'missing stratification column metadata and no rsg column found. '
+                        'This indicates a bug in chart construction.'
                     )
 
                 # Note: stratum identity assumes canonical factor ordering defined upstream
@@ -514,7 +494,7 @@ class AnalysisResult:
             if focused_data.empty:
                 raise ValidationError(
                     f"No data found for stratum '{stratum}' in chart '{chart_name}'. "
-                    f"This may indicate an encoding mismatch between strata keys and rsg values."
+                    f'This may indicate an encoding mismatch between strata keys and rsg values.'
                 )
 
             # Extract stratum-specific statistics
@@ -527,7 +507,7 @@ class AnalysisResult:
                 # Stratified chart but key doesn't match — don't silently return the nested dict
                 raise ProcessBehaviorError(
                     f"Statistics key mismatch for stratum '{stratum}' in chart '{chart_name}'. "
-                    f"Available keys: {list(nested_stats.keys())}"
+                    f'Available keys: {list(nested_stats.keys())}'
                 )
             else:
                 focused_stats = nested_stats  # flat stats dict — OK
@@ -539,17 +519,13 @@ class AnalysisResult:
                 'metadata': {
                     **chart_info.get('metadata', {}),
                     'stratified': False,  # No longer stratified after focus
-                    'focused_stratum': stratum
-                }
+                    'focused_stratum': stratum,
+                },
             }
 
         # Create new AnalysisResult with focused data
         # We need to create a minimal AnalysisDataSet-like object
-        return FocusedAnalysisResult(
-            charts=focused_charts,
-            original_result=self,
-            focused_stratum=stratum
-        )
+        return FocusedAnalysisResult(charts=focused_charts, original_result=self, focused_stratum=stratum)
 
     # =========================================================================
     # Convenience methods for accessing data
@@ -591,9 +567,7 @@ class AnalysisResult:
         name = self._resolve_chart_name(name)
         if name not in self.charts:
             raise ChartNotAvailableError(
-                f"Chart '{name}' not found. Available charts: {self.all_charts}",
-                chart=name,
-                available=self.all_charts
+                f"Chart '{name}' not found. Available charts: {self.all_charts}", chart=name, available=self.all_charts
             )
         return self.charts[name]['data'].copy()
 
@@ -638,9 +612,7 @@ class AnalysisResult:
         name = self._resolve_chart_name(name)
         if name not in self.charts:
             raise ChartNotAvailableError(
-                f"Chart '{name}' not found. Available charts: {self.all_charts}",
-                chart=name,
-                available=self.all_charts
+                f"Chart '{name}' not found. Available charts: {self.all_charts}", chart=name, available=self.all_charts
             )
         return self.charts[name]['statistics'].copy()
 
@@ -668,10 +640,7 @@ class AnalysisResult:
 
         if residual_type not in self._residuals.columns:
             available = list(self._residuals.columns)
-            logger.warning(
-                f"Residual '{residual_type}' not found. "
-                f"Available: {available}"
-            )
+            logger.warning(f"Residual '{residual_type}' not found. Available: {available}")
             return pd.Series([], name=residual_type, dtype=float)
 
         return self._residuals[residual_type].copy()
@@ -713,10 +682,7 @@ class AnalysisResult:
             yield name, chart_info['data'], chart_info['statistics']
 
     def chart_table(  # noqa: C901
-        self,
-        chart: str | None = None,
-        include_signal_col: bool = True,
-        signal_symbols: bool = True
+        self, chart: str | None = None, include_signal_col: bool = True, signal_symbols: bool = True
     ) -> pd.DataFrame:
         """
         Get a summary table of chart data with subgroup sizes.
@@ -773,7 +739,7 @@ class AnalysisResult:
             raise ChartNotAvailableError(
                 f"Chart '{chart}' not found. Available charts: {self.all_charts}",
                 chart=chart,
-                available=self.all_charts
+                available=self.all_charts,
             )
 
         # Get chart data
@@ -789,9 +755,21 @@ class AnalysisResult:
         # If not found, infer by excluding known non-value columns
         if value_col is None:
             meta_cols = {
-                'rsg', 'center', 'lpl', 'upl', 'beyond_limits', 'n', 'N',
-                'obs_id', 'x', 'pull', 'time', 'date', 'datetime',
-                'rsg_key', 'cell_key'
+                'rsg',
+                'center',
+                'lpl',
+                'upl',
+                'beyond_limits',
+                'n',
+                'N',
+                'obs_id',
+                'x',
+                'pull',
+                'time',
+                'date',
+                'datetime',
+                'rsg_key',
+                'cell_key',
             }
             # Also exclude any time variable from spec
             if self._ads is not None and self._ads.spec.time_var:
@@ -832,10 +810,7 @@ class AnalysisResult:
                     # refuses to merge. When the dtypes differ on either
                     # side, cast both sides of every kt column to string so
                     # values (not just dtypes) line up.
-                    mismatched = any(
-                        chart_data[col].dtype != n_per_kt[col].dtype
-                        for col in kt_cols
-                    )
+                    mismatched = any(chart_data[col].dtype != n_per_kt[col].dtype for col in kt_cols)
                     if mismatched:
                         for col in kt_cols:
                             chart_data[col] = chart_data[col].astype(str)
@@ -931,51 +906,53 @@ class AnalysisResult:
         """String representation."""
         charts_str = ', '.join(self.all_charts)
         return (
-            f"AnalysisResult(\n"
-            f"  analytical_sds={self.analytical_sds} ({self.analytical_sds_info['description']}),\n"
-            f"  charts=[{charts_str}],\n"
-            f"  n_obs={len(self.dataset)},\n"
-            f"  has_residuals={self.has_residuals},\n"
-            f"  has_effects={self.has_effects},\n"
-            f"  n_signals={self.summary['n_signals_total']}\n"
-            f")"
+            f'AnalysisResult(\n'
+            f'  analytical_sds={self.analytical_sds} ({self.analytical_sds_info["description"]}),\n'
+            f'  charts=[{charts_str}],\n'
+            f'  n_obs={len(self.dataset)},\n'
+            f'  has_residuals={self.has_residuals},\n'
+            f'  has_effects={self.has_effects},\n'
+            f'  n_signals={self.summary["n_signals_total"]}\n'
+            f')'
         )
 
     def __str__(self) -> str:
         """User-friendly string representation."""
         lines = [
-            "="*70,
-            "ANALYSIS RESULT SUMMARY",
-            "="*70,
-            f"\nAnalytical Design State (ADS): {self.analytical_sds}",
-            f"Description: {self.analytical_sds_info['description']}",
-            f"\nAnalysis Type: {self.summary['analysis_type']}",
-            f"Response Variable: {self.summary['response_var']}",
+            '=' * 70,
+            'ANALYSIS RESULT SUMMARY',
+            '=' * 70,
+            f'\nAnalytical Design State (ADS): {self.analytical_sds}',
+            f'Description: {self.analytical_sds_info["description"]}',
+            f'\nAnalysis Type: {self.summary["analysis_type"]}',
+            f'Response Variable: {self.summary["response_var"]}',
         ]
 
         if self.summary['grouping_vars']:
-            lines.append(f"Grouping: {', '.join(self.summary['grouping_vars'])}")
+            lines.append(f'Grouping: {", ".join(self.summary["grouping_vars"])}')
 
         if self.summary['time_var']:
-            lines.append(f"Time Variable: {self.summary['time_var']}")
+            lines.append(f'Time Variable: {self.summary["time_var"]}')
 
-        lines.extend([
-            f"\nObservations: {self.summary['n_observations']}",
-            f"Charts: {', '.join(self.all_charts)}",
-        ])
+        lines.extend(
+            [
+                f'\nObservations: {self.summary["n_observations"]}',
+                f'Charts: {", ".join(self.all_charts)}',
+            ]
+        )
 
         if self.summary['is_stratified']:
-            lines.append(f"Stratified: Yes ({len(self.charts)} groups)")
+            lines.append(f'Stratified: Yes ({len(self.charts)} groups)')
 
-        lines.append("\nCapabilities:")
-        lines.append(f"  Residuals: {'✓' if self.has_residuals else '✗'}")
-        lines.append(f"  Effects: {'✓' if self.has_effects else '✗'}")
-        lines.append(f"  Interactions: {'✓' if self.has_interactions else '✗'}")
+        lines.append('\nCapabilities:')
+        lines.append(f'  Residuals: {"✓" if self.has_residuals else "✗"}')
+        lines.append(f'  Effects: {"✓" if self.has_effects else "✗"}')
+        lines.append(f'  Interactions: {"✓" if self.has_interactions else "✗"}')
 
         if self.summary['n_signals_total'] > 0:
-            lines.append(f"\n⚠️  Signals: {self.summary['n_signals_total']} points beyond limits")
+            lines.append(f'\n⚠️  Signals: {self.summary["n_signals_total"]} points beyond limits')
 
-        lines.append("="*70)
+        lines.append('=' * 70)
 
         return '\n'.join(lines)
 
@@ -1048,14 +1025,11 @@ class AnalysisResult:
         >>> result.to_excel('full.xlsx', include_full_dataset=True)
         """
         from .exporters import ExcelExporter
+
         return ExcelExporter(self).export(filepath, **kwargs)
 
     def detect_signals(
-        self,
-        chart: str | None = None,
-        rules: str | list[str] | None = None,
-        config: Any | None = None,
-        **kwargs
+        self, chart: str | None = None, rules: str | list[str] | None = None, config: Any | None = None, **kwargs
     ) -> SignalResult | dict[str, SignalResult]:
         """
         Detect Western Electric rule violations in control charts.
@@ -1151,10 +1125,7 @@ class AnalysisResult:
             chart = self._resolve_chart_name(chart)
             if chart not in self.charts:
                 raise ChartNotAvailableError(
-                    f"Chart '{chart}' not found.\n"
-                    f"Available: {self.all_charts}",
-                    chart=chart,
-                    available=self.all_charts
+                    f"Chart '{chart}' not found.\nAvailable: {self.all_charts}", chart=chart, available=self.all_charts
                 )
 
             chart_info = self.charts[chart]
@@ -1162,15 +1133,12 @@ class AnalysisResult:
             # Extract value column from metadata (required)
             if 'metadata' not in chart_info:
                 raise ProcessBehaviorError(
-                    f"Chart '{chart}' missing metadata. "
-                    f"This indicates a bug in chart calculation."
+                    f"Chart '{chart}' missing metadata. This indicates a bug in chart calculation."
                 )
             value_col = chart_info['metadata']['value_col']
 
             # Get chart type from metadata (preferred) or extract from name
-            chart_type = chart_info['metadata'].get(
-                'chart_type', self._extract_chart_type(chart)
-            )
+            chart_type = chart_info['metadata'].get('chart_type', self._extract_chart_type(chart))
 
             return detector.detect(
                 data=chart_info['data'],
@@ -1178,7 +1146,7 @@ class AnalysisResult:
                 config=config,
                 value_col=value_col,
                 chart_name=chart,
-                chart_type=chart_type
+                chart_type=chart_type,
             )
 
         else:
@@ -1188,15 +1156,12 @@ class AnalysisResult:
                 # Extract value column from metadata (required)
                 if 'metadata' not in chart_info:
                     raise ProcessBehaviorError(
-                        f"Chart '{chart_name}' missing metadata. "
-                        f"This indicates a bug in chart calculation."
+                        f"Chart '{chart_name}' missing metadata. This indicates a bug in chart calculation."
                     )
                 value_col = chart_info['metadata']['value_col']
 
                 # Get chart type from metadata (preferred) or extract from name
-                chart_type = chart_info['metadata'].get(
-                    'chart_type', self._extract_chart_type(chart_name)
-                )
+                chart_type = chart_info['metadata'].get('chart_type', self._extract_chart_type(chart_name))
 
                 results[chart_name] = detector.detect(
                     data=chart_info['data'],
@@ -1204,7 +1169,7 @@ class AnalysisResult:
                     config=config,
                     value_col=value_col,
                     chart_name=chart_name,
-                    chart_type=chart_type
+                    chart_type=chart_type,
                 )
 
             return results
@@ -1226,12 +1191,7 @@ class AnalysisResult:
             Base chart type ('Xbar', 'S', 'X', 'mR')
         """
         # Common chart type mapping
-        type_mapping = {
-            'Xbar': 'Xbar',
-            'S': 'S',
-            'X': 'X',
-            'mR': 'mR'
-        }
+        type_mapping = {'Xbar': 'Xbar', 'S': 'S', 'X': 'X', 'mR': 'mR'}
 
         # Check if chart name starts with a known type
         for prefix, chart_type in type_mapping.items():
@@ -1409,7 +1369,10 @@ class AnalysisResult:
 
         plotter = Plotter(self)
         return plotter.plot_effects(
-            effect_type=effect_type, theme=theme, width=width, height=height,
+            effect_type=effect_type,
+            theme=theme,
+            width=width,
+            height=height,
         )
 
     def report(
@@ -1471,12 +1434,7 @@ class FocusedAnalysisResult(AnalysisResult):
         The stratum this result is focused on
     """
 
-    def __init__(
-        self,
-        charts: dict[str, dict[str, Any]],
-        original_result: AnalysisResult,
-        focused_stratum: str
-    ):
+    def __init__(self, charts: dict[str, dict[str, Any]], original_result: AnalysisResult, focused_stratum: str):
         # Store chart data
         self.charts = charts
 
@@ -1540,14 +1498,16 @@ class FocusedAnalysisResult(AnalysisResult):
 
         # Copy from original and update
         summary = self._original_summary.copy()
-        summary.update({
-            'n_observations': len(self.dataset),
-            'n_charts': len(self.charts),
-            'chart_types': list(self.charts.keys()),
-            'is_stratified': False,
-            'focused_stratum': self._focused_stratum,
-            'n_signals_total': int(n_signals),
-        })
+        summary.update(
+            {
+                'n_observations': len(self.dataset),
+                'n_charts': len(self.charts),
+                'chart_types': list(self.charts.keys()),
+                'is_stratified': False,
+                'focused_stratum': self._focused_stratum,
+                'n_signals_total': int(n_signals),
+            }
+        )
         return summary
 
     @property
@@ -1568,21 +1528,22 @@ class FocusedAnalysisResult(AnalysisResult):
     def focus(self, stratum: str) -> AnalysisResult:
         """Cannot focus further - already focused on single stratum."""
         from .exceptions import ValidationError
+
         raise ValidationError(
             f"Cannot focus: this result is already focused on '{self._focused_stratum}'. "
-            "Use the original result to focus on a different stratum."
+            'Use the original result to focus on a different stratum.'
         )
 
     def __repr__(self) -> str:
         """String representation."""
         charts_str = ', '.join(self.all_charts)
         return (
-            f"FocusedAnalysisResult(\n"
+            f'FocusedAnalysisResult(\n'
             f"  stratum='{self._focused_stratum}',\n"
-            f"  analytical_sds={self.analytical_sds} ({self.analytical_sds_info['description']}),\n"
-            f"  charts=[{charts_str}],\n"
-            f"  n_obs={len(self.dataset)},\n"
-            f"  has_residuals={self.has_residuals},\n"
-            f"  has_effects={self.has_effects}\n"
-            f")"
+            f'  analytical_sds={self.analytical_sds} ({self.analytical_sds_info["description"]}),\n'
+            f'  charts=[{charts_str}],\n'
+            f'  n_obs={len(self.dataset)},\n'
+            f'  has_residuals={self.has_residuals},\n'
+            f'  has_effects={self.has_effects}\n'
+            f')'
         )

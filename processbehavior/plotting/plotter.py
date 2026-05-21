@@ -30,10 +30,15 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-_EFFECTS_CHART_TYPES = frozenset({
-    'Effects', 'MainEffects', 'TimeEffects',
-    'TimeInteraction', 'FactorInteraction',
-})
+_EFFECTS_CHART_TYPES = frozenset(
+    {
+        'Effects',
+        'MainEffects',
+        'TimeEffects',
+        'TimeInteraction',
+        'FactorInteraction',
+    }
+)
 
 _RESIDUAL_LABELS = {
     'R1': 'Within-Subgroup',
@@ -163,7 +168,10 @@ class Plotter:
         # Handle effects charts
         if chart in _EFFECTS_CHART_TYPES:
             return self._plot_effects_chart(
-                chart_type=chart, width=width, height=height, title=title,
+                chart_type=chart,
+                width=width,
+                height=height,
+                title=title,
             )
 
         # Validate
@@ -171,8 +179,8 @@ class Plotter:
             available = list(self.charts.keys())
             raise ChartNotAvailableError(
                 f"Chart '{chart}' not found.\n"
-                f"Available charts: {available}\n"
-                f"Hint: Use list_charts() to see all options",
+                f'Available charts: {available}\n'
+                f'Hint: Use list_charts() to see all options',
                 chart=chart,
                 available=available,
             )
@@ -181,10 +189,7 @@ class Plotter:
         charts_to_plot = self._resolve_charts(chart, facet)
 
         if not charts_to_plot:
-            raise PlotError(
-                "No charts available to plot.\n"
-                "Hint: Check result.charts to see available charts"
-            )
+            raise PlotError('No charts available to plot.\nHint: Check result.charts to see available charts')
 
         # Reorder stratified companion pairs for side-by-side layout
         charts_to_plot, forced_ncols = self._reorder_companion_pairs(charts_to_plot)
@@ -193,7 +198,11 @@ class Plotter:
 
         # Calculate height
         height = self._resolve_height(
-            height, width, aspect_ratio, len(charts_to_plot), ncols,
+            height,
+            width,
+            aspect_ratio,
+            len(charts_to_plot),
+            ncols,
         )
 
         # Build display options dict for reuse
@@ -211,8 +220,10 @@ class Plotter:
             fig = self._plot_single_chart(
                 list(charts_to_plot.values())[0],
                 list(charts_to_plot.keys())[0],
-                width=width, height=height,
-                xaxis_title=xaxis_title, yaxis_title=yaxis_title,
+                width=width,
+                height=height,
+                xaxis_title=xaxis_title,
+                yaxis_title=yaxis_title,
                 **display_opts,
             )
         else:
@@ -225,9 +236,12 @@ class Plotter:
                     per_type_shared = True
 
             fig = self._plot_faceted(
-                charts_to_plot, ncols=ncols,
-                width=width, height=height,
-                xaxis_title=xaxis_title, yaxis_title=yaxis_title,
+                charts_to_plot,
+                ncols=ncols,
+                width=width,
+                height=height,
+                xaxis_title=xaxis_title,
+                yaxis_title=yaxis_title,
                 shared_yaxis=effective_shared,
                 yaxis_padding=yaxis_padding,
                 vertical_spacing=vertical_spacing,
@@ -273,9 +287,13 @@ class Plotter:
         # Histogram delegation
         if metadata.get('chart_type') == 'Histogram':
             return self._plot_histogram(
-                chart_info, chart_name,
-                show_stats=show_stats, width=width, height=height,
-                xaxis_title=xaxis_title, yaxis_title=yaxis_title,
+                chart_info,
+                chart_name,
+                show_stats=show_stats,
+                width=width,
+                height=height,
+                xaxis_title=xaxis_title,
+                yaxis_title=yaxis_title,
             )
 
         fig = go.Figure()
@@ -287,11 +305,18 @@ class Plotter:
 
         spec = build_render_spec(chart_info, chart_name, x_col, center_key)
         ctx = build_render_context(
-            spec, chart_info, chart_name, self._theme, self.result,
+            spec,
+            chart_info,
+            chart_name,
+            self._theme,
+            self.result,
             highlight_signals=highlight_signals,
-            show_limits=show_limits, show_limit_values=show_limit_values,
-            show_zones=show_zones, show_rules=show_rules,
-            show_stats=show_stats, is_faceted=False,
+            show_limits=show_limits,
+            show_limit_values=show_limit_values,
+            show_zones=show_zones,
+            show_rules=show_rules,
+            show_stats=show_stats,
+            is_faceted=False,
         )
 
         # Render
@@ -314,9 +339,12 @@ class Plotter:
         legend_traces = [t for t in fig.data if getattr(t, 'showlegend', True) is not False]
         show_legend = len(legend_traces) > 1
         fig.update_layout(
-            width=width, height=height,
-            xaxis_title=x_label, yaxis_title=y_label,
-            hovermode='x unified', showlegend=show_legend,
+            width=width,
+            height=height,
+            xaxis_title=x_label,
+            yaxis_title=y_label,
+            hovermode='x unified',
+            showlegend=show_legend,
         )
 
         return fig
@@ -348,27 +376,25 @@ class Plotter:
         n_charts = len(charts)
         nrows = (n_charts + ncols - 1) // ncols
 
-        subplot_titles = [
-            self._generate_subplot_title(name, charts[name]) for name in charts
-        ]
+        subplot_titles = [self._generate_subplot_title(name, charts[name]) for name in charts]
 
         # Dynamic spacing
         v_spacing, h_spacing = self._calculate_spacing(
-            nrows, ncols, vertical_spacing,
+            nrows,
+            ncols,
+            vertical_spacing,
         )
 
         fig = make_subplots(
-            rows=nrows, cols=ncols,
+            rows=nrows,
+            cols=ncols,
             subplot_titles=subplot_titles,
             vertical_spacing=v_spacing,
             horizontal_spacing=h_spacing,
         )
 
         # Detect if all histograms
-        all_histograms = all(
-            ci.get('metadata', {}).get('chart_type') == 'Histogram'
-            for ci in charts.values()
-        )
+        all_histograms = all(ci.get('metadata', {}).get('chart_type') == 'Histogram' for ci in charts.values())
 
         # Determine axis labels
         first_info = next(iter(charts.values()))
@@ -395,7 +421,8 @@ class Plotter:
         if shared_yaxis:
             if all_histograms:
                 histogram_y_range = self._calculate_histogram_yrange(
-                    charts, histogram_bin_edges,
+                    charts,
+                    histogram_bin_edges,
                 )
             else:
                 global_y_range = self._calculate_global_yrange(charts, yaxis_padding)
@@ -410,8 +437,12 @@ class Plotter:
 
             if metadata.get('chart_type') == 'Histogram':
                 render_histogram(
-                    fig, chart_info, theme,
-                    show_stats=show_stats, row=row, col=col,
+                    fig,
+                    chart_info,
+                    theme,
+                    show_stats=show_stats,
+                    row=row,
+                    col=col,
                     shared_bin_edges=histogram_bin_edges,
                     is_faceted=True,
                 )
@@ -424,18 +455,30 @@ class Plotter:
 
             spec = build_render_spec(chart_info, chart_name, x_col, center_key)
             ctx = build_render_context(
-                spec, chart_info, chart_name, theme, self.result,
+                spec,
+                chart_info,
+                chart_name,
+                theme,
+                self.result,
                 highlight_signals=highlight_signals,
-                show_limits=show_limits, show_limit_values=show_limit_values,
-                show_zones=show_zones, show_rules=show_rules,
-                show_stats=show_stats, is_faceted=True,
+                show_limits=show_limits,
+                show_limit_values=show_limit_values,
+                show_zones=show_zones,
+                show_rules=show_rules,
+                show_stats=show_stats,
+                is_faceted=True,
             )
 
             render_control_chart(fig, ctx, row=row, col=col, nrows=nrows, ncols=ncols)
 
             # Time tick labels
             self._apply_time_tick_labels(
-                fig, data, metadata, row=row, col=col, ncols=ncols,
+                fig,
+                data,
+                metadata,
+                row=row,
+                col=col,
+                ncols=ncols,
             )
 
         # Layout
@@ -488,19 +531,21 @@ class Plotter:
             c = idx % ncols + 1
             # Bottom row: last full row, or incomplete last row
             is_bottom = (r == nrows) or (idx + ncols >= n_charts)
-            is_leftmost = (c == 1)
+            is_leftmost = c == 1
             panel_xcol = panel_x_cols.get(idx)
             show_x_title = is_bottom or panel_has_cell_band.get(idx, False)
             fig.update_xaxes(
                 title_text=x_label if show_x_title else None,
                 **axis_style_x_base,
-                **({"type": "category"} if panel_xcol else {}),
-                row=r, col=c,
+                **({'type': 'category'} if panel_xcol else {}),
+                row=r,
+                col=c,
             )
             fig.update_yaxes(
                 title_text=y_label if is_leftmost else None,
                 **axis_style_y,
-                row=r, col=c,
+                row=r,
+                col=c,
             )
 
         if histogram_y_range is not None:
@@ -516,10 +561,7 @@ class Plotter:
 
             chart_names_list = list(charts.keys())
             for _base_type, group_charts in type_groups.items():
-                if all(
-                    c.get('metadata', {}).get('chart_type') == 'Histogram'
-                    for c in group_charts.values()
-                ):
+                if all(c.get('metadata', {}).get('chart_type') == 'Histogram' for c in group_charts.values()):
                     continue
                 y_range = self._calculate_global_yrange(group_charts, yaxis_padding)
                 if y_range is not None:
@@ -528,7 +570,10 @@ class Plotter:
                         r = idx // ncols + 1
                         c = idx % ncols + 1
                         fig.update_yaxes(
-                            range=y_range, autorange=False, row=r, col=c,
+                            range=y_range,
+                            autorange=False,
+                            row=r,
+                            col=c,
                         )
 
         return fig
@@ -550,19 +595,25 @@ class Plotter:
         """Render standalone histogram with optional mean/std lines."""
         fig = go.Figure()
         render_histogram(
-            fig, chart_info, self._theme,
-            show_stats=show_stats, is_faceted=False,
+            fig,
+            chart_info,
+            self._theme,
+            show_stats=show_stats,
+            is_faceted=False,
         )
 
         metadata = chart_info.get('metadata', {})
         value_col = metadata.get('value_col')
         x_label = xaxis_title or value_col
-        y_label = yaxis_title or "Count"
+        y_label = yaxis_title or 'Count'
 
         fig.update_layout(
-            width=width, height=height,
-            xaxis_title=x_label, yaxis_title=y_label,
-            showlegend=False, bargap=0.05,
+            width=width,
+            height=height,
+            xaxis_title=x_label,
+            yaxis_title=y_label,
+            showlegend=False,
+            bargap=0.05,
         )
         return fig
 
@@ -601,71 +652,76 @@ class Plotter:
         if chart_type == 'Effects':
             if not self.result.has_effects:
                 raise ValidationError(
-                    "Effects not available for this analysis.\n"
-                    "Effects require factors in the analysis specification."
+                    'Effects not available for this analysis.\nEffects require factors in the analysis specification.'
                 )
             fig = create_main_effects_chart(
-                effects=effects, theme=theme, width=width, height=height,
+                effects=effects,
+                theme=theme,
+                width=width,
+                height=height,
             )
 
         elif chart_type == 'MainEffects':
             if not self.result.has_effects:
                 raise ValidationError(
-                    "Effects not available for this analysis.\n"
-                    "Effects require factors in the analysis specification."
+                    'Effects not available for this analysis.\nEffects require factors in the analysis specification.'
                 )
             fig = create_factor_effects_chart(
-                effects=effects, theme=theme, width=width, height=height or 500,
+                effects=effects,
+                theme=theme,
+                width=width,
+                height=height or 500,
             )
 
         elif chart_type == 'TimeEffects':
             if 'time' not in effects and not any(
-                isinstance(v, pd.DataFrame) and 'PT_ME' in v.columns
-                for v in effects.values()
+                isinstance(v, pd.DataFrame) and 'PT_ME' in v.columns for v in effects.values()
             ):
                 raise ValidationError(
-                    "Time effects not available for this analysis.\n"
-                    "This requires a time variable in the analysis."
+                    'Time effects not available for this analysis.\nThis requires a time variable in the analysis.'
                 )
             fig = create_time_effects_chart(
-                effects=effects, theme=theme, width=width, height=height,
+                effects=effects,
+                theme=theme,
+                width=width,
+                height=height,
             )
 
         elif chart_type == 'TimeInteraction':
             if 'factor_time' not in interactions:
                 raise ValidationError(
-                    "Time interaction not available for this analysis.\n"
-                    "This requires both factors and time variable."
+                    'Time interaction not available for this analysis.\nThis requires both factors and time variable.'
                 )
             factors = self.summary.get('grouping_vars', [])
             time_var = self.summary.get('time_var')
             if not factors or not time_var:
-                raise ValidationError(
-                    "Cannot create time interaction chart.\n"
-                    "Requires both factors and time variable."
-                )
+                raise ValidationError('Cannot create time interaction chart.\nRequires both factors and time variable.')
             fig = create_time_interaction_chart(
-                interactions=interactions, effects=effects,
-                factors=factors, time_var=time_var,
+                interactions=interactions,
+                effects=effects,
+                factors=factors,
+                time_var=time_var,
                 dataset=self.result.dataset,
-                theme=theme, width=width, height=height or 500,
+                theme=theme,
+                width=width,
+                height=height or 500,
             )
 
         elif chart_type == 'FactorInteraction':
             if 'factor_factor' not in interactions:
                 raise ValidationError(
-                    "Factor interaction not available for this analysis.\n"
-                    "This requires at least 2 factors in the analysis."
+                    'Factor interaction not available for this analysis.\n'
+                    'This requires at least 2 factors in the analysis.'
                 )
             factors = self.summary.get('grouping_vars', [])
             if len(factors) < 2:
-                raise ValidationError(
-                    f"Factor interaction requires at least 2 factors, "
-                    f"got {len(factors)}."
-                )
+                raise ValidationError(f'Factor interaction requires at least 2 factors, got {len(factors)}.')
             fig = create_factor_interaction_chart(
-                interactions=interactions, factors=factors,
-                theme=theme, width=width, height=height or 600,
+                interactions=interactions,
+                factors=factors,
+                theme=theme,
+                width=width,
+                height=height or 600,
             )
 
         else:
@@ -709,8 +765,7 @@ class Plotter:
         """
         if not self.result.has_effects:
             raise ValidationError(
-                "Effects not available for this analysis.\n"
-                "Effects require SDS >= 2 (multiple factor levels)."
+                'Effects not available for this analysis.\nEffects require SDS >= 2 (multiple factor levels).'
             )
 
         effects = self.result.effects
@@ -723,10 +778,7 @@ class Plotter:
         elif effect_type == 'time':
             fig = self._effects_time(effects, theme, width, height)
         else:
-            raise ValidationError(
-                f"Invalid effect_type: '{effect_type}'.\n"
-                f"Options: 'factor', 'time', 'all'"
-            )
+            raise ValidationError(f"Invalid effect_type: '{effect_type}'.\nOptions: 'factor', 'time', 'all'")
 
         fig = apply_theme(fig, theme)
         return ControlChartFigure(fig, self.result)
@@ -806,27 +858,23 @@ class Plotter:
     # =================================================================
 
     def _resolve_charts(
-        self, chart: str | None, facet: bool,
+        self,
+        chart: str | None,
+        facet: bool,
     ) -> dict:
         """Determine which charts to plot."""
         if chart:
             chart_info = self.charts[chart]
             if 'strata' in chart_info and chart_info['strata']:
                 charts = self._get_stratified_charts()
-                return {
-                    k: v for k, v in charts.items()
-                    if v.get('metadata', {}).get('original_chart') == chart
-                }
+                return {k: v for k, v in charts.items() if v.get('metadata', {}).get('original_chart') == chart}
             return {chart: chart_info}
 
         if facet or self.summary.get('is_stratified', False):
             return self._get_stratified_charts()
 
         # Standard charts
-        standard = {
-            k: v for k, v in self.charts.items()
-            if k in ['Xbar', 'S', 'X', 'mR', 'Histogram']
-        }
+        standard = {k: v for k, v in self.charts.items() if k in ['Xbar', 'S', 'X', 'mR', 'Histogram']}
         if not standard and len(self.charts) == 1:
             standard = dict(self.charts)
         return standard
@@ -852,7 +900,9 @@ class Plotter:
 
     @staticmethod
     def _calculate_spacing(
-        nrows: int, ncols: int, vertical_spacing: float,
+        nrows: int,
+        ncols: int,
+        vertical_spacing: float,
     ) -> tuple[float, float]:
         """Calculate dynamic subplot spacing."""
         if nrows > 1:
@@ -874,10 +924,7 @@ class Plotter:
 
     def _get_value_column(self, chart_info: ChartPayload, chart_name: str) -> str:
         if 'metadata' not in chart_info:
-            raise PlotError(
-                f"Chart '{chart_name}' missing metadata. "
-                f"All charts must have metadata with 'value_col'."
-            )
+            raise PlotError(f"Chart '{chart_name}' missing metadata. All charts must have metadata with 'value_col'.")
         return chart_info['metadata']['value_col']
 
     @staticmethod
@@ -955,8 +1002,17 @@ class Plotter:
         # For explicit by=[single factor] in Xbar/S paths, the grouping
         # column may be the original factor name (e.g., "FACTOR 1").
         metric_cols = {
-            'xbar', 's', 'mr', 'center', 'lpl', 'upl',
-            'beyond_limits', 'obs_id', 'groups', 'n', 'N',
+            'xbar',
+            's',
+            'mr',
+            'center',
+            'lpl',
+            'upl',
+            'beyond_limits',
+            'obs_id',
+            'groups',
+            'n',
+            'N',
         }
         for col in data.columns:
             if col in metric_cols:
@@ -987,9 +1043,9 @@ class Plotter:
                     stratify_col = stratify_by[0]
                 elif len(stratify_by) > 1:
                     combined_data = combined_data.copy()
-                    combined_data['_stratify_key'] = combined_data[
-                        stratify_by
-                    ].apply(lambda row: encode_rsg(tuple(row)), axis=1)
+                    combined_data['_stratify_key'] = combined_data[stratify_by].apply(
+                        lambda row: encode_rsg(tuple(row)), axis=1
+                    )
                     stratify_col = '_stratify_key'
                 else:
                     stratify_col = None
@@ -1002,12 +1058,10 @@ class Plotter:
 
                         stratum_str = encode_rsg(stratum)
                         stratum_display = str(stratum)
-                        expanded_name = f"{name}_{stratum_str}"
+                        expanded_name = f'{name}_{stratum_str}'
 
                         all_lb = metadata.get('lane_boundaries')
-                        stratum_lb = (
-                            all_lb.get(stratum) if isinstance(all_lb, dict) else None
-                        )
+                        stratum_lb = all_lb.get(stratum) if isinstance(all_lb, dict) else None
 
                         stratified[expanded_name] = {
                             'data': stratum_data,
@@ -1024,8 +1078,7 @@ class Plotter:
                     stratified[name] = chart_info
 
             elif '_' in str(name) or any(
-                key in chart_info.get('metadata', {})
-                for key in ['stratum', 'level', 'group']
+                key in chart_info.get('metadata', {}) for key in ['stratum', 'level', 'group']
             ):
                 stratified[name] = chart_info
 
@@ -1087,7 +1140,8 @@ class Plotter:
         # sub-cell structure within each stratum is legible.
         if block_edges and not is_categorical:
             tick_positions, _ = self._per_block_time_ticks(
-                block_edges, per_block_ticks,
+                block_edges,
+                per_block_ticks,
             )
             tick_positions = [p for p in tick_positions if 0 <= p < n]
             tick_labels = data[time_var].iloc[tick_positions].astype(str).tolist()
@@ -1108,8 +1162,12 @@ class Plotter:
                 **update_kwargs,
             )
             self._add_cell_label_band(
-                fig, block_edges, cell_labels,
-                row=row, col=col, ncols=ncols,
+                fig,
+                block_edges,
+                cell_labels,
+                row=row,
+                col=col,
+                ncols=ncols,
             )
             return
 
@@ -1187,10 +1245,7 @@ class Plotter:
                 block_positions = list(range(start, end))
             else:
                 step = (block_n - 1) / (per_block_ticks - 1)
-                block_positions = [
-                    int(round(start + step * k))
-                    for k in range(per_block_ticks)
-                ]
+                block_positions = [int(round(start + step * k)) for k in range(per_block_ticks)]
                 block_positions[-1] = end - 1  # ensure last point exact
                 block_positions = sorted(set(block_positions))
             for p in block_positions:
@@ -1231,16 +1286,11 @@ class Plotter:
         anchors to the panel's y-domain so the band always sits just
         below that panel's plot area.
         """
-        midpoints = [
-            (block_edges[i] + block_edges[i + 1]) // 2
-            for i in range(len(block_edges) - 1)
-        ]
+        midpoints = [(block_edges[i] + block_edges[i + 1]) // 2 for i in range(len(block_edges) - 1)]
         # Crowd-thin: if more than 25 cells, show every Nth label.
         n_labels = len(midpoints)
         stride = max(1, n_labels // 25 + (1 if n_labels % 25 else 0))
-        font_size = getattr(self._theme, 'annotation_font_size', 12) if hasattr(
-            self, '_theme'
-        ) else 12
+        font_size = getattr(self._theme, 'annotation_font_size', 12) if hasattr(self, '_theme') else 12
 
         # Position the band below the axis title. The y offset is in
         # whatever the yref's axis system uses: 'paper' for single
@@ -1312,7 +1362,9 @@ class Plotter:
 
     @staticmethod
     def _thin_ticks_per_block(
-        block_edges: list[int], n: int, max_ticks: int,
+        block_edges: list[int],
+        n: int,
+        max_ticks: int,
     ) -> list[int]:
         """Select evenly-spaced tick positions independently within each block.
 
@@ -1345,7 +1397,9 @@ class Plotter:
     # ---- Y-range / histogram helpers ----
 
     def _calculate_global_yrange(
-        self, charts: dict, padding: float = 0.05,
+        self,
+        charts: dict,
+        padding: float = 0.05,
     ) -> list[float]:
         """Global y-axis range across all charts."""
         global_min = float('inf')
@@ -1397,6 +1451,7 @@ class Plotter:
         # Auto-bin via Sturges' rule when bins is None
         if n_bins is None:
             import math
+
             n_bins = max(5, int(math.ceil(1 + math.log2(total_n)))) if total_n > 0 else 10
 
         if global_min == float('inf') or global_max == float('-inf'):
@@ -1433,7 +1488,7 @@ class Plotter:
     @staticmethod
     def _format_chart_label(chart_type: str) -> str:
         """Append ' Chart' unless chart_type already ends with 'Chart'."""
-        return chart_type if chart_type.endswith('Chart') else f"{chart_type} Chart"
+        return chart_type if chart_type.endswith('Chart') else f'{chart_type} Chart'
 
     def _generate_title(self, chart_name: str, chart_info: ChartPayload | None = None) -> str:
         response_var = self.summary.get('response_var', '')
@@ -1448,47 +1503,52 @@ class Plotter:
         if residual_type:
             recentered = metadata.get('recentered', False)
             label = _RESIDUAL_LABELS.get(residual_type, residual_type)
-            suffix = f"{residual_type} ({label})"
+            suffix = f'{residual_type} ({label})'
             if recentered:
-                suffix += " Recentered"
-            parts.append(f"of {suffix}")
+                suffix += ' Recentered'
+            parts.append(f'of {suffix}')
         elif response_var:
-            parts.append(f"of {response_var}")
+            parts.append(f'of {response_var}')
 
         if grouping_vars and len(grouping_vars) == 1:
-            parts.append(f"by {grouping_vars[0]}")
+            parts.append(f'by {grouping_vars[0]}')
         if '_' in chart_name and chart_name not in ['Xbar', 'S', 'X']:
             stratum = self._extract_stratum_name(chart_name)
             if stratum:
-                parts.append(f"- {stratum}")
+                parts.append(f'- {stratum}')
         return ' '.join(parts)
 
     def _generate_subplot_title(
-        self, chart_name: str, chart_info: ChartPayload | None = None,
+        self,
+        chart_name: str,
+        chart_info: ChartPayload | None = None,
     ) -> str:
         chart_type = self._get_chart_type_display(chart_name)
         if chart_info is not None:
             sd = chart_info.get('metadata', {}).get('stratum_display')
             if sd:
-                return f"{chart_type} {sd}"
+                return f'{chart_type} {sd}'
         if '_' in chart_name:
             stratum = self._extract_stratum_name(chart_name)
             if stratum:
-                return f"{chart_type} {stratum}"
+                return f'{chart_type} {stratum}'
         return chart_type
 
     @staticmethod
     def _get_chart_type_display(chart_name: str) -> str:
         display_names = {
-            'Xbar': 'X\u0304', 'S': 'S', 'X': 'Individuals Chart',
-            'mR': 'mR', 'Histogram': 'Histogram',
+            'Xbar': 'X\u0304',
+            'S': 'S',
+            'X': 'Individuals Chart',
+            'mR': 'mR',
+            'Histogram': 'Histogram',
         }
         if chart_name in display_names:
             return display_names[chart_name]
         for key, display in display_names.items():
             if chart_name.startswith(key + '_'):
                 return display
-        raise PlotError(f"Unknown chart type: {chart_name}")
+        raise PlotError(f'Unknown chart type: {chart_name}')
 
     @staticmethod
     def _extract_stratum_name(chart_name: str) -> str | None:
@@ -1496,13 +1556,15 @@ class Plotter:
         result = chart_name
         for prefix in prefixes:
             if result.startswith(prefix):
-                result = result[len(prefix):]
+                result = result[len(prefix) :]
                 break
         result = result.replace('_', ' ')
         return result if result != chart_name else None
 
     def _get_xaxis_label(
-        self, x_col: str | None = None, chart_name: str | None = None,
+        self,
+        x_col: str | None = None,
+        chart_name: str | None = None,
     ) -> str:
         if x_col in ('subgroup', 'rsg', 'group'):
             base_type = chart_name.split('_')[0] if chart_name else ''
@@ -1553,12 +1615,12 @@ class Plotter:
 
         n_plots = len(factor_effects) + (1 if time_effects is not None else 0)
         if n_plots == 0:
-            raise ValidationError("No effects data found to plot.")
+            raise ValidationError('No effects data found to plot.')
 
         fig = _ms(
-            rows=1, cols=n_plots,
-            subplot_titles=[n for n, _ in factor_effects]
-            + (['Time Effects'] if time_effects is not None else []),
+            rows=1,
+            cols=n_plots,
+            subplot_titles=[n for n, _ in factor_effects] + (['Time Effects'] if time_effects is not None else []),
             horizontal_spacing=0.1,
         )
         c = 1
@@ -1566,10 +1628,14 @@ class Plotter:
             fc = data.columns[0]
             fig.add_trace(
                 go.Bar(
-                    x=data[fc].astype(str), y=data['Main_Effect'],
-                    name=name, marker_color=theme.data_color, showlegend=False,
+                    x=data[fc].astype(str),
+                    y=data['Main_Effect'],
+                    name=name,
+                    marker_color=theme.data_color,
+                    showlegend=False,
                 ),
-                row=1, col=c,
+                row=1,
+                col=c,
             )
             fig.update_xaxes(title_text=fc, row=1, col=c)
             fig.update_yaxes(title_text='Main Effect', row=1, col=c)
@@ -1579,10 +1645,14 @@ class Plotter:
             tc = time_effects.columns[0]
             fig.add_trace(
                 go.Bar(
-                    x=time_effects[tc].astype(str), y=time_effects['PT_ME'],
-                    name='Time', marker_color=theme.center_color, showlegend=False,
+                    x=time_effects[tc].astype(str),
+                    y=time_effects['PT_ME'],
+                    name='Time',
+                    marker_color=theme.center_color,
+                    showlegend=False,
                 ),
-                row=1, col=c,
+                row=1,
+                col=c,
             )
             fig.update_xaxes(title_text=tc, row=1, col=c)
             fig.update_yaxes(title_text='Time Effect', row=1, col=c)
@@ -1595,29 +1665,35 @@ class Plotter:
         from plotly.subplots import make_subplots as _ms
 
         factor_effects = [
-            (n, d) for n, d in effects.items()
-            if isinstance(d, pd.DataFrame) and 'Main_Effect' in d.columns
+            (n, d) for n, d in effects.items() if isinstance(d, pd.DataFrame) and 'Main_Effect' in d.columns
         ]
         if not factor_effects:
-            raise ValidationError("No factor effects found.")
+            raise ValidationError('No factor effects found.')
 
         if len(factor_effects) == 1:
             name, data = factor_effects[0]
             fc = data.columns[0]
             fig = go.Figure()
-            fig.add_trace(go.Bar(
-                x=data[fc].astype(str), y=data['Main_Effect'],
-                name='Effect', marker_color=theme.data_color,
-            ))
+            fig.add_trace(
+                go.Bar(
+                    x=data[fc].astype(str),
+                    y=data['Main_Effect'],
+                    name='Effect',
+                    marker_color=theme.data_color,
+                )
+            )
             fig.add_hline(y=0, line_dash='dash', line_color=theme.center_color)
             fig.update_layout(
                 title=f'Factor Main Effects: {name}',
-                xaxis_title=fc, yaxis_title='Main Effect',
-                width=width, height=height,
+                xaxis_title=fc,
+                yaxis_title='Main Effect',
+                width=width,
+                height=height,
             )
         else:
             fig = _ms(
-                rows=1, cols=len(factor_effects),
+                rows=1,
+                cols=len(factor_effects),
                 subplot_titles=[n for n, _ in factor_effects],
                 horizontal_spacing=0.1,
             )
@@ -1625,15 +1701,21 @@ class Plotter:
                 fc = data.columns[0]
                 fig.add_trace(
                     go.Bar(
-                        x=data[fc].astype(str), y=data['Main_Effect'],
-                        name=name, marker_color=theme.data_color, showlegend=False,
+                        x=data[fc].astype(str),
+                        y=data['Main_Effect'],
+                        name=name,
+                        marker_color=theme.data_color,
+                        showlegend=False,
                     ),
-                    row=1, col=c,
+                    row=1,
+                    col=c,
                 )
                 fig.update_xaxes(title_text=fc, row=1, col=c)
                 fig.update_yaxes(title_text='Main Effect', row=1, col=c)
             fig.update_layout(
-                title='Factor Main Effects', width=width, height=height,
+                title='Factor Main Effects',
+                width=width,
+                height=height,
             )
         return fig
 
@@ -1645,20 +1727,23 @@ class Plotter:
                 time_effects = data
                 break
         if time_effects is None:
-            raise ValidationError(
-                "Time effects not found.\n"
-                "Time effects require time_var in analysis specification."
-            )
+            raise ValidationError('Time effects not found.\nTime effects require time_var in analysis specification.')
         tc = time_effects.columns[0]
         fig = go.Figure()
-        fig.add_trace(go.Bar(
-            x=time_effects[tc].astype(str), y=time_effects['PT_ME'],
-            name='Time Effect', marker_color=theme.center_color,
-        ))
+        fig.add_trace(
+            go.Bar(
+                x=time_effects[tc].astype(str),
+                y=time_effects['PT_ME'],
+                name='Time Effect',
+                marker_color=theme.center_color,
+            )
+        )
         fig.add_hline(y=0, line_dash='dash', line_color=theme.data_color)
         fig.update_layout(
             title='Time Main Effects',
-            xaxis_title=tc, yaxis_title='Time Effect (PT_ME)',
-            width=width, height=height,
+            xaxis_title=tc,
+            yaxis_title='Time Effect (PT_ME)',
+            width=width,
+            height=height,
         )
         return fig

@@ -18,36 +18,32 @@ from processbehavior.exceptions import ValidationError
 # Fixtures
 # =============================================================================
 
+
 @pytest.fixture
 def sds1_study():
     """SDS1 study with constant subgroup sizes (n=3 per cell)."""
     df = synthetic.make_sds(1, K1=3, K2=2, T=4, n_min=3, n_max=3, seed=42)
-    return ProcessBehavior(df).formulate(
-        response='y', time='time', factors=['factor 1', 'factor 2']
-    )
+    return ProcessBehavior(df).formulate(response='y', time='time', factors=['factor 1', 'factor 2'])
 
 
 @pytest.fixture
 def sds1_varying_n_study():
     """SDS1 study with VARYING subgroup sizes (n_min=2, n_max=5)."""
     df = synthetic.make_sds(1, K1=3, K2=2, T=4, n_min=2, n_max=5, seed=42)
-    return ProcessBehavior(df).formulate(
-        response='y', time='time', factors=['factor 1', 'factor 2']
-    )
+    return ProcessBehavior(df).formulate(response='y', time='time', factors=['factor 1', 'factor 2'])
 
 
 @pytest.fixture
 def xmr_study():
     """XmR-only study (time series, no factors)."""
     df = synthetic.make_sds(4, T=20, seed=42)
-    return ProcessBehavior(df).formulate(
-        response='y', time='time', factors=['factor 1', 'factor 2']
-    )
+    return ProcessBehavior(df).formulate(response='y', time='time', factors=['factor 1', 'factor 2'])
 
 
 # =============================================================================
 # Default Behavior Unchanged
 # =============================================================================
+
 
 class TestDefaultBehavior:
     """Verify n_sigma=3.0, n_mode="actual" produces identical results."""
@@ -55,9 +51,7 @@ class TestDefaultBehavior:
     def test_explicit_defaults_match_omitted(self, sds1_study):
         """Passing n_sigma=3.0, n_mode='actual' explicitly is identical to omitting."""
         result_default = sds1_study.execute(chart='Xbar', companion=True)
-        result_explicit = sds1_study.execute(
-            chart='Xbar', companion=True, n_sigma=3.0, n_mode="actual"
-        )
+        result_explicit = sds1_study.execute(chart='Xbar', companion=True, n_sigma=3.0, n_mode='actual')
 
         # Xbar data identical
         pd.testing.assert_frame_equal(
@@ -98,6 +92,7 @@ class TestDefaultBehavior:
 # =============================================================================
 # n_sigma Affects Limit Width
 # =============================================================================
+
 
 class TestNSigmaWidth:
     """n_sigma controls how wide/narrow the limits are."""
@@ -167,33 +162,32 @@ class TestNSigmaWidth:
 # n_mode="average" Makes Limits Constant
 # =============================================================================
 
+
 class TestNModeAverage:
     """n_mode='average' uses mean N-bar for constant limits."""
 
     def test_average_mode_constant_limits(self, sds1_varying_n_study):
         """With n_mode='average', all rows have identical lpl/upl."""
-        result = sds1_varying_n_study.execute(chart='Xbar', n_mode="average")
+        result = sds1_varying_n_study.execute(chart='Xbar', n_mode='average')
         data = result.charts['Xbar']['data']
 
         # All lpl values should be identical
-        assert data['lpl'].nunique() == 1, f"Expected 1 unique lpl, got {data['lpl'].nunique()}"
+        assert data['lpl'].nunique() == 1, f'Expected 1 unique lpl, got {data["lpl"].nunique()}'
         # All upl values should be identical
-        assert data['upl'].nunique() == 1, f"Expected 1 unique upl, got {data['upl'].nunique()}"
+        assert data['upl'].nunique() == 1, f'Expected 1 unique upl, got {data["upl"].nunique()}'
 
     def test_average_mode_scalar_statistics(self, sds1_varying_n_study):
         """With n_mode='average', statistics show scalar values (not None)."""
-        result = sds1_varying_n_study.execute(chart='Xbar', n_mode="average")
+        result = sds1_varying_n_study.execute(chart='Xbar', n_mode='average')
         stats = result.charts['Xbar']['statistics']
 
-        assert isinstance(stats['lpl'], numbers.Number), f"Expected numeric lpl, got {stats['lpl']!r}"
-        assert isinstance(stats['upl'], numbers.Number), f"Expected numeric upl, got {stats['upl']!r}"
-        assert isinstance(stats['N'], numbers.Number), f"Expected numeric N, got {stats['N']!r}"
+        assert isinstance(stats['lpl'], numbers.Number), f'Expected numeric lpl, got {stats["lpl"]!r}'
+        assert isinstance(stats['upl'], numbers.Number), f'Expected numeric upl, got {stats["upl"]!r}'
+        assert isinstance(stats['N'], numbers.Number), f'Expected numeric N, got {stats["N"]!r}'
 
     def test_average_mode_s_chart_constant(self, sds1_varying_n_study):
         """S chart also has constant limits with n_mode='average'."""
-        result = sds1_varying_n_study.execute(
-            chart='Xbar', companion=True, n_mode="average"
-        )
+        result = sds1_varying_n_study.execute(chart='Xbar', companion=True, n_mode='average')
         s_data = result.charts['S']['data']
 
         assert s_data['lpl'].nunique() == 1
@@ -201,9 +195,7 @@ class TestNModeAverage:
 
     def test_average_mode_metadata_includes_n_avg(self, sds1_varying_n_study):
         """Metadata includes n_avg when n_mode='average'."""
-        result = sds1_varying_n_study.execute(
-            chart='Xbar', companion=True, n_mode="average"
-        )
+        result = sds1_varying_n_study.execute(chart='Xbar', companion=True, n_mode='average')
         xbar_meta = result.charts['Xbar']['metadata']
         s_meta = result.charts['S']['metadata']
 
@@ -219,12 +211,13 @@ class TestNModeAverage:
 # n_mode="average" Uses Correct N-bar
 # =============================================================================
 
+
 class TestNAvgCorrectness:
     """Verify that the computed N-bar matches the actual mean subgroup size."""
 
     def test_n_avg_value(self, sds1_varying_n_study):
         """n_avg in metadata should equal the mean of subgroup sizes."""
-        result = sds1_varying_n_study.execute(chart='Xbar', n_mode="average")
+        result = sds1_varying_n_study.execute(chart='Xbar', n_mode='average')
         meta = result.charts['Xbar']['metadata']
 
         # Compute expected n_avg from the study's dataset
@@ -244,35 +237,36 @@ class TestNAvgCorrectness:
 # Validation Tests
 # =============================================================================
 
+
 class TestValidation:
     """Verify invalid inputs are rejected with clear errors."""
 
     def test_n_sigma_zero_raises(self, sds1_study):
-        with pytest.raises(ValidationError, match="n_sigma must be a finite number > 0"):
+        with pytest.raises(ValidationError, match='n_sigma must be a finite number > 0'):
             sds1_study.execute(chart='Xbar', n_sigma=0)
 
     def test_n_sigma_negative_raises(self, sds1_study):
-        with pytest.raises(ValidationError, match="n_sigma must be a finite number > 0"):
+        with pytest.raises(ValidationError, match='n_sigma must be a finite number > 0'):
             sds1_study.execute(chart='Xbar', n_sigma=-1)
 
     def test_n_sigma_inf_raises(self, sds1_study):
-        with pytest.raises(ValidationError, match="n_sigma must be a finite number > 0"):
+        with pytest.raises(ValidationError, match='n_sigma must be a finite number > 0'):
             sds1_study.execute(chart='Xbar', n_sigma=float('inf'))
 
     def test_n_mode_invalid_raises(self, sds1_study):
         with pytest.raises(ValidationError, match="n_mode must be 'actual' or 'average'"):
-            sds1_study.execute(chart='Xbar', n_mode="foo")
+            sds1_study.execute(chart='Xbar', n_mode='foo')
 
     def test_xmr_n_sigma_raises(self, xmr_study):
-        with pytest.raises(ValidationError, match="only supported for Xbar/S"):
+        with pytest.raises(ValidationError, match='only supported for Xbar/S'):
             xmr_study.execute(chart='X', by=[], n_sigma=2.0)
 
     def test_xmr_n_mode_raises(self, xmr_study):
-        with pytest.raises(ValidationError, match="only supported for Xbar/S"):
-            xmr_study.execute(chart='X', by=[], n_mode="average")
+        with pytest.raises(ValidationError, match='only supported for Xbar/S'):
+            xmr_study.execute(chart='X', by=[], n_mode='average')
 
     def test_histogram_n_sigma_raises(self, sds1_study):
-        with pytest.raises(ValidationError, match="only supported for Xbar/S"):
+        with pytest.raises(ValidationError, match='only supported for Xbar/S'):
             sds1_study.execute(chart='Histogram', n_sigma=2.0)
 
     def test_default_values_no_validation_error_on_non_xbar(self, xmr_study):
@@ -284,6 +278,7 @@ class TestValidation:
 # =============================================================================
 # Companion Consistency
 # =============================================================================
+
 
 class TestCompanionConsistency:
     """Companion Xbar+S should both use the same n_sigma and n_mode."""
@@ -299,9 +294,7 @@ class TestCompanionConsistency:
 
     def test_companion_n_mode_applied_to_both(self, sds1_varying_n_study):
         """Both Xbar and S use n_mode='average'."""
-        result = sds1_varying_n_study.execute(
-            chart='Xbar', companion=True, n_mode="average"
-        )
+        result = sds1_varying_n_study.execute(chart='Xbar', companion=True, n_mode='average')
         xbar_meta = result.charts['Xbar']['metadata']
         s_meta = result.charts['S']['metadata']
 
@@ -310,9 +303,7 @@ class TestCompanionConsistency:
 
     def test_companion_combined_options(self, sds1_varying_n_study):
         """Both n_sigma and n_mode applied together in companion mode."""
-        result = sds1_varying_n_study.execute(
-            chart='Xbar', companion=True, n_sigma=2.5, n_mode="average"
-        )
+        result = sds1_varying_n_study.execute(chart='Xbar', companion=True, n_sigma=2.5, n_mode='average')
 
         xbar_data = result.charts['Xbar']['data']
         s_data = result.charts['S']['data']

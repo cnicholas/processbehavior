@@ -45,9 +45,9 @@ def _make_sds1_study():
     df = make_sds(1, K1=2, K2=2, T=4, n=3, seed=42)
     pb = ProcessBehavior(df)
     return pb.formulate(
-        response="y",
-        factors=["factor 1", "factor 2"],
-        time="time",
+        response='y',
+        factors=['factor 1', 'factor 2'],
+        time='time',
     )
 
 
@@ -59,8 +59,8 @@ def _make_no_r2_study():
     pb = ProcessBehavior(df)
     # Omit time → has_time=False → no VAS residuals
     return pb.formulate(
-        response="y",
-        factors=["factor 1", "factor 2"],
+        response='y',
+        factors=['factor 1', 'factor 2'],
     )
 
 
@@ -106,31 +106,31 @@ class TestSpecLimits:
 
     def test_no_limits_raises(self):
         """No spec limits at all is an error."""
-        with pytest.raises(ValidationError, match="At least one"):
+        with pytest.raises(ValidationError, match='At least one'):
             SpecLimits()
 
     def test_lsl_ge_usl_raises(self):
         """LSL >= USL is an error."""
-        with pytest.raises(ValidationError, match="LSL.*must be less than USL"):
+        with pytest.raises(ValidationError, match='LSL.*must be less than USL'):
             SpecLimits(usl=5, lsl=10)
 
     def test_lsl_eq_usl_raises(self):
         """LSL == USL is an error."""
-        with pytest.raises(ValidationError, match="LSL.*must be less than USL"):
+        with pytest.raises(ValidationError, match='LSL.*must be less than USL'):
             SpecLimits(usl=5, lsl=5)
 
     def test_target_outside_range_raises(self):
         """Target outside [LSL, USL] is an error (two-sided)."""
-        with pytest.raises(ValidationError, match="Target.*must be between"):
+        with pytest.raises(ValidationError, match='Target.*must be between'):
             SpecLimits(usl=10, lsl=5, target=11)
 
-        with pytest.raises(ValidationError, match="Target.*must be between"):
+        with pytest.raises(ValidationError, match='Target.*must be between'):
             SpecLimits(usl=10, lsl=5, target=4)
 
     def test_target_with_one_sided_permissive(self):
         """Target with one-sided spec — no error in v1."""
         SpecLimits(usl=10, target=12)  # target > usl is fine for one-sided
-        SpecLimits(lsl=5, target=3)    # target < lsl is fine for one-sided
+        SpecLimits(lsl=5, target=3)  # target < lsl is fine for one-sided
 
     def test_frozen(self):
         """SpecLimits is immutable."""
@@ -188,66 +188,66 @@ class TestComputeCapabilityIndices:
         specs = SpecLimits(usl=106, lsl=94, target=100)
         result = compute_capability_indices(y_bar=100.0, sigma_hat=2.0, specs=specs)
 
-        assert result["pp"] == pytest.approx((106 - 94) / (6 * 2.0))  # 1.0
-        assert result["ppk_lower"] == pytest.approx((100 - 94) / (3 * 2.0))  # 1.0
-        assert result["ppk_upper"] == pytest.approx((106 - 100) / (3 * 2.0))  # 1.0
-        assert result["ppk"] == pytest.approx(1.0)
+        assert result['pp'] == pytest.approx((106 - 94) / (6 * 2.0))  # 1.0
+        assert result['ppk_lower'] == pytest.approx((100 - 94) / (3 * 2.0))  # 1.0
+        assert result['ppk_upper'] == pytest.approx((106 - 100) / (3 * 2.0))  # 1.0
+        assert result['ppk'] == pytest.approx(1.0)
 
     def test_two_sided_shifted(self):
         """Process shifted toward USL."""
         specs = SpecLimits(usl=106, lsl=94)
         result = compute_capability_indices(y_bar=102.0, sigma_hat=2.0, specs=specs)
 
-        assert result["pp"] == pytest.approx(1.0)
-        assert result["ppk_lower"] == pytest.approx((102 - 94) / 6)  # 1.333
-        assert result["ppk_upper"] == pytest.approx((106 - 102) / 6)  # 0.667
-        assert result["ppk"] == pytest.approx(0.667, rel=0.01)
+        assert result['pp'] == pytest.approx(1.0)
+        assert result['ppk_lower'] == pytest.approx((102 - 94) / 6)  # 1.333
+        assert result['ppk_upper'] == pytest.approx((106 - 102) / 6)  # 0.667
+        assert result['ppk'] == pytest.approx(0.667, rel=0.01)
 
     def test_usl_only(self):
         """USL-only → pp=None, ppk=ppk_upper, ppk_lower=None."""
         specs = SpecLimits(usl=106)
         result = compute_capability_indices(y_bar=100.0, sigma_hat=2.0, specs=specs)
 
-        assert result["pp"] is None
-        assert result["ppk_lower"] is None
-        assert result["ppk_upper"] == pytest.approx((106 - 100) / 6)
-        assert result["ppk"] == result["ppk_upper"]
+        assert result['pp'] is None
+        assert result['ppk_lower'] is None
+        assert result['ppk_upper'] == pytest.approx((106 - 100) / 6)
+        assert result['ppk'] == result['ppk_upper']
 
     def test_lsl_only(self):
         """LSL-only → pp=None, ppk=ppk_lower, ppk_upper=None."""
         specs = SpecLimits(lsl=94)
         result = compute_capability_indices(y_bar=100.0, sigma_hat=2.0, specs=specs)
 
-        assert result["pp"] is None
-        assert result["ppk_upper"] is None
-        assert result["ppk_lower"] == pytest.approx((100 - 94) / 6)
-        assert result["ppk"] == result["ppk_lower"]
+        assert result['pp'] is None
+        assert result['ppk_upper'] is None
+        assert result['ppk_lower'] == pytest.approx((100 - 94) / 6)
+        assert result['ppk'] == result['ppk_lower']
 
     def test_sigma_zero(self):
         """σ=0 → indices are inf, no crash."""
         specs = SpecLimits(usl=106, lsl=94)
         result = compute_capability_indices(y_bar=100.0, sigma_hat=0.0, specs=specs)
 
-        assert result["pp"] == float("inf")
-        assert result["ppk"] == float("inf")
-        assert result["z_lower"] == float("inf")
-        assert result["z_upper"] == float("inf")
+        assert result['pp'] == float('inf')
+        assert result['ppk'] == float('inf')
+        assert result['z_lower'] == float('inf')
+        assert result['z_upper'] == float('inf')
 
     def test_z_scores(self):
         """Z-scores: z_lower = (Ȳ-LSL)/σ̂, z_upper = (USL-Ȳ)/σ̂."""
         specs = SpecLimits(usl=106, lsl=94)
         result = compute_capability_indices(y_bar=100.0, sigma_hat=2.0, specs=specs)
 
-        assert result["z_lower"] == pytest.approx(3.0)
-        assert result["z_upper"] == pytest.approx(3.0)
+        assert result['z_lower'] == pytest.approx(3.0)
+        assert result['z_upper'] == pytest.approx(3.0)
 
     def test_z_scores_equal_3_times_ppk(self):
         """Algebraic consistency: z = 3 × ppk."""
         specs = SpecLimits(usl=110, lsl=90)
         result = compute_capability_indices(y_bar=103.0, sigma_hat=2.5, specs=specs)
 
-        assert result["z_lower"] == pytest.approx(3 * result["ppk_lower"])
-        assert result["z_upper"] == pytest.approx(3 * result["ppk_upper"])
+        assert result['z_lower'] == pytest.approx(3 * result['ppk_lower'])
+        assert result['z_upper'] == pytest.approx(3 * result['ppk_upper'])
 
 
 class TestComputePctOutside:
@@ -259,12 +259,12 @@ class TestComputePctOutside:
         specs = SpecLimits(usl=8, lsl=3)
         result = compute_pct_outside(values, specs)
 
-        assert result["n_below_lsl"] == 2
-        assert result["n_above_usl"] == 1
-        assert result["n_outside"] == 3
-        assert result["pct_below_lsl"] == pytest.approx(20.0)
-        assert result["pct_above_usl"] == pytest.approx(10.0)
-        assert result["pct_outside"] == pytest.approx(30.0)
+        assert result['n_below_lsl'] == 2
+        assert result['n_above_usl'] == 1
+        assert result['n_outside'] == 3
+        assert result['pct_below_lsl'] == pytest.approx(20.0)
+        assert result['pct_above_usl'] == pytest.approx(10.0)
+        assert result['pct_outside'] == pytest.approx(30.0)
 
     def test_none_outside(self):
         """All within limits."""
@@ -272,8 +272,8 @@ class TestComputePctOutside:
         specs = SpecLimits(usl=10, lsl=4)
         result = compute_pct_outside(values, specs)
 
-        assert result["n_outside"] == 0
-        assert result["pct_outside"] == pytest.approx(0.0)
+        assert result['n_outside'] == 0
+        assert result['pct_outside'] == pytest.approx(0.0)
 
     def test_usl_only(self):
         """USL-only: n_below_lsl and pct_below_lsl are None."""
@@ -281,10 +281,10 @@ class TestComputePctOutside:
         specs = SpecLimits(usl=10)
         result = compute_pct_outside(values, specs)
 
-        assert result["n_below_lsl"] is None
-        assert result["pct_below_lsl"] is None
-        assert result["n_above_usl"] == 1
-        assert result["n_outside"] == 1
+        assert result['n_below_lsl'] is None
+        assert result['pct_below_lsl'] is None
+        assert result['n_above_usl'] == 1
+        assert result['n_outside'] == 1
 
     def test_lsl_only(self):
         """LSL-only: n_above_usl and pct_above_usl are None."""
@@ -292,10 +292,10 @@ class TestComputePctOutside:
         specs = SpecLimits(lsl=3)
         result = compute_pct_outside(values, specs)
 
-        assert result["n_above_usl"] is None
-        assert result["pct_above_usl"] is None
-        assert result["n_below_lsl"] == 1
-        assert result["n_outside"] == 1
+        assert result['n_above_usl'] is None
+        assert result['pct_above_usl'] is None
+        assert result['n_below_lsl'] == 1
+        assert result['n_outside'] == 1
 
     def test_at_boundary_not_outside(self):
         """Values exactly at spec limits are NOT outside (strict </>)."""
@@ -303,7 +303,7 @@ class TestComputePctOutside:
         specs = SpecLimits(usl=10, lsl=5)
         result = compute_pct_outside(values, specs)
 
-        assert result["n_outside"] == 0
+        assert result['n_outside'] == 0
 
 
 # ============================================================================
@@ -352,80 +352,121 @@ class TestCapabilityResultPresentation:
     def test_as_dict_rounds(self, sample_result):
         """as_dict() rounds to specified precision."""
         d = sample_result.as_dict(round_to=2)
-        assert d["y_bar"] == 7.12
-        assert d["ppk"] == 0.39
-        assert d["pp"] == 0.67
+        assert d['y_bar'] == 7.12
+        assert d['ppk'] == 0.39
+        assert d['pp'] == 0.67
 
     def test_as_dict_default_round_to(self, sample_result):
         """as_dict() uses self.round_to when no override."""
         d = sample_result.as_dict()
-        assert d["y_bar"] == 7.123
-        assert d["ppk"] == 0.389
+        assert d['y_bar'] == 7.123
+        assert d['ppk'] == 0.389
 
     def test_as_dict_preserves_none(self, sample_result):
         """None values stay None after rounding."""
         result = CapabilityResult(
             specs=SpecLimits(usl=10),
-            n=50, y_bar=7.0, s=1.0, sigma_hat=1.01,
-            pp=None, ppk_lower=None, ppk_upper=1.5, ppk=1.5,
-            sigma_hat_r2=None, cp=None, cpk_lower=None,
-            cpk_upper=None, cpk=None,
-            potential_unavailable_reason="no R2",
-            z_lower=None, z_upper=4.5,
-            n_below_lsl=None, n_above_usl=0, n_outside=0,
-            pct_below_lsl=None, pct_above_usl=0.0, pct_outside=0.0,
+            n=50,
+            y_bar=7.0,
+            s=1.0,
+            sigma_hat=1.01,
+            pp=None,
+            ppk_lower=None,
+            ppk_upper=1.5,
+            ppk=1.5,
+            sigma_hat_r2=None,
+            cp=None,
+            cpk_lower=None,
+            cpk_upper=None,
+            cpk=None,
+            potential_unavailable_reason='no R2',
+            z_lower=None,
+            z_upper=4.5,
+            n_below_lsl=None,
+            n_above_usl=0,
+            n_outside=0,
+            pct_below_lsl=None,
+            pct_above_usl=0.0,
+            pct_outside=0.0,
         )
         d = result.as_dict()
-        assert d["pp"] is None
-        assert d["ppk_lower"] is None
-        assert d["z_lower"] is None
+        assert d['pp'] is None
+        assert d['ppk_lower'] is None
+        assert d['z_lower'] is None
 
     def test_as_dict_preserves_inf(self):
         """inf values pass through rounding unchanged."""
         result = CapabilityResult(
             specs=SpecLimits(usl=10, lsl=5),
-            n=50, y_bar=7.5, s=0.0, sigma_hat=0.0,
-            pp=float("inf"), ppk_lower=float("inf"),
-            ppk_upper=float("inf"), ppk=float("inf"),
-            sigma_hat_r2=None, cp=None, cpk_lower=None,
-            cpk_upper=None, cpk=None,
-            potential_unavailable_reason="no R2",
-            z_lower=float("inf"), z_upper=float("inf"),
-            n_below_lsl=0, n_above_usl=0, n_outside=0,
-            pct_below_lsl=0.0, pct_above_usl=0.0, pct_outside=0.0,
+            n=50,
+            y_bar=7.5,
+            s=0.0,
+            sigma_hat=0.0,
+            pp=float('inf'),
+            ppk_lower=float('inf'),
+            ppk_upper=float('inf'),
+            ppk=float('inf'),
+            sigma_hat_r2=None,
+            cp=None,
+            cpk_lower=None,
+            cpk_upper=None,
+            cpk=None,
+            potential_unavailable_reason='no R2',
+            z_lower=float('inf'),
+            z_upper=float('inf'),
+            n_below_lsl=0,
+            n_above_usl=0,
+            n_outside=0,
+            pct_below_lsl=0.0,
+            pct_above_usl=0.0,
+            pct_outside=0.0,
         )
         d = result.as_dict()
-        assert d["pp"] == float("inf")
+        assert d['pp'] == float('inf')
 
     def test_repr_stability_note(self, sample_result):
         """__repr__ includes stability note when not evaluated."""
         r = repr(sample_result)
-        assert "Stability not assessed" in r
+        assert 'Stability not assessed' in r
 
     def test_repr_contains_key_values(self, sample_result):
         """__repr__ shows Pp, Ppk, Cp, Cpk."""
         r = repr(sample_result)
-        assert "Pp=" in r
-        assert "Ppk=" in r
-        assert "Cp=" in r
-        assert "Cpk=" in r
+        assert 'Pp=' in r
+        assert 'Ppk=' in r
+        assert 'Cp=' in r
+        assert 'Cpk=' in r
 
     def test_repr_potential_unavailable(self):
         """__repr__ shows unavailable reason when Cp/Cpk not computed."""
         result = CapabilityResult(
             specs=SpecLimits(usl=10, lsl=5),
-            n=50, y_bar=7.5, s=1.0, sigma_hat=1.01,
-            pp=0.83, ppk_lower=0.83, ppk_upper=0.83, ppk=0.83,
-            sigma_hat_r2=None, cp=None, cpk_lower=None,
-            cpk_upper=None, cpk=None,
-            potential_unavailable_reason="R2 residuals not available",
-            z_lower=2.48, z_upper=2.48,
-            n_below_lsl=0, n_above_usl=0, n_outside=0,
-            pct_below_lsl=0.0, pct_above_usl=0.0, pct_outside=0.0,
+            n=50,
+            y_bar=7.5,
+            s=1.0,
+            sigma_hat=1.01,
+            pp=0.83,
+            ppk_lower=0.83,
+            ppk_upper=0.83,
+            ppk=0.83,
+            sigma_hat_r2=None,
+            cp=None,
+            cpk_lower=None,
+            cpk_upper=None,
+            cpk=None,
+            potential_unavailable_reason='R2 residuals not available',
+            z_lower=2.48,
+            z_upper=2.48,
+            n_below_lsl=0,
+            n_above_usl=0,
+            n_outside=0,
+            pct_below_lsl=0.0,
+            pct_above_usl=0.0,
+            pct_outside=0.0,
         )
         r = repr(result)
-        assert "R2 residuals not available" in r
-        assert "Cp=" not in r
+        assert 'R2 residuals not available' in r
+        assert 'Cp=' not in r
 
     def test_frozen(self, sample_result):
         """CapabilityResult is immutable."""
@@ -466,10 +507,10 @@ class TestHandCalculated:
 
         result = compute_capability_indices(y_bar, sigma_hat, specs)
         expected_pp = 22 / (6 * sigma_hat)
-        assert result["pp"] == pytest.approx(expected_pp, rel=1e-4)
+        assert result['pp'] == pytest.approx(expected_pp, rel=1e-4)
         # Centered process: ppk_lower ≈ ppk_upper
-        assert result["ppk_lower"] == pytest.approx(result["ppk_upper"], rel=1e-4)
-        assert result["ppk"] == pytest.approx(expected_pp, rel=1e-4)
+        assert result['ppk_lower'] == pytest.approx(result['ppk_upper'], rel=1e-4)
+        assert result['ppk'] == pytest.approx(expected_pp, rel=1e-4)
 
     def test_ppk_shifted_process(self):
         """
@@ -488,8 +529,8 @@ class TestHandCalculated:
         result = compute_capability_indices(y_bar, sigma_hat, specs)
 
         # Ppk should be the smaller one (closer to USL side)
-        assert result["ppk_upper"] < result["ppk_lower"]
-        assert result["ppk"] == pytest.approx(result["ppk_upper"])
+        assert result['ppk_upper'] < result['ppk_lower']
+        assert result['ppk'] == pytest.approx(result['ppk_upper'])
 
 
 # ============================================================================
@@ -567,10 +608,10 @@ class TestIntegrationSDS1:
         assert cap.potential_values is not None
         # Recompute expected from potential_values directly
         expected = compute_pct_outside(cap.potential_values, cap.specs)
-        assert cap.potential_n_below_lsl == expected["n_below_lsl"]
-        assert cap.potential_n_above_usl == expected["n_above_usl"]
-        assert cap.potential_pct_below_lsl == pytest.approx(expected["pct_below_lsl"])
-        assert cap.potential_pct_above_usl == pytest.approx(expected["pct_above_usl"])
+        assert cap.potential_n_below_lsl == expected['n_below_lsl']
+        assert cap.potential_n_above_usl == expected['n_above_usl']
+        assert cap.potential_pct_below_lsl == pytest.approx(expected['pct_below_lsl'])
+        assert cap.potential_pct_above_usl == pytest.approx(expected['pct_above_usl'])
 
     def test_potential_pct_outside_less_than_current(self, sds1_study):
         """Potential distribution (σ_R2 < σ_overall) has fewer values outside specs."""
@@ -602,7 +643,7 @@ class TestIntegrationNoR2:
         assert cap.cpk is None
         assert cap.sigma_hat_r2 is None
         assert cap.potential_unavailable_reason is not None
-        assert "R2" in cap.potential_unavailable_reason
+        assert 'R2' in cap.potential_unavailable_reason
 
     def test_current_capability_still_works(self, no_r2_study):
         """Pp/Ppk are computed even without R2."""
@@ -642,12 +683,12 @@ class TestOneSided:
         specs = SpecLimits(usl=25)
         result = compute_capability_indices(y_bar, sigma_hat, specs)
 
-        assert result["pp"] is None
-        assert result["ppk_lower"] is None
-        assert result["ppk_upper"] is not None
-        assert result["ppk"] == result["ppk_upper"]
-        assert result["z_lower"] is None
-        assert result["z_upper"] is not None
+        assert result['pp'] is None
+        assert result['ppk_lower'] is None
+        assert result['ppk_upper'] is not None
+        assert result['ppk'] == result['ppk_upper']
+        assert result['z_lower'] is None
+        assert result['z_upper'] is not None
 
     def test_lsl_only_indices(self, values_and_sigma):
         """LSL-only: pp=None, ppk=ppk_lower, ppk_upper=None."""
@@ -655,12 +696,12 @@ class TestOneSided:
         specs = SpecLimits(lsl=5)
         result = compute_capability_indices(y_bar, sigma_hat, specs)
 
-        assert result["pp"] is None
-        assert result["ppk_upper"] is None
-        assert result["ppk_lower"] is not None
-        assert result["ppk"] == result["ppk_lower"]
-        assert result["z_upper"] is None
-        assert result["z_lower"] is not None
+        assert result['pp'] is None
+        assert result['ppk_upper'] is None
+        assert result['ppk_lower'] is not None
+        assert result['ppk'] == result['ppk_lower']
+        assert result['z_upper'] is None
+        assert result['z_lower'] is not None
 
     def test_usl_only_pct_outside(self, values_and_sigma):
         """USL-only: n_below_lsl=None.  Values [10,12,14,16,18], USL=15 → 16,18 above."""
@@ -668,10 +709,10 @@ class TestOneSided:
         specs = SpecLimits(usl=15)
         result = compute_pct_outside(values, specs)
 
-        assert result["n_below_lsl"] is None
-        assert result["pct_below_lsl"] is None
-        assert result["n_above_usl"] == 2  # 16, 18 > 15
-        assert result["n_outside"] == 2
+        assert result['n_below_lsl'] is None
+        assert result['pct_below_lsl'] is None
+        assert result['n_above_usl'] == 2  # 16, 18 > 15
+        assert result['n_outside'] == 2
 
     def test_lsl_only_pct_outside(self, values_and_sigma):
         """LSL-only: n_above_usl=None.  Values [10,12,14,16,18], LSL=13 → 10,12 below."""
@@ -679,10 +720,10 @@ class TestOneSided:
         specs = SpecLimits(lsl=13)
         result = compute_pct_outside(values, specs)
 
-        assert result["n_above_usl"] is None
-        assert result["pct_above_usl"] is None
-        assert result["n_below_lsl"] == 2  # 10, 12 < 13
-        assert result["n_outside"] == 2
+        assert result['n_above_usl'] is None
+        assert result['pct_above_usl'] is None
+        assert result['n_below_lsl'] == 2  # 10, 12 < 13
+        assert result['n_outside'] == 2
 
 
 # ============================================================================
@@ -698,43 +739,47 @@ class TestEdgeCases:
         from processbehavior.datasets.synthetic import make_sds
 
         df = make_sds(1, K1=2, K2=2, T=4, n=3, seed=42)
-        df["y"] = 100.0  # all identical
+        df['y'] = 100.0  # all identical
 
         pb = ProcessBehavior(df)
         study = pb.formulate(
-            response="y",
-            factors=["factor 1", "factor 2"],
-            time="time",
+            response='y',
+            factors=['factor 1', 'factor 2'],
+            time='time',
         )
         cap = study.capability(usl=110, lsl=90)
 
         assert cap.sigma_hat == 0.0
-        assert cap.pp == float("inf")
-        assert cap.ppk == float("inf")
+        assert cap.pp == float('inf')
+        assert cap.ppk == float('inf')
         assert cap.n_outside == 0
 
     def test_n_less_than_2_raises(self):
         """Fewer than 2 valid observations raises ValidationError."""
-        df = pd.DataFrame({
-            "y": [5.0],
-            "Factor": ["A"],
-            "Time": [1],
-        })
+        df = pd.DataFrame(
+            {
+                'y': [5.0],
+                'Factor': ['A'],
+                'Time': [1],
+            }
+        )
         pb = ProcessBehavior(df)
-        study = pb.formulate(response="y", factors=["Factor"], time="Time")
+        study = pb.formulate(response='y', factors=['Factor'], time='Time')
 
-        with pytest.raises(ValidationError, match="at least 2"):
+        with pytest.raises(ValidationError, match='at least 2'):
             study.capability(usl=10, lsl=0)
 
     def test_nan_values_dropped(self):
         """NaN response values are dropped; N = count of valid."""
-        df = pd.DataFrame({
-            "y": [10.0, np.nan, 14.0, np.nan, 18.0, 20.0, 12.0, 16.0],
-            "Factor": ["A"] * 4 + ["B"] * 4,
-            "Time": [1, 2, 3, 4, 1, 2, 3, 4],
-        })
+        df = pd.DataFrame(
+            {
+                'y': [10.0, np.nan, 14.0, np.nan, 18.0, 20.0, 12.0, 16.0],
+                'Factor': ['A'] * 4 + ['B'] * 4,
+                'Time': [1, 2, 3, 4, 1, 2, 3, 4],
+            }
+        )
         pb = ProcessBehavior(df)
-        study = pb.formulate(response="y", factors=["Factor"], time="Time")
+        study = pb.formulate(response='y', factors=['Factor'], time='Time')
         cap = study.capability(usl=25, lsl=5)
 
         # NaN rows are dropped during data preparation
@@ -786,8 +831,8 @@ class TestInvariance:
         _, sigma_hat_s = compute_sigma_hat(scaled_data)
         scaled = compute_capability_indices(y_bar_s, sigma_hat_s, scaled_specs)
 
-        assert scaled["pp"] == pytest.approx(original["pp"], rel=1e-10)
-        assert scaled["ppk"] == pytest.approx(original["ppk"], rel=1e-10)
+        assert scaled['pp'] == pytest.approx(original['pp'], rel=1e-10)
+        assert scaled['ppk'] == pytest.approx(original['ppk'], rel=1e-10)
 
     def test_shift_invariance(self, base_data):
         """
@@ -810,10 +855,10 @@ class TestInvariance:
         _, sigma_hat_sh = compute_sigma_hat(shifted_data)
         shifted = compute_capability_indices(y_bar_sh, sigma_hat_sh, shifted_specs)
 
-        assert shifted["pp"] == pytest.approx(original["pp"], rel=1e-10)
-        assert shifted["ppk"] == pytest.approx(original["ppk"], rel=1e-10)
-        assert shifted["ppk_lower"] == pytest.approx(original["ppk_lower"], rel=1e-10)
-        assert shifted["ppk_upper"] == pytest.approx(original["ppk_upper"], rel=1e-10)
+        assert shifted['pp'] == pytest.approx(original['pp'], rel=1e-10)
+        assert shifted['ppk'] == pytest.approx(original['ppk'], rel=1e-10)
+        assert shifted['ppk_lower'] == pytest.approx(original['ppk_lower'], rel=1e-10)
+        assert shifted['ppk_upper'] == pytest.approx(original['ppk_upper'], rel=1e-10)
 
 
 # ============================================================================
@@ -829,22 +874,22 @@ class TestZScoreConsistency:
         specs = SpecLimits(usl=110, lsl=90)
         result = compute_capability_indices(y_bar=103.0, sigma_hat=2.5, specs=specs)
 
-        assert result["z_lower"] == pytest.approx(3 * result["ppk_lower"], rel=1e-10)
-        assert result["z_upper"] == pytest.approx(3 * result["ppk_upper"], rel=1e-10)
+        assert result['z_lower'] == pytest.approx(3 * result['ppk_lower'], rel=1e-10)
+        assert result['z_upper'] == pytest.approx(3 * result['ppk_upper'], rel=1e-10)
 
     def test_z_equals_3_ppk_usl_only(self):
         """z_upper = 3*ppk for USL-only."""
         specs = SpecLimits(usl=110)
         result = compute_capability_indices(y_bar=100.0, sigma_hat=2.0, specs=specs)
 
-        assert result["z_upper"] == pytest.approx(3 * result["ppk"], rel=1e-10)
+        assert result['z_upper'] == pytest.approx(3 * result['ppk'], rel=1e-10)
 
     def test_z_equals_3_ppk_lsl_only(self):
         """z_lower = 3*ppk for LSL-only."""
         specs = SpecLimits(lsl=90)
         result = compute_capability_indices(y_bar=100.0, sigma_hat=2.0, specs=specs)
 
-        assert result["z_lower"] == pytest.approx(3 * result["ppk"], rel=1e-10)
+        assert result['z_lower'] == pytest.approx(3 * result['ppk'], rel=1e-10)
 
 
 # ============================================================================
@@ -879,7 +924,7 @@ class TestKwargsAPI:
 
     def test_kwargs_no_limits_raises(self, study):
         """kwargs path with nothing raises ValidationError."""
-        with pytest.raises(ValidationError, match="At least one"):
+        with pytest.raises(ValidationError, match='At least one'):
             study.capability()
 
 

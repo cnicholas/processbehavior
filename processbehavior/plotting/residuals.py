@@ -65,17 +65,13 @@ def plot_residuals(
     """
     if not result.has_residuals:
         raise ValidationError(
-            "Residuals not available for this analysis.\n"
-            "Residuals require SDS >= 1 (replicated observations)."
+            'Residuals not available for this analysis.\nResiduals require SDS >= 1 (replicated observations).'
         )
 
     residuals = result.residuals
     if residual_type not in residuals.columns:
         available = list(residuals.columns)
-        raise ValidationError(
-            f"Residual '{residual_type}' not found.\n"
-            f"Available: {available}"
-        )
+        raise ValidationError(f"Residual '{residual_type}' not found.\nAvailable: {available}")
 
     theme = get_theme(theme) if isinstance(theme, str) else theme
     r_data = residuals[residual_type].dropna()
@@ -89,10 +85,7 @@ def plot_residuals(
     elif plot_type == 'sequence':
         fig = _plot_sequence(r_data, residual_type, theme, width, height)
     else:
-        raise ValidationError(
-            f"Invalid plot_type: '{plot_type}'.\n"
-            f"Options: 'all', 'histogram', 'qq', 'sequence'"
-        )
+        raise ValidationError(f"Invalid plot_type: '{plot_type}'.\nOptions: 'all', 'histogram', 'qq', 'sequence'")
 
     fig = apply_theme(fig, theme)
     return ControlChartFigure(fig, result)
@@ -106,7 +99,8 @@ def plot_residuals(
 def _plot_all_diagnostics(r_data, residual_type, theme, width, height):
     """3-panel diagnostic: histogram + Q-Q + sequence."""
     fig = make_subplots(
-        rows=1, cols=3,
+        rows=1,
+        cols=3,
         subplot_titles=['Histogram', 'Q-Q Plot', 'Sequence Plot'],
         horizontal_spacing=0.08,
     )
@@ -114,11 +108,14 @@ def _plot_all_diagnostics(r_data, residual_type, theme, width, height):
     # 1. Histogram
     fig.add_trace(
         go.Histogram(
-            x=r_data, name='Residuals',
-            marker_color=theme.data_color, opacity=0.7,
+            x=r_data,
+            name='Residuals',
+            marker_color=theme.data_color,
+            opacity=0.7,
             showlegend=False,
         ),
-        row=1, col=1,
+        row=1,
+        col=1,
     )
 
     # Normal curve overlay
@@ -129,11 +126,15 @@ def _plot_all_diagnostics(r_data, residual_type, theme, width, height):
 
     fig.add_trace(
         go.Scatter(
-            x=x_range, y=y_normal, mode='lines', name='Normal',
+            x=x_range,
+            y=y_normal,
+            mode='lines',
+            name='Normal',
             line=dict(color=theme.center_color, width=2, dash='dash'),
             showlegend=False,
         ),
-        row=1, col=1,
+        row=1,
+        col=1,
     )
 
     # 2. Q-Q Plot
@@ -143,11 +144,15 @@ def _plot_all_diagnostics(r_data, residual_type, theme, width, height):
 
     fig.add_trace(
         go.Scatter(
-            x=theoretical_q, y=sample_q, mode='markers', name='Q-Q',
+            x=theoretical_q,
+            y=sample_q,
+            mode='markers',
+            name='Q-Q',
             marker=dict(color=theme.data_color, size=5),
             showlegend=False,
         ),
-        row=1, col=2,
+        row=1,
+        col=2,
     )
 
     # Reference line
@@ -156,31 +161,37 @@ def _plot_all_diagnostics(r_data, residual_type, theme, width, height):
     fig.add_trace(
         go.Scatter(
             x=[qq_min, qq_max],
-            y=[qq_min * r_data.std() + r_data.mean(),
-               qq_max * r_data.std() + r_data.mean()],
-            mode='lines', name='Reference',
+            y=[qq_min * r_data.std() + r_data.mean(), qq_max * r_data.std() + r_data.mean()],
+            mode='lines',
+            name='Reference',
             line=dict(color=theme.ucl_color, dash='dash'),
             showlegend=False,
         ),
-        row=1, col=2,
+        row=1,
+        col=2,
     )
 
     # 3. Sequence plot
     fig.add_trace(
         go.Scatter(
-            x=list(range(len(r_data))), y=r_data.values,
-            mode='lines+markers', name='Residuals',
+            x=list(range(len(r_data))),
+            y=r_data.values,
+            mode='lines+markers',
+            name='Residuals',
             marker=dict(size=4, color=theme.data_color),
             line=dict(color=theme.data_color, width=1),
             showlegend=False,
         ),
-        row=1, col=3,
+        row=1,
+        col=3,
     )
     fig.add_hline(y=0, line_dash='dash', line_color=theme.center_color, row=1, col=3)
 
     fig.update_layout(
         title=f'{residual_type} Residual Diagnostics',
-        width=width, height=height, showlegend=False,
+        width=width,
+        height=height,
+        showlegend=False,
     )
     fig.update_xaxes(title_text='Residual Value', row=1, col=1)
     fig.update_yaxes(title_text='Frequency', row=1, col=1)
@@ -194,14 +205,20 @@ def _plot_all_diagnostics(r_data, residual_type, theme, width, height):
 
 def _plot_histogram(r_data, residual_type, theme, width, height):
     fig = go.Figure()
-    fig.add_trace(go.Histogram(
-        x=r_data, name='Residuals',
-        marker_color=theme.data_color, opacity=0.7,
-    ))
+    fig.add_trace(
+        go.Histogram(
+            x=r_data,
+            name='Residuals',
+            marker_color=theme.data_color,
+            opacity=0.7,
+        )
+    )
     fig.update_layout(
         title=f'{residual_type} Residual Distribution',
-        xaxis_title='Residual Value', yaxis_title='Frequency',
-        width=width, height=height,
+        xaxis_title='Residual Value',
+        yaxis_title='Frequency',
+        width=width,
+        height=height,
     )
     return fig
 
@@ -212,39 +229,54 @@ def _plot_qq(r_data, residual_type, theme, width, height):
     sample_q = np.sort(r_data.values)
 
     fig = go.Figure()
-    fig.add_trace(go.Scatter(
-        x=theoretical_q, y=sample_q, mode='markers', name='Data',
-        marker=dict(color=theme.data_color, size=6),
-    ))
+    fig.add_trace(
+        go.Scatter(
+            x=theoretical_q,
+            y=sample_q,
+            mode='markers',
+            name='Data',
+            marker=dict(color=theme.data_color, size=6),
+        )
+    )
     qq_min = min(theoretical_q.min(), sample_q.min())
     qq_max = max(theoretical_q.max(), sample_q.max())
-    fig.add_trace(go.Scatter(
-        x=[qq_min, qq_max],
-        y=[qq_min * r_data.std() + r_data.mean(),
-           qq_max * r_data.std() + r_data.mean()],
-        mode='lines', name='Normal Reference',
-        line=dict(color=theme.ucl_color, dash='dash'),
-    ))
+    fig.add_trace(
+        go.Scatter(
+            x=[qq_min, qq_max],
+            y=[qq_min * r_data.std() + r_data.mean(), qq_max * r_data.std() + r_data.mean()],
+            mode='lines',
+            name='Normal Reference',
+            line=dict(color=theme.ucl_color, dash='dash'),
+        )
+    )
     fig.update_layout(
         title=f'{residual_type} Q-Q Plot',
-        xaxis_title='Theoretical Quantiles', yaxis_title='Sample Quantiles',
-        width=width, height=height,
+        xaxis_title='Theoretical Quantiles',
+        yaxis_title='Sample Quantiles',
+        width=width,
+        height=height,
     )
     return fig
 
 
 def _plot_sequence(r_data, residual_type, theme, width, height):
     fig = go.Figure()
-    fig.add_trace(go.Scatter(
-        x=list(range(len(r_data))), y=r_data.values,
-        mode='lines+markers', name='Residuals',
-        marker=dict(size=5, color=theme.data_color),
-        line=dict(color=theme.data_color, width=1),
-    ))
+    fig.add_trace(
+        go.Scatter(
+            x=list(range(len(r_data))),
+            y=r_data.values,
+            mode='lines+markers',
+            name='Residuals',
+            marker=dict(size=5, color=theme.data_color),
+            line=dict(color=theme.data_color, width=1),
+        )
+    )
     fig.add_hline(y=0, line_dash='dash', line_color=theme.center_color)
     fig.update_layout(
         title=f'{residual_type} Residual Sequence Plot',
-        xaxis_title='Observation', yaxis_title='Residual Value',
-        width=width, height=height,
+        xaxis_title='Observation',
+        yaxis_title='Residual Value',
+        width=width,
+        height=height,
     )
     return fig

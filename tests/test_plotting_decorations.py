@@ -38,8 +38,8 @@ def theme():
 # Limits
 # =========================================================================
 
-class TestFormatLimitLabel:
 
+class TestFormatLimitLabel:
     def test_with_value_large(self):
         assert format_limit_label('UPL', 152.3456, True) == 'UPL = 152.3'
 
@@ -57,7 +57,6 @@ class TestFormatLimitLabel:
 
 
 class TestBuildSteppedCoordinates:
-
     def test_single_point(self):
         x, y = build_stepped_coordinates([1], [10.0])
         assert x == [1]
@@ -81,51 +80,31 @@ class TestBuildSteppedCoordinates:
 
 
 class TestAddSteppedLimitLine:
-
     def test_adds_trace_to_single_figure(self, theme):
         fig = go.Figure()
-        data = pd.DataFrame({
-            'x': [1, 2, 3],
-            'upl': [10.0, 11.0, 10.5]
-        })
-        add_stepped_limit_line(
-            fig, data, 'x', 'upl',
-            'red', 'dash', 1.5, 'UPL', theme
-        )
+        data = pd.DataFrame({'x': [1, 2, 3], 'upl': [10.0, 11.0, 10.5]})
+        add_stepped_limit_line(fig, data, 'x', 'upl', 'red', 'dash', 1.5, 'UPL', theme)
         assert len(fig.data) == 1
         assert fig.data[0].mode == 'lines'
         assert fig.data[0].name == 'UPL (varies)'
 
     def test_adds_trace_to_faceted_subplot(self, theme):
         fig = make_subplots(rows=1, cols=2)
-        data = pd.DataFrame({
-            'x': [1, 2, 3],
-            'lpl': [2.0, 1.5, 2.5]
-        })
-        add_stepped_limit_line(
-            fig, data, 'x', 'lpl',
-            'blue', 'dot', 1.0, 'LPL', theme,
-            row=1, col=2
-        )
+        data = pd.DataFrame({'x': [1, 2, 3], 'lpl': [2.0, 1.5, 2.5]})
+        add_stepped_limit_line(fig, data, 'x', 'lpl', 'blue', 'dot', 1.0, 'LPL', theme, row=1, col=2)
         assert len(fig.data) == 1
         assert fig.data[0].name == 'LPL (varies)'
 
     def test_noop_when_column_missing(self, theme):
         fig = go.Figure()
         data = pd.DataFrame({'x': [1, 2, 3]})
-        add_stepped_limit_line(
-            fig, data, 'x', 'upl',
-            'red', 'dash', 1.5, 'UPL', theme
-        )
+        add_stepped_limit_line(fig, data, 'x', 'upl', 'red', 'dash', 1.5, 'UPL', theme)
         assert len(fig.data) == 0
 
     def test_hover_uses_limit_name(self, theme):
         fig = go.Figure()
         data = pd.DataFrame({'x': [1, 2], 'upl': [10.0, 11.0]})
-        add_stepped_limit_line(
-            fig, data, 'x', 'upl',
-            'red', 'dash', 1.5, 'UPL', theme
-        )
+        add_stepped_limit_line(fig, data, 'x', 'upl', 'red', 'dash', 1.5, 'UPL', theme)
         assert 'UPL' in fig.data[0].hovertemplate
 
 
@@ -133,8 +112,8 @@ class TestAddSteppedLimitLine:
 # Zones
 # =========================================================================
 
-class TestCalculateZoneBoundaries:
 
+class TestCalculateZoneBoundaries:
     def test_returns_five_zones(self, theme):
         stats = {'center': 50.0, 'upl': 65.0, 'lpl': 35.0}
         zones = calculate_zone_boundaries(stats, theme)
@@ -166,7 +145,6 @@ class TestCalculateZoneBoundaries:
 
 
 class TestAddZoneShading:
-
     def test_adds_shapes_to_single_figure(self, theme):
         fig = go.Figure()
         stats = {'center': 50.0, 'upl': 65.0, 'lpl': 35.0}
@@ -203,8 +181,8 @@ class TestAddZoneShading:
 # Lane Boundaries
 # =========================================================================
 
-class TestAddLaneBoundaries:
 
+class TestAddLaneBoundaries:
     def test_noop_on_none(self, theme):
         fig = go.Figure()
         add_lane_boundaries(fig, None, (0, 100), theme)
@@ -251,8 +229,8 @@ class TestAddLaneBoundaries:
 # Stats Box
 # =========================================================================
 
-class TestBuildStatsText:
 
+class TestBuildStatsText:
     def test_full_format(self):
         stats = {'center': 50.0, 'upl': 65.0, 'lpl': 35.0}
         data = pd.DataFrame({'val': range(20)})
@@ -281,7 +259,6 @@ class TestBuildStatsText:
 
 
 class TestAddStatsBox:
-
     def test_single_chart_position(self, theme):
         fig = go.Figure()
         stats = {'center': 50.0, 'upl': 65.0, 'lpl': 35.0}
@@ -318,11 +295,12 @@ class TestAddStatsBox:
 # Run Rules Visualization
 # =========================================================================
 
-class TestAddRunRulesVisualization:
 
+class TestAddRunRulesVisualization:
     def test_function_signature(self):
         """Verify function accepts explicit result parameter."""
         import inspect
+
         sig = inspect.signature(add_run_rules_visualization)
         params = list(sig.parameters.keys())
         assert 'result' in params
@@ -334,20 +312,12 @@ class TestAddRunRulesVisualization:
         np.random.seed(42)
         # Create data with factors (required by formulate)
         values = list(np.arange(1, 21, dtype=float)) * 2
-        df = pd.DataFrame({
-            'value': values,
-            'group': ['A'] * 20 + ['B'] * 20,
-            'time': list(range(20)) * 2
-
-        })
+        df = pd.DataFrame({'value': values, 'group': ['A'] * 20 + ['B'] * 20, 'time': list(range(20)) * 2})
 
         from processbehavior import ProcessBehavior
+
         pdf = ProcessBehavior(df)
-        study = pdf.formulate(
-            response=pdf.cols.value,
-            factors=[pdf.cols.group],
-            time=pdf.cols.time
-        )
+        study = pdf.formulate(response=pdf.cols.value, factors=[pdf.cols.group], time=pdf.cols.time)
         result = study.execute(chart='X', by=['group'])
 
         # Pick the first available chart
@@ -361,7 +331,4 @@ class TestAddRunRulesVisualization:
         value_col = chart_info['metadata']['value_col']
 
         # Should not raise, even if no rules are violated
-        add_run_rules_visualization(
-            fig, data, stats, chart_name, value_col, None, theme,
-            result=result
-        )
+        add_run_rules_visualization(fig, data, stats, chart_name, value_col, None, theme, result=result)

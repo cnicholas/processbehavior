@@ -27,17 +27,17 @@ import pandas as pd
 # Formal vocabulary for SDS classification reasons (per Bishop Table 1)
 SDSReasonType = Literal[
     # Complete/Semi-Complete (SDS 1, 2, 3) - no empty cells
-    "full_replication",            # SDS 1: all N_kt >= 2
-    "no_replication",              # SDS 2: all N_kt = 1
-    "partial_replication",         # SDS 3: mixed N_kt (some 1, some >=2)
+    'full_replication',  # SDS 1: all N_kt >= 2
+    'no_replication',  # SDS 2: all N_kt = 1
+    'partial_replication',  # SDS 3: mixed N_kt (some 1, some >=2)
     # Incomplete (SDS 4, 5, 6) - has empty cells (N_kt = 0)
-    "incomplete_no_singletons",    # SDS 4: has 0s, no 1s, has >=2s
-    "incomplete_no_replication",   # SDS 5: has 0s, max = 1
-    "incomplete_with_singletons",  # SDS 6: has 0s, has 1s, has >=2s
+    'incomplete_no_singletons',  # SDS 4: has 0s, no 1s, has >=2s
+    'incomplete_no_replication',  # SDS 5: has 0s, max = 1
+    'incomplete_with_singletons',  # SDS 6: has 0s, has 1s, has >=2s
 ]
 
 # R2 calculation method - structure-driven, not SDS-driven
-R2Method = Literal["exact", "ma2", "hybrid"]
+R2Method = Literal['exact', 'ma2', 'hybrid']
 
 
 @dataclass(frozen=True)
@@ -61,11 +61,13 @@ class StructureStats:
     K_obs : int
         Number of unique rsg_key values (for R5 availability check)
     """
+
     has_grouping: bool
     has_order: bool
     n_cell_min: int
     n_cell_max: int
     K_obs: int
+
 
 if TYPE_CHECKING:
     from .formulation_spec import FormulationSpec
@@ -76,6 +78,7 @@ logger = logging.getLogger(__name__)
 # ============================================================================
 # SDS Analysis Plan - The "Recipe" for Each Sampling Design State
 # ============================================================================
+
 
 @dataclass
 class SDSAnalysisPlan:
@@ -135,6 +138,7 @@ class SDSAnalysisPlan:
     >>> print(plan.valid_charts)
     ['Xbar', 'S', 'X']
     """
+
     sds: int
     name: str
     description: str
@@ -245,59 +249,65 @@ class SDSAnalysisPlan:
     def __str__(self) -> str:
         """Pretty print the analysis plan."""
         lines = [
-            f"SDS {self.sds}: {self.name}",
-            "=" * 70,
-            f"Description: {self.description}",
-            "",
-            "Data Structure:",
-            f"  • Factors: {'Yes' if self.has_factors else 'No'}",
-            f"  • Time: {'Yes' if self.has_time else 'No'}",
-            f"  • Replication: {self.has_replication.capitalize()}",
-            "",
-            "Chart Capabilities:",
-            f"  • Valid charts: {', '.join(self.valid_charts)}",
-            f"  • Recommended: {self.recommended_chart}",
+            f'SDS {self.sds}: {self.name}',
+            '=' * 70,
+            f'Description: {self.description}',
+            '',
+            'Data Structure:',
+            f'  • Factors: {"Yes" if self.has_factors else "No"}',
+            f'  • Time: {"Yes" if self.has_time else "No"}',
+            f'  • Replication: {self.has_replication.capitalize()}',
+            '',
+            'Chart Capabilities:',
+            f'  • Valid charts: {", ".join(self.valid_charts)}',
+            f'  • Recommended: {self.recommended_chart}',
         ]
 
         if self.invalid_charts:
-            lines.append(f"  • Invalid charts: {', '.join(self.invalid_charts)}")
+            lines.append(f'  • Invalid charts: {", ".join(self.invalid_charts)}')
 
-        lines.extend([
-            "",
-            "Variance Analysis System (VAS):",
-            f"  • VAS supported: {'Yes' if self.vas_residuals_supported else 'No'}",
-        ])
+        lines.extend(
+            [
+                '',
+                'Variance Analysis System (VAS):',
+                f'  • VAS supported: {"Yes" if self.vas_residuals_supported else "No"}',
+            ]
+        )
 
         if self.vas_residuals_supported:
-            lines.append(f"  • Residuals: {', '.join(self.residuals_available)}")
-            lines.append(f"  • R2 calculation: {self.residual_calculation_method}")
+            lines.append(f'  • Residuals: {", ".join(self.residuals_available)}')
+            lines.append(f'  • R2 calculation: {self.residual_calculation_method}')
 
-        lines.extend([
-            "",
-            "Effects Analysis:",
-            f"  • Main effects: {'Yes' if self.main_effects_supported else 'No'}",
-            f"  • Interactions: {'Yes' if self.interaction_effects_supported else 'No'}",
-            f"  • Stratification: {'Yes' if self.supports_stratification else 'No'}",
-        ])
+        lines.extend(
+            [
+                '',
+                'Effects Analysis:',
+                f'  • Main effects: {"Yes" if self.main_effects_supported else "No"}',
+                f'  • Interactions: {"Yes" if self.interaction_effects_supported else "No"}',
+                f'  • Stratification: {"Yes" if self.supports_stratification else "No"}',
+            ]
+        )
 
         if self.typical_use_cases:
-            lines.append("")
-            lines.append("Typical Use Cases:")
+            lines.append('')
+            lines.append('Typical Use Cases:')
             for use_case in self.typical_use_cases:
-                lines.append(f"  • {use_case}")
+                lines.append(f'  • {use_case}')
 
         if self.limitations:
-            lines.append("")
-            lines.append("Limitations:")
+            lines.append('')
+            lines.append('Limitations:')
             for limitation in self.limitations:
-                lines.append(f"  • {limitation}")
+                lines.append(f'  • {limitation}')
 
-        lines.extend([
-            "",
-            f"Reference: {self.bishop_reference}",
-        ])
+        lines.extend(
+            [
+                '',
+                f'Reference: {self.bishop_reference}',
+            ]
+        )
 
-        return "\n".join(lines)
+        return '\n'.join(lines)
 
 
 @dataclass(frozen=True)
@@ -328,6 +338,7 @@ class SDSResult:
         Count of cells with Nₖₜ=0 after plan reindex (if plan provided).
         For observed-only detection, counts cells where all responses are NA.
     """
+
     sds: int
     min_cell_size: int
     reason: SDSReasonType | None = None
@@ -397,7 +408,7 @@ class SDSRegistry:
         spec: FormulationSpec,
         response_col: str,
         plan: dict[str, list] | None = None,
-        T_planned: int | None = None
+        T_planned: int | None = None,
     ) -> SDSResult:
         """
         Detect SDS from raw data structure (before response NA rows are dropped).
@@ -433,9 +444,7 @@ class SDSRegistry:
         # Compute N_kt = count of VALID responses per cell
         # groupby naturally yields 0 for cells where ALL responses are NA
         if kt_cols:
-            nkt_observed = structure_view.groupby(kt_cols, observed=True)[response_col].apply(
-                lambda s: s.notna().sum()
-            )
+            nkt_observed = structure_view.groupby(kt_cols, observed=True)[response_col].apply(lambda s: s.notna().sum())
         else:
             # No factors or time - single cell
             # NOTE: This uses regular Index (not MultiIndex). _classify_by_nkt must tolerate both.
@@ -443,7 +452,7 @@ class SDSRegistry:
 
         # Validate we have some data
         if nkt_observed.sum() == 0:
-            raise ValueError("No valid response values found after filtering")
+            raise ValueError('No valid response values found after filtering')
 
         if plan is not None:
             # WITH PLAN: Compare to canonicalized plan
@@ -463,8 +472,7 @@ class SDSRegistry:
                     observed_times = structure_view[t].dropna().unique().tolist()
                     canonicalized_plan[t] = sorted(observed_times)
                     logger.debug(
-                        f"Plan doesn't include time column '{t}'; "
-                        f"using observed time values: {canonicalized_plan[t]}"
+                        f"Plan doesn't include time column '{t}'; using observed time values: {canonicalized_plan[t]}"
                     )
 
             # Check if we have all factor columns (not including time which we just filled)
@@ -473,16 +481,13 @@ class SDSRegistry:
 
             if missing_factor_cols:
                 logger.warning(
-                    f"Plan missing required factor columns or has empty values for {missing_factor_cols}; "
-                    f"falling back to observed structure only."
+                    f'Plan missing required factor columns or has empty values for {missing_factor_cols}; '
+                    f'falling back to observed structure only.'
                 )
                 nkt_counts = nkt_observed
             elif kt_cols:
                 # Build expected cells using from_product (deterministic, avoids tuple list)
-                planned_index = pd.MultiIndex.from_product(
-                    [canonicalized_plan[c] for c in kt_cols],
-                    names=kt_cols
-                )
+                planned_index = pd.MultiIndex.from_product([canonicalized_plan[c] for c in kt_cols], names=kt_cols)
                 nkt_counts = nkt_observed.reindex(planned_index, fill_value=0)
             else:
                 # No kt columns - single cell
@@ -497,9 +502,7 @@ class SDSRegistry:
         has_empty_cells = n_empty_cells > 0
 
         if has_empty_cells:
-            logger.debug(
-                f"Structure detection: {n_empty_cells} cells with N_kt=0"
-            )
+            logger.debug(f'Structure detection: {n_empty_cells} cells with N_kt=0')
 
         # Calculate min_cell_size for chart selection (only cells with valid data)
         valid_nkt = nkt_counts[nkt_counts > 0]
@@ -517,7 +520,7 @@ class SDSRegistry:
         spec: FormulationSpec,
         plan: dict[str, list] | None = None,
         T_planned: int | None = None,
-        response_col: str | None = None
+        response_col: str | None = None,
     ) -> SDSResult:
         """
         Detect Sampling Design State from data structure.
@@ -591,8 +594,8 @@ class SDSRegistry:
             normalized_resp = self._normalize_missing_tokens(df[resp])
             if normalized_resp.isna().sum() == 0:
                 logger.debug(
-                    "detect_sds called with data that has no NA responses; "
-                    "if this is prepared data, SDS may miss attempted-but-invalid cells."
+                    'detect_sds called with data that has no NA responses; '
+                    'if this is prepared data, SDS may miss attempted-but-invalid cells.'
                 )
 
         return self.detect_sds_from_structure(df, spec, resp, plan, T_planned)
@@ -635,7 +638,7 @@ class SDSRegistry:
                 'r2_method': 'not_applicable',
                 'capabilities': [],
                 'interaction_analysis': False,
-                'variance_decomposition': False
+                'variance_decomposition': False,
             },
             1: {
                 'description': 'Full replication (all cells n≥2)',
@@ -643,7 +646,7 @@ class SDSRegistry:
                 'r2_method': 'within_cell',
                 'capabilities': ['full_vas', 'all_residuals', 'interactions', 'main_effects'],
                 'interaction_analysis': True,
-                'variance_decomposition': True
+                'variance_decomposition': True,
             },
             2: {
                 'description': 'No replication (all cells n=1)',
@@ -651,7 +654,7 @@ class SDSRegistry:
                 'r2_method': 'moving_average',
                 'capabilities': ['all_residuals', 'limited_interactions', 'main_effects'],
                 'interaction_analysis': 'limited',
-                'variance_decomposition': True
+                'variance_decomposition': True,
             },
             3: {
                 'description': 'Partial replication (mixed n=1 and n≥2)',
@@ -659,7 +662,7 @@ class SDSRegistry:
                 'r2_method': 'hybrid',
                 'capabilities': ['all_residuals', 'partial_interactions', 'main_effects'],
                 'interaction_analysis': 'partial',
-                'variance_decomposition': True
+                'variance_decomposition': True,
             },
             4: {
                 'description': 'Incomplete grid without singletons (has 0s and ≥2s, no 1s)',
@@ -667,7 +670,7 @@ class SDSRegistry:
                 'r2_method': 'exact',  # All observed cells have replication
                 'capabilities': ['full_vas', 'main_effects', 'stratification'],
                 'interaction_analysis': False,  # Incomplete grid limits this
-                'variance_decomposition': True
+                'variance_decomposition': True,
             },
             5: {
                 'description': 'Incomplete grid without replication (has 0s, max=1)',
@@ -675,7 +678,7 @@ class SDSRegistry:
                 'r2_method': 'ma2',  # No replication, use moving average
                 'capabilities': ['partial_vas', 'stratification'],
                 'interaction_analysis': False,
-                'variance_decomposition': True  # VAS supported via moving average
+                'variance_decomposition': True,  # VAS supported via moving average
             },
             6: {
                 'description': 'Incomplete grid with singletons (has 0s, 1s, and ≥2s)',
@@ -683,8 +686,8 @@ class SDSRegistry:
                 'r2_method': 'hybrid',
                 'capabilities': ['partial_vas', 'main_effects', 'stratification'],
                 'interaction_analysis': False,
-                'variance_decomposition': True
-            }
+                'variance_decomposition': True,
+            },
         }
 
         result = characteristics.get(sds, characteristics[0]).copy()
@@ -723,17 +726,13 @@ class SDSRegistry:
         - Hybrid: exact where replicated, MA2 where singleton
         """
         if stats.n_cell_min >= 2:
-            return "exact"
+            return 'exact'
         elif stats.n_cell_max == 1:
-            return "ma2"
+            return 'ma2'
         else:
-            return "hybrid"
+            return 'hybrid'
 
-    def validate_sds_for_analysis(
-        self,
-        sds: int,
-        analysis_type: str
-    ) -> bool:
+    def validate_sds_for_analysis(self, sds: int, analysis_type: str) -> bool:
         """
         Validate that SDS is appropriate for requested analysis.
 
@@ -771,25 +770,20 @@ class SDSRegistry:
         # SDS 4 or 6: Incomplete grid
         if sds in [4, 6]:
             logger.info(
-                f"SDS {sds} detected: Incomplete grid.\n"
-                f"Some factor×time combinations are missing from the data."
+                f'SDS {sds} detected: Incomplete grid.\nSome factor×time combinations are missing from the data.'
             )
 
         # SDS 5: Incomplete without replication
         if sds == 5:
             logger.warning(
-                "SDS 5 detected: Incomplete grid without replication.\n"
-                "Analysis results may be limited - no within-cell variance estimation.\n"
+                'SDS 5 detected: Incomplete grid without replication.\n'
+                'Analysis results may be limited - no within-cell variance estimation.\n'
                 "Consider using 'X' analysis for this data structure."
             )
 
         return True
 
-    def should_calculate_vas_residuals(
-        self,
-        sds: int,
-        analysis_type: str
-    ) -> bool:
+    def should_calculate_vas_residuals(self, sds: int, analysis_type: str) -> bool:
         """
         Determine if VAS residual decomposition (R1-R5) should be calculated.
 
@@ -832,29 +826,26 @@ class SDSRegistry:
         """
         # SDS 5: Incomplete without replication - very limited analysis possible
         if sds == 5:
-            logger.debug("No VAS: SDS 5 (incomplete without replication)")
+            logger.debug('No VAS: SDS 5 (incomplete without replication)')
             return False
 
         # X/mR use moving ranges, not factorial decomposition
         # Grouping just creates separate stratified charts
         if analysis_type in ['X', 'mR']:
             logger.debug(
-                f"No VAS: {analysis_type} analysis uses moving ranges, "
-                f"not factorial decomposition. "
-                f"Grouping creates stratified charts (separate chart per group)."
+                f'No VAS: {analysis_type} analysis uses moving ranges, '
+                f'not factorial decomposition. '
+                f'Grouping creates stratified charts (separate chart per group).'
             )
             return False
 
         # Xbar/S with factorial structure (SDS 1-4, 6)
         if sds in [1, 2, 3, 4, 6]:
-            logger.debug(
-                f"Calculate VAS: SDS {sds} with {analysis_type} analysis "
-                f"supports decomposition"
-            )
+            logger.debug(f'Calculate VAS: SDS {sds} with {analysis_type} analysis supports decomposition')
             return True
 
         # Shouldn't reach here, but be conservative
-        logger.debug(f"No VAS: Unexpected case (SDS={sds})")
+        logger.debug(f'No VAS: Unexpected case (SDS={sds})')
         return False
 
     # ========================================================================
@@ -1038,11 +1029,7 @@ class SDSRegistry:
         sds, reason = self._classify_by_nkt(nkt_counts, has_empty_cells)
         return SDSResult(sds=sds, min_cell_size=N, reason=reason, n_empty_cells=0)
 
-    def _classify_by_nkt(
-        self,
-        nkt_counts: pd.Series,
-        has_empty_cells: bool
-    ) -> tuple[int, SDSReasonType]:
+    def _classify_by_nkt(self, nkt_counts: pd.Series, has_empty_cells: bool) -> tuple[int, SDSReasonType]:
         """
         Classify SDS directly from N_kt distribution per Bishop Table 1.
 
@@ -1084,48 +1071,38 @@ class SDSRegistry:
         cells_with_n2_plus = (nkt_counts >= 2).sum()
 
         logger.debug(
-            f"N_kt classification: {cells_with_n1} singletons, "
-            f"{cells_with_n2_plus} replicated, has_empty_cells={has_empty_cells}"
+            f'N_kt classification: {cells_with_n1} singletons, '
+            f'{cells_with_n2_plus} replicated, has_empty_cells={has_empty_cells}'
         )
 
         if not has_empty_cells:
             # Complete or Semi-Complete (SDS 1, 2, 3)
             if min_n >= 2:
-                logger.debug(f"SDS 1: Complete - all cells replicated (min={min_n})")
-                return (1, "full_replication")
+                logger.debug(f'SDS 1: Complete - all cells replicated (min={min_n})')
+                return (1, 'full_replication')
             elif max_n == 1:
-                logger.debug("SDS 2: Semi-Complete - all cells singleton")
-                return (2, "no_replication")
+                logger.debug('SDS 2: Semi-Complete - all cells singleton')
+                return (2, 'no_replication')
             else:
                 pct_replicated = 100 * cells_with_n2_plus / n_cells
-                logger.debug(
-                    f"SDS 3: Semi-Complete - mixed ({pct_replicated:.0f}% replicated)"
-                )
-                return (3, "partial_replication")
+                logger.debug(f'SDS 3: Semi-Complete - mixed ({pct_replicated:.0f}% replicated)')
+                return (3, 'partial_replication')
         else:
             # Incomplete (SDS 4, 5, 6) - has empty cells
             if max_n == 1:
-                logger.debug("SDS 5: Incomplete - no replication (max=1)")
-                return (5, "incomplete_no_replication")
+                logger.debug('SDS 5: Incomplete - no replication (max=1)')
+                return (5, 'incomplete_no_replication')
             elif has_singletons:
                 logger.debug(
-                    f"SDS 6: Incomplete with singletons "
-                    f"({cells_with_n1} singletons, {cells_with_n2_plus} replicated)"
+                    f'SDS 6: Incomplete with singletons ({cells_with_n1} singletons, {cells_with_n2_plus} replicated)'
                 )
-                return (6, "incomplete_with_singletons")
+                return (6, 'incomplete_with_singletons')
             else:
-                logger.debug(
-                    f"SDS 4: Incomplete without singletons "
-                    f"({cells_with_n2_plus} replicated cells)"
-                )
-                return (4, "incomplete_no_singletons")
+                logger.debug(f'SDS 4: Incomplete without singletons ({cells_with_n2_plus} replicated cells)')
+                return (4, 'incomplete_no_singletons')
 
     def _calculate_coverage_ratio(
-        self,
-        df: pd.DataFrame,
-        spec: FormulationSpec,
-        plan: dict[str, list],
-        T_planned: int | None = None
+        self, df: pd.DataFrame, spec: FormulationSpec, plan: dict[str, list], T_planned: int | None = None
     ) -> float:
         """
         Calculate coverage ratio: observed cells / expected cells.
@@ -1192,7 +1169,7 @@ class SDSRegistry:
             return 1.0 if observed_R == 0 else 0.0
 
         ratio = observed_R / expected_R
-        logger.debug(f"Coverage: {observed_R}/{expected_R} = {ratio:.1%}")
+        logger.debug(f'Coverage: {observed_R}/{expected_R} = {ratio:.1%}')
         return ratio
 
     # =========================================================================
@@ -1247,8 +1224,8 @@ class SDSRegistry:
         plans = {
             1: SDSAnalysisPlan(
                 sds=1,
-                name="Full Factorial with Complete Replication",
-                description="All factor × time cells have n ≥ 2 observations (best case for analysis)",
+                name='Full Factorial with Complete Replication',
+                description='All factor × time cells have n ≥ 2 observations (best case for analysis)',
                 has_factors=True,
                 has_time=True,
                 has_replication='full',
@@ -1265,16 +1242,15 @@ class SDSRegistry:
                     'Designed experiments with replication',
                     'Process capability studies',
                     'Multi-factor ANOVA-style analyses',
-                    'Complete factorial designs'
+                    'Complete factorial designs',
                 ],
                 limitations=[],
-                bishop_reference="Bishop Methodology: Complete Data (SDS 1)"
+                bishop_reference='Bishop Methodology: Complete Data (SDS 1)',
             ),
-
             2: SDSAnalysisPlan(
                 sds=2,
-                name="Full Factorial with No Replication",
-                description="All factor × time cells have exactly n = 1 observation",
+                name='Full Factorial with No Replication',
+                description='All factor × time cells have exactly n = 1 observation',
                 has_factors=True,
                 has_time=True,
                 has_replication='none',
@@ -1291,19 +1267,18 @@ class SDSRegistry:
                     'Production data (one measurement per factor/time combination)',
                     'Unreplicated factorial experiments',
                     'Historical data analysis',
-                    'Screening experiments'
+                    'Screening experiments',
                 ],
                 limitations=[
                     'R2 estimated via moving average (approximate, not exact)',
-                    'Interaction confounded with pure error'
+                    'Interaction confounded with pure error',
                 ],
-                bishop_reference="Bishop Methodology: No Replication (SDS 2)"
+                bishop_reference='Bishop Methodology: No Replication (SDS 2)',
             ),
-
             3: SDSAnalysisPlan(
                 sds=3,
-                name="Partial Replication",
-                description="Mixed cells: some have n ≥ 2, others have n = 1",
+                name='Partial Replication',
+                description='Mixed cells: some have n ≥ 2, others have n = 1',
                 has_factors=True,
                 has_time=True,
                 has_replication='partial',
@@ -1320,16 +1295,15 @@ class SDSRegistry:
                     'Unbalanced designs',
                     'Real-world data with missing observations',
                     'Opportunistic replication in some cells',
-                    'Pilot studies with targeted replication'
+                    'Pilot studies with targeted replication',
                 ],
                 limitations=[
                     'R2 uses hybrid calculation (exact where possible, approximate elsewhere)',
                     'Variance estimates less precise than SDS 1',
-                    'May have unequal subgroup sizes'
+                    'May have unequal subgroup sizes',
                 ],
-                bishop_reference="Bishop Methodology: Partial Replication (SDS 3)"
+                bishop_reference='Bishop Methodology: Partial Replication (SDS 3)',
             ),
-
             # SDS 4-6 (incomplete grids) are observed/planned design states only.
             # After tidying (dropping NA response rows), they always collapse to
             # SDS 1-3: 4→1, 5→2, 6→3. The analytical design state (ADS) drives
@@ -1338,9 +1312,9 @@ class SDSRegistry:
 
         if sds not in plans:
             raise ValueError(
-                f"Invalid analytical SDS: {sds}. Must be 1-3. "
-                f"SDS 4-6 are observed/planned design states that collapse to "
-                f"1-3 after tidying. Available: {list(plans.keys())}"
+                f'Invalid analytical SDS: {sds}. Must be 1-3. '
+                f'SDS 4-6 are observed/planned design states that collapse to '
+                f'1-3 after tidying. Available: {list(plans.keys())}'
             )
 
         plan = plans[sds]
@@ -1367,10 +1341,10 @@ class SDSRegistry:
         >>> SDSRegistry.print_all_analysis_plans()
         # Prints complete analysis plan for SDS 1-3
         """
-        print("=" * 70)
-        print("SAMPLING DESIGN STATE (SDS) ANALYSIS PLANS")
-        print("Complete Specification of System Capabilities")
-        print("=" * 70)
+        print('=' * 70)
+        print('SAMPLING DESIGN STATE (SDS) ANALYSIS PLANS')
+        print('Complete Specification of System Capabilities')
+        print('=' * 70)
         print()
 
         for sds in range(1, 4):  # Analytical SDS 1-3
@@ -1401,19 +1375,21 @@ class SDSRegistry:
         data = []
         for sds in range(1, 4):  # Analytical SDS 1-3
             plan = SDSRegistry.get_analysis_plan(sds)
-            data.append({
-                'SDS': sds,
-                'Name': plan.name,
-                'Factors': '✓' if plan.has_factors else '✗',
-                'Time': '✓' if plan.has_time else '✗',
-                'Replication': plan.has_replication,
-                'Valid Charts': ', '.join(plan.valid_charts),
-                'Recommended': plan.recommended_chart,
-                'VAS': '✓' if plan.vas_residuals_supported else '✗',
-                'R2 Method': plan.residual_calculation_method,
-                'Main Effects': '✓' if plan.main_effects_supported else '✗',
-                'Interactions': '✓' if plan.interaction_effects_supported else '✗',
-                'Stratification': '✓' if plan.supports_stratification else '✗',
-            })
+            data.append(
+                {
+                    'SDS': sds,
+                    'Name': plan.name,
+                    'Factors': '✓' if plan.has_factors else '✗',
+                    'Time': '✓' if plan.has_time else '✗',
+                    'Replication': plan.has_replication,
+                    'Valid Charts': ', '.join(plan.valid_charts),
+                    'Recommended': plan.recommended_chart,
+                    'VAS': '✓' if plan.vas_residuals_supported else '✗',
+                    'R2 Method': plan.residual_calculation_method,
+                    'Main Effects': '✓' if plan.main_effects_supported else '✗',
+                    'Interactions': '✓' if plan.interaction_effects_supported else '✗',
+                    'Stratification': '✓' if plan.supports_stratification else '✗',
+                }
+            )
 
         return pd.DataFrame(data).set_index('SDS')

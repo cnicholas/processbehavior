@@ -52,12 +52,7 @@ class ControlChartFigure:
         """Display figure in browser or notebook."""
         self._fig.show()
 
-    def save_html(
-        self,
-        filepath: str | Path,
-        include_plotlyjs: bool = True,
-        auto_open: bool = False
-    ) -> None:
+    def save_html(self, filepath: str | Path, include_plotlyjs: bool = True, auto_open: bool = False) -> None:
         """
         Save as standalone HTML file.
 
@@ -73,19 +68,13 @@ class ControlChartFigure:
         filepath = Path(filepath)
 
         self._fig.write_html(
-            str(filepath),
-            include_plotlyjs='cdn' if not include_plotlyjs else True,
-            auto_open=auto_open
+            str(filepath), include_plotlyjs='cdn' if not include_plotlyjs else True, auto_open=auto_open
         )
 
-        logger.info(f"✓ Saved interactive chart to: {filepath}")
+        logger.info(f'✓ Saved interactive chart to: {filepath}')
 
     def save_image(
-        self,
-        filepath: str | Path,
-        width: int | None = None,
-        height: int | None = None,
-        scale: float = 2.0
+        self, filepath: str | Path, width: int | None = None, height: int | None = None, scale: float = 2.0
     ) -> None:
         """
         Save as static image (requires kaleido).
@@ -102,19 +91,14 @@ class ControlChartFigure:
             Scale factor for resolution
         """
         try:
-            self._fig.write_image(
-                str(filepath),
-                width=width,
-                height=height,
-                scale=scale
-            )
-            logger.info(f"✓ Saved static image to: {filepath}")
+            self._fig.write_image(str(filepath), width=width, height=height, scale=scale)
+            logger.info(f'✓ Saved static image to: {filepath}')
         except Exception as e:
             if 'kaleido' in str(e).lower():
                 raise ImportError(
-                    "Image export requires kaleido.\n"
-                    "Install with: pip install kaleido\n"
-                    "Or use .save_html() for interactive HTML export"
+                    'Image export requires kaleido.\n'
+                    'Install with: pip install kaleido\n'
+                    'Or use .save_html() for interactive HTML export'
                 ) from e
             raise
 
@@ -142,8 +126,8 @@ class ControlChartFigure:
         return self._fig
 
     def __repr__(self):
-        return f"ControlChartFigure(charts={list(self._result.charts.keys())})"
+        return f'ControlChartFigure(charts={list(self._result.charts.keys())})'
 
     def _repr_html_(self) -> str:
         """Rich HTML display for Jupyter notebooks and nbconvert."""
-        return self._fig.to_html(full_html=False, include_plotlyjs="cdn")
+        return self._fig.to_html(full_html=False, include_plotlyjs='cdn')

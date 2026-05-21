@@ -23,22 +23,14 @@ from processbehavior.exceptions import ValidationError
 def sds1_study():
     """SDS1 study with two factors — supports all chart types."""
     df = synthetic.make_sds(1, K1=3, K2=2, T=6, n_min=2, n_max=4, seed=42)
-    return ProcessBehavior(df).formulate(
-        response='y',
-        time='time',
-        factors=['factor 1', 'factor 2']
-    )
+    return ProcessBehavior(df).formulate(response='y', time='time', factors=['factor 1', 'factor 2'])
 
 
 @pytest.fixture(scope='module')
 def sds1_single_factor_study():
     """SDS1 study with single factor — for XmR tests without ambiguity."""
     df = synthetic.make_sds(1, K1=3, K2=1, T=6, n_min=2, n_max=4, seed=42)
-    return ProcessBehavior(df).formulate(
-        response='y',
-        time='time',
-        factors=['factor 1']
-    )
+    return ProcessBehavior(df).formulate(response='y', time='time', factors=['factor 1'])
 
 
 # =============================================================================
@@ -51,24 +43,22 @@ class TestInvalidCombinations:
 
     def test_companion_histogram_raises(self, sds1_study):
         """companion=True with Histogram raises ValidationError."""
-        with pytest.raises(ValidationError, match="companion.*Histogram"):
+        with pytest.raises(ValidationError, match='companion.*Histogram'):
             sds1_study.execute(chart='Histogram', companion=True)
 
     def test_phased_with_value_allowed(self, sds2_study):
         """phased=True with value= (residual) is allowed."""
-        result = sds2_study.execute(
-            chart='X', by=[], phased=True, value='R2'
-        )
+        result = sds2_study.execute(chart='X', by=[], phased=True, value='R2')
         assert len(result.get_chart('X')) > 0
 
     def test_bins_non_histogram_raises(self, sds1_single_factor_study):
         """bins with non-Histogram chart raises ValidationError."""
-        with pytest.raises(ValidationError, match="bins.*Histogram"):
+        with pytest.raises(ValidationError, match='bins.*Histogram'):
             sds1_single_factor_study.execute(chart='X', by=[], bins=10)
 
     def test_bins_non_histogram_raises_xbar(self, sds1_study):
         """bins with Xbar chart raises ValidationError."""
-        with pytest.raises(ValidationError, match="bins.*Histogram"):
+        with pytest.raises(ValidationError, match='bins.*Histogram'):
             sds1_study.execute(chart='Xbar', bins=5)
 
 
@@ -97,9 +87,7 @@ class TestValidCombinations:
 
     def test_companion_xmr_succeeds(self, sds1_single_factor_study):
         """companion=True with X succeeds."""
-        result = sds1_single_factor_study.execute(
-            chart='X', by=[], companion=True
-        )
+        result = sds1_single_factor_study.execute(chart='X', by=[], companion=True)
         assert result is not None
 
 
@@ -113,9 +101,7 @@ class TestCompanionWithResiduals:
 
     def test_xmr_companion_with_residual_returns_both(self, sds2_study):
         """X + companion + value='R2' → both X and mR."""
-        result = sds2_study.execute(
-            chart='X', by=[], companion=True, value='R2'
-        )
+        result = sds2_study.execute(chart='X', by=[], companion=True, value='R2')
         assert 'X' in result.charts
         assert 'mR' in result.charts
 
@@ -127,9 +113,7 @@ class TestCompanionWithResiduals:
 
     def test_xmr_no_companion_with_residual_returns_single(self, sds2_study):
         """X + companion=False + value='R2' → only X."""
-        result = sds2_study.execute(
-            chart='X', by=[], companion=False, value='R2'
-        )
+        result = sds2_study.execute(chart='X', by=[], companion=False, value='R2')
         assert 'X' in result.charts
         assert 'mR' not in result.charts
 
@@ -150,9 +134,7 @@ class TestCompanionWithResiduals:
 def sds2_study():
     """SDS2 study — supports R2_XmR residual charts."""
     df = synthetic.make_sds(2, K1=2, K2=2, T=8, seed=42)
-    return ProcessBehavior(df).formulate(
-        response='y', time='time', factors=['factor 1', 'factor 2']
-    )
+    return ProcessBehavior(df).formulate(response='y', time='time', factors=['factor 1', 'factor 2'])
 
 
 class TestRecenteredValueResolution:
@@ -175,7 +157,7 @@ class TestRecenteredValueResolution:
 
     def test_recentered_true_without_value_raises(self, sds1_study):
         """recentered=True with value=None raises ValidationError."""
-        with pytest.raises(ValidationError, match="recentered.*requires.*residual"):
+        with pytest.raises(ValidationError, match='recentered.*requires.*residual'):
             sds1_study.execute(chart='Xbar', recentered=True)
 
 
@@ -188,15 +170,13 @@ class TestRecenteredValueResolution:
 def no_time_study():
     """Study with factors but no time — no VAS residuals."""
     df = synthetic.make_sds(1, K1=3, K2=2, T=6, n_min=2, n_max=4, seed=42)
-    return ProcessBehavior(df).formulate(
-        response='y', factors=['factor 1', 'factor 2']
-    )
+    return ProcessBehavior(df).formulate(response='y', factors=['factor 1', 'factor 2'])
 
 
 class TestRecenteredRequiresVAS:
     def test_recentered_without_time_raises(self, no_time_study):
         """recentered=True without time raises clear ValidationError."""
-        with pytest.raises(ValidationError, match="factors.*time"):
+        with pytest.raises(ValidationError, match='factors.*time'):
             no_time_study.execute(chart='X', by=[], value='R2', recentered=True)
 
 
@@ -236,8 +216,5 @@ class TestResidualAccessor:
 
     def test_execute_with_accessor(self, sds1_study):
         """End-to-end: study.execute(chart=..., value=study.residuals.R5)."""
-        result = sds1_study.execute(
-            chart=sds1_study.charts.Xbar,
-            value=sds1_study.residuals.R5
-        )
+        result = sds1_study.execute(chart=sds1_study.charts.Xbar, value=sds1_study.residuals.R5)
         assert result is not None

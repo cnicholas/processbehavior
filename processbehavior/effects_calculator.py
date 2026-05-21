@@ -34,10 +34,8 @@ logger = logging.getLogger(__name__)
 # Pure Functions: Main Effects
 # ============================================================================
 
-def calculate_factor_main_effects(
-    df: pd.DataFrame,
-    factor: str
-) -> pd.DataFrame:
+
+def calculate_factor_main_effects(df: pd.DataFrame, factor: str) -> pd.DataFrame:
     """
     Calculate main effect for a single factor.
 
@@ -78,23 +76,15 @@ def calculate_factor_main_effects(
     """
     if 'R5' not in df.columns:
         raise ValueError(
-            f"Cannot calculate main effects - R5 column missing.\n"
-            f"Available columns: {df.columns.tolist()}\n"
-            f"Fix: Calculate VAS residuals first"
+            f'Cannot calculate main effects - R5 column missing.\n'
+            f'Available columns: {df.columns.tolist()}\n'
+            f'Fix: Calculate VAS residuals first'
         )
 
     if factor not in df.columns:
-        raise ValueError(
-            f"Factor '{factor}' not found in data.\n"
-            f"Available columns: {df.columns.tolist()}"
-        )
+        raise ValueError(f"Factor '{factor}' not found in data.\nAvailable columns: {df.columns.tolist()}")
 
-    me = (
-        df.groupby(factor, sort=False, observed=True)['R5']
-        .mean()
-        .rename('Main_Effect')
-        .reset_index()
-    )
+    me = df.groupby(factor, sort=False, observed=True)['R5'].mean().rename('Main_Effect').reset_index()
 
     # Validate uniqueness
     if me.duplicated(subset=[factor]).any():
@@ -103,10 +93,7 @@ def calculate_factor_main_effects(
     return me[[factor, 'Main_Effect']]
 
 
-def calculate_time_main_effects(
-    df: pd.DataFrame,
-    time_var: str
-) -> pd.DataFrame:
+def calculate_time_main_effects(df: pd.DataFrame, time_var: str) -> pd.DataFrame:
     """
     Calculate main effect for time.
 
@@ -142,26 +129,14 @@ def calculate_time_main_effects(
     1     2  -0.15
     """
     if 'R4' not in df.columns:
-        raise ValueError(
-            "Cannot calculate time effects - R4 column missing.\n"
-            "Calculate VAS residuals first."
-        )
+        raise ValueError('Cannot calculate time effects - R4 column missing.\nCalculate VAS residuals first.')
 
-    te = (
-        df.groupby(time_var, sort=False, observed=True)['R4']
-        .mean()
-        .rename('PT_ME')
-        .reset_index()
-    )
+    te = df.groupby(time_var, sort=False, observed=True)['R4'].mean().rename('PT_ME').reset_index()
 
     return te[[time_var, 'PT_ME']]
 
 
-def calculate_main_effect_scores(
-    df: pd.DataFrame,
-    factor: str,
-    main_effects: pd.DataFrame
-) -> pd.DataFrame:
+def calculate_main_effect_scores(df: pd.DataFrame, factor: str, main_effects: pd.DataFrame) -> pd.DataFrame:
     """
     Calculate main effect scores: R2 + Main Effect per row.
 
@@ -204,32 +179,25 @@ def calculate_main_effect_scores(
     2    B     -0.20
     """
     if 'R2' not in df.columns:
-        raise ValueError("Cannot calculate MEs - R2 column missing")
+        raise ValueError('Cannot calculate MEs - R2 column missing')
 
     if factor not in df.columns:
         raise ValueError(f"Factor '{factor}' not in data")
 
     if not isinstance(main_effects, pd.DataFrame):
-        raise TypeError("main_effects must be a DataFrame")
+        raise TypeError('main_effects must be a DataFrame')
 
     required_cols = {factor, 'Main_Effect'}
     if not required_cols.issubset(main_effects.columns):
         raise ValueError(
-            f"main_effects missing required columns.\n"
-            f"Required: {required_cols}\n"
-            f"Found: {set(main_effects.columns)}"
+            f'main_effects missing required columns.\nRequired: {required_cols}\nFound: {set(main_effects.columns)}'
         )
 
     # Merge to add Main_Effect column
-    merged = df[[factor, 'R2']].merge(
-        main_effects,
-        on=factor,
-        how='left',
-        validate='many_to_one'
-    )
+    merged = df[[factor, 'R2']].merge(main_effects, on=factor, how='left', validate='many_to_one')
 
     # Calculate score
-    label = f"{factor}_MEs"
+    label = f'{factor}_MEs'
     merged[label] = merged['R2'] + merged['Main_Effect']
 
     return merged[[factor, label]]
@@ -239,11 +207,8 @@ def calculate_main_effect_scores(
 # Pure Functions: Interactions
 # ============================================================================
 
-def calculate_interaction_cell_means(
-    df: pd.DataFrame,
-    rsg_vars: list[str],
-    time_var: str
-) -> pd.Series:
+
+def calculate_interaction_cell_means(df: pd.DataFrame, rsg_vars: list[str], time_var: str) -> pd.Series:
     """
     Calculate cell-level interaction effect (factor × time).
 
@@ -284,7 +249,7 @@ def calculate_interaction_cell_means(
     Name: R3, dtype: float64
     """
     if 'R3' not in df.columns:
-        raise ValueError("Cannot calculate interactions - R3 column missing")
+        raise ValueError('Cannot calculate interactions - R3 column missing')
 
     keys = list(rsg_vars) + [time_var]
 
@@ -293,11 +258,7 @@ def calculate_interaction_cell_means(
 
 
 def calculate_pdc_by_time_sds2(
-    df: pd.DataFrame,
-    ybar_kt: pd.Series,
-    ybar_k: pd.Series,
-    ybar_t: pd.Series,
-    ybar: float
+    df: pd.DataFrame, ybar_kt: pd.Series, ybar_k: pd.Series, ybar_t: pd.Series, ybar: float
 ) -> pd.Series:
     """
     Calculate process disruption component (PDC) for SDS 2.
@@ -329,9 +290,7 @@ def calculate_pdc_by_time_sds2(
 
 
 def calculate_factor_interaction_effects(
-    df: pd.DataFrame,
-    rsg_vars: list[str],
-    main_effects: dict[str, pd.DataFrame]
+    df: pd.DataFrame, rsg_vars: list[str], main_effects: dict[str, pd.DataFrame]
 ) -> pd.DataFrame:
     """
     Calculate two-factor interaction effects (F1 × F2).
@@ -369,44 +328,32 @@ def calculate_factor_interaction_effects(
     >>> # Then Rx = 0.4 - 0.2 - 0.1 = 0.1 (synergistic interaction)
     """
     if len(rsg_vars) < 2:
-        logger.debug(
-            f"Only {len(rsg_vars)} factor(s) - "
-            f"factor interaction requires at least 2. Skipping."
-        )
+        logger.debug(f'Only {len(rsg_vars)} factor(s) - factor interaction requires at least 2. Skipping.')
         return pd.DataFrame()
 
     if 'R5' not in df.columns:
-        raise ValueError("Cannot calculate interactions - R5 column missing")
+        raise ValueError('Cannot calculate interactions - R5 column missing')
 
     # Use first 2 factors only
     if len(rsg_vars) > 2:
-        logger.warning(
-            f"More than 2 factors in RSG - "
-            f"calculating interaction for first 2: {rsg_vars[:2]}"
-        )
+        logger.warning(f'More than 2 factors in RSG - calculating interaction for first 2: {rsg_vars[:2]}')
 
     factor1, factor2 = rsg_vars[0], rsg_vars[1]
 
     # Calculate mean R5 for each factor combination
-    rsg_r5 = (
-        df.groupby(list(rsg_vars[:2]), as_index=False, observed=True)['R5']
-        .mean()
-    )
+    rsg_r5 = df.groupby(list(rsg_vars[:2]), as_index=False, observed=True)['R5'].mean()
 
     # Add main effects for each factor
     for _i, factor in enumerate([factor1, factor2]):
         me = main_effects.get(factor)
         if me is None or not isinstance(me, pd.DataFrame):
             raise ValueError(
-                f"Main effects for '{factor}' not found or invalid.\n"
-                f"Available: {list(main_effects.keys())}"
+                f"Main effects for '{factor}' not found or invalid.\nAvailable: {list(main_effects.keys())}"
             )
 
         # Validate structure
         if not {factor, 'Main_Effect'}.issubset(me.columns):
-            raise ValueError(
-                f"Main effects for '{factor}' missing required columns"
-            )
+            raise ValueError(f"Main effects for '{factor}' missing required columns")
 
         rsg_r5 = rsg_r5.merge(me, on=factor, how='left', validate='many_to_one')
         # Rename to distinguish
@@ -419,9 +366,7 @@ def calculate_factor_interaction_effects(
 
 
 def calculate_factor_interaction_scores(
-    df: pd.DataFrame,
-    rsg_vars: list[str],
-    factor_interactions: pd.DataFrame
+    df: pd.DataFrame, rsg_vars: list[str], factor_interactions: pd.DataFrame
 ) -> pd.DataFrame:
     """
     Calculate factor interaction scores per row.
@@ -449,16 +394,13 @@ def calculate_factor_interaction_scores(
         return pd.DataFrame()
 
     if 'R2' not in df.columns:
-        raise ValueError("Cannot calculate interaction scores - R2 missing")
+        raise ValueError('Cannot calculate interaction scores - R2 missing')
 
     factor1, factor2 = rsg_vars[0], rsg_vars[1]
 
     # Merge to add Rx to each row
     merged = df[[factor1, factor2, 'R2']].merge(
-        factor_interactions,
-        on=[factor1, factor2],
-        how='left',
-        validate='many_to_one'
+        factor_interactions, on=[factor1, factor2], how='left', validate='many_to_one'
     )
 
     merged['factor_interaction_effects'] = merged['R2'] + merged['Rx']
@@ -469,6 +411,7 @@ def calculate_factor_interaction_scores(
 # ============================================================================
 # Orchestration Class
 # ============================================================================
+
 
 class EffectsCalculator:
     """
@@ -492,11 +435,7 @@ class EffectsCalculator:
     dict_keys(['main_effect', 'lane', 'head', 'time', 'lane_MEs', ...])
     """
 
-    def calculate_all_effects(
-        self,
-        df: pd.DataFrame,
-        spec: FormulationSpec
-    ) -> dict:
+    def calculate_all_effects(self, df: pd.DataFrame, spec: FormulationSpec) -> dict:
         """
         Calculate all main effects.
 
@@ -537,14 +476,14 @@ class EffectsCalculator:
         effects = {}
 
         if not spec.rsg_vars:
-            logger.debug("No grouping variables - skipping effects calculation")
+            logger.debug('No grouping variables - skipping effects calculation')
             return effects
 
         # Validate residuals present
         self._validate_residuals(df)
 
         # Calculate main effects for each factor
-        logger.debug("Calculating factor main effects")
+        logger.debug('Calculating factor main effects')
         for factor in spec.rsg_vars:
             me = calculate_factor_main_effects(df, factor)
             effects[factor] = me
@@ -556,21 +495,21 @@ class EffectsCalculator:
 
         # Calculate time main effects
         if spec.has_time:
-            logger.debug("Calculating time main effects")
+            logger.debug('Calculating time main effects')
             te = calculate_time_main_effects(df, spec.time_var)
             effects['time'] = te
 
         # Calculate main effect scores for each factor
-        logger.debug("Calculating main effect scores")
+        logger.debug('Calculating main effect scores')
         for factor in spec.rsg_vars:
             me = effects[factor]
             mes = calculate_main_effect_scores(df, factor, me)
-            effects[f"{factor}_MEs"] = mes
+            effects[f'{factor}_MEs'] = mes
 
         # Calculate factor interaction effects (if 2+ factors)
         # Note: factor × factor interaction is stored in interactions dict, not effects
         if len(spec.rsg_vars) >= 2:
-            logger.debug("Calculating factor interaction effects")
+            logger.debug('Calculating factor interaction effects')
             fi = calculate_factor_interaction_effects(df, spec.rsg_vars, effects)
             if not fi.empty:
                 # Calculate per-row scores (kept in effects for backward compatibility)
@@ -578,15 +517,11 @@ class EffectsCalculator:
                 if not fie.empty:
                     effects['factor_interaction_effects'] = fie
 
-        logger.debug("All effects calculated successfully")
+        logger.debug('All effects calculated successfully')
         return effects
 
     def calculate_interactions(
-        self,
-        df: pd.DataFrame,
-        spec: FormulationSpec,
-        sds: int,
-        effects: dict | None = None
+        self, df: pd.DataFrame, spec: FormulationSpec, sds: int, effects: dict | None = None
     ) -> dict:
         """
         Calculate interaction effects.
@@ -618,15 +553,13 @@ class EffectsCalculator:
         # Factor × time interaction (requires grouping + time)
         if spec.has_grouping and spec.has_time:
             if 'R3' not in df.columns:
-                logger.warning("R3 not found - cannot calculate factor × time interaction")
+                logger.warning('R3 not found - cannot calculate factor × time interaction')
             else:
-                logger.debug("Calculating factor × time interaction (PDC)")
+                logger.debug('Calculating factor × time interaction (PDC)')
 
                 if sds == 1:
                     # Full replication: use cell averages of R3
-                    pdc = calculate_interaction_cell_means(
-                        df, spec.rsg_vars, spec.time_var
-                    )
+                    pdc = calculate_interaction_cell_means(df, spec.rsg_vars, spec.time_var)
                     interactions['factor_time'] = pdc
 
                 elif sds == 2:
@@ -636,21 +569,19 @@ class EffectsCalculator:
                         df['Ybar_kt'],
                         df['Ybar_k'],
                         df['Ybar_t'],
-                        df['Ybar'].iloc[0]  # Grand mean (constant)
+                        df['Ybar'].iloc[0],  # Grand mean (constant)
                     )
                     interactions['factor_time'] = pdc
 
                 else:
                     # SDS 3+: use SDS 1 approach
-                    logger.debug(f"SDS {sds}: Using cell-average approach for PDC")
-                    pdc = calculate_interaction_cell_means(
-                        df, spec.rsg_vars, spec.time_var
-                    )
+                    logger.debug(f'SDS {sds}: Using cell-average approach for PDC')
+                    pdc = calculate_interaction_cell_means(df, spec.rsg_vars, spec.time_var)
                     interactions['factor_time'] = pdc
 
         # Factor × factor interaction (requires 2+ factors)
         if spec.rsg_vars and len(spec.rsg_vars) >= 2 and effects is not None:
-            logger.debug("Calculating factor × factor interaction")
+            logger.debug('Calculating factor × factor interaction')
             fi = calculate_factor_interaction_effects(df, spec.rsg_vars, effects)
             if not fi.empty:
                 interactions['factor_factor'] = fi
@@ -664,7 +595,7 @@ class EffectsCalculator:
 
         if missing:
             raise ValueError(
-                f"Cannot calculate effects - missing residuals: {missing}\n"
-                f"Available columns: {df.columns.tolist()}\n"
-                f"Fix: Calculate VAS residuals before calling calculate_all_effects()"
+                f'Cannot calculate effects - missing residuals: {missing}\n'
+                f'Available columns: {df.columns.tolist()}\n'
+                f'Fix: Calculate VAS residuals before calling calculate_all_effects()'
             )

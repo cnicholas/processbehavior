@@ -28,6 +28,7 @@ pytestmark = pytest.mark.plotting
 # Fixtures
 # ============================================================================
 
+
 @pytest.fixture
 def result_with_effects():
     """Create analysis result with effects (SDS 1 - full replication)."""
@@ -48,11 +49,7 @@ def result_with_effects():
 
     df = pd.DataFrame(data)
     pdf = ProcessBehavior(df)
-    study = pdf.formulate(
-        response=pdf.cols.value,
-        factors=[pdf.cols.factor1, pdf.cols.factor2],
-        time=pdf.cols.time
-    )
+    study = pdf.formulate(response=pdf.cols.value, factors=[pdf.cols.factor1, pdf.cols.factor2], time=pdf.cols.time)
     return study.execute()
 
 
@@ -71,11 +68,7 @@ def result_single_factor():
 
     df = pd.DataFrame(data)
     pdf = ProcessBehavior(df)
-    study = pdf.formulate(
-        response=pdf.cols.value,
-        factors=[pdf.cols.factor1],
-        time=pdf.cols.time
-    )
+    study = pdf.formulate(response=pdf.cols.value, factors=[pdf.cols.factor1], time=pdf.cols.time)
     return study.execute()
 
 
@@ -94,10 +87,7 @@ def result_no_time():
 
     df = pd.DataFrame(data)
     pdf = ProcessBehavior(df)
-    study = pdf.formulate(
-        response=pdf.cols.value,
-        factors=[pdf.cols.factor1]
-    )
+    study = pdf.formulate(response=pdf.cols.value, factors=[pdf.cols.factor1])
     return study.execute(chart='X', by=['factor1'])
 
 
@@ -110,6 +100,7 @@ def theme():
 # ============================================================================
 # Test: Effect Key Names (Phase 1 verification)
 # ============================================================================
+
 
 class TestEffectKeyNames:
     """Verify effect keys use new naming convention."""
@@ -136,6 +127,7 @@ class TestEffectKeyNames:
 # ============================================================================
 # Test: create_main_effects_chart
 # ============================================================================
+
 
 class TestCreateMainEffectsChart:
     """Test main effects bar chart creation."""
@@ -180,13 +172,14 @@ class TestCreateMainEffectsChart:
     def test_raises_if_no_effects(self, theme):
         """Should raise error if no effects data found."""
         empty_effects = {}
-        with pytest.raises(ChartNotAvailableError, match="No main effects found"):
+        with pytest.raises(ChartNotAvailableError, match='No main effects found'):
             create_main_effects_chart(empty_effects, theme)
 
 
 # ============================================================================
 # Test: create_factor_effects_chart
 # ============================================================================
+
 
 class TestCreateFactorEffectsChart:
     """Test factor effects bar chart creation (MainEffects)."""
@@ -242,13 +235,14 @@ class TestCreateFactorEffectsChart:
         """Should raise error if no factor effects data found."""
         # Create effects dict with only time effects
         time_only_effects = {'time': result_with_effects.effects.get('time')}
-        with pytest.raises(ChartNotAvailableError, match="No factor main effects found"):
+        with pytest.raises(ChartNotAvailableError, match='No factor main effects found'):
             create_factor_effects_chart(time_only_effects, theme)
 
 
 # ============================================================================
 # Test: create_time_effects_chart
 # ============================================================================
+
 
 class TestCreateTimeEffectsChart:
     """Test time effects bar chart creation (TimeEffects)."""
@@ -302,13 +296,14 @@ class TestCreateTimeEffectsChart:
     def test_raises_if_no_time_effects(self, theme, result_no_time):
         """Should raise error if no time effects data found."""
         effects = result_no_time.effects
-        with pytest.raises(ChartNotAvailableError, match="No time effects found"):
+        with pytest.raises(ChartNotAvailableError, match='No time effects found'):
             create_time_effects_chart(effects, theme)
 
 
 # ============================================================================
 # Test: create_time_interaction_chart
 # ============================================================================
+
 
 class TestCreateTimeInteractionChart:
     """Test factor × time interaction line chart creation."""
@@ -321,7 +316,7 @@ class TestCreateTimeInteractionChart:
             factors=['factor1', 'factor2'],
             time_var='time',
             dataset=result_with_effects.dataset,
-            theme=theme
+            theme=theme,
         )
 
         assert isinstance(fig, go.Figure)
@@ -334,7 +329,7 @@ class TestCreateTimeInteractionChart:
             factors=['factor1'],
             time_var='time',
             dataset=result_single_factor.dataset,
-            theme=theme
+            theme=theme,
         )
 
         # Should have 3 traces (A, B, C)
@@ -342,14 +337,14 @@ class TestCreateTimeInteractionChart:
 
     def test_raises_if_no_factor_time(self, theme, result_no_time):
         """Should raise error if factor_time not available."""
-        with pytest.raises(ChartNotAvailableError, match="Factor × time interaction not available"):
+        with pytest.raises(ChartNotAvailableError, match='Factor × time interaction not available'):
             create_time_interaction_chart(
                 interactions={},  # Empty interactions
                 effects={},
                 factors=['factor1'],
                 time_var='time',
                 dataset=result_no_time.dataset,
-                theme=theme
+                theme=theme,
             )
 
 
@@ -357,15 +352,14 @@ class TestCreateTimeInteractionChart:
 # Test: create_factor_interaction_chart
 # ============================================================================
 
+
 class TestCreateFactorInteractionChart:
     """Test factor × factor interaction chart creation."""
 
     def test_creates_line_chart(self, result_with_effects, theme):
         """Should create a line chart with scatter traces."""
         fig = create_factor_interaction_chart(
-            interactions=result_with_effects.interactions,
-            factors=['factor1', 'factor2'],
-            theme=theme
+            interactions=result_with_effects.interactions, factors=['factor1', 'factor2'], theme=theme
         )
 
         assert isinstance(fig, go.Figure)
@@ -376,26 +370,23 @@ class TestCreateFactorInteractionChart:
 
     def test_raises_if_no_factor_factor(self, theme):
         """Should raise error if factor_factor not available."""
-        with pytest.raises(ChartNotAvailableError, match="Factor × factor interaction not available"):
-            create_factor_interaction_chart(
-                interactions={},
-                factors=['factor1', 'factor2'],
-                theme=theme
-            )
+        with pytest.raises(ChartNotAvailableError, match='Factor × factor interaction not available'):
+            create_factor_interaction_chart(interactions={}, factors=['factor1', 'factor2'], theme=theme)
 
     def test_raises_if_less_than_two_factors(self, theme, result_with_effects):
         """Should raise error if less than 2 factors."""
-        with pytest.raises(ValidationError, match="at least 2 factors"):
+        with pytest.raises(ValidationError, match='at least 2 factors'):
             create_factor_interaction_chart(
                 interactions=result_with_effects.interactions,
                 factors=['factor1'],  # Only 1 factor
-                theme=theme
+                theme=theme,
             )
 
 
 # ============================================================================
 # Test: result.plot() Integration
 # ============================================================================
+
 
 class TestPlotEffectsIntegration:
     """Test plot(chart='...') integration with AnalysisResult."""
@@ -468,34 +459,36 @@ class TestPlotEffectsIntegration:
 # Test: Error Handling
 # ============================================================================
 
+
 class TestEffectsPlottingErrors:
     """Test error handling for effects plotting."""
 
     def test_time_interaction_requires_time(self, result_no_time):
         """Should raise error when time interaction not available."""
-        with pytest.raises(ValidationError, match="Time interaction not available"):
+        with pytest.raises(ValidationError, match='Time interaction not available'):
             result_no_time.plot(chart='TimeInteraction')
 
     def test_factor_interaction_requires_two_factors(self, result_single_factor):
         """Should raise error when factor interaction not available."""
-        with pytest.raises(ValidationError, match="Factor interaction not available"):
+        with pytest.raises(ValidationError, match='Factor interaction not available'):
             result_single_factor.plot(chart='FactorInteraction')
 
     def test_time_effects_requires_time_variable(self, result_no_time):
         """Should raise error when time effects not available."""
-        with pytest.raises(ValidationError, match="Time effects not available"):
+        with pytest.raises(ValidationError, match='Time effects not available'):
             result_no_time.plot(chart='TimeEffects')
 
     def test_main_effects_requires_effects(self, result_no_time):
         """MainEffects should raise error when effects not computed."""
         # result_no_time has factors but has_effects=False (XmR chart with by param)
-        with pytest.raises(ValidationError, match="Effects not available"):
+        with pytest.raises(ValidationError, match='Effects not available'):
             result_no_time.plot(chart='MainEffects')
 
 
 # ============================================================================
 # Test: Different SDS Types
 # ============================================================================
+
 
 class TestEffectsPottingDifferentSDS:
     """Test effects plotting with different SDS types."""
@@ -525,11 +518,7 @@ class TestEffectsPottingDifferentSDS:
 
         df = pd.DataFrame(data)
         pdf = ProcessBehavior(df)
-        study = pdf.formulate(
-            response=pdf.cols.value,
-            factors=[pdf.cols.factor1, pdf.cols.factor2],
-            time=pdf.cols.time
-        )
+        study = pdf.formulate(response=pdf.cols.value, factors=[pdf.cols.factor1, pdf.cols.factor2], time=pdf.cols.time)
         result = study.execute(chart='X', by=['factor1', 'factor2'])
 
         assert result.analytical_sds == 2
@@ -542,6 +531,7 @@ class TestEffectsPottingDifferentSDS:
 # ============================================================================
 # Test: Data Access
 # ============================================================================
+
 
 class TestEffectsDataAccess:
     """Test accessing effects data directly."""

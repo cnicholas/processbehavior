@@ -16,31 +16,25 @@ from processbehavior.datasets import synthetic
 # Fixtures
 # =============================================================================
 
+
 @pytest.fixture
 def sds1_study():
     """SDS1 study with two factors and time - ideal for testing `by` parameter."""
     df = synthetic.make_sds(1, K1=3, K2=2, T=6, n_min=2, n_max=4, seed=42)
-    return ProcessBehavior(df).formulate(
-        response='y',
-        time='time',
-        factors=['factor 1', 'factor 2']
-    )
+    return ProcessBehavior(df).formulate(response='y', time='time', factors=['factor 1', 'factor 2'])
 
 
 @pytest.fixture
 def sds1_single_factor_study():
     """SDS1 study with single factor."""
     df = synthetic.make_sds(1, K1=3, K2=1, T=6, n_min=2, n_max=4, seed=42)
-    return ProcessBehavior(df).formulate(
-        response='y',
-        time='time',
-        factors=['factor 1']
-    )
+    return ProcessBehavior(df).formulate(response='y', time='time', factors=['factor 1'])
 
 
 # =============================================================================
 # CRITICAL INVARIANT TEST
 # =============================================================================
+
 
 class TestResidualsInvariant:
     """Test that residuals are identical across all `by` views.
@@ -68,13 +62,13 @@ class TestResidualsInvariant:
                 ds_full[residual].reset_index(drop=True),
                 ds_f1[residual].reset_index(drop=True),
                 check_names=False,
-                obj=f"{residual} full vs f1"
+                obj=f'{residual} full vs f1',
             )
             pd.testing.assert_series_equal(
                 ds_full[residual].reset_index(drop=True),
                 ds_all[residual].reset_index(drop=True),
                 check_names=False,
-                obj=f"{residual} full vs all"
+                obj=f'{residual} full vs all',
             )
 
 
@@ -82,17 +76,18 @@ class TestResidualsInvariant:
 # BY PARAMETER VALIDATION TESTS
 # =============================================================================
 
+
 class TestByParameterValidation:
     """Test validation rules for the `by` parameter."""
 
     def test_xmr_with_factors_requires_by(self, sds1_study):
         """X charts with factors should require explicit `by` parameter."""
-        with pytest.raises(ValidationError, match="require.*by"):
+        with pytest.raises(ValidationError, match='require.*by'):
             sds1_study.execute(chart='X')
 
     def test_by_must_be_subset_of_factors(self, sds1_study):
         """by parameter must only contain factor variables."""
-        with pytest.raises(FactorNotFoundError, match="not a valid by variable"):
+        with pytest.raises(FactorNotFoundError, match='not a valid by variable'):
             sds1_study.execute(chart='X', by=['invalid_factor'])
 
     def test_by_empty_list_allowed(self, sds1_study):
@@ -116,6 +111,7 @@ class TestByParameterValidation:
 # =============================================================================
 # XBAR/S AGGREGATION TESTS
 # =============================================================================
+
 
 class TestXbarAggregation:
     """Test Xbar chart aggregation with `by` parameter."""
@@ -169,6 +165,7 @@ class TestSAggregation:
 # ORDER PRESERVATION TESTS
 # =============================================================================
 
+
 class TestOrderPreservation:
     """Test that user-specified by order is preserved in subgroup labels."""
 
@@ -203,6 +200,7 @@ class TestOrderPreservation:
 # =============================================================================
 # XmR STRATIFICATION TESTS
 # =============================================================================
+
 
 class TestXmRStratification:
     """Test XmR chart stratification with `by` parameter."""
@@ -265,6 +263,7 @@ class TestRStratification:
 # VALUE PARAMETER TESTS
 # =============================================================================
 
+
 class TestValueParameter:
     """Test the `value` parameter for charting residuals."""
 
@@ -305,6 +304,7 @@ class TestValueParameter:
 # LANE BOUNDARY CONTENT TESTS
 # =============================================================================
 
+
 class TestLaneBoundaryContent:
     """Test the content and structure of lane boundaries."""
 
@@ -338,10 +338,12 @@ class TestLaneBoundaryContent:
 # THREE-FACTOR LANE BOUNDARY TESTS
 # =============================================================================
 
+
 @pytest.fixture
 def three_factor_study():
     """SDS1 study with three factors — machine, shift, operator."""
     import numpy as np
+
     rng = np.random.default_rng(42)
     rows = []
     for t in [1, 2]:
@@ -349,13 +351,15 @@ def three_factor_study():
             for s in ['S1', 'S2']:
                 for o in ['O1', 'O2']:
                     for _ in range(2):  # n=2 per cell
-                        rows.append({
-                            'time': t,
-                            'machine': m,
-                            'shift': s,
-                            'operator': o,
-                            'y': rng.normal(50, 1),
-                        })
+                        rows.append(
+                            {
+                                'time': t,
+                                'machine': m,
+                                'shift': s,
+                                'operator': o,
+                                'y': rng.normal(50, 1),
+                            }
+                        )
     df = pd.DataFrame(rows)
     return ProcessBehavior(df).formulate(
         response='y',
@@ -386,7 +390,7 @@ class TestThreeFactorLaneBoundaries:
         # Labels are 3-part joined strings (e.g. "M1_S1_O2")
         for b in boundaries:
             parts = b['label'].split('_')
-            assert len(parts) == 3, f"Expected 3-part label, got {b['label']!r}"
+            assert len(parts) == 3, f'Expected 3-part label, got {b["label"]!r}'
 
         # Positions are ordered
         positions = [b['position'] for b in boundaries]
@@ -413,7 +417,7 @@ class TestThreeFactorLaneBoundaries:
             # Labels are 2-part joined strings (e.g. "S1_O2")
             for b in stratum_bounds:
                 parts = b['label'].split('_')
-                assert len(parts) == 2, f"Expected 2-part label, got {b['label']!r}"
+                assert len(parts) == 2, f'Expected 2-part label, got {b["label"]!r}'
 
     def test_by_two_factors_stratifies_with_one_collapsed(self, three_factor_study):
         """by=['machine', 'shift'] stratifies by both, collapses operator."""
@@ -426,7 +430,7 @@ class TestThreeFactorLaneBoundaries:
 
         # Strata keys are strings (encode_rsg format)
         for s in strata:
-            assert isinstance(s, str), f"Expected string stratum key, got {type(s).__name__}"
+            assert isinstance(s, str), f'Expected string stratum key, got {type(s).__name__}'
 
         # Lane boundaries dict uses string keys
         boundaries = result.charts['X']['metadata']['lane_boundaries']
@@ -441,8 +445,9 @@ class TestThreeFactorLaneBoundaries:
 
             # Labels are single values (no joining needed)
             for b in stratum_bounds:
-                assert '_' not in b['label'] or b['label'] in ('O1', 'O2'), \
-                    f"Expected single-factor label, got {b['label']!r}"
+                assert '_' not in b['label'] or b['label'] in ('O1', 'O2'), (
+                    f'Expected single-factor label, got {b["label"]!r}'
+                )
 
     def test_by_empty_three_factor_plot_renders(self, three_factor_study):
         """Smoke test: plotting a 3-factor by=[] chart does not raise."""
@@ -454,6 +459,7 @@ class TestThreeFactorLaneBoundaries:
 # =============================================================================
 # XBAR R2-BASED LIMITS FOR EFFECT-CARRYING RESIDUALS
 # =============================================================================
+
 
 class TestXbarEffectResidualLimits:
     """Test that Xbar limits for R4/R5 use R2's within-group std.
@@ -480,21 +486,15 @@ class TestXbarEffectResidualLimits:
         # Both use R2's Sbar, so limit WIDTHs should match
         r5_width = (r5_data['upl'] - r5_data['lpl']).iloc[0]
         r4_width = (r4_data['upl'] - r4_data['lpl']).iloc[0]
-        assert abs(r5_width - r4_width) < 0.01, (
-            f"R5 limit width {r5_width:.4f} should match R4 width {r4_width:.4f}"
-        )
+        assert abs(r5_width - r4_width) < 0.01, f'R5 limit width {r5_width:.4f} should match R4 width {r4_width:.4f}'
 
     def test_xbar_r5_by_rsg_unchanged(self, sds1_study):
         """Xbar R5 by RSG: limits unchanged (R5 std = R2 std within cells).
 
         At RSG level, both R5 and R4 use R2 dispersion and should match.
         """
-        result_r5 = sds1_study.execute(
-            chart='Xbar', value='R5', by=['factor 1', 'factor 2']
-        )
-        result_r4 = sds1_study.execute(
-            chart='Xbar', value='R4', by=['factor 1', 'factor 2']
-        )
+        result_r5 = sds1_study.execute(chart='Xbar', value='R5', by=['factor 1', 'factor 2'])
+        result_r4 = sds1_study.execute(chart='Xbar', value='R4', by=['factor 1', 'factor 2'])
 
         r5_data = result_r5.charts['Xbar']['data']
         r4_data = result_r4.charts['Xbar']['data']
@@ -516,9 +516,7 @@ class TestXbarEffectResidualLimits:
 
         r4_width = (r4_data['upl'] - r4_data['lpl']).iloc[0]
         r5_width = (r5_data['upl'] - r5_data['lpl']).iloc[0]
-        assert abs(r4_width - r5_width) < 0.01, (
-            f"R4 limit width {r4_width:.4f} should match R5 width {r5_width:.4f}"
-        )
+        assert abs(r4_width - r5_width) < 0.01, f'R4 limit width {r4_width:.4f} should match R5 width {r5_width:.4f}'
 
     def test_xbar_r5_collapsed_narrower_than_without_fix(self, sds1_study):
         """Verify R5 by factor limits are narrower than R5's own variability would give.
@@ -535,20 +533,14 @@ class TestXbarEffectResidualLimits:
 
         # R5 std >= R2 std at collapsed levels (between-cell variance adds up)
         assert r5_group_stds.mean() >= r2_group_stds.mean() - 0.001, (
-            "R5 within-group std should be >= R2 within-group std at collapsed level"
+            'R5 within-group std should be >= R2 within-group std at collapsed level'
         )
 
         # The Xbar chart should use R2's (tighter) std — verify via R4 comparison
         result_r5 = sds1_study.execute(chart='Xbar', value='R5', by=['factor 1'])
         result_r4 = sds1_study.execute(chart='Xbar', value='R4', by=['factor 1'])
 
-        r5_width = (
-            result_r5.charts['Xbar']['data']['upl']
-            - result_r5.charts['Xbar']['data']['lpl']
-        ).iloc[0]
-        r4_width = (
-            result_r4.charts['Xbar']['data']['upl']
-            - result_r4.charts['Xbar']['data']['lpl']
-        ).iloc[0]
+        r5_width = (result_r5.charts['Xbar']['data']['upl'] - result_r5.charts['Xbar']['data']['lpl']).iloc[0]
+        r4_width = (result_r4.charts['Xbar']['data']['upl'] - result_r4.charts['Xbar']['data']['lpl']).iloc[0]
 
         assert abs(r5_width - r4_width) < 0.01

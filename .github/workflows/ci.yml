@@ -46,6 +46,19 @@ jobs:
           mypy processbehavior
       - name: Tests
         run: pytest tests/ -m "not slow" --cov=processbehavior --cov-report=xml --cov-report=term-missing
+      - name: Execute docs notebooks (ubuntu / 3.13 only)
+        # Allowlist of notebooks known to execute against the current API.
+        # The remaining tutorials (basic-imr, signal-detection,
+        # stratified-analysis, xbar-s-analysis, sds-validation,
+        # sds1-complete-analysis) have stale code; they need rewriting
+        # against the current API before joining this gate.
+        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.13'
+        run: |
+          pytest --nbmake \
+            docs/getting-started/quickstart.ipynb \
+            docs/tutorials/process-capability.ipynb \
+            docs/tutorials/loss-function.ipynb \
+            --tb=short
       - name: Upload coverage to Codecov
         if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.11'
         uses: codecov/codecov-action@b9fd7d16f6d7d1b5d2bec1a2887e65ceed900238 # v4.6.0

@@ -47,6 +47,7 @@ logger = logging.getLogger(__name__)
 # Pure Functions: Means (Ybar calculations)
 # ============================================================================
 
+
 def calculate_grand_mean(df: pd.DataFrame, response_var: str) -> float:
     """
     Calculate grand mean (Ȳ) - average of all observations.
@@ -74,11 +75,7 @@ def calculate_grand_mean(df: pd.DataFrame, response_var: str) -> float:
     return df[response_var].mean()
 
 
-def calculate_factor_means(
-    df: pd.DataFrame,
-    response_var: str,
-    rsg_var: str
-) -> pd.Series:
+def calculate_factor_means(df: pd.DataFrame, response_var: str, rsg_var: str) -> pd.Series:
     """
     Calculate factor-level means (Ȳ_k) - average for each factor level.
 
@@ -114,11 +111,7 @@ def calculate_factor_means(
     return df.groupby(rsg_var, observed=True)[response_var].transform('mean')
 
 
-def calculate_time_means(
-    df: pd.DataFrame,
-    response_var: str,
-    time_var: str
-) -> pd.Series:
+def calculate_time_means(df: pd.DataFrame, response_var: str, time_var: str) -> pd.Series:
     """
     Calculate time-level means (Ȳ_t) - average for each time point.
 
@@ -154,12 +147,7 @@ def calculate_time_means(
     return df.groupby(time_var, observed=True)[response_var].transform('mean')
 
 
-def calculate_cell_means(
-    df: pd.DataFrame,
-    response_var: str,
-    rsg_var: str,
-    time_var: str
-) -> pd.Series:
+def calculate_cell_means(df: pd.DataFrame, response_var: str, rsg_var: str, time_var: str) -> pd.Series:
     """
     Calculate cell means (Ȳ_kt) - average for each (factor × time) cell.
 
@@ -202,11 +190,8 @@ def calculate_cell_means(
 # Pure Functions: Residuals (R1, R3, R4, R5)
 # ============================================================================
 
-def calculate_r1_residual(
-    df: pd.DataFrame,
-    response_var: str,
-    grand_mean: float
-) -> pd.Series:
+
+def calculate_r1_residual(df: pd.DataFrame, response_var: str, grand_mean: float) -> pd.Series:
     """
     Calculate R1 residual: total deviation from grand mean.
 
@@ -245,11 +230,7 @@ def calculate_r1_residual(
 
 
 def calculate_r3_residual(
-    df: pd.DataFrame,
-    response_var: str,
-    factor_means: pd.Series,
-    time_means: pd.Series,
-    grand_mean: float
+    df: pd.DataFrame, response_var: str, factor_means: pd.Series, time_means: pd.Series, grand_mean: float
 ) -> pd.Series:
     """
     Calculate R3 residual: interaction effects (factor × time).
@@ -287,11 +268,7 @@ def calculate_r3_residual(
     return df[response_var] - factor_means - time_means + grand_mean
 
 
-def calculate_r4_residual(
-    time_means: pd.Series,
-    grand_mean: float,
-    r2: pd.Series
-) -> pd.Series:
+def calculate_r4_residual(time_means: pd.Series, grand_mean: float, r2: pd.Series) -> pd.Series:
     """
     Calculate R4 residual: time effects + unexplained.
 
@@ -317,11 +294,7 @@ def calculate_r4_residual(
     return time_means - grand_mean + r2
 
 
-def calculate_r5_residual(
-    factor_means: pd.Series,
-    grand_mean: float,
-    r2: pd.Series
-) -> pd.Series:
+def calculate_r5_residual(factor_means: pd.Series, grand_mean: float, r2: pd.Series) -> pd.Series:
     """
     Calculate R5 residual: factor effects + unexplained.
 
@@ -352,12 +325,8 @@ def calculate_r5_residual(
 # R2: Structure-dependent residual (consolidated)
 # ============================================================================
 
-def calculate_r2(
-    df: pd.DataFrame,
-    y: str,
-    r2_method: R2Method,
-    n_per_cell: pd.Series | None = None
-) -> pd.Series:
+
+def calculate_r2(df: pd.DataFrame, y: str, r2_method: R2Method, n_per_cell: pd.Series | None = None) -> pd.Series:
     """
     Calculate R2 residual using the specified method.
 
@@ -391,24 +360,25 @@ def calculate_r2(
         R2 residuals with name="R2"
     """
     if n_per_cell is None:
-        n_per_cell = df.groupby("cell_key", observed=True)[y].transform("size")
+        n_per_cell = df.groupby('cell_key', observed=True)[y].transform('size')
 
     # State 1: all cells replicated → exact (Eq 59)
     if (n_per_cell >= 2).all():
-        return pd.Series(df[y] - df["Ybar_kt"], index=df.index, name="R2")
+        return pd.Series(df[y] - df['Ybar_kt'], index=df.index, name='R2')
 
     # States 2 & 3: any singletons → MA2 for ALL observations (Eq 13.8-13.9)
     # MA2 runs across the entire canonical-sorted stream — no grouping.
     # j=1 has no predecessor → R2 is NaN (Bishop leaves it blank).
-    df_sorted = df.sort_values("sort_key")
+    df_sorted = df.sort_values('sort_key')
     y_sorted = df_sorted[y]
     r2 = (y_sorted - y_sorted.shift(1)) / 2
-    return pd.Series(r2.loc[df.index], index=df.index, name="R2")
+    return pd.Series(r2.loc[df.index], index=df.index, name='R2')
 
 
 # ============================================================================
 # Orchestration: calculate_vas_residuals
 # ============================================================================
+
 
 def _validate_prerequisites(df: pd.DataFrame) -> None:
     """
@@ -424,12 +394,11 @@ def _validate_prerequisites(df: pd.DataFrame) -> None:
     ValueError
         If required columns are missing
     """
-    required = {"rsg_key", "obs_id", "cell_key"}
+    required = {'rsg_key', 'obs_id', 'cell_key'}
     missing = required - set(df.columns)
     if missing:
         raise ValueError(
-            f"Missing required columns for VAS residuals: {missing}. "
-            f"Ensure data_preparation.build_keys() was called."
+            f'Missing required columns for VAS residuals: {missing}. Ensure data_preparation.build_keys() was called.'
         )
 
 
@@ -438,7 +407,7 @@ def calculate_vas_residuals(
     spec: FormulationSpec,
     r2_method: R2Method,
     n_per_cell: pd.Series | None = None,
-    ybar_kt: pd.Series | None = None
+    ybar_kt: pd.Series | None = None,
 ) -> pd.DataFrame:
     """
     Calculate all VAS residuals using structure-driven R2 method.
@@ -474,26 +443,19 @@ def calculate_vas_residuals(
     _validate_prerequisites(df)
 
     if not spec.has_grouping:
-        raise ValueError(
-            "VAS residuals require grouping structure.\n"
-            "No grouping variables specified in spec."
-        )
+        raise ValueError('VAS residuals require grouping structure.\nNo grouping variables specified in spec.')
 
     out = df.copy()
     y = spec.response_var
 
     # Step 1: Compute cell means FIRST (foundation for everything)
-    logger.debug("Calculating means (Ybar_kt, then unweighted Ybar, Ybar_k, Ybar_t)")
-    out['Ybar_kt'] = ybar_kt if ybar_kt is not None else calculate_cell_means(
-        out, y, spec.rsg_var_name, spec.time_var
-    )
+    logger.debug('Calculating means (Ybar_kt, then unweighted Ybar, Ybar_k, Ybar_t)')
+    out['Ybar_kt'] = ybar_kt if ybar_kt is not None else calculate_cell_means(out, y, spec.rsg_var_name, spec.time_var)
 
     # Step 2: Derive marginal means from cell means (unweighted means analysis)
     # Bishop VAS uses mean of cell means, giving each experimental
     # condition equal weight regardless of sample size within cells.
-    cell_means_unique = out.groupby(
-        [spec.rsg_var_name, spec.time_var], observed=True
-    )['Ybar_kt'].first()
+    cell_means_unique = out.groupby([spec.rsg_var_name, spec.time_var], observed=True)['Ybar_kt'].first()
 
     grand_mean = cell_means_unique.mean()
     out['Ybar'] = grand_mean
@@ -505,11 +467,11 @@ def calculate_vas_residuals(
     out['Ybar_t'] = out[spec.time_var].map(time_means).astype(float)
 
     # Step 3: Calculate R1 (pure algebra)
-    logger.debug("Calculating R1 residual")
+    logger.debug('Calculating R1 residual')
     out['R1'] = calculate_r1_residual(out, y, grand_mean)
 
     # Step 4: Calculate R2 (structure-dependent)
-    logger.debug(f"Calculating R2 residual (method: {r2_method})")
+    logger.debug(f'Calculating R2 residual (method: {r2_method})')
     out['R2'] = calculate_r2(out, y, r2_method, n_per_cell=n_per_cell)
 
     # Step 5: Calculate R3 (interaction effects)
@@ -517,16 +479,16 @@ def calculate_vas_residuals(
     # For exact (state 1): R2 = Y - Ybar_kt, so this simplifies to
     #   Y - Ybar_k - Ybar_t + Ybar (algebraically identical to old formula).
     # For MA2 (states 2-3): adds R2 to each row per Bishop.
-    logger.debug("Calculating R3 residual")
+    logger.debug('Calculating R3 residual')
     out['R3'] = out['Ybar_kt'] - out['Ybar_k'] - out['Ybar_t'] + grand_mean + out['R2']
 
     # Step 6: Calculate R4 (pure algebra given R2)
-    logger.debug("Calculating R4 residual")
+    logger.debug('Calculating R4 residual')
     out['R4'] = calculate_r4_residual(out['Ybar_t'], grand_mean, out['R2'])
 
     # Step 7: Calculate R5 (pure algebra given R2)
-    logger.debug("Calculating R5 residual")
+    logger.debug('Calculating R5 residual')
     out['R5'] = calculate_r5_residual(out['Ybar_k'], grand_mean, out['R2'])
 
-    logger.debug("VAS residuals calculated successfully")
+    logger.debug('VAS residuals calculated successfully')
     return out

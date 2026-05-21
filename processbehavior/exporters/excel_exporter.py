@@ -61,7 +61,7 @@ class ExcelExporter:
         include_full_dataset: bool = False,
         format_cells: bool = True,
         include_chart_images: bool = True,
-        export_html: bool = True
+        export_html: bool = True,
     ) -> None:
         """
         Export analysis results to Excel with each component on a separate tab.
@@ -132,7 +132,6 @@ class ExcelExporter:
         """
         # Create Excel writer
         with pd.ExcelWriter(filepath, engine='openpyxl') as writer:
-
             # 1. Summary Tab
             if include_summary:
                 self._write_summary_tab(writer, format_cells)
@@ -165,7 +164,7 @@ class ExcelExporter:
         if export_html:
             self._export_html_charts(filepath)
 
-        logger.info(f"Analysis results exported to: {filepath}")
+        logger.info(f'Analysis results exported to: {filepath}')
 
     def _write_summary_tab(self, writer: pd.ExcelWriter, format_cells: bool) -> None:
         """Write summary tab with analysis metadata."""
@@ -247,7 +246,7 @@ class ExcelExporter:
                     continue
 
                 # Create tab name (Excel limit: 31 chars)
-                tab_name = f"Chart_{chart_name}"
+                tab_name = f'Chart_{chart_name}'
                 if len(tab_name) > 31:
                     tab_name = tab_name[:31]
 
@@ -259,11 +258,7 @@ class ExcelExporter:
                     ws = writer.sheets[tab_name]
                     self._apply_formatting(ws)
 
-    def _write_stratified_chart_tab(
-        self,
-        writer: pd.ExcelWriter,
-        format_cells: bool
-    ) -> None:
+    def _write_stratified_chart_tab(self, writer: pd.ExcelWriter, format_cells: bool) -> None:
         """
         Write all stratified charts to a single combined tab.
 
@@ -296,9 +291,9 @@ class ExcelExporter:
             grouping_vars = self.result._ads.spec.rsg_vars if self.result._ads.spec.has_grouping else []
 
             if len(grouping_vars) == 1:
-                tab_name = f"Chart_{chart_type}_by_{grouping_vars[0]}"
+                tab_name = f'Chart_{chart_type}_by_{grouping_vars[0]}'
             else:
-                tab_name = f"Chart_{chart_type}_Stratified"
+                tab_name = f'Chart_{chart_type}_Stratified'
 
             # Excel tab name limit: 31 chars
             if len(tab_name) > 31:
@@ -319,18 +314,14 @@ class ExcelExporter:
                 chart_info = self.result.charts[chart_name]
                 chart_data = chart_info.get('data')
                 if chart_data is not None and isinstance(chart_data, pd.DataFrame):
-                    tab_name = f"Chart_{chart_name}"
+                    tab_name = f'Chart_{chart_name}'
                     chart_data.to_excel(writer, sheet_name=tab_name, index=False)
 
                     if format_cells:
                         ws = writer.sheets[tab_name]
                         self._apply_formatting(ws)
 
-    def _write_stratified_summary_tab(
-        self,
-        writer: pd.ExcelWriter,
-        format_cells: bool
-    ) -> None:
+    def _write_stratified_summary_tab(self, writer: pd.ExcelWriter, format_cells: bool) -> None:
         """
         Create a summary tab for stratified X/mR charts.
 
@@ -381,15 +372,17 @@ class ExcelExporter:
                 n_signals = None
                 signal_rate = None
 
-            summary_rows.append({
-                'Stratum': stratum,
-                'Observations': n_obs,
-                'Mean': mean_val,
-                'LPL': lpl_val,
-                'UPL': upl_val,
-                'Signals': n_signals,
-                'Signal_Rate_%': signal_rate
-            })
+            summary_rows.append(
+                {
+                    'Stratum': stratum,
+                    'Observations': n_obs,
+                    'Mean': mean_val,
+                    'LPL': lpl_val,
+                    'UPL': upl_val,
+                    'Signals': n_signals,
+                    'Signal_Rate_%': signal_rate,
+                }
+            )
 
         if summary_rows:
             # Create summary DataFrame
@@ -451,10 +444,9 @@ class ExcelExporter:
                     # Get the value column - look for specific patterns
                     # Exclude first column (grouping variable) and match effect/ME columns
                     value_col = [
-                        c for c in effect_values.columns[1:]
-                        if 'effect' in c.lower()
-                        or c.upper().endswith('_ME')
-                        or c.upper() == 'PT_ME'
+                        c
+                        for c in effect_values.columns[1:]
+                        if 'effect' in c.lower() or c.upper().endswith('_ME') or c.upper() == 'PT_ME'
                     ]
                     # Use first match or last column as value
                     val = row[value_col[0]] if value_col else row.iloc[-1]
@@ -463,24 +455,12 @@ class ExcelExporter:
                     level_col = effect_values.columns[0]
                     level = row[level_col]
 
-                    effects_data.append({
-                        'Effect_Type': effect_name,
-                        'Level': str(level),
-                        'Value': val
-                    })
+                    effects_data.append({'Effect_Type': effect_name, 'Level': str(level), 'Value': val})
             elif isinstance(effect_values, pd.Series):
                 for idx, val in effect_values.items():
-                    effects_data.append({
-                        'Effect_Type': effect_name,
-                        'Level': str(idx),
-                        'Value': val
-                    })
+                    effects_data.append({'Effect_Type': effect_name, 'Level': str(idx), 'Value': val})
             elif isinstance(effect_values, (int, float)):
-                effects_data.append({
-                    'Effect_Type': effect_name,
-                    'Level': '',
-                    'Value': effect_values
-                })
+                effects_data.append({'Effect_Type': effect_name, 'Level': '', 'Value': effect_values})
 
         if effects_data:
             effects_df = pd.DataFrame(effects_data)
@@ -513,20 +493,16 @@ class ExcelExporter:
                 else:
                     # Regular index - use as Combination
                     for idx, val in interaction_values.items():
-                        interactions_data.append({
-                            'Interaction': interaction_name,
-                            'Combination': str(idx),
-                            'Value': val
-                        })
+                        interactions_data.append(
+                            {'Interaction': interaction_name, 'Combination': str(idx), 'Value': val}
+                        )
             elif isinstance(interaction_values, pd.DataFrame):
                 # For DataFrames, flatten them
                 for row_idx, row in interaction_values.iterrows():
                     for col_name, val in row.items():
-                        interactions_data.append({
-                            'Interaction': interaction_name,
-                            'Combination': f"{row_idx} x {col_name}",
-                            'Value': val
-                        })
+                        interactions_data.append(
+                            {'Interaction': interaction_name, 'Combination': f'{row_idx} x {col_name}', 'Value': val}
+                        )
 
         if interactions_data:
             interactions_df = pd.DataFrame(interactions_data)
@@ -572,8 +548,7 @@ class ExcelExporter:
             current_row = 1
 
             # Export combined charts first (Xbar, S, etc.)
-            combined_charts = [name for name in self.result.charts
-                             if name in STANDARD_CHART_NAMES]
+            combined_charts = [name for name in self.result.charts if name in STANDARD_CHART_NAMES]
 
             if combined_charts:
                 ws[f'A{current_row}'] = 'COMBINED CONTROL CHARTS'
@@ -583,12 +558,7 @@ class ExcelExporter:
                 for chart_name in combined_charts:
                     try:
                         # Generate chart
-                        fig = plotter.plot(
-                            chart=chart_name,
-                            width=1200,
-                            height=500,
-                            theme='processbehavior'
-                        )
+                        fig = plotter.plot(chart=chart_name, width=1200, height=500, theme='processbehavior')
 
                         # Save as image
                         img_buffer = BytesIO()
@@ -596,7 +566,7 @@ class ExcelExporter:
                         img_buffer.seek(0)
 
                         # Add title
-                        ws[f'A{current_row}'] = f"{chart_name} Chart"
+                        ws[f'A{current_row}'] = f'{chart_name} Chart'
                         ws[f'A{current_row}'].font = Font(bold=True)
                         current_row += 1
 
@@ -607,11 +577,11 @@ class ExcelExporter:
                         ws.add_image(img, f'A{current_row}')
                         current_row += 18  # Space for image + margin
 
-                        logger.info(f"Added {chart_name} chart image to Excel")
+                        logger.info(f'Added {chart_name} chart image to Excel')
 
                     except Exception as e:
-                        logger.warning(f"Could not add {chart_name} chart image: {e}")
-                        ws[f'A{current_row}'] = f"Error generating {chart_name} chart"
+                        logger.warning(f'Could not add {chart_name} chart image: {e}')
+                        ws[f'A{current_row}'] = f'Error generating {chart_name} chart'
                         current_row += 2
 
             # Add note about interactive HTML files
@@ -622,13 +592,12 @@ class ExcelExporter:
             ws[f'A{current_row}'] = 'Interactive HTML files have been exported alongside this Excel file.'
             current_row += 1
             ws[f'A{current_row}'] = (
-                'Open the .html files in a web browser for full interactivity '
-                '(zoom, pan, hover tooltips).'
+                'Open the .html files in a web browser for full interactivity (zoom, pan, hover tooltips).'
             )
 
         except ImportError as e:
-            logger.warning(f"Could not create visual charts tab: {e}")
-            logger.warning("Install kaleido for image export: pip install kaleido")
+            logger.warning(f'Could not create visual charts tab: {e}')
+            logger.warning('Install kaleido for image export: pip install kaleido')
 
     def _export_html_charts(self, filepath: str) -> None:
         """
@@ -650,38 +619,34 @@ class ExcelExporter:
             plotter = Plotter(self.result)
 
             # Export combined charts
-            combined_charts = [name for name in self.result.charts
-                             if name in STANDARD_CHART_NAMES]
+            combined_charts = [name for name in self.result.charts if name in STANDARD_CHART_NAMES]
 
             if combined_charts:
                 html_file = output_dir / f'{base_name}_combined.html'
                 fig = plotter.plot(
-                    width=1400,
-                    height=800,
-                    theme='processbehavior',
-                    title=f'Control Charts: {base_name}'
+                    width=1400, height=800, theme='processbehavior', title=f'Control Charts: {base_name}'
                 )
                 fig.save_html(str(html_file))
-                logger.info(f"Exported interactive combined charts to: {html_file}")
+                logger.info(f'Exported interactive combined charts to: {html_file}')
 
             # Export stratified charts if present
-            stratified_charts = [name for name in self.result.charts
-                               if name not in combined_charts and len(self.result.charts) > len(combined_charts)]
+            stratified_charts = [
+                name
+                for name in self.result.charts
+                if name not in combined_charts and len(self.result.charts) > len(combined_charts)
+            ]
 
             if stratified_charts and self.result.summary.get('is_stratified', False):
                 html_file = output_dir / f'{base_name}_stratified.html'
                 # This will plot all stratified charts
                 fig = plotter.plot(
-                    width=1800,
-                    height=1200,
-                    theme='processbehavior',
-                    title=f'Stratified Control Charts: {base_name}'
+                    width=1800, height=1200, theme='processbehavior', title=f'Stratified Control Charts: {base_name}'
                 )
                 fig.save_html(str(html_file))
-                logger.info(f"Exported interactive stratified charts to: {html_file}")
+                logger.info(f'Exported interactive stratified charts to: {html_file}')
 
         except Exception as e:
-            logger.warning(f"Could not export HTML charts: {e}")
+            logger.warning(f'Could not export HTML charts: {e}')
 
     def _apply_formatting(self, worksheet) -> None:
         """

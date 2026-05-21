@@ -12,6 +12,7 @@ from processbehavior import LossResult, ProcessBehavior, ValidationError
 # Fixtures
 # ============================================================================
 
+
 @pytest.fixture
 def pb():
     """Load validation dataset."""
@@ -71,6 +72,7 @@ def study_no_time(pb):
 # Validation: PM SDS 1 with T=237 (Tom's reference)
 # ============================================================================
 
+
 class TestValidationPMSDS1:
     """Match Tom's reference output: Fig 15-4 / 15-5."""
 
@@ -111,6 +113,7 @@ class TestValidationPMSDS1:
 # Centering
 # ============================================================================
 
+
 class TestCentering:
     def test_centering_default_target(self, study_sds1):
         """Default target = grand mean → centering = 0."""
@@ -132,22 +135,19 @@ class TestCentering:
 # Decomposition identities
 # ============================================================================
 
+
 class TestDecompositionIdentities:
     def test_five_components_sum_to_total(self, study_sds1):
         """5 components = EL within floating point tolerance."""
         result = study_sds1.loss_function(target=237.0)
-        component_sum = (
-            result.centering + result.unexplained + result.pdc
-            + result.time + result.interaction
-        )
+        component_sum = result.centering + result.unexplained + result.pdc + result.time + result.interaction
         assert abs(component_sum - result.total) < 1e-10
 
     def test_pareto_sums_to_100(self, study_sds1):
         """Percentages sum to 100%."""
         result = study_sds1.loss_function(target=237.0)
         pct_sum = (
-            result.pct_centering + result.pct_unexplained + result.pct_pdc
-            + result.pct_time + result.pct_interaction
+            result.pct_centering + result.pct_unexplained + result.pct_pdc + result.pct_time + result.pct_interaction
         )
         assert abs(pct_sum - 100.0) < 0.1
 
@@ -160,16 +160,14 @@ class TestDecompositionIdentities:
     def test_decomposition_default_target(self, study_sds1):
         """Identity holds when centering = 0."""
         result = study_sds1.loss_function()
-        component_sum = (
-            result.centering + result.unexplained + result.pdc
-            + result.time + result.interaction
-        )
+        component_sum = result.centering + result.unexplained + result.pdc + result.time + result.interaction
         assert abs(component_sum - result.total) < 1e-10
 
 
 # ============================================================================
 # SDS-dependent unexplained
 # ============================================================================
+
 
 class TestUnexplained:
     def test_sds1_uses_per_cell(self, study_sds1):
@@ -205,6 +203,7 @@ class TestUnexplained:
 # Single factor
 # ============================================================================
 
+
 class TestSingleFactor:
     def test_no_factor_interaction(self, study_single_factor):
         """Single factor: pdc_factor_interaction = 0."""
@@ -221,10 +220,11 @@ class TestSingleFactor:
 # Guards
 # ============================================================================
 
+
 class TestGuards:
     def test_no_vas_raises(self, study_no_time):
         """Study without time (no VAS residuals) raises ValidationError."""
-        with pytest.raises(ValidationError, match="VAS residuals"):
+        with pytest.raises(ValidationError, match='VAS residuals'):
             study_no_time.loss_function()
 
 
@@ -232,38 +232,41 @@ class TestGuards:
 # Presentation
 # ============================================================================
 
+
 class TestPresentation:
     def test_repr(self, study_sds1):
         result = study_sds1.loss_function(target=237.0)
         text = repr(result)
-        assert "LossResult:" in text
-        assert "Target=" in text
-        assert "MEAN" in text
-        assert "UNEXPLAINED" in text
+        assert 'LossResult:' in text
+        assert 'Target=' in text
+        assert 'MEAN' in text
+        assert 'UNEXPLAINED' in text
 
     def test_as_dict(self, study_sds1):
         result = study_sds1.loss_function(target=237.0)
         d = result.as_dict()
-        assert "centering" in d
-        assert "pct_centering" in d
-        assert "pdc_by_factor" in d
-        assert isinstance(d["pdc_by_factor"], dict)
+        assert 'centering' in d
+        assert 'pct_centering' in d
+        assert 'pdc_by_factor' in d
+        assert isinstance(d['pdc_by_factor'], dict)
 
     def test_as_dict_round_to(self, study_sds1):
         result = study_sds1.loss_function(target=237.0)
         d = result.as_dict(round_to=1)
         # Values should be rounded to 1 decimal
-        assert d["pct_interaction"] == round(result.pct_interaction, 1)
+        assert d['pct_interaction'] == round(result.pct_interaction, 1)
 
 
 # ============================================================================
 # Edge cases
 # ============================================================================
 
+
 class TestEdgeCases:
     def test_pareto_zero_total(self):
         """When total=0, all percentages should be 0."""
         from processbehavior.loss_function import _compute_pareto
+
         pct = _compute_pareto(0, 0, 0, 0, 0, 0)
         assert all(p == 0.0 for p in pct)
 

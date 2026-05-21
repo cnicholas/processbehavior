@@ -47,17 +47,17 @@ class TestRChartResidualValidation:
 
     def test_r_chart_with_residual_raises_validation_error(self, sds1_study):
         """execute(chart='mR', value='R3') must raise ValidationError."""
-        with pytest.raises(ValidationError, match="not supported for residual"):
+        with pytest.raises(ValidationError, match='not supported for residual'):
             sds1_study.execute(chart='mR', value='R3', by=[])
 
     def test_r_chart_with_r5_raises_validation_error(self, sds1_study):
         """execute(chart='mR', value='R5') must raise ValidationError."""
-        with pytest.raises(ValidationError, match="not supported for residual"):
+        with pytest.raises(ValidationError, match='not supported for residual'):
             sds1_study.execute(chart='mR', value='R5', by=[])
 
     def test_r_chart_with_residual_no_companion_still_raises(self, sds1_study):
         """execute(chart='mR', value='R3', companion=False) must still raise."""
-        with pytest.raises(ValidationError, match="not supported for residual"):
+        with pytest.raises(ValidationError, match='not supported for residual'):
             sds1_study.execute(chart='mR', value='R3', by=[], companion=False)
 
     def test_r_chart_with_residual_companion_works(self, sds1_study):

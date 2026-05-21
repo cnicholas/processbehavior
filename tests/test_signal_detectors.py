@@ -34,12 +34,12 @@ def _stats():
 def _zones():
     """Constant zone boundaries for Rules 2, 3, 7, 8."""
     return {
-        'A_upper': (CENTER + 2 * SIGMA, CENTER + 3 * SIGMA),   # (60, 65)
-        'A_lower': (CENTER - 3 * SIGMA, CENTER - 2 * SIGMA),   # (35, 40)
-        'B_upper': (CENTER + SIGMA, CENTER + 2 * SIGMA),       # (55, 60)
-        'B_lower': (CENTER - 2 * SIGMA, CENTER - SIGMA),       # (40, 45)
-        'C_upper': (CENTER, CENTER + SIGMA),                    # (50, 55)
-        'C_lower': (CENTER - SIGMA, CENTER),                    # (45, 50)
+        'A_upper': (CENTER + 2 * SIGMA, CENTER + 3 * SIGMA),  # (60, 65)
+        'A_lower': (CENTER - 3 * SIGMA, CENTER - 2 * SIGMA),  # (35, 40)
+        'B_upper': (CENTER + SIGMA, CENTER + 2 * SIGMA),  # (55, 60)
+        'B_lower': (CENTER - 2 * SIGMA, CENTER - SIGMA),  # (40, 45)
+        'C_upper': (CENTER, CENTER + SIGMA),  # (50, 55)
+        'C_lower': (CENTER - SIGMA, CENTER),  # (45, 50)
     }
 
 
@@ -51,8 +51,8 @@ def _df(values):
 # Rule 1: Beyond Limits
 # ============================================================================
 
-class TestRule1BeyondLimits:
 
+class TestRule1BeyondLimits:
     def test_violation_above(self):
         """Point above UPL should be flagged."""
         data = _df([50, 50, 50, 66, 50])  # 66 > 65
@@ -84,8 +84,8 @@ class TestRule1BeyondLimits:
 # Rule 2: 2 of 3 in Zone A
 # ============================================================================
 
-class TestRule2ZoneA:
 
+class TestRule2ZoneA:
     def test_trigger_upper(self):
         """2 of 3 consecutive points in upper Zone A should trigger."""
         # Zone A upper: (60, 65). Put 2 of 3 points there.
@@ -110,8 +110,8 @@ class TestRule2ZoneA:
 # Rule 3: 4 of 5 in Zone B or beyond
 # ============================================================================
 
-class TestRule3ZoneB:
 
+class TestRule3ZoneB:
     def test_trigger_upper(self):
         """4 of 5 consecutive points beyond 1-sigma (upper) should trigger."""
         # Zone B upper starts at 55. Put 4 of 5 points above 55.
@@ -131,8 +131,8 @@ class TestRule3ZoneB:
 # Rule 4: Run of 8 on same side
 # ============================================================================
 
-class TestRule4Run:
 
+class TestRule4Run:
     def test_trigger_above(self):
         """8 consecutive points above center should trigger."""
         data = _df([50, 51, 52, 53, 54, 55, 56, 57, 58])
@@ -151,12 +151,12 @@ class TestRule4Run:
 # Rule 6: Oscillation (14 consecutive alternating)
 # ============================================================================
 
-class TestRule6Oscillation:
 
+class TestRule6Oscillation:
     def test_trigger(self):
         """14 consecutive alternating up/down should trigger."""
         # Create alternating pattern
-        values = [50 + ((-1)**i) * 3 for i in range(16)]
+        values = [50 + ((-1) ** i) * 3 for i in range(16)]
         data = _df(values)
         result = detect_oscillation(data, _stats(), 'value')
         assert result.any()
@@ -172,8 +172,8 @@ class TestRule6Oscillation:
 # Rule 7: Reduced variation (15 in Zone C)
 # ============================================================================
 
-class TestRule7ReducedVariation:
 
+class TestRule7ReducedVariation:
     def test_trigger(self):
         """15 consecutive points within Zone C should trigger."""
         # Zone C: (45, 55). Put 15+ points there.
@@ -194,8 +194,8 @@ class TestRule7ReducedVariation:
 # Rule 8: Avoiding center (8 outside Zone C)
 # ============================================================================
 
-class TestRule8AvoidingCenter:
 
+class TestRule8AvoidingCenter:
     def test_trigger(self):
         """8 consecutive points outside Zone C should trigger."""
         # Zone C: (45, 55). Put 8+ points outside.
@@ -215,8 +215,8 @@ class TestRule8AvoidingCenter:
 # Cross-cutting
 # ============================================================================
 
-class TestCrossCutting:
 
+class TestCrossCutting:
     def test_insufficient_data_rule4(self):
         """Fewer than 8 points should produce no violations for Rule 4."""
         data = _df([51, 52, 53, 54, 55])  # Only 5 points, all above center
@@ -225,7 +225,7 @@ class TestCrossCutting:
 
     def test_insufficient_data_rule6(self):
         """Fewer than 14 points should produce no violations for Rule 6."""
-        values = [50 + ((-1)**i) * 3 for i in range(10)]
+        values = [50 + ((-1) ** i) * 3 for i in range(10)]
         data = _df(values)
         result = detect_oscillation(data, _stats(), 'value')
         assert not result.any()

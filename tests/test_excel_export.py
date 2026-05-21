@@ -35,12 +35,7 @@ def test_excel_export_basic(temp_excel_file):
     # Generate SDS1 data
     df = make_sds(1, K1=3, K2=2, T=5, n_min=2, n_max=3, seed=42)
 
-    spec = {
-        'analysis_type': 'Xbar',
-        'rsg_vars': ['factor 1'],
-        'time_var': 'time',
-        'response_var': 'y'
-    }
+    spec = {'analysis_type': 'Xbar', 'rsg_vars': ['factor 1'], 'time_var': 'time', 'response_var': 'y'}
 
     # Run analysis
     sds = detect_sds_for_test(df, spec)
@@ -72,12 +67,7 @@ def test_excel_export_with_full_dataset(temp_excel_file):
     """Test Excel export including full dataset."""
     df = make_sds(1, K1=2, K2=2, T=4, n_min=2, n_max=2, seed=42)
 
-    spec = {
-        'analysis_type': 'Xbar',
-        'rsg_vars': ['factor 1'],
-        'time_var': 'time',
-        'response_var': 'y'
-    }
+    spec = {'analysis_type': 'Xbar', 'rsg_vars': ['factor 1'], 'time_var': 'time', 'response_var': 'y'}
 
     sds = detect_sds_for_test(df, spec)
     analysis = Analysis(spec=make_spec(spec), request=make_request(spec), sds=sds, df=df)
@@ -100,12 +90,7 @@ def test_excel_export_stratified_x(temp_excel_file):
     """Test Excel export with stratified X chart (SRP: X only)."""
     df = make_sds(1, K1=3, K2=2, T=5, n_min=2, n_max=3, seed=42)
 
-    spec = {
-        'analysis_type': 'X',
-        'rsg_vars': ['factor 1'],
-        'time_var': 'time',
-        'response_var': 'y'
-    }
+    spec = {'analysis_type': 'X', 'rsg_vars': ['factor 1'], 'time_var': 'time', 'response_var': 'y'}
 
     sds = detect_sds_for_test(df, spec)
     analysis = Analysis(spec=make_spec(spec), request=make_request(spec), sds=sds, df=df)
@@ -122,12 +107,12 @@ def test_excel_export_stratified_x(temp_excel_file):
     chart_tabs = [name for name in excel_file.sheet_names if 'Chart_' in name]
 
     # SRP: X only returns X (no longer bundled with mR by default)
-    assert len(chart_tabs) == 1, f"Expected 1 chart tab (SRP: X only), got {len(chart_tabs)}: {chart_tabs}"
-    assert 'Chart_X' in chart_tabs, f"Expected Chart_X tab, got: {chart_tabs}"
+    assert len(chart_tabs) == 1, f'Expected 1 chart tab (SRP: X only), got {len(chart_tabs)}: {chart_tabs}'
+    assert 'Chart_X' in chart_tabs, f'Expected Chart_X tab, got: {chart_tabs}'
 
     # Verify the X tab has data
     x_data = pd.read_excel(temp_excel_file, sheet_name='Chart_X')
-    assert len(x_data) > 0, "X chart tab should have data"
+    assert len(x_data) > 0, 'X chart tab should have data'
     assert 'rsg' in x_data.columns, "X data should have 'rsg' column for stratification"
 
 
@@ -140,7 +125,7 @@ def test_excel_export_stratified_x_companion(temp_excel_file):
         'rsg_vars': ['factor 1'],
         'time_var': 'time',
         'response_var': 'y',
-        'companion': True  # Request bundled X+mR
+        'companion': True,  # Request bundled X+mR
     }
 
     sds = detect_sds_for_test(df, spec)
@@ -158,21 +143,16 @@ def test_excel_export_stratified_x_companion(temp_excel_file):
     chart_tabs = [name for name in excel_file.sheet_names if 'Chart_' in name]
 
     # Companion mode: X+mR bundled together
-    assert len(chart_tabs) == 2, f"Expected 2 chart tabs (X+mR companion), got {len(chart_tabs)}: {chart_tabs}"
-    assert 'Chart_X' in chart_tabs, f"Expected Chart_X tab, got: {chart_tabs}"
-    assert 'Chart_mR' in chart_tabs, f"Expected Chart_mR tab, got: {chart_tabs}"
+    assert len(chart_tabs) == 2, f'Expected 2 chart tabs (X+mR companion), got {len(chart_tabs)}: {chart_tabs}'
+    assert 'Chart_X' in chart_tabs, f'Expected Chart_X tab, got: {chart_tabs}'
+    assert 'Chart_mR' in chart_tabs, f'Expected Chart_mR tab, got: {chart_tabs}'
 
 
 def test_excel_export_with_residuals(temp_excel_file):
     """Test Excel export includes residuals when calculated."""
     df = make_sds(2, K1=3, K2=2, T=5, seed=42)
 
-    spec = {
-        'analysis_type': 'Xbar',
-        'rsg_vars': ['factor 1'],
-        'time_var': 'time',
-        'response_var': 'y'
-    }
+    spec = {'analysis_type': 'Xbar', 'rsg_vars': ['factor 1'], 'time_var': 'time', 'response_var': 'y'}
 
     sds = detect_sds_for_test(df, spec)
     analysis = Analysis(spec=make_spec(spec), request=make_request(spec), sds=sds, df=df)
@@ -194,12 +174,7 @@ def test_excel_export_minimal(temp_excel_file):
     """Test Excel export with minimal options (only charts)."""
     df = make_sds(1, K1=2, K2=2, T=4, n_min=2, n_max=2, seed=42)
 
-    spec = {
-        'analysis_type': 'Xbar',
-        'rsg_vars': ['factor 1'],
-        'time_var': 'time',
-        'response_var': 'y'
-    }
+    spec = {'analysis_type': 'Xbar', 'rsg_vars': ['factor 1'], 'time_var': 'time', 'response_var': 'y'}
 
     sds = detect_sds_for_test(df, spec)
     analysis = Analysis(spec=make_spec(spec), request=make_request(spec), sds=sds, df=df)
@@ -211,7 +186,7 @@ def test_excel_export_minimal(temp_excel_file):
         include_summary=False,
         include_residuals=False,
         include_effects=False,
-        include_interactions=False
+        include_interactions=False,
     )
 
     # Verify only chart tabs exist (plus Visual_Charts)
@@ -227,12 +202,7 @@ def test_excel_export_no_formatting(temp_excel_file):
     """Test Excel export without formatting."""
     df = make_sds(1, K1=2, K2=2, T=4, n_min=2, n_max=2, seed=42)
 
-    spec = {
-        'analysis_type': 'Xbar',
-        'rsg_vars': ['factor 1'],
-        'time_var': 'time',
-        'response_var': 'y'
-    }
+    spec = {'analysis_type': 'Xbar', 'rsg_vars': ['factor 1'], 'time_var': 'time', 'response_var': 'y'}
 
     sds = detect_sds_for_test(df, spec)
     analysis = Analysis(spec=make_spec(spec), request=make_request(spec), sds=sds, df=df)
@@ -251,12 +221,7 @@ def test_excel_export_chart_data_integrity(temp_excel_file):
     """Test that chart data is correctly exported to Excel."""
     df = make_sds(1, K1=2, K2=2, T=5, n_min=3, n_max=3, seed=42)
 
-    spec = {
-        'analysis_type': 'Xbar',
-        'rsg_vars': ['factor 1'],
-        'time_var': 'time',
-        'response_var': 'y'
-    }
+    spec = {'analysis_type': 'Xbar', 'rsg_vars': ['factor 1'], 'time_var': 'time', 'response_var': 'y'}
 
     sds = detect_sds_for_test(df, spec)
     analysis = Analysis(spec=make_spec(spec), request=make_request(spec), sds=sds, df=df)
@@ -280,12 +245,7 @@ def test_excel_export_summary_content(temp_excel_file):
     """Test that summary tab contains expected information."""
     df = make_sds(2, K1=3, K2=2, T=5, seed=42)
 
-    spec = {
-        'analysis_type': 'Xbar',
-        'rsg_vars': ['factor 1'],
-        'time_var': 'time',
-        'response_var': 'y'
-    }
+    spec = {'analysis_type': 'Xbar', 'rsg_vars': ['factor 1'], 'time_var': 'time', 'response_var': 'y'}
 
     sds = detect_sds_for_test(df, spec)
     analysis = Analysis(spec=make_spec(spec), request=make_request(spec), sds=sds, df=df)
@@ -309,12 +269,7 @@ def test_excel_export_effects_tab(temp_excel_file):
     """Test that effects are properly exported when available."""
     df = make_sds(2, K1=3, K2=2, T=5, seed=42)
 
-    spec = {
-        'analysis_type': 'Xbar',
-        'rsg_vars': ['factor 1'],
-        'time_var': 'time',
-        'response_var': 'y'
-    }
+    spec = {'analysis_type': 'Xbar', 'rsg_vars': ['factor 1'], 'time_var': 'time', 'response_var': 'y'}
 
     sds = detect_sds_for_test(df, spec)
     analysis = Analysis(spec=make_spec(spec), request=make_request(spec), sds=sds, df=df)
@@ -337,12 +292,7 @@ def test_excel_export_invalid_path():
     """Test Excel export with invalid file path."""
     df = make_sds(1, K1=2, K2=2, T=3, n_min=2, n_max=2, seed=42)
 
-    spec = {
-        'analysis_type': 'Xbar',
-        'rsg_vars': ['factor 1'],
-        'time_var': 'time',
-        'response_var': 'y'
-    }
+    spec = {'analysis_type': 'Xbar', 'rsg_vars': ['factor 1'], 'time_var': 'time', 'response_var': 'y'}
 
     sds = detect_sds_for_test(df, spec)
     analysis = Analysis(spec=make_spec(spec), request=make_request(spec), sds=sds, df=df)
@@ -358,12 +308,7 @@ def test_excel_export_multiple_analyses(temp_excel_file):
     df = make_sds(1, K1=3, K2=2, T=5, n_min=2, n_max=3, seed=42)
 
     # Test with S chart
-    spec_s = {
-        'analysis_type': 'S',
-        'rsg_vars': ['factor 1'],
-        'time_var': 'time',
-        'response_var': 'y'
-    }
+    spec_s = {'analysis_type': 'S', 'rsg_vars': ['factor 1'], 'time_var': 'time', 'response_var': 'y'}
 
     sds = detect_sds_for_test(df, spec_s)
     analysis = Analysis(spec=make_spec(spec_s), request=make_request(spec_s), sds=sds, df=df)
@@ -382,17 +327,11 @@ def test_excel_tab_name_truncation(temp_excel_file):
     df = make_sds(1, K1=2, K2=2, T=4, n_min=2, n_max=2, seed=42)
 
     # Rename factor to create very long group names
-    df['factor 1'] = df['factor 1'].replace({
-        'F1_1': 'Very_Long_Group_Name_That_Exceeds_31_Characters',
-        'F1_2': 'Another_Super_Long_Name_For_Testing'
-    })
+    df['factor 1'] = df['factor 1'].replace(
+        {'F1_1': 'Very_Long_Group_Name_That_Exceeds_31_Characters', 'F1_2': 'Another_Super_Long_Name_For_Testing'}
+    )
 
-    spec = {
-        'analysis_type': 'X',
-        'rsg_vars': ['factor 1'],
-        'time_var': 'time',
-        'response_var': 'y'
-    }
+    spec = {'analysis_type': 'X', 'rsg_vars': ['factor 1'], 'time_var': 'time', 'response_var': 'y'}
 
     sds = detect_sds_for_test(df, spec)
     analysis = Analysis(spec=make_spec(spec), request=make_request(spec), sds=sds, df=df)
@@ -411,12 +350,7 @@ def test_excel_export_preserves_statistics(temp_excel_file):
     """Test that chart statistics are accessible in exported data."""
     df = make_sds(1, K1=2, K2=2, T=5, n_min=3, n_max=3, seed=42)
 
-    spec = {
-        'analysis_type': 'Xbar',
-        'rsg_vars': ['factor 1'],
-        'time_var': 'time',
-        'response_var': 'y'
-    }
+    spec = {'analysis_type': 'Xbar', 'rsg_vars': ['factor 1'], 'time_var': 'time', 'response_var': 'y'}
 
     sds = detect_sds_for_test(df, spec)
     analysis = Analysis(spec=make_spec(spec), request=make_request(spec), sds=sds, df=df)
@@ -447,13 +381,16 @@ def test_excel_export_preserves_statistics(temp_excel_file):
 # Additional coverage tests
 # ============================================================================
 
+
 def test_excel_export_stratified_multifactor(temp_excel_file):
     """Test export with multi-factor stratification."""
     from processbehavior import ProcessBehavior
 
     df = make_sds(1, K1=2, K2=2, T=4, n_min=3, n_max=3, seed=42)
     study = ProcessBehavior(df).formulate(
-        response='y', time='time', factors=['factor 1', 'factor 2'],
+        response='y',
+        time='time',
+        factors=['factor 1', 'factor 2'],
     )
     result = study.execute(chart='X', by=['factor 1', 'factor 2'])
     result.to_excel(temp_excel_file)
@@ -469,13 +406,18 @@ def test_excel_export_sds4_minimal(temp_excel_file):
     import numpy as np
 
     from processbehavior import ProcessBehavior
-    df = pd.DataFrame({
-        'y': np.random.default_rng(42).normal(50, 5, 20),
-        'time': range(1, 21),
-        'group': ['A'] * 20,
-    })
+
+    df = pd.DataFrame(
+        {
+            'y': np.random.default_rng(42).normal(50, 5, 20),
+            'time': range(1, 21),
+            'group': ['A'] * 20,
+        }
+    )
     study = ProcessBehavior(df).formulate(
-        response='y', time='time', factors=['group'],
+        response='y',
+        time='time',
+        factors=['group'],
     )
     result = study.execute(chart='X', by=['group'])
     result.to_excel(temp_excel_file)
@@ -489,12 +431,7 @@ def test_excel_export_s_chart(temp_excel_file):
     """Test export with S chart (different chart type than Xbar/X)."""
     df = make_sds(1, K1=3, K2=2, T=4, n_min=3, n_max=3, seed=42)
 
-    spec = {
-        'analysis_type': 'S',
-        'rsg_vars': ['factor 1'],
-        'time_var': 'time',
-        'response_var': 'y'
-    }
+    spec = {'analysis_type': 'S', 'rsg_vars': ['factor 1'], 'time_var': 'time', 'response_var': 'y'}
 
     sds = detect_sds_for_test(df, spec)
     analysis = Analysis(spec=make_spec(spec), request=make_request(spec), sds=sds, df=df)
@@ -514,7 +451,9 @@ def test_excel_export_round_trip_summary(temp_excel_file):
 
     df = make_sds(1, K1=2, K2=2, T=4, n_min=3, n_max=3, seed=42)
     study = ProcessBehavior(df).formulate(
-        response='y', time='time', factors=['factor 1', 'factor 2'],
+        response='y',
+        time='time',
+        factors=['factor 1', 'factor 2'],
     )
     result = study.execute(chart='Xbar')
     result.to_excel(temp_excel_file)

@@ -24,11 +24,7 @@ class TestWECOIntegration:
 
         # Analyze
         pdf = ProcessBehavior(df)
-        study = pdf.formulate(
-            response=pdf.cols.y,
-            factors=[pdf.cols.factor_1, pdf.cols.factor_2],
-            time=pdf.cols.time
-        )
+        study = pdf.formulate(response=pdf.cols.y, factors=[pdf.cols.factor_1, pdf.cols.factor_2], time=pdf.cols.time)
         result = study.execute()
 
         # Verify Xbar chart has metadata
@@ -53,11 +49,7 @@ class TestWECOIntegration:
 
         # Analyze
         pdf = ProcessBehavior(df)
-        study = pdf.formulate(
-            response=pdf.cols.y,
-            factors=[pdf.cols.factor_1, pdf.cols.factor_2],
-            time=pdf.cols.time
-        )
+        study = pdf.formulate(response=pdf.cols.y, factors=[pdf.cols.factor_1, pdf.cols.factor_2], time=pdf.cols.time)
         # Request S chart explicitly (SRP-compliant)
         result = study.execute(chart='S')
 
@@ -83,11 +75,7 @@ class TestWECOIntegration:
 
         # Analyze
         pdf = ProcessBehavior(df)
-        study = pdf.formulate(
-            response=pdf.cols.y,
-            factors=[pdf.cols.factor_1, pdf.cols.factor_2],
-            time=pdf.cols.time
-        )
+        study = pdf.formulate(response=pdf.cols.y, factors=[pdf.cols.factor_1, pdf.cols.factor_2], time=pdf.cols.time)
         # Use companion=True to get both Xbar and S charts
         result = study.execute(companion=True)
 
@@ -113,16 +101,12 @@ class TestWECOIntegration:
 
         # Inject an outlier - shift ALL F1_2 observations significantly
         # (Xbar chart aggregates across time, so need to shift all observations)
-        mask = (df['factor 1'] == 'F1_2')
+        mask = df['factor 1'] == 'F1_2'
         df.loc[mask, 'y'] = df.loc[mask, 'y'] + 100  # Large shift to ensure detection
 
         # Analyze
         pdf = ProcessBehavior(df)
-        study = pdf.formulate(
-            response=pdf.cols.y,
-            factors=[pdf.cols.factor_1, pdf.cols.factor_2],
-            time=pdf.cols.time
-        )
+        study = pdf.formulate(response=pdf.cols.y, factors=[pdf.cols.factor_1, pdf.cols.factor_2], time=pdf.cols.time)
         result = study.execute()
 
         # Detect signals with Rule 1 (beyond limits)
@@ -140,11 +124,7 @@ class TestWECOIntegration:
         df = synthetic.make_sds(1, K1=2, K2=2, T=6, n_min=2, n_max=3, seed=42)
 
         pdf = ProcessBehavior(df)
-        study = pdf.formulate(
-            response=pdf.cols.y,
-            factors=[pdf.cols.factor_1, pdf.cols.factor_2],
-            time=pdf.cols.time
-        )
+        study = pdf.formulate(response=pdf.cols.y, factors=[pdf.cols.factor_1, pdf.cols.factor_2], time=pdf.cols.time)
         result = study.execute()
 
         # Manually remove metadata to simulate bug
@@ -152,7 +132,8 @@ class TestWECOIntegration:
 
         # Should raise helpful error
         from processbehavior.exceptions import ProcessBehaviorError
-        with pytest.raises(ProcessBehaviorError, match="missing metadata"):
+
+        with pytest.raises(ProcessBehaviorError, match='missing metadata'):
             result.detect_signals(chart='Xbar')
 
     def test_value_column_used_correctly(self):
@@ -162,11 +143,7 @@ class TestWECOIntegration:
 
         # Analyze
         pdf = ProcessBehavior(df)
-        study = pdf.formulate(
-            response=pdf.cols.y,
-            factors=[pdf.cols.factor_1, pdf.cols.factor_2],
-            time=pdf.cols.time
-        )
+        study = pdf.formulate(response=pdf.cols.y, factors=[pdf.cols.factor_1, pdf.cols.factor_2], time=pdf.cols.time)
         result = study.execute()
 
         # Get Xbar chart
@@ -195,11 +172,7 @@ class TestMetadataContract:
         df = synthetic.make_sds(1, K1=2, K2=2, T=8, n_min=2, n_max=4, seed=42)
 
         pdf = ProcessBehavior(df)
-        study = pdf.formulate(
-            response=pdf.cols.y,
-            factors=[pdf.cols.factor_1, pdf.cols.factor_2],
-            time=pdf.cols.time
-        )
+        study = pdf.formulate(response=pdf.cols.y, factors=[pdf.cols.factor_1, pdf.cols.factor_2], time=pdf.cols.time)
         # Use companion=True to get both Xbar and S charts
         result = study.execute(companion=True)
 
@@ -220,11 +193,7 @@ class TestMetadataContract:
         df = synthetic.make_sds(1, K1=2, K2=2, T=8, n_min=2, n_max=4, seed=42)
 
         pdf = ProcessBehavior(df)
-        study = pdf.formulate(
-            response=pdf.cols.y,
-            factors=[pdf.cols.factor_1, pdf.cols.factor_2],
-            time=pdf.cols.time
-        )
+        study = pdf.formulate(response=pdf.cols.y, factors=[pdf.cols.factor_1, pdf.cols.factor_2], time=pdf.cols.time)
         result = study.execute()
 
         # All charts should have metadata with required keys

@@ -130,4 +130,4 @@ class ChartRequest:
     bins: int | None = 10
     phased: bool = False
     n_sigma: float = 3.0
-    n_mode: str = "actual"
+    n_mode: str = 'actual'

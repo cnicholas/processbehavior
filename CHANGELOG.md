@@ -7,6 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### CI / Infrastructure
+- Docs notebooks are now executed as part of CI via ``pytest --nbmake``
+  on the ubuntu / Python 3.13 cell. The allowlist covers
+  ``docs/getting-started/quickstart.ipynb``,
+  ``docs/tutorials/process-capability.ipynb``, and
+  ``docs/tutorials/loss-function.ipynb`` — the three notebooks known to
+  execute cleanly against the current API. Catches future versions of
+  the ``chart='Imr'``-style typos that lived in the quickstart for
+  months. ``nbmake`` is added to the ``[test]`` extra.
+- ``publish.yml`` now runs the full test matrix (3 Python versions × 2
+  primary OSes + macOS / 3.13) before building and uploading to PyPI.
+  Previously a tag fired ``build → twine check → publish`` with no test
+  step, so a regression on ``main`` between the last CI run and the tag
+  push could publish a broken wheel.
+- ``.pre-commit-config.yaml`` bumped ruff from v0.6.4 to v0.14.9 so
+  contributors' pre-commit hooks align with editor-bundled ruff
+  versions. Dependabot now tracks ``pre-commit`` revs alongside
+  ``pip`` and ``github-actions``. The bump applied ``ruff-format`` to
+  87 files (pure whitespace + import-sort changes; no behavior change).
+- Six tutorial notebooks in ``docs/tutorials/`` are **not yet** in the
+  nbmake gate — ``basic-imr``, ``signal-detection``,
+  ``stratified-analysis``, ``xbar-s-analysis``, ``sds-validation``,
+  ``sds1-complete-analysis`` — because they reference stale API
+  (Study.sds attribute removed, chart names changed, missing
+  ``companion=True``). Tracked for rewrite in a follow-up; the CI gate
+  catches new bugs while these are getting addressed.
+
 ### Added
 - Two tutorial notebooks added to the published docs site:
   ``docs/tutorials/process-capability.ipynb`` and

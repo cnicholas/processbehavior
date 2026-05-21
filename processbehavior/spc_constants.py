@@ -42,6 +42,7 @@ R_UPPER_LIMIT_MULTIPLIER = 3.268
 # Bias Correction Constants
 # ============================================================================
 
+
 def c4(n: int) -> float:
     """
     Calculate c4 bias constant for Xbar and S charts.
@@ -80,11 +81,9 @@ def c4(n: int) -> float:
     Wheeler (1995), Advanced Topics in SPC, Chapter 3
     """
     if n < 2:
-        raise ValueError(f"Subgroup size must be >= 2, got {n}")
+        raise ValueError(f'Subgroup size must be >= 2, got {n}')
 
-    out = np.sqrt(2 / (n - 1)) * (
-        np.exp(math.lgamma(n / 2) - math.lgamma((n - 1) / 2))
-    )
+    out = np.sqrt(2 / (n - 1)) * (np.exp(math.lgamma(n / 2) - math.lgamma((n - 1) / 2)))
     return out
 
 
@@ -129,7 +128,7 @@ def b3(n: int, sigma_multiplier: float = 3) -> float:
     Wheeler (1995), Advanced Topics in SPC, Chapter 3
     """
     if n < 2:
-        raise ValueError(f"Subgroup size must be >= 2, got {n}")
+        raise ValueError(f'Subgroup size must be >= 2, got {n}')
 
     c4_n = c4(n)
     out = 1 - (sigma_multiplier / c4_n * math.sqrt(1 - math.pow(c4_n, 2)))
@@ -177,7 +176,7 @@ def b4(n: int, sigma_multiplier: float = 3) -> float:
     Wheeler (1995), Advanced Topics in SPC, Chapter 3
     """
     if n < 2:
-        raise ValueError(f"Subgroup size must be >= 2, got {n}")
+        raise ValueError(f'Subgroup size must be >= 2, got {n}')
 
     c4_n = c4(n)
     out = 1 + (sigma_multiplier / c4_n * math.sqrt(1 - math.pow(c4_n, 2)))
@@ -189,6 +188,7 @@ def b4(n: int, sigma_multiplier: float = 3) -> float:
 # Control Limit Calculations
 # ============================================================================
 
+
 def calculate_limits(
     limits_type: str,
     mean: float = None,
@@ -196,7 +196,7 @@ def calculate_limits(
     N: int = None,
     mR: float = None,
     round_to: int = 3,
-    sigma_multiplier: float = 3
+    sigma_multiplier: float = 3,
 ) -> pd.Series:
     """
     Calculate control limits for various chart types.
@@ -265,11 +265,10 @@ def calculate_limits(
     ----------
     Wheeler (1995), Advanced Topics in SPC, Chapters 3-5
     """
-    if limits_type == "Xbar":
+    if limits_type == 'Xbar':
         if None in [sd, mean, N]:
             raise ValueError(
-                f"The limits calculation for {limits_type} requires (mean, sd, and N). "
-                f"Got: mean={mean}, sd={sd}, N={N}"
+                f'The limits calculation for {limits_type} requires (mean, sd, and N). Got: mean={mean}, sd={sd}, N={N}'
             )
 
         # Wd = S / c4(n) - within-subgroup standard deviation
@@ -281,23 +280,19 @@ def calculate_limits(
         lpl = mean - ((sigma_multiplier * Wd) / math.sqrt(N))
         upl = mean + ((sigma_multiplier * Wd) / math.sqrt(N))
 
-    elif limits_type == "S":
+    elif limits_type == 'S':
         if None in [sd, N]:
-            raise ValueError(
-                f"The limits calculation for {limits_type} requires (sd, and N). "
-                f"Got: sd={sd}, N={N}"
-            )
+            raise ValueError(f'The limits calculation for {limits_type} requires (sd, and N). Got: sd={sd}, N={N}')
 
         # LPL = S * b3(N)
         # UPL = S * b4(N)
         lpl = sd * b3(N, sigma_multiplier)
         upl = sd * b4(N, sigma_multiplier)
 
-    elif limits_type == "XmR":
+    elif limits_type == 'XmR':
         if None in [mean, mR]:
             raise ValueError(
-                f"The limits calculation for {limits_type} requires (mean, and mR). "
-                f"Got: mean={mean}, mR={mR}"
+                f'The limits calculation for {limits_type} requires (mean, and mR). Got: mean={mean}, mR={mR}'
             )
 
         # LPL = X̄ - (E2 * mR)
@@ -305,12 +300,9 @@ def calculate_limits(
         lpl = mean - (XMR_LIMIT_MULTIPLIER * mR)
         upl = mean + (XMR_LIMIT_MULTIPLIER * mR)
 
-    elif limits_type == "R":
+    elif limits_type == 'R':
         if mR is None:
-            raise ValueError(
-                f"The limits calculation for {limits_type} requires (mR). "
-                f"Got: mR={mR}"
-            )
+            raise ValueError(f'The limits calculation for {limits_type} requires (mR). Got: mR={mR}')
 
         # LPL = 0 (ranges cannot be negative)
         # UPL = mR * D4
@@ -318,10 +310,7 @@ def calculate_limits(
         upl = mR * R_UPPER_LIMIT_MULTIPLIER
 
     else:
-        raise ValueError(
-            f"The limits type '{limits_type}' is not supported. "
-            f"Supported types: 'Xbar', 'S', 'XmR', 'R'"
-        )
+        raise ValueError(f"The limits type '{limits_type}' is not supported. Supported types: 'Xbar', 'S', 'XmR', 'R'")
 
     return pd.Series({'lpl': lpl, 'upl': upl}, index=['lpl', 'upl'])
 
@@ -329,6 +318,7 @@ def calculate_limits(
 # ============================================================================
 # Signal Detection
 # ============================================================================
+
 
 def detect_beyond_limits(x: float, lpl: float, upl: float) -> int:
     """
@@ -387,17 +377,15 @@ def detect_beyond_limits(x: float, lpl: float, upl: float) -> int:
 # Valid base chart types for syntactic validation.
 # API uses focal-chart naming: 'X' (individual) and 'mR' (moving range).
 # Use companion=True to get the paired chart (X↔mR).
-VALID_BASE_CHARTS = {"Xbar", "S", "X", "mR", "Histogram"}
+VALID_BASE_CHARTS = {'Xbar', 'S', 'X', 'mR', 'Histogram'}
 
 # Case-insensitive canonical chart name mapping
-CHART_NAME_CANONICAL: dict[str, str] = {
-    name.lower(): name for name in VALID_BASE_CHARTS
-}
+CHART_NAME_CANONICAL: dict[str, str] = {name.lower(): name for name in VALID_BASE_CHARTS}
 
 # Removed chart names with migration hints
 _REMOVED_CHART_NAMES: dict[str, str] = {
-    "xmr": "Use chart='X' for the individual chart, or chart='X' with companion=True for both X and mR.",
-    "r": "Use chart='mR' for the moving range chart.",
+    'xmr': "Use chart='X' for the individual chart, or chart='X' with companion=True for both X and mR.",
+    'r': "Use chart='mR' for the moving range chart.",
 }
 
 
@@ -416,41 +404,27 @@ def normalize_chart_name(name: str) -> str:
     if lower in CHART_NAME_CANONICAL:
         return CHART_NAME_CANONICAL[lower]
     if lower in _REMOVED_CHART_NAMES:
-        raise ValueError(
-            f"Chart name '{name}' has been removed. "
-            f"{_REMOVED_CHART_NAMES[lower]}"
-        )
+        raise ValueError(f"Chart name '{name}' has been removed. {_REMOVED_CHART_NAMES[lower]}")
     return name
+
 
 # Human-readable residual aliases
 # Maps alias -> {id, label, description}
 RESIDUAL_ALIASES = {
-    "mean_removed": {
-        "id": "R1",
-        "label": "Mean Removed",
-        "description": "Residual after removing grand mean"
+    'mean_removed': {'id': 'R1', 'label': 'Mean Removed', 'description': 'Residual after removing grand mean'},
+    'within_cell': {'id': 'R2', 'label': 'Within Cell', 'description': 'Within-cell variation (per VAS definition)'},
+    'structure_removed': {
+        'id': 'R3',
+        'label': 'Structure Removed',
+        'description': 'Residual after removing factor structure',
     },
-    "within_cell": {
-        "id": "R2",
-        "label": "Within Cell",
-        "description": "Within-cell variation (per VAS definition)"
+    'time_structure_removed': {
+        'id': 'R4',
+        'label': 'Time Structure Removed',
+        'description': 'Residual after removing time structure',
     },
-    "structure_removed": {
-        "id": "R3",
-        "label": "Structure Removed",
-        "description": "Residual after removing factor structure"
-    },
-    "time_structure_removed": {
-        "id": "R4",
-        "label": "Time Structure Removed",
-        "description": "Residual after removing time structure"
-    },
-    "noise": {
-        "id": "R5",
-        "label": "Noise",
-        "description": "Unexplained variation"
-    },
+    'noise': {'id': 'R5', 'label': 'Noise', 'description': 'Unexplained variation'},
 }
 
 # Reverse lookup: "R5" -> "noise"
-RESIDUAL_ID_TO_ALIAS = {v["id"]: k for k, v in RESIDUAL_ALIASES.items()}
+RESIDUAL_ID_TO_ALIAS = {v['id']: k for k, v in RESIDUAL_ALIASES.items()}

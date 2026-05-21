@@ -31,6 +31,7 @@ if TYPE_CHECKING:
 # Data Class
 # ============================================================================
 
+
 @dataclass(frozen=True)
 class MaximumInformationResult:
     """
@@ -78,7 +79,7 @@ class MaximumInformationResult:
     def plot(
         self,
         *,
-        view: Literal["combined", "xmr", "histogram"] = "combined",
+        view: Literal['combined', 'xmr', 'histogram'] = 'combined',
         bins: int = 10,
         theme=None,
         width: int = 900,
@@ -133,25 +134,25 @@ class MaximumInformationResult:
             return round(v, r)
 
         return {
-            "n": self.n,
-            "r2_mean": _r(self.r2_mean),
-            "r2_mR": _r(self.r2_mR),
-            "sigma_hat": _r(self.sigma_hat),
-            "upl": _r(self.upl),
-            "lpl": _r(self.lpl),
-            "n_signals": self.n_signals,
+            'n': self.n,
+            'r2_mean': _r(self.r2_mean),
+            'r2_mR': _r(self.r2_mR),
+            'sigma_hat': _r(self.sigma_hat),
+            'upl': _r(self.upl),
+            'lpl': _r(self.lpl),
+            'n_signals': self.n_signals,
         }
 
     def __repr__(self) -> str:
         d = self.as_dict()
         lines = [
-            "MaximumInformationResult:",
-            f"  R2 residuals (noise floor): n={d['n']}",
-            f"  Mean={d['r2_mean']}, mR={d['r2_mR']}, sigma_hat={d['sigma_hat']}",
-            f"  NPL: [{d['lpl']}, {d['upl']}]",
-            f"  Signals: {d['n_signals']}",
+            'MaximumInformationResult:',
+            f'  R2 residuals (noise floor): n={d["n"]}',
+            f'  Mean={d["r2_mean"]}, mR={d["r2_mR"]}, sigma_hat={d["sigma_hat"]}',
+            f'  NPL: [{d["lpl"]}, {d["upl"]}]',
+            f'  Signals: {d["n_signals"]}',
         ]
-        return "\n".join(lines)
+        return '\n'.join(lines)
 
 
 # ============================================================================
@@ -185,21 +186,19 @@ def assess_maximum_information(
     ValidationError
         If R2 residuals are not available.
     """
-    if not ads.has_vas_residuals or "R2" not in ads.analysis_dataset.columns:
+    if not ads.has_vas_residuals or 'R2' not in ads.analysis_dataset.columns:
         raise ValidationError(
-            "Maximum information analysis requires R2 residuals. "
-            "R2 is only available for designs with factors and time "
-            f"(current SDS: {ads.observed_design_state})."
+            'Maximum information analysis requires R2 residuals. '
+            'R2 is only available for designs with factors and time '
+            f'(current SDS: {ads.observed_design_state}).'
         )
 
     df = ads.analysis_dataset
-    r2_values = df["R2"].dropna().to_numpy(dtype=float)
+    r2_values = df['R2'].dropna().to_numpy(dtype=float)
     n = len(r2_values)
 
     if n < 2:
-        raise ValidationError(
-            f"Maximum information analysis requires at least 2 R2 values, got {n}."
-        )
+        raise ValidationError(f'Maximum information analysis requires at least 2 R2 values, got {n}.')
 
     # --- XmR statistics on R2 ---
     r2_mean = float(np.mean(r2_values))
@@ -226,46 +225,48 @@ def assess_maximum_information(
     # R chart limits
     r_upl = R_UPPER_LIMIT_MULTIPLIER * r2_mR
 
-    xmr_data = pd.DataFrame({
-        "R2": r2_values,
-        "mr": mr_series,
-        "obs": np.arange(1, n + 1),
-        "beyond_limits": beyond.astype(int),
-    })
+    xmr_data = pd.DataFrame(
+        {
+            'R2': r2_values,
+            'mr': mr_series,
+            'obs': np.arange(1, n + 1),
+            'beyond_limits': beyond.astype(int),
+        }
+    )
 
     # Mark R beyond limits
     r_beyond = np.zeros(n, dtype=int)
     r_beyond[0] = 0  # first has NaN mR
     r_beyond[1:] = (mr_values > r_upl).astype(int)
-    xmr_data["r_beyond_limits"] = r_beyond
+    xmr_data['r_beyond_limits'] = r_beyond
 
     xmr_chart_info = {
-        "data": xmr_data,
-        "statistics": {
-            "x_mean": r2_mean,
-            "x_upl": upl,
-            "x_lpl": lpl,
-            "mR": r2_mR,
-            "r_upl": r_upl,
+        'data': xmr_data,
+        'statistics': {
+            'x_mean': r2_mean,
+            'x_upl': upl,
+            'x_lpl': lpl,
+            'mR': r2_mR,
+            'r_upl': r_upl,
         },
-        "metadata": {
-            "value_col": "R2",
-            "mr_col": "mr",
-            "x_col": "obs",
+        'metadata': {
+            'value_col': 'R2',
+            'mr_col': 'mr',
+            'x_col': 'obs',
         },
     }
 
     # Histogram chart info
     response_name = ads.spec.response_var
     histogram_chart_info = {
-        "data": pd.DataFrame({"R2": r2_values}),
-        "statistics": {
-            "mean": r2_mean,
-            "n": n,
+        'data': pd.DataFrame({'R2': r2_values}),
+        'statistics': {
+            'mean': r2_mean,
+            'n': n,
         },
-        "metadata": {
-            "value_col": "R2",
-            "chart_type": "Histogram",
+        'metadata': {
+            'value_col': 'R2',
+            'chart_type': 'Histogram',
         },
     }
 

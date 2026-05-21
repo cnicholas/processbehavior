@@ -47,10 +47,15 @@ class TestRecenteredXmRLimits:
     def test_xmr_limit_width_matches(self, sds2_study, residual):
         """Limit half-width must be identical with and without recentering."""
         result_plain = sds2_study.execute(
-            chart='X', value=residual, by=[],
+            chart='X',
+            value=residual,
+            by=[],
         )
         result_rc = sds2_study.execute(
-            chart='X', value=residual, by=[], recentered=True,
+            chart='X',
+            value=residual,
+            by=[],
+            recentered=True,
         )
 
         stats_plain = result_plain.charts['X']['statistics']
@@ -60,14 +65,16 @@ class TestRecenteredXmRLimits:
         width_rc = stats_rc['upl'] - stats_rc['lpl']
 
         assert width_plain == pytest.approx(width_rc, abs=0.01), (
-            f"Recentered {residual} XmR limit width {width_rc:.4f} != "
-            f"non-recentered {width_plain:.4f}"
+            f'Recentered {residual} XmR limit width {width_rc:.4f} != non-recentered {width_plain:.4f}'
         )
 
     def test_xmr_r3_reference_values(self, sds2_study):
         """SDS 2, PM2, R3, by=[], XmR recentered: match Tom's Minitab values."""
         result = sds2_study.execute(
-            chart='X', value='R3', by=[], recentered=True,
+            chart='X',
+            value='R3',
+            by=[],
+            recentered=True,
         )
         stats = result.charts['X']['statistics']
 
@@ -84,10 +91,17 @@ class TestRecenteredRChart:
     def test_r_chart_limits_match(self, sds2_study, residual):
         """R chart CL/UPL must be identical with and without recentering."""
         result_plain = sds2_study.execute(
-            chart='X', value=residual, by=[], companion=True,
+            chart='X',
+            value=residual,
+            by=[],
+            companion=True,
         )
         result_rc = sds2_study.execute(
-            chart='X', value=residual, by=[], companion=True, recentered=True,
+            chart='X',
+            value=residual,
+            by=[],
+            companion=True,
+            recentered=True,
         )
 
         r_stats_plain = result_plain.charts['mR']['statistics']
@@ -100,7 +114,10 @@ class TestRecenteredRChart:
     def test_r_chart_r3_reference_values(self, sds2_study):
         """R chart reference values: CL=1.440, UPL=4.720, LPL=0."""
         result = sds2_study.execute(
-            chart='X', value='R3', by=[], companion=True,
+            chart='X',
+            value='R3',
+            by=[],
+            companion=True,
         )
         r_stats = result.charts['mR']['statistics']
 
@@ -115,10 +132,15 @@ class TestRecenteredStratified:
     def test_stratified_xmr_width_matches(self, sds2_study):
         """Stratified by=['FACTOR 1']: limit width identical with recentering."""
         result_plain = sds2_study.execute(
-            chart='X', value='R3', by=['FACTOR 1'],
+            chart='X',
+            value='R3',
+            by=['FACTOR 1'],
         )
         result_rc = sds2_study.execute(
-            chart='X', value='R3', by=['FACTOR 1'], recentered=True,
+            chart='X',
+            value='R3',
+            by=['FACTOR 1'],
+            recentered=True,
         )
 
         xmr_plain = result_plain.charts['X']
@@ -135,8 +157,7 @@ class TestRecenteredStratified:
             width_plain = sp['upl'] - sp['lpl']
             width_rc = sr['upl'] - sr['lpl']
             assert width_plain == pytest.approx(width_rc, abs=0.01), (
-                f"Stratum {stratum}: recentered width {width_rc:.4f} != "
-                f"non-recentered {width_plain:.4f}"
+                f'Stratum {stratum}: recentered width {width_rc:.4f} != non-recentered {width_plain:.4f}'
             )
 
 
@@ -146,10 +167,15 @@ class TestRecenteredR6:
     def test_r6_xbar_limit_width_matches(self, sds2_study):
         """R6 recentered Xbar limits should have same width as non-recentered."""
         result_plain = sds2_study.execute(
-            chart='Xbar', value='R6', by=['FACTOR 1'],
+            chart='Xbar',
+            value='R6',
+            by=['FACTOR 1'],
         )
         result_rc = sds2_study.execute(
-            chart='Xbar', value='R6', by=['FACTOR 1'], recentered=True,
+            chart='Xbar',
+            value='R6',
+            by=['FACTOR 1'],
+            recentered=True,
         )
 
         plain_data = result_plain.charts['Xbar']['data']
@@ -159,8 +185,7 @@ class TestRecenteredR6:
         width_rc = (rc_data['upl'] - rc_data['lpl']).iloc[0]
 
         assert width_plain == pytest.approx(width_rc, abs=0.01), (
-            f"R6 recentered Xbar width {width_rc:.4f} != "
-            f"non-recentered {width_plain:.4f}"
+            f'R6 recentered Xbar width {width_rc:.4f} != non-recentered {width_plain:.4f}'
         )
 
 

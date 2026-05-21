@@ -23,13 +23,9 @@ class TestSDSDetection:
         df = synthetic.make_sds(1, K1=3, K2=2, T=6, n_min=2, n_max=4, seed=42)
 
         pdf = ProcessBehavior(df)
-        study = pdf.formulate(
-            response=pdf.cols.y,
-            factors=[pdf.cols.factor_1, pdf.cols.factor_2],
-            time=pdf.cols.time
-        )
+        study = pdf.formulate(response=pdf.cols.y, factors=[pdf.cols.factor_1, pdf.cols.factor_2], time=pdf.cols.time)
 
-        assert study.observed_design_state.sds == 1, f"Expected SDS=1, got {study.observed_design_state.sds}"
+        assert study.observed_design_state.sds == 1, f'Expected SDS=1, got {study.observed_design_state.sds}'
         assert 'Xbar' in study.valid_charts
         assert 'S' in study.valid_charts
 
@@ -45,11 +41,11 @@ class TestSDSDetection:
             'time_var': 'time',
             'response_var': 'y',
             'rsg_var_name': 'rsg',
-            'round_to': 3
+            'round_to': 3,
         }
 
         sds = detect_sds_for_test(df, spec)
-        assert sds == 2, f"Time as factor: Expected SDS=2, got {sds}"
+        assert sds == 2, f'Time as factor: Expected SDS=2, got {sds}'
 
     def test_sds2_detection_with_nkt_grouping(self):
         """Test that SDS 2 data is correctly detected as SDS 2 per Bishop.
@@ -70,35 +66,30 @@ class TestSDSDetection:
             'time_var': 'time',
             'response_var': 'y',
             'rsg_var_name': 'rsg',
-            'round_to': 3
+            'round_to': 3,
         }
 
         sds = detect_sds_for_test(df, spec)
-        assert sds == 2, f"Bishop: all N_kt=1 → Expected SDS=2, got {sds}"
+        assert sds == 2, f'Bishop: all N_kt=1 → Expected SDS=2, got {sds}'
 
     def test_sds5_incomplete_singletons(self):
         """Verify that ODS 5 produces incomplete-grid singleton structure."""
         df = synthetic.make_sds(5, K1=3, K2=2, T=6, seed=42)
 
         # ODS 5 must include empty cells (NaN y rows)
-        assert df['y'].isna().any(), "ODS 5 must include at least one empty cell"
+        assert df['y'].isna().any(), 'ODS 5 must include at least one empty cell'
 
         # All occupied cells must be singletons
         occupied = df.dropna(subset=['y'])
         sizes = occupied.groupby(['factor 1', 'factor 2', 'time']).size()
-        assert (sizes == 1).all(), \
-            f"ODS 5 occupied cells must all be singletons; saw {sizes.unique()}"
+        assert (sizes == 1).all(), f'ODS 5 occupied cells must all be singletons; saw {sizes.unique()}'
 
     def test_sds6_stratified_xmr(self):
         """Stratified XmR works with the ODS 6 incomplete-mixed shape."""
         df = synthetic.make_sds(6, K1=3, K2=2, T=12, seed=42)
 
         pdf = ProcessBehavior(df)
-        study = pdf.formulate(
-            response=pdf.cols.y,
-            factors=[pdf.cols.factor_1, pdf.cols.factor_2],
-            time=pdf.cols.time
-        )
+        study = pdf.formulate(response=pdf.cols.y, factors=[pdf.cols.factor_1, pdf.cols.factor_2], time=pdf.cols.time)
 
         # XmR with factors requires explicit 'by' parameter
         result = study.execute(chart='X', by=['factor 1', 'factor 2'])
@@ -120,14 +111,14 @@ class TestVASCalculationDecisions:
             'rsg_vars': ['factor 1'],
             'response_var': 'y',
             'time_var': 'time',
-            'rsg_var_name': 'rsg'
+            'rsg_var_name': 'rsg',
         }
 
         sds = detect_sds_for_test(df, spec)
         aspec = make_spec(spec)
         ads = ad.AnalysisDataSet(df, aspec, observed_sds=sds)
 
-        assert 'R1' in ads.analysis_dataset.columns, "SDS1 + Xbar should have VAS residuals"
+        assert 'R1' in ads.analysis_dataset.columns, 'SDS1 + Xbar should have VAS residuals'
         assert 'R2' in ads.analysis_dataset.columns
 
     def test_sds1_xmr_has_vas(self):
@@ -143,7 +134,7 @@ class TestVASCalculationDecisions:
             'rsg_vars': ['factor 1'],
             'response_var': 'y',
             'time_var': 'time',
-            'rsg_var_name': 'rsg'
+            'rsg_var_name': 'rsg',
         }
 
         sds = detect_sds_for_test(df, spec)
@@ -151,8 +142,7 @@ class TestVASCalculationDecisions:
         ads = ad.AnalysisDataSet(df, aspec, observed_sds=sds)
 
         # VAS is computed for any SDS with grouping and time
-        assert 'R1' in ads.analysis_dataset.columns, \
-            "SDS1 with grouping+time should have VAS residuals"
+        assert 'R1' in ads.analysis_dataset.columns, 'SDS1 with grouping+time should have VAS residuals'
 
     def test_vas_decision_matrix_chart_agnostic(self):
         """Test VAS calculation is now chart-agnostic.
@@ -167,8 +157,7 @@ class TestVASCalculationDecisions:
             (1, 'Xbar'): True,
             (1, 'S'): True,
             (1, 'X'): True,  # Changed from False
-            (1, 'mR'): True,    # Changed from False
-
+            (1, 'mR'): True,  # Changed from False
             # SDS 2: Has grouping + time → always VAS
             (2, 'Xbar'): True,
             (2, 'X'): True,  # Changed from False
@@ -187,7 +176,7 @@ class TestVASCalculationDecisions:
                 'rsg_vars': ['factor 1'],
                 'time_var': 'time',
                 'response_var': 'y',
-                'rsg_var_name': 'rsg'
+                'rsg_var_name': 'rsg',
             }
 
             detected_sds = detect_sds_for_test(df, spec)
@@ -196,8 +185,9 @@ class TestVASCalculationDecisions:
 
             actual_vas = 'R1' in ads.analysis_dataset.columns
 
-            assert actual_vas == expected_vas, \
-                f"SDS {sds_expected} + {analysis_type}: expected VAS={expected_vas}, got {actual_vas}"
+            assert actual_vas == expected_vas, (
+                f'SDS {sds_expected} + {analysis_type}: expected VAS={expected_vas}, got {actual_vas}'
+            )
 
 
 class TestResidualCalculations:
@@ -213,7 +203,7 @@ class TestResidualCalculations:
             'time_var': 'time',
             'response_var': 'y',
             'rsg_var_name': 'rsg',
-            'round_to': 3
+            'round_to': 3,
         }
 
         sds = detect_sds_for_test(df, spec)
@@ -227,7 +217,7 @@ class TestResidualCalculations:
 
         # Check correlation is very high (should be ~1.0)
         correlation = np.corrcoef(ds['R2'], expected_r2)[0, 1]
-        assert correlation > 0.9999, f"R2 calculation correlation: {correlation}"
+        assert correlation > 0.9999, f'R2 calculation correlation: {correlation}'
 
     def test_residual_identities(self):
         """Test that residual relationships hold: R3 = (Ybar_kt - Ybar_k - Ybar_t + Ybar) + R2."""
@@ -238,7 +228,7 @@ class TestResidualCalculations:
             'rsg_vars': ['factor 1'],
             'time_var': 'time',
             'response_var': 'y',
-            'rsg_var_name': 'rsg'
+            'rsg_var_name': 'rsg',
         }
 
         sds = detect_sds_for_test(df, spec)
@@ -269,7 +259,7 @@ class TestResidualCalculations:
             'rsg_vars': ['factor 1'],
             'time_var': 'time',
             'response_var': 'y',
-            'rsg_var_name': 'rsg'
+            'rsg_var_name': 'rsg',
         }
 
         sds = detect_sds_for_test(df, spec)
@@ -287,29 +277,26 @@ class TestResidualCalculations:
         # RCR5 = (Ybar + Ybar_kt - Ybar_k) + R5
 
         expected_rcr1 = ds['Ybar'] + ds['R1']
-        assert (ds['RCR1'] - expected_rcr1).abs().max() <= TOL, "RCR1 formula incorrect"
+        assert (ds['RCR1'] - expected_rcr1).abs().max() <= TOL, 'RCR1 formula incorrect'
 
         expected_rcr2 = ds['Ybar_kt'] + ds['R2']
-        assert (ds['RCR2'] - expected_rcr2).abs().max() <= TOL, "RCR2 formula incorrect"
+        assert (ds['RCR2'] - expected_rcr2).abs().max() <= TOL, 'RCR2 formula incorrect'
 
         expected_rcr3 = (ds['Ybar_k'] + ds['Ybar_t'] - ds['Ybar']) + ds['R3']
-        assert (ds['RCR3'] - expected_rcr3).abs().max() <= TOL, "RCR3 formula incorrect"
+        assert (ds['RCR3'] - expected_rcr3).abs().max() <= TOL, 'RCR3 formula incorrect'
 
         expected_rcr4 = (ds['Ybar'] + ds['Ybar_kt'] - ds['Ybar_t']) + ds['R4']
-        assert (ds['RCR4'] - expected_rcr4).abs().max() <= TOL, "RCR4 formula incorrect"
+        assert (ds['RCR4'] - expected_rcr4).abs().max() <= TOL, 'RCR4 formula incorrect'
 
         expected_rcr5 = (ds['Ybar'] + ds['Ybar_kt'] - ds['Ybar_k']) + ds['R5']
-        assert (ds['RCR5'] - expected_rcr5).abs().max() <= TOL, "RCR5 formula incorrect"
+        assert (ds['RCR5'] - expected_rcr5).abs().max() <= TOL, 'RCR5 formula incorrect'
 
         # End-to-end reconstruction identity
         # The fixture is SDS 1 with n_min=2, guaranteeing the exact R2 method
         # (all cells have n >= 2). Under the exact method:
         #   R1 = Y - Ybar      → RCR1 = Ybar + R1 = Y
         #   R2 = Y - Ybar_kt   → RCR2 = Ybar_kt + R2 = Y
-        assert (ds['RCR1'] - ds['y']).abs().max() <= TOL, (
-            "RCR1 must reconstruct Y exactly (RCR1 = Ybar + R1 = Y)"
-        )
+        assert (ds['RCR1'] - ds['y']).abs().max() <= TOL, 'RCR1 must reconstruct Y exactly (RCR1 = Ybar + R1 = Y)'
         assert (ds['RCR2'] - ds['y']).abs().max() <= TOL, (
-            "RCR2 must reconstruct Y exactly under exact R2 method "
-            "(SDS 1, n_min=2, all cells replicated)"
+            'RCR2 must reconstruct Y exactly under exact R2 method (SDS 1, n_min=2, all cells replicated)'
         )

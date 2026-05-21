@@ -6,13 +6,10 @@ from processbehavior.formulation_spec import ChartRequest, FormulationSpec
 # FormulationSpec Tests
 # =============================================================================
 
+
 def test_formulation_spec_basic():
     """Test FormulationSpec with all primary fields."""
-    spec = FormulationSpec(
-        response_var='Height',
-        rsg_vars=('Operator',),
-        time_var='Time'
-    )
+    spec = FormulationSpec(response_var='Height', rsg_vars=('Operator',), time_var='Time')
 
     assert spec.response_var == 'Height'
     assert spec.rsg_vars == ('Operator',)
@@ -30,10 +27,7 @@ def test_formulation_spec_requires_response_var():
 
 def test_formulation_spec_has_grouping():
     """Test has_grouping property."""
-    spec_with_grouping = FormulationSpec(
-        response_var='y',
-        rsg_vars=('a', 'b')
-    )
+    spec_with_grouping = FormulationSpec(response_var='y', rsg_vars=('a', 'b'))
     assert spec_with_grouping.has_grouping
 
     spec_no_grouping = FormulationSpec(response_var='y')
@@ -76,11 +70,7 @@ def test_formulation_spec_rsg_delim_default():
 
 def test_formulation_spec_rsg_delim_custom():
     """Test rsg_var_delim accepts custom delimiter."""
-    spec = FormulationSpec(
-        response_var='y',
-        rsg_vars=('a', 'b'),
-        rsg_var_delim='|'
-    )
+    spec = FormulationSpec(response_var='y', rsg_vars=('a', 'b'), rsg_var_delim='|')
     assert spec.rsg_var_delim == '|'
 
 
@@ -135,12 +125,7 @@ def test_formulation_spec_rsg_vars_is_tuple():
 
 def test_formulation_spec_multi_rsg_vars():
     """Test FormulationSpec with multiple rational subgrouping variables."""
-    spec = FormulationSpec(
-        response_var='c',
-        rsg_vars=('a', 'b'),
-        time_var='d',
-        rsg_var_name='rsg'
-    )
+    spec = FormulationSpec(response_var='c', rsg_vars=('a', 'b'), time_var='d', rsg_var_name='rsg')
     assert spec.has_grouping
     assert spec.has_time
     assert spec.requires_sort
@@ -149,11 +134,7 @@ def test_formulation_spec_multi_rsg_vars():
 
 def test_formulation_spec_grouping_no_time():
     """Test FormulationSpec with grouping but no time variable."""
-    spec = FormulationSpec(
-        response_var='c',
-        rsg_vars=('a', 'b'),
-        rsg_var_name='rsg'
-    )
+    spec = FormulationSpec(response_var='c', rsg_vars=('a', 'b'), rsg_var_name='rsg')
     assert spec.has_grouping
     assert not spec.has_time
     assert not spec.requires_sort
@@ -162,6 +143,7 @@ def test_formulation_spec_grouping_no_time():
 # =============================================================================
 # ChartRequest Tests
 # =============================================================================
+
 
 def test_chart_request_basic():
     """Test ChartRequest with only the required chart field."""
@@ -198,12 +180,7 @@ def test_chart_request_companion():
 
 def test_chart_request_residual():
     """Test ChartRequest for residual charting."""
-    req = ChartRequest(
-        chart='X',
-        residual='R2',
-        residual_chart_type='X',
-        value_col='R2'
-    )
+    req = ChartRequest(chart='X', residual='R2', residual_chart_type='X', value_col='R2')
     assert req.residual == 'R2'
     assert req.residual_chart_type == 'X'
     assert req.value_col == 'R2'

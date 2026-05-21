@@ -36,13 +36,7 @@ class SignalResult:
     >>> signals.to_excel('violations.xlsx')
     """
 
-    def __init__(
-        self,
-        violations: pd.DataFrame,
-        chart_name: str,
-        data: pd.DataFrame,
-        stats: dict
-    ):
+    def __init__(self, violations: pd.DataFrame, chart_name: str, data: pd.DataFrame, stats: dict):
         self.violations = violations
         self.chart_name = chart_name
         self.data = data
@@ -71,10 +65,7 @@ class SignalResult:
         if self.violations.empty:
             return {}
 
-        return {
-            rule: group
-            for rule, group in self.violations.groupby('rule_name', observed=True)
-        }
+        return {rule: group for rule, group in self.violations.groupby('rule_name', observed=True)}
 
     @property
     def by_observation(self) -> dict[Any, pd.DataFrame]:
@@ -82,10 +73,7 @@ class SignalResult:
         if self.violations.empty:
             return {}
 
-        return {
-            obs_id: group
-            for obs_id, group in self.violations.groupby('obs_id', observed=True)
-        }
+        return {obs_id: group for obs_id, group in self.violations.groupby('obs_id', observed=True)}
 
     def get_rule_violations(self, rule_name: str) -> pd.DataFrame:
         """
@@ -104,9 +92,7 @@ class SignalResult:
         if self.violations.empty:
             return pd.DataFrame()
 
-        return self.violations[
-            self.violations['rule_name'] == rule_name
-        ].copy()
+        return self.violations[self.violations['rule_name'] == rule_name].copy()
 
     def get_observation_violations(self, obs_id: Any) -> pd.DataFrame:
         """
@@ -125,43 +111,38 @@ class SignalResult:
         if self.violations.empty:
             return pd.DataFrame()
 
-        return self.violations[
-            self.violations['obs_id'] == obs_id
-        ].copy()
+        return self.violations[self.violations['obs_id'] == obs_id].copy()
 
     @property
     def summary(self) -> str:
         """Human-readable summary of detected signals."""
         if not self.has_signals:
-            return f"✓ No signals detected in {self.chart_name}"
+            return f'✓ No signals detected in {self.chart_name}'
 
         lines = [
-            f"\n{'=' * 70}",
-            f"Signal Detection Summary: {self.chart_name}",
-            f"{'=' * 70}",
-            f"Total violations: {self.count}",
-            f"Flagged observations: {len(self.flagged_observations)}",
-            ""
+            f'\n{"=" * 70}',
+            f'Signal Detection Summary: {self.chart_name}',
+            f'{"=" * 70}',
+            f'Total violations: {self.count}',
+            f'Flagged observations: {len(self.flagged_observations)}',
+            '',
         ]
 
         # Breakdown by rule
         rule_counts = self.violations['rule_name'].value_counts()
-        lines.append("Violations by rule:")
+        lines.append('Violations by rule:')
         for rule, count in rule_counts.items():
-            lines.append(f"  {rule}: {count}")
+            lines.append(f'  {rule}: {count}')
 
         # Show first few violations
-        lines.append("\nFirst violations:")
+        lines.append('\nFirst violations:')
         for _, row in self.violations.head(5).iterrows():
-            lines.append(
-                f"  • Obs {row['obs_id']}: {row['description']} "
-                f"(value={row['value']:.3f})"
-            )
+            lines.append(f'  • Obs {row["obs_id"]}: {row["description"]} (value={row["value"]:.3f})')
 
         if self.count > 5:
-            lines.append(f"  ... and {self.count - 5} more")
+            lines.append(f'  ... and {self.count - 5} more')
 
-        lines.append(f"\n{'=' * 70}\n")
+        lines.append(f'\n{"=" * 70}\n')
         return '\n'.join(lines)
 
     def to_dataframe(self) -> pd.DataFrame:
@@ -193,33 +174,21 @@ class SignalResult:
         >>> signals.to_excel('violations.xlsx')
         """
         if self.violations.empty:
-            logger.warning("No violations to export")
+            logger.warning('No violations to export')
             return
 
         with pd.ExcelWriter(filepath, engine='openpyxl') as writer:
             # Violations sheet
-            self.violations.to_excel(
-                writer,
-                sheet_name='Violations',
-                index=False
-            )
+            self.violations.to_excel(writer, sheet_name='Violations', index=False)
 
             # Summary sheet
             summary_data = {
                 'Metric': ['Total Violations', 'Flagged Observations', 'Chart Name'],
-                'Value': [
-                    self.count,
-                    len(self.flagged_observations),
-                    self.chart_name
-                ]
+                'Value': [self.count, len(self.flagged_observations), self.chart_name],
             }
-            pd.DataFrame(summary_data).to_excel(
-                writer,
-                sheet_name='Summary',
-                index=False
-            )
+            pd.DataFrame(summary_data).to_excel(writer, sheet_name='Summary', index=False)
 
-        logger.info(f"✓ Exported violations to: {filepath}")
+        logger.info(f'✓ Exported violations to: {filepath}')
 
     def to_json(self, filepath: str):
         """
@@ -235,12 +204,12 @@ class SignalResult:
         >>> signals.to_json('violations.json')
         """
         self.violations.to_json(filepath, orient='records', indent=2)
-        logger.info(f"✓ Exported violations to: {filepath}")
+        logger.info(f'✓ Exported violations to: {filepath}')
 
     def __repr__(self):
         return (
-            f"SignalResult(violations={self.count}, "
-            f"flagged_obs={len(self.flagged_observations)}, "
+            f'SignalResult(violations={self.count}, '
+            f'flagged_obs={len(self.flagged_observations)}, '
             f"chart='{self.chart_name}')"
         )
 

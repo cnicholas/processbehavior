@@ -21,6 +21,7 @@ from processbehavior.spc_constants import c4
 # Fixtures
 # ========================
 
+
 @pytest.fixture
 def analysis_types():
     return ['Xbar', 'S', 'X', 'mR']
@@ -73,13 +74,12 @@ def df_dt():
         'a': ['a', 'a', 'a', 'b', 'b', 'b', 'd'],
         'b': ['c', 'c', 'c', 'd', 'd', 'd', 'e'],
         'c': [1.5, 2, 3.5, 40, 55, 60, 1],
-        'd': pd.to_datetime([
-            "2022-01-01", "2022-01-02", "2022-01-03",
-            "2022-01-01", "2022-01-02", "2022-01-03", pd.NA
-        ]),
+        'd': pd.to_datetime(
+            ['2022-01-01', '2022-01-02', '2022-01-03', '2022-01-01', '2022-01-02', '2022-01-03', pd.NA]
+        ),
         'a1': [1, 1, 1, 1, 1, 1, 1],
         'a2': [2, 2, 2, 2, 2, 2, 2],
-        'd2': ["4/1/2000", "2/1/2000", "3/1/2000", "5/1/2000", "2/1/2000", "1/1/2000", pd.NA]
+        'd2': ['4/1/2000', '2/1/2000', '3/1/2000', '5/1/2000', '2/1/2000', '1/1/2000', pd.NA],
     }
     return pd.DataFrame(data=data)
 
@@ -87,6 +87,7 @@ def df_dt():
 # ========================
 # Xbar-S Chart Tests
 # ========================
+
 
 class TestXbarSAnalysis:
     """Tests for Xbar and S chart calculations."""
@@ -162,6 +163,7 @@ class TestXbarSAnalysis:
 # XmR Chart Tests
 # ========================
 
+
 class TestXmRAnalysis:
     """Tests for Individual Moving Range (XmR) chart calculations."""
 
@@ -173,7 +175,7 @@ class TestXmRAnalysis:
             'time_var': 'd',
             'response_var': 'c',
             'rsg_var_name': 'rsg',
-            'round_to': 2
+            'round_to': 2,
         }
 
         sds = detect_sds_for_test(df, spec)
@@ -214,7 +216,7 @@ class TestXmRAnalysis:
             'response_var': 'c',
             'rsg_var_name': 'rsg',
             'round_to': 2,
-            'companion': True  # Request bundled XmR+R
+            'companion': True,  # Request bundled XmR+R
         }
         sds = detect_sds_for_test(df, spec)
         result = Analysis(spec=make_spec(spec), request=make_request(spec), sds=sds, df=df).calculate()
@@ -235,6 +237,7 @@ class TestXmRAnalysis:
 # R Chart Tests
 # ========================
 
+
 class TestRChartAnalysis:
     """Tests for Moving Range (R) chart calculations."""
 
@@ -246,13 +249,13 @@ class TestRChartAnalysis:
             'time_var': 'd',
             'response_var': 'c',
             'rsg_var_name': 'rsg',
-            'round_to': 2
+            'round_to': 2,
         }
         sds = detect_sds_for_test(df, spec)
         result = Analysis(spec=make_spec(spec), request=make_request(spec), sds=sds, df=df).calculate()
 
         # SRP: R only returns R (no longer bundled with XmR by default)
-        assert hasattr(result, "keys") and hasattr(result, "values")
+        assert hasattr(result, 'keys') and hasattr(result, 'values')
         keys = list(result.keys())
         assert 'mR' in keys
 
@@ -279,7 +282,7 @@ class TestRChartAnalysis:
 
     def test_r_with_fillweight_data(self):
         """Test R chart on FillWeight800 dataset with stratification (SRP: R only)."""
-        f_path = "tests/fixtures/data/FILLWEIGHTDATA_800.csv"
+        f_path = 'tests/fixtures/data/FILLWEIGHTDATA_800.csv'
         df = pd.read_csv(f_path)
 
         spec = {
@@ -287,14 +290,14 @@ class TestRChartAnalysis:
             'rsg_vars': ['lane', 'phase'],
             'response_var': 'fill_weight',
             'rsg_var_name': 'rsg',
-            'time_var': 'pull'
+            'time_var': 'pull',
         }
 
         sds = detect_sds_for_test(df, spec)
         result = Analysis(spec=make_spec(spec), request=make_request(spec), sds=sds, df=df).calculate()
 
         # SRP: R only returns R
-        assert hasattr(result, "keys") and hasattr(result, "values")
+        assert hasattr(result, 'keys') and hasattr(result, 'values')
         assert 'mR' in result
 
         # Strata are nested inside each chart
@@ -310,6 +313,7 @@ class TestRChartAnalysis:
 # DateTime Handling Tests
 # ========================
 
+
 class TestDateTimeHandling:
     """Tests for datetime column handling in analysis."""
 
@@ -320,7 +324,7 @@ class TestDateTimeHandling:
             'rsg_vars': ['a', 'b'],
             'time_var': 'd',
             'response_var': 'c',
-            'rsg_var_name': 'rsg'
+            'rsg_var_name': 'rsg',
         }
 
         has_time = 'd'
@@ -346,7 +350,7 @@ class TestDateTimeHandling:
             'rsg_vars': ['a', 'b'],
             'time_var': 'd2',
             'response_var': 'c',
-            'rsg_var_name': 'rsg'
+            'rsg_var_name': 'rsg',
         }
 
         sds = detect_sds_for_test(df_dt, spec)
@@ -357,7 +361,7 @@ class TestDateTimeHandling:
 
         # String dates should be converted to datetime
         o_type = xmr_data['d2'].dtype
-        assert pd.api.types.is_datetime64_any_dtype(o_type), f"Expected datetime type, got {o_type}"
+        assert pd.api.types.is_datetime64_any_dtype(o_type), f'Expected datetime type, got {o_type}'
 
         # Filter to a specific stratum for ordering check
         stratum_data = xmr_data[xmr_data['rsg'] == 'a_c']
@@ -376,25 +380,22 @@ class TestDateTimeHandling:
 # Canonical Ordering Tests
 # ========================
 
+
 class TestCanonicalOrdering:
     """Tests for sort_key and obs_id canonical ordering behavior."""
 
     def test_sort_key_deterministic_from_cell_key_and_obs_id(self):
         """sort_key should be deterministic based on (cell_key, obs_id) ordering."""
         # Create data intentionally out of canonical order
-        df = pd.DataFrame({
-            'factor': ['B', 'A', 'A', 'B'],  # Out of order
-            'time': [2, 1, 2, 1],  # Out of order
-            'y': [10, 20, 30, 40]
-        })
+        df = pd.DataFrame(
+            {
+                'factor': ['B', 'A', 'A', 'B'],  # Out of order
+                'time': [2, 1, 2, 1],  # Out of order
+                'y': [10, 20, 30, 40],
+            }
+        )
 
-        spec = {
-            'analysis_type': 'Xbar',
-            'rsg_vars': ['factor'],
-            'time_var': 'time',
-            'response_var': 'y',
-            'round_to': 2
-        }
+        spec = {'analysis_type': 'Xbar', 'rsg_vars': ['factor'], 'time_var': 'time', 'response_var': 'y', 'round_to': 2}
 
         sds = detect_sds_for_test(df, spec)
         a_spec = make_spec(spec)
@@ -408,24 +409,20 @@ class TestCanonicalOrdering:
         # Data should be sorted by cell_key (factor, time)
         # Expected order: A-1, A-2, B-1, B-2
         cell_keys = ads['cell_key'].tolist()
-        assert cell_keys == sorted(cell_keys), "Data should be sorted by cell_key"
+        assert cell_keys == sorted(cell_keys), 'Data should be sorted by cell_key'
 
     def test_obs_id_preserves_pre_sort_row_order(self):
         """obs_id should reflect row order before canonical sorting."""
         # Create data with known pre-sort order
-        df = pd.DataFrame({
-            'factor': ['B', 'A', 'B', 'A'],  # Rows 0,1,2,3 in original order
-            'time': [1, 1, 2, 2],
-            'y': [10, 20, 30, 40]
-        })
+        df = pd.DataFrame(
+            {
+                'factor': ['B', 'A', 'B', 'A'],  # Rows 0,1,2,3 in original order
+                'time': [1, 1, 2, 2],
+                'y': [10, 20, 30, 40],
+            }
+        )
 
-        spec = {
-            'analysis_type': 'Xbar',
-            'rsg_vars': ['factor'],
-            'time_var': 'time',
-            'response_var': 'y',
-            'round_to': 2
-        }
+        spec = {'analysis_type': 'Xbar', 'rsg_vars': ['factor'], 'time_var': 'time', 'response_var': 'y', 'round_to': 2}
 
         sds = detect_sds_for_test(df, spec)
         a_spec = make_spec(spec)
@@ -447,19 +444,15 @@ class TestCanonicalOrdering:
     def test_sort_key_stable_tie_breaking_by_obs_id(self):
         """When cell_keys are equal, obs_id should break ties stably."""
         # Create data with same cell_key for multiple rows
-        df = pd.DataFrame({
-            'factor': ['A', 'A', 'A'],  # Same factor
-            'time': [1, 1, 1],  # Same time = same cell_key
-            'y': [10, 20, 30]
-        })
+        df = pd.DataFrame(
+            {
+                'factor': ['A', 'A', 'A'],  # Same factor
+                'time': [1, 1, 1],  # Same time = same cell_key
+                'y': [10, 20, 30],
+            }
+        )
 
-        spec = {
-            'analysis_type': 'Xbar',
-            'rsg_vars': ['factor'],
-            'time_var': 'time',
-            'response_var': 'y',
-            'round_to': 2
-        }
+        spec = {'analysis_type': 'Xbar', 'rsg_vars': ['factor'], 'time_var': 'time', 'response_var': 'y', 'round_to': 2}
 
         sds = detect_sds_for_test(df, spec)
         a_spec = make_spec(spec)
@@ -477,6 +470,7 @@ class TestCanonicalOrdering:
 # ========================
 # Utility Function Tests
 # ========================
+
 
 class TestUtilityFunctions:
     """Tests for analysis utility functions."""

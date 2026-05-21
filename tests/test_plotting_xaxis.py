@@ -23,12 +23,14 @@ class TestGetXColumnUniqueness:
 
         Simulates by=[] XmR on SDS 2 data: rsg repeats across time periods.
         """
-        df = pd.DataFrame({
-            'value': np.random.default_rng(42).normal(100, 5, 40),
-            'factor 1': [1, 1, 2, 2] * 10,
-            'factor 2': [1, 2, 1, 2] * 10,
-            'time': sorted(list(range(1, 11)) * 4),
-        })
+        df = pd.DataFrame(
+            {
+                'value': np.random.default_rng(42).normal(100, 5, 40),
+                'factor 1': [1, 1, 2, 2] * 10,
+                'factor 2': [1, 2, 1, 2] * 10,
+                'time': sorted(list(range(1, 11)) * 4),
+            }
+        )
         pb = ProcessBehavior(df)
         study = pb.formulate(
             response=pb.cols.value,
@@ -43,11 +45,13 @@ class TestGetXColumnUniqueness:
 
         Standard Xbar analysis where each row is a unique subgroup.
         """
-        df = pd.DataFrame({
-            'value': np.random.default_rng(42).normal(100, 5, 40),
-            'factor 1': [1, 1, 2, 2] * 10,
-            'time': sorted(list(range(1, 11)) * 4),
-        })
+        df = pd.DataFrame(
+            {
+                'value': np.random.default_rng(42).normal(100, 5, 40),
+                'factor 1': [1, 1, 2, 2] * 10,
+                'time': sorted(list(range(1, 11)) * 4),
+            }
+        )
         pb = ProcessBehavior(df)
         study = pb.formulate(
             response=pb.cols.value,
@@ -57,7 +61,8 @@ class TestGetXColumnUniqueness:
         return study.execute()
 
     def test_get_x_column_returns_none_for_repeating_rsg(
-        self, plotter_with_repeating_rsg,
+        self,
+        plotter_with_repeating_rsg,
     ):
         """When rsg values repeat (by=[] XmR), _get_x_column must return None."""
         plotter = Plotter(plotter_with_repeating_rsg)
@@ -66,7 +71,8 @@ class TestGetXColumnUniqueness:
         assert result is None
 
     def test_get_x_column_returns_col_for_unique_rsg(
-        self, plotter_with_unique_rsg,
+        self,
+        plotter_with_unique_rsg,
     ):
         """When rsg/subgroup values are unique (Xbar), _get_x_column returns it."""
         plotter = Plotter(plotter_with_unique_rsg)
@@ -80,12 +86,14 @@ class TestByEmptyXmrXAxis:
 
     def test_by_empty_xmr_uses_integer_xaxis(self):
         """by=[] XmR chart must use sequential integer x-axis, not categorical."""
-        df = pd.DataFrame({
-            'value': np.random.default_rng(42).normal(100, 5, 40),
-            'factor 1': [1, 1, 2, 2] * 10,
-            'factor 2': [1, 2, 1, 2] * 10,
-            'time': sorted(list(range(1, 11)) * 4),
-        })
+        df = pd.DataFrame(
+            {
+                'value': np.random.default_rng(42).normal(100, 5, 40),
+                'factor 1': [1, 1, 2, 2] * 10,
+                'factor 2': [1, 2, 1, 2] * 10,
+                'time': sorted(list(range(1, 11)) * 4),
+            }
+        )
         pb = ProcessBehavior(df)
         study = pb.formulate(
             response=pb.cols.value,
@@ -101,7 +109,7 @@ class TestByEmptyXmrXAxis:
         if trace_x is not None:
             # Should be numeric / integer-like, not categorical
             assert all(isinstance(v, (int, float, np.integer)) for v in trace_x), (
-                f"Expected numeric x values, got types: {set(type(v) for v in trace_x)}"
+                f'Expected numeric x values, got types: {set(type(v) for v in trace_x)}'
             )
         # If trace_x is None, plotly uses the DataFrame index (integer) — also correct
 
@@ -113,12 +121,14 @@ class TestAdaptiveTickAngle:
         """Helper: create an XmR by=[] result with n_time observations per factor combo."""
         n_combos = 4  # 2 × 2 factor grid
         n_total = n_time * n_combos
-        df = pd.DataFrame({
-            'value': np.random.default_rng(42).normal(100, 5, n_total),
-            'factor 1': [1, 1, 2, 2] * n_time,
-            'factor 2': [1, 2, 1, 2] * n_time,
-            'time': sorted(list(range(1, n_time + 1)) * n_combos),
-        })
+        df = pd.DataFrame(
+            {
+                'value': np.random.default_rng(42).normal(100, 5, n_total),
+                'factor 1': [1, 1, 2, 2] * n_time,
+                'factor 2': [1, 2, 1, 2] * n_time,
+                'time': sorted(list(range(1, n_time + 1)) * n_combos),
+            }
+        )
         pb = ProcessBehavior(df)
         study = pb.formulate(
             response=pb.cols.value,
@@ -142,7 +152,7 @@ class TestAdaptiveTickAngle:
                     angles.append(ax.tickangle)
 
         # All x-axes should have tickangle=0
-        assert all(a == 0 for a in angles), f"Expected tickangle=0, got {angles}"
+        assert all(a == 0 for a in angles), f'Expected tickangle=0, got {angles}'
 
     def test_tick_angle_rotated_for_dense_long_labels(self):
         """Charts with many time points and long labels should auto-rotate to -45 degrees."""
@@ -150,13 +160,15 @@ class TestAdaptiveTickAngle:
         n_time = 100
         n_combos = 4
         n_total = n_time * n_combos
-        long_labels = [f"2024-01-{i:02d}-extra" for i in range(1, n_time + 1)]
-        df = pd.DataFrame({
-            'value': np.random.default_rng(42).normal(100, 5, n_total),
-            'factor 1': [1, 1, 2, 2] * n_time,
-            'factor 2': [1, 2, 1, 2] * n_time,
-            'time': sorted(long_labels * n_combos),
-        })
+        long_labels = [f'2024-01-{i:02d}-extra' for i in range(1, n_time + 1)]
+        df = pd.DataFrame(
+            {
+                'value': np.random.default_rng(42).normal(100, 5, n_total),
+                'factor 1': [1, 1, 2, 2] * n_time,
+                'factor 2': [1, 2, 1, 2] * n_time,
+                'time': sorted(long_labels * n_combos),
+            }
+        )
         pb = ProcessBehavior(df)
         study = pb.formulate(
             response=pb.cols.value,
@@ -175,7 +187,7 @@ class TestAdaptiveTickAngle:
                     angles.append(ax.tickangle)
 
         # At least one x-axis should have tickangle=-45
-        assert any(a == -45 for a in angles), f"Expected tickangle=-45, got {angles}"
+        assert any(a == -45 for a in angles), f'Expected tickangle=-45, got {angles}'
 
     def test_tick_angle_horizontal_for_dense_short_labels(self):
         """Charts with many time points but short numeric labels stay horizontal."""
@@ -191,7 +203,7 @@ class TestAdaptiveTickAngle:
                     angles.append(ax.tickangle)
 
         # Short numeric labels should remain horizontal
-        assert all(a == 0 for a in angles), f"Expected tickangle=0, got {angles}"
+        assert all(a == 0 for a in angles), f'Expected tickangle=0, got {angles}'
 
 
 class TestSingleFactorByAxisLabel:
@@ -199,20 +211,20 @@ class TestSingleFactorByAxisLabel:
 
     @staticmethod
     def _study():
-        pb = ProcessBehavior.read_csv("validation/PBTESTDATABASE_T100.csv")
-        return pb.formulate(response="PM SDS 1", factors=["FACTOR 1", "FACTOR 2"])
+        pb = ProcessBehavior.read_csv('validation/PBTESTDATABASE_T100.csv')
+        return pb.formulate(response='PM SDS 1', factors=['FACTOR 1', 'FACTOR 2'])
 
     def test_xbar_by_factor_uses_factor_label(self):
         study = self._study()
-        result = study.execute(chart="Xbar", by=["FACTOR 1"])
-        fig = result.plot(chart="Xbar")
-        assert fig._fig.layout.xaxis.title.text == "Factor 1"
+        result = study.execute(chart='Xbar', by=['FACTOR 1'])
+        fig = result.plot(chart='Xbar')
+        assert fig._fig.layout.xaxis.title.text == 'Factor 1'
 
     def test_s_by_factor_uses_factor_label(self):
         study = self._study()
-        result = study.execute(chart="S", by=["FACTOR 1"])
-        fig = result.plot(chart="S")
-        assert fig._fig.layout.xaxis.title.text == "Factor 1"
+        result = study.execute(chart='S', by=['FACTOR 1'])
+        fig = result.plot(chart='S')
+        assert fig._fig.layout.xaxis.title.text == 'Factor 1'
 
 
 class TestNumericFactorCategoryAxis:
@@ -220,26 +232,22 @@ class TestNumericFactorCategoryAxis:
 
     @staticmethod
     def _study():
-        pb = ProcessBehavior.read_csv("validation/PBTESTDATABASE_T100.csv")
-        return pb.formulate(response="PM SDS 1", factors=["FACTOR 1", "FACTOR 2"])
+        pb = ProcessBehavior.read_csv('validation/PBTESTDATABASE_T100.csv')
+        return pb.formulate(response='PM SDS 1', factors=['FACTOR 1', 'FACTOR 2'])
 
     def test_xbar_by_numeric_factor_is_categorical(self):
         """Xbar by=['FACTOR 1'] with integer levels → category axis."""
         study = self._study()
-        result = study.execute(chart="Xbar", by=["FACTOR 1"])
-        fig = result.plot(chart="Xbar")
-        assert fig._fig.layout.xaxis.type == "category", (
-            f"Expected category axis, got {fig._fig.layout.xaxis.type}"
-        )
+        result = study.execute(chart='Xbar', by=['FACTOR 1'])
+        fig = result.plot(chart='Xbar')
+        assert fig._fig.layout.xaxis.type == 'category', f'Expected category axis, got {fig._fig.layout.xaxis.type}'
 
     def test_s_by_numeric_factor_is_categorical(self):
         """S by=['FACTOR 1'] with integer levels → category axis."""
         study = self._study()
-        result = study.execute(chart="S", by=["FACTOR 1"])
-        fig = result.plot(chart="S")
-        assert fig._fig.layout.xaxis.type == "category", (
-            f"Expected category axis, got {fig._fig.layout.xaxis.type}"
-        )
+        result = study.execute(chart='S', by=['FACTOR 1'])
+        fig = result.plot(chart='S')
+        assert fig._fig.layout.xaxis.type == 'category', f'Expected category axis, got {fig._fig.layout.xaxis.type}'
 
 
 # ============================================================================
@@ -258,9 +266,12 @@ class TestTickLabelBlockInvariants:
     @staticmethod
     def _study():
         from processbehavior.datasets.synthetic import make_sds
+
         df = make_sds(2, K1=3, K2=2, T=10, seed=42)
         return ProcessBehavior(df).formulate(
-            response='y', factors=['factor 1', 'factor 2'], time='time',
+            response='y',
+            factors=['factor 1', 'factor 2'],
+            time='time',
         )
 
     @staticmethod
@@ -286,11 +297,14 @@ class TestTickLabelBlockInvariants:
         data = focused.get_chart(chart_name)
         return tickvals, ticktext, boundary_positions, data
 
-    @pytest.mark.parametrize("by", [
-        pytest.param([], id="overall"),
-        pytest.param(['factor 1'], id="by_factor1"),
-        pytest.param(['factor 2'], id="by_factor2"),
-    ])
+    @pytest.mark.parametrize(
+        'by',
+        [
+            pytest.param([], id='overall'),
+            pytest.param(['factor 1'], id='by_factor1'),
+            pytest.param(['factor 2'], id='by_factor2'),
+        ],
+    )
     def test_tick_labels_monotonic_within_blocks(self, by):
         """Tick labels should increase within each factor block."""
         study = self._study()
@@ -302,21 +316,21 @@ class TestTickLabelBlockInvariants:
 
         for i in range(len(edges) - 1):
             start, end = edges[i], edges[i + 1]
-            block_labels = [
-                int(ticktext[j]) for j, pos in enumerate(tickvals)
-                if start <= pos < end
-            ]
+            block_labels = [int(ticktext[j]) for j, pos in enumerate(tickvals) if start <= pos < end]
             if len(block_labels) >= 2:
                 for k in range(1, len(block_labels)):
                     assert block_labels[k] > block_labels[k - 1], (
-                        f"Block [{start}, {end}): tick labels not monotonic: {block_labels}"
+                        f'Block [{start}, {end}): tick labels not monotonic: {block_labels}'
                     )
 
-    @pytest.mark.parametrize("by", [
-        pytest.param([], id="overall"),
-        pytest.param(['factor 1'], id="by_factor1"),
-        pytest.param(['factor 2'], id="by_factor2"),
-    ])
+    @pytest.mark.parametrize(
+        'by',
+        [
+            pytest.param([], id='overall'),
+            pytest.param(['factor 1'], id='by_factor1'),
+            pytest.param(['factor 2'], id='by_factor2'),
+        ],
+    )
     def test_every_block_has_at_least_one_tick(self, by):
         """Every factor block should have at least one tick label."""
         study = self._study()
@@ -329,9 +343,7 @@ class TestTickLabelBlockInvariants:
         for i in range(len(edges) - 1):
             start, end = edges[i], edges[i + 1]
             block_ticks = [pos for pos in tickvals if start <= pos < end]
-            assert len(block_ticks) >= 1, (
-                f"Block [{start}, {end}) has no tick labels"
-            )
+            assert len(block_ticks) >= 1, f'Block [{start}, {end}) has no tick labels'
 
     def test_full_rsg_no_lane_boundaries(self):
         """by=[all factors] has unique time — no lane boundaries, no blocks."""
@@ -340,7 +352,7 @@ class TestTickLabelBlockInvariants:
         focused = result.focus(result.strata[0])
         meta = focused.charts['X'].get('metadata', {})
         lb = meta.get('lane_boundaries')
-        assert not lb, "Full RSG should have no lane boundaries"
+        assert not lb, 'Full RSG should have no lane boundaries'
 
 
 # ============================================================================
@@ -356,9 +368,12 @@ class TestTwoTierXAxis:
     @staticmethod
     def _result():
         from processbehavior.datasets.synthetic import make_sds
+
         df = make_sds(2, K1=3, K2=2, T=10, seed=42)
         study = ProcessBehavior(df).formulate(
-            response='y', factors=['factor 1', 'factor 2'], time='time',
+            response='y',
+            factors=['factor 1', 'factor 2'],
+            time='time',
         )
         return study.execute(chart='X', by=[])
 
@@ -366,8 +381,7 @@ class TestTwoTierXAxis:
     def _cell_band_annotations(fig):
         """Return paper-coord cell-band annotations (yref=paper, y<0)."""
         return [
-            a for a in fig.figure.layout.annotations
-            if getattr(a, 'yref', None) == 'paper' and getattr(a, 'y', 0) < 0
+            a for a in fig.figure.layout.annotations if getattr(a, 'yref', None) == 'paper' and getattr(a, 'y', 0) < 0
         ]
 
     def test_cell_band_one_per_block(self):
@@ -379,7 +393,7 @@ class TestTwoTierXAxis:
         lane_bounds = meta.get('lane_boundaries') or []
         # n blocks = n boundaries + 1
         assert len(bands) == len(lane_bounds) + 1, (
-            f"Expected {len(lane_bounds) + 1} cell-band annotations, got {len(bands)}"
+            f'Expected {len(lane_bounds) + 1} cell-band annotations, got {len(bands)}'
         )
 
     def test_cell_band_text_matches_rsg(self):
@@ -396,7 +410,7 @@ class TestTwoTierXAxis:
         seen_texts = [a.text.replace('<b>', '').replace('</b>', '') for a in bands]
         expected_texts = [str(data.iloc[edges[i]]['rsg']) for i in range(len(edges) - 1)]
         assert seen_texts == expected_texts, (
-            f"Cell-band labels mismatch:\n  got: {seen_texts}\n  want: {expected_texts}"
+            f'Cell-band labels mismatch:\n  got: {seen_texts}\n  want: {expected_texts}'
         )
 
     def test_per_block_tick_count(self):
@@ -416,7 +430,7 @@ class TestTwoTierXAxis:
             block_ticks = [t for t in tickvals if start <= t < end]
             expected = min(4, block_n)
             assert len(block_ticks) == expected, (
-                f"Block [{start},{end}) has {len(block_ticks)} ticks, expected {expected}"
+                f'Block [{start},{end}) has {len(block_ticks)} ticks, expected {expected}'
             )
 
     def test_legend_hidden_for_single_series(self):
@@ -425,24 +439,19 @@ class TestTwoTierXAxis:
         fig = result.plot()
         # showlegend may be False explicitly or inherited as None+default;
         # we only care that the rendered figure suppresses the legend.
-        assert fig.figure.layout.showlegend is False, (
-            "Single-series X chart should not show a legend"
-        )
+        assert fig.figure.layout.showlegend is False, 'Single-series X chart should not show a legend'
 
     def test_limits_annotation_in_paper_coords(self):
         """The UPL/CL/LPL summary annotation lives outside the plot area."""
         result = self._result()
         fig = result.plot()
         # Find the limits annotation by content.
-        matches = [
-            a for a in fig.figure.layout.annotations
-            if 'UPL' in (a.text or '') and 'CL' in (a.text or '')
-        ]
-        assert matches, "Expected a UPL/CL/LPL summary annotation"
+        matches = [a for a in fig.figure.layout.annotations if 'UPL' in (a.text or '') and 'CL' in (a.text or '')]
+        assert matches, 'Expected a UPL/CL/LPL summary annotation'
         ann = matches[0]
         assert ann.xref == 'paper', f"Limits annotation xref={ann.xref}, expected 'paper'"
         assert ann.yref == 'paper', f"Limits annotation yref={ann.yref}, expected 'paper'"
-        assert ann.y > 1.0, f"Limits annotation y={ann.y}, expected > 1.0 (above plot)"
+        assert ann.y > 1.0, f'Limits annotation y={ann.y}, expected > 1.0 (above plot)'
 
     def test_lane_top_labels_suppressed(self):
         """Top-of-plot lane labels are not drawn when the cell band is present."""
@@ -452,18 +461,17 @@ class TestTwoTierXAxis:
         lane_bounds = meta.get('lane_boundaries') or []
         boundary_labels = {b.get('label') for b in lane_bounds if b.get('label')}
         if not boundary_labels:
-            pytest.skip("no lane boundary labels in this scenario")
+            pytest.skip('no lane boundary labels in this scenario')
         # No annotation at the top of the plot area should match a lane
         # boundary label. Top-of-plot annotations have yanchor='bottom'
         # and y near the data y_max with yref not 'paper'.
         offending = [
-            a for a in fig.figure.layout.annotations
+            a
+            for a in fig.figure.layout.annotations
             if (a.text or '').replace('<b>', '').replace('</b>', '') in boundary_labels
             and getattr(a, 'yref', '') != 'paper'
         ]
-        assert not offending, (
-            f"Top-of-plot lane labels still drawn: {[a.text for a in offending]}"
-        )
+        assert not offending, f'Top-of-plot lane labels still drawn: {[a.text for a in offending]}'
 
     def test_hover_includes_cell_and_time(self):
         """Hover template carries cell, time, and obs id via customdata."""
@@ -473,10 +481,6 @@ class TestTwoTierXAxis:
         main_traces = [t for t in fig.figure.data if t.name == 'X']
         assert main_traces, "expected an 'X' trace"
         tr = main_traces[0]
-        assert tr.customdata is not None, "main trace should have customdata"
-        assert 'Cell:' in (tr.hovertemplate or ''), (
-            f"hovertemplate missing 'Cell:': {tr.hovertemplate!r}"
-        )
-        assert 'Time:' in (tr.hovertemplate or ''), (
-            f"hovertemplate missing 'Time:': {tr.hovertemplate!r}"
-        )
+        assert tr.customdata is not None, 'main trace should have customdata'
+        assert 'Cell:' in (tr.hovertemplate or ''), f"hovertemplate missing 'Cell:': {tr.hovertemplate!r}"
+        assert 'Time:' in (tr.hovertemplate or ''), f"hovertemplate missing 'Time:': {tr.hovertemplate!r}"

@@ -17,7 +17,7 @@ from typing import Callable, Literal
 # Easy to extend for new chart types (CUSUM, EWMA, etc.)
 CHART_TYPE_RULES = {
     'Xbar': ['rule_1'],  # Rational subgroup means (categorical)
-    'S': ['rule_1'],     # Rational subgroup variation (categorical)
+    'S': ['rule_1'],  # Rational subgroup variation (categorical)
     'X': ['rule_1', 'rule_2', 'rule_3', 'rule_4', 'rule_5', 'rule_6', 'rule_7', 'rule_8'],
     'mR': ['rule_1', 'rule_2', 'rule_3', 'rule_4', 'rule_5', 'rule_6', 'rule_7', 'rule_8'],
 }
@@ -143,10 +143,7 @@ class SignalConfig:
         }
 
         if preset not in presets:
-            raise ValueError(
-                f"Unknown preset '{preset}'.\\n"
-                f"Valid presets: {list(presets.keys())}"
-            )
+            raise ValueError(f"Unknown preset '{preset}'.\\nValid presets: {list(presets.keys())}")
 
         return presets[preset]
 
@@ -192,10 +189,7 @@ class SignalConfig:
 
         # This shouldn't happen (already resolved in __post_init__)
         # but handle just in case
-        raise ValueError(
-            f"Invalid enabled_rules state: {self.enabled_rules}. "
-            f"Expected list or 'default'."
-        )
+        raise ValueError(f"Invalid enabled_rules state: {self.enabled_rules}. Expected list or 'default'.")
 
 
 class RuleSet:
@@ -307,11 +301,7 @@ class RuleSet:
         self._parameters['rule_4'] = {'length': length}
         return self
 
-    def trend(
-        self,
-        length: int = 6,
-        direction: Literal['up', 'down', 'both'] = 'both'
-    ) -> RuleSet:
+    def trend(self, length: int = 6, direction: Literal['up', 'down', 'both'] = 'both') -> RuleSet:
         """
         Add Rule 5: Trending points.
 
@@ -396,12 +386,7 @@ class RuleSet:
         self._parameters['rule_8'] = {'length': length}
         return self
 
-    def custom(
-        self,
-        name: str,
-        detector: Callable,
-        min_observations: int = 1
-    ) -> RuleSet:
+    def custom(self, name: str, detector: Callable, min_observations: int = 1) -> RuleSet:
         """
         Add a custom detection rule.
 
@@ -421,10 +406,7 @@ class RuleSet:
             Self for chaining
         """
         self._rules.append(name)
-        self._parameters[name] = {
-            'detector': detector,
-            'min_observations': min_observations
-        }
+        self._parameters[name] = {'detector': detector, 'min_observations': min_observations}
         return self
 
     def to_config(self) -> SignalConfig:

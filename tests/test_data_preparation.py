@@ -21,6 +21,7 @@ from processbehavior.formulation_spec import FormulationSpec
 # Fixtures
 # ============================================================================
 
+
 @pytest.fixture
 def prep():
     """Create DataPreparation instance."""
@@ -36,11 +37,13 @@ def simple_df():
     - Lane B: 2 time points × 2 observations each = 4 rows
     Total: 8 rows
     """
-    return pd.DataFrame({
-        'lane': ['A', 'A', 'A', 'A', 'B', 'B', 'B', 'B'],
-        'pull': [1, 1, 2, 2, 1, 1, 2, 2],  # 2 obs per kt cell
-        'weight': [10.1, 10.15, 10.3, 10.35, 9.9, 9.95, 9.8, 9.85]
-    })
+    return pd.DataFrame(
+        {
+            'lane': ['A', 'A', 'A', 'A', 'B', 'B', 'B', 'B'],
+            'pull': [1, 1, 2, 2, 1, 1, 2, 2],  # 2 obs per kt cell
+            'weight': [10.1, 10.15, 10.3, 10.35, 9.9, 9.95, 9.8, 9.85],
+        }
+    )
 
 
 @pytest.fixture
@@ -50,16 +53,31 @@ def multi_factor_df():
     Structure: 2 lanes × 2 heads × 2 time points × 2 obs = 16 rows
     Each kt cell (lane_head × pull) has n=2 observations.
     """
-    return pd.DataFrame({
-        'lane': ['A', 'A', 'A', 'A', 'A', 'A', 'A', 'A',
-                 'B', 'B', 'B', 'B', 'B', 'B', 'B', 'B'],
-        'head': [1, 1, 1, 1, 2, 2, 2, 2,
-                 1, 1, 1, 1, 2, 2, 2, 2],
-        'pull': [1, 1, 2, 2, 1, 1, 2, 2,
-                 1, 1, 2, 2, 1, 1, 2, 2],  # 2 obs per kt cell
-        'weight': [10.1, 10.15, 10.2, 10.25, 10.3, 10.35, 10.4, 10.45,
-                   9.9, 9.95, 9.8, 9.85, 10.0, 10.05, 9.7, 9.75]
-    })
+    return pd.DataFrame(
+        {
+            'lane': ['A', 'A', 'A', 'A', 'A', 'A', 'A', 'A', 'B', 'B', 'B', 'B', 'B', 'B', 'B', 'B'],
+            'head': [1, 1, 1, 1, 2, 2, 2, 2, 1, 1, 1, 1, 2, 2, 2, 2],
+            'pull': [1, 1, 2, 2, 1, 1, 2, 2, 1, 1, 2, 2, 1, 1, 2, 2],  # 2 obs per kt cell
+            'weight': [
+                10.1,
+                10.15,
+                10.2,
+                10.25,
+                10.3,
+                10.35,
+                10.4,
+                10.45,
+                9.9,
+                9.95,
+                9.8,
+                9.85,
+                10.0,
+                10.05,
+                9.7,
+                9.75,
+            ],
+        }
+    )
 
 
 @pytest.fixture
@@ -69,10 +87,12 @@ def small_groups_df():
     Without a time variable, kt grouping degenerates to factor-only grouping.
     A:2, B:1, C:2 - B should be filtered out.
     """
-    return pd.DataFrame({
-        'lane': ['A', 'A', 'B', 'C', 'C'],  # A:2, B:1, C:2
-        'weight': [10.1, 10.2, 9.9, 9.5, 9.6]
-    })
+    return pd.DataFrame(
+        {
+            'lane': ['A', 'A', 'B', 'C', 'C'],  # A:2, B:1, C:2
+            'weight': [10.1, 10.2, 9.9, 9.5, 9.6],
+        }
+    )
 
 
 @pytest.fixture
@@ -99,6 +119,7 @@ def spec_multi_factor():
 # Test: validate_columns
 # ============================================================================
 
+
 def test_validate_columns_passes_with_valid_data(prep, simple_df, spec_xbar):
     """Should pass validation when all required columns present."""
     # Should not raise
@@ -123,7 +144,7 @@ def test_validate_columns_raises_on_missing_grouping_var(prep, simple_df):
         rsg_vars=('missing_lane',),
     )
 
-    with pytest.raises(FactorNotFoundError, match="grouping variables not found"):
+    with pytest.raises(FactorNotFoundError, match='grouping variables not found'):
         prep.validate_columns(simple_df, spec)
 
 
@@ -141,15 +162,17 @@ def test_validate_columns_raises_on_missing_time(prep, simple_df):
 
 def test_validate_columns_raises_on_non_numeric_response(prep):
     """Should raise helpful error if response variable is not numeric."""
-    df = pd.DataFrame({
-        'lane': ['A', 'B'],
-        'weight': ['ten', 'nine']  # Strings!
-    })
+    df = pd.DataFrame(
+        {
+            'lane': ['A', 'B'],
+            'weight': ['ten', 'nine'],  # Strings!
+        }
+    )
     spec = FormulationSpec(
         response_var='weight',
     )
 
-    with pytest.raises(ValidationError, match="must be numeric"):
+    with pytest.raises(ValidationError, match='must be numeric'):
         prep.validate_columns(df, spec)
 
 
@@ -160,13 +183,14 @@ def test_validate_columns_error_suggests_fix(prep, simple_df):
         rsg_vars=('lane',),
     )
 
-    with pytest.raises(ColumnNotFoundError, match="Fix:"):
+    with pytest.raises(ColumnNotFoundError, match='Fix:'):
         prep.validate_columns(simple_df, spec)
 
 
 # ============================================================================
 # Test: prepare_dataset
 # ============================================================================
+
 
 def test_prepare_dataset_creates_rsg_column(prep, simple_df, spec_xbar):
     """Should create 'rsg' column from grouping variable."""
@@ -199,10 +223,12 @@ def test_prepare_dataset_keeps_small_groups(prep, small_groups_df):
 
 def test_prepare_dataset_all_groups_small_no_error(prep):
     """FormulationSpec is chart-agnostic, so all-small groups don't raise."""
-    df = pd.DataFrame({
-        'lane': ['A', 'B', 'C'],  # All have n=1
-        'weight': [10.1, 9.9, 10.0]
-    })
+    df = pd.DataFrame(
+        {
+            'lane': ['A', 'B', 'C'],  # All have n=1
+            'weight': [10.1, 9.9, 10.0],
+        }
+    )
     spec = FormulationSpec(
         response_var='weight',
         rsg_vars=('lane',),
@@ -222,10 +248,7 @@ def test_prepare_dataset_sorts_when_needed(prep, simple_df, spec_xbar):
 
     # Check sorted by rsg then time
     expected_order = result.sort_values(['rsg', 'pull'])
-    pd.testing.assert_frame_equal(
-        result[['rsg', 'pull']],
-        expected_order[['rsg', 'pull']]
-    )
+    pd.testing.assert_frame_equal(result[['rsg', 'pull']], expected_order[['rsg', 'pull']])
 
 
 def test_prepare_dataset_drops_na_rows(prep):
@@ -234,12 +257,14 @@ def test_prepare_dataset_drops_na_rows(prep):
     This ensures n reflects actual usable observations, not raw count.
     Groups with insufficient observations after NA removal are filtered out.
     """
-    df = pd.DataFrame({
-        # Lane A: 3 rows, 1 NaN → 2 usable (passes n≥2 filter)
-        # Lane B: 2 rows, 0 NaN → 2 usable (passes n≥2 filter)
-        'lane': ['A', 'A', 'A', 'B', 'B'],
-        'weight': [10.1, np.nan, 10.2, 9.9, 10.0]
-    })
+    df = pd.DataFrame(
+        {
+            # Lane A: 3 rows, 1 NaN → 2 usable (passes n≥2 filter)
+            # Lane B: 2 rows, 0 NaN → 2 usable (passes n≥2 filter)
+            'lane': ['A', 'A', 'A', 'B', 'B'],
+            'weight': [10.1, np.nan, 10.2, 9.9, 10.0],
+        }
+    )
     spec = FormulationSpec(
         response_var='weight',
         rsg_vars=('lane',),
@@ -285,6 +310,7 @@ def test_prepare_dataset_creates_composite_grouping(prep, multi_factor_df, spec_
 # Test: build_keys
 # ============================================================================
 
+
 def test_build_keys_adds_obs_id(prep, simple_df, spec_xbar):
     """Should add unique obs_id to each row."""
     result = prep.build_keys(simple_df, spec_xbar)
@@ -329,19 +355,12 @@ def test_build_keys_empty_rsg_key_when_no_factors(prep):
 # Test: Private helper methods
 # ============================================================================
 
+
 def test_add_composite_column_combines_multiple_cols(prep):
     """Should combine multiple columns with delimiter."""
-    df = pd.DataFrame({
-        'col1': ['A', 'B'],
-        'col2': ['X', 'Y']
-    })
+    df = pd.DataFrame({'col1': ['A', 'B'], 'col2': ['X', 'Y']})
 
-    result = prep._add_composite_column(
-        df,
-        cols_to_combine=['col1', 'col2'],
-        col_name='combined',
-        col_delim='_'
-    )
+    result = prep._add_composite_column(df, cols_to_combine=['col1', 'col2'], col_name='combined', col_delim='_')
 
     assert 'combined' in result.columns
     assert result['combined'].tolist() == ['A_X', 'B_Y']
@@ -349,17 +368,9 @@ def test_add_composite_column_combines_multiple_cols(prep):
 
 def test_add_composite_column_custom_delimiter(prep):
     """Should use custom delimiter."""
-    df = pd.DataFrame({
-        'col1': ['A', 'B'],
-        'col2': ['X', 'Y']
-    })
+    df = pd.DataFrame({'col1': ['A', 'B'], 'col2': ['X', 'Y']})
 
-    result = prep._add_composite_column(
-        df,
-        cols_to_combine=['col1', 'col2'],
-        col_name='combined',
-        col_delim='|'
-    )
+    result = prep._add_composite_column(df, cols_to_combine=['col1', 'col2'], col_name='combined', col_delim='|')
 
     assert result['combined'].tolist() == ['A|X', 'B|Y']
 
@@ -368,12 +379,8 @@ def test_add_composite_column_raises_on_missing(prep):
     """Should raise helpful error if column missing."""
     df = pd.DataFrame({'col1': ['A']})
 
-    with pytest.raises(ValueError, match="missing"):
-        prep._add_composite_column(
-            df,
-            cols_to_combine=['col1', 'missing_col'],
-            col_name='combined'
-        )
+    with pytest.raises(ValueError, match='missing'):
+        prep._add_composite_column(df, cols_to_combine=['col1', 'missing_col'], col_name='combined')
 
 
 def test_add_column_copies_existing(prep):
@@ -386,17 +393,14 @@ def test_add_column_copies_existing(prep):
     assert result['new_name'].tolist() == [1, 2, 3]
 
 
-
 # ============================================================================
 # Test: Edge cases
 # ============================================================================
 
+
 def test_prepare_dataset_with_single_factor(prep):
     """Should work with single factor (no composite needed)."""
-    df = pd.DataFrame({
-        'lane': ['A', 'A', 'B', 'B'],
-        'weight': [10.1, 10.2, 9.9, 10.0]
-    })
+    df = pd.DataFrame({'lane': ['A', 'A', 'B', 'B'], 'weight': [10.1, 10.2, 9.9, 10.0]})
     spec = FormulationSpec(
         response_var='weight',
         rsg_vars=('lane',),
@@ -411,10 +415,7 @@ def test_prepare_dataset_with_single_factor(prep):
 
 def test_prepare_dataset_without_grouping(prep):
     """Should work without grouping variables (XmR case)."""
-    df = pd.DataFrame({
-        'time': [1, 2, 3],
-        'weight': [10.1, 10.2, 10.3]
-    })
+    df = pd.DataFrame({'time': [1, 2, 3], 'weight': [10.1, 10.2, 10.3]})
     spec = FormulationSpec(
         response_var='weight',
         time_var='time',
@@ -429,10 +430,7 @@ def test_prepare_dataset_without_grouping(prep):
 
 def test_prepare_dataset_without_time(prep):
     """Should work without time variable."""
-    df = pd.DataFrame({
-        'lane': ['A', 'A', 'B', 'B'],
-        'weight': [10.1, 10.2, 9.9, 10.0]
-    })
+    df = pd.DataFrame({'lane': ['A', 'A', 'B', 'B'], 'weight': [10.1, 10.2, 9.9, 10.0]})
     spec = FormulationSpec(
         response_var='weight',
         rsg_vars=('lane',),
@@ -454,10 +452,7 @@ def test_prepare_dataset_preserves_data_types(prep, simple_df, spec_xbar):
 
 def test_validate_columns_with_categorical_grouping(prep):
     """Should accept categorical data types for grouping variables."""
-    df = pd.DataFrame({
-        'lane': pd.Categorical(['A', 'A', 'B', 'B']),
-        'weight': [10.1, 10.2, 9.9, 10.0]
-    })
+    df = pd.DataFrame({'lane': pd.Categorical(['A', 'A', 'B', 'B']), 'weight': [10.1, 10.2, 9.9, 10.0]})
     spec = FormulationSpec(
         response_var='weight',
         rsg_vars=('lane',),
@@ -470,6 +465,7 @@ def test_validate_columns_with_categorical_grouping(prep):
 # ============================================================================
 # Test: Integration scenarios
 # ============================================================================
+
 
 def test_full_preparation_pipeline(prep, simple_df, spec_xbar):
     """Test complete preparation pipeline."""
@@ -496,14 +492,17 @@ def test_full_preparation_pipeline(prep, simple_df, spec_xbar):
 # Test: Type Conversion for Correct Sorting
 # ============================================================================
 
+
 def test_time_var_numeric_unchanged(prep):
     """Native numeric time_var should stay unchanged."""
     # Each kt cell (lane × time) needs n>=2 for Xbar
-    df = pd.DataFrame({
-        'lane': ['A', 'A', 'A', 'A', 'A', 'A'],
-        'time': [1, 1, 2, 2, 10, 10],  # 2 obs per time point
-        'weight': [10.1, 10.15, 10.2, 10.25, 10.3, 10.35]
-    })
+    df = pd.DataFrame(
+        {
+            'lane': ['A', 'A', 'A', 'A', 'A', 'A'],
+            'time': [1, 1, 2, 2, 10, 10],  # 2 obs per time point
+            'weight': [10.1, 10.15, 10.2, 10.25, 10.3, 10.35],
+        }
+    )
     spec = FormulationSpec(
         response_var='weight',
         rsg_vars=('lane',),
@@ -519,11 +518,13 @@ def test_time_var_numeric_unchanged(prep):
 
 def test_time_var_string_numeric_converted(prep):
     """String-numeric time_var should be converted to numeric."""
-    df = pd.DataFrame({
-        'lane': ['A', 'A', 'A', 'A', 'A', 'A'],
-        'time': ['1', '2', '10', '1', '2', '10'],  # String numbers
-        'weight': [10.1, 10.2, 10.3, 10.0, 10.1, 10.2]
-    })
+    df = pd.DataFrame(
+        {
+            'lane': ['A', 'A', 'A', 'A', 'A', 'A'],
+            'time': ['1', '2', '10', '1', '2', '10'],  # String numbers
+            'weight': [10.1, 10.2, 10.3, 10.0, 10.1, 10.2],
+        }
+    )
     spec = FormulationSpec(
         response_var='weight',
         rsg_vars=('lane',),
@@ -543,13 +544,20 @@ def test_time_var_date_unchanged(prep):
     from datetime import date
 
     # Each kt cell needs n>=2 for Xbar
-    df = pd.DataFrame({
-        'lane': ['A', 'A', 'A', 'A', 'A', 'A'],
-        'time': [date(2024, 1, 1), date(2024, 1, 1),
-                 date(2024, 1, 2), date(2024, 1, 2),
-                 date(2024, 1, 10), date(2024, 1, 10)],
-        'weight': [10.1, 10.15, 10.2, 10.25, 10.3, 10.35]
-    })
+    df = pd.DataFrame(
+        {
+            'lane': ['A', 'A', 'A', 'A', 'A', 'A'],
+            'time': [
+                date(2024, 1, 1),
+                date(2024, 1, 1),
+                date(2024, 1, 2),
+                date(2024, 1, 2),
+                date(2024, 1, 10),
+                date(2024, 1, 10),
+            ],
+            'weight': [10.1, 10.15, 10.2, 10.25, 10.3, 10.35],
+        }
+    )
     spec = FormulationSpec(
         response_var='weight',
         rsg_vars=('lane',),
@@ -569,13 +577,20 @@ def test_time_var_datetime_unchanged(prep):
     from datetime import datetime
 
     # Each kt cell needs n>=2 for Xbar
-    df = pd.DataFrame({
-        'lane': ['A', 'A', 'A', 'A', 'A', 'A'],
-        'time': [datetime(2024, 1, 1), datetime(2024, 1, 1),
-                 datetime(2024, 1, 2), datetime(2024, 1, 2),
-                 datetime(2024, 1, 10), datetime(2024, 1, 10)],
-        'weight': [10.1, 10.15, 10.2, 10.25, 10.3, 10.35]
-    })
+    df = pd.DataFrame(
+        {
+            'lane': ['A', 'A', 'A', 'A', 'A', 'A'],
+            'time': [
+                datetime(2024, 1, 1),
+                datetime(2024, 1, 1),
+                datetime(2024, 1, 2),
+                datetime(2024, 1, 2),
+                datetime(2024, 1, 10),
+                datetime(2024, 1, 10),
+            ],
+            'weight': [10.1, 10.15, 10.2, 10.25, 10.3, 10.35],
+        }
+    )
     spec = FormulationSpec(
         response_var='weight',
         rsg_vars=('lane',),
@@ -590,13 +605,13 @@ def test_time_var_datetime_unchanged(prep):
 def test_time_var_string_date_converted(prep):
     """String-date time_var should be converted to datetime."""
     # Each kt cell needs n>=2 for Xbar
-    df = pd.DataFrame({
-        'lane': ['A', 'A', 'A', 'A', 'A', 'A'],
-        'time': ['2024-01-01', '2024-01-01',
-                 '2024-01-02', '2024-01-02',
-                 '2024-01-10', '2024-01-10'],
-        'weight': [10.1, 10.15, 10.2, 10.25, 10.3, 10.35]
-    })
+    df = pd.DataFrame(
+        {
+            'lane': ['A', 'A', 'A', 'A', 'A', 'A'],
+            'time': ['2024-01-01', '2024-01-01', '2024-01-02', '2024-01-02', '2024-01-10', '2024-01-10'],
+            'weight': [10.1, 10.15, 10.2, 10.25, 10.3, 10.35],
+        }
+    )
     spec = FormulationSpec(
         response_var='weight',
         rsg_vars=('lane',),
@@ -613,11 +628,9 @@ def test_time_var_categorical_unchanged(prep):
     """Ordered categorical time_var should stay unchanged."""
     # Each kt cell needs n>=2 for Xbar
     times = pd.Categorical(['early', 'early', 'mid', 'mid', 'late', 'late'], ordered=True)
-    df = pd.DataFrame({
-        'lane': ['A', 'A', 'A', 'A', 'A', 'A'],
-        'time': times,
-        'weight': [10.1, 10.15, 10.2, 10.25, 10.3, 10.35]
-    })
+    df = pd.DataFrame(
+        {'lane': ['A', 'A', 'A', 'A', 'A', 'A'], 'time': times, 'weight': [10.1, 10.15, 10.2, 10.25, 10.3, 10.35]}
+    )
     spec = FormulationSpec(
         response_var='weight',
         rsg_vars=('lane',),
@@ -634,11 +647,13 @@ def test_time_var_period_unchanged(prep):
     """Period time_var should stay unchanged."""
     # Each kt cell needs n>=2 for Xbar
     periods = list(pd.period_range('2024-01', periods=3, freq='M'))
-    df = pd.DataFrame({
-        'lane': ['A', 'A', 'A', 'A', 'A', 'A'],
-        'time': [periods[0], periods[0], periods[1], periods[1], periods[2], periods[2]],
-        'weight': [10.1, 10.15, 10.2, 10.25, 10.3, 10.35]
-    })
+    df = pd.DataFrame(
+        {
+            'lane': ['A', 'A', 'A', 'A', 'A', 'A'],
+            'time': [periods[0], periods[0], periods[1], periods[1], periods[2], periods[2]],
+            'weight': [10.1, 10.15, 10.2, 10.25, 10.3, 10.35],
+        }
+    )
     spec = FormulationSpec(
         response_var='weight',
         rsg_vars=('lane',),
@@ -655,12 +670,15 @@ def test_time_var_period_unchanged(prep):
 # Test: Factor Column Type Conversion
 # ============================================================================
 
+
 def test_factor_numeric_unchanged(prep):
     """Numeric factor columns should stay unchanged."""
-    df = pd.DataFrame({
-        'lane': [1, 1, 2, 2, 10, 10],  # Already numeric
-        'weight': [10.1, 10.2, 10.3, 10.4, 10.5, 10.6]
-    })
+    df = pd.DataFrame(
+        {
+            'lane': [1, 1, 2, 2, 10, 10],  # Already numeric
+            'weight': [10.1, 10.2, 10.3, 10.4, 10.5, 10.6],
+        }
+    )
     spec = FormulationSpec(
         response_var='weight',
         rsg_vars=('lane',),
@@ -674,10 +692,12 @@ def test_factor_numeric_unchanged(prep):
 
 def test_factor_string_numeric_converted(prep):
     """String-numeric factor columns should be converted."""
-    df = pd.DataFrame({
-        'lane': ['1', '1', '2', '2', '10', '10'],  # String numbers
-        'weight': [10.1, 10.2, 10.3, 10.4, 10.5, 10.6]
-    })
+    df = pd.DataFrame(
+        {
+            'lane': ['1', '1', '2', '2', '10', '10'],  # String numbers
+            'weight': [10.1, 10.2, 10.3, 10.4, 10.5, 10.6],
+        }
+    )
     spec = FormulationSpec(
         response_var='weight',
         rsg_vars=('lane',),
@@ -693,10 +713,12 @@ def test_factor_string_numeric_converted(prep):
 
 def test_factor_mixed_stays_string(prep):
     """Mixed string/numeric factor columns should stay string."""
-    df = pd.DataFrame({
-        'lane': ['A', 'A', 'B', 'B', '1', '1'],  # Mixed
-        'weight': [10.1, 10.2, 10.3, 10.4, 10.5, 10.6]
-    })
+    df = pd.DataFrame(
+        {
+            'lane': ['A', 'A', 'B', 'B', '1', '1'],  # Mixed
+            'weight': [10.1, 10.2, 10.3, 10.4, 10.5, 10.6],
+        }
+    )
     spec = FormulationSpec(
         response_var='weight',
         rsg_vars=('lane',),
@@ -713,12 +735,15 @@ def test_factor_mixed_stays_string(prep):
 # Test: RSG Categorical with Natural Sort
 # ============================================================================
 
+
 def test_rsg_categorical_natural_sort(prep):
     """RSG should be categorical with natural sort order."""
-    df = pd.DataFrame({
-        'lane': ['Lane_1', 'Lane_10', 'Lane_2'] * 2,  # Would sort wrong lexicographically
-        'weight': [10.1, 10.2, 10.3, 10.4, 10.5, 10.6]
-    })
+    df = pd.DataFrame(
+        {
+            'lane': ['Lane_1', 'Lane_10', 'Lane_2'] * 2,  # Would sort wrong lexicographically
+            'weight': [10.1, 10.2, 10.3, 10.4, 10.5, 10.6],
+        }
+    )
     spec = FormulationSpec(
         response_var='weight',
         rsg_vars=('lane',),
@@ -735,10 +760,12 @@ def test_rsg_categorical_natural_sort(prep):
 
 def test_rsg_categorical_preserves_groupby_order(prep):
     """Groupby should respect categorical order."""
-    df = pd.DataFrame({
-        'lane': ['10', '10', '2', '2', '1', '1'],  # Would sort wrong as strings
-        'weight': [10.1, 10.2, 10.3, 10.4, 10.5, 10.6]
-    })
+    df = pd.DataFrame(
+        {
+            'lane': ['10', '10', '2', '2', '1', '1'],  # Would sort wrong as strings
+            'weight': [10.1, 10.2, 10.3, 10.4, 10.5, 10.6],
+        }
+    )
     spec = FormulationSpec(
         response_var='weight',
         rsg_vars=('lane',),
@@ -756,11 +783,13 @@ def test_rsg_categorical_preserves_groupby_order(prep):
 
 def test_rsg_categorical_with_numeric_factors(prep):
     """Multi-factor RSG with numeric parts should sort naturally."""
-    df = pd.DataFrame({
-        'lane': [1, 1, 10, 10, 2, 2, 1, 1, 10, 10, 2, 2],
-        'head': [1, 1, 1, 1, 1, 1, 10, 10, 10, 10, 10, 10],
-        'weight': [10.1, 10.2, 10.3, 10.4, 10.5, 10.6, 10.7, 10.8, 10.9, 11.0, 11.1, 11.2]
-    })
+    df = pd.DataFrame(
+        {
+            'lane': [1, 1, 10, 10, 2, 2, 1, 1, 10, 10, 2, 2],
+            'head': [1, 1, 1, 1, 1, 1, 10, 10, 10, 10, 10, 10],
+            'weight': [10.1, 10.2, 10.3, 10.4, 10.5, 10.6, 10.7, 10.8, 10.9, 11.0, 11.1, 11.2],
+        }
+    )
     spec = FormulationSpec(
         response_var='weight',
         rsg_vars=('lane', 'head'),
@@ -781,12 +810,15 @@ def test_rsg_categorical_with_numeric_factors(prep):
 # Test: Sorting Correctness (Critical for Analysis)
 # ============================================================================
 
+
 def test_sorting_correctness_for_moving_range(prep):
     """Moving range must use adjacent observations in correct time order."""
-    df = pd.DataFrame({
-        'time': ['1', '10', '2', '20', '3'],  # Intentionally scrambled strings
-        'weight': [10.1, 10.2, 10.3, 10.4, 10.5]
-    })
+    df = pd.DataFrame(
+        {
+            'time': ['1', '10', '2', '20', '3'],  # Intentionally scrambled strings
+            'weight': [10.1, 10.2, 10.3, 10.4, 10.5],
+        }
+    )
     spec = FormulationSpec(
         response_var='weight',
         time_var='time',
@@ -803,13 +835,55 @@ def test_sorting_correctness_for_moving_range(prep):
 def test_sorting_correctness_for_signal_detection(prep):
     """Signal detection rules require correct sequential ordering."""
     # Each kt cell needs n>=2 for Xbar (duplicate each time point)
-    df = pd.DataFrame({
-        'lane': ['A'] * 20,
-        'time': ['1', '1', '10', '10', '11', '11', '2', '2', '20', '20',
-                 '21', '21', '3', '3', '30', '30', '4', '4', '5', '5'],
-        'weight': [10.1, 10.15, 10.2, 10.25, 10.3, 10.35, 10.4, 10.45, 10.5, 10.55,
-                   10.6, 10.65, 10.7, 10.75, 10.8, 10.85, 10.9, 10.95, 11.0, 11.05]
-    })
+    df = pd.DataFrame(
+        {
+            'lane': ['A'] * 20,
+            'time': [
+                '1',
+                '1',
+                '10',
+                '10',
+                '11',
+                '11',
+                '2',
+                '2',
+                '20',
+                '20',
+                '21',
+                '21',
+                '3',
+                '3',
+                '30',
+                '30',
+                '4',
+                '4',
+                '5',
+                '5',
+            ],
+            'weight': [
+                10.1,
+                10.15,
+                10.2,
+                10.25,
+                10.3,
+                10.35,
+                10.4,
+                10.45,
+                10.5,
+                10.55,
+                10.6,
+                10.65,
+                10.7,
+                10.75,
+                10.8,
+                10.85,
+                10.9,
+                10.95,
+                11.0,
+                11.05,
+            ],
+        }
+    )
     spec = FormulationSpec(
         response_var='weight',
         rsg_vars=('lane',),
@@ -827,13 +901,16 @@ def test_sorting_correctness_for_signal_detection(prep):
 # Test: Integration - Type Conversion End-to-End
 # ============================================================================
 
+
 def test_integration_string_numeric_time_correct_chart_ordering(prep):
     """End-to-end: String-numeric time should produce correctly ordered charts."""
-    df = pd.DataFrame({
-        'lane': ['A'] * 12,
-        'time': ['1', '2', '3', '10', '11', '12'] * 2,  # Strings
-        'weight': np.random.normal(10, 0.1, 12)
-    })
+    df = pd.DataFrame(
+        {
+            'lane': ['A'] * 12,
+            'time': ['1', '2', '3', '10', '11', '12'] * 2,  # Strings
+            'weight': np.random.normal(10, 0.1, 12),
+        }
+    )
     spec = FormulationSpec(
         response_var='weight',
         rsg_vars=('lane',),
@@ -849,11 +926,13 @@ def test_integration_string_numeric_time_correct_chart_ordering(prep):
 
 def test_integration_mixed_factor_types_correct_stratification(prep):
     """End-to-end: Mixed factor types should stratify correctly."""
-    df = pd.DataFrame({
-        'batch': ['1', '2', '10'] * 4,  # String-numeric
-        'operator': ['A', 'B'] * 6,  # Categorical
-        'weight': np.random.normal(10, 0.1, 12)
-    })
+    df = pd.DataFrame(
+        {
+            'batch': ['1', '2', '10'] * 4,  # String-numeric
+            'operator': ['A', 'B'] * 6,  # Categorical
+            'weight': np.random.normal(10, 0.1, 12),
+        }
+    )
     spec = FormulationSpec(
         response_var='weight',
         rsg_vars=('batch', 'operator'),
@@ -873,19 +952,24 @@ def test_integration_mixed_factor_types_correct_stratification(prep):
     assert categories.index('1_A') < categories.index('10_A')
 
 
-@pytest.mark.parametrize("n_lanes,n_pulls,n_obs_per_cell", [
-    (3, 2, 3),   # 3 lanes × 2 pulls × 3 obs = 18 rows
-    (4, 25, 2),  # 4 lanes × 25 pulls × 2 obs = 200 rows
-])
+@pytest.mark.parametrize(
+    'n_lanes,n_pulls,n_obs_per_cell',
+    [
+        (3, 2, 3),  # 3 lanes × 2 pulls × 3 obs = 18 rows
+        (4, 25, 2),  # 4 lanes × 25 pulls × 2 obs = 200 rows
+    ],
+)
 def test_prepare_dataset_preserves_observation_counts(prep, n_lanes, n_pulls, n_obs_per_cell):
     """Data preparation preserves row counts, per-group counts, and n column."""
     np.random.seed(42)
     total = n_lanes * n_pulls * n_obs_per_cell
-    df = pd.DataFrame({
-        'lane': np.repeat(range(1, n_lanes + 1), n_pulls * n_obs_per_cell),
-        'pull': np.tile(np.repeat(range(1, n_pulls + 1), n_obs_per_cell), n_lanes),
-        'weight': np.random.normal(10, 0.5, total),
-    })
+    df = pd.DataFrame(
+        {
+            'lane': np.repeat(range(1, n_lanes + 1), n_pulls * n_obs_per_cell),
+            'pull': np.tile(np.repeat(range(1, n_pulls + 1), n_obs_per_cell), n_lanes),
+            'weight': np.random.normal(10, 0.5, total),
+        }
+    )
 
     spec = FormulationSpec(
         response_var='weight',
@@ -895,15 +979,15 @@ def test_prepare_dataset_preserves_observation_counts(prep, n_lanes, n_pulls, n_
 
     result = prep.prepare_dataset(df, spec)
 
-    assert len(result) == total, f"Expected {total} rows, got {len(result)}"
+    assert len(result) == total, f'Expected {total} rows, got {len(result)}'
 
     per_lane = n_pulls * n_obs_per_cell
     counts = result.groupby('rsg', observed=True).size()
-    assert all(counts == per_lane), f"Expected {per_lane} per lane, got {counts.tolist()}"
+    assert all(counts == per_lane), f'Expected {per_lane} per lane, got {counts.tolist()}'
 
     assert 'n' in result.columns
     assert all(result['n'] == n_obs_per_cell), (
-        f"Expected n={n_obs_per_cell}, got unique n values: {result['n'].unique()}"
+        f'Expected n={n_obs_per_cell}, got unique n values: {result["n"].unique()}'
     )
 
 
@@ -914,13 +998,26 @@ def test_prepare_dataset_handles_missing_data_correctly(prep):
     This test uses data with n=2 per kt cell, minus some NaN values.
     """
     # Each kt cell has 2 obs initially, some will have NaN
-    df = pd.DataFrame({
-        'lane': [1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3],
-        'pull': [1, 1, 2, 2, 1, 1, 2, 2, 1, 1, 2, 2],  # 2 obs per kt cell
-        'weight': [10.1, 10.15, None, 10.35,  # Lane 1: pull 2 loses 1 obs -> n=1
-                   10.4, 10.45, 10.5, 10.55,  # Lane 2: all ok
-                   10.7, 10.75, 10.8, 10.85]  # Lane 3: all ok
-    })
+    df = pd.DataFrame(
+        {
+            'lane': [1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3],
+            'pull': [1, 1, 2, 2, 1, 1, 2, 2, 1, 1, 2, 2],  # 2 obs per kt cell
+            'weight': [
+                10.1,
+                10.15,
+                None,
+                10.35,  # Lane 1: pull 2 loses 1 obs -> n=1
+                10.4,
+                10.45,
+                10.5,
+                10.55,  # Lane 2: all ok
+                10.7,
+                10.75,
+                10.8,
+                10.85,
+            ],  # Lane 3: all ok
+        }
+    )
     spec = FormulationSpec(
         response_var='weight',
         rsg_vars=('lane',),
@@ -938,17 +1035,18 @@ def test_prepare_dataset_handles_missing_data_correctly(prep):
     # After dropna: 11 rows (1 NaN removed)
     # kt cell (1, 2) has n=1 now -> filtered out -> lose 1 more row
     # Final: 11 - 1 = 10 rows
-    assert len(result) >= 8, f"Expected at least 8 rows, got {len(result)}"
+    assert len(result) >= 8, f'Expected at least 8 rows, got {len(result)}'
 
     # Lanes 2 and 3 should be fully present
     counts_by_lane = result.groupby('rsg', observed=True).size().to_dict()
-    assert counts_by_lane.get('2', 0) == 4, "Lane 2 should have 4 observations"
-    assert counts_by_lane.get('3', 0) == 4, "Lane 3 should have 4 observations"
+    assert counts_by_lane.get('2', 0) == 4, 'Lane 2 should have 4 observations'
+    assert counts_by_lane.get('3', 0) == 4, 'Lane 3 should have 4 observations'
 
 
 # ============================================================================
 # Test: KT (Factor × Time) Level Filtering
 # ============================================================================
+
 
 def test_filter_uses_factor_level_for_flexibility(prep):
     """Filtering uses factor level to allow factor-level aggregation.
@@ -960,11 +1058,13 @@ def test_filter_uses_factor_level_for_flexibility(prep):
     Data preparation filters at factor level (not kt level) to support this.
     """
     # Data where factor A has 6 observations total but n=1 per time point
-    df = pd.DataFrame({
-        'factor': ['A', 'A', 'A', 'A', 'A', 'A'],
-        'time': [1, 2, 3, 4, 5, 6],  # 6 different time points
-        'y': [1.0, 2.0, 3.0, 4.0, 5.0, 6.0]
-    })
+    df = pd.DataFrame(
+        {
+            'factor': ['A', 'A', 'A', 'A', 'A', 'A'],
+            'time': [1, 2, 3, 4, 5, 6],  # 6 different time points
+            'y': [1.0, 2.0, 3.0, 4.0, 5.0, 6.0],
+        }
+    )
 
     spec = FormulationSpec(
         response_var='y',
@@ -984,11 +1084,13 @@ def test_filter_at_factor_level_keeps_all_factors_with_n_gt_1(prep):
     # Data where both factors have n>=2 at factor level
     # A: 4 observations (n=2 per kt cell)
     # B: 2 observations (n=1 per kt cell, but n=2 at factor level)
-    df = pd.DataFrame({
-        'factor': ['A', 'A', 'A', 'A', 'B', 'B'],
-        'time': [1, 1, 2, 2, 1, 2],  # A has n=2 per time, B has n=1 per time
-        'y': [1.0, 1.1, 2.0, 2.1, 3.0, 4.0]
-    })
+    df = pd.DataFrame(
+        {
+            'factor': ['A', 'A', 'A', 'A', 'B', 'B'],
+            'time': [1, 1, 2, 2, 1, 2],  # A has n=2 per time, B has n=1 per time
+            'y': [1.0, 1.1, 2.0, 2.1, 3.0, 4.0],
+        }
+    )
 
     spec = FormulationSpec(
         response_var='y',
@@ -1006,10 +1108,12 @@ def test_filter_at_factor_level_keeps_all_factors_with_n_gt_1(prep):
 
 def test_no_filter_without_time_chart_agnostic(prep):
     """Chart-agnostic prepare_dataset keeps all groups regardless of size."""
-    df = pd.DataFrame({
-        'factor': ['A', 'A', 'B'],  # A has n=2, B has n=1
-        'y': [1.0, 1.1, 2.0]
-    })
+    df = pd.DataFrame(
+        {
+            'factor': ['A', 'A', 'B'],  # A has n=2, B has n=1
+            'y': [1.0, 1.1, 2.0],
+        }
+    )
 
     spec = FormulationSpec(
         response_var='y',
@@ -1026,11 +1130,13 @@ def test_no_filter_without_time_chart_agnostic(prep):
 def test_n_column_reflects_kt_cell_size(prep):
     """The n column should reflect kt cell size, not factor-level count."""
     # Data with varying observations per kt cell
-    df = pd.DataFrame({
-        'factor': ['A', 'A', 'A', 'A', 'A'],
-        'time': [1, 1, 2, 2, 2],  # time 1 has n=2, time 2 has n=3
-        'y': [1.0, 1.1, 2.0, 2.1, 2.2]
-    })
+    df = pd.DataFrame(
+        {
+            'factor': ['A', 'A', 'A', 'A', 'A'],
+            'time': [1, 1, 2, 2, 2],  # time 1 has n=2, time 2 has n=3
+            'y': [1.0, 1.1, 2.0, 2.1, 2.2],
+        }
+    )
 
     spec = FormulationSpec(
         response_var='y',
@@ -1043,5 +1149,5 @@ def test_n_column_reflects_kt_cell_size(prep):
     # n should reflect kt cell size, not factor-level count
     # Factor A has 5 total, but kt cells have n=2 and n=3
     n_values = result.groupby(['rsg', 'time'], observed=True)['n'].first()
-    assert n_values[('A', 1)] == 2, f"Expected n=2 for (A, 1), got {n_values.get(('A', 1))}"
-    assert n_values[('A', 2)] == 3, f"Expected n=3 for (A, 2), got {n_values.get(('A', 2))}"
+    assert n_values[('A', 1)] == 2, f'Expected n=2 for (A, 1), got {n_values.get(("A", 1))}'
+    assert n_values[('A', 2)] == 3, f'Expected n=3 for (A, 2), got {n_values.get(("A", 2))}'

@@ -8,7 +8,7 @@ and extended by Dr. Thomas A. Bishop.
 Purpose:
 --------
 - Testing: Validate analysis algorithms with known ground truth
-- Documentation: Provide reproducible examples  
+- Documentation: Provide reproducible examples
 - Education: Demonstrate different data structures and their implications
 - Development: Rapid prototyping of new features
 
@@ -18,7 +18,7 @@ Quick Start:
     >>>
     >>> # Generate SDS1 data (full replication)
     >>> df = synthetic.make_sds1(K1=3, K2=2, T=8, n_min=2, n_max=4)
-    >>> 
+    >>>
     >>> # Use with analysis
     >>> from processbehavior.analysis import Analysis
     >>> spec = {'analysis_type': 'Xbar', 'rsg_vars': ['factor 1'],
@@ -28,7 +28,7 @@ Quick Start:
 Sampling Design States:
 ----------------------
 - SDS 1: Full replication (n≥2 in all cells)
-- SDS 2: No replication (n=1 in all cells)  
+- SDS 2: No replication (n=1 in all cells)
 - SDS 3: Partial replication (mixed n=1 and n≥2)
 - SDS 4: Single condition over time (one factor, multiple time points)
 - SDS 5: Nested design (hierarchical factors, asynchronous)
@@ -70,6 +70,7 @@ __all__ = [
 # SDS 1: Full Replication - Most Statistically Powerful
 # ============================================================================
 
+
 def make_sds1(
     K1: int = 3,
     K2: int = 2,
@@ -85,7 +86,7 @@ def make_sds1(
     seed: Optional[int] = None,
     include_truth: bool = False,
     factor1_names: Optional[list[str]] = None,
-    factor2_names: Optional[list[str]] = None
+    factor2_names: Optional[list[str]] = None,
 ) -> pd.DataFrame:
     """
     Generate Sampling Design State 1 data (full replication).
@@ -183,21 +184,21 @@ def make_sds1(
     rng = np.random.default_rng(seed)
 
     # Generate true effects from the model
-    rho = rng.normal(0, factor1_effect_size, K1)      # Factor 1 main effects
-    phi = rng.normal(0, factor2_effect_size, K2)      # Factor 2 main effects
-    tau = rng.normal(0, time_effect_size, T)          # Time main effects
+    rho = rng.normal(0, factor1_effect_size, K1)  # Factor 1 main effects
+    phi = rng.normal(0, factor2_effect_size, K2)  # Factor 2 main effects
+    tau = rng.normal(0, time_effect_size, T)  # Time main effects
     inter = rng.normal(0, interaction_effect_size, (K1, K2, T))  # Interactions
 
     # Use custom factor names if provided
     if factor1_names is None:
-        factor1_names = [f"F1_{k+1}" for k in range(K1)]
+        factor1_names = [f'F1_{k + 1}' for k in range(K1)]
     elif len(factor1_names) != K1:
-        raise ValueError(f"Length of factor1_names ({len(factor1_names)}) must equal K1 ({K1})")
+        raise ValueError(f'Length of factor1_names ({len(factor1_names)}) must equal K1 ({K1})')
 
     if factor2_names is None:
-        factor2_names = [f"F2_{k+1}" for k in range(K2)]
+        factor2_names = [f'F2_{k + 1}' for k in range(K2)]
     elif len(factor2_names) != K2:
-        raise ValueError(f"Length of factor2_names ({len(factor2_names)}) must equal K2 ({K2})")
+        raise ValueError(f'Length of factor2_names ({len(factor2_names)}) must equal K2 ({K2})')
 
     rows = []
     for k1 in range(K1):
@@ -211,23 +212,20 @@ def make_sds1(
                     epsilon = rng.normal(0, sigma)  # Pure error
                     y = mu + rho[k1] + phi[k2] + tau[t] + inter[k1, k2, t] + epsilon
 
-                    row = {
-                        'time': t + 1,
-                        'factor 1': factor1_names[k1],
-                        'factor 2': factor2_names[k2],
-                        'y': y
-                    }
+                    row = {'time': t + 1, 'factor 1': factor1_names[k1], 'factor 2': factor2_names[k2], 'y': y}
 
                     # Optionally include ground truth for validation
                     if include_truth:
-                        row.update({
-                            'true_factor1_effect': rho[k1],
-                            'true_factor2_effect': phi[k2],
-                            'true_time_effect': tau[t],
-                            'true_interaction': inter[k1, k2, t],
-                            'true_error': epsilon,
-                            'true_mean': mu + rho[k1] + phi[k2] + tau[t] + inter[k1, k2, t]
-                        })
+                        row.update(
+                            {
+                                'true_factor1_effect': rho[k1],
+                                'true_factor2_effect': phi[k2],
+                                'true_time_effect': tau[t],
+                                'true_interaction': inter[k1, k2, t],
+                                'true_error': epsilon,
+                                'true_mean': mu + rho[k1] + phi[k2] + tau[t] + inter[k1, k2, t],
+                            }
+                        )
 
                     rows.append(row)
 
@@ -237,27 +235,28 @@ def make_sds1(
     cell_counts = df.groupby(['factor 1', 'factor 2', 'time']).size()
 
     if cell_counts.min() < n_min:
-        raise AssertionError(f"SDS1 validation failed: min n={cell_counts.min()} < {n_min}")
+        raise AssertionError(f'SDS1 validation failed: min n={cell_counts.min()} < {n_min}')
     if cell_counts.max() > n_max:
-        raise AssertionError(f"SDS1 validation failed: max n={cell_counts.max()} > {n_max}")
+        raise AssertionError(f'SDS1 validation failed: max n={cell_counts.max()} > {n_max}')
     expected_cells = K1 * K2 * T
     if len(cell_counts) != expected_cells:
         raise AssertionError(
-            f"SDS1 validation failed: expected {expected_cells} cells, got {len(cell_counts)} "
-            "(some factor-time combinations missing)"
+            f'SDS1 validation failed: expected {expected_cells} cells, got {len(cell_counts)} '
+            '(some factor-time combinations missing)'
         )
 
     logger.debug(
-        f"Generated SDS1 data: {K1} × {K2} factors × {T} times × ~{(n_min+n_max)/2:.1f} reps/cell "
-        f"= {len(df)} observations"
+        f'Generated SDS1 data: {K1} × {K2} factors × {T} times × ~{(n_min + n_max) / 2:.1f} reps/cell '
+        f'= {len(df)} observations'
     )
 
     return df
 
 
 # ============================================================================
-# SDS 2: No Replication - Common in Designed Experiments  
+# SDS 2: No Replication - Common in Designed Experiments
 # ============================================================================
+
 
 def make_sds2(
     K1: int = 3,
@@ -272,7 +271,7 @@ def make_sds2(
     seed: Optional[int] = None,
     include_truth: bool = False,
     factor1_names: Optional[list[str]] = None,
-    factor2_names: Optional[list[str]] = None
+    factor2_names: Optional[list[str]] = None,
 ) -> pd.DataFrame:
     """
     Generate Sampling Design State 2 data (no replication).
@@ -337,14 +336,14 @@ def make_sds2(
     inter = rng.normal(0, interaction_effect_size, (K1, K2, T))
 
     if factor1_names is None:
-        factor1_names = [f"F1_{k+1}" for k in range(K1)]
+        factor1_names = [f'F1_{k + 1}' for k in range(K1)]
     elif len(factor1_names) != K1:
-        raise ValueError("Length of factor1_names must equal K1")
+        raise ValueError('Length of factor1_names must equal K1')
 
     if factor2_names is None:
-        factor2_names = [f"F2_{k+1}" for k in range(K2)]
+        factor2_names = [f'F2_{k + 1}' for k in range(K2)]
     elif len(factor2_names) != K2:
-        raise ValueError("Length of factor2_names must equal K2")
+        raise ValueError('Length of factor2_names must equal K2')
 
     rows = []
     for k1 in range(K1):
@@ -354,21 +353,18 @@ def make_sds2(
                 epsilon = rng.normal(0, sigma)
                 y = mu + rho[k1] + phi[k2] + tau[t] + inter[k1, k2, t] + epsilon
 
-                row = {
-                    'time': t + 1,
-                    'factor 1': factor1_names[k1],
-                    'factor 2': factor2_names[k2],
-                    'y': y
-                }
+                row = {'time': t + 1, 'factor 1': factor1_names[k1], 'factor 2': factor2_names[k2], 'y': y}
 
                 if include_truth:
-                    row.update({
-                        'true_factor1_effect': rho[k1],
-                        'true_factor2_effect': phi[k2],
-                        'true_time_effect': tau[t],
-                        'true_interaction': inter[k1, k2, t],
-                        'true_confounded': inter[k1, k2, t] + epsilon
-                    })
+                    row.update(
+                        {
+                            'true_factor1_effect': rho[k1],
+                            'true_factor2_effect': phi[k2],
+                            'true_time_effect': tau[t],
+                            'true_interaction': inter[k1, k2, t],
+                            'true_confounded': inter[k1, k2, t] + epsilon,
+                        }
+                    )
 
                 rows.append(row)
 
@@ -379,17 +375,14 @@ def make_sds2(
 
     if not (cell_counts == 1).all():
         raise AssertionError(
-            f"SDS2 validation failed: expected all n=1, "
-            f"got min={cell_counts.min()}, max={cell_counts.max()}"
+            f'SDS2 validation failed: expected all n=1, got min={cell_counts.min()}, max={cell_counts.max()}'
         )
 
     expected_n = K1 * K2 * T
     if len(df) != expected_n:
-        raise AssertionError(
-            f"SDS2 validation failed: expected {expected_n} obs, got {len(df)}"
-        )
+        raise AssertionError(f'SDS2 validation failed: expected {expected_n} obs, got {len(df)}')
 
-    logger.debug(f"Generated SDS2 data: {K1} × {K2} factors × {T} times = {len(df)} observations")
+    logger.debug(f'Generated SDS2 data: {K1} × {K2} factors × {T} times = {len(df)} observations')
 
     return df
 
@@ -397,6 +390,7 @@ def make_sds2(
 # ============================================================================
 # SDS 3: Partial Replication - MOST COMMON IN PRACTICE!
 # ============================================================================
+
 
 def make_sds3(  # noqa: C901
     K1: int = 3,
@@ -414,7 +408,7 @@ def make_sds3(  # noqa: C901
     replication_pattern: str = 'random',
     include_truth: bool = False,
     factor1_names: Optional[list[str]] = None,
-    factor2_names: Optional[list[str]] = None
+    factor2_names: Optional[list[str]] = None,
 ) -> pd.DataFrame:
     """
     Generate Sampling Design State 3 data (partial replication).
@@ -488,14 +482,14 @@ def make_sds3(  # noqa: C901
     inter = rng.normal(0, interaction_effect_size, (K1, K2, T))
 
     if factor1_names is None:
-        factor1_names = [f"F1_{k+1}" for k in range(K1)]
+        factor1_names = [f'F1_{k + 1}' for k in range(K1)]
     elif len(factor1_names) != K1:
-        raise ValueError("Length of factor1_names must equal K1")
+        raise ValueError('Length of factor1_names must equal K1')
 
     if factor2_names is None:
-        factor2_names = [f"F2_{k+1}" for k in range(K2)]
+        factor2_names = [f'F2_{k + 1}' for k in range(K2)]
     elif len(factor2_names) != K2:
-        raise ValueError("Length of factor2_names must equal K2")
+        raise ValueError('Length of factor2_names must equal K2')
 
     rows = []
     replicated_cells = []
@@ -519,12 +513,12 @@ def make_sds3(  # noqa: C901
                     is_replicated = (k1 + k2 + t) % 2 == 0
 
                 elif replication_pattern == 'corners':
-                    is_corner = (k1 == 0 or k1 == K1-1) or (t == 0 or t == T-1)
-                    is_replicated = is_corner or (rng.random() < p_replicated/2)
+                    is_corner = (k1 == 0 or k1 == K1 - 1) or (t == 0 or t == T - 1)
+                    is_replicated = is_corner or (rng.random() < p_replicated / 2)
 
                 else:
                     raise ValueError(
-                        f"Unknown replication pattern: {replication_pattern}. "
+                        f'Unknown replication pattern: {replication_pattern}. '
                         f"Valid: 'random', 'early_times', 'late_times', "
                         f"'checkerboard', 'corners'"
                     )
@@ -548,17 +542,19 @@ def make_sds3(  # noqa: C901
                         'factor 1': factor1_names[k1],
                         'factor 2': factor2_names[k2],
                         'y': y,
-                        'cell_type': 'replicated' if is_replicated else 'unreplicated'
+                        'cell_type': 'replicated' if is_replicated else 'unreplicated',
                     }
 
                     if include_truth:
-                        row.update({
-                            'true_factor1_effect': rho[k1],
-                            'true_factor2_effect': phi[k2],
-                            'true_time_effect': tau[t],
-                            'true_interaction': inter[k1, k2, t],
-                            'true_error': epsilon
-                        })
+                        row.update(
+                            {
+                                'true_factor1_effect': rho[k1],
+                                'true_factor2_effect': phi[k2],
+                                'true_time_effect': tau[t],
+                                'true_interaction': inter[k1, k2, t],
+                                'true_error': epsilon,
+                            }
+                        )
 
                     rows.append(row)
 
@@ -571,23 +567,20 @@ def make_sds3(  # noqa: C901
 
     if not (has_singles and has_multiples):
         raise AssertionError(
-            f"SDS3 validation failed: must have both single and multiple observations. "
-            f"Got singles={has_singles}, multiples={has_multiples}. "
-            f"Try adjusting p_replicated or replication_pattern."
+            f'SDS3 validation failed: must have both single and multiple observations. '
+            f'Got singles={has_singles}, multiples={has_multiples}. '
+            f'Try adjusting p_replicated or replication_pattern.'
         )
 
     # Check replication proportion
     actual_p = len(replicated_cells) / total_cells
     if abs(actual_p - p_replicated) > 0.25:  # Allow 25% tolerance
-        logger.warning(
-            f"SDS3: target replication {p_replicated:.1%}, "
-            f"actual {actual_p:.1%} (outside 25% tolerance)"
-        )
+        logger.warning(f'SDS3: target replication {p_replicated:.1%}, actual {actual_p:.1%} (outside 25% tolerance)')
 
     logger.debug(
-        f"Generated SDS3 data: {len(df)} obs, "
-        f"{len(replicated_cells)} replicated cells ({actual_p:.1%}), "
-        f"{len(unreplicated_cells)} unreplicated cells"
+        f'Generated SDS3 data: {len(df)} obs, '
+        f'{len(replicated_cells)} replicated cells ({actual_p:.1%}), '
+        f'{len(unreplicated_cells)} unreplicated cells'
     )
 
     return df
@@ -596,6 +589,7 @@ def make_sds3(  # noqa: C901
 # ============================================================================
 # SDS 4: Incomplete grid, occupied cells replicated (N >= 2)
 # ============================================================================
+
 
 def make_sds4(
     K1: int = 3,
@@ -653,11 +647,11 @@ def make_sds4(
         >>> # After tidy/NA drop, study.analytical_design_state.sds == 1
     """
     if not 0 < p_drop < 1:
-        raise ValueError(f"p_drop must be in (0, 1), got {p_drop}")
+        raise ValueError(f'p_drop must be in (0, 1), got {p_drop}')
     if n_min < 2:
-        raise ValueError(f"ODS 4 requires n_min >= 2 (no singletons), got {n_min}")
+        raise ValueError(f'ODS 4 requires n_min >= 2 (no singletons), got {n_min}')
     if n_max < n_min:
-        raise ValueError(f"n_max ({n_max}) must be >= n_min ({n_min})")
+        raise ValueError(f'n_max ({n_max}) must be >= n_min ({n_min})')
 
     rng = np.random.default_rng(seed)
 
@@ -666,17 +660,13 @@ def make_sds4(
     tau = rng.normal(0, time_effect_size, T)
 
     if factor1_names is None:
-        factor1_names = [f"F1_{k+1}" for k in range(K1)]
+        factor1_names = [f'F1_{k + 1}' for k in range(K1)]
     elif len(factor1_names) != K1:
-        raise ValueError(
-            f"Length of factor1_names ({len(factor1_names)}) must equal K1 ({K1})"
-        )
+        raise ValueError(f'Length of factor1_names ({len(factor1_names)}) must equal K1 ({K1})')
     if factor2_names is None:
-        factor2_names = [f"F2_{k+1}" for k in range(K2)]
+        factor2_names = [f'F2_{k + 1}' for k in range(K2)]
     elif len(factor2_names) != K2:
-        raise ValueError(
-            f"Length of factor2_names ({len(factor2_names)}) must equal K2 ({K2})"
-        )
+        raise ValueError(f'Length of factor2_names ({len(factor2_names)}) must equal K2 ({K2})')
 
     total_cells = K1 * K2 * T
     n_drop = max(1, int(p_drop * total_cells))
@@ -689,30 +679,34 @@ def make_sds4(
         for k2 in range(K2):
             for t in range(T):
                 if cell_idx in dropped:
-                    rows.append({
-                        'time': t + 1,
-                        'factor 1': factor1_names[k1],
-                        'factor 2': factor2_names[k2],
-                        'y': np.nan,
-                    })
+                    rows.append(
+                        {
+                            'time': t + 1,
+                            'factor 1': factor1_names[k1],
+                            'factor 2': factor2_names[k2],
+                            'y': np.nan,
+                        }
+                    )
                 else:
                     n = int(rng.integers(n_min, n_max + 1))
                     for _ in range(n):
                         eps = rng.normal(0, sigma)
                         y = mu + rho[k1] + phi[k2] + tau[t] + eps
-                        rows.append({
-                            'time': t + 1,
-                            'factor 1': factor1_names[k1],
-                            'factor 2': factor2_names[k2],
-                            'y': y,
-                        })
+                        rows.append(
+                            {
+                                'time': t + 1,
+                                'factor 1': factor1_names[k1],
+                                'factor 2': factor2_names[k2],
+                                'y': y,
+                            }
+                        )
                 cell_idx += 1
 
     df = pd.DataFrame(rows)
 
     logger.debug(
-        f"Generated ODS 4 data: {K1}x{K2}x{T} grid, {n_drop}/{total_cells} cells empty, "
-        f"{len(df)} total rows ({df['y'].notna().sum()} valid responses)"
+        f'Generated ODS 4 data: {K1}x{K2}x{T} grid, {n_drop}/{total_cells} cells empty, '
+        f'{len(df)} total rows ({df["y"].notna().sum()} valid responses)'
     )
     return df
 
@@ -720,6 +714,7 @@ def make_sds4(
 # ============================================================================
 # SDS 5: Incomplete grid, occupied cells unreplicated (N = 1)
 # ============================================================================
+
 
 def make_sds5(
     K1: int = 3,
@@ -771,7 +766,7 @@ def make_sds5(
         >>> # After tidy/NA drop, study.analytical_design_state.sds == 2
     """
     if not 0 < p_drop < 1:
-        raise ValueError(f"p_drop must be in (0, 1), got {p_drop}")
+        raise ValueError(f'p_drop must be in (0, 1), got {p_drop}')
 
     rng = np.random.default_rng(seed)
 
@@ -780,17 +775,13 @@ def make_sds5(
     tau = rng.normal(0, time_effect_size, T)
 
     if factor1_names is None:
-        factor1_names = [f"F1_{k+1}" for k in range(K1)]
+        factor1_names = [f'F1_{k + 1}' for k in range(K1)]
     elif len(factor1_names) != K1:
-        raise ValueError(
-            f"Length of factor1_names ({len(factor1_names)}) must equal K1 ({K1})"
-        )
+        raise ValueError(f'Length of factor1_names ({len(factor1_names)}) must equal K1 ({K1})')
     if factor2_names is None:
-        factor2_names = [f"F2_{k+1}" for k in range(K2)]
+        factor2_names = [f'F2_{k + 1}' for k in range(K2)]
     elif len(factor2_names) != K2:
-        raise ValueError(
-            f"Length of factor2_names ({len(factor2_names)}) must equal K2 ({K2})"
-        )
+        raise ValueError(f'Length of factor2_names ({len(factor2_names)}) must equal K2 ({K2})')
 
     total_cells = K1 * K2 * T
     n_drop = max(1, int(p_drop * total_cells))
@@ -803,28 +794,32 @@ def make_sds5(
         for k2 in range(K2):
             for t in range(T):
                 if cell_idx in dropped:
-                    rows.append({
-                        'time': t + 1,
-                        'factor 1': factor1_names[k1],
-                        'factor 2': factor2_names[k2],
-                        'y': np.nan,
-                    })
+                    rows.append(
+                        {
+                            'time': t + 1,
+                            'factor 1': factor1_names[k1],
+                            'factor 2': factor2_names[k2],
+                            'y': np.nan,
+                        }
+                    )
                 else:
                     eps = rng.normal(0, sigma)
                     y = mu + rho[k1] + phi[k2] + tau[t] + eps
-                    rows.append({
-                        'time': t + 1,
-                        'factor 1': factor1_names[k1],
-                        'factor 2': factor2_names[k2],
-                        'y': y,
-                    })
+                    rows.append(
+                        {
+                            'time': t + 1,
+                            'factor 1': factor1_names[k1],
+                            'factor 2': factor2_names[k2],
+                            'y': y,
+                        }
+                    )
                 cell_idx += 1
 
     df = pd.DataFrame(rows)
 
     logger.debug(
-        f"Generated ODS 5 data: {K1}x{K2}x{T} grid, {n_drop}/{total_cells} cells empty, "
-        f"every occupied cell has N=1, {df['y'].notna().sum()} valid responses"
+        f'Generated ODS 5 data: {K1}x{K2}x{T} grid, {n_drop}/{total_cells} cells empty, '
+        f'every occupied cell has N=1, {df["y"].notna().sum()} valid responses'
     )
     return df
 
@@ -832,6 +827,7 @@ def make_sds5(
 # ============================================================================
 # SDS 6: Incomplete grid, mixed replication (some N=1, some N>=2)
 # ============================================================================
+
 
 def make_sds6(  # noqa: C901
     K1: int = 3,
@@ -890,13 +886,13 @@ def make_sds6(  # noqa: C901
         >>> # After tidy/NA drop, study.analytical_design_state.sds == 3
     """
     if not 0 < p_drop < 1:
-        raise ValueError(f"p_drop must be in (0, 1), got {p_drop}")
+        raise ValueError(f'p_drop must be in (0, 1), got {p_drop}')
     if not 0 < p_singleton < 1:
-        raise ValueError(f"p_singleton must be in (0, 1), got {p_singleton}")
+        raise ValueError(f'p_singleton must be in (0, 1), got {p_singleton}')
     if n_min < 2:
-        raise ValueError(f"n_min must be >= 2 (replicated cells), got {n_min}")
+        raise ValueError(f'n_min must be >= 2 (replicated cells), got {n_min}')
     if n_max < n_min:
-        raise ValueError(f"n_max ({n_max}) must be >= n_min ({n_min})")
+        raise ValueError(f'n_max ({n_max}) must be >= n_min ({n_min})')
 
     rng = np.random.default_rng(seed)
 
@@ -905,17 +901,13 @@ def make_sds6(  # noqa: C901
     tau = rng.normal(0, time_effect_size, T)
 
     if factor1_names is None:
-        factor1_names = [f"F1_{k+1}" for k in range(K1)]
+        factor1_names = [f'F1_{k + 1}' for k in range(K1)]
     elif len(factor1_names) != K1:
-        raise ValueError(
-            f"Length of factor1_names ({len(factor1_names)}) must equal K1 ({K1})"
-        )
+        raise ValueError(f'Length of factor1_names ({len(factor1_names)}) must equal K1 ({K1})')
     if factor2_names is None:
-        factor2_names = [f"F2_{k+1}" for k in range(K2)]
+        factor2_names = [f'F2_{k + 1}' for k in range(K2)]
     elif len(factor2_names) != K2:
-        raise ValueError(
-            f"Length of factor2_names ({len(factor2_names)}) must equal K2 ({K2})"
-        )
+        raise ValueError(f'Length of factor2_names ({len(factor2_names)}) must equal K2 ({K2})')
 
     total_cells = K1 * K2 * T
     n_drop = max(1, int(p_drop * total_cells))
@@ -923,12 +915,12 @@ def make_sds6(  # noqa: C901
     if n_drop < 1:
         raise ValueError(
             f"Grid too small for ODS 6: K1*K2*T={total_cells} can't fit "
-            f"both empty cells and at least one singleton + one replicated cell"
+            f'both empty cells and at least one singleton + one replicated cell'
         )
 
-    occupied_indices = [i for i in range(total_cells) if i not in set(
-        rng.choice(total_cells, size=n_drop, replace=False).tolist()
-    )]
+    occupied_indices = [
+        i for i in range(total_cells) if i not in set(rng.choice(total_cells, size=n_drop, replace=False).tolist())
+    ]
     # rebuild dropped set from indices not in occupied
     occupied_set = set(occupied_indices)
     dropped_set = set(range(total_cells)) - occupied_set
@@ -950,35 +942,36 @@ def make_sds6(  # noqa: C901
         for k2 in range(K2):
             for t in range(T):
                 if cell_idx in dropped_set:
-                    rows.append({
-                        'time': t + 1,
-                        'factor 1': factor1_names[k1],
-                        'factor 2': factor2_names[k2],
-                        'y': np.nan,
-                    })
-                else:
-                    n = (
-                        1 if occupied_to_singleton[cell_idx]
-                        else int(rng.integers(n_min, n_max + 1))
-                    )
-                    for _ in range(n):
-                        eps = rng.normal(0, sigma)
-                        y = mu + rho[k1] + phi[k2] + tau[t] + eps
-                        rows.append({
+                    rows.append(
+                        {
                             'time': t + 1,
                             'factor 1': factor1_names[k1],
                             'factor 2': factor2_names[k2],
-                            'y': y,
-                        })
+                            'y': np.nan,
+                        }
+                    )
+                else:
+                    n = 1 if occupied_to_singleton[cell_idx] else int(rng.integers(n_min, n_max + 1))
+                    for _ in range(n):
+                        eps = rng.normal(0, sigma)
+                        y = mu + rho[k1] + phi[k2] + tau[t] + eps
+                        rows.append(
+                            {
+                                'time': t + 1,
+                                'factor 1': factor1_names[k1],
+                                'factor 2': factor2_names[k2],
+                                'y': y,
+                            }
+                        )
                 cell_idx += 1
 
     df = pd.DataFrame(rows)
 
     logger.debug(
-        f"Generated ODS 6 data: {K1}x{K2}x{T} grid, {n_drop}/{total_cells} cells empty, "
-        f"{int(singleton_flags.sum())} singletons + "
-        f"{int((~singleton_flags).sum())} replicated cells, "
-        f"{df['y'].notna().sum()} valid responses"
+        f'Generated ODS 6 data: {K1}x{K2}x{T} grid, {n_drop}/{total_cells} cells empty, '
+        f'{int(singleton_flags.sum())} singletons + '
+        f'{int((~singleton_flags).sum())} replicated cells, '
+        f'{df["y"].notna().sum()} valid responses'
     )
     return df
 
@@ -987,14 +980,9 @@ def make_sds6(  # noqa: C901
 # Convenience Functions
 # ============================================================================
 
+
 def make_sds(
-    sds: int,
-    K1: int = 3,
-    K2: int = 2,
-    T: int = 8,
-    n: int = 20,
-    seed: Optional[int] = None,
-    **kwargs
+    sds: int, K1: int = 3, K2: int = 2, T: int = 8, n: int = 20, seed: Optional[int] = None, **kwargs
 ) -> pd.DataFrame:
     """
     Generate synthetic data classifying as the requested design state.
@@ -1034,20 +1022,10 @@ def make_sds(
     Raises:
         ValueError: If sds not in [1, 2, 3, 4, 5, 6].
     """
-    generators = {
-        1: make_sds1,
-        2: make_sds2,
-        3: make_sds3,
-        4: make_sds4,
-        5: make_sds5,
-        6: make_sds6
-    }
+    generators = {1: make_sds1, 2: make_sds2, 3: make_sds3, 4: make_sds4, 5: make_sds5, 6: make_sds6}
 
     if sds not in generators:
-        raise ValueError(
-            f"SDS {sds} not implemented. "
-            f"Available SDS types: {sorted(generators.keys())}"
-        )
+        raise ValueError(f'SDS {sds} not implemented. Available SDS types: {sorted(generators.keys())}')
 
     return generators[sds](K1=K1, K2=K2, T=T, seed=seed, **kwargs)
 
@@ -1091,10 +1069,11 @@ def make_design(
 # Edge Cases and Special Scenarios
 # ============================================================================
 
+
 def make_edge_cases() -> dict[str, pd.DataFrame]:
     """
     Generate challenging edge cases for testing robustness.
-    
+
     These datasets test how well the system handles unusual but real situations:
     - Missing cells (incomplete factorial)
     - Extreme imbalance (one cell with many obs, others with few)
@@ -1102,16 +1081,16 @@ def make_edge_cases() -> dict[str, pd.DataFrame]:
     - All same value (zero variance)
     - Extreme outliers
     - Mixed data quality
-    
+
     Returns:
         Dictionary of DataFrames, keyed by edge case name
-        
+
     Examples:
         >>> edge_cases = make_edge_cases()
         >>> list(edge_cases.keys())
-        ['missing_cells', 'extreme_imbalance', 'single_obs', 
+        ['missing_cells', 'extreme_imbalance', 'single_obs',
          'zero_variance', 'outliers', 'mixed_quality']
-        
+
         >>> # Test each edge case
         >>> for name, df in edge_cases.items():
         ...     try:
@@ -1119,7 +1098,7 @@ def make_edge_cases() -> dict[str, pd.DataFrame]:
         ...         print(f"{name}: PASSED")
         ...     except Exception as e:
         ...         print(f"{name}: {type(e).__name__}")
-    
+
     Use Cases:
         - Regression testing for error handling
         - Validating input validation logic
@@ -1127,80 +1106,86 @@ def make_edge_cases() -> dict[str, pd.DataFrame]:
         - Documentation of failure modes
     """
     cases = {}
-    
+
     # 1. Missing cells (incomplete factorial)
-    cases['missing_cells'] = pd.DataFrame({
-        'time': [1, 1, 2, 2, 3],  # No time=3 for factor B
-        'factor 1': ['A', 'A', 'A', 'B', 'A'],
-        'factor 2': ['NA'] * 5,
-        'y': [10.1, 10.2, 11.0, 12.0, 10.5]
-    })
-    
+    cases['missing_cells'] = pd.DataFrame(
+        {
+            'time': [1, 1, 2, 2, 3],  # No time=3 for factor B
+            'factor 1': ['A', 'A', 'A', 'B', 'A'],
+            'factor 2': ['NA'] * 5,
+            'y': [10.1, 10.2, 11.0, 12.0, 10.5],
+        }
+    )
+
     # 2. Extreme imbalance (one cell dominates)
-    cases['extreme_imbalance'] = pd.DataFrame({
-        'time': [1]*20 + [2]*2 + [3]*20,  # Time 2 has only 2 obs
-        'factor 1': ['A']*20 + ['B']*2 + ['A']*20,
-        'factor 2': ['NA']*42,
-        'y': np.random.normal(50, 2, 42)
-    })
-    
+    cases['extreme_imbalance'] = pd.DataFrame(
+        {
+            'time': [1] * 20 + [2] * 2 + [3] * 20,  # Time 2 has only 2 obs
+            'factor 1': ['A'] * 20 + ['B'] * 2 + ['A'] * 20,
+            'factor 2': ['NA'] * 42,
+            'y': np.random.normal(50, 2, 42),
+        }
+    )
+
     # 3. Single observation total (should fail)
-    cases['single_obs'] = pd.DataFrame({
-        'time': [1],
-        'factor 1': ['A'],
-        'factor 2': ['NA'],
-        'y': [50.0]
-    })
-    
+    cases['single_obs'] = pd.DataFrame({'time': [1], 'factor 1': ['A'], 'factor 2': ['NA'], 'y': [50.0]})
+
     # 4. Zero variance (all values identical)
-    cases['zero_variance'] = pd.DataFrame({
-        'time': [1, 1, 2, 2, 3, 3],
-        'factor 1': ['A', 'A', 'B', 'B', 'A', 'B'],
-        'factor 2': ['NA'] * 6,
-        'y': [50.0] * 6  # All identical
-    })
-    
+    cases['zero_variance'] = pd.DataFrame(
+        {
+            'time': [1, 1, 2, 2, 3, 3],
+            'factor 1': ['A', 'A', 'B', 'B', 'A', 'B'],
+            'factor 2': ['NA'] * 6,
+            'y': [50.0] * 6,  # All identical
+        }
+    )
+
     # 5. Extreme outliers
     rng = np.random.default_rng(42)
     y_with_outliers = list(rng.normal(50, 1, 18))
-    y_with_outliers[5] = 100.0   # Extreme high
-    y_with_outliers[12] = 0.0    # Extreme low
-    
-    cases['outliers'] = pd.DataFrame({
-        'time': [1, 1, 2, 2, 3, 3] * 3,
-        'factor 1': ['A']*6 + ['B']*6 + ['C']*6,
-        'factor 2': ['NA'] * 18,
-        'y': y_with_outliers
-    })
-    
+    y_with_outliers[5] = 100.0  # Extreme high
+    y_with_outliers[12] = 0.0  # Extreme low
+
+    cases['outliers'] = pd.DataFrame(
+        {
+            'time': [1, 1, 2, 2, 3, 3] * 3,
+            'factor 1': ['A'] * 6 + ['B'] * 6 + ['C'] * 6,
+            'factor 2': ['NA'] * 18,
+            'y': y_with_outliers,
+        }
+    )
+
     # 6. Mixed quality (some cells have high variance, others low)
-    y_mixed = (list(rng.normal(50, 0.1, 6)) +   # Low variance
-               list(rng.normal(50, 5.0, 6)) +   # High variance
-               list(rng.normal(50, 0.5, 6)))    # Medium variance
-    
-    cases['mixed_quality'] = pd.DataFrame({
-        'time': [1, 1, 2, 2, 3, 3] * 3,
-        'factor 1': ['A']*6 + ['B']*6 + ['C']*6,
-        'factor 2': ['NA'] * 18,
-        'y': y_mixed
-    })
-    
+    y_mixed = (
+        list(rng.normal(50, 0.1, 6))  # Low variance
+        + list(rng.normal(50, 5.0, 6))  # High variance
+        + list(rng.normal(50, 0.5, 6))
+    )  # Medium variance
+
+    cases['mixed_quality'] = pd.DataFrame(
+        {
+            'time': [1, 1, 2, 2, 3, 3] * 3,
+            'factor 1': ['A'] * 6 + ['B'] * 6 + ['C'] * 6,
+            'factor 2': ['NA'] * 18,
+            'y': y_mixed,
+        }
+    )
+
     # 7. Single cell with replication (rest empty)
-    cases['single_cell_replicated'] = pd.DataFrame({
-        'time': [1] * 5,
-        'factor 1': ['A'] * 5,
-        'factor 2': ['NA'] * 5,
-        'y': [49.5, 50.0, 50.5, 50.2, 49.8]
-    })
-    
+    cases['single_cell_replicated'] = pd.DataFrame(
+        {'time': [1] * 5, 'factor 1': ['A'] * 5, 'factor 2': ['NA'] * 5, 'y': [49.5, 50.0, 50.5, 50.2, 49.8]}
+    )
+
     # 8. Nearly empty (very sparse data)
-    cases['sparse'] = pd.DataFrame({
-        'time': [1, 5, 10, 15, 20],
-        'factor 1': ['A', 'B', 'A', 'C', 'B'],
-        'factor 2': ['NA'] * 5,
-        'y': [50.1, 49.8, 50.3, 49.5, 50.0]
-    })
-    
+    cases['sparse'] = pd.DataFrame(
+        {
+            'time': [1, 5, 10, 15, 20],
+            'factor 1': ['A', 'B', 'A', 'C', 'B'],
+            'factor 2': ['NA'] * 5,
+            'y': [50.1, 49.8, 50.3, 49.5, 50.0],
+        }
+    )
+
     return cases
 
 
@@ -1208,12 +1193,9 @@ def make_edge_cases() -> dict[str, pd.DataFrame]:
 # Validation and Comparison Utilities
 # ============================================================================
 
+
 def compare_sds_characteristics(
-    sds_list: Optional[list[int]] = None,
-    K1: int = 3,
-    K2: int = 2,
-    T: int = 8,
-    seed: int = 42
+    sds_list: Optional[list[int]] = None, K1: int = 3, K2: int = 2, T: int = 8, seed: int = 42
 ) -> pd.DataFrame:
     """
     Generate comparison table of SDS characteristics.
@@ -1249,42 +1231,40 @@ def compare_sds_characteristics(
     rows = []
     for sds in sds_list:
         df = make_sds(sds, K1=K1, K2=K2, T=T, seed=seed)
-        
+
         if 'factor 1' in df.columns and 'time' in df.columns:
             cell_counts = df.groupby(['factor 1', 'time']).size()
             complete = len(cell_counts) == df['factor 1'].nunique() * df['time'].nunique()
         else:
             cell_counts = pd.Series([1] * len(df))
             complete = False
-        
+
         min_n = cell_counts.min()
         max_n = cell_counts.max()
-        
+
         if min_n == max_n == 1:
-            replication = "False"
+            replication = 'False'
         elif min_n >= 2:
-            replication = "True"
+            replication = 'True'
         else:
-            replication = "Mixed"
-        
-        rows.append({
-            'sds': sds,
-            'n_obs': len(df),
-            'n_cells': len(cell_counts),
-            'min_n': min_n,
-            'max_n': max_n,
-            'has_replication': replication,
-            'complete_grid': complete
-        })
-    
+            replication = 'Mixed'
+
+        rows.append(
+            {
+                'sds': sds,
+                'n_obs': len(df),
+                'n_cells': len(cell_counts),
+                'min_n': min_n,
+                'max_n': max_n,
+                'has_replication': replication,
+                'complete_grid': complete,
+            }
+        )
+
     return pd.DataFrame(rows)
 
 
-def validate_sds_detection(
-    df: pd.DataFrame,
-    expected_sds: int,
-    spec: 'FormulationSpec'
-) -> bool:
+def validate_sds_detection(df: pd.DataFrame, expected_sds: int, spec: 'FormulationSpec') -> bool:
     """
     Validate that generated data is correctly classified as expected SDS.
 
@@ -1314,19 +1294,16 @@ def validate_sds_detection(
 
         ads = AnalysisDataSet(df=df, spec=spec, observed_sds=expected_sds)
         detected_sds = ads.observed_design_state
-        
+
         if detected_sds == expected_sds:
-            logger.info(f"✓ Correctly detected SDS {expected_sds}")
+            logger.info(f'✓ Correctly detected SDS {expected_sds}')
             return True
         else:
-            logger.error(
-                f"✗ SDS detection mismatch: expected {expected_sds}, "
-                f"detected {detected_sds}"
-            )
+            logger.error(f'✗ SDS detection mismatch: expected {expected_sds}, detected {detected_sds}')
             return False
-            
+
     except ImportError:
-        logger.warning("Cannot validate SDS detection: analysis_dataset module not available")
+        logger.warning('Cannot validate SDS detection: analysis_dataset module not available')
         return False
 
 
@@ -1334,33 +1311,31 @@ def validate_sds_detection(
 # Batch Generation Utilities
 # ============================================================================
 
-def generate_test_suite(
-    output_dir: str = 'test_data',
-    seed: int = 42
-) -> dict[str, str]:
+
+def generate_test_suite(output_dir: str = 'test_data', seed: int = 42) -> dict[str, str]:
     """
     Generate complete suite of test datasets and save to disk.
-    
+
     Creates CSV files for all SDS types with multiple variations,
     useful for:
     - Regression testing
     - Benchmarking
     - Documentation examples
     - Training materials
-    
+
     Args:
         output_dir: Directory to save CSV files
         seed: Random seed for reproducibility
-        
+
     Returns:
         Dictionary mapping dataset names to file paths
-        
+
     Example:
         >>> files = generate_test_suite(output_dir='datasets/test')
         >>> print(f"Generated {len(files)} test datasets")
         >>> for name, path in files.items():
         ...     print(f"  {name}: {path}")
-        
+
     File Structure:
         test_data/
             sds1_basic.csv
@@ -1371,12 +1346,12 @@ def generate_test_suite(
             ...
     """
     import os
-    
+
     # Create output directory
     os.makedirs(output_dir, exist_ok=True)
-    
+
     files = {}
-    
+
     # SDS 1 variations
     files['sds1_basic'] = os.path.join(output_dir, 'sds1_basic.csv')
     df = make_sds1(K1=3, K2=2, T=8, seed=seed)
@@ -1411,7 +1386,7 @@ def generate_test_suite(
     files['sds3_early_times'] = os.path.join(output_dir, 'sds3_early_times.csv')
     df = make_sds3(K1=3, K2=2, T=12, replication_pattern='early_times', seed=seed)
     df.to_csv(files['sds3_early_times'], index=False)
-    
+
     # SDS 4 variations (ODS 4: incomplete grid, all occupied cells replicated)
     files['sds4_default'] = os.path.join(output_dir, 'sds4_default.csv')
     df = make_sds4(K1=3, K2=2, T=8, seed=seed)
@@ -1438,15 +1413,15 @@ def generate_test_suite(
     files['sds6_singleton_heavy'] = os.path.join(output_dir, 'sds6_singleton_heavy.csv')
     df = make_sds6(K1=4, K2=2, T=10, p_singleton=0.7, seed=seed)
     df.to_csv(files['sds6_singleton_heavy'], index=False)
-    
+
     # Edge cases
     edge_cases = make_edge_cases()
     for name, df in edge_cases.items():
         files[f'edge_{name}'] = os.path.join(output_dir, f'edge_{name}.csv')
         df.to_csv(files[f'edge_{name}'], index=False)
-    
-    logger.info(f"Generated {len(files)} test datasets in {output_dir}")
-    
+
+    logger.info(f'Generated {len(files)} test datasets in {output_dir}')
+
     return files
 
 
@@ -1454,18 +1429,19 @@ def generate_test_suite(
 # Documentation and Metadata
 # ============================================================================
 
+
 def get_sds_info(sds: int) -> dict[str, str]:
     """
     Get detailed information about a specific SDS type.
-    
+
     Returns metadata and usage guidance for each SDS.
-    
+
     Args:
         sds: Sampling Design State (1-6)
-        
+
     Returns:
         Dictionary with description, characteristics, use cases, etc.
-        
+
     Example:
         >>> info = get_sds_info(3)
         >>> print(info['description'])
@@ -1479,17 +1455,17 @@ def get_sds_info(sds: int) -> dict[str, str]:
                 'True within-cell variance estimation',
                 'Complete (factor × time) grid',
                 'Supports full interaction analysis',
-                'Most statistically powerful'
+                'Most statistically powerful',
             ],
             'when_to_use': [
                 'Testing Xbar-S chart algorithms',
                 'Full factorial experiments',
                 'When resources allow complete replication',
-                'Baseline for comparing other SDS'
+                'Baseline for comparing other SDS',
             ],
             'chart_types': ['Xbar-S', 'Range charts on subgroups'],
             'vas_capabilities': ['All residuals R1-R5', 'Full interaction effects'],
-            'common_in': 'Designed experiments, validation studies'
+            'common_in': 'Designed experiments, validation studies',
         },
         2: {
             'name': 'No Replication',
@@ -1498,17 +1474,17 @@ def get_sds_info(sds: int) -> dict[str, str]:
                 'Complete (factor × time) grid',
                 'No within-cell variance',
                 'Must use moving average for R2',
-                'Error confounded with interaction'
+                'Error confounded with interaction',
             ],
             'when_to_use': [
                 'Resource-constrained experiments',
                 'Screening studies',
                 'Testing moving average algorithms',
-                'When interaction assumed small'
+                'When interaction assumed small',
             ],
             'chart_types': ['IMR on cell means', 'Moving range methods'],
             'vas_capabilities': ['R1-R5 with approximated R2', 'Limited interaction analysis'],
-            'common_in': 'Designed experiments, DOE, initial screening'
+            'common_in': 'Designed experiments, DOE, initial screening',
         },
         3: {
             'name': 'Partial Replication',
@@ -1517,17 +1493,17 @@ def get_sds_info(sds: int) -> dict[str, str]:
                 'Most common in real-world data',
                 'Requires hybrid R2 estimation',
                 'Irregular replication pattern',
-                'Challenging to analyze correctly'
+                'Challenging to analyze correctly',
             ],
             'when_to_use': [
                 'Testing hybrid variance estimation',
                 'Real-world manufacturing data',
                 'Unplanned replication scenarios',
-                'Missing data situations'
+                'Missing data situations',
             ],
             'chart_types': ['Hybrid approaches', 'Adaptive methods'],
             'vas_capabilities': ['Hybrid R2 calculation', 'Partial interaction analysis'],
-            'common_in': 'Most real production data, unplanned sampling'
+            'common_in': 'Most real production data, unplanned sampling',
         },
         4: {
             'name': 'Single Condition Over Time',
@@ -1536,17 +1512,17 @@ def get_sds_info(sds: int) -> dict[str, str]:
                 'Time series structure',
                 'No grouping by factors',
                 'May show trends or drift',
-                'Classic control chart scenario'
+                'Classic control chart scenario',
             ],
             'when_to_use': [
                 'Single process monitoring',
                 'Time series analysis',
                 'Trend detection',
-                'Classic SPC applications'
+                'Classic SPC applications',
             ],
             'chart_types': ['IMR', 'Individuals chart', 'Moving range'],
             'vas_capabilities': ['Limited (no factor structure)', 'Time effects only'],
-            'common_in': 'Single machine/process, continuous monitoring'
+            'common_in': 'Single machine/process, continuous monitoring',
         },
         5: {
             'name': 'Nested Design',
@@ -1555,17 +1531,17 @@ def get_sds_info(sds: int) -> dict[str, str]:
                 'Factor 2 nested in Factor 1',
                 'Irregular temporal patterns',
                 'Not all combinations at all times',
-                'Requires variance components'
+                'Requires variance components',
             ],
             'when_to_use': [
                 'Multi-head machines (heads in lanes)',
                 'Hierarchical production structures',
                 'Nested experimental designs',
-                'Asynchronous operations'
+                'Asynchronous operations',
             ],
             'chart_types': ['Hierarchical charts', 'Nested variance components'],
             'vas_capabilities': ['Nested effects', 'Variance component estimation'],
-            'common_in': 'Multi-head fillers, multi-spindle machines, nested processes'
+            'common_in': 'Multi-head fillers, multi-spindle machines, nested processes',
         },
         6: {
             'name': 'Unstructured / Regime Changes',
@@ -1574,56 +1550,56 @@ def get_sds_info(sds: int) -> dict[str, str]:
                 'Incomplete (factor × time) grid',
                 'Mean shifts over time (regimes)',
                 'Irregular sampling patterns',
-                'Complex time structure'
+                'Complex time structure',
             ],
             'when_to_use': [
                 'Long-term process studies',
                 'Process with adjustments',
                 'Regime detection problems',
-                'Irregular production schedules'
+                'Irregular production schedules',
             ],
             'chart_types': ['Adaptive methods', 'Change-point detection'],
             'vas_capabilities': ['Limited', 'Regime-specific analysis'],
-            'common_in': 'Long-term studies, processes with changes, irregular schedules'
-        }
+            'common_in': 'Long-term studies, processes with changes, irregular schedules',
+        },
     }
-    
+
     if sds not in sds_metadata:
-        raise ValueError(f"SDS {sds} not defined. Valid: 1-6")
-    
+        raise ValueError(f'SDS {sds} not defined. Valid: 1-6')
+
     return sds_metadata[sds]
 
 
 def print_sds_summary():
     """
     Print formatted summary of all SDS types.
-    
+
     Useful for documentation and teaching.
-    
+
     Example:
         >>> print_sds_summary()
-        
+
         SAMPLING DESIGN STATES SUMMARY
         ==============================
-        
+
         SDS 1: Full Replication
         -----------------------
         Description: Every (factor, time) cell has n≥2 observations
         ...
     """
-    print("\nSAMPLING DESIGN STATES SUMMARY")
-    print("=" * 70)
-    
+    print('\nSAMPLING DESIGN STATES SUMMARY')
+    print('=' * 70)
+
     for sds in range(1, 7):
         info = get_sds_info(sds)
-        print(f"\nSDS {sds}: {info['name']}")
-        print("-" * 70)
-        print(f"Description: {info['description']}")
-        print("\nCharacteristics:")
+        print(f'\nSDS {sds}: {info["name"]}')
+        print('-' * 70)
+        print(f'Description: {info["description"]}')
+        print('\nCharacteristics:')
         for char in info['characteristics']:
-            print(f"  • {char}")
-        print(f"\nCommon in: {info['common_in']}")
-        print(f"Chart types: {', '.join(info['chart_types'])}")
+            print(f'  • {char}')
+        print(f'\nCommon in: {info["common_in"]}')
+        print(f'Chart types: {", ".join(info["chart_types"])}')
 
 
 # ============================================================================
@@ -1739,32 +1715,25 @@ def make_large_dataset(
 # Quick access to all generators (SDS 1-6)
 # Note: SDS 0 was consolidated into SDS 4. Response-only data is now
 # treated as SDS 4 with implicit time ordering via obs_id.
-GENERATORS = {
-    1: make_sds1,
-    2: make_sds2,
-    3: make_sds3,
-    4: make_sds4,
-    5: make_sds5,
-    6: make_sds6
-}
+GENERATORS = {1: make_sds1, 2: make_sds2, 3: make_sds3, 4: make_sds4, 5: make_sds5, 6: make_sds6}
 
 
 if __name__ == '__main__':
     # Demo: Generate one dataset of each type
-    print("Generating example datasets for each SDS...\n")
-    
+    print('Generating example datasets for each SDS...\n')
+
     for sds in range(1, 7):
-        print(f"SDS {sds}: {get_sds_info(sds)['name']}")
+        print(f'SDS {sds}: {get_sds_info(sds)["name"]}')
         df = make_sds(sds, K1=3, K2=2, T=6, seed=42)
-        print(f"  Generated {len(df)} observations")
-        print(f"  Columns: {df.columns.tolist()}")
-        print(f"  Preview:\n{df.head(3)}")
+        print(f'  Generated {len(df)} observations')
+        print(f'  Columns: {df.columns.tolist()}')
+        print(f'  Preview:\n{df.head(3)}')
         print()
-    
-    print("\nEdge cases:")
+
+    print('\nEdge cases:')
     edge_cases = make_edge_cases()
     for name, df in edge_cases.items():
-        print(f"  {name}: {len(df)} observations")
-    
-    print("\nFor detailed info on any SDS, use get_sds_info(sds_number)")
-    print("For complete summary, use print_sds_summary()")
+        print(f'  {name}: {len(df)} observations')
+
+    print('\nFor detailed info on any SDS, use get_sds_info(sds_number)')
+    print('For complete summary, use print_sds_summary()')

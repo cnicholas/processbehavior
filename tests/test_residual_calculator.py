@@ -31,6 +31,7 @@ from processbehavior.residual_calculator import (
 # Helpers
 # ============================================================================
 
+
 def _prepare_for_vas(df: pd.DataFrame, spec: FormulationSpec) -> pd.DataFrame:
     """Run DataPreparation pipeline to add required keys for calculate_vas_residuals."""
     prep = DataPreparation()
@@ -41,6 +42,7 @@ def _prepare_for_vas(df: pd.DataFrame, spec: FormulationSpec) -> pd.DataFrame:
 # ============================================================================
 # Test: Pure Functions for Means
 # ============================================================================
+
 
 def test_calculate_grand_mean():
     """Grand mean is simple average of all values."""
@@ -62,10 +64,7 @@ def test_calculate_grand_mean_with_floats():
 
 def test_calculate_factor_means_broadcasts_to_rows():
     """Factor means should broadcast to all rows in each group."""
-    df = pd.DataFrame({
-        'lane': ['A', 'A', 'B', 'B'],
-        'weight': [10.0, 10.5, 9.0, 9.5]
-    })
+    df = pd.DataFrame({'lane': ['A', 'A', 'B', 'B'], 'weight': [10.0, 10.5, 9.0, 9.5]})
 
     result = calculate_factor_means(df, 'weight', 'lane')
 
@@ -75,10 +74,7 @@ def test_calculate_factor_means_broadcasts_to_rows():
 
 def test_calculate_time_means_broadcasts_to_rows():
     """Time means should broadcast to all rows at each time point."""
-    df = pd.DataFrame({
-        'pull': [1, 1, 2, 2],
-        'weight': [10.0, 10.5, 9.0, 9.5]
-    })
+    df = pd.DataFrame({'pull': [1, 1, 2, 2], 'weight': [10.0, 10.5, 9.0, 9.5]})
 
     result = calculate_time_means(df, 'weight', 'pull')
 
@@ -88,11 +84,7 @@ def test_calculate_time_means_broadcasts_to_rows():
 
 def test_calculate_cell_means_broadcasts_to_rows():
     """Cell means should broadcast to all rows in each (factor × time) cell."""
-    df = pd.DataFrame({
-        'lane': ['A', 'A', 'B', 'B'],
-        'pull': [1, 1, 2, 2],
-        'weight': [10.0, 10.5, 9.0, 9.5]
-    })
+    df = pd.DataFrame({'lane': ['A', 'A', 'B', 'B'], 'pull': [1, 1, 2, 2], 'weight': [10.0, 10.5, 9.0, 9.5]})
 
     result = calculate_cell_means(df, 'weight', 'lane', 'pull')
 
@@ -102,11 +94,13 @@ def test_calculate_cell_means_broadcasts_to_rows():
 
 def test_calculate_cell_means_with_unequal_cell_sizes():
     """Should work with varying observations per cell."""
-    df = pd.DataFrame({
-        'lane': ['A', 'A', 'A', 'B', 'B'],  # A has 3, B has 2
-        'pull': [1, 1, 1, 1, 1],
-        'weight': [10.0, 10.5, 10.2, 9.0, 9.5]
-    })
+    df = pd.DataFrame(
+        {
+            'lane': ['A', 'A', 'A', 'B', 'B'],  # A has 3, B has 2
+            'pull': [1, 1, 1, 1, 1],
+            'weight': [10.0, 10.5, 10.2, 9.0, 9.5],
+        }
+    )
 
     result = calculate_cell_means(df, 'weight', 'lane', 'pull')
 
@@ -119,6 +113,7 @@ def test_calculate_cell_means_with_unequal_cell_sizes():
 # ============================================================================
 # Test: Pure Functions for Residuals
 # ============================================================================
+
 
 def test_calculate_r1_residual():
     """R1 = Y - Ybar (total deviation from grand mean)."""
@@ -144,13 +139,15 @@ def test_calculate_r1_residual_sum_is_zero():
 def test_calculate_r2_exact():
     """R2 exact = Y - Ybar_kt (within-cell deviation)."""
     # Build data with required keys
-    df = pd.DataFrame({
-        'weight': [10.0, 10.5, 9.0, 9.5],
-        'Ybar_kt': [10.25, 10.25, 9.25, 9.25],
-        'cell_key': [('A', 1), ('A', 1), ('B', 1), ('B', 1)],
-        'rsg_key': ['A', 'A', 'B', 'B'],
-        'sort_key': [(('A',), 1, 0), (('A',), 1, 1), (('B',), 1, 0), (('B',), 1, 1)],
-    })
+    df = pd.DataFrame(
+        {
+            'weight': [10.0, 10.5, 9.0, 9.5],
+            'Ybar_kt': [10.25, 10.25, 9.25, 9.25],
+            'cell_key': [('A', 1), ('A', 1), ('B', 1), ('B', 1)],
+            'rsg_key': ['A', 'A', 'B', 'B'],
+            'sort_key': [(('A',), 1, 0), (('A',), 1, 1), (('B',), 1, 0), (('B',), 1, 1)],
+        }
+    )
 
     result = calculate_r2(df, 'weight', r2_method='exact')
 
@@ -160,13 +157,15 @@ def test_calculate_r2_exact():
 
 def test_calculate_r2_ma2():
     """R2 ma2 uses backward 2-point moving average per Tom Bishop."""
-    df = pd.DataFrame({
-        'weight': [10.0, 11.0, 12.0],
-        'Ybar_kt': [10.0, 11.0, 12.0],
-        'cell_key': [('A', 1), ('A', 2), ('A', 3)],
-        'rsg_key': ['A', 'A', 'A'],
-        'sort_key': [(('A',), 1, 0), (('A',), 2, 0), (('A',), 3, 0)],
-    })
+    df = pd.DataFrame(
+        {
+            'weight': [10.0, 11.0, 12.0],
+            'Ybar_kt': [10.0, 11.0, 12.0],
+            'cell_key': [('A', 1), ('A', 2), ('A', 3)],
+            'rsg_key': ['A', 'A', 'A'],
+            'sort_key': [(('A',), 1, 0), (('A',), 2, 0), (('A',), 3, 0)],
+        }
+    )
 
     result = calculate_r2(df, 'weight', r2_method='ma2')
 
@@ -188,13 +187,15 @@ def test_calculate_r2_hybrid():
     """
     # A×1 has n=2, B×1 has n=1, B×2 has n=1
     # sort_key order: A×1(0), A×1(1), B×1(0), B×2(0)
-    df = pd.DataFrame({
-        'weight': [10.0, 10.5, 9.0, 11.0],
-        'Ybar_kt': [10.25, 10.25, 9.0, 11.0],
-        'cell_key': [('A', 1), ('A', 1), ('B', 1), ('B', 2)],
-        'rsg_key': ['A', 'A', 'B', 'B'],
-        'sort_key': [(('A',), 1, 0), (('A',), 1, 1), (('B',), 1, 0), (('B',), 2, 0)],
-    })
+    df = pd.DataFrame(
+        {
+            'weight': [10.0, 10.5, 9.0, 11.0],
+            'Ybar_kt': [10.25, 10.25, 9.0, 11.0],
+            'cell_key': [('A', 1), ('A', 1), ('B', 1), ('B', 2)],
+            'rsg_key': ['A', 'A', 'B', 'B'],
+            'sort_key': [(('A',), 1, 0), (('A',), 1, 1), (('B',), 1, 0), (('B',), 2, 0)],
+        }
+    )
     n_per_cell = pd.Series([2, 2, 1, 1])
 
     result = calculate_r2(df, 'weight', r2_method='hybrid', n_per_cell=n_per_cell)
@@ -258,14 +259,17 @@ def test_calculate_r5_residual():
 # Test: calculate_vas_residuals orchestration
 # ============================================================================
 
+
 @pytest.fixture
 def sds1_df():
     """SDS 1 data - full replication (all cells have n>=2)."""
-    return pd.DataFrame({
-        'lane': ['A', 'A', 'B', 'B'] * 2,  # Each cell has n=2
-        'time': [1, 1, 1, 1, 2, 2, 2, 2],
-        'weight': [10.0, 10.5, 9.0, 9.5, 10.2, 10.4, 9.1, 9.3]
-    })
+    return pd.DataFrame(
+        {
+            'lane': ['A', 'A', 'B', 'B'] * 2,  # Each cell has n=2
+            'time': [1, 1, 1, 1, 2, 2, 2, 2],
+            'weight': [10.0, 10.5, 9.0, 9.5, 10.2, 10.4, 9.1, 9.3],
+        }
+    )
 
 
 @pytest.fixture
@@ -286,7 +290,7 @@ def test_calculate_vas_residuals_adds_all_mean_columns(sds1_df, spec_sds1):
 
     mean_cols = ['Ybar', 'Ybar_k', 'Ybar_t', 'Ybar_kt']
     for col in mean_cols:
-        assert col in result.columns, f"Missing column: {col}"
+        assert col in result.columns, f'Missing column: {col}'
 
 
 def test_calculate_vas_residuals_adds_all_residual_columns(sds1_df, spec_sds1):
@@ -296,7 +300,7 @@ def test_calculate_vas_residuals_adds_all_residual_columns(sds1_df, spec_sds1):
 
     residual_cols = ['R1', 'R2', 'R3', 'R4', 'R5']
     for col in residual_cols:
-        assert col in result.columns, f"Missing column: {col}"
+        assert col in result.columns, f'Missing column: {col}'
 
 
 def test_calculate_vas_residuals_sds1_uses_within_cell_variance(sds1_df, spec_sds1):
@@ -324,7 +328,7 @@ def test_calculate_vas_residuals_preserves_original_data(sds1_df, spec_sds1):
 def test_calculate_vas_residuals_raises_on_missing_keys(sds1_df, spec_sds1):
     """Should raise if required key columns are missing."""
     # Raw df without build_keys — missing rsg_key, obs_id, cell_key
-    with pytest.raises(ValueError, match="Missing required columns"):
+    with pytest.raises(ValueError, match='Missing required columns'):
         calculate_vas_residuals(sds1_df, spec_sds1, r2_method='exact')
 
 
@@ -339,7 +343,7 @@ def test_calculate_vas_residuals_raises_without_grouping():
     df['obs_id'] = range(len(df))
     df['cell_key'] = 'X'
 
-    with pytest.raises(ValueError, match="require grouping structure"):
+    with pytest.raises(ValueError, match='require grouping structure'):
         calculate_vas_residuals(df, spec_no_grouping, r2_method='exact')
 
 
@@ -353,11 +357,7 @@ def test_calculate_vas_residuals_r1_sum_is_zero(sds1_df, spec_sds1):
 
 def test_calculate_vas_residuals_sds2_uses_moving_average(spec_sds1):
     """SDS 2 (ma2) should use backward moving average for R2."""
-    sds2_df = pd.DataFrame({
-        'lane': ['A', 'A', 'A'],
-        'time': [1, 2, 3],
-        'weight': [10.0, 11.0, 12.0]
-    })
+    sds2_df = pd.DataFrame({'lane': ['A', 'A', 'A'], 'time': [1, 2, 3], 'weight': [10.0, 11.0, 12.0]})
     df = _prepare_for_vas(sds2_df, spec_sds1)
     result = calculate_vas_residuals(df, spec_sds1, r2_method='ma2')
 
@@ -378,16 +378,10 @@ def test_calculate_vas_residuals_sds3_hybrid_uses_ma2_for_all(spec_sds1):
     Only j=1 gets R2=NaN (no predecessor).
     """
     # A has n=2 at time=1, B has n=1 at time=1 and n=1 at time=2
-    sds3_df = pd.DataFrame({
-        'lane': ['A', 'A', 'B', 'B'],
-        'time': [1, 1, 1, 2],
-        'weight': [10.0, 10.5, 9.0, 11.0]
-    })
+    sds3_df = pd.DataFrame({'lane': ['A', 'A', 'B', 'B'], 'time': [1, 1, 1, 2], 'weight': [10.0, 10.5, 9.0, 11.0]})
     df = _prepare_for_vas(sds3_df, spec_sds1)
     n_per_cell = df.groupby('cell_key', observed=True)['weight'].transform('size')
-    result = calculate_vas_residuals(
-        df, spec_sds1, r2_method='hybrid', n_per_cell=n_per_cell
-    )
+    result = calculate_vas_residuals(df, spec_sds1, r2_method='hybrid', n_per_cell=n_per_cell)
 
     # MA2 across full sorted stream (A×1(0), A×1(1), B×1(0), B×2(0)):
     # Only the very first observation in the entire stream gets R2=NaN
@@ -402,11 +396,13 @@ def test_calculate_vas_residuals_sds3_hybrid_uses_ma2_for_all(spec_sds1):
 
 def test_calculate_vas_residuals_sds1_exact_replicated(spec_sds1):
     """Full replication should use exact R2 = Y - Ybar_kt."""
-    sds4_df = pd.DataFrame({
-        'lane': ['A', 'A', 'B', 'B'] * 2,
-        'time': [1, 1, 1, 1, 2, 2, 2, 2],
-        'weight': [10.0, 10.5, 9.0, 9.5, 10.2, 10.4, 9.1, 9.3]
-    })
+    sds4_df = pd.DataFrame(
+        {
+            'lane': ['A', 'A', 'B', 'B'] * 2,
+            'time': [1, 1, 1, 1, 2, 2, 2, 2],
+            'weight': [10.0, 10.5, 9.0, 9.5, 10.2, 10.4, 9.1, 9.3],
+        }
+    )
     df = _prepare_for_vas(sds4_df, spec_sds1)
     result = calculate_vas_residuals(df, spec_sds1, r2_method='exact')
 
@@ -416,11 +412,7 @@ def test_calculate_vas_residuals_sds1_exact_replicated(spec_sds1):
 
 def test_calculate_vas_residuals_sparse_uses_moving_average(spec_sds1):
     """Sparse data (all n=1) should use MA2 for R2."""
-    sds6_df = pd.DataFrame({
-        'lane': ['A', 'A', 'A'],
-        'time': [1, 2, 3],
-        'weight': [10.0, 11.0, 12.0]
-    })
+    sds6_df = pd.DataFrame({'lane': ['A', 'A', 'A'], 'time': [1, 2, 3], 'weight': [10.0, 11.0, 12.0]})
     df = _prepare_for_vas(sds6_df, spec_sds1)
     result = calculate_vas_residuals(df, spec_sds1, r2_method='ma2')
 
@@ -432,6 +424,7 @@ def test_calculate_vas_residuals_sparse_uses_moving_average(spec_sds1):
 # ============================================================================
 # Test: Pure Functions Are Truly Pure
 # ============================================================================
+
 
 def test_pure_functions_dont_modify_inputs():
     """Pure functions should never modify input DataFrames."""
@@ -461,13 +454,10 @@ def test_pure_functions_same_input_same_output():
 # Test: Edge Cases
 # ============================================================================
 
+
 def test_calculate_vas_residuals_with_single_observation_per_row():
     """Should handle edge case of minimal data."""
-    df = pd.DataFrame({
-        'lane': ['A', 'A'],
-        'time': [1, 1],
-        'weight': [10.0, 10.5]
-    })
+    df = pd.DataFrame({'lane': ['A', 'A'], 'time': [1, 1], 'weight': [10.0, 10.5]})
     spec = FormulationSpec(
         response_var='weight',
         rsg_vars=('lane',),
@@ -485,31 +475,39 @@ def test_calculate_vas_residuals_with_single_observation_per_row():
 # Test: No NaN in any residual for any R2 method
 # ============================================================================
 
+
 @pytest.fixture
 def sds2_df():
     """SDS 2 data - all cells have n=1 (uses MA2)."""
-    return pd.DataFrame({
-        'lane': ['A', 'A', 'A', 'B', 'B', 'B'],
-        'time': [1, 2, 3, 1, 2, 3],
-        'weight': [10.0, 11.0, 12.0, 20.0, 21.0, 22.0],
-    })
+    return pd.DataFrame(
+        {
+            'lane': ['A', 'A', 'A', 'B', 'B', 'B'],
+            'time': [1, 2, 3, 1, 2, 3],
+            'weight': [10.0, 11.0, 12.0, 20.0, 21.0, 22.0],
+        }
+    )
 
 
 @pytest.fixture
 def sds3_df():
     """SDS 3 data - mixed cell sizes (uses hybrid)."""
-    return pd.DataFrame({
-        'lane': ['A', 'A', 'A', 'A', 'B', 'B', 'B'],
-        'time': [1, 1, 2, 2, 1, 2, 3],
-        'weight': [10.0, 10.5, 11.0, 11.5, 20.0, 21.0, 22.0],
-    })
+    return pd.DataFrame(
+        {
+            'lane': ['A', 'A', 'A', 'A', 'B', 'B', 'B'],
+            'time': [1, 1, 2, 2, 1, 2, 3],
+            'weight': [10.0, 10.5, 11.0, 11.5, 20.0, 21.0, 22.0],
+        }
+    )
 
 
-@pytest.mark.parametrize("r2_method,df_key", [
-    ("exact", "sds1"),
-    ("ma2", "sds2"),
-    ("hybrid", "sds3"),
-])
+@pytest.mark.parametrize(
+    'r2_method,df_key',
+    [
+        ('exact', 'sds1'),
+        ('ma2', 'sds2'),
+        ('hybrid', 'sds3'),
+    ],
+)
 def test_no_nan_residuals_all_r2_methods(r2_method, df_key, sds1_df, sds2_df, sds3_df, spec_sds1):
     """Exact method has no NaN residuals. MA2 methods have NaN at j=1.
 
@@ -517,36 +515,37 @@ def test_no_nan_residuals_all_r2_methods(r2_method, df_key, sds1_df, sds2_df, sd
     moving average). R3-R5 inherit NaN from R2 via arithmetic propagation.
     R1 is always defined (Y - Ybar).
     """
-    dfs = {"sds1": sds1_df, "sds2": sds2_df, "sds3": sds3_df}
+    dfs = {'sds1': sds1_df, 'sds2': sds2_df, 'sds3': sds3_df}
     raw_df = dfs[df_key]
     df = _prepare_for_vas(raw_df, spec_sds1)
 
     n_per_cell = df.groupby('cell_key', observed=True)['weight'].transform('size')
     result = calculate_vas_residuals(
-        df, spec_sds1, r2_method=r2_method, n_per_cell=n_per_cell,
+        df,
+        spec_sds1,
+        r2_method=r2_method,
+        n_per_cell=n_per_cell,
     )
 
     # R1 is always NaN-free (Y - Ybar is always defined)
-    assert result['R1'].isna().sum() == 0, "R1 should never have NaN"
+    assert result['R1'].isna().sum() == 0, 'R1 should never have NaN'
 
-    if r2_method == "exact":
+    if r2_method == 'exact':
         # Exact method: all cells n≥2, no MA2 → no NaN
         for col in ['R2', 'R3', 'R4', 'R5']:
-            assert result[col].isna().sum() == 0, (
-                f"{col} has NaN with r2_method=exact"
-            )
+            assert result[col].isna().sum() == 0, f'{col} has NaN with r2_method=exact'
     else:
         # MA2 methods (ma2, hybrid): j=1 has no predecessor → exactly 1 NaN
         for col in ['R2', 'R3', 'R4', 'R5']:
             assert result[col].isna().sum() == 1, (
-                f"{col} should have exactly 1 NaN (j=1) with r2_method={r2_method}, "
-                f"got {result[col].isna().sum()}"
+                f'{col} should have exactly 1 NaN (j=1) with r2_method={r2_method}, got {result[col].isna().sum()}'
             )
 
 
 # ============================================================================
 # Test: Tom Bishop Validation - R2 = MR/2 for MA2
 # ============================================================================
+
 
 def test_r2_ma2_equals_half_moving_range():
     """
@@ -555,13 +554,15 @@ def test_r2_ma2_equals_half_moving_range():
     This test confirms the mathematical relationship between R2 residuals
     and the moving range used in XmR charts.
     """
-    df = pd.DataFrame({
-        'weight': [10.0, 12.0, 11.0, 13.0, 12.5],
-        'Ybar_kt': [10.0, 12.0, 11.0, 13.0, 12.5],
-        'cell_key': [('A', i) for i in range(1, 6)],
-        'rsg_key': ['A'] * 5,
-        'sort_key': [(('A',), i, 0) for i in range(1, 6)],
-    })
+    df = pd.DataFrame(
+        {
+            'weight': [10.0, 12.0, 11.0, 13.0, 12.5],
+            'Ybar_kt': [10.0, 12.0, 11.0, 13.0, 12.5],
+            'cell_key': [('A', i) for i in range(1, 6)],
+            'rsg_key': ['A'] * 5,
+            'sort_key': [(('A',), i, 0) for i in range(1, 6)],
+        }
+    )
 
     r2 = calculate_r2(df, 'weight', r2_method='ma2')
 
@@ -585,16 +586,22 @@ def test_r2_ma2_multiple_groups():
     Bishop Eq 13.7-13.9: j=2,...,J with no grouping. Only j=1 gets R2=NaN.
     The MA2 continues across rsg_key boundaries.
     """
-    df = pd.DataFrame({
-        'weight': [10.0, 11.0, 12.0, 20.0, 22.0, 21.0],
-        'Ybar_kt': [10.0, 11.0, 12.0, 20.0, 22.0, 21.0],
-        'cell_key': [('A', 1), ('A', 2), ('A', 3), ('B', 1), ('B', 2), ('B', 3)],
-        'rsg_key': ['A', 'A', 'A', 'B', 'B', 'B'],
-        'sort_key': [
-            (('A',), 1, 0), (('A',), 2, 0), (('A',), 3, 0),
-            (('B',), 1, 0), (('B',), 2, 0), (('B',), 3, 0),
-        ],
-    })
+    df = pd.DataFrame(
+        {
+            'weight': [10.0, 11.0, 12.0, 20.0, 22.0, 21.0],
+            'Ybar_kt': [10.0, 11.0, 12.0, 20.0, 22.0, 21.0],
+            'cell_key': [('A', 1), ('A', 2), ('A', 3), ('B', 1), ('B', 2), ('B', 3)],
+            'rsg_key': ['A', 'A', 'A', 'B', 'B', 'B'],
+            'sort_key': [
+                (('A',), 1, 0),
+                (('A',), 2, 0),
+                (('A',), 3, 0),
+                (('B',), 1, 0),
+                (('B',), 2, 0),
+                (('B',), 3, 0),
+            ],
+        }
+    )
 
     result = calculate_r2(df, 'weight', r2_method='ma2')
 
@@ -620,22 +627,23 @@ def test_r2_ma2_tom_bishop_example():
     Validates that R2 = (Y_j - Y_{j-1}) / 2 for each consecutive pair,
     removing trend (PT effect) and leaving unexplained variation.
     """
-    weights = [238.0, 239.0, 240.0, 239.5, 240.5,
-               241.0, 240.0, 241.5, 241.0, 242.0]
-    df = pd.DataFrame({
-        'weight': weights,
-        'Ybar_kt': weights,  # n=1 per cell, so Ybar_kt = Y
-        'cell_key': [('Lane4', i) for i in range(1, 11)],
-        'rsg_key': ['Lane4'] * 10,
-        'sort_key': [(('Lane4',), i, 0) for i in range(1, 11)],
-    })
+    weights = [238.0, 239.0, 240.0, 239.5, 240.5, 241.0, 240.0, 241.5, 241.0, 242.0]
+    df = pd.DataFrame(
+        {
+            'weight': weights,
+            'Ybar_kt': weights,  # n=1 per cell, so Ybar_kt = Y
+            'cell_key': [('Lane4', i) for i in range(1, 11)],
+            'rsg_key': ['Lane4'] * 10,
+            'sort_key': [(('Lane4',), i, 0) for i in range(1, 11)],
+        }
+    )
 
     result = calculate_r2(df, 'weight', r2_method='ma2')
 
     assert pd.isna(result.iloc[0])  # j=1: no predecessor → NaN
     for i in range(1, len(result)):
         y_current = df['weight'].iloc[i]
-        y_previous = df['weight'].iloc[i-1]
+        y_previous = df['weight'].iloc[i - 1]
         expected_r2 = (y_current - y_previous) / 2.0
         assert pytest.approx(result.iloc[i], 0.01) == expected_r2
 
@@ -645,13 +653,15 @@ def test_r2_ma2_tom_bishop_example():
 
 def test_r2_ma2_handles_single_group():
     """MA2 R2 calculation should handle minimal data (2 points) correctly."""
-    df = pd.DataFrame({
-        'weight': [10.0, 11.0],
-        'Ybar_kt': [10.0, 11.0],
-        'cell_key': [('A', 1), ('A', 2)],
-        'rsg_key': ['A', 'A'],
-        'sort_key': [(('A',), 1, 0), (('A',), 2, 0)],
-    })
+    df = pd.DataFrame(
+        {
+            'weight': [10.0, 11.0],
+            'Ybar_kt': [10.0, 11.0],
+            'cell_key': [('A', 1), ('A', 2)],
+            'rsg_key': ['A', 'A'],
+            'sort_key': [(('A',), 1, 0), (('A',), 2, 0)],
+        }
+    )
 
     result = calculate_r2(df, 'weight', r2_method='ma2')
 
@@ -663,6 +673,7 @@ def test_r2_ma2_handles_single_group():
 # ============================================================================
 # Test: R1/RCR1 VAS Invariants (replaces zero_center functionality)
 # ============================================================================
+
 
 def test_r1_rcr1_invariants():
     """
@@ -702,6 +713,7 @@ def test_r1_rcr1_invariants():
 # Test: Residual Chart Column Selection (Issue #66)
 # ============================================================================
 
+
 def test_residual_chart_uses_correct_column():
     """
     Verify R5_Xbar uses R5 column, not response variable.
@@ -730,34 +742,37 @@ def test_residual_chart_uses_correct_column():
     # grain, not observation-weighted df[col].mean(). For Y, that's the
     # pre-computed Ybar (full cell grid). For R5, it's the rsg-level grain.
     y_center_expected = ds['Ybar'].iloc[0]
-    r5_center_expected = (
-        ds.groupby(['factor 1', 'factor 2'], observed=True)['R5'].mean().mean()
-    )
+    r5_center_expected = ds.groupby(['factor 1', 'factor 2'], observed=True)['R5'].mean().mean()
 
     # Y and R5 should have different centers (otherwise test is not meaningful)
-    assert not np.isclose(y_center_expected, r5_center_expected, atol=0.1), \
-        "Test data should have different Y and R5 centers"
+    assert not np.isclose(y_center_expected, r5_center_expected, atol=0.1), (
+        'Test data should have different Y and R5 centers'
+    )
 
     # Get Xbar center (uses Y) - should equal Bishop unweighted Y center.
     xbar_stats = result.get_statistics('Xbar')
-    assert np.isclose(xbar_stats['center'], y_center_expected, atol=0.01), \
-        f"Xbar center {xbar_stats['center']} should equal {y_center_expected}"
+    assert np.isclose(xbar_stats['center'], y_center_expected, atol=0.01), (
+        f'Xbar center {xbar_stats["center"]} should equal {y_center_expected}'
+    )
 
     # Get R5 Xbar center (should use R5) - Bishop unweighted at rsg grain.
     r5_result = study.execute(chart='Xbar', value='R5')
     r5_xbar_stats = r5_result.get_statistics('Xbar')
-    assert np.isclose(r5_xbar_stats['center'], r5_center_expected, atol=0.01), \
-        f"R5 Xbar center {r5_xbar_stats['center']} should equal {r5_center_expected}"
+    assert np.isclose(r5_xbar_stats['center'], r5_center_expected, atol=0.01), (
+        f'R5 Xbar center {r5_xbar_stats["center"]} should equal {r5_center_expected}'
+    )
 
     # Most importantly: R5 Xbar center should NOT equal Y center
     # This catches the bug where residual charts used Y instead of R5
-    assert not np.isclose(r5_xbar_stats['center'], y_center_expected, atol=0.1), \
-        f"R5 Xbar center {r5_xbar_stats['center']} should NOT equal {y_center_expected}"
+    assert not np.isclose(r5_xbar_stats['center'], y_center_expected, atol=0.1), (
+        f'R5 Xbar center {r5_xbar_stats["center"]} should NOT equal {y_center_expected}'
+    )
 
 
 # ============================================================================
 # Test: Unweighted Means (mean of cell means) for unbalanced data
 # ============================================================================
+
 
 def test_unweighted_means_with_unbalanced_cells():
     """
@@ -771,11 +786,13 @@ def test_unweighted_means_with_unbalanced_cells():
 
     # Unbalanced: cell (A,1) has 3 obs, cell (A,2) has 2 obs,
     # cell (B,1) has 2 obs, cell (B,2) has 3 obs
-    df = pd.DataFrame({
-        'lane': ['A', 'A', 'A', 'A', 'A', 'B', 'B', 'B', 'B', 'B'],
-        'time': [1, 1, 1, 2, 2, 1, 1, 2, 2, 2],
-        'weight': [10.0, 11.0, 12.0, 20.0, 21.0, 30.0, 31.0, 40.0, 41.0, 42.0],
-    })
+    df = pd.DataFrame(
+        {
+            'lane': ['A', 'A', 'A', 'A', 'A', 'B', 'B', 'B', 'B', 'B'],
+            'time': [1, 1, 1, 2, 2, 1, 1, 2, 2, 2],
+            'weight': [10.0, 11.0, 12.0, 20.0, 21.0, 30.0, 31.0, 40.0, 41.0, 42.0],
+        }
+    )
     spec = FormulationSpec(
         response_var='weight',
         rsg_vars=('lane',),
@@ -794,13 +811,15 @@ def test_unweighted_means_with_unbalanced_cells():
 
     # Unweighted grand mean = mean of cell means
     expected_grand = np.mean(cell_means)  # 25.75
-    assert np.isclose(result['Ybar'].iloc[0], expected_grand, atol=1e-10), \
-        f"Grand mean {result['Ybar'].iloc[0]} != expected {expected_grand}"
+    assert np.isclose(result['Ybar'].iloc[0], expected_grand, atol=1e-10), (
+        f'Grand mean {result["Ybar"].iloc[0]} != expected {expected_grand}'
+    )
 
     # Observation-weighted grand mean would be different
     obs_weighted_grand = df['weight'].mean()  # 25.8
-    assert not np.isclose(expected_grand, obs_weighted_grand, atol=1e-10), \
-        "Test data should produce different weighted vs unweighted grand means"
+    assert not np.isclose(expected_grand, obs_weighted_grand, atol=1e-10), (
+        'Test data should produce different weighted vs unweighted grand means'
+    )
 
     # Unweighted factor means = mean of cell means per factor
     expected_factor_A = np.mean([11.0, 20.5])  # 15.75
@@ -826,9 +845,5 @@ def test_unweighted_means_with_unbalanced_cells():
         result['weight'] - result['Ybar_k'] - result['Ybar_t'] + result['Ybar'],
         atol=1e-10,
     )
-    assert np.allclose(
-        result['R4'], result['Ybar_t'] - result['Ybar'] + result['R2'], atol=1e-10
-    )
-    assert np.allclose(
-        result['R5'], result['Ybar_k'] - result['Ybar'] + result['R2'], atol=1e-10
-    )
+    assert np.allclose(result['R4'], result['Ybar_t'] - result['Ybar'] + result['R2'], atol=1e-10)
+    assert np.allclose(result['R5'], result['Ybar_k'] - result['Ybar'] + result['R2'], atol=1e-10)

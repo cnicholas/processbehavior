@@ -81,9 +81,7 @@ def _try_clean_numeric_strings(series: pd.Series) -> pd.Series | None:
     cleaned = cleaned.str.replace(r'^\((.*)\)$', r'-\1', regex=True)
     # Remove currency symbols and optional adjacent whitespace
     # Use literal Unicode chars (€£¥) — raw string \u escapes aren't valid in pyarrow regex
-    cleaned = cleaned.str.replace(
-        r'[$€£¥]\s*', '', regex=True
-    )
+    cleaned = cleaned.str.replace(r'[$€£¥]\s*', '', regex=True)
     # Remove thousands separators (commas)
     cleaned = cleaned.str.replace(',', '', regex=False)
     # Remove percentage signs
@@ -171,8 +169,8 @@ class ColumnRef:
     def __repr__(self) -> str:
         lvls = self.levels
         if len(lvls) <= 6:
-            return f"{self.name} ({len(lvls)}): {lvls}"
-        return f"{self.name} ({len(lvls)}): [{lvls[0]}..{lvls[-1]}]"
+            return f'{self.name} ({len(lvls)}): {lvls}'
+        return f'{self.name} ({len(lvls)}): [{lvls[0]}..{lvls[-1]}]'
 
 
 class ColumnAccessor:
@@ -260,7 +258,7 @@ class ColumnAccessor:
 
     def __repr__(self) -> str:
         """Display available columns."""
-        return f"ColumnAccessor({self._columns})"
+        return f'ColumnAccessor({self._columns})'
 
     def __getitem__(self, col_name: str) -> ColumnRef:
         """
@@ -289,10 +287,7 @@ class ColumnAccessor:
         if resolved_name not in self._df.columns:
             available = list(self._df.columns)
             raise ColumnNotFoundError(
-                f"Column '{col_name}' not found. "
-                f"Available: {available}",
-                column=col_name,
-                available=available
+                f"Column '{col_name}' not found. Available: {available}", column=col_name, available=available
             )
         return ColumnRef(resolved_name, self._df)
 
@@ -355,23 +350,23 @@ class ProcessBehavior:
             >>> pb = ProcessBehavior(df, na_values=['-999', '9999', 'MISSING'])
         """
         if not isinstance(df, pd.DataFrame):
-            raise ValidationError(f"Expected pandas DataFrame, got {type(df).__name__}")
+            raise ValidationError(f'Expected pandas DataFrame, got {type(df).__name__}')
 
         # Default garbage characters commonly found in real-world data
         # These are NOT recognized by pandas by default
         default_na = [
-            '*',      # Common in lab data for missing/invalid
-            '?',      # Question mark for unknown
-            '--',     # Double dash for missing
-            'ND',     # Not Detected
-            'BDL',    # Below Detection Limit
-            'BQL',    # Below Quantification Limit
-            '<LOD',   # Below Limit of Detection
-            '>ULQ',   # Above Upper Limit of Quantification
-            'N/D',    # Not Detected (variant)
-            'n/d',    # Not detected (lowercase)
+            '*',  # Common in lab data for missing/invalid
+            '?',  # Question mark for unknown
+            '--',  # Double dash for missing
+            'ND',  # Not Detected
+            'BDL',  # Below Detection Limit
+            'BQL',  # Below Quantification Limit
+            '<LOD',  # Below Limit of Detection
+            '>ULQ',  # Above Upper Limit of Quantification
+            'N/D',  # Not Detected (variant)
+            'n/d',  # Not detected (lowercase)
             'MISSING',
-            'missing'
+            'missing',
         ]
 
         # Combine default with user-specified NA values
@@ -409,9 +404,9 @@ class ProcessBehavior:
         if columns_with_na:
             total_na = sum(na_counts.values())
             logger.warning(
-                f"Found {total_na} garbage/NA values across {len(columns_with_na)} column(s):\n"
-                + "\n".join([f"  • {col}: {count} values" for col, count in na_counts.items()])
-                + "\n\nThese values were converted to NA and will be excluded from analysis."
+                f'Found {total_na} garbage/NA values across {len(columns_with_na)} column(s):\n'
+                + '\n'.join([f'  • {col}: {count} values' for col, count in na_counts.items()])
+                + '\n\nThese values were converted to NA and will be excluded from analysis.'
             )
 
         # Phase 2: Clean numeric formatting (currency symbols, thousands
@@ -425,31 +420,23 @@ class ProcessBehavior:
 
         if formatting_cleaned:
             logger.warning(
-                f"Cleaned numeric formatting in {len(formatting_cleaned)} column(s):\n"
-                + "\n".join(
-                    [f"  • {col}: {count} values converted"
-                     for col, count in formatting_cleaned.items()]
-                )
-                + "\n\nCurrency symbols, thousands separators, and "
-                "accounting negatives were removed."
+                f'Cleaned numeric formatting in {len(formatting_cleaned)} column(s):\n'
+                + '\n'.join([f'  • {col}: {count} values converted' for col, count in formatting_cleaned.items()])
+                + '\n\nCurrency symbols, thousands separators, and '
+                'accounting negatives were removed.'
             )
 
         self.data = cleaned_df
         self.cols = ColumnAccessor(self.data)
 
-        logger.info(f"ProcessBehavior: {len(df)} rows, {len(df.columns)} columns")
+        logger.info(f'ProcessBehavior: {len(df)} rows, {len(df.columns)} columns')
 
     # =========================================================================
     # Factory Methods: Read from files
     # =========================================================================
 
     @classmethod
-    def read_csv(
-        cls,
-        path: str,
-        na_values: list[str] | None = None,
-        **kwargs
-    ) -> ProcessBehavior:
+    def read_csv(cls, path: str, na_values: list[str] | None = None, **kwargs) -> ProcessBehavior:
         """
         Read data from a CSV file.
 
@@ -477,11 +464,7 @@ class ProcessBehavior:
 
     @classmethod
     def read_excel(
-        cls,
-        path: str,
-        sheet_name: str | int = 0,
-        na_values: list[str] | None = None,
-        **kwargs
+        cls, path: str, sheet_name: str | int = 0, na_values: list[str] | None = None, **kwargs
     ) -> ProcessBehavior:
         """
         Read data from an Excel file.
@@ -511,12 +494,7 @@ class ProcessBehavior:
         return cls(df, na_values=na_values)
 
     @classmethod
-    def read_parquet(
-        cls,
-        path: str,
-        na_values: list[str] | None = None,
-        **kwargs
-    ) -> ProcessBehavior:
+    def read_parquet(cls, path: str, na_values: list[str] | None = None, **kwargs) -> ProcessBehavior:
         """
         Read data from a Parquet file.
 
@@ -542,17 +520,12 @@ class ProcessBehavior:
             df = pd.read_parquet(path, **kwargs)
         except ImportError:
             raise ImportError(
-                "Reading Parquet files requires pyarrow or fastparquet. "
-                "Install with: pip install pyarrow"
+                'Reading Parquet files requires pyarrow or fastparquet. Install with: pip install pyarrow'
             ) from None
         return cls(df, na_values=na_values)
 
     @classmethod
-    def read_clipboard(
-        cls,
-        na_values: list[str] | None = None,
-        **kwargs
-    ) -> ProcessBehavior:
+    def read_clipboard(cls, na_values: list[str] | None = None, **kwargs) -> ProcessBehavior:
         """
         Read data from the system clipboard.
 
@@ -584,10 +557,7 @@ class ProcessBehavior:
         """Extract column name from str or ColumnRef."""
         return col.name if isinstance(col, ColumnRef) else col
 
-    def _validate_plan(
-        self,
-        plan: dict
-    ) -> tuple[dict[str, list], list[str], int, int]:
+    def _validate_plan(self, plan: dict) -> tuple[dict[str, list], list[str], int, int]:
         """
         Validate and normalize sampling plan.
 
@@ -648,17 +618,16 @@ class ProcessBehavior:
             if col_name not in self.data.columns:
                 available = list(self.data.columns)
                 raise ColumnNotFoundError(
-                    f"Plan column '{col_name}' not found in data. "
-                    f"Available: {available}",
+                    f"Plan column '{col_name}' not found in data. Available: {available}",
                     column=col_name,
-                    available=available
+                    available=available,
                 )
 
             # Validate levels is non-empty
             if not levels:
                 raise ValidationError(
                     f"Factor '{col_name}' has empty level list in plan.\n"
-                    f"Each factor must have at least one planned level."
+                    f'Each factor must have at least one planned level.'
                 )
 
             normalized[col_name] = list(levels)
@@ -674,12 +643,12 @@ class ProcessBehavior:
                 observed_sorted = sorted(observed, key=lambda x: (type(x).__name__, x))
                 logger.warning(
                     f"Factor '{col_name}' has observed levels not in plan: {extra_list}\n"
-                    f"  Your plan: {levels}\n"
-                    f"  Observed:  {observed_sorted}\n"
-                    f"\n"
-                    f"  To update your plan:\n"
+                    f'  Your plan: {levels}\n'
+                    f'  Observed:  {observed_sorted}\n'
+                    f'\n'
+                    f'  To update your plan:\n'
                     f"    plan['factors']['{col_name}'] = pb.cols['{col_name}'].levels  # Use observed\n"
-                    f"    # or\n"
+                    f'    # or\n'
                     f"    plan['factors']['{col_name}'] = {observed_sorted}  # Add manually"
                 )
 
@@ -692,7 +661,7 @@ class ProcessBehavior:
         time: str | ColumnRef | None = None,
         plan: dict | None = None,
         precision: int = 3,
-        unit_of_analysis: str | None = None
+        unit_of_analysis: str | None = None,
     ) -> Study:
         """
         Formulate a study for process behavior analysis.
@@ -815,19 +784,19 @@ class ProcessBehavior:
         if factors is not None and plan is not None:
             raise ValidationError(
                 "Cannot specify both 'factors' and 'plan'. Use either:\n"
-                "  • factors=[...] to infer structure from observed data (complete designs)\n"
-                "  • plan={col: [levels], ...} to specify expected structure (complete + incomplete designs)"
+                '  • factors=[...] to infer structure from observed data (complete designs)\n'
+                '  • plan={col: [levels], ...} to specify expected structure (complete + incomplete designs)'
             )
 
         # Require at least one of factors or plan
         if factors is None and plan is None:
             raise ValidationError(
-                "Cannot analyze response-only data without grouping structure.\n\n"
+                'Cannot analyze response-only data without grouping structure.\n\n'
                 "Bishop's design states (codes 1-6) require a factor × time grid.\n"
-                "Please specify:\n"
-                "  - factors: categorical variables defining subgroups (e.g., Machine, Operator)\n"
-                "  - plan: expected factor levels for detecting incomplete designs\n\n"
-                "See documentation for examples of proper study formulation."
+                'Please specify:\n'
+                '  - factors: categorical variables defining subgroups (e.g., Machine, Operator)\n'
+                '  - plan: expected factor levels for detecting incomplete designs\n\n'
+                'See documentation for examples of proper study formulation.'
             )
 
         # Normalize column names from ColumnRef to str
@@ -861,6 +830,7 @@ class ProcessBehavior:
 
         # Validate columns early (fail fast)
         from .data_preparation import DataPreparation
+
         prep = DataPreparation()
         prep.validate_columns(self.data, spec)
 
@@ -869,31 +839,32 @@ class ProcessBehavior:
         # still count as "attempted" cells, revealing the true intended structure.
         detector = SDSRegistry()
         sds_result = detector.detect_sds_from_structure(
-            self.data,           # Raw data (NA rows still present)
+            self.data,  # Raw data (NA rows still present)
             spec,
             response_col=response_str,
             plan=sampling_plan,
-            T_planned=T_planned
+            T_planned=T_planned,
         )
 
         # Compute Plan Design State (PDS) if a plan was provided
         pds_result: SDSResult | None = None
         if sampling_plan is not None and T_planned is not None and N_planned is not None:
             from math import prod
+
             K = prod(len(v) for v in sampling_plan.values())
             pds_result = detector.classify_from_plan(K, T_planned, N_planned)
-            logger.debug(f"PDS: SDS {pds_result.sds} ({pds_result.reason})")
+            logger.debug(f'PDS: SDS {pds_result.sds} ({pds_result.reason})')
 
         # Calculate full dataset with residuals (R1-R5, RCR1-RCR5)
         # ADS is chart-agnostic — chart-specific params live in ChartRequest at execute() time
         # Pass ODS for diagnostic logging; ADS is computed internally on tidy data
         from .analysis_dataset import AnalysisDataSet
+
         ads = AnalysisDataSet(self.data, spec, observed_sds=sds_result.sds)
 
         # ADS drives analysis: build analysis_plan from ADS (not ODS)
         analysis_plan = SDSRegistry.get_analysis_plan(
-            ads.analytical_design_state.sds,
-            min_cell_size=ads.analytical_design_state.min_cell_size
+            ads.analytical_design_state.sds, min_cell_size=ads.analytical_design_state.min_cell_size
         )
 
         # Create and return Study object with pre-calculated AnalysisDataSet
@@ -914,8 +885,8 @@ class ProcessBehavior:
     def __repr__(self) -> str:
         """String representation."""
         return (
-            f"ProcessBehavior({len(self.data)} rows × {len(self.data.columns)} columns)\n"
-            f"Columns: {list(self.data.columns)}"
+            f'ProcessBehavior({len(self.data)} rows × {len(self.data.columns)} columns)\n'
+            f'Columns: {list(self.data.columns)}'
         )
 
     def __len__(self) -> int:

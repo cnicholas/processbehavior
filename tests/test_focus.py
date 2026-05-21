@@ -21,22 +21,14 @@ from processbehavior.datasets import synthetic
 def sds1_study_single_factor():
     """SDS1 study with single factor — ideal for single-factor focus tests."""
     df = synthetic.make_sds(1, K1=3, K2=1, T=6, n_min=2, n_max=4, seed=42)
-    return ProcessBehavior(df).formulate(
-        response='y',
-        time='time',
-        factors=['factor 1']
-    )
+    return ProcessBehavior(df).formulate(response='y', time='time', factors=['factor 1'])
 
 
 @pytest.fixture(scope='module')
 def sds1_study_two_factor():
     """SDS1 study with two factors — for multi-factor focus tests."""
     df = synthetic.make_sds(1, K1=3, K2=2, T=6, n_min=2, n_max=4, seed=42)
-    return ProcessBehavior(df).formulate(
-        response='y',
-        time='time',
-        factors=['factor 1', 'factor 2']
-    )
+    return ProcessBehavior(df).formulate(response='y', time='time', factors=['factor 1', 'factor 2'])
 
 
 @pytest.fixture(scope='module')
@@ -54,17 +46,13 @@ def single_factor_xmr_result(sds1_study_single_factor):
 @pytest.fixture(scope='module')
 def two_factor_xmr_result(sds1_study_two_factor):
     """Stratified XmR result with two factors."""
-    return sds1_study_two_factor.execute(
-        chart='X', by=['factor 1', 'factor 2']
-    )
+    return sds1_study_two_factor.execute(chart='X', by=['factor 1', 'factor 2'])
 
 
 @pytest.fixture(scope='module')
 def single_factor_histogram_result(sds1_study_single_factor):
     """Stratified Histogram result with single factor."""
-    return sds1_study_single_factor.execute(
-        chart='Histogram', by=['factor 1']
-    )
+    return sds1_study_single_factor.execute(chart='Histogram', by=['factor 1'])
 
 
 # =============================================================================
@@ -175,12 +163,12 @@ class TestFocusErrors:
 
     def test_focus_non_stratified_raises(self, non_stratified_xmr_result):
         """focus on non-stratified result (by=[]) raises ValidationError."""
-        with pytest.raises(ValidationError, match="not stratified"):
+        with pytest.raises(ValidationError, match='not stratified'):
             non_stratified_xmr_result.focus('anything')
 
     def test_focus_invalid_stratum_raises(self, single_factor_xmr_result):
         """focus with nonexistent stratum raises ValidationError."""
-        with pytest.raises(ValidationError, match="not found"):
+        with pytest.raises(ValidationError, match='not found'):
             single_factor_xmr_result.focus('nonexistent_stratum')
 
     def test_focus_encoding_equivalence(self, single_factor_xmr_result):
@@ -188,9 +176,7 @@ class TestFocusErrors:
         data = single_factor_xmr_result.get_chart('X')
         for s in single_factor_xmr_result.strata:
             encoded = encode_rsg(s)
-            assert encoded in data['rsg'].values, (
-                f"encode_rsg({s!r}) = {encoded!r} not found in rsg column"
-            )
+            assert encoded in data['rsg'].values, f'encode_rsg({s!r}) = {encoded!r} not found in rsg column'
 
 
 # =============================================================================
@@ -203,15 +189,11 @@ class TestStratifiedChartsHaveRsg:
 
     def test_all_stratified_charts_have_rsg(self, sds1_study_single_factor):
         """For a stratified run, every chart with strata has rsg column."""
-        result = sds1_study_single_factor.execute(
-            chart='X', by=['factor 1'], companion=True
-        )
+        result = sds1_study_single_factor.execute(chart='X', by=['factor 1'], companion=True)
         for chart_name, chart_info in result.charts.items():
             if chart_info.get('strata'):
                 data = chart_info['data']
-                assert 'rsg' in data.columns, (
-                    f"Stratified chart '{chart_name}' missing rsg column"
-                )
+                assert 'rsg' in data.columns, f"Stratified chart '{chart_name}' missing rsg column"
 
     def test_histogram_stratified_has_rsg(self, single_factor_histogram_result):
         """Stratified Histogram has rsg column."""
@@ -221,14 +203,10 @@ class TestStratifiedChartsHaveRsg:
 
     def test_focus_every_stratified_chart_no_leak(self, sds1_study_single_factor):
         """For each stratified chart, focus produces single-stratum data."""
-        result = sds1_study_single_factor.execute(
-            chart='X', by=['factor 1'], companion=True
-        )
+        result = sds1_study_single_factor.execute(chart='X', by=['factor 1'], companion=True)
         stratum = result.strata[0]
         focused = result.focus(stratum)
         for chart_name, chart_info in focused.charts.items():
             data = chart_info['data']
             if 'rsg' in data.columns:
-                assert data['rsg'].nunique() == 1, (
-                    f"Chart '{chart_name}' has data from multiple strata after focus"
-                )
+                assert data['rsg'].nunique() == 1, f"Chart '{chart_name}' has data from multiple strata after focus"
