@@ -512,14 +512,30 @@ class AnalysisResult:
             else:
                 focused_stats = nested_stats  # flat stats dict — OK
 
-            # Build focused chart info
+            # Build focused chart info. Unpack the parent's per-stratum
+            # lane_boundaries to the focused stratum's flat list so downstream
+            # consumers (plotter) see a single chart's positions, not a dict
+            # they'd have to disambiguate. Without this, the plotter silently
+            # used the first stratum's positions on every focused chart.
+            parent_metadata = chart_info.get('metadata', {})
+            raw_lb = parent_metadata.get('lane_boundaries')
+            if isinstance(raw_lb, dict):
+                focused_raw_lb = raw_lb.get(stratum) or raw_lb.get(encode_rsg(stratum))
+                if focused_raw_lb is None and stratum in raw_lb:
+                    focused_raw_lb = raw_lb[stratum]
+            elif isinstance(raw_lb, list):
+                focused_raw_lb = raw_lb
+            else:
+                focused_raw_lb = None
+
             focused_charts[chart_name] = {
                 'data': focused_data,
                 'statistics': focused_stats,
                 'metadata': {
-                    **chart_info.get('metadata', {}),
+                    **parent_metadata,
                     'stratified': False,  # No longer stratified after focus
                     'focused_stratum': stratum,
+                    'lane_boundaries': focused_raw_lb,
                 },
             }
 
