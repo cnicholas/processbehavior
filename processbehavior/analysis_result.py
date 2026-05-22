@@ -489,7 +489,14 @@ class AnalysisResult:
 
                 # Note: stratum identity assumes canonical factor ordering defined upstream
                 mask = data[rsg_col].astype(str) == encode_rsg(stratum)
-            focused_data = data[mask].copy()
+            # Reset_index so the focused data's row positions are 0..n-1.
+            # The renderer falls back to `data.index` for trace x when there's
+            # no explicit x_col (integer-position axis); without the reset, that
+            # index inherits 376..755 from the unfiltered data and the tick
+            # positions computed by x_axis_layout (which use iloc 0..n-1) land
+            # left of the rendered data — same hazard as _get_stratified_charts
+            # already handles.
+            focused_data = data[mask].copy().reset_index(drop=True)
 
             if focused_data.empty:
                 raise ValidationError(
