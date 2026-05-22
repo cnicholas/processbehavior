@@ -484,3 +484,67 @@ class TestTwoTierXAxis:
         assert tr.customdata is not None, 'main trace should have customdata'
         assert 'Cell:' in (tr.hovertemplate or ''), f"hovertemplate missing 'Cell:': {tr.hovertemplate!r}"
         assert 'Time:' in (tr.hovertemplate or ''), f"hovertemplate missing 'Time:': {tr.hovertemplate!r}"
+
+
+class TestTitleBandNoOverlap:
+    """Bug B regression: the x-axis title and the cell-label band must not
+    overlap. The title's `standoff` is set explicitly to pin it close to the
+    tick row, leaving the band's paper-coord y-offset clear below it."""
+
+    @staticmethod
+    def _two_tier_result():
+        """A dense multi-cell X chart — the SDS 3 IMR shape that produced Bug B."""
+        from processbehavior.datasets.synthetic import make_sds
+
+        df = make_sds(2, K1=3, K2=2, T=10, seed=42)
+        study = ProcessBehavior(df).formulate(
+            response='y', factors=['factor 1', 'factor 2'], time='time',
+        )
+        return study.execute(chart='X', by=[])
+
+    def test_title_standoff_set_when_band_present(self):
+        """Title standoff is explicitly set (not Plotly default) when a band
+        is drawn — this is the mechanism that pins the title above the band."""
+        result = self._two_tier_result()
+        fig = result.plot(chart='X')
+        ax = fig.figure.layout.xaxis
+        band_annotations = [
+            a for a in fig.figure.layout.annotations
+            if getattr(a, 'yref', '') == 'paper' and (a.text or '').startswith('<b>')
+        ]
+        if not band_annotations:
+            pytest.skip('No cell band rendered for this shape — band geometry test not applicable.')
+        assert ax.title.standoff is not None, (
+            'Title standoff must be set explicitly when a cell band is present '
+            '(otherwise Plotly auto-positions and may collide with the band).'
+        )
+
+    def test_band_y_offset_below_title(self):
+        """Band annotations sit BELOW the axis baseline (y < 0 in paper coords).
+        Combined with explicit title standoff, this guarantees no overlap."""
+        result = self._two_tier_result()
+        fig = result.plot(chart='X')
+        band_annotations = [
+            a for a in fig.figure.layout.annotations
+            if getattr(a, 'yref', '') == 'paper' and (a.text or '').startswith('<b>')
+        ]
+        if not band_annotations:
+            pytest.skip('No cell band rendered for this shape.')
+        for a in band_annotations:
+            assert a.y < 0, f'Cell band annotation at y={a.y}; must be below axis (y < 0)'
+
+    def test_bottom_margin_reserved_for_band(self):
+        """A chart with a band must reserve enough bottom margin so the band
+        and title both fit without clipping."""
+        result = self._two_tier_result()
+        fig = result.plot(chart='X')
+        band_annotations = [
+            a for a in fig.figure.layout.annotations
+            if getattr(a, 'yref', '') == 'paper' and (a.text or '').startswith('<b>')
+        ]
+        if not band_annotations:
+            pytest.skip('No cell band rendered for this shape.')
+        assert fig.figure.layout.margin.b is not None, 'bottom margin must be set when band present'
+        assert fig.figure.layout.margin.b >= 100, (
+            f'bottom margin {fig.figure.layout.margin.b} too small for band + title'
+        )
