@@ -379,7 +379,7 @@ class TestTimeTickLabels:
         fig = result.plot('X')
 
         # Time values repeat due to replication, so integer positions are used
-        # and _apply_time_tick_labels should add tick labels
+        # and compute_x_axis_layout should add tick labels (via the two-tier path).
         xaxis = fig._fig.layout.xaxis
         assert xaxis.tickvals is not None, 'tickvals should be set (time repeats)'
         assert xaxis.ticktext is not None, 'ticktext should be set (time repeats)'

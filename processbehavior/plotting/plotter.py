@@ -24,6 +24,12 @@ from .contracts import PlotError, build_render_context, build_render_spec
 from .control_chart import ControlChartFigure
 from .renderers import render_control_chart, render_histogram
 from .themes import ChartTheme, apply_theme, get_theme
+from .x_axis_layout import (
+    StratifiedBoundaries,
+    apply_x_axis_layout,
+    compute_x_axis_layout,
+    parse_lane_boundaries,
+)
 
 if TYPE_CHECKING:
     from processbehavior.analysis_result import AnalysisResult
@@ -322,17 +328,37 @@ class Plotter:
         # Render
         render_control_chart(fig, ctx)
 
-        # Time tick labels
-        self._apply_time_tick_labels(fig, chart_info['data'], metadata)
+        # X-axis layout: ticks + (optional) cell band + title + bottom margin.
+        # Boundaries from focused or stratified callers must already be flat —
+        # raise on dict input rather than silently use the wrong stratum.
+        x_label = xaxis_title or self._get_xaxis_label(x_col, chart_name)
+        y_label = yaxis_title or self._get_yaxis_label(value_col, metadata.get('chart_type'))
+
+        boundaries = parse_lane_boundaries(metadata.get('lane_boundaries'))
+        if isinstance(boundaries, StratifiedBoundaries):
+            raise PlotError(
+                'Stratified lane_boundaries leaked into a single-chart render. '
+                'Caller (focus() or _get_stratified_charts) must unpack per-stratum '
+                'boundaries before delegating to the plotter.'
+            )
+        layout = compute_x_axis_layout(
+            data=chart_info['data'],
+            time_var=self.summary.get('time_var'),
+            x_col=x_col,
+            boundaries=boundaries,
+            title_text=x_label,
+            is_faceted=False,
+        )
+        apply_x_axis_layout(
+            fig, layout,
+            font_size=getattr(self._theme, 'annotation_font_size', 12),
+        )
 
         # Force categorical axis — control chart x-axes are always ordinal
         # (evenly spaced in sequence order), never continuous numeric
         if x_col:
             fig.update_xaxes(type='category')
 
-        # Layout
-        x_label = xaxis_title or self._get_xaxis_label(x_col, chart_name)
-        y_label = yaxis_title or self._get_yaxis_label(value_col, metadata.get('chart_type'))
         # Hide the legend when there is only one user-facing trace — a
         # single-series 'X' chip in the top-right is redundant and
         # competes with the limits annotation for header space.
@@ -341,7 +367,6 @@ class Plotter:
         fig.update_layout(
             width=width,
             height=height,
-            xaxis_title=x_label,
             yaxis_title=y_label,
             hovermode='x unified',
             showlegend=show_legend,
@@ -429,7 +454,13 @@ class Plotter:
 
         theme = self._theme
 
-        # Render each chart
+        # Pass 1: render each panel and compute its x-axis layout.
+        # We defer applying the layout until pass 2 because title visibility
+        # depends on grid position (bottom row) AND on whether the layout
+        # produced a cell band — which we only know after compute_x_axis_layout.
+        panel_layouts: dict[int, Any] = {}
+        panel_x_cols: dict[int, str | None] = {}
+
         for idx, (chart_name, chart_info) in enumerate(charts.items()):
             row = idx // ncols + 1
             col = idx % ncols + 1
@@ -446,11 +477,12 @@ class Plotter:
                     shared_bin_edges=histogram_bin_edges,
                     is_faceted=True,
                 )
+                panel_x_cols[idx] = None
                 continue
 
-            # Build context for this panel
             data = chart_info['data']
             x_col = self._get_x_column(data)
+            panel_x_cols[idx] = x_col
             center_key = self._get_center_key(chart_info['statistics'])
 
             spec = build_render_spec(chart_info, chart_name, x_col, center_key)
@@ -471,30 +503,29 @@ class Plotter:
 
             render_control_chart(fig, ctx, row=row, col=col, nrows=nrows, ncols=ncols)
 
-            # Time tick labels
-            self._apply_time_tick_labels(
-                fig,
-                data,
-                metadata,
-                row=row,
-                col=col,
-                ncols=ncols,
+            # Compute (don't apply yet) the panel's x-axis layout.
+            boundaries = parse_lane_boundaries(metadata.get('lane_boundaries'))
+            if isinstance(boundaries, StratifiedBoundaries):
+                raise PlotError(
+                    'Stratified lane_boundaries leaked into a faceted panel render. '
+                    'Caller (focus() or _get_stratified_charts) must unpack per-stratum '
+                    'boundaries before delegating to the plotter.'
+                )
+            panel_layouts[idx] = compute_x_axis_layout(
+                data=data,
+                time_var=self.summary.get('time_var'),
+                x_col=x_col,
+                boundaries=boundaries,
+                title_text=x_label,
+                is_faceted=True,
             )
 
-        # Layout
+        # Figure-level layout (width/height/hover).
         fig.update_layout(width=width, height=height, hovermode='closest')
 
-        # Collect per-panel x_col to determine axis type per subplot
-        panel_x_cols: dict[int, str | None] = {}
-        for idx, (_chart_name, chart_info) in enumerate(charts.items()):
-            metadata = chart_info.get('metadata', {})
-            if metadata.get('chart_type') == 'Histogram':
-                panel_x_cols[idx] = None
-            else:
-                panel_x_cols[idx] = self._get_x_column(chart_info['data'])
-
-        # Apply axis styling to all subplots, but only show titles on
-        # leftmost column (y-axis) and bottom row (x-axis) to avoid clutter.
+        # Pass 2: apply per-panel layouts + axis styling.
+        # Title visibility rule: bottom row, OR panels with a cell band
+        # (the band needs the title as its header).
         axis_style_y = dict(
             showline=theme.show_axis_line,
             linecolor=theme.axis_line_color,
@@ -503,7 +534,6 @@ class Plotter:
             gridcolor=theme.grid_color,
             gridwidth=theme.grid_width,
         )
-
         axis_style_x_base = dict(
             showline=theme.show_axis_line,
             linecolor=theme.axis_line_color,
@@ -513,29 +543,26 @@ class Plotter:
             gridwidth=theme.grid_width,
         )
 
-        # Per-panel cell-band presence: a panel that gets a cell band
-        # below its x-axis needs its x-axis title shown so the band has
-        # a header (otherwise the band floats with no production-time
-        # context above it).
-        panel_has_cell_band: dict[int, bool] = {}
-        for idx, (_chart_name, chart_info) in enumerate(charts.items()):
-            md = chart_info.get('metadata', {})
-            lb = md.get('lane_boundaries')
-            n = len(chart_info.get('data', []))
-            edges = self._get_block_edges(lb, n)
-            xcol = panel_x_cols.get(idx)
-            panel_has_cell_band[idx] = bool(edges) and xcol is None
-
+        font_size = getattr(theme, 'annotation_font_size', 12)
         for idx in range(n_charts):
             r = idx // ncols + 1
             c = idx % ncols + 1
-            # Bottom row: last full row, or incomplete last row
             is_bottom = (r == nrows) or (idx + ncols >= n_charts)
             is_leftmost = c == 1
             panel_xcol = panel_x_cols.get(idx)
-            show_x_title = is_bottom or panel_has_cell_band.get(idx, False)
+
+            layout_obj = panel_layouts.get(idx)
+            if layout_obj is not None:
+                show_x_title = is_bottom or layout_obj.has_cell_band
+                apply_x_axis_layout(
+                    fig, layout_obj,
+                    row=r, col=c, ncols=ncols,
+                    font_size=font_size,
+                    show_title=show_x_title,
+                )
+
+            # Theme-driven axis styling, applied to every panel.
             fig.update_xaxes(
-                title_text=x_label if show_x_title else None,
                 **axis_style_x_base,
                 **({'type': 'category'} if panel_xcol else {}),
                 row=r,
@@ -1084,315 +1111,6 @@ class Plotter:
 
         return stratified if stratified else self.charts
 
-    # ---- Time tick labels ----
-
-    def _apply_time_tick_labels(
-        self,
-        fig: go.Figure,
-        data: pd.DataFrame,
-        metadata: dict,
-        row: int | None = None,
-        col: int | None = None,
-        ncols: int | None = None,
-        max_ticks: int = 20,
-        per_block_ticks: int = 4,
-    ) -> None:
-        """Apply x-axis tick labels with two-tier layout for multi-cell charts.
-
-        For dense multi-cell X charts (lane_boundaries in metadata, x falls
-        back to integer position because production_time repeats across
-        cells), generate ``per_block_ticks`` evenly-spaced production_time
-        labels per cell **and** add a cell-label band below the axis title
-        so the analyst can read both within-cell time and which cell at a
-        glance. Single-cell and categorical paths fall through to the
-        original thinning logic.
-
-        Works for both single-chart and faceted panels. For faceted
-        panels, the cell band is anchored to the panel's y-axis domain
-        so it sits just below the panel's plot area regardless of grid
-        position.
-        """
-        time_var = self.summary.get('time_var')
-        if not time_var or time_var not in data.columns:
-            return
-
-        n = len(data)
-        if n == 0:
-            return
-
-        # Determine if x-axis uses the time column directly (categorical)
-        # or integer positions (time repeats across strata)
-        x_col = self._get_x_column(data)
-        is_categorical = x_col is not None
-
-        # For categorical axes with few enough points, no thinning needed
-        if is_categorical and n <= max_ticks:
-            return
-
-        # Select evenly-spaced time ticks.
-        lane_bounds = metadata.get('lane_boundaries')
-        block_edges = self._get_block_edges(lane_bounds, n)
-
-        # ----- Two-tier layout: per-cell time ticks + cell-label band -----
-        # Activates for non-categorical charts with lane boundaries
-        # present, in both single-chart and faceted panel modes. For
-        # faceted panels we still draw a per-panel cell band so the
-        # sub-cell structure within each stratum is legible.
-        if block_edges and not is_categorical:
-            tick_positions, _ = self._per_block_time_ticks(
-                block_edges,
-                per_block_ticks,
-            )
-            tick_positions = [p for p in tick_positions if 0 <= p < n]
-            tick_labels = data[time_var].iloc[tick_positions].astype(str).tolist()
-            cell_labels = self._block_cell_labels(data, block_edges)
-
-            # Adaptive angle for the time row.
-            max_label_len = max((len(lbl) for lbl in tick_labels), default=1)
-            angle = -45 if (len(tick_positions) * max_label_len) > 100 else 0
-
-            update_kwargs: dict[str, int] = {}
-            if row is not None and col is not None:
-                update_kwargs = {'row': row, 'col': col}
-            fig.update_xaxes(
-                tickvals=tick_positions,
-                ticktext=tick_labels,
-                tickangle=angle,
-                automargin=True,
-                **update_kwargs,
-            )
-            self._add_cell_label_band(
-                fig,
-                block_edges,
-                cell_labels,
-                row=row,
-                col=col,
-                ncols=ncols,
-            )
-            return
-
-        # ----- Fallback: original behavior -----
-        if block_edges and not is_categorical:
-            # Faceted with internal blocks: keep per-block thinning for
-            # legacy callers (rare in practice).
-            tick_positions = self._thin_ticks_per_block(block_edges, n, max_ticks)
-        elif n <= max_ticks:
-            tick_positions = list(range(n))
-        else:
-            step = max(2, (n - 1) // (max_ticks - 1))
-            tick_positions = sorted({0, n - 1} | set(range(0, n, step)))
-
-        tick_positions = [p for p in tick_positions if 0 <= p < n]
-        tick_labels = data[time_var].iloc[tick_positions].astype(str).tolist()
-
-        # Adaptive angle: rotate labels when total label footprint is large
-        n_ticks = len(tick_positions)
-        max_label_len = max((len(lbl) for lbl in tick_labels), default=1)
-        label_footprint = n_ticks * max_label_len
-        angle = -45 if label_footprint > 80 else 0
-
-        kwargs = {}
-        if row is not None and col is not None:
-            kwargs = {'row': row, 'col': col}
-
-        if is_categorical:
-            # Categorical axis: tickvals are the actual category values
-            tick_categories = data[x_col].iloc[tick_positions].tolist()
-            fig.update_xaxes(
-                tickvals=tick_categories,
-                ticktext=tick_labels,
-                tickangle=angle,
-                automargin=True,
-                **kwargs,
-            )
-        else:
-            # Integer-position axis: tickvals are row indices
-            fig.update_xaxes(
-                tickvals=tick_positions,
-                ticktext=tick_labels,
-                tickangle=angle,
-                automargin=True,
-                **kwargs,
-            )
-
-    @staticmethod
-    def _per_block_time_ticks(
-        block_edges: list[int],
-        per_block_ticks: int,
-    ) -> tuple[list[int], list[int]]:
-        """Pick ``per_block_ticks`` evenly-spaced positions per block.
-
-        Each block contributes its first index, last index, and
-        ``per_block_ticks - 2`` evenly-spaced interior indices. Blocks
-        smaller than ``per_block_ticks`` contribute every position they
-        contain.
-
-        Returns
-        -------
-        (tick_positions, cell_block_indices)
-            tick_positions sorted ascending; cell_block_indices is the
-            block index each tick belongs to (parallel to tick_positions).
-        """
-        positions: list[int] = []
-        block_indices: list[int] = []
-        for i in range(len(block_edges) - 1):
-            start = block_edges[i]
-            end = block_edges[i + 1]
-            block_n = end - start
-            if block_n <= 0:
-                continue
-            if block_n <= per_block_ticks:
-                block_positions = list(range(start, end))
-            else:
-                step = (block_n - 1) / (per_block_ticks - 1)
-                block_positions = [int(round(start + step * k)) for k in range(per_block_ticks)]
-                block_positions[-1] = end - 1  # ensure last point exact
-                block_positions = sorted(set(block_positions))
-            for p in block_positions:
-                positions.append(p)
-                block_indices.append(i)
-        return positions, block_indices
-
-    @staticmethod
-    def _block_cell_labels(data: pd.DataFrame, block_edges: list[int]) -> list[str]:
-        """Cell label for each block, read from the rsg column at block start.
-
-        Falls back to a numeric placeholder when the column is missing
-        (single-factor pathological cases).
-        """
-        col = 'rsg' if 'rsg' in data.columns else None
-        labels: list[str] = []
-        for i in range(len(block_edges) - 1):
-            start = block_edges[i]
-            if col is not None and start < len(data):
-                labels.append(str(data.iloc[start][col]))
-            else:
-                labels.append(f'cell {i + 1}')
-        return labels
-
-    def _add_cell_label_band(
-        self,
-        fig: go.Figure,
-        block_edges: list[int],
-        cell_labels: list[str],
-        row: int | None = None,
-        col: int | None = None,
-        ncols: int | None = None,
-    ) -> None:
-        """Annotate each block's midpoint below the x-axis title.
-
-        For single-chart mode (row=col=None) the band is positioned in
-        paper-y coords below the figure axis. For faceted panels it
-        anchors to the panel's y-domain so the band always sits just
-        below that panel's plot area.
-        """
-        midpoints = [(block_edges[i] + block_edges[i + 1]) // 2 for i in range(len(block_edges) - 1)]
-        # Crowd-thin: if more than 25 cells, show every Nth label.
-        n_labels = len(midpoints)
-        stride = max(1, n_labels // 25 + (1 if n_labels % 25 else 0))
-        font_size = getattr(self._theme, 'annotation_font_size', 12) if hasattr(self, '_theme') else 12
-
-        # Position the band below the axis title. The y offset is in
-        # whatever the yref's axis system uses: 'paper' for single
-        # charts (y < 0 = below the figure axis), 'y{n} domain' for
-        # faceted panels (y < 0 = below the panel's data area).
-        if row is not None and col is not None:
-            subplot_idx = (row - 1) * (ncols or 1) + col
-            xref = 'x' if subplot_idx == 1 else f'x{subplot_idx}'
-            yref = 'y domain' if subplot_idx == 1 else f'y{subplot_idx} domain'
-            # In y-domain coords -0.18 is 18% of the panel height below
-            # the panel; large enough to clear tick labels and the axis
-            # title, small enough that for typical 2x2 layouts it stays
-            # in the inter-panel gutter rather than landing on the next
-            # row's panel.
-            band_y = -0.22
-        else:
-            xref = 'x'
-            yref = 'paper'
-            band_y = -0.24
-
-        for idx, (mid, lbl) in enumerate(zip(midpoints, cell_labels)):
-            if idx % stride != 0:
-                continue
-            fig.add_annotation(
-                x=mid,
-                y=band_y,
-                xref=xref,
-                yref=yref,
-                text=f'<b>{lbl}</b>',
-                showarrow=False,
-                xanchor='center',
-                yanchor='top',
-                font=dict(size=font_size),
-            )
-
-        # Reserve enough bottom margin so the band is never clipped.
-        # Single-chart and faceted both need the expansion because
-        # Plotly's automargin doesn't always count paper-coord
-        # annotations below y=0. Faceted needs more room because the
-        # bottom-row panel band lands outside the figure's data area.
-        current_margin = fig.layout.margin
-        current_b = current_margin.b if current_margin and current_margin.b else 80
-        target_b = 110 if row is None else 130
-        if current_b < target_b:
-            fig.update_layout(margin=dict(b=target_b))
-
-    @staticmethod
-    def _get_block_edges(lane_bounds, n: int) -> list[int] | None:
-        """Extract sorted block edge positions from lane boundary metadata.
-
-        Returns [0, b1, b2, ..., n] or None if no boundaries.
-        """
-        if not lane_bounds:
-            return None
-
-        if isinstance(lane_bounds, list):
-            positions = [b['position'] for b in lane_bounds]
-        elif isinstance(lane_bounds, dict):
-            # Stratified: take boundaries from first stratum
-            first_key = next(iter(lane_bounds))
-            positions = [b['position'] for b in lane_bounds[first_key]]
-        else:
-            return None
-
-        if not positions:
-            return None
-
-        return sorted({0} | set(positions) | {n})
-
-    @staticmethod
-    def _thin_ticks_per_block(
-        block_edges: list[int],
-        n: int,
-        max_ticks: int,
-    ) -> list[int]:
-        """Select evenly-spaced tick positions independently within each block.
-
-        Distributes the tick budget proportionally by block size, with a
-        minimum of 2 ticks (first and last) per block.
-        """
-        n_blocks = len(block_edges) - 1
-        ticks_per_block = max(2, max_ticks // n_blocks)
-        all_positions: set[int] = set()
-
-        for i in range(n_blocks):
-            start = block_edges[i]
-            end = block_edges[i + 1]
-            block_n = end - start
-            if block_n <= 0:
-                continue
-
-            if block_n <= ticks_per_block:
-                block_ticks = list(range(start, end))
-            else:
-                step = max(2, (block_n - 1) // (ticks_per_block - 1))
-                block_ticks = list(range(start, end, step))
-                if end - 1 not in block_ticks:
-                    block_ticks.append(end - 1)
-
-            all_positions.update(block_ticks)
-
-        return sorted(all_positions)
 
     # ---- Y-range / histogram helpers ----
 
