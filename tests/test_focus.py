@@ -210,3 +210,55 @@ class TestStratifiedChartsHaveRsg:
             data = chart_info['data']
             if 'rsg' in data.columns:
                 assert data['rsg'].nunique() == 1, f"Chart '{chart_name}' has data from multiple strata after focus"
+
+
+class TestFocusLaneBoundaries:
+    """focus() must unpack the parent's stratified lane_boundaries dict into
+    the focused stratum's flat list. Without this, the plotter consumed the
+    full dict and silently fell back to the first stratum's positions —
+    producing wrong x-axis tick labels on every non-first focused stratum."""
+
+    def test_focused_metadata_carries_flat_lane_boundaries(self, sds1_study_single_factor):
+        """Focused metadata's `lane_boundaries` is a flat list (or None), never a dict."""
+        result = sds1_study_single_factor.execute(chart='X', by=['factor 1'], companion=True)
+        for stratum in result.strata:
+            focused = result.focus(stratum)
+            for chart_name, chart_info in focused.charts.items():
+                lb = chart_info.get('metadata', {}).get('lane_boundaries')
+                assert lb is None or isinstance(lb, list), (
+                    f"Stratum {stratum!r} chart {chart_name!r}: lane_boundaries "
+                    f"should be flat list or None, got {type(lb).__name__}: {lb!r}"
+                )
+
+    def test_focused_plot_for_each_stratum_renders(self, sds1_study_single_factor):
+        """Each stratum's focused chart plots without raising. Symptom of
+        Bug A: the plotter's defensive guard would reject the dict shape with
+        PlotError before any tick labels could be computed."""
+        result = sds1_study_single_factor.execute(chart='X', by=['factor 1'], companion=True)
+        for stratum in result.strata:
+            focused = result.focus(stratum)
+            for cname in ('X', 'mR'):
+                if cname not in focused.charts:
+                    continue
+                fig = focused.plot(chart=cname)
+                assert fig is not None
+
+    def test_focused_chart_tick_positions_in_range(self, sds1_study_two_factor):
+        """Tick positions on a focused stratum's chart are inside the FOCUSED
+        data's row range. Was the symptom of Bug A: the plotter was using the
+        first stratum's boundaries against the focused stratum's data, which
+        could produce tick positions beyond the focused stratum's row count."""
+        result = sds1_study_two_factor.execute(chart='X', by=['factor 1', 'factor 2'], companion=True)
+        stratum = result.strata[-1]  # non-first stratum
+        focused = result.focus(stratum)
+        fig = focused.plot(chart='X')
+        ax = fig.figure.layout.xaxis
+        if ax.tickvals is None:
+            return  # small categorical case — Plotly handles natively
+        n = len(focused.charts['X']['data'])
+        for pos in ax.tickvals:
+            if isinstance(pos, int):
+                assert 0 <= pos < n, (
+                    f"Tick position {pos} outside focused stratum's [0, {n}) "
+                    f"— likely Bug A regression."
+                )
