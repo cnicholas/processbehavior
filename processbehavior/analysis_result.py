@@ -45,7 +45,6 @@ Access residuals and effects::
 
 from __future__ import annotations
 
-import contextlib
 import logging
 from typing import TYPE_CHECKING, Any, Literal
 
@@ -704,7 +703,7 @@ class AnalysisResult:
         for name, chart_info in self.charts.items():
             yield name, chart_info['data'], chart_info['statistics']
 
-    def chart_table(  # noqa: C901
+    def chart_table(
         self, chart: str | None = None, include_signal_col: bool = True, signal_symbols: bool = True
     ) -> pd.DataFrame:
         """
@@ -727,7 +726,7 @@ class AnalysisResult:
         -------
         pd.DataFrame
             Summary table with columns:
-            - subgroup: Subgroup identifier (RSG)
+            - subgroup: Subgroup identifier (RSG) — when chart_data has rsg
             - n: Number of observations in subgroup
             - value: The statistic value (xbar, s, etc.)
             - center: Center line value
@@ -755,134 +754,14 @@ class AnalysisResult:
 
         >>> result.chart_table('S', signal_symbols=False)
         """
-        # Determine which chart to use
-        chart = self.all_charts[0] if chart is None else self._resolve_chart_name(chart)
+        from .result_tabular import build_chart_table
 
-        if chart not in self.charts:
-            raise ChartNotAvailableError(
-                f"Chart '{chart}' not found. Available charts: {self.all_charts}",
-                chart=chart,
-                available=self.all_charts,
-            )
-
-        # Get chart data
-        chart_data = self.charts[chart]['data'].copy()
-
-        # Identify the value column - try response variable first, then infer
-        value_col = None
-        if self._ads is not None:
-            response_var = self._ads.spec.response_var
-            if response_var in chart_data.columns:
-                value_col = response_var
-
-        # If not found, infer by excluding known non-value columns
-        if value_col is None:
-            meta_cols = {
-                'rsg',
-                'center',
-                'lpl',
-                'upl',
-                'beyond_limits',
-                'n',
-                'N',
-                'obs_id',
-                'x',
-                'pull',
-                'time',
-                'date',
-                'datetime',
-                'rsg_key',
-                'cell_key',
-            }
-            # Also exclude any time variable from spec
-            if self._ads is not None and self._ads.spec.time_var:
-                meta_cols.add(self._ads.spec.time_var)
-
-            value_cols = [c for c in chart_data.columns if c not in meta_cols]
-            # Prefer known statistic columns
-            for preferred in ['xbar', 's', 'mr', 'r']:
-                if preferred in value_cols:
-                    value_col = preferred
-                    break
-            else:
-                value_col = value_cols[0] if value_cols else None
-
-        # Try to add n from analysis dataset if available
-        # Note: n is computed per kt (factor × time) cell, so we need to join
-        # by kt columns, not just factor columns
-        if 'n' not in chart_data.columns and self._ads is not None:
-            ads = self._ads.analysis_dataset
-            spec = self._ads.spec
-            if 'n' in ads.columns:
-                # Build kt join columns (must match columns in chart_data)
-                kt_cols = []
-                if spec.rsg_var_name and spec.rsg_var_name in ads.columns:
-                    # Use rsg if it's in both
-                    rsg_col = 'rsg' if 'rsg' in chart_data.columns else spec.rsg_var_name
-                    if rsg_col in chart_data.columns:
-                        kt_cols.append(spec.rsg_var_name)
-                if spec.has_time and spec.time_var in ads.columns and spec.time_var in chart_data.columns:
-                    kt_cols.append(spec.time_var)
-
-                if kt_cols:
-                    # Get unique n per kt cell
-                    n_per_kt = ads.groupby(kt_cols, observed=True)['n'].first().reset_index()
-                    # Coerce join-key dtypes — chart construction may
-                    # stringify by-columns (e.g. 'PRODUCTION TIME' becomes
-                    # object) while the ads keeps them numeric, which pandas
-                    # refuses to merge. When the dtypes differ on either
-                    # side, cast both sides of every kt column to string so
-                    # values (not just dtypes) line up.
-                    mismatched = any(chart_data[col].dtype != n_per_kt[col].dtype for col in kt_cols)
-                    if mismatched:
-                        for col in kt_cols:
-                            chart_data[col] = chart_data[col].astype(str)
-                            n_per_kt[col] = n_per_kt[col].astype(str)
-                    # Merge to add n; if it still fails, skip the n-join
-                    # rather than killing the entire table.
-                    with contextlib.suppress(ValueError, TypeError):
-                        chart_data = chart_data.merge(n_per_kt, on=kt_cols, how='left')
-
-        # Build output columns in logical order
-        output_cols = []
-        col_renames = {}
-
-        # Subgroup column
-        if 'rsg' in chart_data.columns:
-            output_cols.append('rsg')
-            col_renames['rsg'] = 'subgroup'
-
-        # n column
-        if 'n' in chart_data.columns:
-            output_cols.append('n')
-
-        # Value column
-        if value_col:
-            output_cols.append(value_col)
-            col_renames[value_col] = 'value'
-
-        # Control chart columns
-        for col in ['center', 'lpl', 'upl']:
-            if col in chart_data.columns:
-                output_cols.append(col)
-
-        # Signal column
-        if include_signal_col and 'beyond_limits' in chart_data.columns:
-            output_cols.append('beyond_limits')
-            col_renames['beyond_limits'] = 'signal'
-
-        # Select and rename columns
-        result = chart_data[output_cols].copy()
-        result = result.rename(columns=col_renames)
-
-        # Format signal column
-        if include_signal_col and 'signal' in result.columns and signal_symbols:
-            # Convert -1/0/1 to ↓/blank/↑
-            signal_map = {-1: '↓', 0: '', 1: '↑'}
-            result['signal'] = result['signal'].map(signal_map)
-            # Keep as numeric if signal_symbols=False
-
-        return result.reset_index(drop=True)
+        return build_chart_table(
+            self,
+            chart=chart,
+            include_signal_col=include_signal_col,
+            signal_symbols=signal_symbols,
+        )
 
     def get_signals(self, chart_name: str | None = None) -> pd.DataFrame:
         """
@@ -903,23 +782,9 @@ class AnalysisResult:
         >>> signals = result.get_signals('Xbar')
         >>> all_signals = result.get_signals()  # All charts
         """
-        if chart_name:
-            data = self.get_chart(chart_name)
-            if 'beyond_limits' in data.columns:
-                return data[data['beyond_limits'] != 0]
-            return pd.DataFrame()
+        from .result_tabular import build_signals_table
 
-        # Get signals from all charts
-        all_signals = []
-        for name, data, _ in self.iter_charts():
-            if 'beyond_limits' in data.columns:
-                signals = data[data['beyond_limits'] != 0].copy()
-                signals['chart'] = name
-                all_signals.append(signals)
-
-        if all_signals:
-            return pd.concat(all_signals, ignore_index=True)
-        return pd.DataFrame()
+        return build_signals_table(self, chart=chart_name)
 
     # =========================================================================
     # String representation
