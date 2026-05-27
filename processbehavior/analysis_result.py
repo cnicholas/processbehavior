@@ -987,107 +987,17 @@ class AnalysisResult:
         >>> signals.flagged_observations  # Set of obs_ids
         >>> signals.to_excel('violations.xlsx')
         """
-        from .signals import RuleSet, SignalConfig, SignalDetector
+        from .result_signals import detect_signals_for_result
 
-        # Build configuration
-        if config is None:
-            config = SignalConfig()
-
-            # Handle rules parameter
-            if rules is not None:
-                if isinstance(rules, RuleSet):
-                    config.enabled_rules = rules.get_rules()
-                elif isinstance(rules, (str, list)):
-                    config.enabled_rules = rules
-
-            # Apply kwargs
-            for key, value in kwargs.items():
-                if hasattr(config, key):
-                    setattr(config, key, value)
-
-        # Initialize detector
-        detector = SignalDetector()
-
-        # Detect on specific chart or all charts
-        if chart:
-            chart = self._resolve_chart_name(chart)
-            if chart not in self.charts:
-                raise ChartNotAvailableError(
-                    f"Chart '{chart}' not found.\nAvailable: {self.all_charts}", chart=chart, available=self.all_charts
-                )
-
-            chart_info = self.charts[chart]
-
-            # Extract value column from metadata (required)
-            if 'metadata' not in chart_info:
-                raise ProcessBehaviorError(
-                    f"Chart '{chart}' missing metadata. This indicates a bug in chart calculation."
-                )
-            value_col = chart_info['metadata']['value_col']
-
-            # Get chart type from metadata (preferred) or extract from name
-            chart_type = chart_info['metadata'].get('chart_type', self._extract_chart_type(chart))
-
-            return detector.detect(
-                data=chart_info['data'],
-                stats=chart_info['statistics'],
-                config=config,
-                value_col=value_col,
-                chart_name=chart,
-                chart_type=chart_type,
-            )
-
-        else:
-            # Detect on all charts
-            results = {}
-            for chart_name, chart_info in self.charts.items():
-                # Extract value column from metadata (required)
-                if 'metadata' not in chart_info:
-                    raise ProcessBehaviorError(
-                        f"Chart '{chart_name}' missing metadata. This indicates a bug in chart calculation."
-                    )
-                value_col = chart_info['metadata']['value_col']
-
-                # Get chart type from metadata (preferred) or extract from name
-                chart_type = chart_info['metadata'].get('chart_type', self._extract_chart_type(chart_name))
-
-                results[chart_name] = detector.detect(
-                    data=chart_info['data'],
-                    stats=chart_info['statistics'],
-                    config=config,
-                    value_col=value_col,
-                    chart_name=chart_name,
-                    chart_type=chart_type,
-                )
-
-            return results
+        return detect_signals_for_result(
+            self, chart=chart, rules=rules, config=config, **kwargs
+        )
 
     def _extract_chart_type(self, chart_name: str) -> str:
-        """
-        Extract base chart type from chart name.
+        """Base chart type from a chart name. Delegate for backward compat."""
+        from .result_signals import extract_chart_type
 
-        Handles stratified chart names like 'X_lane_1' -> 'X'.
-
-        Parameters
-        ----------
-        chart_name : str
-            Full chart name
-
-        Returns
-        -------
-        str
-            Base chart type ('Xbar', 'S', 'X', 'mR')
-        """
-        # Common chart type mapping
-        type_mapping = {'Xbar': 'Xbar', 'S': 'S', 'X': 'X', 'mR': 'mR'}
-
-        # Check if chart name starts with a known type
-        for prefix, chart_type in type_mapping.items():
-            if chart_name.startswith(prefix):
-                return chart_type
-
-        # Default to Xbar if unknown
-        return 'Xbar'
+        return extract_chart_type(chart_name)
 
     def plot(
         self,
