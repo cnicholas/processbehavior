@@ -97,6 +97,9 @@ source = ["processbehavior"]
 branch = true
 
 [tool.coverage.report]
+# Coverage floor. Currently ~82%; setting to 80 leaves a small safety
+# margin while preventing regression. Raise as coverage improves.
+fail_under = 80
 exclude_lines = [
   "pragma: no cover",
   "raise NotImplementedError",
