@@ -114,7 +114,9 @@ class AnalysisDataSet:
         if needs_residuals:
             logger.debug('Calculating VAS residuals (R1-R5)')
 
-            # Get R2 method based on observed tidy structure (not raw SDS)
+            # _compute_structure_stats() ran above; structure_stats is populated.
+            if self._structure_stats is None:
+                raise RuntimeError('_structure_stats not populated; _compute_structure_stats must run first')
             r2_method = self._sds_registry.get_r2_method(self._structure_stats)
             logger.debug(f'Using R2 method: {r2_method}')
 
@@ -283,6 +285,8 @@ class AnalysisDataSet:
         The ADS drives analysis decisions: valid charts, residual
         availability, R2 method, and interaction method selection.
         """
+        if self._ads_result is None:
+            raise RuntimeError('_ads_result not populated; __init__ must complete first')
         return self._ads_result
 
     @property

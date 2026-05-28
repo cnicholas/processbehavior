@@ -203,4 +203,18 @@ disable_error_code = [
     "misc",                # Miscellaneous type issues
 ]
 
+# Per-module overrides that re-enable safety-relevant error codes for
+# already-clean modules. Each module listed here has been verified to
+# pass under arg-type/return-value/assignment; the global disable below
+# stays for the remaining modules until they're cleaned up too.
+# Add a module to this list whenever it passes the targeted checks.
+[[tool.mypy.overrides]]
+module = [
+    "processbehavior.exceptions",
+    "processbehavior.formulation_spec",
+    "processbehavior.spc_constants",
+    "processbehavior.analysis_dataset",
+]
+enable_error_code = ["arg-type", "return-value", "assignment"]
+
 # Note: Can gradually re-enable strict mode per module as types are added
