@@ -241,6 +241,47 @@ def _build_ungrouped_mr_payload(
     }
 
 
+# Chart dispatch tables — added by analysis type and companion mode.
+# Values are method names on Analysis; the orchestrator calls
+# `getattr(self, name)(...)` so this stays a single source of truth for
+# "which method handles this chart type?". Adding a new chart type
+# becomes adding two rows.
+_COMPANION_STRATEGY_MAP: dict[str, str] = {
+    'Xbar': '_calculate_xbar_s',
+    'S': '_calculate_xbar_s',
+    'X': '_calculate_xmr_r',
+    'mR': '_calculate_xmr_r',
+    'Histogram': '_calculate_histogram',  # no companion exists; degrade to standalone
+}
+
+_SOLO_STRATEGY_MAP: dict[str, str] = {
+    'Xbar': '_calculate_xbar',
+    'S': '_calculate_s',
+    'X': '_calculate_xmr',
+    'mR': '_calculate_r',
+    'Histogram': '_calculate_histogram',
+}
+
+# Residual charts call the companion-style methods (Xbar_S / Xmr_R)
+# when companion=True, the solo methods otherwise. Only Histogram
+# differs from _SOLO_STRATEGY_MAP — residual context uses the same
+# four base entry points.
+_RESIDUAL_COMPANION_STRATEGY_MAP: dict[str, str] = {
+    'Xbar': '_calculate_xbar_s',
+    'S': '_calculate_xbar_s',
+    'X': '_calculate_xmr_r',
+    'mR': '_calculate_xmr_r',
+    'Histogram': '_calculate_histogram',
+}
+
+_RESIDUAL_SOLO_STRATEGY_MAP: dict[str, str] = {
+    'Xbar': '_calculate_xbar',
+    'S': '_calculate_s',
+    'X': '_calculate_xmr',
+    'Histogram': '_calculate_histogram',
+}
+
+
 class Analysis:
     """
     Unified analysis class handling all chart types via strategy pattern.
@@ -372,59 +413,33 @@ class Analysis:
                 'R5': 'Do factors have a significant effect?',
             }
 
-            # Calculate using base method with value_col
+            # Dispatch to the appropriate residual-chart calculator via registry.
             companion = self.request.companion
-            if companion:
-                residual_strategies = {
-                    'Xbar': self._calculate_xbar_s,
-                    'S': self._calculate_xbar_s,
-                    'X': self._calculate_xmr_r,
-                    'mR': self._calculate_xmr_r,
-                    'Histogram': self._calculate_histogram,
-                }
-            else:
-                residual_strategies = {
-                    'Xbar': self._calculate_xbar,
-                    'S': self._calculate_s,
-                    'X': self._calculate_xmr,
-                    'Histogram': self._calculate_histogram,
-                }
-            chart_data = residual_strategies[chart_type](value_col=col_name)
+            registry = _RESIDUAL_COMPANION_STRATEGY_MAP if companion else _RESIDUAL_SOLO_STRATEGY_MAP
+            method_name = registry.get(chart_type)
+            if method_name is None:
+                raise ChartNotAvailableError(
+                    f"Chart type '{chart_type}' not supported for residual charts.\n"
+                    f'Valid types: {", ".join(sorted(registry))}',
+                    chart=chart_type,
+                    available=sorted(registry),
+                )
+            chart_data = getattr(self, method_name)(value_col=col_name)
             chart_data = self._add_residual_metadata(chart_data, residual, recentered, questions)
 
         else:
-            # Standard chart analysis
-            # Check if companion charts requested (Xbar+S or X+mR together)
+            # Standard chart analysis — registry dispatch by chart type and companion mode.
             companion = self.request.companion
-
-            if companion:
-                # Companion mode: return both charts regardless of which was requested
-                strategies = {
-                    'Xbar': self._calculate_xbar_s,
-                    'S': self._calculate_xbar_s,
-                    'X': self._calculate_xmr_r,  # Bundled X+mR
-                    'mR': self._calculate_xmr_r,
-                    'Histogram': self._calculate_histogram,  # No companion for Histogram
-                }
-            else:
-                # SRP-compliant mode: return only the requested chart
-                strategies = {
-                    'Xbar': self._calculate_xbar,
-                    'S': self._calculate_s,
-                    'X': self._calculate_xmr,  # SRP: X only
-                    'mR': self._calculate_r,  # SRP: mR only
-                    'Histogram': self._calculate_histogram,
-                }
-
-            if self.analysis_type not in strategies:
+            registry = _COMPANION_STRATEGY_MAP if companion else _SOLO_STRATEGY_MAP
+            method_name = registry.get(self.analysis_type)
+            if method_name is None:
                 raise ChartNotAvailableError(
-                    f'Analysis type {self.analysis_type} not supported! Valid types: {list(strategies.keys())}',
+                    f'Analysis type {self.analysis_type} not supported! '
+                    f'Valid types: {list(registry.keys())}',
                     chart=self.analysis_type,
-                    available=list(strategies.keys()),
+                    available=list(registry.keys()),
                 )
-
-            # Execute analysis strategy
-            chart_data = strategies[self.analysis_type]()
+            chart_data = getattr(self, method_name)()
 
         # Wrap in AnalysisResult for unified access
         # Pass analysis_type so result.summary reports the executed chart type, not the recommended one
