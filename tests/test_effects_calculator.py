@@ -25,6 +25,7 @@ from processbehavior.effects_calculator import (
     calculate_pdc_by_time_sds2,
     calculate_time_main_effects,
 )
+from processbehavior.exceptions import ValidationError
 from processbehavior.formulation_spec import FormulationSpec
 
 # ============================================================================
@@ -135,7 +136,7 @@ def test_calculate_factor_main_effects_raises_if_no_r5():
     """Should raise helpful error if R5 missing."""
     df = pd.DataFrame({'lane': ['A', 'B'], 'weight': [10.0, 9.0]})
 
-    with pytest.raises(ValueError, match='R5 column missing'):
+    with pytest.raises(ValidationError, match='R5 column missing'):
         calculate_factor_main_effects(df, 'lane')
 
 
@@ -143,7 +144,7 @@ def test_calculate_factor_main_effects_raises_if_factor_missing():
     """Should raise helpful error if factor not found."""
     df = pd.DataFrame({'lane': ['A', 'B'], 'R5': [0.1, -0.1]})
 
-    with pytest.raises(ValueError, match="Factor 'missing' not found"):
+    with pytest.raises(ValidationError, match="Factor 'missing' not found"):
         calculate_factor_main_effects(df, 'missing')
 
 
@@ -185,7 +186,7 @@ def test_calculate_time_main_effects_raises_if_no_r4():
     """Should raise helpful error if R4 missing."""
     df = pd.DataFrame({'pull': [1, 2], 'weight': [10.0, 9.0]})
 
-    with pytest.raises(ValueError, match='R4 column missing'):
+    with pytest.raises(ValidationError, match='R4 column missing'):
         calculate_time_main_effects(df, 'pull')
 
 
@@ -215,7 +216,7 @@ def test_calculate_main_effect_scores_raises_if_no_r2():
     df = pd.DataFrame({'lane': ['A', 'B']})
     main_effects = pd.DataFrame({'lane': ['A', 'B'], 'Main_Effect': [0.1, -0.1]})
 
-    with pytest.raises(ValueError, match='R2 column missing'):
+    with pytest.raises(ValidationError, match='R2 column missing'):
         calculate_main_effect_scores(df, 'lane', main_effects)
 
 
@@ -249,7 +250,7 @@ def test_calculate_interaction_cell_means_raises_if_no_r3():
     """Should raise helpful error if R3 missing."""
     df = pd.DataFrame({'lane': ['A', 'B'], 'pull': [1, 2]})
 
-    with pytest.raises(ValueError, match='R3 column missing'):
+    with pytest.raises(ValidationError, match='R3 column missing'):
         calculate_interaction_cell_means(df, ['lane'], 'pull')
 
 
@@ -394,7 +395,7 @@ def test_calculate_all_effects_raises_if_missing_residuals(calc, spec_single_fac
     """Should raise helpful error if residuals missing."""
     df = pd.DataFrame({'lane': ['A', 'B'], 'weight': [10.0, 9.0]})
 
-    with pytest.raises(ValueError, match='missing residuals'):
+    with pytest.raises(ValidationError, match='missing residuals'):
         calc.calculate_all_effects(df, spec_single_factor)
 
 

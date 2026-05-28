@@ -9,6 +9,7 @@ import pytest
 
 from processbehavior import ProcessBehavior
 from processbehavior.datasets.synthetic import make_sds
+from processbehavior.exceptions import ValidationError
 
 
 class TestSyntheticStructure:
@@ -147,7 +148,7 @@ class TestConvenienceFunction:
 
     def test_make_sds_invalid_type(self):
         """make_sds() should raise ValueError for invalid SDS type."""
-        with pytest.raises(ValueError, match='not implemented'):
+        with pytest.raises(ValidationError, match='not implemented'):
             make_sds(99, seed=42)
 
     def test_make_sds_kwargs_passthrough(self):
@@ -176,7 +177,7 @@ class TestFactorNames:
 
     def test_factor_names_wrong_length_raises(self):
         """Wrong number of factor names should raise ValueError."""
-        with pytest.raises(ValueError, match='must equal K1'):
+        with pytest.raises(ValidationError, match='must equal K1'):
             make_sds(1, K1=3, K2=2, T=4, factor1_names=['A', 'B'], seed=42)
 
 
