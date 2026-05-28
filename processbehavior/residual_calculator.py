@@ -75,7 +75,7 @@ def calculate_grand_mean(df: pd.DataFrame, response_var: str) -> float:
     return df[response_var].mean()
 
 
-def calculate_factor_means(df: pd.DataFrame, response_var: str, rsg_var: str) -> pd.Series:
+def calculate_factor_means(df: pd.DataFrame, response_var: str, rsg_var_name: str) -> pd.Series:
     """
     Calculate factor-level means (Ȳ_k) - average for each factor level.
 
@@ -87,8 +87,8 @@ def calculate_factor_means(df: pd.DataFrame, response_var: str, rsg_var: str) ->
         Input data
     response_var : str
         Name of response variable
-    rsg_var : str
-        Name of rational subgroup variable
+    rsg_var_name : str
+        Name of the composite rational subgroup column (e.g., 'rsg')
 
     Returns
     -------
@@ -108,7 +108,7 @@ def calculate_factor_means(df: pd.DataFrame, response_var: str, rsg_var: str) ->
     3     9.25
     Name: weight, dtype: float64
     """
-    return df.groupby(rsg_var, observed=True)[response_var].transform('mean')
+    return df.groupby(rsg_var_name, observed=True)[response_var].transform('mean')
 
 
 def calculate_time_means(df: pd.DataFrame, response_var: str, time_var: str) -> pd.Series:
@@ -147,7 +147,7 @@ def calculate_time_means(df: pd.DataFrame, response_var: str, time_var: str) -> 
     return df.groupby(time_var, observed=True)[response_var].transform('mean')
 
 
-def calculate_cell_means(df: pd.DataFrame, response_var: str, rsg_var: str, time_var: str) -> pd.Series:
+def calculate_cell_means(df: pd.DataFrame, response_var: str, rsg_var_name: str, time_var: str) -> pd.Series:
     """
     Calculate cell means (Ȳ_kt) - average for each (factor × time) cell.
 
@@ -159,8 +159,8 @@ def calculate_cell_means(df: pd.DataFrame, response_var: str, rsg_var: str, time
         Input data
     response_var : str
         Name of response variable
-    rsg_var : str
-        Name of rational subgroup variable
+    rsg_var_name : str
+        Name of the composite rational subgroup column (e.g., 'rsg')
     time_var : str
         Name of time variable
 
@@ -183,7 +183,7 @@ def calculate_cell_means(df: pd.DataFrame, response_var: str, rsg_var: str, time
     3     9.25
     Name: weight, dtype: float64
     """
-    return df.groupby([rsg_var, time_var], observed=True)[response_var].transform('mean')
+    return df.groupby([rsg_var_name, time_var], observed=True)[response_var].transform('mean')
 
 
 # ============================================================================

@@ -80,6 +80,32 @@ The primary user is the analyst. The API must be simple, mirror how analysts thi
 - Natural Process Limits ≠ Specification Limits
 - XmR = IMR (Individual Moving Range)
 
+### Vocabulary (canonical internal names — reject new aliases at review)
+
+The codebase had eight overlapping terms for two underlying concepts. Pick from these names; do not introduce new spellings.
+
+**Rational subgrouping (the "what factors compose the subgroup" question):**
+- `rsg_vars : tuple[str, ...] | None` — the canonical attribute on `FormulationSpec`. Tuple of factor column names that compose the rational subgroup.
+- `spec.rsg_vars_list : list[str]` — property that converts to a list (empty when None). Use this when you need to pass to pandas as a list. Don't recreate `list(spec.rsg_vars or ())` in callers.
+- `rsg_var_name : str` — the **column name** of the composite rsg column (default `'rsg'`). A NAMING concept, not a content one. Used as a `groupby` key. Don't shorten to `rsg_var` — that conflates with `rsg_vars`.
+- `rsg_key : str` — the **value** of the rsg column for a row (e.g., `'1_2'`). Not a name, not a list.
+
+**Stratification (the "separate into charts" question):**
+- `stratify_by : list[str] | tuple[str, ...]` — the list of column names to stratify on. User-facing parameter shape.
+- `stratify_col : str` — the **single composite output column** that holds the stratification key (often `'rsg'`, sometimes `'_stratify_key'` for multi-factor strata). Different concept from `stratify_by`.
+- `stratum : str` — one stratum identifier value.
+- `strata : list[str]` — collection of stratum identifier values.
+- Bare `stratify` is fine only in prose/docstrings as a verb; do not use it as an identifier.
+
+**Grain markers (factor × time):**
+- `cell_key : tuple` — the (factor, time) tuple identifying one cell in the analysis grid.
+- `kt_cols : list[str]` — list of column names that together form the factor × time grain. (`k` = factor index, `t` = time index — Bishop notation.)
+
+**Plot visuals:**
+- `lane` — an X-chart vertical-divider concept (visual only); see `processbehavior/plotting/lane_boundaries.py` and `x_axis_layout.py`. Not a grouping concept.
+
+When you see existing code using a non-canonical alias and you're touching nearby lines, rename in passing. Don't introduce new aliases.
+
 ### Docs
 - Jupyter Book / MyST is the only doc system. Config: `docs/myst.yml`. The previous `mkdocs.yml` was deleted in Phase 2; do not restore it.
 - Root `CHANGELOG.md` is the source of truth — `docs/appendix/changelog.md` is a `{include}` of it.
