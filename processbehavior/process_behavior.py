@@ -296,6 +296,57 @@ class ColumnAccessor:
         return list(self._attr_to_col.keys())
 
 
+# ---------------------------------------------------------------------------
+# formulate() helpers (module-level so they're easy to test in isolation)
+# ---------------------------------------------------------------------------
+
+
+def _validate_factors_or_plan_args(
+    factors: list | None, plan: dict | None
+) -> None:
+    """Enforce the factors XOR plan contract for formulate().
+
+    Both None is rejected (Bishop's design states require a factor × time
+    grid). Both provided is rejected (ambiguous source of factor structure).
+    """
+    if factors is not None and plan is not None:
+        raise ValidationError(
+            "Cannot specify both 'factors' and 'plan'. Use either:\n"
+            '  • factors=[...] to infer structure from observed data (complete designs)\n'
+            '  • plan={col: [levels], ...} to specify expected structure (complete + incomplete designs)'
+        )
+    if factors is None and plan is None:
+        raise ValidationError(
+            'Cannot analyze response-only data without grouping structure.\n\n'
+            "Bishop's design states (codes 1-6) require a factor × time grid.\n"
+            'Please specify:\n'
+            '  - factors: categorical variables defining subgroups (e.g., Machine, Operator)\n'
+            '  - plan: expected factor levels for detecting incomplete designs\n\n'
+            'See documentation for examples of proper study formulation.'
+        )
+
+
+def _compute_pds(
+    detector: SDSRegistry,
+    sampling_plan: dict[str, list] | None,
+    T_planned: int | None,
+    N_planned: int | None,
+) -> SDSResult | None:
+    """Compute the Plan Design State (PDS) when a sampling plan was supplied.
+
+    PDS is `None` when no plan exists or any of T/N are missing — in that
+    case the study has only an ODS (observed) and ADS (analytical) state.
+    """
+    if sampling_plan is None or T_planned is None or N_planned is None:
+        return None
+    from math import prod
+
+    K = prod(len(v) for v in sampling_plan.values())
+    pds = detector.classify_from_plan(K, T_planned, N_planned)
+    logger.debug('PDS: SDS %s (%s)', pds.sds, pds.reason)
+    return pds
+
+
 class ProcessBehavior:
     """
     Main entry point for process behavior analysis with auto-completion.
@@ -778,48 +829,22 @@ class ProcessBehavior:
         Study : The returned Study object
         ColumnRef : Column reference with .levels property for discoverability
         """
+        from .analysis_dataset import AnalysisDataSet
+        from .data_preparation import DataPreparation
         from .study import Study
 
-        # Mutual exclusion: factors OR plan, not both
-        if factors is not None and plan is not None:
-            raise ValidationError(
-                "Cannot specify both 'factors' and 'plan'. Use either:\n"
-                '  • factors=[...] to infer structure from observed data (complete designs)\n'
-                '  • plan={col: [levels], ...} to specify expected structure (complete + incomplete designs)'
-            )
+        # 1. Validate the factors/plan combination + presence.
+        _validate_factors_or_plan_args(factors, plan)
 
-        # Require at least one of factors or plan
-        if factors is None and plan is None:
-            raise ValidationError(
-                'Cannot analyze response-only data without grouping structure.\n\n'
-                "Bishop's design states (codes 1-6) require a factor × time grid.\n"
-                'Please specify:\n'
-                '  - factors: categorical variables defining subgroups (e.g., Machine, Operator)\n'
-                '  - plan: expected factor levels for detecting incomplete designs\n\n'
-                'See documentation for examples of proper study formulation.'
-            )
-
-        # Normalize column names from ColumnRef to str
+        # 2. Normalize inputs into (response_str, time_str, factors_str,
+        #    sampling_plan, factor_order, T_planned, N_planned).
         response_str = self._to_column_name(response)
         time_str = self._to_column_name(time) if time is not None else None
+        factors_str, sampling_plan, factor_order, T_planned, N_planned = (
+            self._resolve_factors_and_plan(factors, plan)
+        )
 
-        # Process plan or factors
-        sampling_plan: dict[str, list] | None = None
-        factor_order: list[str] | None = None
-        factors_str: list[str] | None = None
-        T_planned: int | None = None
-        N_planned: int | None = None
-
-        if plan is not None:
-            # Validate and normalize the plan
-            sampling_plan, factor_order, T_planned, N_planned = self._validate_plan(plan)
-            # Extract factors from plan keys
-            factors_str = factor_order
-        elif factors is not None:
-            # Normalize factors list
-            factors_str = [self._to_column_name(f) for f in factors]
-
-        # Create FormulationSpec directly — no dict intermediary
+        # 3. Build the FormulationSpec and validate columns (fail fast).
         spec = FormulationSpec(
             response_var=response_str,
             rsg_vars=tuple(factors_str) if factors_str else None,
@@ -827,48 +852,33 @@ class ProcessBehavior:
             round_to=precision,
             unit_of_analysis=unit_of_analysis,
         )
+        DataPreparation().validate_columns(self.data, spec)
 
-        # Validate columns early (fail fast)
-        from .data_preparation import DataPreparation
-
-        prep = DataPreparation()
-        prep.validate_columns(self.data, spec)
-
-        # SDS detection runs FIRST on raw data (response NA rows preserved)
-        # This matches Tom Bishop's Minitab approach: cells with all-NA responses
-        # still count as "attempted" cells, revealing the true intended structure.
+        # 4. SDS detection on raw data (NA response rows preserved so
+        #    cells with all-NA responses still count as attempted —
+        #    matches Bishop's Minitab approach).
         detector = SDSRegistry()
         sds_result = detector.detect_sds_from_structure(
-            self.data,  # Raw data (NA rows still present)
+            self.data,
             spec,
             response_col=response_str,
             plan=sampling_plan,
             T_planned=T_planned,
         )
 
-        # Compute Plan Design State (PDS) if a plan was provided
-        pds_result: SDSResult | None = None
-        if sampling_plan is not None and T_planned is not None and N_planned is not None:
-            from math import prod
+        # 5. Plan Design State (PDS) — only when a plan was supplied.
+        pds_result = _compute_pds(detector, sampling_plan, T_planned, N_planned)
 
-            K = prod(len(v) for v in sampling_plan.values())
-            pds_result = detector.classify_from_plan(K, T_planned, N_planned)
-            logger.debug(f'PDS: SDS {pds_result.sds} ({pds_result.reason})')
-
-        # Calculate full dataset with residuals (R1-R5, RCR1-RCR5)
-        # ADS is chart-agnostic — chart-specific params live in ChartRequest at execute() time
-        # Pass ODS for diagnostic logging; ADS is computed internally on tidy data
-        from .analysis_dataset import AnalysisDataSet
-
+        # 6. Calculate the full AnalysisDataSet (residuals R1-R5, RCR1-RCR5).
+        #    ADS is chart-agnostic — chart-specific params live in ChartRequest.
         ads = AnalysisDataSet(self.data, spec, observed_sds=sds_result.sds)
 
-        # ADS drives analysis: build analysis_plan from ADS (not ODS)
+        # 7. ADS drives analysis: build analysis_plan from ADS, not ODS.
         analysis_plan = SDSRegistry.get_analysis_plan(
-            ads.analytical_design_state.sds, min_cell_size=ads.analytical_design_state.min_cell_size
+            ads.analytical_design_state.sds,
+            min_cell_size=ads.analytical_design_state.min_cell_size,
         )
 
-        # Create and return Study object with pre-calculated AnalysisDataSet
-        # This enables execute() to reuse the expensive calculation
         return Study(
             _pdf=self,
             _spec=spec,
@@ -881,6 +891,28 @@ class ProcessBehavior:
             _sds_result=sds_result,
             _pds_result=pds_result,
         )
+
+    def _resolve_factors_and_plan(
+        self,
+        factors: list[str | ColumnRef] | None,
+        plan: dict | None,
+    ) -> tuple[list[str] | None, dict[str, list] | None, list[str] | None, int | None, int | None]:
+        """Normalize factors/plan inputs to the tuple formulate() consumes.
+
+        Exactly one of `factors` or `plan` is non-None (enforced by the
+        caller). Returns `(factors_str, sampling_plan, factor_order,
+        T_planned, N_planned)`.
+
+        - `plan` path: delegates to `_validate_plan` for normalization and
+          extracts T_planned/N_planned.
+        - `factors` path: simple ColumnRef → str normalization; the
+          sampling-plan slots stay None.
+        """
+        if plan is not None:
+            sampling_plan, factor_order, T_planned, N_planned = self._validate_plan(plan)
+            return factor_order, sampling_plan, factor_order, T_planned, N_planned
+        factors_str = [self._to_column_name(f) for f in factors] if factors else None
+        return factors_str, None, None, None, None
 
     def __repr__(self) -> str:
         """String representation."""
