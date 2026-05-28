@@ -818,7 +818,7 @@ class Analysis:
     # =========================================================================
 
     def _calculate_xbar(  # noqa: C901
-        self, value_col: str = None, _return_intermediates: bool = False
+        self, value_col: str | None = None, _return_intermediates: bool = False
     ) -> dict:
         """
         Calculate Xbar (mean) chart statistics.
@@ -1351,7 +1351,7 @@ class Analysis:
         }
 
     def _calculate_s(  # noqa: C901
-        self, value_col: str = None, _precomputed: dict = None
+        self, value_col: str | None = None, _precomputed: dict | None = None
     ) -> dict:
         """
         Calculate S (standard deviation) chart statistics.
@@ -1539,7 +1539,7 @@ class Analysis:
             }
         }
 
-    def _calculate_xbar_s(self, value_col: str = None) -> dict[str, ChartPayload]:
+    def _calculate_xbar_s(self, value_col: str | None = None) -> dict[str, ChartPayload]:
         """
         Calculate Xbar and S charts together (Bishop methodology).
 
@@ -1594,9 +1594,9 @@ class Analysis:
     def _calculate_mr_chart(
         self,
         mr_spec: _MRChartSpec,
-        value_col: str = None,
+        value_col: str | None = None,
         _return_intermediates: bool = False,
-        _precomputed: dict = None,
+        _precomputed: dict | None = None,
     ) -> dict:
         """
         Shared pipeline for MR-family charts (X and mR).
@@ -1720,7 +1720,8 @@ class Analysis:
             )
 
             # Re-detect beyond limits
-            assert plot_col in out.columns, f'plot_col {plot_col!r} not in DataFrame'
+            if plot_col not in out.columns:
+                raise RuntimeError(f"plot_col {plot_col!r} not in DataFrame")
             out = self._add_beyond_limits_flag(out, value_col=plot_col)
 
             # Format output
@@ -1934,7 +1935,8 @@ class Analysis:
             # 7. Phased path: NEVER drop rows. NaN mR at phase boundaries preserved.
 
             # 8. Signal detection (per-row, uses row-level lpl/upl)
-            assert plot_col in out.columns, f'plot_col {plot_col!r} not in DataFrame'
+            if plot_col not in out.columns:
+                raise RuntimeError(f"plot_col {plot_col!r} not in DataFrame")
             out = self._add_beyond_limits_flag(out, value_col=plot_col)
 
             # 9. Lane boundaries per stratum
@@ -2177,7 +2179,8 @@ class Analysis:
 
                 # Re-detect beyond limits
                 out = out.drop(columns=['beyond_limits'], errors='ignore')
-                assert plot_col in out.columns, f'plot_col {plot_col!r} not in DataFrame'
+                if plot_col not in out.columns:
+                    raise RuntimeError(f"plot_col {plot_col!r} not in DataFrame")
                 out = self._add_beyond_limits_flag(out, value_col=plot_col)
 
                 chart_out = self._build_output_columns(
@@ -2329,7 +2332,8 @@ class Analysis:
             #    stay in the DataFrame. Plotly skips NaN naturally.
 
             # 8. Signal detection (per-row, uses row-level lpl/upl)
-            assert plot_col in out.columns, f'plot_col {plot_col!r} not in DataFrame'
+            if plot_col not in out.columns:
+                raise RuntimeError(f"plot_col {plot_col!r} not in DataFrame")
             out = self._add_beyond_limits_flag(out, value_col=plot_col)
 
             # 9. Format output
@@ -2449,7 +2453,7 @@ class Analysis:
 
     def _calculate_xmr(
         self,
-        value_col: str = None,
+        value_col: str | None = None,
         _return_intermediates: bool = False,
     ) -> dict:
         """
@@ -2477,8 +2481,8 @@ class Analysis:
 
     def _calculate_r(
         self,
-        value_col: str = None,
-        _precomputed: dict = None,
+        value_col: str | None = None,
+        _precomputed: dict | None = None,
     ) -> dict:
         """
         Calculate mR (Moving Range) chart statistics.
@@ -2503,7 +2507,7 @@ class Analysis:
             _precomputed=_precomputed,
         )
 
-    def _calculate_xmr_r(self, value_col: str = None) -> dict[str, ChartPayload]:
+    def _calculate_xmr_r(self, value_col: str | None = None) -> dict[str, ChartPayload]:
         """
         Calculate X and mR charts together (Bishop methodology).
 
@@ -2533,7 +2537,7 @@ class Analysis:
         # Combine results
         return {**xmr_result, **r_result}
 
-    def _calculate_histogram(self, value_col: str = None) -> dict[str, ChartPayload]:
+    def _calculate_histogram(self, value_col: str | None = None) -> dict[str, ChartPayload]:
         """
         Calculate histogram data with mean/std statistics.
 
