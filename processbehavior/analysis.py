@@ -388,9 +388,9 @@ class Analysis:
         weight per cell — yielding Bishop's unweighted center line.
 
         Grain table (None for non-residuals; falls through to other logic):
-          R1, R2, R3 -> [rsg_var, time_var]   (full cell grid)
-          R4         -> [rsg_var]             (time effect removed)
-          R5, R6     -> [rsg_var]             (factor effects live at rsg level)
+          R1, R2, R3 -> [rsg_var_name, time_var]   (full cell grid)
+          R4         -> [rsg_var_name]             (time effect removed)
+          R5, R6     -> [rsg_var_name]             (factor effects live at rsg level)
 
         Returns an empty list when the column isn't a residual or the spec
         lacks the required factors/time — caller falls back to `df.mean()`.
