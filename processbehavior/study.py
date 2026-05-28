@@ -1831,8 +1831,47 @@ class Study:
         """
         # Import here to avoid circular imports
         from .analysis import Analysis
+        from .formulation_spec import ChartRequest
 
-        # Determine chart type
+        # 1. Resolve chart name (None → recommended, basic shape check).
+        base_chart = self._resolve_execute_chart(chart)
+
+        # 2. Run all parameter validation; resolve by/value/is_residual.
+        by_validated, value_col, is_residual = self._validate_execute_request(
+            base_chart=base_chart,
+            by=by,
+            value=value,
+            recentered=recentered,
+            companion=companion,
+            bins=bins,
+            phased=phased,
+            n_sigma=n_sigma,
+            n_mode=n_mode,
+        )
+
+        # 3. Build ephemeral request and dispatch to Analysis.
+        request = ChartRequest(
+            chart=base_chart,
+            by=tuple(by_validated) if by_validated is not None else None,
+            value_col=value_col,
+            residual=value.upper() if is_residual else None,
+            residual_chart_type=base_chart if is_residual else None,
+            recentered=recentered,
+            companion=companion,
+            bins=bins,
+            phased=phased,
+            n_sigma=n_sigma,
+            n_mode=n_mode,
+        )
+        analysis = Analysis(self._spec, request, analysis_dataset=self._ads)
+        return analysis.calculate()
+
+    def _resolve_execute_chart(self, chart: str | None) -> str:
+        """Resolve the requested chart name to a base chart type.
+
+        None → `recommended_chart` (or raise if none available).
+        Validates basic shape and parses through `_parse_chart_request`.
+        """
         if chart is None and self.recommended_chart is None:
             raise ValidationError(
                 'No charts available: no valid observations after data cleaning. '
@@ -1841,37 +1880,58 @@ class Study:
         if chart is not None and (not isinstance(chart, str) or chart == ''):
             raise ValidationError('Chart name must be a non-empty string')
         chart_request = chart or self.recommended_chart
+        return self._parse_chart_request(chart_request)
 
-        # Parse and validate chart request (returns base chart type only)
-        base_chart = self._parse_chart_request(chart_request)
+    def _validate_execute_request(  # noqa: C901
+        self,
+        *,
+        base_chart: str,
+        by: list[str] | None,
+        value: str | None,
+        recentered: bool,
+        companion: bool,
+        bins: int | None,
+        phased: bool,
+        n_sigma: float,
+        n_mode: str,
+    ) -> tuple[list[str] | None, str | None, bool]:
+        """Run all execute() parameter validation; resolve by/value/is_residual.
 
-        # Validate by parameter (may raise ValidationError)
+        Returns
+        -------
+        by_validated : list[str] | None
+            The `by=` argument after validation. May be replaced with `[]`
+            for Histogram (full-distribution default).
+        value_col : str | None
+            The column name to chart (response or residual).
+        is_residual : bool
+            True when `value` requests a residual.
+
+        Raises
+        ------
+        ValidationError, ChartNotAvailableError
+            Any user-facing validation failure.
+        """
+        # by= validation (may raise)
         by_validated = self._validate_by_parameter(by, base_chart)
 
-        # Recentered validation - only R1-R5 allowed with recentered=True
         if recentered:
             self._validate_recentered(value)
-
-        # Phased limits validation
         if phased:
             self._validate_phased(base_chart, by_validated)
 
-        # companion + Histogram — no companion chart exists for Histogram
         if companion and base_chart == 'Histogram':
             raise ValidationError('companion is not applicable to Histogram charts.')
-
-        # bins + non-Histogram — bins only makes sense for Histogram
         if bins is not None and base_chart != 'Histogram':
             raise ValidationError(f"bins is only applicable to Histogram charts, not '{base_chart}'.")
 
-        # n_sigma / n_mode validation
         self._validate_n_sigma_n_mode(n_sigma, n_mode, base_chart)
 
-        # For Histogram chart, default by=[] if not specified (full distribution)
+        # Histogram with by=None defaults to the full distribution.
         if base_chart == 'Histogram' and by is None:
             by_validated = []
 
-        # Primary chart validation
+        # Primary chart-vs-ADS validation.
         if base_chart not in self.valid_charts:
             available_list = list(self.valid_charts)
             raise ChartNotAvailableError(
@@ -1883,22 +1943,23 @@ class Study:
                 available=available_list,
             )
 
-        # Resolve value column (response or residual)
+        # Resolve value column (response or residual; R6 has its own compute path).
         if value is not None and value.upper() == 'R6':
             value_col = self._compute_r6(by_validated, recentered)
         else:
             value_col = self._resolve_value_column(value, recentered)
 
-        # Validate residual availability if charting a residual
-        # Skip validation for Histogram - histograms can plot any available numeric column
+        is_residual = value is not None and value.upper().startswith('R')
+
+        # Validate residual availability (Histogram exempt — plots any numeric column).
         if (
-            value is not None
-            and value.upper().startswith('R')
+            is_residual
             and base_chart != 'Histogram'
             and value_col not in self._ads.analysis_dataset.columns
         ):
             available_residuals = [
-                c for c in self._ads.analysis_dataset.columns if c.upper().startswith('R') and c[1:2].isdigit()
+                c for c in self._ads.analysis_dataset.columns
+                if c.upper().startswith('R') and c[1:2].isdigit()
             ]
             raise ChartNotAvailableError(
                 f"Residual column '{value_col}' not found in the dataset "
@@ -1909,15 +1970,10 @@ class Study:
                 available=available_residuals,
             )
 
-        # Determine if this is a residual chart
-        is_residual = value is not None and value.upper().startswith('R')
-
-        # Validate (chart, value) combo against ADS mapping
-        # Histogram is exempt — can plot any residual
-        # mR chart is handled separately below (requires companion)
-        # R1 is exempt — total deviation, not a structured method of analysis
+        # Validate (chart, value) combo against ADS mapping.
+        # Histogram is exempt (any residual); mR is handled separately
+        # below (requires companion); R1 is exempt (total deviation).
         if is_residual and base_chart not in ('Histogram', 'mR'):
-            # Extract base residual: RCR5 → R5, R5 → R5
             val_upper = value.upper()
             base_residual = val_upper[2:] if val_upper.startswith('RCR') else val_upper
             if base_residual != 'R1' and (base_chart, base_residual) not in self.residual_charts:
@@ -1939,27 +1995,7 @@ class Study:
                 f"study.execute(chart='mR', value='{value}', companion=True)"
             )
 
-        # Build chart request (ephemeral, per-execute)
-        from .formulation_spec import ChartRequest
-
-        request = ChartRequest(
-            chart=base_chart,
-            by=tuple(by_validated) if by_validated is not None else None,
-            value_col=value_col,
-            residual=value.upper() if is_residual else None,
-            residual_chart_type=base_chart if is_residual else None,
-            recentered=recentered,
-            companion=companion,
-            bins=bins,
-            phased=phased,
-            n_sigma=n_sigma,
-            n_mode=n_mode,
-        )
-
-        # Create and run analysis using pre-calculated AnalysisDataSet
-        # This makes execute() cheap - the expensive residual calculation was done in formulate()
-        analysis = Analysis(self._spec, request, analysis_dataset=self._ads)
-        return analysis.calculate()
+        return by_validated, value_col, is_residual
 
     def _validate_recentered(self, value: str | None) -> None:
         """Validate recentered=True requirements."""
