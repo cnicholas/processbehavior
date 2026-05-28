@@ -191,10 +191,10 @@ def b4(n: int, sigma_multiplier: float = 3) -> float:
 
 def calculate_limits(
     limits_type: str,
-    mean: float = None,
-    sd: float = None,
-    N: int = None,
-    mR: float = None,
+    mean: float | None = None,
+    sd: float | None = None,
+    N: int | None = None,
+    mR: float | None = None,
     round_to: int = 3,
     sigma_multiplier: float = 3,
 ) -> pd.Series:
@@ -270,6 +270,7 @@ def calculate_limits(
             raise ValueError(
                 f'The limits calculation for {limits_type} requires (mean, sd, and N). Got: mean={mean}, sd={sd}, N={N}'
             )
+        assert mean is not None and sd is not None and N is not None  # narrowed by guard above  # noqa: S101
 
         # Wd = S / c4(n) - within-subgroup standard deviation
         Wd = sd / c4(N)
@@ -283,6 +284,7 @@ def calculate_limits(
     elif limits_type == 'S':
         if None in [sd, N]:
             raise ValueError(f'The limits calculation for {limits_type} requires (sd, and N). Got: sd={sd}, N={N}')
+        assert sd is not None and N is not None  # narrowed by guard above  # noqa: S101
 
         # LPL = S * b3(N)
         # UPL = S * b4(N)
