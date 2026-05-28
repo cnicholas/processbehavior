@@ -105,6 +105,142 @@ def _join_limits(grouped: pd.DataFrame, lims_result, rsuffix: str = '') -> pd.Da
     return grouped.join(lims_df, rsuffix=rsuffix)
 
 
+# ---------------------------------------------------------------------------
+# MR-chart payload assembly helpers
+# ---------------------------------------------------------------------------
+#
+# The four `_calculate_mr_chart_*` paths (precomputed/independent ×
+# stratified/ungrouped, phased and global) all end with near-identical
+# code that adjusts lane boundaries for the dropped-first-mR row,
+# filters insufficient strata, and assembles the output dict.
+# These helpers consolidate that tail so adding a new metadata key, or
+# fixing a strata-filter bug, happens in one place.
+
+
+def _shift_lane_boundaries(lane_boundaries, offset: int):
+    """Shift each boundary's `position` by `offset`, drop those that go negative.
+
+    Accepts the flat (`list[dict]`) shape or the stratified
+    (`dict[stratum, list[dict]]`) shape. Returns the same shape; returns
+    None when the input is empty or every position was dropped.
+    """
+    if not lane_boundaries:
+        return None
+    if isinstance(lane_boundaries, dict):
+        adjusted: dict[str, list[dict]] = {}
+        for stratum, boundaries in lane_boundaries.items():
+            shifted = [
+                {**b, 'position': b['position'] + offset}
+                for b in boundaries
+                if b['position'] + offset >= 0
+            ]
+            if shifted:
+                adjusted[stratum] = shifted
+        return adjusted or None
+    shifted = [
+        {**b, 'position': b['position'] + offset}
+        for b in lane_boundaries
+        if b['position'] + offset >= 0
+    ]
+    return shifted or None
+
+
+def _split_strata_by_sufficiency(
+    out: pd.DataFrame, stratify_col: str, strata: list, min_obs: int = 2
+) -> tuple[list, list]:
+    """Partition `strata` into (insufficient, published) by post-mR row count.
+
+    The focus()/strata contract requires every published stratum to be
+    focusable; insufficient strata have empty (or near-empty) data after
+    the first-mR drop and would fail downstream consumers.
+
+    Returns (insufficient_strata, published_strata).
+    """
+    insufficient = [s for s in strata if len(out[out[stratify_col] == s]) < min_obs]
+    published = [s for s in strata if s not in insufficient]
+    return insufficient, published
+
+
+def _build_stratified_mr_payload(
+    *,
+    mr_spec: _MRChartSpec,
+    chart_out: pd.DataFrame,
+    chart_statistics: dict,
+    plot_col: str,
+    stratify_col: str,
+    stratify_by,
+    strata: list,
+    lane_boundaries,
+    phased: bool = False,
+    insufficient_strata: list | None = None,
+    single_point_phases: int | None = None,
+) -> dict:
+    """Build the {chart_type: {...}} payload for a stratified MR-family chart.
+
+    For phased layouts `strata` is published as-is. For non-phased
+    layouts, callers pre-compute `insufficient_strata` via
+    `_split_strata_by_sufficiency` and pass them in; published strata
+    are derived here.
+    """
+    metadata: dict = {
+        'chart_type': mr_spec.chart_type,
+        'value_col': plot_col,
+        'center_col': 'center',
+        'stratified': True,
+        'lane_boundaries': lane_boundaries if lane_boundaries else None,
+        'stratify_col': stratify_col,
+        'stratify_by': list(stratify_by),
+    }
+    if phased:
+        metadata['phased'] = True
+        metadata['run_rules_applicable'] = False
+        if single_point_phases is not None:
+            metadata['single_point_phases'] = single_point_phases
+        published_strata = list(strata)
+    else:
+        metadata['insufficient_strata'] = insufficient_strata or None
+        published_strata = [s for s in strata if s not in (insufficient_strata or [])]
+    return {
+        mr_spec.chart_type: {
+            'data': chart_out,
+            'statistics': chart_statistics,
+            'metadata': metadata,
+            'strata': published_strata,
+        },
+    }
+
+
+def _build_ungrouped_mr_payload(
+    *,
+    mr_spec: _MRChartSpec,
+    chart_out: pd.DataFrame,
+    chart_statistics: dict,
+    plot_col: str,
+    lane_boundaries,
+    phased: bool = False,
+    single_point_phases: int | None = None,
+) -> dict:
+    """Build the {chart_type: {...}} payload for an ungrouped MR-family chart."""
+    metadata: dict = {
+        'chart_type': mr_spec.chart_type,
+        'value_col': plot_col,
+        'center_col': 'center',
+        'lane_boundaries': lane_boundaries,
+    }
+    if phased:
+        metadata['phased'] = True
+        metadata['run_rules_applicable'] = False
+        if single_point_phases is not None:
+            metadata['single_point_phases'] = single_point_phases
+    return {
+        mr_spec.chart_type: {
+            'data': chart_out,
+            'statistics': chart_statistics,
+            'metadata': metadata,
+        },
+    }
+
+
 class Analysis:
     """
     Unified analysis class handling all chart types via strategy pattern.
@@ -1578,35 +1714,29 @@ class Analysis:
                 value_cols=extra_cols + [plot_col, 'center', 'lpl', 'upl', 'beyond_limits'],
             )
 
-            chart_statistics = {}
-            for stratum in strata:
-                chart_statistics[stratum] = {
+            chart_statistics = {
+                stratum: {
                     'N': None,
                     'center': None,
                     'lpl': None,
                     'upl': None,
                     'limits_vary': True,
                 }
+                for stratum in strata
+            }
 
             # Phased R: no lane boundary offset (no rows dropped)
-            return {
-                mr_spec.chart_type: {
-                    'data': chart_out,
-                    'statistics': chart_statistics,
-                    'metadata': {
-                        'chart_type': mr_spec.chart_type,
-                        'value_col': plot_col,
-                        'center_col': 'center',
-                        'stratified': True,
-                        'lane_boundaries': xmr_lane_boundaries if xmr_lane_boundaries else None,
-                        'stratify_col': stratify_col,
-                        'stratify_by': list(stratify_by),
-                        'phased': True,
-                        'run_rules_applicable': False,
-                    },
-                    'strata': strata,
-                },
-            }
+            return _build_stratified_mr_payload(
+                mr_spec=mr_spec,
+                chart_out=chart_out,
+                chart_statistics=chart_statistics,
+                plot_col=plot_col,
+                stratify_col=stratify_col,
+                stratify_by=stratify_by,
+                strata=strata,
+                lane_boundaries=xmr_lane_boundaries,
+                phased=True,
+            )
 
         # --- Non-phased precomputed path ---
         grouped = precomputed['grouped'].copy()
@@ -1666,44 +1796,20 @@ class Analysis:
             value_cols=extra_cols + [plot_col, 'center', 'lpl', 'upl', 'beyond_limits'],
         )
 
-        # Adjust lane boundaries for R chart (first row dropped per stratum)
-        lane_boundaries = {}
-        if xmr_lane_boundaries:
-            for stratum, boundaries in xmr_lane_boundaries.items():
-                adjusted = [
-                    {**b, 'position': b['position'] + mr_spec.lane_boundary_offset}
-                    for b in boundaries
-                    if b['position'] + mr_spec.lane_boundary_offset >= 0
-                ]
-                if adjusted:
-                    lane_boundaries[stratum] = adjusted
+        lane_boundaries = _shift_lane_boundaries(xmr_lane_boundaries, mr_spec.lane_boundary_offset)
+        insufficient_strata, _ = _split_strata_by_sufficiency(r_out, stratify_col, strata)
 
-        # Identify strata with insufficient data (< 2 observations)
-        insufficient_strata = [s for s in strata if len(r_out[r_out[stratify_col] == s]) < 2]
-
-        # Drop strata that lost all rows post-mR (single-obs cells) from the
-        # published strata list. The focus()/strata contract requires every
-        # stratum exposed here to be focusable; insufficient strata have
-        # empty data and would fail downstream consumers.
-        published_strata = [s for s in strata if s not in (insufficient_strata or [])]
-
-        return {
-            mr_spec.chart_type: {
-                'data': chart_out,
-                'statistics': chart_statistics,
-                'metadata': {
-                    'chart_type': mr_spec.chart_type,
-                    'value_col': plot_col,
-                    'center_col': 'center',
-                    'stratified': True,
-                    'lane_boundaries': lane_boundaries if lane_boundaries else None,
-                    'stratify_col': stratify_col,
-                    'stratify_by': list(stratify_by),
-                    'insufficient_strata': insufficient_strata if insufficient_strata else None,
-                },
-                'strata': published_strata,
-            },
-        }
+        return _build_stratified_mr_payload(
+            mr_spec=mr_spec,
+            chart_out=chart_out,
+            chart_statistics=chart_statistics,
+            plot_col=plot_col,
+            stratify_col=stratify_col,
+            stratify_by=stratify_by,
+            strata=strata,
+            lane_boundaries=lane_boundaries,
+            insufficient_strata=insufficient_strata,
+        )
 
     def _calculate_mr_chart_stratified(  # noqa: C901
         self,
@@ -1826,15 +1932,16 @@ class Analysis:
                         lane_boundaries[stratum] = boundaries
 
             # 10. Statistics per stratum: limits vary per phase
-            chart_statistics = {}
-            for stratum in strata:
-                chart_statistics[stratum] = {
+            chart_statistics = {
+                stratum: {
                     'N': None,
                     'center': None,
                     'lpl': None,
                     'upl': None,
                     'limits_vary': True,
                 }
+                for stratum in strata
+            }
 
             # 11. Track single-point phases
             n_single_point = int((phase_stats['_n'] < 2).sum())
@@ -1846,23 +1953,18 @@ class Analysis:
                 value_cols=extra_cols + [plot_col, 'center', 'lpl', 'upl', 'beyond_limits'],
             )
 
-            result[mr_spec.chart_type] = {
-                'data': chart_out,
-                'statistics': chart_statistics,
-                'metadata': {
-                    'chart_type': mr_spec.chart_type,
-                    'value_col': plot_col,
-                    'center_col': 'center',
-                    'stratified': True,
-                    'lane_boundaries': lane_boundaries if lane_boundaries else None,
-                    'stratify_col': stratify_col,
-                    'stratify_by': list(stratify_by),
-                    'phased': True,
-                    'single_point_phases': n_single_point,
-                    'run_rules_applicable': False,
-                },
-                'strata': strata,
-            }
+            result.update(_build_stratified_mr_payload(
+                mr_spec=mr_spec,
+                chart_out=chart_out,
+                chart_statistics=chart_statistics,
+                plot_col=plot_col,
+                stratify_col=stratify_col,
+                stratify_by=stratify_by,
+                strata=strata,
+                lane_boundaries=lane_boundaries,
+                phased=True,
+                single_point_phases=n_single_point,
+            ))
 
             if _return_intermediates:
                 result['_intermediates'] = {
@@ -1981,30 +2083,19 @@ class Analysis:
             value_cols=extra_cols + [plot_col, 'center', 'lpl', 'upl', 'beyond_limits'],
         )
 
-        # Identify strata with insufficient data (< 2 observations)
-        insufficient_strata = [s for s in strata if len(out[out[stratify_col] == s]) < 2]
+        insufficient_strata, _ = _split_strata_by_sufficiency(out, stratify_col, strata)
 
-        # Drop strata that lost all rows post-mR (single-obs cells) from the
-        # published strata list. The focus()/strata contract requires every
-        # stratum exposed here to be focusable; insufficient strata have
-        # empty data and would fail downstream consumers.
-        published_strata = [s for s in strata if s not in (insufficient_strata or [])]
-
-        result[mr_spec.chart_type] = {
-            'data': chart_out,
-            'statistics': chart_statistics,
-            'metadata': {
-                'chart_type': mr_spec.chart_type,
-                'value_col': plot_col,
-                'center_col': 'center',
-                'stratified': True,
-                'lane_boundaries': lane_boundaries if lane_boundaries else None,
-                'stratify_col': stratify_col,
-                'stratify_by': list(stratify_by),
-                'insufficient_strata': insufficient_strata if insufficient_strata else None,
-            },
-            'strata': published_strata,
-        }
+        result.update(_build_stratified_mr_payload(
+            mr_spec=mr_spec,
+            chart_out=chart_out,
+            chart_statistics=chart_statistics,
+            plot_col=plot_col,
+            stratify_col=stratify_col,
+            stratify_by=stratify_by,
+            strata=strata,
+            lane_boundaries=lane_boundaries,
+            insufficient_strata=insufficient_strata,
+        ))
 
         # Optionally include intermediates for companion calculation
         if _return_intermediates:
@@ -2088,20 +2179,14 @@ class Analysis:
                 }
 
                 # Phased R: no lane boundary offset needed (no rows dropped)
-                r_lane_boundaries = xmr_lane_boundaries
-
-                result[mr_spec.chart_type] = {
-                    'data': chart_out,
-                    'statistics': chart_statistics,
-                    'metadata': {
-                        'chart_type': mr_spec.chart_type,
-                        'value_col': plot_col,
-                        'center_col': 'center',
-                        'lane_boundaries': r_lane_boundaries,
-                        'phased': True,
-                        'run_rules_applicable': False,
-                    },
-                }
+                result.update(_build_ungrouped_mr_payload(
+                    mr_spec=mr_spec,
+                    chart_out=chart_out,
+                    chart_statistics=chart_statistics,
+                    plot_col=plot_col,
+                    lane_boundaries=xmr_lane_boundaries,
+                    phased=True,
+                ))
                 return result
 
             # --- Existing non-phased precomputed path ---
@@ -2143,28 +2228,17 @@ class Analysis:
                 'upl': round(r_lims['upl'], spec.round_to),
             }
 
-            # Adjust lane boundaries
-            r_lane_boundaries = None
-            if xmr_lane_boundaries:
-                r_lane_boundaries = []
-                for b in xmr_lane_boundaries:
-                    new_pos = b['position'] + mr_spec.lane_boundary_offset
-                    if new_pos >= 0:
-                        r_lane_boundaries.append({**b, 'position': new_pos})
-                if not r_lane_boundaries:
-                    r_lane_boundaries = None
+            r_lane_boundaries = _shift_lane_boundaries(
+                xmr_lane_boundaries, mr_spec.lane_boundary_offset
+            )
 
-            result[mr_spec.chart_type] = {
-                'data': chart_out,
-                'statistics': chart_statistics,
-                'metadata': {
-                    'chart_type': mr_spec.chart_type,
-                    'value_col': plot_col,
-                    'center_col': 'center',
-                    'lane_boundaries': r_lane_boundaries,
-                },
-            }
-
+            result.update(_build_ungrouped_mr_payload(
+                mr_spec=mr_spec,
+                chart_out=chart_out,
+                chart_statistics=chart_statistics,
+                plot_col=plot_col,
+                lane_boundaries=r_lane_boundaries,
+            ))
             return result
 
         # --- Independent calculation ---
@@ -2261,19 +2335,15 @@ class Analysis:
             # 11. Track single-point phases for visibility
             n_single_point = int((phase_stats['_n'] < 2).sum())
 
-            result[mr_spec.chart_type] = {
-                'data': chart_out,
-                'statistics': chart_statistics,
-                'metadata': {
-                    'chart_type': mr_spec.chart_type,
-                    'value_col': plot_col,
-                    'center_col': 'center',
-                    'lane_boundaries': lane_boundaries,
-                    'phased': True,
-                    'single_point_phases': n_single_point,
-                    'run_rules_applicable': False,
-                },
-            }
+            result.update(_build_ungrouped_mr_payload(
+                mr_spec=mr_spec,
+                chart_out=chart_out,
+                chart_statistics=chart_statistics,
+                plot_col=plot_col,
+                lane_boundaries=lane_boundaries,
+                phased=True,
+                single_point_phases=n_single_point,
+            ))
 
             if _return_intermediates:
                 result['_intermediates'] = {
@@ -2339,25 +2409,17 @@ class Analysis:
             'upl': round(lims['upl'], spec.round_to),
         }
 
-        # Adjust lane boundaries for chart type
-        if lane_boundaries and mr_spec.lane_boundary_offset != 0:
-            adjusted = []
-            for b in lane_boundaries:
-                new_pos = b['position'] + mr_spec.lane_boundary_offset
-                if new_pos >= 0:
-                    adjusted.append({**b, 'position': new_pos})
-            lane_boundaries = adjusted if adjusted else None
+        # Adjust lane boundaries for chart type (no-op when offset == 0)
+        if mr_spec.lane_boundary_offset != 0:
+            lane_boundaries = _shift_lane_boundaries(lane_boundaries, mr_spec.lane_boundary_offset)
 
-        result[mr_spec.chart_type] = {
-            'data': chart_out,
-            'statistics': chart_statistics,
-            'metadata': {
-                'chart_type': mr_spec.chart_type,
-                'value_col': plot_col,
-                'center_col': 'center',
-                'lane_boundaries': lane_boundaries,
-            },
-        }
+        result.update(_build_ungrouped_mr_payload(
+            mr_spec=mr_spec,
+            chart_out=chart_out,
+            chart_statistics=chart_statistics,
+            plot_col=plot_col,
+            lane_boundaries=lane_boundaries,
+        ))
 
         # Optionally include intermediates for companion calculation
         if _return_intermediates:
