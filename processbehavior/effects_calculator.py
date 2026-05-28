@@ -24,6 +24,8 @@ from typing import TYPE_CHECKING
 
 import pandas as pd
 
+from .exceptions import ValidationError
+
 if TYPE_CHECKING:
     from .formulation_spec import FormulationSpec
 
@@ -75,20 +77,20 @@ def calculate_factor_main_effects(df: pd.DataFrame, factor: str) -> pd.DataFrame
     produce higher values. Large negative effects indicate lower values.
     """
     if 'R5' not in df.columns:
-        raise ValueError(
+        raise ValidationError(
             f'Cannot calculate main effects - R5 column missing.\n'
             f'Available columns: {df.columns.tolist()}\n'
             f'Fix: Calculate VAS residuals first'
         )
 
     if factor not in df.columns:
-        raise ValueError(f"Factor '{factor}' not found in data.\nAvailable columns: {df.columns.tolist()}")
+        raise ValidationError(f"Factor '{factor}' not found in data.\nAvailable columns: {df.columns.tolist()}")
 
     me = df.groupby(factor, sort=False, observed=True)['R5'].mean().rename('Main_Effect').reset_index()
 
     # Validate uniqueness
     if me.duplicated(subset=[factor]).any():
-        raise ValueError(f"Duplicate levels found for factor '{factor}'")
+        raise ValidationError(f"Duplicate levels found for factor '{factor}'")
 
     return me[[factor, 'Main_Effect']]
 
@@ -129,7 +131,7 @@ def calculate_time_main_effects(df: pd.DataFrame, time_var: str) -> pd.DataFrame
     1     2  -0.15
     """
     if 'R4' not in df.columns:
-        raise ValueError('Cannot calculate time effects - R4 column missing.\nCalculate VAS residuals first.')
+        raise ValidationError('Cannot calculate time effects - R4 column missing.\nCalculate VAS residuals first.')
 
     te = df.groupby(time_var, sort=False, observed=True)['R4'].mean().rename('PT_ME').reset_index()
 
@@ -179,17 +181,17 @@ def calculate_main_effect_scores(df: pd.DataFrame, factor: str, main_effects: pd
     2    B     -0.20
     """
     if 'R2' not in df.columns:
-        raise ValueError('Cannot calculate MEs - R2 column missing')
+        raise ValidationError('Cannot calculate MEs - R2 column missing')
 
     if factor not in df.columns:
-        raise ValueError(f"Factor '{factor}' not in data")
+        raise ValidationError(f"Factor '{factor}' not in data")
 
     if not isinstance(main_effects, pd.DataFrame):
         raise TypeError('main_effects must be a DataFrame')
 
     required_cols = {factor, 'Main_Effect'}
     if not required_cols.issubset(main_effects.columns):
-        raise ValueError(
+        raise ValidationError(
             f'main_effects missing required columns.\nRequired: {required_cols}\nFound: {set(main_effects.columns)}'
         )
 
@@ -249,7 +251,7 @@ def calculate_interaction_cell_means(df: pd.DataFrame, rsg_vars: list[str], time
     Name: R3, dtype: float64
     """
     if 'R3' not in df.columns:
-        raise ValueError('Cannot calculate interactions - R3 column missing')
+        raise ValidationError('Cannot calculate interactions - R3 column missing')
 
     keys = list(rsg_vars) + [time_var]
 
@@ -332,7 +334,7 @@ def calculate_factor_interaction_effects(
         return pd.DataFrame()
 
     if 'R5' not in df.columns:
-        raise ValueError('Cannot calculate interactions - R5 column missing')
+        raise ValidationError('Cannot calculate interactions - R5 column missing')
 
     # Use first 2 factors only
     if len(rsg_vars) > 2:
@@ -347,13 +349,13 @@ def calculate_factor_interaction_effects(
     for _i, factor in enumerate([factor1, factor2]):
         me = main_effects.get(factor)
         if me is None or not isinstance(me, pd.DataFrame):
-            raise ValueError(
+            raise ValidationError(
                 f"Main effects for '{factor}' not found or invalid.\nAvailable: {list(main_effects.keys())}"
             )
 
         # Validate structure
         if not {factor, 'Main_Effect'}.issubset(me.columns):
-            raise ValueError(f"Main effects for '{factor}' missing required columns")
+            raise ValidationError(f"Main effects for '{factor}' missing required columns")
 
         rsg_r5 = rsg_r5.merge(me, on=factor, how='left', validate='many_to_one')
         # Rename to distinguish
@@ -394,7 +396,7 @@ def calculate_factor_interaction_scores(
         return pd.DataFrame()
 
     if 'R2' not in df.columns:
-        raise ValueError('Cannot calculate interaction scores - R2 missing')
+        raise ValidationError('Cannot calculate interaction scores - R2 missing')
 
     factor1, factor2 = rsg_vars[0], rsg_vars[1]
 
@@ -594,7 +596,7 @@ class EffectsCalculator:
         missing = required - set(df.columns)
 
         if missing:
-            raise ValueError(
+            raise ValidationError(
                 f'Cannot calculate effects - missing residuals: {missing}\n'
                 f'Available columns: {df.columns.tolist()}\n'
                 f'Fix: Calculate VAS residuals before calling calculate_all_effects()'

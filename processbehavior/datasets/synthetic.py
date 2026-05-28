@@ -49,6 +49,7 @@ from typing import Optional
 import numpy as np
 import pandas as pd
 
+from ..exceptions import ValidationError
 from ..formulation_spec import FormulationSpec
 
 logger = logging.getLogger(__name__)
@@ -193,12 +194,12 @@ def make_sds1(
     if factor1_names is None:
         factor1_names = [f'F1_{k + 1}' for k in range(K1)]
     elif len(factor1_names) != K1:
-        raise ValueError(f'Length of factor1_names ({len(factor1_names)}) must equal K1 ({K1})')
+        raise ValidationError(f'Length of factor1_names ({len(factor1_names)}) must equal K1 ({K1})')
 
     if factor2_names is None:
         factor2_names = [f'F2_{k + 1}' for k in range(K2)]
     elif len(factor2_names) != K2:
-        raise ValueError(f'Length of factor2_names ({len(factor2_names)}) must equal K2 ({K2})')
+        raise ValidationError(f'Length of factor2_names ({len(factor2_names)}) must equal K2 ({K2})')
 
     rows = []
     for k1 in range(K1):
@@ -338,12 +339,12 @@ def make_sds2(
     if factor1_names is None:
         factor1_names = [f'F1_{k + 1}' for k in range(K1)]
     elif len(factor1_names) != K1:
-        raise ValueError('Length of factor1_names must equal K1')
+        raise ValidationError('Length of factor1_names must equal K1')
 
     if factor2_names is None:
         factor2_names = [f'F2_{k + 1}' for k in range(K2)]
     elif len(factor2_names) != K2:
-        raise ValueError('Length of factor2_names must equal K2')
+        raise ValidationError('Length of factor2_names must equal K2')
 
     rows = []
     for k1 in range(K1):
@@ -484,12 +485,12 @@ def make_sds3(  # noqa: C901
     if factor1_names is None:
         factor1_names = [f'F1_{k + 1}' for k in range(K1)]
     elif len(factor1_names) != K1:
-        raise ValueError('Length of factor1_names must equal K1')
+        raise ValidationError('Length of factor1_names must equal K1')
 
     if factor2_names is None:
         factor2_names = [f'F2_{k + 1}' for k in range(K2)]
     elif len(factor2_names) != K2:
-        raise ValueError('Length of factor2_names must equal K2')
+        raise ValidationError('Length of factor2_names must equal K2')
 
     rows = []
     replicated_cells = []
@@ -517,7 +518,7 @@ def make_sds3(  # noqa: C901
                     is_replicated = is_corner or (rng.random() < p_replicated / 2)
 
                 else:
-                    raise ValueError(
+                    raise ValidationError(
                         f'Unknown replication pattern: {replication_pattern}. '
                         f"Valid: 'random', 'early_times', 'late_times', "
                         f"'checkerboard', 'corners'"
@@ -647,11 +648,11 @@ def make_sds4(
         >>> # After tidy/NA drop, study.analytical_design_state.sds == 1
     """
     if not 0 < p_drop < 1:
-        raise ValueError(f'p_drop must be in (0, 1), got {p_drop}')
+        raise ValidationError(f'p_drop must be in (0, 1), got {p_drop}')
     if n_min < 2:
-        raise ValueError(f'ODS 4 requires n_min >= 2 (no singletons), got {n_min}')
+        raise ValidationError(f'ODS 4 requires n_min >= 2 (no singletons), got {n_min}')
     if n_max < n_min:
-        raise ValueError(f'n_max ({n_max}) must be >= n_min ({n_min})')
+        raise ValidationError(f'n_max ({n_max}) must be >= n_min ({n_min})')
 
     rng = np.random.default_rng(seed)
 
@@ -662,11 +663,11 @@ def make_sds4(
     if factor1_names is None:
         factor1_names = [f'F1_{k + 1}' for k in range(K1)]
     elif len(factor1_names) != K1:
-        raise ValueError(f'Length of factor1_names ({len(factor1_names)}) must equal K1 ({K1})')
+        raise ValidationError(f'Length of factor1_names ({len(factor1_names)}) must equal K1 ({K1})')
     if factor2_names is None:
         factor2_names = [f'F2_{k + 1}' for k in range(K2)]
     elif len(factor2_names) != K2:
-        raise ValueError(f'Length of factor2_names ({len(factor2_names)}) must equal K2 ({K2})')
+        raise ValidationError(f'Length of factor2_names ({len(factor2_names)}) must equal K2 ({K2})')
 
     total_cells = K1 * K2 * T
     n_drop = max(1, int(p_drop * total_cells))
@@ -766,7 +767,7 @@ def make_sds5(
         >>> # After tidy/NA drop, study.analytical_design_state.sds == 2
     """
     if not 0 < p_drop < 1:
-        raise ValueError(f'p_drop must be in (0, 1), got {p_drop}')
+        raise ValidationError(f'p_drop must be in (0, 1), got {p_drop}')
 
     rng = np.random.default_rng(seed)
 
@@ -777,11 +778,11 @@ def make_sds5(
     if factor1_names is None:
         factor1_names = [f'F1_{k + 1}' for k in range(K1)]
     elif len(factor1_names) != K1:
-        raise ValueError(f'Length of factor1_names ({len(factor1_names)}) must equal K1 ({K1})')
+        raise ValidationError(f'Length of factor1_names ({len(factor1_names)}) must equal K1 ({K1})')
     if factor2_names is None:
         factor2_names = [f'F2_{k + 1}' for k in range(K2)]
     elif len(factor2_names) != K2:
-        raise ValueError(f'Length of factor2_names ({len(factor2_names)}) must equal K2 ({K2})')
+        raise ValidationError(f'Length of factor2_names ({len(factor2_names)}) must equal K2 ({K2})')
 
     total_cells = K1 * K2 * T
     n_drop = max(1, int(p_drop * total_cells))
@@ -886,13 +887,13 @@ def make_sds6(  # noqa: C901
         >>> # After tidy/NA drop, study.analytical_design_state.sds == 3
     """
     if not 0 < p_drop < 1:
-        raise ValueError(f'p_drop must be in (0, 1), got {p_drop}')
+        raise ValidationError(f'p_drop must be in (0, 1), got {p_drop}')
     if not 0 < p_singleton < 1:
-        raise ValueError(f'p_singleton must be in (0, 1), got {p_singleton}')
+        raise ValidationError(f'p_singleton must be in (0, 1), got {p_singleton}')
     if n_min < 2:
-        raise ValueError(f'n_min must be >= 2 (replicated cells), got {n_min}')
+        raise ValidationError(f'n_min must be >= 2 (replicated cells), got {n_min}')
     if n_max < n_min:
-        raise ValueError(f'n_max ({n_max}) must be >= n_min ({n_min})')
+        raise ValidationError(f'n_max ({n_max}) must be >= n_min ({n_min})')
 
     rng = np.random.default_rng(seed)
 
@@ -903,17 +904,17 @@ def make_sds6(  # noqa: C901
     if factor1_names is None:
         factor1_names = [f'F1_{k + 1}' for k in range(K1)]
     elif len(factor1_names) != K1:
-        raise ValueError(f'Length of factor1_names ({len(factor1_names)}) must equal K1 ({K1})')
+        raise ValidationError(f'Length of factor1_names ({len(factor1_names)}) must equal K1 ({K1})')
     if factor2_names is None:
         factor2_names = [f'F2_{k + 1}' for k in range(K2)]
     elif len(factor2_names) != K2:
-        raise ValueError(f'Length of factor2_names ({len(factor2_names)}) must equal K2 ({K2})')
+        raise ValidationError(f'Length of factor2_names ({len(factor2_names)}) must equal K2 ({K2})')
 
     total_cells = K1 * K2 * T
     n_drop = max(1, int(p_drop * total_cells))
     n_drop = min(n_drop, total_cells - 2)  # Need at least 2 occupied cells (1 singleton, 1 replicated)
     if n_drop < 1:
-        raise ValueError(
+        raise ValidationError(
             f"Grid too small for ODS 6: K1*K2*T={total_cells} can't fit "
             f'both empty cells and at least one singleton + one replicated cell'
         )
@@ -1025,7 +1026,7 @@ def make_sds(
     generators = {1: make_sds1, 2: make_sds2, 3: make_sds3, 4: make_sds4, 5: make_sds5, 6: make_sds6}
 
     if sds not in generators:
-        raise ValueError(f'SDS {sds} not implemented. Available SDS types: {sorted(generators.keys())}')
+        raise ValidationError(f'SDS {sds} not implemented. Available SDS types: {sorted(generators.keys())}')
 
     return generators[sds](K1=K1, K2=K2, T=T, seed=seed, **kwargs)
 
@@ -1565,7 +1566,7 @@ def get_sds_info(sds: int) -> dict[str, str]:
     }
 
     if sds not in sds_metadata:
-        raise ValueError(f'SDS {sds} not defined. Valid: 1-6')
+        raise ValidationError(f'SDS {sds} not defined. Valid: 1-6')
 
     return sds_metadata[sds]
 
@@ -1688,7 +1689,7 @@ def make_large_dataset(
         df = make_sds4(K1=K1, K2=K2, T=T, seed=seed)
 
     else:
-        raise ValueError(
+        raise ValidationError(
             f'SDS {sds} not optimized for large datasets. '
             f'Supported: 1 (full replication), 2 (no replication), 4 (incomplete grid)'
         )
