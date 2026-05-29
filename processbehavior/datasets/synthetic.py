@@ -982,55 +982,6 @@ def make_sds6(  # noqa: C901
 # ============================================================================
 
 
-def make_sds(
-    sds: int, K1: int = 3, K2: int = 2, T: int = 8, n: int = 20, seed: Optional[int] = None, **kwargs
-) -> pd.DataFrame:
-    """
-    Generate synthetic data classifying as the requested design state.
-
-    Bishop's design-state scale assigns an integer 1-6 to each (factor x
-    time) grid based on the N_kt distribution. ``make_sds(N)`` generates
-    data whose Observed Design State (ODS) classification equals ``N``.
-    See :func:`make_design` for the same function under its
-    forward-looking name.
-
-    Args:
-        sds: Bishop design-state code (1, 2, 3, 4, 5, or 6).
-        K1: Number of factor 1 levels.
-        K2: Number of factor 2 levels.
-        T: Number of time periods.
-        n: Deprecated alias kept for backward compatibility; ignored.
-        seed: Random seed for reproducibility.
-        **kwargs: Additional keyword arguments forwarded to the
-            state-specific generator (``make_sds1`` etc.).
-
-    Returns:
-        DataFrame with columns ``time``, ``factor 1``, ``factor 2``,
-        ``y`` whose ODS classification equals ``sds``. After NA-filtering
-        during tidying, ODS 4/5/6 collapse to ADS 1/2/3 respectively.
-
-    Examples:
-        >>> # Round-trip: generated ODS equals requested ODS
-        >>> for s in (1, 2, 3, 4, 5, 6):
-        ...     df = make_sds(s, seed=42)
-        ...     study = pb.ProcessBehavior(df).formulate(
-        ...         response='y',
-        ...         factors=['factor 1', 'factor 2'],
-        ...         time='time',
-        ...     )
-        ...     assert study.observed_design_state.sds == s
-
-    Raises:
-        ValueError: If sds not in [1, 2, 3, 4, 5, 6].
-    """
-    generators = {1: make_sds1, 2: make_sds2, 3: make_sds3, 4: make_sds4, 5: make_sds5, 6: make_sds6}
-
-    if sds not in generators:
-        raise ValidationError(f'SDS {sds} not implemented. Available SDS types: {sorted(generators.keys())}')
-
-    return generators[sds](K1=K1, K2=K2, T=T, seed=seed, **kwargs)
-
-
 def make_design(
     state: int,
     K1: int = 3,
@@ -1042,28 +993,61 @@ def make_design(
     """
     Generate synthetic data classifying as the requested design state.
 
-    Forward-looking alias for :func:`make_sds` that uses the new
-    three-state vocabulary (PDS / ODS / ADS). The integer ``state`` is
-    Bishop's design-state code (1-6); the returned DataFrame, when run
-    through ``ProcessBehavior(...).formulate(...)``, classifies as that
-    Observed Design State.
+    Bishop's design-state scale assigns an integer 1-6 to each (factor x
+    time) grid based on the N_kt distribution. ``make_design(state=N)``
+    generates data whose Observed Design State (ODS) classification
+    equals ``N``. Uses the three-state vocabulary (PDS / ODS / ADS);
+    the integer ``state`` is Bishop's reference scale.
 
     Args:
         state: Bishop design-state code (1, 2, 3, 4, 5, or 6).
-        K1, K2: Number of factor 1 / factor 2 levels.
+        K1: Number of factor 1 levels.
+        K2: Number of factor 2 levels.
         T: Number of time periods.
         seed: Random seed for reproducibility.
         **kwargs: Additional keyword arguments forwarded to the
-            state-specific generator.
+            state-specific generator (mix params like ``p_replicated``,
+            ``p_drop``, ``p_singleton``, ``n_min``, ``n_max``).
 
     Returns:
-        Same as :func:`make_sds`.
+        DataFrame with columns ``time``, ``factor 1``, ``factor 2``,
+        ``y`` whose ODS classification equals ``state``. After
+        NA-filtering during tidying, ODS 4/5/6 collapse to ADS 1/2/3.
 
     Examples:
-        >>> df = make_design(state=4, K1=3, K2=2, T=6, seed=42)
-        >>> # study.observed_design_state.sds == 4
+        >>> # Round-trip: generated ODS equals requested state
+        >>> for s in (1, 2, 3, 4, 5, 6):
+        ...     df = make_design(state=s, seed=42)
+        ...     study = pb.ProcessBehavior(df).formulate(
+        ...         response='y',
+        ...         factors=['factor 1', 'factor 2'],
+        ...         time='time',
+        ...     )
+        ...     assert study.observed_design_state.sds == s
+
+    Raises:
+        ValidationError: If state not in [1, 2, 3, 4, 5, 6].
     """
-    return make_sds(sds=state, K1=K1, K2=K2, T=T, seed=seed, **kwargs)
+    generators = {1: make_sds1, 2: make_sds2, 3: make_sds3, 4: make_sds4, 5: make_sds5, 6: make_sds6}
+
+    if state not in generators:
+        raise ValidationError(
+            f'Design state {state} not implemented. Available states: {sorted(generators.keys())}'
+        )
+
+    return generators[state](K1=K1, K2=K2, T=T, seed=seed, **kwargs)
+
+
+def make_sds(
+    sds: int, K1: int = 3, K2: int = 2, T: int = 8, n: int = 20, seed: Optional[int] = None, **kwargs
+) -> pd.DataFrame:
+    """Deprecated alias for :func:`make_design`. Use ``make_design(state=N)``.
+
+    Retained temporarily during the make_sds → make_design migration; the
+    ``n`` parameter was always ignored and is dropped on the canonical
+    function.
+    """
+    return make_design(state=sds, K1=K1, K2=K2, T=T, seed=seed, **kwargs)
 
 
 # ============================================================================
