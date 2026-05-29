@@ -57,8 +57,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   catches key drift at edit time. The strata-list and Xbar dead-branch
   bug classes (commits ``f938fdf`` and ``1444b63``) were producer/consumer
   disagreements about this shape; the TypedDicts close that gap.
-- ``make_design(state=N, ...)`` as a forward-looking alias for
-  ``make_sds(sds=N, ...)``. Same semantics, three-state vocabulary.
+- ``make_design(state=N, ...)`` is now the canonical synthetic-data
+  generator, using the three-state vocabulary (PDS / ODS / ADS). The
+  former ``make_sds(sds=N, ...)`` dispatcher has been **removed**
+  (it was never released) — all internal call sites migrated. The
+  ignored ``n`` parameter is gone from the canonical signature. The
+  per-state generators ``make_sds1``..``make_sds6`` remain available.
 - ``SDSResult`` is re-exported at the top level so users can
   ``from processbehavior import SDSResult`` for type hints on
   ``study.observed_design_state`` and ``study.analytical_design_state``.
