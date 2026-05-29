@@ -22,7 +22,7 @@ from processbehavior.result_signals import (
 
 @pytest.fixture(scope="module")
 def xbar_result():
-    df = synthetic.make_sds(1, K1=3, K2=2, T=6, n_min=2, n_max=4, seed=42)
+    df = synthetic.make_design(1, K1=3, K2=2, T=6, n_min=2, n_max=4, seed=42)
     return (
         ProcessBehavior(df)
         .formulate(response="y", factors=["factor 1", "factor 2"], time="time")
@@ -32,7 +32,7 @@ def xbar_result():
 
 @pytest.fixture(scope="module")
 def x_mr_companion_result():
-    df = synthetic.make_sds(2, K1=3, K2=2, T=10, seed=42)
+    df = synthetic.make_design(2, K1=3, K2=2, T=10, seed=42)
     return (
         ProcessBehavior(df)
         .formulate(response="y", factors=["factor 1", "factor 2"], time="time")

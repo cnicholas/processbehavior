@@ -20,14 +20,14 @@ from processbehavior.datasets import synthetic
 @pytest.fixture(scope='module')
 def sds1_study_single_factor():
     """SDS1 study with single factor — ideal for single-factor focus tests."""
-    df = synthetic.make_sds(1, K1=3, K2=1, T=6, n_min=2, n_max=4, seed=42)
+    df = synthetic.make_design(1, K1=3, K2=1, T=6, n_min=2, n_max=4, seed=42)
     return ProcessBehavior(df).formulate(response='y', time='time', factors=['factor 1'])
 
 
 @pytest.fixture(scope='module')
 def sds1_study_two_factor():
     """SDS1 study with two factors — for multi-factor focus tests."""
-    df = synthetic.make_sds(1, K1=3, K2=2, T=6, n_min=2, n_max=4, seed=42)
+    df = synthetic.make_design(1, K1=3, K2=2, T=6, n_min=2, n_max=4, seed=42)
     return ProcessBehavior(df).formulate(response='y', time='time', factors=['factor 1', 'factor 2'])
 
 

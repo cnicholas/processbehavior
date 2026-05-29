@@ -19,9 +19,9 @@ from processbehavior.exceptions import ValidationError
 
 def _make_sds1_study(K1=3, K2=2, T=6, n_min=2, n_max=4, seed=42):
     """Standard SDS 1 study for reuse."""
-    from processbehavior.datasets.synthetic import make_sds
+    from processbehavior.datasets.synthetic import make_design
 
-    df = make_sds(1, K1=K1, K2=K2, T=T, n_min=n_min, n_max=n_max, seed=seed)
+    df = make_design(1, K1=K1, K2=K2, T=T, n_min=n_min, n_max=n_max, seed=seed)
     return ProcessBehavior(df).formulate(
         response='y',
         time='time',
@@ -40,9 +40,9 @@ class TestBug1_SChartAllN1:
     def test_s_chart_raises_when_all_n_equals_1(self):
         """Construct data where every cell has exactly 1 observation (SDS 2).
         S chart requires n >= 2 for std dev; should raise, not crash."""
-        from processbehavior.datasets.synthetic import make_sds
+        from processbehavior.datasets.synthetic import make_design
 
-        df = make_sds(2, K1=3, K2=2, T=6, seed=42)
+        df = make_design(2, K1=3, K2=2, T=6, seed=42)
         ProcessBehavior(df).formulate(
             response='y',
             time='time',
@@ -72,9 +72,9 @@ class TestBug1_SChartAllN1:
         """Direct test: build SDS 1 data then strip to 1 obs per subgroup.
         The S chart code filters n==1 groups; if ALL are n==1, it should raise."""
         # Use SDS 1 but with n_min=n_max=2 and remove one row per cell
-        from processbehavior.datasets.synthetic import make_sds
+        from processbehavior.datasets.synthetic import make_design
 
-        df = make_sds(1, K1=2, K2=2, T=4, n_min=2, n_max=2, seed=99)
+        df = make_design(1, K1=2, K2=2, T=4, n_min=2, n_max=2, seed=99)
 
         # Keep only first observation per (factor 1, factor 2, time)
         df = df.groupby(['factor 1', 'factor 2', 'time']).first().reset_index()

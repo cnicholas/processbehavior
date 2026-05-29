@@ -238,25 +238,25 @@ def _assert_result_matches_snapshot(scenario_name: str, result):
 def _make_unstratified_small():
     """Scenario 1: Unstratified, small N — single condition over time (15 obs).
 
-    Uses ``make_sds(2, K1=1, K2=1, T=15)`` to produce a single-stream
+    Uses ``make_design(2, K1=1, K2=1, T=15)`` to produce a single-stream
     time series suitable for unstratified X/mR shape testing.
     """
-    return synthetic.make_sds(2, K1=1, K2=1, T=15, seed=42)
+    return synthetic.make_design(2, K1=1, K2=1, T=15, seed=42)
 
 
 def _make_stratified_balanced():
     """Scenario 2: Stratified with equal group sizes — balanced SDS 1."""
-    return synthetic.make_sds(1, K1=3, K2=2, T=4, n_min=3, n_max=3, seed=42)
+    return synthetic.make_design(1, K1=3, K2=2, T=4, n_min=3, n_max=3, seed=42)
 
 
 def _make_stratified_uneven():
     """Scenario 3: Stratified with uneven group sizes — varying n."""
-    return synthetic.make_sds(1, K1=2, K2=2, T=4, n_min=2, n_max=5, seed=42)
+    return synthetic.make_design(1, K1=2, K2=2, T=4, n_min=2, n_max=5, seed=42)
 
 
 def _make_missing_values():
     """Scenario 4: Data with missing values in response column."""
-    df = synthetic.make_sds(1, K1=2, K2=2, T=4, n_min=3, n_max=3, seed=42)
+    df = synthetic.make_design(1, K1=2, K2=2, T=4, n_min=3, n_max=3, seed=42)
     # Introduce NaN in response at specific positions (deterministic)
     rng = np.random.default_rng(99)
     mask = rng.random(len(df)) < 0.1  # ~10% missing
@@ -266,23 +266,23 @@ def _make_missing_values():
 
 def _make_companion_mode():
     """Scenario 5: Companion mode — Xbar+S and X+mR companion charts."""
-    return synthetic.make_sds(1, K1=3, K2=2, T=6, n_min=2, n_max=4, seed=42)
+    return synthetic.make_design(1, K1=3, K2=2, T=6, n_min=2, n_max=4, seed=42)
 
 
 def _make_residual_chart():
     """Scenario 6: Residual chart (R2 via XmR)."""
-    return synthetic.make_sds(1, K1=3, K2=2, T=4, n_min=3, n_max=3, seed=42)
+    return synthetic.make_design(1, K1=3, K2=2, T=4, n_min=3, n_max=3, seed=42)
 
 
 def _make_single_obs_strata():
     """Scenario 7: Stratum with n=1 — edge case for mR computation."""
     # SDS 3 has mixed replication. Use specific params to get some n=1 cells.
-    return synthetic.make_sds(3, K1=3, K2=2, T=4, p_replicated=0.3, seed=42)
+    return synthetic.make_design(3, K1=3, K2=2, T=4, p_replicated=0.3, seed=42)
 
 
 def _make_pathological_ordering():
     """Scenario 8: Pathological ordering — reverse-sorted input."""
-    df = synthetic.make_sds(1, K1=2, K2=2, T=4, n_min=2, n_max=2, seed=42)
+    df = synthetic.make_design(1, K1=2, K2=2, T=4, n_min=2, n_max=2, seed=42)
     # Reverse the entire DataFrame
     return df.iloc[::-1].reset_index(drop=True)
 
@@ -626,7 +626,7 @@ class TestShapeInvariants:
         within-cell order, which changes moving ranges — that's expected behavior.
         """
         # Normal ordering (SDS 2: n=1 per cell — order fully determined by sort_key)
-        df_normal = synthetic.make_sds(2, K1=2, K2=2, T=6, seed=42)
+        df_normal = synthetic.make_design(2, K1=2, K2=2, T=6, seed=42)
         pb_normal = ProcessBehavior(df_normal)
         study_normal = pb_normal.formulate(response='y', factors=['factor 1', 'factor 2'], time='time')
         result_normal = study_normal.execute(chart='X', by=[], companion=True)

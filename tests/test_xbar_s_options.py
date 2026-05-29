@@ -22,21 +22,21 @@ from processbehavior.exceptions import ValidationError
 @pytest.fixture
 def sds1_study():
     """SDS1 study with constant subgroup sizes (n=3 per cell)."""
-    df = synthetic.make_sds(1, K1=3, K2=2, T=4, n_min=3, n_max=3, seed=42)
+    df = synthetic.make_design(1, K1=3, K2=2, T=4, n_min=3, n_max=3, seed=42)
     return ProcessBehavior(df).formulate(response='y', time='time', factors=['factor 1', 'factor 2'])
 
 
 @pytest.fixture
 def sds1_varying_n_study():
     """SDS1 study with VARYING subgroup sizes (n_min=2, n_max=5)."""
-    df = synthetic.make_sds(1, K1=3, K2=2, T=4, n_min=2, n_max=5, seed=42)
+    df = synthetic.make_design(1, K1=3, K2=2, T=4, n_min=2, n_max=5, seed=42)
     return ProcessBehavior(df).formulate(response='y', time='time', factors=['factor 1', 'factor 2'])
 
 
 @pytest.fixture
 def xmr_study():
     """XmR-only study (time series, no factors)."""
-    df = synthetic.make_sds(4, T=20, seed=42)
+    df = synthetic.make_design(4, T=20, seed=42)
     return ProcessBehavior(df).formulate(response='y', time='time', factors=['factor 1', 'factor 2'])
 
 

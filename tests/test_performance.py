@@ -41,7 +41,7 @@ class TestDataGenerationPerformance:
         """Generate 1M SDS1 observations and measure time."""
         start = time.perf_counter()
         # K1=100 × K2=2 × T=500 × n=10 = 1,000,000
-        df = synthetic.make_sds(1, K1=100, K2=2, T=500, n_min=10, n_max=10, seed=42)
+        df = synthetic.make_design(1, K1=100, K2=2, T=500, n_min=10, n_max=10, seed=42)
         elapsed = time.perf_counter() - start
 
         assert len(df) == 1_000_000
@@ -351,7 +351,7 @@ class TestScalability:
         T = max(2, int(np.sqrt(size / 20)))
         n = max(2, size // (K1 * K2 * T))
 
-        df = synthetic.make_sds(1, K1=K1, K2=K2, T=T, n_min=n, n_max=n, seed=42)
+        df = synthetic.make_design(1, K1=K1, K2=K2, T=T, n_min=n, n_max=n, seed=42)
         actual_size = len(df)
 
         pdf = ProcessBehavior(df)
@@ -379,7 +379,7 @@ class TestScalability:
         T = 50
         n = 10
 
-        df = synthetic.make_sds(1, K1=K1, K2=K2, T=T, n_min=n, n_max=n, seed=42)
+        df = synthetic.make_design(1, K1=K1, K2=K2, T=T, n_min=n, n_max=n, seed=42)
         pdf = ProcessBehavior(df)
 
         start = time.perf_counter()

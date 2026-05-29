@@ -8,7 +8,7 @@ import pandas as pd
 import pytest
 
 from processbehavior import ProcessBehavior
-from processbehavior.datasets.synthetic import make_sds
+from processbehavior.datasets.synthetic import make_design
 from processbehavior.exceptions import ValidationError
 
 # =============================================================================
@@ -19,14 +19,14 @@ from processbehavior.exceptions import ValidationError
 @pytest.fixture
 def sds1_study():
     """SDS1 study with two factors and time."""
-    df = make_sds(1, K1=3, K2=2, T=6, n_min=2, n_max=4, seed=42)
+    df = make_design(1, K1=3, K2=2, T=6, n_min=2, n_max=4, seed=42)
     return ProcessBehavior(df).formulate(response='y', time='time', factors=['factor 1', 'factor 2'])
 
 
 @pytest.fixture
 def sds2_study():
     """SDS2 study — R2/R3 use XmR charts."""
-    df = make_sds(2, K1=2, K2=2, T=8, seed=42)
+    df = make_design(2, K1=2, K2=2, T=8, seed=42)
     return ProcessBehavior(df).formulate(response='y', time='time', factors=['factor 1', 'factor 2'])
 
 

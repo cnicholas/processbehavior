@@ -13,7 +13,7 @@ from processbehavior import (
     ProcessBehavior,
     ValidationError,
 )
-from processbehavior.datasets.synthetic import make_sds
+from processbehavior.datasets.synthetic import make_design
 
 # ============================================================================
 # Module-scoped fixtures (expensive — computed once)
@@ -23,7 +23,7 @@ from processbehavior.datasets.synthetic import make_sds
 @pytest.fixture(scope='module')
 def sds1_xbar_result():
     """SDS 1 with replication — Xbar/S charts available."""
-    df = make_sds(1, K1=3, K2=2, T=4, n_min=3, n_max=3, seed=42)
+    df = make_design(1, K1=3, K2=2, T=4, n_min=3, n_max=3, seed=42)
     study = ProcessBehavior(df).formulate(
         response='y',
         time='time',
@@ -35,7 +35,7 @@ def sds1_xbar_result():
 @pytest.fixture(scope='module')
 def sds1_stratified_xmr_result():
     """SDS 1 stratified XmR — strata available."""
-    df = make_sds(1, K1=3, K2=2, T=4, n_min=3, n_max=3, seed=42)
+    df = make_design(1, K1=3, K2=2, T=4, n_min=3, n_max=3, seed=42)
     study = ProcessBehavior(df).formulate(
         response='y',
         time='time',

@@ -687,9 +687,9 @@ def test_r1_rcr1_invariants():
     import numpy as np
 
     from processbehavior import ProcessBehavior
-    from processbehavior.datasets.synthetic import make_sds
+    from processbehavior.datasets.synthetic import make_design
 
-    df = make_sds(1, seed=42)
+    df = make_design(1, seed=42)
     pb = ProcessBehavior(df)
     study = pb.formulate(response='y', time='time', factors=['factor 1', 'factor 2'])
     result = study.execute()
@@ -728,10 +728,10 @@ def test_residual_chart_uses_correct_column():
     import numpy as np
 
     from processbehavior import ProcessBehavior
-    from processbehavior.datasets.synthetic import make_sds
+    from processbehavior.datasets.synthetic import make_design
 
     # Create SDS 1 data (has R5 column)
-    df = make_sds(1, seed=42)
+    df = make_design(1, seed=42)
     pb = ProcessBehavior(df)
     study = pb.formulate(response='y', time='time', factors=['factor 1', 'factor 2'])
     result = study.execute()

@@ -40,9 +40,9 @@ from processbehavior.spc_constants import c4
 
 def _make_sds1_study():
     """SDS 1 study: factorial + time + replication → has R2."""
-    from processbehavior.datasets.synthetic import make_sds
+    from processbehavior.datasets.synthetic import make_design
 
-    df = make_sds(1, K1=2, K2=2, T=4, n=3, seed=42)
+    df = make_design(1, K1=2, K2=2, T=4, seed=42)
     pb = ProcessBehavior(df)
     return pb.formulate(
         response='y',
@@ -53,9 +53,9 @@ def _make_sds1_study():
 
 def _make_no_r2_study():
     """Study without R2: factors but no time → no VAS residuals."""
-    from processbehavior.datasets.synthetic import make_sds
+    from processbehavior.datasets.synthetic import make_design
 
-    df = make_sds(1, K1=2, K2=2, T=4, n=3, seed=42)
+    df = make_design(1, K1=2, K2=2, T=4, seed=42)
     pb = ProcessBehavior(df)
     # Omit time → has_time=False → no VAS residuals
     return pb.formulate(
@@ -736,9 +736,9 @@ class TestEdgeCases:
 
     def test_all_identical_sigma_zero(self):
         """All identical values → σ̂=0 → indices=inf, no crash."""
-        from processbehavior.datasets.synthetic import make_sds
+        from processbehavior.datasets.synthetic import make_design
 
-        df = make_sds(1, K1=2, K2=2, T=4, n=3, seed=42)
+        df = make_design(1, K1=2, K2=2, T=4, seed=42)
         df['y'] = 100.0  # all identical
 
         pb = ProcessBehavior(df)

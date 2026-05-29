@@ -56,7 +56,7 @@ def test_residual_xbar_center_is_mean_of_cell_means_on_unbalanced_data():
     Asserts both: (a) the new methodology-correct behavior, and (b) that
     the dead-branch observation-weighted fallback is no longer in use.
     """
-    df = synthetic.make_sds(3, K1=3, K2=2, T=4, p_replicated=0.5, n_when_replicated=4, seed=42)
+    df = synthetic.make_design(3, K1=3, K2=2, T=4, p_replicated=0.5, n_when_replicated=4, seed=42)
     pb_obj = ProcessBehavior(df)
     study = pb_obj.formulate(response='y', factors=['factor 1', 'factor 2'], time='time')
 
@@ -92,7 +92,7 @@ def test_response_xbar_center_matches_precomputed_ybar():
     Confirms the response-path branch wires into residual_calculator's
     grand_mean computation.
     """
-    df = synthetic.make_sds(3, K1=3, K2=2, T=4, p_replicated=0.5, n_when_replicated=4, seed=42)
+    df = synthetic.make_design(3, K1=3, K2=2, T=4, p_replicated=0.5, n_when_replicated=4, seed=42)
     pb_obj = ProcessBehavior(df)
     study = pb_obj.formulate(response='y', factors=['factor 1', 'factor 2'], time='time')
     result = study.execute(chart='Xbar')
@@ -113,7 +113,7 @@ def test_r6_xbar_center_is_factor_grain_not_full_cell_grid():
     On unbalanced data these two values differ; pinning to (F1, F2) is what
     matches Bishop's reference for SDS 3 R6 effects charts (pages 20/24/26).
     """
-    df = synthetic.make_sds(3, K1=3, K2=2, T=4, p_replicated=0.5, n_when_replicated=4, seed=42)
+    df = synthetic.make_design(3, K1=3, K2=2, T=4, p_replicated=0.5, n_when_replicated=4, seed=42)
     pb_obj = ProcessBehavior(df)
     study = pb_obj.formulate(response='y', factors=['factor 1', 'factor 2'], time='time')
     # Force RCR6 column to materialize
@@ -139,7 +139,7 @@ def test_r6_xbar_center_is_factor_grain_not_full_cell_grid():
 def test_balanced_design_unaffected_by_fix():
     """On balanced SDS 1 cells, observation-weighted and unweighted means
     coincide — fix is a no-op."""
-    df = synthetic.make_sds(1, K1=3, K2=2, T=4, n_min=3, n_max=3, seed=42)
+    df = synthetic.make_design(1, K1=3, K2=2, T=4, n_min=3, n_max=3, seed=42)
     pb_obj = ProcessBehavior(df)
     study = pb_obj.formulate(response='y', factors=['factor 1', 'factor 2'], time='time')
     result = study.execute(chart='Xbar', by=['time'], value='R3', recentered=True)
