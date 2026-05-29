@@ -61,7 +61,7 @@ __all__ = [
     'make_sds4',
     'make_sds5',
     'make_sds6',
-    'make_sds',
+    'make_design',
     'make_edge_cases',
     'make_large_dataset',
 ]
@@ -1038,18 +1038,6 @@ def make_design(
     return generators[state](K1=K1, K2=K2, T=T, seed=seed, **kwargs)
 
 
-def make_sds(
-    sds: int, K1: int = 3, K2: int = 2, T: int = 8, n: int = 20, seed: Optional[int] = None, **kwargs
-) -> pd.DataFrame:
-    """Deprecated alias for :func:`make_design`. Use ``make_design(state=N)``.
-
-    Retained temporarily during the make_sds → make_design migration; the
-    ``n`` parameter was always ignored and is dropped on the canonical
-    function.
-    """
-    return make_design(state=sds, K1=K1, K2=K2, T=T, seed=seed, **kwargs)
-
-
 # ============================================================================
 # Edge Cases and Special Scenarios
 # ============================================================================
@@ -1215,7 +1203,7 @@ def compare_sds_characteristics(
 
     rows = []
     for sds in sds_list:
-        df = make_sds(sds, K1=K1, K2=K2, T=T, seed=seed)
+        df = make_design(sds, K1=K1, K2=K2, T=T, seed=seed)
 
         if 'factor 1' in df.columns and 'time' in df.columns:
             cell_counts = df.groupby(['factor 1', 'time']).size()
@@ -1709,7 +1697,7 @@ if __name__ == '__main__':
 
     for sds in range(1, 7):
         print(f'SDS {sds}: {get_sds_info(sds)["name"]}')
-        df = make_sds(sds, K1=3, K2=2, T=6, seed=42)
+        df = make_design(sds, K1=3, K2=2, T=6, seed=42)
         print(f'  Generated {len(df)} observations')
         print(f'  Columns: {df.columns.tolist()}')
         print(f'  Preview:\n{df.head(3)}')
