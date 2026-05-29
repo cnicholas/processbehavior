@@ -22,6 +22,7 @@ from __future__ import annotations
 import pytest
 
 import processbehavior as pb
+from processbehavior.exceptions import ValidationError
 
 
 @pytest.mark.parametrize('target_sds', [1, 2, 3, 4, 5, 6])
@@ -119,3 +120,63 @@ def test_ods6_has_both_singletons_and_replicates() -> None:
     cell_sizes = occupied.groupby(['factor 1', 'factor 2', 'time']).size()
     assert (cell_sizes == 1).any(), 'ODS 6 must include at least one singleton cell'
     assert (cell_sizes >= 2).any(), 'ODS 6 must include at least one replicated cell'
+
+
+# =============================================================================
+# Contract robustness — pin make_design(state=N) → ODS N beyond the default
+# seed / grid. The prior drift only surfaced because make_sds4/5/6 silently
+# produced ODS 2 regardless of input; these matrices guard that the contract
+# holds across the parameter space a user might actually pass.
+# =============================================================================
+
+_FORMULATE_KW = dict(response='y', factors=['factor 1', 'factor 2'], time='time')
+
+
+def _observed_state(df) -> int:
+    return pb.ProcessBehavior(df).formulate(**_FORMULATE_KW).observed_design_state.sds
+
+
+class TestContractAcrossParameters:
+    """``make_design(state=N) → ODS N`` must hold across seeds and grid sizes."""
+
+    @pytest.mark.parametrize('state', [1, 2, 3, 4, 5, 6])
+    @pytest.mark.parametrize('seed', [0, 1, 7, 99, 123, 2024])
+    def test_contract_holds_across_seeds(self, state: int, seed: int) -> None:
+        df = pb.make_design(state=state, seed=seed)
+        assert _observed_state(df) == state, (
+            f'make_design(state={state}, seed={seed}) classified as '
+            f'ODS {_observed_state(df)} — contract is seed-fragile'
+        )
+
+    @pytest.mark.parametrize('state', [1, 2, 3, 4, 5, 6])
+    @pytest.mark.parametrize('K1,K2,T', [(2, 2, 4), (3, 2, 6), (4, 3, 8), (2, 3, 10)])
+    def test_contract_holds_across_grid_sizes(
+        self, state: int, K1: int, K2: int, T: int
+    ) -> None:
+        df = pb.make_design(state=state, K1=K1, K2=K2, T=T, seed=42)
+        assert _observed_state(df) == state, (
+            f'make_design(state={state}, K1={K1}, K2={K2}, T={T}) classified '
+            f'as ODS {_observed_state(df)} — contract is grid-size-fragile'
+        )
+
+
+class TestDegenerateParamsRaise:
+    """Policy: parameters that contradict the requested design state raise a
+    clear ValidationError rather than silently producing the wrong ODS.
+
+    The mixed states (3, 6) require both singleton and replicated cells; mix
+    params at the extremes can't satisfy that, so the generator's
+    post-generation structural check rejects them."""
+
+    def test_state3_all_replicated_raises(self) -> None:
+        with pytest.raises(ValidationError, match='both single and multiple'):
+            pb.make_design(state=3, p_replicated=0.99, seed=42)
+
+    def test_state3_none_replicated_raises(self) -> None:
+        with pytest.raises(ValidationError, match='both single and multiple'):
+            pb.make_design(state=3, p_replicated=0.01, seed=42)
+
+    def test_state3_balanced_mix_ok(self) -> None:
+        """A sane mix still produces ODS 3 — the guard only rejects extremes."""
+        df = pb.make_design(state=3, p_replicated=0.5, seed=42)
+        assert _observed_state(df) == 3

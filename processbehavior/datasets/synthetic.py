@@ -236,12 +236,12 @@ def make_sds1(
     cell_counts = df.groupby(['factor 1', 'factor 2', 'time']).size()
 
     if cell_counts.min() < n_min:
-        raise AssertionError(f'SDS1 validation failed: min n={cell_counts.min()} < {n_min}')
+        raise ValidationError(f'SDS1 validation failed: min n={cell_counts.min()} < {n_min}')
     if cell_counts.max() > n_max:
-        raise AssertionError(f'SDS1 validation failed: max n={cell_counts.max()} > {n_max}')
+        raise ValidationError(f'SDS1 validation failed: max n={cell_counts.max()} > {n_max}')
     expected_cells = K1 * K2 * T
     if len(cell_counts) != expected_cells:
-        raise AssertionError(
+        raise ValidationError(
             f'SDS1 validation failed: expected {expected_cells} cells, got {len(cell_counts)} '
             '(some factor-time combinations missing)'
         )
@@ -375,13 +375,13 @@ def make_sds2(
     cell_counts = df.groupby(['factor 1', 'factor 2', 'time']).size()
 
     if not (cell_counts == 1).all():
-        raise AssertionError(
+        raise ValidationError(
             f'SDS2 validation failed: expected all n=1, got min={cell_counts.min()}, max={cell_counts.max()}'
         )
 
     expected_n = K1 * K2 * T
     if len(df) != expected_n:
-        raise AssertionError(f'SDS2 validation failed: expected {expected_n} obs, got {len(df)}')
+        raise ValidationError(f'SDS2 validation failed: expected {expected_n} obs, got {len(df)}')
 
     logger.debug(f'Generated SDS2 data: {K1} × {K2} factors × {T} times = {len(df)} observations')
 
@@ -567,7 +567,7 @@ def make_sds3(  # noqa: C901
     has_multiples = (cell_counts >= 2).any()
 
     if not (has_singles and has_multiples):
-        raise AssertionError(
+        raise ValidationError(
             f'SDS3 validation failed: must have both single and multiple observations. '
             f'Got singles={has_singles}, multiples={has_multiples}. '
             f'Try adjusting p_replicated or replication_pattern.'
