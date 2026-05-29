@@ -20,7 +20,7 @@ class TestWECOIntegration:
     def test_detect_signals_xbar_chart(self):
         """Test detect_signals() works with Xbar chart (value_col='xbar')."""
         # Use synthetic SDS1 data (full replication)
-        df = synthetic.make_sds(1, K1=3, K2=2, T=8, n_min=2, n_max=4, seed=42)
+        df = synthetic.make_design(1, K1=3, K2=2, T=8, n_min=2, n_max=4, seed=42)
 
         # Analyze
         pdf = ProcessBehavior(df)
@@ -45,7 +45,7 @@ class TestWECOIntegration:
     def test_detect_signals_sbar_chart(self):
         """Test detect_signals() works with S chart (value_col='s')."""
         # Use synthetic SDS1 data (full replication)
-        df = synthetic.make_sds(1, K1=4, K2=2, T=10, n_min=2, n_max=5, seed=42)
+        df = synthetic.make_design(1, K1=4, K2=2, T=10, n_min=2, n_max=5, seed=42)
 
         # Analyze
         pdf = ProcessBehavior(df)
@@ -71,7 +71,7 @@ class TestWECOIntegration:
     def test_detect_signals_all_charts(self):
         """Test detect_signals() without chart parameter detects on all charts."""
         # Use synthetic SDS1 data (full replication)
-        df = synthetic.make_sds(1, K1=3, K2=2, T=8, n_min=2, n_max=4, seed=42)
+        df = synthetic.make_design(1, K1=3, K2=2, T=8, n_min=2, n_max=4, seed=42)
 
         # Analyze
         pdf = ProcessBehavior(df)
@@ -97,7 +97,7 @@ class TestWECOIntegration:
     def test_detect_signals_with_violations(self):
         """Test that actual violations are detected correctly."""
         # Create SDS1 data with known violation - add outlier manually
-        df = synthetic.make_sds(1, K1=3, K2=2, T=10, n_min=2, n_max=4, seed=42)
+        df = synthetic.make_design(1, K1=3, K2=2, T=10, n_min=2, n_max=4, seed=42)
 
         # Inject an outlier - shift ALL F1_2 observations significantly
         # (Xbar chart aggregates across time, so need to shift all observations)
@@ -121,7 +121,7 @@ class TestWECOIntegration:
     def test_metadata_missing_raises_error(self):
         """Test that missing metadata raises helpful error."""
         # Create result with charts
-        df = synthetic.make_sds(1, K1=2, K2=2, T=6, n_min=2, n_max=3, seed=42)
+        df = synthetic.make_design(1, K1=2, K2=2, T=6, n_min=2, n_max=3, seed=42)
 
         pdf = ProcessBehavior(df)
         study = pdf.formulate(response=pdf.cols.y, factors=[pdf.cols.factor_1, pdf.cols.factor_2], time=pdf.cols.time)
@@ -139,7 +139,7 @@ class TestWECOIntegration:
     def test_value_column_used_correctly(self):
         """Test that the correct value column is actually used for detection."""
         # Use synthetic SDS1 data
-        df = synthetic.make_sds(1, K1=3, K2=2, T=8, n_min=2, n_max=4, seed=42)
+        df = synthetic.make_design(1, K1=3, K2=2, T=8, n_min=2, n_max=4, seed=42)
 
         # Analyze
         pdf = ProcessBehavior(df)
@@ -169,7 +169,7 @@ class TestMetadataContract:
 
     def test_xbar_sbar_metadata(self):
         """Test Xbar and S charts have complete metadata."""
-        df = synthetic.make_sds(1, K1=2, K2=2, T=8, n_min=2, n_max=4, seed=42)
+        df = synthetic.make_design(1, K1=2, K2=2, T=8, n_min=2, n_max=4, seed=42)
 
         pdf = ProcessBehavior(df)
         study = pdf.formulate(response=pdf.cols.y, factors=[pdf.cols.factor_1, pdf.cols.factor_2], time=pdf.cols.time)
@@ -190,7 +190,7 @@ class TestMetadataContract:
 
     def test_metadata_structure(self):
         """Test metadata has required keys."""
-        df = synthetic.make_sds(1, K1=2, K2=2, T=8, n_min=2, n_max=4, seed=42)
+        df = synthetic.make_design(1, K1=2, K2=2, T=8, n_min=2, n_max=4, seed=42)
 
         pdf = ProcessBehavior(df)
         study = pdf.formulate(response=pdf.cols.y, factors=[pdf.cols.factor_1, pdf.cols.factor_2], time=pdf.cols.time)

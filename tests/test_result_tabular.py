@@ -30,7 +30,7 @@ from processbehavior.result_tabular import (
 @pytest.fixture(scope="module")
 def xbar_s_result():
     """A stratified Xbar/S result on SDS 1 — has rsg column, multiple subgroups."""
-    df = synthetic.make_sds(1, K1=3, K2=2, T=6, n_min=2, n_max=4, seed=42)
+    df = synthetic.make_design(1, K1=3, K2=2, T=6, n_min=2, n_max=4, seed=42)
     return (
         ProcessBehavior(df)
         .formulate(response="y", factors=["factor 1", "factor 2"], time="time")
@@ -41,7 +41,7 @@ def xbar_s_result():
 @pytest.fixture(scope="module")
 def x_mr_result():
     """An X/mR companion result — confirms the same code path works for individuals."""
-    df = synthetic.make_sds(2, K1=3, K2=2, T=10, seed=42)
+    df = synthetic.make_design(2, K1=3, K2=2, T=10, seed=42)
     return (
         ProcessBehavior(df)
         .formulate(response="y", factors=["factor 1", "factor 2"], time="time")

@@ -76,7 +76,7 @@ def large_dataset_1m():
     This fixture is module-scoped to avoid regeneration between tests.
     """
     K1, K2, T, n = 100, 2, 500, 10
-    df = synthetic.make_sds(1, K1=K1, K2=K2, T=T, n_min=n, n_max=n, seed=42)
+    df = synthetic.make_design(1, K1=K1, K2=K2, T=T, n_min=n, n_max=n, seed=42)
 
     # Add 46 extra columns (noise columns not used in analysis)
     rng = np.random.default_rng(42)
@@ -95,7 +95,7 @@ def large_dataset_100k():
     Columns: 4 core + 46 extra = 50 total
     """
     K1, K2, T, n = 50, 2, 100, 10
-    df = synthetic.make_sds(1, K1=K1, K2=K2, T=T, n_min=n, n_max=n, seed=42)
+    df = synthetic.make_design(1, K1=K1, K2=K2, T=T, n_min=n, n_max=n, seed=42)
 
     rng = np.random.default_rng(42)
     for i in range(46):
@@ -113,7 +113,7 @@ def large_dataset_10k():
     Columns: 4 core + 46 extra = 50 total
     """
     K1, K2, T, n = 10, 2, 50, 10
-    df = synthetic.make_sds(1, K1=K1, K2=K2, T=T, n_min=n, n_max=n, seed=42)
+    df = synthetic.make_design(1, K1=K1, K2=K2, T=T, n_min=n, n_max=n, seed=42)
 
     rng = np.random.default_rng(42)
     for i in range(46):
@@ -171,7 +171,7 @@ def sds1_small():
 
     Use for: Xbar/S chart tests, full factorial designs, VAS residual tests
     """
-    return synthetic.make_sds(1, K1=2, K2=2, T=2, n_min=2, n_max=2, seed=42)
+    return synthetic.make_design(1, K1=2, K2=2, T=2, n_min=2, n_max=2, seed=42)
 
 
 @pytest.fixture
@@ -185,7 +185,7 @@ def sds2_small():
 
     Use for: XmR chart tests, unreplicated factorial designs
     """
-    return synthetic.make_sds(2, K1=2, K2=2, T=4, seed=42)
+    return synthetic.make_design(2, K1=2, K2=2, T=4, seed=42)
 
 
 @pytest.fixture
@@ -199,7 +199,7 @@ def sds3_small():
 
     Use for: Mixed replication scenarios, realistic production data
     """
-    return synthetic.make_sds(3, K1=3, K2=2, T=4, p_replicated=0.5, seed=42)
+    return synthetic.make_design(3, K1=3, K2=2, T=4, p_replicated=0.5, seed=42)
 
 
 @pytest.fixture
@@ -213,7 +213,7 @@ def sds4_small():
 
     Use for: XmR charts, time series analysis, trend detection
     """
-    return synthetic.make_sds(4, T=20, seed=42)
+    return synthetic.make_design(4, T=20, seed=42)
 
 
 @pytest.fixture
@@ -227,7 +227,7 @@ def sds4_minimal():
 
     Use for: Quick XmR tests, minimal valid data scenarios
     """
-    return synthetic.make_sds(4, T=10, seed=42)
+    return synthetic.make_design(4, T=10, seed=42)
 
 
 @pytest.fixture
@@ -241,7 +241,7 @@ def sds5_small():
 
     Use for: Nested designs, multi-head/multi-location scenarios
     """
-    return synthetic.make_sds(5, L=2, H_per_L=3, T=4, seed=42)
+    return synthetic.make_design(5, L=2, H_per_L=3, T=4, seed=42)
 
 
 @pytest.fixture
@@ -255,7 +255,7 @@ def sds6_small():
 
     Use for: Irregular sampling, missing combinations, stratified analysis
     """
-    return synthetic.make_sds(6, T=8, K1=3, K2=2, p_sampled=0.5, seed=42)
+    return synthetic.make_design(6, T=8, K1=3, K2=2, p_sampled=0.5, seed=42)
 
 
 # ============================================================================
@@ -273,7 +273,7 @@ def single_factor_data():
 
     Use for: Single-factor analysis, basic grouping tests
     """
-    return synthetic.make_sds(1, K1=3, K2=1, T=6, n_min=2, n_max=2, seed=42)
+    return synthetic.make_design(1, K1=3, K2=1, T=6, n_min=2, n_max=2, seed=42)
 
 
 @pytest.fixture
@@ -286,7 +286,7 @@ def two_factor_data():
 
     Use for: Two-factor analysis, interaction effects, typical SPC scenarios
     """
-    return synthetic.make_sds(1, K1=3, K2=2, T=4, n_min=2, n_max=2, seed=42)
+    return synthetic.make_design(1, K1=3, K2=2, T=4, n_min=2, n_max=2, seed=42)
 
 
 @pytest.fixture
@@ -302,7 +302,7 @@ def xmr_only_data():
     import pandas as pd
 
     # Use make_sds4 but drop the time column to simulate response-only input
-    df = synthetic.make_sds(4, T=15, seed=42)
+    df = synthetic.make_design(4, T=15, seed=42)
     return pd.DataFrame({'y': df['y'].values})
 
 

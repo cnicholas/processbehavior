@@ -25,7 +25,7 @@ from processbehavior.exceptions import ProcessBehaviorError, ValidationError
 @pytest.fixture
 def sds1_study():
     """SDS 1 study with two factors — supports Xbar, S, XmR, R."""
-    df = synthetic.make_sds(1, K1=2, K2=2, T=5, seed=42)
+    df = synthetic.make_design(1, K1=2, K2=2, T=5, seed=42)
     return ProcessBehavior(df).formulate(
         response='y',
         time='time',
@@ -36,7 +36,7 @@ def sds1_study():
 @pytest.fixture
 def sds4_study():
     """SDS 4 study — single condition over time, XmR only."""
-    df = synthetic.make_sds(4, T=20, seed=42)
+    df = synthetic.make_design(4, T=20, seed=42)
     return ProcessBehavior(df).formulate(
         response='y',
         time='time',
@@ -512,7 +512,7 @@ class TestGate03DocsMatchRuntime:
 
 def test_gate_07_result_internal_mutability_guarded():
     """Gate 07: mutating user-returned objects cannot corrupt internals."""
-    df = synthetic.make_sds(1, K1=2, K2=1, T=5, seed=42)
+    df = synthetic.make_design(1, K1=2, K2=1, T=5, seed=42)
     study = ProcessBehavior(df).formulate(response='y', time='time', factors=['factor 1'])
     result = study.execute(chart='Xbar')
 

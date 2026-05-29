@@ -536,10 +536,10 @@ class TestPartialReplication:
 
     def test_xbar_with_sds3_partial_replication(self):
         """Xbar chart works with SDS 3 data (mixed n=1 and n>=2 cells)."""
-        from processbehavior.datasets.synthetic import make_sds
+        from processbehavior.datasets.synthetic import make_design
 
         # SDS 3: partial replication (50% cells have n>=2)
-        df = make_sds(3, K1=3, K2=2, T=8, p_replicated=0.5, n_when_replicated=3, seed=42)
+        df = make_design(3, K1=3, K2=2, T=8, p_replicated=0.5, n_when_replicated=3, seed=42)
 
         pb = ProcessBehavior(df)
         study = pb.formulate(response='y', factors=['factor 1', 'factor 2'], time='time')
@@ -557,9 +557,9 @@ class TestPartialReplication:
 
     def test_s_chart_with_sds3_partial_replication(self):
         """S chart also works with SDS 3 data (filters n=1 groups)."""
-        from processbehavior.datasets.synthetic import make_sds
+        from processbehavior.datasets.synthetic import make_design
 
-        df = make_sds(3, K1=3, K2=2, T=8, p_replicated=0.5, n_when_replicated=3, seed=42)
+        df = make_design(3, K1=3, K2=2, T=8, p_replicated=0.5, n_when_replicated=3, seed=42)
 
         pb = ProcessBehavior(df)
         study = pb.formulate(response='y', factors=['factor 1', 'factor 2'], time='time')

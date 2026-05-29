@@ -14,7 +14,7 @@ from conftest import detect_sds_for_test, make_request, make_spec
 from processbehavior.analysis import Analysis
 
 # Import test data generators
-from processbehavior.datasets.synthetic import make_sds
+from processbehavior.datasets.synthetic import make_design
 
 pytestmark = pytest.mark.io
 
@@ -33,7 +33,7 @@ def temp_excel_file(tmp_path):
 def test_excel_export_basic(temp_excel_file):
     """Test basic Excel export with default parameters."""
     # Generate SDS1 data
-    df = make_sds(1, K1=3, K2=2, T=5, n_min=2, n_max=3, seed=42)
+    df = make_design(1, K1=3, K2=2, T=5, n_min=2, n_max=3, seed=42)
 
     spec = {'analysis_type': 'Xbar', 'rsg_vars': ['factor 1'], 'time_var': 'time', 'response_var': 'y'}
 
@@ -65,7 +65,7 @@ def test_excel_export_basic(temp_excel_file):
 
 def test_excel_export_with_full_dataset(temp_excel_file):
     """Test Excel export including full dataset."""
-    df = make_sds(1, K1=2, K2=2, T=4, n_min=2, n_max=2, seed=42)
+    df = make_design(1, K1=2, K2=2, T=4, n_min=2, n_max=2, seed=42)
 
     spec = {'analysis_type': 'Xbar', 'rsg_vars': ['factor 1'], 'time_var': 'time', 'response_var': 'y'}
 
@@ -88,7 +88,7 @@ def test_excel_export_with_full_dataset(temp_excel_file):
 
 def test_excel_export_stratified_x(temp_excel_file):
     """Test Excel export with stratified X chart (SRP: X only)."""
-    df = make_sds(1, K1=3, K2=2, T=5, n_min=2, n_max=3, seed=42)
+    df = make_design(1, K1=3, K2=2, T=5, n_min=2, n_max=3, seed=42)
 
     spec = {'analysis_type': 'X', 'rsg_vars': ['factor 1'], 'time_var': 'time', 'response_var': 'y'}
 
@@ -118,7 +118,7 @@ def test_excel_export_stratified_x(temp_excel_file):
 
 def test_excel_export_stratified_x_companion(temp_excel_file):
     """Test Excel export with stratified X charts (companion=True for bundled output)."""
-    df = make_sds(1, K1=3, K2=2, T=5, n_min=2, n_max=3, seed=42)
+    df = make_design(1, K1=3, K2=2, T=5, n_min=2, n_max=3, seed=42)
 
     spec = {
         'analysis_type': 'X',
@@ -150,7 +150,7 @@ def test_excel_export_stratified_x_companion(temp_excel_file):
 
 def test_excel_export_with_residuals(temp_excel_file):
     """Test Excel export includes residuals when calculated."""
-    df = make_sds(2, K1=3, K2=2, T=5, seed=42)
+    df = make_design(2, K1=3, K2=2, T=5, seed=42)
 
     spec = {'analysis_type': 'Xbar', 'rsg_vars': ['factor 1'], 'time_var': 'time', 'response_var': 'y'}
 
@@ -172,7 +172,7 @@ def test_excel_export_with_residuals(temp_excel_file):
 
 def test_excel_export_minimal(temp_excel_file):
     """Test Excel export with minimal options (only charts)."""
-    df = make_sds(1, K1=2, K2=2, T=4, n_min=2, n_max=2, seed=42)
+    df = make_design(1, K1=2, K2=2, T=4, n_min=2, n_max=2, seed=42)
 
     spec = {'analysis_type': 'Xbar', 'rsg_vars': ['factor 1'], 'time_var': 'time', 'response_var': 'y'}
 
@@ -200,7 +200,7 @@ def test_excel_export_minimal(temp_excel_file):
 
 def test_excel_export_no_formatting(temp_excel_file):
     """Test Excel export without formatting."""
-    df = make_sds(1, K1=2, K2=2, T=4, n_min=2, n_max=2, seed=42)
+    df = make_design(1, K1=2, K2=2, T=4, n_min=2, n_max=2, seed=42)
 
     spec = {'analysis_type': 'Xbar', 'rsg_vars': ['factor 1'], 'time_var': 'time', 'response_var': 'y'}
 
@@ -219,7 +219,7 @@ def test_excel_export_no_formatting(temp_excel_file):
 
 def test_excel_export_chart_data_integrity(temp_excel_file):
     """Test that chart data is correctly exported to Excel."""
-    df = make_sds(1, K1=2, K2=2, T=5, n_min=3, n_max=3, seed=42)
+    df = make_design(1, K1=2, K2=2, T=5, n_min=3, n_max=3, seed=42)
 
     spec = {'analysis_type': 'Xbar', 'rsg_vars': ['factor 1'], 'time_var': 'time', 'response_var': 'y'}
 
@@ -243,7 +243,7 @@ def test_excel_export_chart_data_integrity(temp_excel_file):
 
 def test_excel_export_summary_content(temp_excel_file):
     """Test that summary tab contains expected information."""
-    df = make_sds(2, K1=3, K2=2, T=5, seed=42)
+    df = make_design(2, K1=3, K2=2, T=5, seed=42)
 
     spec = {'analysis_type': 'Xbar', 'rsg_vars': ['factor 1'], 'time_var': 'time', 'response_var': 'y'}
 
@@ -267,7 +267,7 @@ def test_excel_export_summary_content(temp_excel_file):
 
 def test_excel_export_effects_tab(temp_excel_file):
     """Test that effects are properly exported when available."""
-    df = make_sds(2, K1=3, K2=2, T=5, seed=42)
+    df = make_design(2, K1=3, K2=2, T=5, seed=42)
 
     spec = {'analysis_type': 'Xbar', 'rsg_vars': ['factor 1'], 'time_var': 'time', 'response_var': 'y'}
 
@@ -290,7 +290,7 @@ def test_excel_export_effects_tab(temp_excel_file):
 
 def test_excel_export_invalid_path():
     """Test Excel export with invalid file path."""
-    df = make_sds(1, K1=2, K2=2, T=3, n_min=2, n_max=2, seed=42)
+    df = make_design(1, K1=2, K2=2, T=3, n_min=2, n_max=2, seed=42)
 
     spec = {'analysis_type': 'Xbar', 'rsg_vars': ['factor 1'], 'time_var': 'time', 'response_var': 'y'}
 
@@ -305,7 +305,7 @@ def test_excel_export_invalid_path():
 
 def test_excel_export_multiple_analyses(temp_excel_file):
     """Test exporting different analysis types."""
-    df = make_sds(1, K1=3, K2=2, T=5, n_min=2, n_max=3, seed=42)
+    df = make_design(1, K1=3, K2=2, T=5, n_min=2, n_max=3, seed=42)
 
     # Test with S chart
     spec_s = {'analysis_type': 'S', 'rsg_vars': ['factor 1'], 'time_var': 'time', 'response_var': 'y'}
@@ -324,7 +324,7 @@ def test_excel_export_multiple_analyses(temp_excel_file):
 
 def test_excel_tab_name_truncation(temp_excel_file):
     """Test that long tab names are properly truncated to 31 characters."""
-    df = make_sds(1, K1=2, K2=2, T=4, n_min=2, n_max=2, seed=42)
+    df = make_design(1, K1=2, K2=2, T=4, n_min=2, n_max=2, seed=42)
 
     # Rename factor to create very long group names
     df['factor 1'] = df['factor 1'].replace(
@@ -348,7 +348,7 @@ def test_excel_tab_name_truncation(temp_excel_file):
 
 def test_excel_export_preserves_statistics(temp_excel_file):
     """Test that chart statistics are accessible in exported data."""
-    df = make_sds(1, K1=2, K2=2, T=5, n_min=3, n_max=3, seed=42)
+    df = make_design(1, K1=2, K2=2, T=5, n_min=3, n_max=3, seed=42)
 
     spec = {'analysis_type': 'Xbar', 'rsg_vars': ['factor 1'], 'time_var': 'time', 'response_var': 'y'}
 
@@ -386,7 +386,7 @@ def test_excel_export_stratified_multifactor(temp_excel_file):
     """Test export with multi-factor stratification."""
     from processbehavior import ProcessBehavior
 
-    df = make_sds(1, K1=2, K2=2, T=4, n_min=3, n_max=3, seed=42)
+    df = make_design(1, K1=2, K2=2, T=4, n_min=3, n_max=3, seed=42)
     study = ProcessBehavior(df).formulate(
         response='y',
         time='time',
@@ -429,7 +429,7 @@ def test_excel_export_sds4_minimal(temp_excel_file):
 
 def test_excel_export_s_chart(temp_excel_file):
     """Test export with S chart (different chart type than Xbar/X)."""
-    df = make_sds(1, K1=3, K2=2, T=4, n_min=3, n_max=3, seed=42)
+    df = make_design(1, K1=3, K2=2, T=4, n_min=3, n_max=3, seed=42)
 
     spec = {'analysis_type': 'S', 'rsg_vars': ['factor 1'], 'time_var': 'time', 'response_var': 'y'}
 
@@ -449,7 +449,7 @@ def test_excel_export_round_trip_summary(temp_excel_file):
     """Test that exported Summary sheet contains expected metadata."""
     from processbehavior import ProcessBehavior
 
-    df = make_sds(1, K1=2, K2=2, T=4, n_min=3, n_max=3, seed=42)
+    df = make_design(1, K1=2, K2=2, T=4, n_min=3, n_max=3, seed=42)
     study = ProcessBehavior(df).formulate(
         response='y',
         time='time',

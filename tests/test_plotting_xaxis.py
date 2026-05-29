@@ -265,9 +265,9 @@ class TestTickLabelBlockInvariants:
 
     @staticmethod
     def _study():
-        from processbehavior.datasets.synthetic import make_sds
+        from processbehavior.datasets.synthetic import make_design
 
-        df = make_sds(2, K1=3, K2=2, T=10, seed=42)
+        df = make_design(2, K1=3, K2=2, T=10, seed=42)
         return ProcessBehavior(df).formulate(
             response='y',
             factors=['factor 1', 'factor 2'],
@@ -367,9 +367,9 @@ class TestTwoTierXAxis:
 
     @staticmethod
     def _result():
-        from processbehavior.datasets.synthetic import make_sds
+        from processbehavior.datasets.synthetic import make_design
 
-        df = make_sds(2, K1=3, K2=2, T=10, seed=42)
+        df = make_design(2, K1=3, K2=2, T=10, seed=42)
         study = ProcessBehavior(df).formulate(
             response='y',
             factors=['factor 1', 'factor 2'],
@@ -494,9 +494,9 @@ class TestTitleBandNoOverlap:
     @staticmethod
     def _two_tier_result():
         """A dense multi-cell X chart — the SDS 3 IMR shape that produced Bug B."""
-        from processbehavior.datasets.synthetic import make_sds
+        from processbehavior.datasets.synthetic import make_design
 
-        df = make_sds(2, K1=3, K2=2, T=10, seed=42)
+        df = make_design(2, K1=3, K2=2, T=10, seed=42)
         study = ProcessBehavior(df).formulate(
             response='y', factors=['factor 1', 'factor 2'], time='time',
         )

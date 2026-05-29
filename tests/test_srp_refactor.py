@@ -21,14 +21,14 @@ from processbehavior.datasets import synthetic
 @pytest.fixture
 def sds1_study():
     """SDS1 study with two factors and time - has both Xbar and S available."""
-    df = synthetic.make_sds(1, K1=3, K2=2, T=6, n_min=2, n_max=4, seed=42)
+    df = synthetic.make_design(1, K1=3, K2=2, T=6, n_min=2, n_max=4, seed=42)
     return ProcessBehavior(df).formulate(response='y', time='time', factors=['factor 1', 'factor 2'])
 
 
 @pytest.fixture
 def sds3_study():
     """SDS3 study (single factor, time, partial replication) - has Xbar and S."""
-    df = synthetic.make_sds(3, K1=4, T=8, seed=42)
+    df = synthetic.make_design(3, K1=4, T=8, seed=42)
     return ProcessBehavior(df).formulate(response='y', time='time', factors=['factor 1'])
 
 

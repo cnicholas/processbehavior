@@ -22,14 +22,14 @@ from processbehavior.exceptions import ValidationError
 @pytest.fixture(scope='module')
 def sds1_study():
     """SDS1 study with two factors — supports all chart types."""
-    df = synthetic.make_sds(1, K1=3, K2=2, T=6, n_min=2, n_max=4, seed=42)
+    df = synthetic.make_design(1, K1=3, K2=2, T=6, n_min=2, n_max=4, seed=42)
     return ProcessBehavior(df).formulate(response='y', time='time', factors=['factor 1', 'factor 2'])
 
 
 @pytest.fixture(scope='module')
 def sds1_single_factor_study():
     """SDS1 study with single factor — for XmR tests without ambiguity."""
-    df = synthetic.make_sds(1, K1=3, K2=1, T=6, n_min=2, n_max=4, seed=42)
+    df = synthetic.make_design(1, K1=3, K2=1, T=6, n_min=2, n_max=4, seed=42)
     return ProcessBehavior(df).formulate(response='y', time='time', factors=['factor 1'])
 
 
@@ -133,7 +133,7 @@ class TestCompanionWithResiduals:
 @pytest.fixture(scope='module')
 def sds2_study():
     """SDS2 study — supports R2_XmR residual charts."""
-    df = synthetic.make_sds(2, K1=2, K2=2, T=8, seed=42)
+    df = synthetic.make_design(2, K1=2, K2=2, T=8, seed=42)
     return ProcessBehavior(df).formulate(response='y', time='time', factors=['factor 1', 'factor 2'])
 
 
@@ -169,7 +169,7 @@ class TestRecenteredValueResolution:
 @pytest.fixture(scope='module')
 def no_time_study():
     """Study with factors but no time — no VAS residuals."""
-    df = synthetic.make_sds(1, K1=3, K2=2, T=6, n_min=2, n_max=4, seed=42)
+    df = synthetic.make_design(1, K1=3, K2=2, T=6, n_min=2, n_max=4, seed=42)
     return ProcessBehavior(df).formulate(response='y', factors=['factor 1', 'factor 2'])
 
 
