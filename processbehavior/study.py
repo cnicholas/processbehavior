@@ -1581,6 +1581,7 @@ class Study:
         usl: float | None = None,
         lsl: float | None = None,
         target: float | None = None,
+        window: tuple | None = None,
     ) -> CapabilityResult:
         """
         Assess process capability against specification limits (Ch. 16).
@@ -1596,6 +1597,15 @@ class Study:
             Lower specification limit.
         target : float, optional
             Target value.
+        window : tuple, optional
+            Time-based subset ``(start, end)`` in the units of this study's
+            designated time variable (an int for a sequence, a date/datetime for
+            a date axis); half-open ``start <= t < end``, either bound ``None``
+            for open. Default ``None`` = full data (unchanged behaviour). This is
+            a view over the frozen analytic dataset: current capability and the
+            potential centering use the windowed observed values, while the
+            potential noise floor (σ̂_R2) stays the full-study pooled residual
+            basis. See ``assess_capability`` for the windowing rules/guards.
 
         Returns
         -------
@@ -1610,13 +1620,18 @@ class Study:
         1.42
 
         >>> cap2 = study.capability(usl=251.0, lsl=249.0)  # wider specs
+
+        Before vs. after a change at time 25 (integer time axis):
+
+        >>> before = study.capability(usl=240, target=180, window=(None, 25))
+        >>> after = study.capability(usl=240, target=180, window=(25, None))
         """
         from .capability import SpecLimits as _SpecLimits
         from .capability import assess_capability
 
         if specs is None:
             specs = _SpecLimits(usl=usl, lsl=lsl, target=target)
-        return assess_capability(self._ads, specs, round_to=self._spec.round_to)
+        return assess_capability(self._ads, specs, round_to=self._spec.round_to, window=window)
 
     def loss_function(self, target: float | None = None) -> LossResult:
         """
