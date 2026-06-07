@@ -28,6 +28,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Literal
 
 import numpy as np
+import pandas as pd
 
 from .exceptions import ValidationError
 from .spc_constants import c4
@@ -183,13 +184,21 @@ class CapabilityResult:
     # Presentation
     round_to: int = 3
 
+    # Time-window view (all None on the un-windowed default path, so the default
+    # result is byte-for-byte unchanged). Set only when a window= is supplied.
+    window: tuple | None = None
+    time_var: str | None = None
+    n_total: int | None = None
+    window_warning: str | None = None
+    observed_values: np.ndarray | None = None  # values summarized (windowed or full)
+
     # ------------------------------------------------------------------
     # Visualization
     # ------------------------------------------------------------------
 
     def plot(
         self,
-        values,
+        values=None,
         *,
         theme=None,
         show_potential=True,
@@ -207,8 +216,10 @@ class CapabilityResult:
 
         Parameters
         ----------
-        values : array-like
-            Response values to histogram.
+        values : array-like, optional
+            Response values to histogram. Defaults to the values this result
+            summarized (the window subset when windowed, else the full data),
+            so a windowed result charts exactly its window with no caller effort.
         theme : ChartTheme, optional
             Visual theme (default: processbehavior theme).
         show_potential : bool, default True
@@ -227,6 +238,8 @@ class CapabilityResult:
         """
         from .plotting.capability_chart import create_capability_chart
 
+        if values is None:
+            values = self.observed_values
         return create_capability_chart(
             self,
             values,
@@ -257,7 +270,7 @@ class CapabilityResult:
                 return v
             return round(v, r)
 
-        return {
+        out = {
             'usl': self.specs.usl,
             'lsl': self.specs.lsl,
             'target': self.specs.target,
@@ -288,6 +301,13 @@ class CapabilityResult:
             'potential_pct_below_lsl': _r(self.potential_pct_below_lsl),
             'potential_pct_above_usl': _r(self.potential_pct_above_usl),
         }
+        # Window metadata only when windowed → un-windowed dict is unchanged.
+        if self.window is not None:
+            out['window'] = self.window
+            out['time_var'] = self.time_var
+            out['n_total'] = self.n_total
+            out['window_warning'] = self.window_warning
+        return out
 
     def __repr__(self) -> str:
         """Formatted summary using self.round_to."""
@@ -507,10 +527,44 @@ def _coerce_ads(source: Study | AnalysisDataSet) -> AnalysisDataSet:
 # ============================================================================
 
 
+def _time_window_mask(time_col: pd.Series, window: tuple) -> pd.Series:
+    """Boolean mask for a half-open time window ``[start, end)``.
+
+    ``window`` is ``(start, end)`` in the time variable's own units; either bound
+    may be ``None`` (open). Bounds are coerced to the column's dtype so a date
+    bound works against a datetime column and an int bound against a sequence.
+    Half-open semantics make a cutpoint partition cleanly: ``(None, c)`` and
+    ``(c, None)`` are exact complements.
+    """
+    start, end = window
+    if pd.api.types.is_datetime64_any_dtype(time_col):
+        try:
+            start = pd.to_datetime(start) if start is not None else None
+            end = pd.to_datetime(end) if end is not None else None
+        except (ValueError, TypeError) as e:
+            raise ValidationError(
+                f'window bound is not a valid date for the date time axis: {e}'
+            ) from e
+    mask = pd.Series(True, index=time_col.index)
+    try:
+        if start is not None:
+            mask &= time_col >= start
+        if end is not None:
+            mask &= time_col < end
+    except TypeError as e:
+        raise ValidationError(
+            f'window bounds {window!r} are not comparable with the '
+            f'{time_col.name!r} time axis (dtype {time_col.dtype}); pass an int '
+            f'for a sequence axis or a date for a date axis.'
+        ) from e
+    return mask
+
+
 def assess_capability(
     source: Study | AnalysisDataSet,
     specs: SpecLimits,
     round_to: int = 3,
+    window: tuple | None = None,
 ) -> CapabilityResult:
     """
     Assess process capability against specification limits.
@@ -528,6 +582,14 @@ def assess_capability(
         Specification limits to assess against.
     round_to : int, default 3
         Decimal places for presentation in ``__repr__`` / ``as_dict``.
+    window : tuple, optional
+        Time-based subset ``(start, end)`` in the study's designated time
+        variable's units (int for a sequence, date/datetime for a date axis);
+        half-open ``start <= t < end``, either bound ``None`` for open. Default
+        ``None`` = full dataset (behaviour identical to before this option).
+        View-only: the **current** stats and the potential **centering** use the
+        windowed observed values, but the potential **noise floor** (σ̂_R2) stays
+        the full-study pooled R2 — never re-estimated on the subset.
 
     Returns
     -------
@@ -537,18 +599,47 @@ def assess_capability(
     Raises
     ------
     ValidationError
-        If fewer than 2 valid observations are available.
+        Un-windowed: if fewer than 2 valid observations. Windowed: if the study
+        has no time variable, or the window holds fewer than 8 observations.
     """
     ads = _coerce_ads(source)
     response_var = ads.spec.response_var
     df = ads.analysis_dataset
 
-    # --- Extract valid Y values ---
-    y_values = df[response_var].dropna().to_numpy(dtype=float)
-    n = len(y_values)
+    # --- Extract valid Y values (windowed observed view, or full) ---
+    window_meta = None
+    time_var_meta = None
+    n_total = None
+    window_warning = None
 
-    if n < 2:
-        raise ValidationError(f'Capability analysis requires at least 2 valid observations, got {n}.')
+    if window is not None:
+        time_var = ads.spec.time_var
+        if not time_var:
+            raise ValidationError('window= requires a designated time variable; this study has none.')
+        n_total = int(df[response_var].notna().sum())
+        obs_df = df[_time_window_mask(df[time_var], window)]
+        y_values = obs_df[response_var].dropna().to_numpy(dtype=float)
+        n = len(y_values)
+        # Single n-ladder on the windowed path: refuse < 8 subsumes the legacy
+        # n < 2 check (and is strictly more informative).
+        if n < 8:
+            tmin, tmax = df[time_var].min(), df[time_var].max()
+            raise ValidationError(
+                f'Capability on window {window!r} of {time_var!r} has only {n} '
+                f'observation(s); need >= 8 for a meaningful figure. '
+                f'{time_var!r} spans [{tmin}, {tmax}].'
+            )
+        if n < 30:
+            window_warning = (
+                f'n={n}: capability indices (Ppk/Cpk) are highly unstable at this '
+                f'sample size; treat as indicative, not authoritative.'
+            )
+        window_meta, time_var_meta = tuple(window), time_var
+    else:
+        y_values = df[response_var].dropna().to_numpy(dtype=float)
+        n = len(y_values)
+        if n < 2:
+            raise ValidationError(f'Capability analysis requires at least 2 valid observations, got {n}.')
 
     # --- Current capability ---
     y_bar = float(np.mean(y_values))
@@ -621,4 +712,9 @@ def assess_capability(
         potential_pct_above_usl=potential_outside.get('pct_above_usl'),
         response_var=response_var,
         round_to=round_to,
+        window=window_meta,
+        time_var=time_var_meta,
+        n_total=n_total,
+        window_warning=window_warning,
+        observed_values=y_values,
     )

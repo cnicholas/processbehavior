@@ -178,6 +178,7 @@ def create_capability_chart(
         fig.update_yaxes(title_text=y_label_left, row=1, col=1)
         fig.update_yaxes(title_text=y_label_right, row=1, col=2)
 
+        _apply_window_decorations(fig, cap, view='current', paired=True)
         return fig
 
     # --- Single chart mode ---
@@ -218,7 +219,53 @@ def create_capability_chart(
         bargap=0.05,
     )
 
+    _apply_window_decorations(fig, cap, view=view, paired=False)
     return fig
+
+
+# ---------------------------------------------------------------------------
+# Time-window decorations (only applied when cap.window is set)
+# ---------------------------------------------------------------------------
+
+
+def _window_suffix(cap: CapabilityResult) -> str:
+    """Title suffix describing the time window, e.g. ' · week ∈ [25, ∞) · n=216 of 384'."""
+    start, end = cap.window
+    lo = '-∞' if start is None else str(start)
+    hi = '∞' if end is None else str(end)
+    return f' · {cap.time_var} ∈ [{lo}, {hi}) · n={cap.n} of {cap.n_total}'
+
+
+def _apply_window_decorations(fig: go.Figure, cap: CapabilityResult, *, view: str, paired: bool) -> None:
+    """Label a windowed capability chart so it is self-describing.
+
+    No-op when ``cap.window is None`` (the un-windowed chart is unchanged).
+    Adds: a window suffix on the title; a prominent thin-window warning banner
+    when ``cap.window_warning`` is set; and, on the potential side, a note that
+    the spread is the pooled full-study residual floor (not the window's).
+    """
+    if cap.window is None:
+        return
+
+    current_title = (fig.layout.title.text or '') if fig.layout.title else ''
+    fig.update_layout(title=current_title + _window_suffix(cap))
+
+    if cap.window_warning:
+        fig.add_annotation(
+            xref='paper', yref='paper', x=0.5, y=1.07, showarrow=False,
+            text='⚠ ' + cap.window_warning,
+            font=dict(color='#B00020', size=12), align='center',
+        )
+
+    # Make clear the potential panel's spread is pooled (full-study), not the window's.
+    if cap.n_total is not None and (paired or view == 'potential'):
+        fig.add_annotation(
+            xref='paper', yref='paper', x=(0.78 if paired else 0.5), y=0.98,
+            showarrow=False,
+            text=(f'σ̂ = full-study residual floor (R2, N={cap.n_total}) · '
+                  f'centered on this window'),
+            font=dict(size=10, color='#666666'), align='center',
+        )
 
 
 # ---------------------------------------------------------------------------
