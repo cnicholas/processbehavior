@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Time-windowed capability views: ``study.capability(..., window=(start, end))``
+  (and ``assess_capability(..., window=...)``) render *current* capability on a
+  before/after subset of the study's declared time axis — an integer sequence or
+  a date, half-open ``start <= t < end`` with either bound ``None`` for open. This
+  is a view over the immutable analytic dataset: the windowed observed values
+  drive current stats and the potential *centering*, while the potential noise
+  floor (``σ̂_R2``) stays the full-study pooled R2 — never re-estimated on the
+  subset. Thin windows refuse (``n < 8``) or warn (``8 ≤ n < 30``); the chart
+  self-describes the window and labels the pooled potential basis. ``window=None``
+  (the default) is byte-for-byte unchanged.
+
 ### CI / Infrastructure
 - Docs notebooks are now executed as part of CI via ``pytest --nbmake``
   on the ubuntu / Python 3.13 cell. The allowlist covers
