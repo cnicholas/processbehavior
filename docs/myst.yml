@@ -37,6 +37,8 @@ project:
           title: Stratified Analysis
         - file: tutorials/process-capability.ipynb
           title: Process Capability
+        - file: tutorials/process-capability-before-after.ipynb
+          title: Capability — Before vs. After
         - file: tutorials/loss-function.ipynb
           title: Loss Function
         - file: tutorials/sds-validation.ipynb

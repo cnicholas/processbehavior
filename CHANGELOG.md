@@ -17,6 +17,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   date columns are unaffected (still parsed to ``datetime64`` at formulation).
 
 ### Added
+- ``load_coffee_shop()`` (top-level + ``processbehavior.datasets``): a bundled demo
+  dataset of coffee-shop wait times with a deliberate process change at week 8,
+  returned as a ready-to-formulate ``ProcessBehavior``. Backs the new
+  "Capability — Before vs. After" tutorial (``docs/tutorials/process-capability-before-after.ipynb``),
+  which demonstrates time-windowed capability on the dataset.
 - Time-windowed capability views: ``study.capability(..., window=(start, end))``
   (and ``assess_capability(..., window=...)``) render *current* capability on a
   before/after subset of the study's declared time axis — an integer sequence or
