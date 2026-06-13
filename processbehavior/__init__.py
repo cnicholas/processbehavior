@@ -56,6 +56,7 @@ __version__ = '0.1.1'
 # Result object
 from processbehavior.analysis_result import AnalysisResult
 from processbehavior.capability import CapabilityResult, SpecLimits
+from processbehavior.datasets.loaders import load_coffee_shop
 from processbehavior.datasets.synthetic import make_design
 
 # Exceptions
@@ -104,4 +105,5 @@ __all__ = [
     'register_theme',
     # Datasets
     'make_design',
+    'load_coffee_shop',
 ]
