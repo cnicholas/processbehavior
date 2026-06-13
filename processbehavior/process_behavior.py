@@ -51,9 +51,13 @@ def _try_clean_numeric_strings(series: pd.Series) -> pd.Series | None:
     Handles: $, EUR, GBP, JPY, unicode currency symbols, thousands commas,
     accounting negatives like (1,234.56), percentage signs, and whitespace.
     """
-    from pandas.api.types import is_numeric_dtype
+    from pandas.api.types import is_datetime64_any_dtype, is_numeric_dtype
 
-    if is_numeric_dtype(series):
+    # Don't "clean" already-typed columns. Crucially, datetime64 must be guarded:
+    # pd.to_numeric(datetime64) silently succeeds (int64 nanoseconds), which would
+    # otherwise replace a date column with huge integers. (Mirrors the datetime
+    # guard in DataPreparation._detect_and_convert_type.)
+    if is_numeric_dtype(series) or is_datetime64_any_dtype(series) or isinstance(series.dtype, pd.PeriodDtype):
         return None
 
     # Only process object columns with actual data
