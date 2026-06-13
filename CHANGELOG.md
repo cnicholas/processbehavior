@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- Input data cleaning no longer coerces a pre-parsed ``datetime64`` column to
+  int64. ``_try_clean_numeric_strings`` guarded only numeric dtypes, so a
+  ``datetime64`` column passed to ``ProcessBehavior(df)`` (e.g. from
+  ``pd.read_csv(..., parse_dates=...)``) was silently converted to nanosecond
+  integers (``pd.to_numeric`` succeeds on datetimes). It now skips datetime and
+  Period dtypes, mirroring ``DataPreparation._detect_and_convert_type``. String
+  date columns are unaffected (still parsed to ``datetime64`` at formulation).
+
 ### Added
 - Time-windowed capability views: ``study.capability(..., window=(start, end))``
   (and ``assess_capability(..., window=...)``) render *current* capability on a

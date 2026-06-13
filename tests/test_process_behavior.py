@@ -978,3 +978,35 @@ def test_read_parquet(tmp_path):
     assert len(pb) == 3
     assert pb.cols.time == 'time'
     assert pb.cols.value == 'value'
+
+
+class TestDatetimeInputPreserved:
+    """A pre-parsed datetime64 column must survive input cleaning unchanged.
+
+    Regression: the constructor's numeric-formatting cleaning coerced datetime64
+    to int64 nanoseconds because pd.to_numeric(datetime64) silently succeeds.
+    """
+
+    def _df(self, day):
+        return pd.DataFrame({'wait': [10, 12, 11, 13, 9, 14], 'day': day})
+
+    def test_datetime64_column_not_coerced_to_int(self):
+        df = self._df(
+            pd.to_datetime(
+                ['2026-01-01', '2026-01-02', '2026-01-03', '2026-01-04', '2026-01-05', '2026-01-06']
+            )
+        )
+        assert pd.api.types.is_datetime64_any_dtype(df['day'])
+        pb = ProcessBehavior(df)
+        assert pd.api.types.is_datetime64_any_dtype(pb.data['day']), (
+            'datetime64 input column was coerced away from datetime (regression)'
+        )
+
+    def test_string_date_column_still_converts_to_datetime(self):
+        df = pd.DataFrame({
+            'wait': [10, 12, 11, 13, 9, 14],
+            'machine': ['A', 'B', 'A', 'B', 'A', 'B'],
+            'day': ['2026-01-01', '2026-01-01', '2026-01-02', '2026-01-02', '2026-01-03', '2026-01-03'],
+        })
+        study = ProcessBehavior(df).formulate(response='wait', factors=['machine'], time='day')
+        assert pd.api.types.is_datetime64_any_dtype(study.dataset['day'])
