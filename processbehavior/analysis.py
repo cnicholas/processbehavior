@@ -37,7 +37,7 @@ from .analysis_result import AnalysisResult
 from .data_preparation import encode_rsg
 from .exceptions import ChartNotAvailableError, ValidationError
 from .formulation_spec import ChartRequest, FormulationSpec
-from .spc_constants import calculate_limits, detect_beyond_limits
+from .spc_constants import calculate_limits, calibrated_limits, detect_beyond_limits
 from .types import ChartPayload
 
 # Configure module logger
@@ -329,6 +329,13 @@ class Analysis:
         self.request = request
         self.analysis_type = request.chart
 
+        # Calibration (standards-given limits). center_zero applies to a plain
+        # residual chart (residual set, not recentered): its mean is meaningless,
+        # so the center is pinned at 0. Raw response and recentered residuals use
+        # the calibration mean.
+        self.calibration = request.calibration
+        self._calibration_center_zero = bool(request.residual) and not request.recentered
+
         # Use pre-calculated AnalysisDataSet if provided, otherwise calculate
         if analysis_dataset is not None:
             self.ads = analysis_dataset
@@ -441,6 +448,9 @@ class Analysis:
                 )
             chart_data = getattr(self, method_name)()
 
+        # Tag calibration provenance for plotting/inspection (no-op when None).
+        chart_data = self._apply_calibration_metadata(chart_data)
+
         # Wrap in AnalysisResult for unified access
         # Pass analysis_type so result.summary reports the executed chart type, not the recommended one
         return AnalysisResult(charts=chart_data, analysis_dataset_obj=self.ads, analysis_type=self.analysis_type)
@@ -448,6 +458,68 @@ class Analysis:
     # =========================================================================
     # Helper Methods (DRY principle)
     # =========================================================================
+
+    def _reject_calibration(self, context: str) -> None:
+        """Raise if a calibration is set on a path that does not yet support it.
+
+        Calibration is currently applied to global and grouped (single-chart)
+        Xbar/S/X/mR paths. Stratified (separate-chart-per-combo) and phased
+        paths are a documented follow-up.
+        """
+        if self.calibration is not None:
+            raise ValidationError(
+                f'calibration is not supported with {context} yet. '
+                'Apply a calibration to a non-stratified, non-phased chart '
+                '(e.g. study.execute(chart="X", by=[], calibration=cal)).'
+            )
+
+    def _calibrated_row(self, limits_type: str, N: int | None = None) -> pd.Series:
+        """Calibrated (center, lpl, upl) for one row, as a Series for DataFrame.apply.
+
+        Delegates to :func:`calibrated_limits`, which reuses ``calculate_limits``
+        so rounding/clamping match the data path exactly.
+        """
+        cal = self.calibration
+        center, lims = calibrated_limits(
+            limits_type,
+            mean=cal.mean,
+            sigma=cal.sigma,
+            N=N,
+            n_sigma=self.request.n_sigma,
+            center_zero=self._calibration_center_zero,
+            round_to=self.spec.round_to,
+        )
+        return pd.Series({'center': center, 'lpl': lims['lpl'], 'upl': lims['upl']})
+
+    def _calibrated_scalar(self, limits_type: str, N: int | None = None) -> tuple[float, pd.Series]:
+        """Calibrated (center, limits_series) for a single-stream chart (X/mR).
+
+        XmR/R take no subgroup size; ``N`` is accepted for symmetry only.
+        """
+        cal = self.calibration
+        return calibrated_limits(
+            limits_type,
+            mean=cal.mean,
+            sigma=cal.sigma,
+            N=N,
+            n_sigma=self.request.n_sigma,
+            center_zero=self._calibration_center_zero,
+            round_to=self.spec.round_to,
+        )
+
+    def _apply_calibration_metadata(self, chart_data: dict) -> dict:
+        """Tag each chart payload's metadata with the calibration provenance."""
+        if self.calibration is None:
+            return chart_data
+        cal = self.calibration
+        badge = {
+            'limits_source': 'calibration',
+            'calibration': {'label': cal.label, 'mean': cal.mean, 'sigma': cal.sigma},
+        }
+        return {
+            key: {**data, 'metadata': {**data.get('metadata', {}), **badge}}
+            for key, data in chart_data.items()
+        }
 
     @staticmethod
     def _add_residual_metadata(chart_data, residual, recentered, questions):
@@ -858,6 +930,7 @@ class Analysis:
 
         # Stratified path: separate chart per factor combination
         if stratify_by:
+            self._reject_calibration('stratified Xbar')
             return self._calculate_xbar_stratified(
                 value_col,
                 groupby_cols,
@@ -962,24 +1035,32 @@ class Analysis:
 
         # CALCULATE XBAR
         xbar = out.copy()
-        xbar['center'] = _Xbar  # Add center column for Xbar chart
-        xbar[['lpl', 'upl']] = xbar.apply(
-            lambda row: calculate_limits(
-                mean=row['center'],
-                sd=_S,
-                N=row[n_to_use],
-                limits_type='Xbar',
-                round_to=spec.round_to,
-                sigma_multiplier=self.request.n_sigma,
-            ),
-            axis=1,
-        )
+        if self.calibration is not None:
+            # Standards-given Xbar: center=mean, mean ± n_sigma·sigma/√N (per-row N).
+            xbar[['center', 'lpl', 'upl']] = xbar.apply(
+                lambda row: self._calibrated_row('Xbar', N=row[n_to_use]),
+                axis=1,
+            )
+        else:
+            xbar['center'] = _Xbar  # Add center column for Xbar chart
+            xbar[['lpl', 'upl']] = xbar.apply(
+                lambda row: calculate_limits(
+                    mean=row['center'],
+                    sd=_S,
+                    N=row[n_to_use],
+                    limits_type='Xbar',
+                    round_to=spec.round_to,
+                    sigma_multiplier=self.request.n_sigma,
+                ),
+                axis=1,
+            )
 
         # Detect beyond limits signals
         xbar = self._add_beyond_limits_flag(xbar, value_col='xbar')
         xbar = xbar.round(spec.round_to)
 
-        statistics['center'] = round(_Xbar, spec.round_to)
+        _center_stat = xbar['center'].iloc[0] if self.calibration is not None else _Xbar
+        statistics['center'] = round(_center_stat, spec.round_to)
         if n_to_use == 'N':
             statistics['N'] = round(n_avg, spec.round_to) if n_avg is not None else _N
             statistics['upl'] = xbar['upl'].max()
@@ -1400,6 +1481,7 @@ class Analysis:
 
             # Stratified path: separate chart per factor combination
             if stratify_by:
+                self._reject_calibration('stratified S')
                 return self._calculate_s_stratified(
                     value_col,
                     groupby_cols,
@@ -1468,22 +1550,29 @@ class Analysis:
                 group_col = None
 
         # Calculate S chart (common path for both precomputed and independent)
-        out['center'] = _S
         out['groups'] = out['n'].count()
         n_mode = self.request.n_mode
 
-        # Add limits columns
-        out[['lpl', 'upl']] = out.apply(
-            lambda row: calculate_limits(
-                mean=0,
-                sd=row['center'],
-                N=row[n_to_use],
-                limits_type='S',
-                round_to=spec.round_to,
-                sigma_multiplier=self.request.n_sigma,
-            ),
-            axis=1,
-        )
+        if self.calibration is not None:
+            # Standards-given S: center=c4(N)·sigma, B5(N)·sigma … B6(N)·sigma (per-row N).
+            out[['center', 'lpl', 'upl']] = out.apply(
+                lambda row: self._calibrated_row('S', N=row[n_to_use]),
+                axis=1,
+            )
+        else:
+            out['center'] = _S
+            # Add limits columns
+            out[['lpl', 'upl']] = out.apply(
+                lambda row: calculate_limits(
+                    mean=0,
+                    sd=row['center'],
+                    N=row[n_to_use],
+                    limits_type='S',
+                    round_to=spec.round_to,
+                    sigma_multiplier=self.request.n_sigma,
+                ),
+                axis=1,
+            )
 
         # Detect beyond limits signals
         out = self._add_beyond_limits_flag(out, value_col='s')
@@ -1652,6 +1741,7 @@ class Analysis:
         mr_source_col = self._resolve_mr_source_column(value_col)
 
         if is_stratified:
+            self._reject_calibration('stratified X/mR')
             return self._calculate_mr_chart_stratified(
                 mr_spec,
                 value_col,
@@ -2218,15 +2308,19 @@ class Analysis:
                 out = out.dropna(subset=['mr'])
 
             # Compute R-specific limits
-            r_lims = calculate_limits(
-                mean=0,
-                sd=0,
-                N=0,
-                mR=mR,
-                limits_type=mr_spec.limits_type,
-                round_to=spec.round_to,
-            )
-            out['center'] = mR
+            if self.calibration is not None:
+                center_r, r_lims = self._calibrated_scalar(mr_spec.limits_type)
+            else:
+                center_r = mR
+                r_lims = calculate_limits(
+                    mean=0,
+                    sd=0,
+                    N=0,
+                    mR=mR,
+                    limits_type=mr_spec.limits_type,
+                    round_to=spec.round_to,
+                )
+            out['center'] = center_r
             out['lpl'] = r_lims['lpl']
             out['upl'] = r_lims['upl']
 
@@ -2241,7 +2335,7 @@ class Analysis:
             )
 
             chart_statistics = {
-                'center': round(mR, spec.round_to),
+                'center': round(center_r, spec.round_to),
                 'lpl': round(r_lims['lpl'], spec.round_to),
                 'upl': round(r_lims['upl'], spec.round_to),
             }
@@ -2271,6 +2365,7 @@ class Analysis:
 
         # === Phased limits path ===
         if phased and collapsed_factors:
+            self._reject_calibration('phased X/mR')
             # 1. Assign phase_id: contiguous runs of the same rsg_key
             out['_phase_id'] = (out['rsg_key'] != out['rsg_key'].shift()).cumsum().astype('int64')
 
@@ -2387,7 +2482,10 @@ class Analysis:
             out = out.dropna(subset=['mr'])
 
         # Compute limits
-        if mr_spec.center_source == 'mean':
+        if self.calibration is not None:
+            # Standards-given: X -> mean ± 3·sigma; mR -> 0 … D4·d2·sigma.
+            center_val, lims = self._calibrated_scalar(mr_spec.limits_type)
+        elif mr_spec.center_source == 'mean':
             center_val = mean_
             lims = calculate_limits(
                 mean=mean_,
