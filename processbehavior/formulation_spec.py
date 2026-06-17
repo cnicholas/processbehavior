@@ -15,6 +15,10 @@ inheritance chain.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .calibration import Calibration
 
 
 @dataclass(frozen=True)
@@ -118,6 +122,10 @@ class ChartRequest:
         Number of bins for Histogram chart. None for auto-binning.
     phased : bool
         Whether to compute per-phase limits for collapsed factors.
+    calibration : Calibration or None
+        When set, control limits use the calibration's frozen mean/sigma
+        (standards-given) instead of data-derived estimates. None (default)
+        leaves the data-derived limit path untouched.
     """
 
     chart: str
@@ -131,3 +139,4 @@ class ChartRequest:
     phased: bool = False
     n_sigma: float = 3.0
     n_mode: str = 'actual'
+    calibration: Calibration | None = None
