@@ -29,7 +29,6 @@ from typing import Any
 import pandas as pd
 import plotly.graph_objects as go
 
-
 # ---------------------------------------------------------------------------
 # Typed boundary objects
 # ---------------------------------------------------------------------------
