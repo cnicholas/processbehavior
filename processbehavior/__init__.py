@@ -60,6 +60,18 @@ from processbehavior.capability import CapabilityResult, SpecLimits
 from processbehavior.datasets.loaders import load_coffee_shop
 from processbehavior.datasets.synthetic import make_design
 
+# Derived variables (transforms + binning)
+from processbehavior.derivations import (
+    Derivation,
+    EvalResult,
+    ValidationResult,
+    derivations,
+    evaluate,
+    remove_derived,
+    replace_derived,
+    validate,
+)
+
 # Exceptions
 from processbehavior.exceptions import (
     ChartNotAvailableError,
@@ -94,6 +106,15 @@ __all__ = [
     'CapabilityResult',
     'LossResult',
     'MaximumInformationResult',
+    # Derived variables
+    'Derivation',
+    'EvalResult',
+    'ValidationResult',
+    'evaluate',
+    'validate',
+    'derivations',
+    'remove_derived',
+    'replace_derived',
     # Exceptions
     'ProcessBehaviorError',
     'ValidationError',

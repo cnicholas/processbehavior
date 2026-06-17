@@ -17,6 +17,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   date columns are unaffected (still parsed to ``datetime64`` at formulation).
 
 ### Added
+- **Derived variables** — create new columns from existing ones with fluent,
+  pipeable verbs on ``ProcessBehavior`` that return a *new* (immutable) instance:
+  ``pb.transform(column, function, ...)`` (``log``/``ln``, ``log10``, ``sqrt``,
+  ``arcsin`` = arcsin√x for proportions, ``inverse``, ``square``, ``power``,
+  ``zscore``) and ``pb.bin(column, method=..., n=..., breaks=..., bin_labels=...)``
+  (``equal_freq``/``equal_width``/``breaks``/``sd`` → an ordered categorical).
+  Derived columns become referenceable by ``response=/factors=/time=`` after
+  ``formulate()``, which is the immutability boundary that freezes data-dependent
+  fits (bin edges, z-score μ/σ) onto the new ``Study.derivations``. A binned
+  ``bin_labels='ordinal'`` factor now charts in bin order (Low → High).
+  Derivations are serializable specs (``Derivation`` with a stable ``id``,
+  ``to_dict``/``from_dict`` round-trip) built by the same ``Derivation.transform``
+  / ``Derivation.bin`` factories the application's attach-free live preview uses
+  via ``evaluate(spec, column)``; ``validate(spec, dataset)`` returns structured
+  pass/fail (label collisions, breakpoint/label-count checks) without raising.
+  Domain violations are reported as structured data (count + row index), resolved
+  at formulation per ``on_invalid`` (``'error'`` raises with a count; ``'na'``
+  coerces) or a ``shift=`` constant. Inspect/edit pending specs with
+  ``pb.derivations`` / ``remove_derived`` / ``replace_derived`` (keyed on ``id``).
+  Box–Cox is intentionally deferred (no scipy dependency); derived-on-derived
+  chaining and custom expressions are out of scope for v1.
 - Named **Calibrations** — standards-given control limits. ``Calibration(label,
   mean, sigma)`` (top-level export) is a frozen value object pinning a chart's
   limits to a known mean and within-subgroup *individual* sigma instead of
