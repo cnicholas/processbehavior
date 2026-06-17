@@ -17,11 +17,13 @@ Design Philosophy (Pythonic Hadley):
 
 from __future__ import annotations
 
+import dataclasses
 import difflib
 import functools
 import math
 import re
-from dataclasses import dataclass
+from collections.abc import Mapping
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Literal
 
 from .exceptions import ChartNotAvailableError, FactorNotFoundError, ValidationError
@@ -33,6 +35,7 @@ if TYPE_CHECKING:
 
     from .analysis_dataset import AnalysisDataSet
     from .analysis_result import AnalysisResult
+    from .calibration import Calibration
     from .capability import CapabilityResult, SpecLimits
     from .formulation_spec import FormulationSpec
     from .loss_function import LossResult
@@ -928,6 +931,7 @@ class Study:
     _N: int | None = None  # Planned observations per cell
     _sds_result: SDSResult | None = None  # ODS result for accessing .reason in DesignReport
     _pds_result: SDSResult | None = None  # PDS result (None when no plan)
+    calibrations: Mapping[str, Calibration] = field(default_factory=dict)  # label -> Calibration
 
     # =========================================================================
     # User-Facing Properties (Clean Names)
@@ -1692,6 +1696,7 @@ class Study:
         phased: bool = False,
         n_sigma: float = 3.0,
         n_mode: Literal['actual', 'average'] = 'actual',
+        calibration: Calibration | str | None = None,
     ) -> AnalysisResult:
         """
         Run the analysis and return results.
@@ -1783,6 +1788,16 @@ class Study:
 
             Only valid for Xbar/S charts.
 
+        calibration : Calibration or str, optional
+            Apply standards-given limits using a frozen mean/sigma instead of
+            data-derived estimates. Accepts a :class:`Calibration` object or the
+            label of one previously attached via :meth:`with_calibration`.
+            Location charts (X, Xbar, response, residuals) place limits at
+            ``center ± n_sigma·sigma`` (Xbar divides by ``√N``); dispersion
+            charts (S, mR) use the standards-given sampling-distribution form.
+            X/mR remain 3-sigma, so a calibrated X/mR rejects a non-default
+            ``n_sigma`` (calibration is not a back door to non-3-sigma limits).
+
         Notes
         -----
         **Xbar center line (Bishop VAS unweighted).** For both response and
@@ -1848,6 +1863,9 @@ class Study:
         from .analysis import Analysis
         from .formulation_spec import ChartRequest
 
+        # 0. Resolve calibration (label string -> attached Calibration object).
+        calibration_obj = self._resolve_calibration(calibration)
+
         # 1. Resolve chart name (None → recommended, basic shape check).
         base_chart = self._resolve_execute_chart(chart)
 
@@ -1877,9 +1895,53 @@ class Study:
             phased=phased,
             n_sigma=n_sigma,
             n_mode=n_mode,
+            calibration=calibration_obj,
         )
         analysis = Analysis(self._spec, request, analysis_dataset=self._ads)
         return analysis.calculate()
+
+    def _resolve_calibration(self, calibration: Calibration | str | None) -> Calibration | None:
+        """Resolve a calibration argument to a Calibration object (or None).
+
+        A string is treated as a label and looked up in ``self.calibrations``;
+        a missing label raises a self-diagnostic ValidationError listing what is
+        attached. A Calibration object is returned as-is.
+        """
+        from .calibration import Calibration as _Calibration
+
+        if calibration is None:
+            return None
+        if isinstance(calibration, _Calibration):
+            return calibration
+        if isinstance(calibration, str):
+            try:
+                return self.calibrations[calibration]
+            except KeyError:
+                available = sorted(self.calibrations)
+                hint = f'Attached calibrations: {available}.' if available else (
+                    'No calibrations are attached; use study.with_calibration(Calibration(...)) first.'
+                )
+                raise ValidationError(f"No calibration labeled {calibration!r}. {hint}") from None
+        raise ValidationError(
+            f'calibration must be a Calibration, a label string, or None; got {type(calibration).__name__}.'
+        )
+
+    def with_calibration(self, calibration: Calibration) -> Study:
+        """Return a new Study with ``calibration`` attached under its label.
+
+        Immutable: the current Study is unchanged. Re-attaching the same label
+        replaces the prior entry. Select an attached calibration at execute time
+        with ``study.execute(calibration='<label>')``.
+        """
+        from .calibration import Calibration as _Calibration
+
+        if not isinstance(calibration, _Calibration):
+            raise ValidationError(
+                f'with_calibration expects a Calibration; got {type(calibration).__name__}.'
+            )
+        updated = dict(self.calibrations)
+        updated[calibration.label] = calibration
+        return dataclasses.replace(self, calibrations=updated)
 
     def _resolve_execute_chart(self, chart: str | None) -> str:
         """Resolve the requested chart name to a base chart type.
