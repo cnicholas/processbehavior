@@ -22,7 +22,6 @@ import pytest
 from processbehavior.analysis import Analysis
 from processbehavior.formulation_spec import ChartRequest, FormulationSpec
 
-
 # ---------------------------------------------------------------------------
 # Stub harness — _resolve_by_grouping only reads self.spec and self.request
 # ---------------------------------------------------------------------------

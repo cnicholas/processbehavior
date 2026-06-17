@@ -22,7 +22,6 @@ from processbehavior.exceptions import FactorNotFoundError, ValidationError
 from processbehavior.formulation_spec import FormulationSpec
 from processbehavior.study import Study
 
-
 # ---------------------------------------------------------------------------
 # Stub harness
 # ---------------------------------------------------------------------------
