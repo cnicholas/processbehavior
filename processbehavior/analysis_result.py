@@ -50,8 +50,7 @@ from typing import TYPE_CHECKING, Any, Literal
 
 import pandas as pd
 
-from .data_preparation import encode_rsg
-from .exceptions import ChartNotAvailableError, ProcessBehaviorError
+from .exceptions import ChartNotAvailableError
 from .sds_detector import SDSRegistry
 from .spc_constants import normalize_chart_name
 from .types import Charts

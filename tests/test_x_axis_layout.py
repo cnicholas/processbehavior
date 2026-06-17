@@ -26,7 +26,6 @@ from processbehavior.plotting.x_axis_layout import (
     parse_lane_boundaries,
 )
 
-
 # ---------------------------------------------------------------------------
 # parse_lane_boundaries
 # ---------------------------------------------------------------------------

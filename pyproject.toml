@@ -40,6 +40,9 @@ dependencies = [
   "pandas>=2.0,<3",
   "natsort>=8.0.0",
   "plotly>=5.18,<7",
+  # NotRequired (used in processbehavior.types) is only in typing from 3.11;
+  # on 3.9/3.10 it comes from typing_extensions.
+  "typing_extensions>=4.0; python_version < '3.11'",
 ]
 
 [project.urls]

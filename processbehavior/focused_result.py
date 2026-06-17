@@ -14,14 +14,12 @@ from __future__ import annotations
 
 from typing import Any
 
-from .data_preparation import encode_rsg
-from .exceptions import ProcessBehaviorError, ValidationError
-
 # Import AnalysisResult at runtime (not just TYPE_CHECKING) because we
 # subclass it. analysis_result.py uses lazy imports inside methods to
 # avoid the circular path.
 from .analysis_result import AnalysisResult
-
+from .data_preparation import encode_rsg
+from .exceptions import ProcessBehaviorError, ValidationError
 
 # ---------------------------------------------------------------------------
 # Public: focus_on
