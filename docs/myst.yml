@@ -41,6 +41,8 @@ project:
           title: Capability — Before vs. After
         - file: tutorials/calibration.ipynb
           title: Calibration — Standards-Given Limits
+        - file: tutorials/derived-variables.ipynb
+          title: Derived Variables — Transforms & Binning
         - file: tutorials/loss-function.ipynb
           title: Loss Function
         - file: tutorials/sds-validation.ipynb
