@@ -17,6 +17,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   date columns are unaffected (still parsed to ``datetime64`` at formulation).
 
 ### Added
+- Named **Calibrations** — standards-given control limits. ``Calibration(label,
+  mean, sigma)`` (top-level export) is a frozen value object pinning a chart's
+  limits to a known mean and within-subgroup *individual* sigma instead of
+  data-derived estimates. Attach by label with ``study.with_calibration(cal)``
+  (immutable; returns a new ``Study``) and apply per call via
+  ``study.execute(..., calibration=cal_or_label)``. The sigma is applied
+  **forward** and used as-is — never run back through c4/d2/b3/b4 to "recover" a
+  process sigma. Location charts place limits constant-free in sigma
+  (X/residual: ``center ± n_sigma·σ``; Xbar: ``center ± n_sigma·σ/√N``);
+  dispersion-statistic charts carry their sampling-distribution constants
+  (S: center ``c4(N)·σ``, ``B5(N)·σ … B6(N)·σ``; mR: center ``d2·σ``,
+  ``0 … D4·d2·σ``). Plain residuals center at 0 (mean ignored); raw response and
+  recentered residuals center at ``calibration.mean``. ``n_sigma`` composes on
+  Xbar/S; calibrated X/mR stay 3-sigma and reject a non-default ``n_sigma``.
+  Result metadata carries a ``limits_source='calibration'`` badge.
+  ``calibration=None`` (the default) is byte-for-byte unchanged. Stratified and
+  phased calibration are rejected with a clear error (follow-up).
 - ``load_coffee_shop()`` (top-level + ``processbehavior.datasets``): a bundled demo
   dataset of coffee-shop wait times with a deliberate process change at week 8,
   returned as a ready-to-formulate ``ProcessBehavior``. Backs the new

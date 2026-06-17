@@ -55,6 +55,7 @@ __version__ = '0.1.1'
 
 # Result object
 from processbehavior.analysis_result import AnalysisResult
+from processbehavior.calibration import Calibration
 from processbehavior.capability import CapabilityResult, SpecLimits
 from processbehavior.datasets.loaders import load_coffee_shop
 from processbehavior.datasets.synthetic import make_design
@@ -89,6 +90,7 @@ __all__ = [
     'SDSResult',
     'AnalysisResult',
     'SpecLimits',
+    'Calibration',
     'CapabilityResult',
     'LossResult',
     'MaximumInformationResult',

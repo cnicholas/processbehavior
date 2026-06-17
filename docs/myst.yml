@@ -39,6 +39,8 @@ project:
           title: Process Capability
         - file: tutorials/process-capability-before-after.ipynb
           title: Capability — Before vs. After
+        - file: tutorials/calibration.ipynb
+          title: Calibration — Standards-Given Limits
         - file: tutorials/loss-function.ipynb
           title: Loss Function
         - file: tutorials/sds-validation.ipynb

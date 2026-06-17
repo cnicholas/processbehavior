@@ -317,6 +317,103 @@ def calculate_limits(
     return pd.Series({'lpl': lpl, 'upl': upl}, index=['lpl', 'upl'])
 
 
+# d2 bias constant for the n=2 moving range, derived from the library's own E2
+# (E2 = sigma_multiplier / d2 at n=2, with the default 3-sigma multiplier). Used
+# only on the calibration path so calibrated X/mR limits stay internally
+# consistent with the data-path XmR/R constants.
+D2_N2 = 3.0 / XMR_LIMIT_MULTIPLIER
+
+
+def calibrated_limits(
+    limits_type: str,
+    *,
+    mean: float,
+    sigma: float,
+    N: int | None = None,
+    n_sigma: float = 3.0,
+    center_zero: bool = False,
+    round_to: int = 3,
+) -> tuple[float, pd.Series]:
+    """Standards-given control limits from a known ``(mean, sigma)``.
+
+    The calibration is applied **forward** from a known *individual* sigma — the
+    sigma is used as-is, never run back through c4/d2/b3/b4 to "recover" a
+    process sigma. To guarantee the calibrated limits round and clamp exactly
+    like the data path, this reuses :func:`calculate_limits` by injecting a
+    sigma-scaled input that makes the existing formula emit the standards-given
+    band:
+
+    - **Xbar** (location): inject ``sd = c4(N)·sigma`` → ``mean ± n_sigma·sigma/√N``
+      (the ``c4`` cancels); center ``= mean``.
+    - **S** (dispersion): inject ``sd = c4(N)·sigma`` → ``b3·(c4·sigma) = B5·sigma``,
+      ``b4·(c4·sigma) = B6·sigma``; center ``= c4(N)·sigma``.
+    - **XmR** (X individuals, location): inject ``mR = D2_N2·sigma`` →
+      ``mean ± E2·(3/E2)·sigma = mean ± 3·sigma`` (fixed 3-sigma); center ``= mean``.
+    - **R** (mR companion, dispersion): inject ``mR = D2_N2·sigma`` →
+      ``0 … D4·(d2·sigma)``; center ``= d2·sigma``.
+
+    Parameters
+    ----------
+    limits_type : str
+        'Xbar', 'S', 'XmR', or 'R'.
+    mean : float
+        Calibrated center for location charts (ignored when ``center_zero``).
+    sigma : float
+        Known within-subgroup standard deviation of individual values (> 0).
+    N : int, optional
+        Subgroup size (required for Xbar/S).
+    n_sigma : float, default 3.0
+        Width multiplier; composes for Xbar/S. Ignored by XmR/R (fixed 3-sigma).
+    center_zero : bool, default False
+        Force center to 0 (plain residual charts, whose mean is meaningless).
+    round_to : int
+        Decimal places, forwarded to :func:`calculate_limits`.
+
+    Returns
+    -------
+    (center, limits) : tuple[float, pandas.Series]
+        ``center`` is the calibrated center line; ``limits`` has 'lpl'/'upl'.
+    """
+    if center_zero:
+        mean = 0.0
+
+    if limits_type in ('Xbar', 'S') and N is None:
+        raise ValueError(f"calibrated_limits requires N for limits_type {limits_type!r}.")
+
+    if limits_type == 'Xbar':
+        assert N is not None
+        center = mean
+        lims = calculate_limits(
+            limits_type='Xbar', mean=mean, sd=c4(N) * sigma, N=N,
+            round_to=round_to, sigma_multiplier=n_sigma,
+        )
+    elif limits_type == 'S':
+        assert N is not None
+        center = c4(N) * sigma
+        lims = calculate_limits(
+            limits_type='S', mean=0, sd=c4(N) * sigma, N=N,
+            round_to=round_to, sigma_multiplier=n_sigma,
+        )
+    elif limits_type == 'XmR':
+        center = mean
+        lims = calculate_limits(
+            limits_type='XmR', mean=mean, sd=0, N=0, mR=D2_N2 * sigma,
+            round_to=round_to,
+        )
+    elif limits_type == 'R':
+        center = D2_N2 * sigma
+        lims = calculate_limits(
+            limits_type='R', mean=0, sd=0, N=0, mR=D2_N2 * sigma,
+            round_to=round_to,
+        )
+    else:
+        raise ValueError(
+            f"calibrated_limits does not support limits_type {limits_type!r}; "
+            "expected 'Xbar', 'S', 'XmR', or 'R'."
+        )
+    return center, lims
+
+
 # ============================================================================
 # Signal Detection
 # ============================================================================
