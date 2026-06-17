@@ -72,7 +72,10 @@ jobs:
         uses: codecov/codecov-action@b9fd7d16f6d7d1b5d2bec1a2887e65ceed900238 # v4.6.0
         with:
           files: coverage.xml
-          fail_ci_if_error: true
+          # Best-effort: tokenless uploads are rejected without a CODECOV_TOKEN,
+          # which should not fail the build. Set true again once a token is
+          # configured in repo secrets.
+          fail_ci_if_error: false
 
   audit:
     name: audit dependencies
