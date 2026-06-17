@@ -65,6 +65,7 @@ jobs:
             docs/tutorials/process-capability.ipynb \
             docs/tutorials/process-capability-before-after.ipynb \
             docs/tutorials/calibration.ipynb \
+            docs/tutorials/derived-variables.ipynb \
             docs/tutorials/loss-function.ipynb \
             --tb=short
       - name: Upload coverage to Codecov
