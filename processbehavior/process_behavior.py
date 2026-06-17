@@ -28,6 +28,9 @@ from typing import TYPE_CHECKING
 
 import pandas as pd
 
+from .derivations import Derivation
+from .derivations import evaluate as _evaluate_derivation
+from .derivations import validate as _validate_derivation
 from .exceptions import ColumnNotFoundError, ValidationError
 from .formulation_spec import FormulationSpec
 from .sds_detector import SDSRegistry, SDSResult
@@ -483,6 +486,10 @@ class ProcessBehavior:
 
         self.data = cleaned_df
         self.cols = ColumnAccessor(self.data)
+        # Pending derived-variable specs, accumulated by the fluent verbs.
+        # Immutable: each verb returns a new ProcessBehavior with an extended
+        # tuple. Materialized into the analytic dataset at formulate().
+        self._derivations: tuple[Derivation, ...] = ()
 
         logger.info(f'ProcessBehavior: {len(df)} rows, {len(df.columns)} columns')
 
@@ -709,6 +716,151 @@ class ProcessBehavior:
 
         return normalized, factor_order, T_planned, N_planned
 
+    # =========================================================================
+    # Derived variables (transforms + binning) — fluent, immutable verbs
+    # =========================================================================
+
+    @property
+    def derivations(self) -> tuple[Derivation, ...]:
+        """Pending derived-variable specs attached to this ProcessBehavior."""
+        return self._derivations
+
+    def _with_derivations(self, specs: tuple[Derivation, ...]) -> ProcessBehavior:
+        """Return a new ProcessBehavior sharing ``self.data`` with ``specs`` attached."""
+        new = ProcessBehavior.__new__(ProcessBehavior)
+        new.data = self.data
+        new.cols = self.cols
+        new._derivations = specs
+        return new
+
+    def _attach(self, spec: Derivation) -> ProcessBehavior:
+        """Validate a spec against the current dataset context and attach it.
+
+        Raises ``ValidationError`` at attach time for column-not-found / non-numeric
+        source / output-name collision (the fluent path's commit point).
+        """
+        existing = {d.output_name for d in self._derivations}
+        result = _validate_derivation(spec, self.data, existing_names=existing)
+        if not result.ok:
+            raise ValidationError(
+                f'Cannot add derived variable {spec.output_name!r}: {result.summary()}'
+            )
+        return self._with_derivations((*self._derivations, spec))
+
+    def transform(
+        self,
+        column: str | ColumnRef,
+        function: str,
+        *,
+        label: str | None = None,
+        shift: float | None = None,
+        exponent: float | None = None,
+        on_invalid: str = 'error',
+    ) -> ProcessBehavior:
+        """Attach a continuous→continuous transform; returns a new ProcessBehavior.
+
+        ``function`` is one of ``log`` (``ln`` alias), ``log10``, ``sqrt``,
+        ``arcsin`` (= ``arcsin(√x)``, x a proportion in ``[0, 1]``), ``inverse``,
+        ``square``, ``power`` (needs ``exponent``), ``zscore``. The new column is
+        named ``label`` or ``{column}_{function}``. Domain violations are resolved
+        at formulate() per ``on_invalid`` (``'error'`` raises with a structured
+        count; ``'na'`` sets offenders missing); ``shift`` applies ``f(x + shift)``.
+        """
+        spec = Derivation.transform(
+            self._to_column_name(column), function,
+            label=label, shift=shift, exponent=exponent, on_invalid=on_invalid,
+        )
+        return self._attach(spec)
+
+    def bin(
+        self,
+        column: str | ColumnRef,
+        *,
+        method: str = 'equal_freq',
+        n: int = 4,
+        breaks: list[float] | None = None,
+        bin_labels='range',
+        label: str | None = None,
+        right: bool = False,
+    ) -> ProcessBehavior:
+        """Attach a continuous→categorical binning; returns a new ProcessBehavior.
+
+        ``method`` is ``equal_freq`` (default, n quantile bins), ``equal_width``,
+        ``breaks`` (explicit cut points, out-of-range falls into below/above
+        categories), or ``sd`` (±1σ, ±2σ about the mean). The new column is an
+        ordered categorical named ``label`` or ``{column}_bin``. ``bin_labels`` is
+        ``'range'`` (default, from fitted edges), ``'ordinal'``, ``'number'``, or
+        an explicit list. Intervals are left-closed ``[a, b)`` unless ``right=True``.
+        """
+        spec = Derivation.bin(
+            self._to_column_name(column),
+            method=method, n=n, breaks=breaks, bin_labels=bin_labels, label=label, right=right,
+        )
+        return self._attach(spec)
+
+    def add_derived(self, *specs: Derivation) -> ProcessBehavior:
+        """Attach one or more pre-built :class:`Derivation` specs (programmatic / app path)."""
+        pb = self
+        for spec in specs:
+            pb = pb._attach(spec)
+        return pb
+
+    def remove_derived(self, id: str) -> ProcessBehavior:
+        """Return a new ProcessBehavior with the derivation ``id`` dropped."""
+        kept = tuple(d for d in self._derivations if d.id != id)
+        if len(kept) == len(self._derivations):
+            available = [d.id for d in self._derivations]
+            raise ValidationError(f'No derivation with id {id!r}. Attached ids: {available}.')
+        return self._with_derivations(kept)
+
+    def replace_derived(self, id: str, spec: Derivation) -> ProcessBehavior:
+        """Return a new ProcessBehavior with derivation ``id`` swapped for ``spec`` (keeps position)."""
+        if id not in {d.id for d in self._derivations}:
+            available = [d.id for d in self._derivations]
+            raise ValidationError(f'No derivation with id {id!r}. Attached ids: {available}.')
+        # Validate the replacement against the dataset + the *other* pending names.
+        others = {d.output_name for d in self._derivations if d.id != id}
+        result = _validate_derivation(spec, self.data, existing_names=others)
+        if not result.ok:
+            raise ValidationError(
+                f'Cannot replace derivation {id!r} with {spec.output_name!r}: {result.summary()}'
+            )
+        swapped = tuple(spec if d.id == id else d for d in self._derivations)
+        return self._with_derivations(swapped)
+
+    def _materialize_derivations(self) -> tuple[pd.DataFrame, tuple[Derivation, ...]]:
+        """Resolve pending specs into columns on a copy of the data (the augmented frame).
+
+        Evaluates each spec in attach order against the **original** columns
+        (chaining is deferred to v2), adds each ``output_name`` column, and returns
+        the augmented frame plus the fit-frozen specs. With no pending specs this
+        returns ``self.data`` untouched (the no-derivation path is identity).
+        ``on_invalid='error'`` with domain violations raises a structured
+        ``ValidationError`` here — the only commit-time raise.
+        """
+        if not self._derivations:
+            return self.data, ()
+
+        frame = self.data.copy()
+        resolved: list[Derivation] = []
+        for spec in self._derivations:
+            res = _evaluate_derivation(spec, self.data[spec.column])
+            if (
+                spec.family == 'transform'
+                and spec.params.get('on_invalid', 'error') == 'error'
+                and res.n_invalid > 0
+            ):
+                sample = list(res.invalid_index[:10])
+                raise ValidationError(
+                    f"Derived variable '{spec.output_name}' ({spec.function} of "
+                    f"'{spec.column}') has {res.n_invalid} domain violation(s) "
+                    f'at rows {sample}{"..." if res.n_invalid > 10 else ""}. '
+                    f"Resolve with shift=, on_invalid='na', or a different transform."
+                )
+            frame[spec.output_name] = res.values
+            resolved.append(spec.with_fitted(res.fitted))
+        return frame, tuple(resolved)
+
     def formulate(
         self,
         response: str | ColumnRef,
@@ -833,10 +985,6 @@ class ProcessBehavior:
         Study : The returned Study object
         ColumnRef : Column reference with .levels property for discoverability
         """
-        from .analysis_dataset import AnalysisDataSet
-        from .data_preparation import DataPreparation
-        from .study import Study
-
         # 1. Validate the factors/plan combination + presence.
         _validate_factors_or_plan_args(factors, plan)
 
@@ -848,7 +996,7 @@ class ProcessBehavior:
             self._resolve_factors_and_plan(factors, plan)
         )
 
-        # 3. Build the FormulationSpec and validate columns (fail fast).
+        # 3. Build the FormulationSpec.
         spec = FormulationSpec(
             response_var=response_str,
             rsg_vars=tuple(factors_str) if factors_str else None,
@@ -856,28 +1004,66 @@ class ProcessBehavior:
             round_to=precision,
             unit_of_analysis=unit_of_analysis,
         )
-        DataPreparation().validate_columns(self.data, spec)
 
-        # 4. SDS detection on raw data (NA response rows preserved so
-        #    cells with all-NA responses still count as attempted —
-        #    matches Bishop's Minitab approach).
+        # 4. Materialize pending derived variables ONCE into the augmented frame,
+        #    before any frame consumer runs. _formulate_from_frame reads this single
+        #    frame at all three sites (column validation, ODS detection, ADS) and
+        #    never self.data — so a derived factor is seen consistently and the
+        #    materialize-once ordering cannot drift in a later refactor.
+        frame, resolved_derivations = self._materialize_derivations()
+        return self._formulate_from_frame(
+            frame,
+            spec,
+            resolved_derivations,
+            sampling_plan=sampling_plan,
+            factor_order=factor_order,
+            T_planned=T_planned,
+            N_planned=N_planned,
+        )
+
+    def _formulate_from_frame(
+        self,
+        frame: pd.DataFrame,
+        spec: FormulationSpec,
+        derivations: tuple[Derivation, ...],
+        *,
+        sampling_plan,
+        factor_order,
+        T_planned,
+        N_planned,
+    ) -> Study:
+        """Run column validation → ODS detection → ADS, all on the single ``frame``.
+
+        Consumes ``frame`` exclusively (never ``self.data``), so the augmented frame
+        flows identically to every site. That is what makes the materialize-once
+        ordering self-enforcing rather than convention: there is no raw frame in
+        scope here to drift to, and no gap between sites to insert one into.
+        """
+        from .analysis_dataset import AnalysisDataSet
+        from .data_preparation import DataPreparation
+        from .study import Study
+
+        # Validate columns (fail fast).
+        DataPreparation().validate_columns(frame, spec)
+
+        # ODS detection on the (augmented) frame — NA response rows preserved so
+        # cells with all-NA responses still count as attempted (Bishop's approach).
         detector = SDSRegistry()
         sds_result = detector.detect_sds_from_structure(
-            self.data,
+            frame,
             spec,
-            response_col=response_str,
+            response_col=spec.response_var,
             plan=sampling_plan,
             T_planned=T_planned,
         )
 
-        # 5. Plan Design State (PDS) — only when a plan was supplied.
+        # Plan Design State (PDS) — only when a plan was supplied.
         pds_result = _compute_pds(detector, sampling_plan, T_planned, N_planned)
 
-        # 6. Calculate the full AnalysisDataSet (residuals R1-R5, RCR1-RCR5).
-        #    ADS is chart-agnostic — chart-specific params live in ChartRequest.
-        ads = AnalysisDataSet(self.data, spec, observed_sds=sds_result.sds)
+        # Full AnalysisDataSet (residuals R1-R5, RCR1-RCR5) — ADS post-cleansing.
+        ads = AnalysisDataSet(frame, spec, observed_sds=sds_result.sds)
 
-        # 7. ADS drives analysis: build analysis_plan from ADS, not ODS.
+        # ADS drives analysis: build analysis_plan from ADS, not ODS.
         analysis_plan = SDSRegistry.get_analysis_plan(
             ads.analytical_design_state.sds,
             min_cell_size=ads.analytical_design_state.min_cell_size,
@@ -894,6 +1080,7 @@ class ProcessBehavior:
             _N=N_planned,
             _sds_result=sds_result,
             _pds_result=pds_result,
+            derivations=derivations,
         )
 
     def _resolve_factors_and_plan(

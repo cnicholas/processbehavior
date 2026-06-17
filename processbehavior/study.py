@@ -34,6 +34,7 @@ if TYPE_CHECKING:
     from .analysis_dataset import AnalysisDataSet
     from .analysis_result import AnalysisResult
     from .capability import CapabilityResult, SpecLimits
+    from .derivations import Derivation
     from .formulation_spec import FormulationSpec
     from .loss_function import LossResult
     from .maximum_information import MaximumInformationResult
@@ -928,6 +929,10 @@ class Study:
     _N: int | None = None  # Planned observations per cell
     _sds_result: SDSResult | None = None  # ODS result for accessing .reason in DesignReport
     _pds_result: SDSResult | None = None  # PDS result (None when no plan)
+    # Resolved (fit-frozen) derived-variable specs materialized into this study's
+    # analytic dataset. Empty when no derived variables were attached. Provenance
+    # + serialization target; the frozen `fitted` values make binning reproducible.
+    derivations: tuple[Derivation, ...] = ()
 
     # =========================================================================
     # User-Facing Properties (Clean Names)

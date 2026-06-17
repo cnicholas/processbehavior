@@ -471,10 +471,20 @@ class DataPreparation:
                 df=out, cols_to_combine=spec.rsg_vars_list, col_name=spec.rsg_var_name, col_delim=spec.rsg_var_delim
             )
         else:
-            # Single factor: copy with standard name, convert to string
+            # Single factor: copy with standard name.
             out = self._add_column(df=out, new_col_name=spec.rsg_var_name, existing_column=spec.rsg_vars[0])
-            # Ensure RSG is string (even if source column is numeric)
-            out[spec.rsg_var_name] = out[spec.rsg_var_name].astype(str)
+            src = out[spec.rsg_var_name]
+            if isinstance(src.dtype, pd.CategoricalDtype) and src.cat.ordered:
+                # Preserve an explicitly-ordered categorical factor's order (e.g. a
+                # binned ordinal factor Low < ... < High) through the string rsg
+                # column, rather than losing it to a plain str cast + later natsort.
+                ordered_cats = [str(c) for c in src.cat.categories]
+                out[spec.rsg_var_name] = pd.Categorical(
+                    src.astype(str), categories=ordered_cats, ordered=True
+                )
+            else:
+                # Ensure RSG is string (even if source column is numeric)
+                out[spec.rsg_var_name] = src.astype(str)
 
         return out
 
@@ -671,6 +681,15 @@ class DataPreparation:
         >>> list(cat.cat.categories)
         ['Lane_1_Head_2', 'Lane_1_Head_10', 'Lane_10_Head_1']
         """
+        # Preserve an already-ordered categorical's order (e.g. a binned ordinal
+        # factor Low < ... < High); natsort would alphabetize it incorrectly.
+        if isinstance(series.dtype, pd.CategoricalDtype) and series.cat.ordered:
+            logger.info(
+                f"Preserved explicit categorical order for '{col_name}' "
+                f'({len(series.cat.categories)} categories)'
+            )
+            return series
+
         # Get unique values and sort naturally
         unique_vals = series.unique()
         sorted_categories = natsorted(unique_vals)
