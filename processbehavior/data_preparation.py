@@ -156,6 +156,8 @@ class DataPreparation:
             cols = [spec.rsg_var_name, 'n'] + spec.rsg_vars_list + cols
         if spec.has_time and spec.time_var not in cols:
             cols.insert(0, spec.time_var)
+        # Preserve the source-row lineage id stamped at the top of prepare_dataset.
+        cols.append('obs_id')
         return cols
 
     def prepare_dataset(self, df: pd.DataFrame, spec: FormulationSpec) -> pd.DataFrame:
@@ -223,6 +225,12 @@ class DataPreparation:
         """
         logger.debug('Entering prepare_dataset')
         out = df.copy()
+        # Stamp a 1-based SOURCE-ROW id (obs_id) as a COLUMN before any row filtering.
+        # As a column it survives both cleaning (dropped rows leave gaps in the values)
+        # and the groupby/merge in _add_group_sizes (which rebuilds the frame's index).
+        # This is the raw→analytic lineage key: a flagged observation traces back to its
+        # source-file row (gaps mark rows removed in cleaning).
+        out['obs_id'] = np.arange(1, len(out) + 1, dtype=np.int64)
 
         # Validate columns early (fail fast!)
         self.validate_columns(out, spec)
@@ -411,9 +419,11 @@ class DataPreparation:
         """
         out = df.copy()
 
-        # 1. Assign obs_id FIRST (row identity, before any sorting)
-        # This captures the row order as it enters build_keys() (post-cleaning/filtering)
-        out['obs_id'] = np.arange(len(out), dtype=np.int64)
+        # 1. obs_id — the 1-based SOURCE-ROW id (raw→analytic lineage). Normally stamped
+        # in prepare_dataset before cleaning and carried through here; only assign it if a
+        # caller invoked build_keys directly without it (kept 1-based for consistency).
+        if 'obs_id' not in out.columns:
+            out['obs_id'] = np.arange(1, len(out) + 1, dtype=np.int64)
 
         k_vars = spec.rsg_vars_list
         t = spec.time_var
