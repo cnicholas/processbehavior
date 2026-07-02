@@ -475,12 +475,23 @@ class TestCompanionEquivalence:
         _assert_chart_equivalence(companion.charts['mR'], r_only.charts['mR'], 'mR stratified companion vs independent')
 
 
-def _assert_chart_equivalence(actual: dict, expected: dict, label: str):
-    """Assert two chart result dicts are equivalent across data, statistics, metadata."""
+def _assert_chart_equivalence(actual: dict, expected: dict, label: str, ignore_data_cols: tuple = ()):
+    """Assert two chart result dicts are equivalent across data, statistics, metadata.
+
+    ``ignore_data_cols`` drops columns from the data comparison. Used for ``obs_id``,
+    which is the 1-based source-row id and therefore *intentionally* differs when the
+    same data is fed in a different row order (it labels the source row, not a position
+    in the analytic result).
+    """
     # Data
+    actual_data = actual['data'].reset_index(drop=True)
+    expected_data = expected['data'].reset_index(drop=True)
+    if ignore_data_cols:
+        actual_data = actual_data.drop(columns=list(ignore_data_cols), errors='ignore')
+        expected_data = expected_data.drop(columns=list(ignore_data_cols), errors='ignore')
     pd.testing.assert_frame_equal(
-        actual['data'].reset_index(drop=True),
-        expected['data'].reset_index(drop=True),
+        actual_data,
+        expected_data,
         rtol=GOLDEN_MASTER_RTOL,
         atol=GOLDEN_MASTER_ATOL,
         check_column_type=True,
@@ -624,6 +635,10 @@ class TestShapeInvariants:
         Uses SDS 2 (n=1 per cell) so within-cell obs ordering is deterministic.
         For n>1 cells, obs_id assigned BEFORE sort means reversing input changes
         within-cell order, which changes moving ranges — that's expected behavior.
+
+        obs_id is excluded from the comparison: it is the 1-based *source-row* id, so
+        reversing the input legitimately relabels each row (the analytic values,
+        limits, and canonical order are still identical).
         """
         # Normal ordering (SDS 2: n=1 per cell — order fully determined by sort_key)
         df_normal = synthetic.make_design(2, K1=2, K2=2, T=6, seed=42)
@@ -642,6 +657,7 @@ class TestShapeInvariants:
                 result_normal.charts[chart_key],
                 result_reverse.charts[chart_key],
                 f'{chart_key} normal vs reverse ordering',
+                ignore_data_cols=('obs_id',),
             )
 
     def test_lane_boundary_positions_monotonic(self):
