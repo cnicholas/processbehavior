@@ -8,6 +8,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
+- Signal detection no longer aborts on small groups. ``detect_signals`` previously
+  raised ``ValueError("Insufficient observations…")`` whenever a group had fewer
+  points than the most-demanding *applicable* run-rule (Rule 7 needs 15) — which
+  broke detection on small stratified subgroups. It now evaluates the rules the
+  group supports and reports the rest via ``SignalResult.rules_skipped`` (plus
+  ``is_partial`` / ``evaluation_status`` accessors), so "no signals" is
+  distinguishable from "not fully evaluated". The genuine input guards (empty data,
+  missing limit statistics) now raise ``ValidationError`` instead of raw
+  ``ValueError``; ``ValidationError`` additionally subclasses ``ValueError`` so
+  existing ``except ValueError`` handling keeps working.
 - Input data cleaning no longer coerces a pre-parsed ``datetime64`` column to
   int64. ``_try_clean_numeric_strings`` guarded only numeric dtypes, so a
   ``datetime64`` column passed to ``ProcessBehavior(df)`` (e.g. from

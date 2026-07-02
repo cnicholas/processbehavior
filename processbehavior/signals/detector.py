@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING
 
 import pandas as pd
 
+from ..exceptions import ValidationError
 from .config import SignalConfig
 from .detectors import (
     detect_avoiding_center,
@@ -122,11 +123,10 @@ class SignalDetector:
             else:
                 logger.info(f"Chart '{chart_name}' (type: {chart_type}): Applying all rules {applicable_rules}")
 
-        # Calculate minimum observations needed for applicable rules
-        min_obs_needed = max(self._get_min_observations(rule) for rule in applicable_rules) if applicable_rules else 1
-
-        # Validate data (using rule-based minimum, not global config)
-        self._validate_inputs(data, stats, config, min_obs_needed)
+        # Validate inputs (empty data / missing stats only). Per-rule observation
+        # minimums are enforced below by skipping the rules that can't run — a small
+        # group still gets the rules it supports, rather than aborting the whole call.
+        self._validate_inputs(data, stats)
 
         # Apply filtering
         filtered_data = self._filter_data(data, config)
@@ -146,18 +146,22 @@ class SignalDetector:
 
         # Detect violations for each applicable rule
         all_violations = pd.DataFrame(index=filtered_data.index)
+        # Applicable rules skipped for too few observations (rule -> reason), so the
+        # result can report partial evaluation instead of raising.
+        rules_skipped: dict[str, str] = {}
 
         for rule_name in applicable_rules:
             if rule_name not in self.RULE_DETECTORS:
                 logger.warning(f'Unknown rule: {rule_name}, skipping')
                 continue
 
-            # Check minimum observations
+            # Check minimum observations — skip (don't abort) rules the group is too small for.
             min_obs = self._get_min_observations(rule_name)
             if len(filtered_data) < min_obs:
-                logger.warning(
+                logger.debug(
                     f'Skipping {rule_name}: insufficient observations (need {min_obs}, have {len(filtered_data)})'
                 )
+                rules_skipped[rule_name] = f'needs {min_obs} observations, have {len(filtered_data)}'
                 continue
 
             # Apply detector
@@ -182,27 +186,24 @@ class SignalDetector:
 
         # Build result
         return self._build_result(
-            data=filtered_data, violations=all_violations, stats=stats, value_col=value_col, chart_name=chart_name
+            data=filtered_data, violations=all_violations, stats=stats, value_col=value_col,
+            chart_name=chart_name, rules_skipped=rules_skipped,
         )
 
-    def _validate_inputs(self, data: pd.DataFrame, stats: dict, config: SignalConfig, min_obs_for_rules: int = 1):
-        """Validate inputs and provide helpful errors."""
+    def _validate_inputs(self, data: pd.DataFrame, stats: dict):
+        """Validate inputs and provide helpful errors.
+
+        Only genuinely-unrecoverable conditions raise here (empty data, missing
+        limit statistics). Too-few-observations is NOT an error — the caller skips
+        the rules that need more points and reports partial evaluation.
+        """
         if data.empty:
-            raise ValueError('Cannot detect signals on empty DataFrame')
+            raise ValidationError('Cannot detect signals on empty DataFrame')
 
         required_stats = ['upl', 'lpl', 'center']
         missing = [s for s in required_stats if s not in stats]
         if missing:
-            raise ValueError(f'Missing required statistics: {missing}\nAvailable: {list(stats.keys())}')
-
-        # Use the minimum observations needed for applicable rules
-        # This respects chart-type-specific rule filtering (e.g., S charts only need Rule 1)
-        if len(data) < min_obs_for_rules:
-            raise ValueError(
-                f'Insufficient observations for signal detection.\n'
-                f'Required: {min_obs_for_rules}, provided: {len(data)}\n'
-                f'Hint: Provide more data'
-            )
+            raise ValidationError(f'Missing required statistics: {missing}\nAvailable: {list(stats.keys())}')
 
     def _filter_data(self, data: pd.DataFrame, config: SignalConfig) -> pd.DataFrame:
         """Apply filtering options."""
@@ -231,7 +232,8 @@ class SignalDetector:
         return minimums.get(rule_name, 1)
 
     def _build_result(
-        self, data: pd.DataFrame, violations: pd.DataFrame, stats: dict, value_col: str, chart_name: str
+        self, data: pd.DataFrame, violations: pd.DataFrame, stats: dict, value_col: str, chart_name: str,
+        rules_skipped: dict[str, str] | None = None,
     ) -> SignalResult:
         """Build SignalResult from violation matrix."""
         # Create violation records
@@ -266,7 +268,8 @@ class SignalDetector:
 
         violation_df = pd.DataFrame(records) if records else pd.DataFrame()
 
-        return SignalResult(violations=violation_df, chart_name=chart_name, data=data, stats=stats)
+        return SignalResult(violations=violation_df, chart_name=chart_name, data=data, stats=stats,
+                            rules_skipped=rules_skipped)
 
     def _limits_vary(self, stats: dict) -> bool:
         """Check if control limits vary (per-row limits)."""

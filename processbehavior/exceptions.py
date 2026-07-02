@@ -44,12 +44,17 @@ class ProcessBehaviorError(Exception):
     pass
 
 
-class ValidationError(ProcessBehaviorError):
+class ValidationError(ProcessBehaviorError, ValueError):
     """
     Invalid input data, parameters, or configuration.
 
     Raised when user input fails validation before analysis runs.
     Check error message for specific issue and suggested fix.
+
+    Also subclasses the built-in ``ValueError`` so that callers (and the
+    library's own legacy code being migrated off raw ``ValueError``) that
+    ``except ValueError`` continue to work — the raw-``ValueError``→
+    ``ValidationError`` migration is therefore non-breaking.
 
     Common causes:
     - Invalid column names in formulate()

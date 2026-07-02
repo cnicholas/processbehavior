@@ -174,18 +174,42 @@ class TestSignalDetector:
         assert result.count > 0
         assert result.has_signals
 
-    def test_insufficient_data(self, simple_stats):
-        """Test error handling for insufficient data."""
-        # Only 5 observations, but Rule 4 needs 8 consecutive points
-        # For XmR charts, all 8 rules apply including rule 4 (8+ same side)
+    def test_insufficient_data_partial_evaluation(self, simple_stats):
+        """Too few points → run the rules that fit and skip the rest (no raise).
+
+        Regression: the detector used to abort the whole call with a ValueError when
+        the group was smaller than the most-demanding applicable rule. It now
+        evaluates the rules the group supports and reports the rest via
+        ``rules_skipped`` (partial evaluation), so small stratified subgroups don't
+        error out.
+        """
+        # 5 flat points on an X chart (all 8 rules apply): rules needing <=5 run
+        # (rule_1/2/3); rules needing >5 are skipped (rule_4/5/6/7/8).
         data = pd.DataFrame({'mean': [100, 100, 100, 100, 100], 'obs_id': range(5)})
 
         detector = SignalDetector()
-        config = SignalConfig()  # Default config
+        config = SignalConfig()  # default config
 
-        # X charts apply all rules, including rule_4 which needs 8 observations
-        with pytest.raises(ValueError, match='Insufficient observations'):
-            detector.detect(data, simple_stats, config, chart_type='X')
+        result = detector.detect(data, simple_stats, config, chart_type='X')
+
+        # No raise — a valid, partially-evaluated result comes back.
+        assert result.is_partial
+        assert result.evaluation_status == 'partial'
+        # A rule that needs more points than we have is skipped, with a reason...
+        assert 'rule_4' in result.rules_skipped
+        assert 'have 5' in result.rules_skipped['rule_4']
+        # ...while a rule the group supports is NOT skipped.
+        assert 'rule_1' not in result.rules_skipped
+        # Flat, in-limits data → no violations among the rules that ran.
+        assert not result.has_signals
+
+    def test_empty_data_raises_validation_error(self, simple_stats):
+        """Empty data is still a genuine error — now a ValidationError."""
+        from processbehavior.exceptions import ValidationError
+
+        detector = SignalDetector()
+        with pytest.raises(ValidationError, match='empty'):
+            detector.detect(pd.DataFrame({'mean': []}), simple_stats, SignalConfig(), chart_type='X')
 
     def test_missing_stats(self, simple_data):
         """Test error handling for missing statistics."""
