@@ -36,11 +36,16 @@ class SignalResult:
     >>> signals.to_excel('violations.xlsx')
     """
 
-    def __init__(self, violations: pd.DataFrame, chart_name: str, data: pd.DataFrame, stats: dict):
+    def __init__(self, violations: pd.DataFrame, chart_name: str, data: pd.DataFrame, stats: dict,
+                 rules_skipped: dict[str, str] | None = None):
         self.violations = violations
         self.chart_name = chart_name
         self.data = data
         self.stats = stats
+        # Applicable rules that could NOT be evaluated because the group had too few
+        # points (rule_name -> reason). Lets callers distinguish "no signals found"
+        # from "not fully evaluated" (e.g. a small stratified subgroup).
+        self.rules_skipped = rules_skipped or {}
 
     @property
     def count(self) -> int:
@@ -51,6 +56,16 @@ class SignalResult:
     def has_signals(self) -> bool:
         """Whether any signals were detected."""
         return self.count > 0
+
+    @property
+    def is_partial(self) -> bool:
+        """True when some applicable rules were skipped for too few observations."""
+        return bool(self.rules_skipped)
+
+    @property
+    def evaluation_status(self) -> str:
+        """'complete' when every applicable rule ran, else 'partial'."""
+        return 'partial' if self.rules_skipped else 'complete'
 
     @property
     def flagged_observations(self) -> set:
