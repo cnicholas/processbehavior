@@ -430,13 +430,13 @@ class TestCanonicalOrdering:
 
         ads = dataset.analysis_dataset
 
-        # After canonical sort, obs_id values will be reordered but preserve identity
-        # Original: row 0 (B,1), row 1 (A,1), row 2 (B,2), row 3 (A,2)
-        # Canonical order: (A,1), (A,2), (B,1), (B,2)
-        # So sorted obs_id should be: 1, 3, 0, 2 (reflecting original row positions)
+        # obs_id is the 1-based SOURCE-ROW id: original rows 0..3 → obs_id 1..4.
+        # After canonical sort by (cell_key, obs_id) the values are reordered but
+        # preserve identity: canonical order (A,1),(A,2),(B,1),(B,2) = source rows
+        # 1,3,0,2 → obs_id 2,4,1,3.
 
-        # obs_id should still contain all original values 0..N-1
-        assert set(ads['obs_id'].tolist()) == {0, 1, 2, 3}
+        # obs_id should still contain all source-row ids (1..N here, no rows dropped)
+        assert set(ads['obs_id'].tolist()) == {1, 2, 3, 4}
 
         # sort_key should be 0..N-1 in order
         assert ads['sort_key'].tolist() == [0, 1, 2, 3]
@@ -460,10 +460,9 @@ class TestCanonicalOrdering:
 
         ads = dataset.analysis_dataset
 
-        # All rows have same cell_key, so obs_id breaks ties
-        # Original order: obs_id 0, 1, 2
-        # After sort by (cell_key, obs_id): still 0, 1, 2
-        assert ads['obs_id'].tolist() == [0, 1, 2]
+        # All rows share a cell_key, so obs_id (1-based source row) breaks ties in
+        # source order: 1, 2, 3. sort_key remains the 0-based positional order key.
+        assert ads['obs_id'].tolist() == [1, 2, 3]
         assert ads['sort_key'].tolist() == [0, 1, 2]
 
 

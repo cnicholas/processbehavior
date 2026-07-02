@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- ``obs_id`` is now the **1-based source-row id** (raw→analytic lineage), replacing the
+  previous 0-based post-cleaning counter. It is stamped on the raw frame *before*
+  cleaning, so every analytic row traces back to its source-file row; rows dropped in
+  cleaning leave gaps in ``obs_id`` (e.g. ``1, 3, 4, 5``). Ordering is unchanged —
+  ``obs_id`` remains the ``(cell_key, obs_id)`` sort tie-breaker and the SDS-4
+  implicit-time key — and the "Obs N" shown in signal summaries and plot hover is now the
+  source-row number. Data-contract change: consumers relying on ``obs_id`` starting at 0
+  or being contiguous should update.
+
 ### Fixed
 - Signal detection no longer aborts on small groups. ``detect_signals`` previously
   raised ``ValueError("Insufficient observations…")`` whenever a group had fewer
