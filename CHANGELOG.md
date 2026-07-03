@@ -8,6 +8,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+- **Observed Design State (ODS) now reports Bishop's full R = K×T design state** even
+  without an explicit sampling plan. The no-plan path previously classified only over
+  cells that contained data, so sparse *observational* data (many absent
+  condition×time combinations, no ``*``/NA markers) was reported as complete/
+  semi-complete (SDS 1–3). It now classifies over the full grid — the cross of the
+  distinct observed process-design conditions with the distinct observed production
+  times — so genuinely absent ``(condition, time)`` cells count as ``N_kt=0`` and the
+  design is correctly detected as incomplete (SDS 4/5/6), matching Bishop's definition.
+  The grid uses the **composite** observed condition tuple (not the independent cross of
+  each factor's levels), so nested / non-crossed designs are not over-flagged.
+  This is a **diagnostic-only** change: ODS is lineage/reporting only. The Analytical
+  Design State (ADS) — which drives valid charts, R2 method, residual availability, and
+  variance decomposition — is computed independently on tidy data and is unchanged, as
+  are all chart/residual/variance outputs. Datasets that declare empties via ``*``/NA
+  rows or via a plan (e.g. the ``PBTESTDATABASE_T100`` reference) are unaffected.
 - ``chart_table`` (the per-chart display table) now uses a **1-based** position index
   (matching the chart's plotted x-axis, which starts at 1) instead of a 0-based counter,
   and adds the source-row id as an **"Obs"** column on Individuals (X/mR) tables for
