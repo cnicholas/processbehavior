@@ -188,21 +188,21 @@ def test_detect_sds_single_factor_level_no_replication(detector, sds4_data, spec
     assert result.reason == 'no_replication'
 
 
-def test_detect_sds2_with_nkt_grouping(detector, sds6_data, spec_with_grouping_and_time):
-    """SDS detection uses N_kt (factor × time) per Bishop.
+def test_detect_sds5_staggered_conditions_full_grid(detector, sds6_data, spec_with_grouping_and_time):
+    """SDS is classified over Bishop's full R=K×T grid (no plan needed).
 
-    DESIGN DECISION (Issue #60):
-    - SDS classification: based on N_kt (factor × time cells)
-    - min_cell_size: based on N_kt (for R2 chart selection)
-
-    This data has 2 groups × unique time points = all N_kt = 1 → SDS 2
-    Each kt cell has N_kt = 1.
+    ``sds6_data`` is a staggered design: lane A is sampled at pulls 1-5 and lane B at
+    pulls 11-15 (disjoint times). The full grid is {A,B} × {1-5,11-15} = 2×10 = 20 cells;
+    only 10 are observed (all N_kt=1) so 10 are empty. Zeros + all singletons → SDS 5.
+    (Under the old observed-only detection this read as SDS 2, hiding the 10 empty
+    rational subgroups where condition effects cannot be estimated.)
     """
     result = detector.detect_sds(sds6_data, spec_with_grouping_and_time)
 
-    # Per Bishop: all N_kt = 1 → SDS 2
-    assert result.sds == 2
-    # min_cell_size is now kt-level (each kt cell has n=1)
+    # Full R=K×T grid: 10 empty cells + all observed N_kt=1 → SDS 5
+    assert result.sds == 5
+    assert result.reason == 'incomplete_no_replication'
+    # min_cell_size is kt-level over the non-empty cells (each has n=1)
     assert result.min_cell_size == 1
 
 
@@ -458,15 +458,12 @@ def test_detect_sds_boundary_75_percent_coverage(detector, spec_with_grouping_an
     assert result.sds != 6
 
 
-def test_detect_sds2_sparse_time_coverage(detector, spec_with_grouping_and_time):
-    """SDS detection uses N_kt per Bishop.
+def test_detect_sds5_sparse_time_coverage_full_grid(detector, spec_with_grouping_and_time):
+    """Sparse time coverage → incomplete over the full R=K×T grid (SDS 5).
 
-    DESIGN DECISION (Issue #60):
-    - SDS classification: based on N_kt (factor × time cells)
-    - min_cell_size: based on N_kt (for R2 chart selection)
-
-    This data has each (rsg, pull) cell with n=1 → SDS 2
-    min_cell_size is kt-level (each kt cell has n=1).
+    Lane A is at pulls {1-7} and lane B at {1,2,3,4,8,9,10}. Full grid is
+    {A,B} × {1..10} = 20 cells; 14 observed (all N_kt=1), 6 empty (A missing 8-10,
+    B missing 5-7). Zeros + all singletons → SDS 5. (Old observed-only: SDS 2.)
     """
     df = pd.DataFrame(
         {
@@ -479,9 +476,10 @@ def test_detect_sds2_sparse_time_coverage(detector, spec_with_grouping_and_time)
 
     result = detector.detect_sds(df, spec_with_grouping_and_time)
 
-    # Per Bishop: all N_kt = 1 → SDS 2
-    assert result.sds == 2
-    # min_cell_size is now kt-level (each kt cell has n=1)
+    # Full R=K×T grid: 6 empty cells + all observed N_kt=1 → SDS 5
+    assert result.sds == 5
+    assert result.reason == 'incomplete_no_replication'
+    # min_cell_size is kt-level over the non-empty cells (each has n=1)
     assert result.min_cell_size == 1
 
 
@@ -504,12 +502,13 @@ def test_detect_sds_with_large_n_values(detector, spec_with_grouping_and_time):
     assert result.min_cell_size == 100
 
 
-def test_detect_sds_with_varying_cell_sizes(detector, spec_with_grouping_and_time):
-    """Should correctly detect SDS 3 with varying subgroup sizes.
+def test_detect_sds6_incomplete_grid_mixed_sizes(detector, spec_with_grouping_and_time):
+    """Full R=K×T grid with a hole + mixed subgroup sizes → SDS 6.
 
-    SDS 3 requires:
-    - Complete grid coverage (≥75%)
-    - Mix of subgroup sizes: some n=1, others n≥2
+    Grid is {A,B,C} × {1,2} = 6 cells. Group B appears only at time 1, so (B, 2) is
+    empty. Observed cell sizes: (A,1)=3, (A,2)=2, (B,1)=1, (C,1)=1, (C,2)=1 →
+    zeros + singletons + replicated → SDS 6. (Under the old observed-only detection
+    this read as SDS 3, treating the missing (B,2) subgroup as if it didn't exist.)
     """
     df = pd.DataFrame(
         {
@@ -530,20 +529,21 @@ def test_detect_sds_with_varying_cell_sizes(detector, spec_with_grouping_and_tim
                 1,
                 2,
                 2,  # A appears at times 1,2
-                1,  # B appears at time 1
+                1,  # B appears at time 1 only → (B, 2) is an empty cell
                 1,
                 2,
             ],  # C appears at times 1,2
             'weight': [10.0] * 8,
         }
     )
-    # Grid: 3 groups × 2 times = 6 cells, all 6 present = 100% coverage
-    # Subgroup sizes: A=5, B=1, C=2 → mix of n=1 and n≥2 → SDS 3
+    # Grid: 3 groups × 2 times = 6 cells; (B, 2) is empty → 5 of 6 present.
+    # Sizes: (A,1)=3,(A,2)=2,(B,1)=1,(C,1)=1,(C,2)=1 → 0s + 1s + ≥2s → SDS 6
 
     result = detector.detect_sds(df, spec_with_grouping_and_time)
 
-    assert result.sds == 3  # Partial replication (mix of n=1 and n≥2)
-    assert result.min_cell_size == 1  # Minimum is 1 (group B)
+    assert result.sds == 6  # Incomplete + mixed replication
+    assert result.reason == 'incomplete_with_singletons'
+    assert result.min_cell_size == 1  # Minimum non-empty cell is 1 (group B, C)
 
 
 def test_detect_sds_logs_debug_info(detector, sds1_data, spec_with_grouping_and_time, caplog):

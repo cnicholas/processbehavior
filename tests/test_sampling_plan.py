@@ -1497,6 +1497,73 @@ class TestSDS6Divergence:
 
 
 # =============================================================================
+# Full-grid ODS without a plan (Bishop R = K×T over observed conditions × times)
+# =============================================================================
+
+
+class TestFullGridODSWithoutPlan:
+    """ODS is classified over Bishop's full R=K×T grid even without an explicit plan.
+
+    The grid is the cross of the distinct OBSERVED process-design conditions (K)
+    with the distinct OBSERVED production times (T). Absent (condition, time) pairs
+    are N_kt=0, so sparse observational data (no plan, no NA markers) is correctly
+    detected as incomplete (ODS 4/5/6). ADS, computed on tidy data, is unaffected.
+    """
+
+    def test_sparse_hole_mixed_replication_ods6_ads3(self):
+        """A missing (condition, time) cell with mixed replication → ODS 6, ADS 3.
+
+        (A,week1)=2, (A,week2)=1, (B,week1)=1, (B,week2) absent →
+        zeros + singletons + replicated = SDS 6. Tidy (no NA) drops nothing and has
+        no empties → mix of 1 and ≥2 = ADS 3.
+        """
+        df = pd.DataFrame(
+            {
+                'team': ['A', 'A', 'A', 'B'],
+                'week': [1, 1, 2, 1],
+                'resp': [10.0, 11.0, 12.0, 13.0],
+            }
+        )
+        study = ProcessBehavior(df).formulate(response='resp', factors=['team'], time='week')
+        assert study.observed_design_state.sds == 6
+        assert study.analytical_design_state.sds == 3
+
+    def test_sparse_hole_all_singletons_ods5_ads2(self):
+        """A missing (condition, time) cell with all singletons → ODS 5, ADS 2."""
+        df = pd.DataFrame(
+            {
+                'team': ['A', 'A', 'B'],
+                'week': [1, 2, 1],  # (B, week2) absent
+                'resp': [10.0, 12.0, 13.0],
+            }
+        )
+        study = ProcessBehavior(df).formulate(response='resp', factors=['team'], time='week')
+        assert study.observed_design_state.sds == 5
+        assert study.analytical_design_state.sds == 2
+
+    def test_composite_grid_not_independent_factor_cross(self):
+        """Nested design: the grid uses the composite observed condition tuple, not the
+        independent cross of factor levels.
+
+        f1=A only ever pairs with f2=X; f1=B only with f2=Y. The composite conditions
+        are {(A,X), (B,Y)} — both present at the single time with n=2 → complete (ODS 1).
+        An independent-factor cross would invent (A,Y) and (B,X), fabricating empty cells
+        and mis-reporting an incomplete state. Asserting ODS 1 proves the composite grid.
+        """
+        df = pd.DataFrame(
+            {
+                'f1': ['A', 'A', 'B', 'B'],
+                'f2': ['X', 'X', 'Y', 'Y'],
+                't': [1, 1, 1, 1],
+                'resp': [10.0, 11.0, 12.0, 13.0],
+            }
+        )
+        study = ProcessBehavior(df).formulate(response='resp', factors=['f1', 'f2'], time='t')
+        assert study.observed_design_state.sds == 1
+        assert study.analytical_design_state.sds == 1
+
+
+# =============================================================================
 # T/N Validation Tests
 # =============================================================================
 

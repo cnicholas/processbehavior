@@ -493,9 +493,29 @@ class SDSRegistry:
                 # No kt columns - single cell
                 nkt_counts = nkt_observed
         else:
-            # WITHOUT PLAN: Use observed structure directly
-            # Zeros naturally appear for cells where all responses are NA
-            nkt_counts = nkt_observed
+            # WITHOUT PLAN: classify over Bishop's full R = K×T grid — the cross of the
+            # distinct observed process-design conditions (K) with the distinct observed
+            # production times (T). Absent (condition, time) pairs become N_kt=0, matching
+            # Bishop's definition where the design state is defined over all R=K×T rational
+            # subgroups. Cells present but all-NA already appear as N_kt=0 via nkt_observed.
+            #
+            # The grid uses the COMPOSITE observed condition tuple (drop_duplicates on the
+            # factor columns), NOT the independent cross of each factor's levels — so a
+            # nested / non-crossed design is not over-flagged with impossible conditions.
+            #
+            # Only meaningful when there is both a condition dimension (K) and a time
+            # dimension (T); otherwise there is no K×T grid to form and observed cells
+            # already are the design.
+            k_vars = [c for c in kt_cols if c != spec.time_var]
+            t = spec.time_var
+            if k_vars and t and t in kt_cols:
+                conditions = structure_view[k_vars].drop_duplicates()
+                times = pd.DataFrame({t: sorted(structure_view[t].dropna().unique())})
+                full = conditions.merge(times, how='cross')
+                full_index = pd.MultiIndex.from_frame(full[kt_cols])
+                nkt_counts = nkt_observed.reindex(full_index, fill_value=0)
+            else:
+                nkt_counts = nkt_observed
 
         # has_empty_cells is derived directly from N_kt distribution
         n_empty_cells = int((nkt_counts == 0).sum())
