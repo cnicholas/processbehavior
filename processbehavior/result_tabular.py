@@ -81,14 +81,18 @@ def build_chart_table(
     chart_data = _join_n_column(result, chart_data)
 
     output_cols, col_renames = _output_column_plan(
-        chart_data, value_col, include_signal_col
+        chart_data, value_col, include_signal_col, chart=chart
     )
     table = chart_data[output_cols].copy().rename(columns=col_renames)
 
     if include_signal_col and "signal" in table.columns and signal_symbols:
         table["signal"] = table["signal"].map(_SIGNAL_SYMBOLS)
 
-    return table.reset_index(drop=True)
+    # 1-based position index so the table's leading column matches the chart's plotted
+    # x-axis (which starts at 1) rather than a 0-based row counter.
+    table = table.reset_index(drop=True)
+    table.index = table.index + 1
+    return table
 
 
 # ---------------------------------------------------------------------------
@@ -214,10 +218,18 @@ def _output_column_plan(
     chart_data: pd.DataFrame,
     value_col: str | None,
     include_signal_col: bool,
+    chart: str | None = None,
 ) -> tuple[list[str], dict[str, str]]:
     """Decide which columns to keep and how to rename them for display."""
     output_cols: list[str] = []
     renames: dict[str, str] = {}
+
+    # Source-row id ("Obs") — Individuals charts only, where each row maps 1:1 to a
+    # single observation, so it traces back to the source data. Xbar/S rows are
+    # subgroup aggregates (identified by "subgroup"), so obs_id is not 1:1 there.
+    if chart in ("X", "mR") and "obs_id" in chart_data.columns:
+        output_cols.append("obs_id")
+        renames["obs_id"] = "Obs"
 
     if "rsg" in chart_data.columns:
         output_cols.append("rsg")

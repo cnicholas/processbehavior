@@ -75,6 +75,20 @@ class TestBuildChartTable:
         # signal column included by default
         assert "signal" in table.columns
 
+    def test_index_is_one_based(self, xbar_s_result, x_mr_result):
+        """The position index starts at 1 (matches the chart's plotted x-axis)."""
+        for res, chart in ((xbar_s_result, "Xbar"), (x_mr_result, "X")):
+            table = build_chart_table(res, chart=chart)
+            assert list(table.index) == list(range(1, len(table) + 1))
+
+    def test_obs_column_on_individuals_only(self, xbar_s_result, x_mr_result):
+        """`Obs` (source-row obs_id) is added on X/mR tables, not on Xbar/S."""
+        for chart in ("X", "mR"):
+            table = build_chart_table(x_mr_result, chart=chart)
+            assert "Obs" in table.columns
+            assert "obs_id" not in table.columns  # renamed to "Obs"
+        assert "Obs" not in build_chart_table(xbar_s_result, chart="Xbar").columns
+
     def test_subgroup_column_present_when_rsg_in_chart_data(self, x_mr_result):
         """rsg column → renamed to `subgroup` in the output."""
         # x_mr_result is stratified with rsg present in chart_data
@@ -108,11 +122,6 @@ class TestBuildChartTable:
         assert "value" in table.columns
         # And 'y' should NOT still be a separate column
         assert "y" not in table.columns
-
-    def test_index_is_reset(self, xbar_s_result):
-        """Returned table has a clean RangeIndex starting at 0."""
-        table = build_chart_table(xbar_s_result, chart="Xbar")
-        assert list(table.index) == list(range(len(table)))
 
     def test_x_mr_chart_works(self, x_mr_result):
         """Individuals chart also produces a sensible table."""

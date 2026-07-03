@@ -8,6 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+- ``chart_table`` (the per-chart display table) now uses a **1-based** position index
+  (matching the chart's plotted x-axis, which starts at 1) instead of a 0-based counter,
+  and adds the source-row id as an **"Obs"** column on Individuals (X/mR) tables for
+  traceability. Xbar/S tables are unchanged (their rows are subgroup aggregates).
 - ``obs_id`` is now the **1-based source-row id** (raw→analytic lineage), replacing the
   previous 0-based post-cleaning counter. It is stamped on the raw frame *before*
   cleaning, so every analytic row traces back to its source-file row; rows dropped in
