@@ -8,6 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+- **Design Report** now labels the observed/sampling lineage row **``SDS (Sampling)``**
+  instead of ``ODS (Observed)``, aligning with Bishop's "Sampling Design State"
+  terminology (the lineage reads Planned → Sampling → Analytical). Display-only: internal
+  attributes (``study.observed_design_state``) and all values are unchanged.
 - **Observed Design State (ODS) now reports Bishop's full R = K×T design state** even
   without an explicit sampling plan. The no-plan path previously classified only over
   cells that contained data, so sparse *observational* data (many absent
