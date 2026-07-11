@@ -27,6 +27,8 @@ project:
       children:
         - file: tutorials/index.md
           title: Tutorial Overview
+        - file: tutorials/coffee-shop.ipynb
+          title: Coffee Shop — A Complete Story
         - file: tutorials/basic-imr.ipynb
           title: Basic XmR Chart
         - file: tutorials/signal-detection.ipynb
@@ -39,8 +41,6 @@ project:
           title: Process Capability
         - file: tutorials/process-capability-before-after.ipynb
           title: Capability — Before vs. After
-        - file: tutorials/calibration.ipynb
-          title: Calibration — Standards-Given Limits
         - file: tutorials/derived-variables.ipynb
           title: Derived Variables — Transforms & Binning
         - file: tutorials/loss-function.ipynb

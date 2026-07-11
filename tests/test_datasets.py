@@ -8,23 +8,31 @@ from processbehavior import ProcessBehavior, load_coffee_shop
 def test_load_coffee_shop_returns_ready_processbehavior():
     pb = load_coffee_shop()
     assert isinstance(pb, ProcessBehavior)
-    assert pb.data.shape == (384, 6)
-    assert {'date', 'day_of_week', 'week', 'subgroup_id', 'reading_no', 'wait_sec'} <= set(pb.data.columns)
+    assert pb.data.shape == (384, 7)
+    assert set(pb.data.columns) == {
+        'date',
+        'year_week',
+        'week',
+        'day_of_week',
+        'hour',
+        'daypart',
+        'wait_sec',
+    }
 
 
 def test_load_coffee_shop_is_formulatable_with_both_axes():
     pb = load_coffee_shop()
     # integer time axis
-    s_week = pb.formulate(response='wait_sec', factors=['day_of_week'], time='week')
+    s_week = pb.formulate(response='wait_sec', factors=['daypart'], time='week')
     assert s_week.analytical_design_state.sds >= 1
     # date time axis (string dates -> datetime64 at formulation)
-    s_date = pb.formulate(response='wait_sec', factors=['day_of_week'], time='date')
+    s_date = pb.formulate(response='wait_sec', factors=['daypart'], time='date')
     assert pd.api.types.is_datetime64_any_dtype(s_date.dataset['date'])
 
 
 def test_load_coffee_shop_before_after_capability_story():
     study = load_coffee_shop().formulate(
-        response='wait_sec', factors=['day_of_week'], time='week'
+        response='wait_sec', factors=['daypart'], time='week'
     )
     before = study.capability(usl=240, target=180, window=(None, 8))
     after = study.capability(usl=240, target=180, window=(8, None))

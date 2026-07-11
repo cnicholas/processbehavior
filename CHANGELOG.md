@@ -8,6 +8,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+- **Demo dataset ``load_coffee_shop()`` rebuilt into a fuller process-behavior story.**
+  New schema — ``date``, ``year_week``, ``week``, ``day_of_week``, ``hour``,
+  ``daypart`` (Peak/Off-peak, the process-design factor), ``wait_sec`` — dropping the
+  old ``subgroup_id`` and ``reading_no`` columns (data-contract change). Formulate with
+  ``factors=['daypart'], time='date'`` for a complete (SDS 1) design. The series now
+  carries three teachable events: a week-8 espresso-machine improvement (Xbar shift), a
+  ~one-week week-12 POS learning curve (a run, not a lone outlier), and a weeks 14–16
+  new-hire spell where the mean holds but within-subgroup spread doubles (an S-chart
+  signal). The before/after eras (~240s → ~205s) are preserved. Regenerated
+  deterministically by ``scripts/generate_coffee_shop_demo.py``. New tutorial
+  ``docs/tutorials/coffee-shop.ipynb`` walks the whole story; the standalone
+  ``calibration.ipynb`` tutorial was retired (calibration is now shown in-context there).
 - **Design Report** now labels the observed/sampling lineage row **``SDS (Sampling)``**
   instead of ``ODS (Observed)``, aligning with Bishop's "Sampling Design State"
   terminology (the lineage reads Planned → Sampling → Analytical). Display-only: internal
