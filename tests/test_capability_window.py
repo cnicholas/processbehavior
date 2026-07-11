@@ -27,7 +27,7 @@ def coffee_df():
 
 def _study(coffee_df, time):
     return ProcessBehavior(coffee_df).formulate(
-        response='wait_sec', factors=['day_of_week'], time=time
+        response='wait_sec', factors=['daypart'], time=time
     )
 
 
@@ -45,12 +45,12 @@ def test_before_after_contrast(coffee_df, time, before_win, after_win):
     before = study.capability(usl=240, target=180, window=before_win)
     after = study.capability(usl=240, target=180, window=after_win)
 
-    # Before: baseline era ~240s, right at the USL -> roughly half over spec.
-    assert before.y_bar == pytest.approx(239.9, abs=0.5)
+    # Before: baseline era ~241s, right at the USL -> roughly half over spec.
+    assert before.y_bar == pytest.approx(241.3, abs=0.5)
     assert before.n == 168
     assert before.pct_above_usl > 40
     # After: post-change era well below the USL -> far fewer over spec.
-    assert after.y_bar == pytest.approx(202.6, abs=0.5)
+    assert after.y_bar == pytest.approx(204.8, abs=0.5)
     assert after.n == 216
     assert after.pct_above_usl < 15
     assert after.y_bar < before.y_bar
@@ -149,7 +149,7 @@ def test_wide_window_has_no_warning(coffee_df):
 # --- Guards ---------------------------------------------------------------
 
 def test_window_requires_time_variable(coffee_df):
-    study = ProcessBehavior(coffee_df).formulate(response='wait_sec', factors=['day_of_week'])
+    study = ProcessBehavior(coffee_df).formulate(response='wait_sec', factors=['daypart'])
     with pytest.raises(ValidationError, match='time variable'):
         study.capability(usl=240, target=180, window=(None, 8))
 
