@@ -53,6 +53,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   or being contiguous should update.
 
 ### Fixed
+- Individuals (**X**) and Moving-Range (**mR**) charts now label the y-axis
+  **"Individual Value"** / **"Moving Range"** instead of the response variable name.
+  Fixed in ``Plotter._get_yaxis_label`` (keyed on chart type), so it applies to residual
+  X/mR charts too (e.g. the R2 "Unexplained Effects" chart). Xbar/S labels
+  ("Sample Average" / "Sample Standard Deviation") are unchanged, and an explicit
+  ``.plot(yaxis_title=...)`` override still takes precedence.
 - Signal detection no longer aborts on small groups. ``detect_signals`` previously
   raised ``ValueError("Insufficient observations…")`` whenever a group had fewer
   points than the most-demanding *applicable* run-rule (Rule 7 needs 15) — which

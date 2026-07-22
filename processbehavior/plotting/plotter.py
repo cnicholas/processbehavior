@@ -1304,6 +1304,10 @@ class Plotter:
             return 'Sample Average'
         if chart_type == 'S':
             return 'Sample Standard Deviation'
+        if chart_type == 'X':
+            return 'Individual Value'
+        if chart_type == 'mR':
+            return 'Moving Range'
         response_var = self.summary.get('response_var')
         if response_var:
             return response_var.replace('_', ' ').title()
