@@ -840,3 +840,58 @@ class TestStatsBox:
         annotations = fig.figure.layout.annotations
         has_stats = any('n =' in (ann.text or '') for ann in annotations)
         assert has_stats
+
+
+class TestYAxisLabels:
+    """Y-axis labels are chart-type-based, not the response variable name.
+
+    X charts read "Individual Value" and mR charts "Moving Range" — for both
+    response and residual charts — while Xbar/S keep their statistic labels and an
+    explicit ``yaxis_title=`` override still wins. See ``Plotter._get_yaxis_label``.
+    """
+
+    @pytest.fixture
+    def replicated_study(self):
+        """Fully replicated design (factor x time, 4 reps/cell) so residuals exist."""
+        np.random.seed(7)
+        n_group, n_time, reps = 2, 12, 4
+        df = pd.DataFrame(
+            {
+                'value': np.random.normal(100, 5, n_group * n_time * reps),
+                'group': np.repeat(['A', 'B'], n_time * reps),
+                'time': np.tile(np.repeat(range(1, n_time + 1), reps), n_group),
+            }
+        )
+        pdf = ProcessBehavior(df)
+        return pdf.formulate(response=pdf.cols.value, factors=[pdf.cols.group], time=pdf.cols.time)
+
+    @staticmethod
+    def _yaxis(result, chart):
+        return result.plot(chart=chart).figure.layout.yaxis.title.text
+
+    def test_individuals_and_moving_range_labels(self, replicated_study):
+        result = replicated_study.execute(chart='X', by=[], companion=True)
+        assert self._yaxis(result, 'X') == 'Individual Value'
+        assert self._yaxis(result, 'mR') == 'Moving Range'
+
+    def test_residual_x_mr_use_chart_type_labels(self, replicated_study):
+        # R2 "Unexplained Effects" plotted as X/mR must use the chart-type labels,
+        # not the response variable name.
+        result = replicated_study.execute(chart='X', by=[], value='R2', companion=True)
+        assert self._yaxis(result, 'X') == 'Individual Value'
+        assert self._yaxis(result, 'mR') == 'Moving Range'
+
+    def test_xbar_s_labels_unchanged(self, replicated_study):
+        result = replicated_study.execute(chart='Xbar', companion=True)
+        assert self._yaxis(result, 'Xbar') == 'Sample Average'
+        assert self._yaxis(result, 'S') == 'Sample Standard Deviation'
+
+    def test_explicit_yaxis_title_overrides_default(self, replicated_study):
+        result = replicated_study.execute(chart='X', by=[])
+        fig = result.plot(chart='X', yaxis_title='Custom Label')
+        assert fig.figure.layout.yaxis.title.text == 'Custom Label'
+
+    def test_stratified_individuals_label(self, replicated_study):
+        # Faceted/stratified path resolves the label from chart_type too.
+        result = replicated_study.execute(chart='X', by=['group'])
+        assert self._yaxis(result, 'X') == 'Individual Value'
