@@ -8,14 +8,32 @@ This module provides:
 - Module-scoped fixtures for expensive operations
 """
 
+import sys
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
 import pytest
+
+# Make the standalone benchmark harness importable from tests (scripts/ is a namespace pkg).
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from processbehavior.data_preparation import DataPreparation
 from processbehavior.datasets import synthetic
 from processbehavior.formulation_spec import ChartRequest, FormulationSpec
 from processbehavior.sds_detector import SDSRegistry
+
+
+@pytest.fixture(scope='session')
+def benchmark_results():
+    """Run the shared benchmark scenarios (SDS-1 & SDS-2 at 10K/100K) once per session.
+
+    Consumed by the drift report and the scaling-shape assertions in test_performance.py.
+    Excludes the 1M cases (those stay in the @slow granular tests + scripts/benchmark.py).
+    """
+    from scripts import benchmark as bench
+
+    return bench.run_benchmarks(quick=True)
 
 # ============================================================================
 # Shared Test Helpers
