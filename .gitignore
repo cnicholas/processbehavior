@@ -93,6 +93,9 @@ id_rsa*
 /Getting_Started_Guide.docx
 simulation/output/
 
+# Performance benchmark per-run output (baseline.json IS tracked)
+benchmarks/last_run.json
+
 # mypy
 .mypy_cache/
 .dmypy.json

@@ -1,33 +1,35 @@
 """
 Performance benchmarks for processbehavior at scale.
 
-This module tests the package's ability to handle large datasets:
-- 1 million observations
-- 50 columns of data
-- Various Sampling Design States
+Covers both residual regimes: SDS-1 (replicated → exact R2, O(N)) and the SDS-2 worst case
+(no replication → MA2 sort, O(N log N)), across 10K/100K/1M rows × 50 columns, for init /
+formulate / execute / memory. Assertions are drift-aware without being hardware-flaky:
+loose sanity ceilings + hardware-independent *scaling shape* (per-row time stays flat as N
+grows ⇒ linear). Absolute per-machine drift is reported against benchmarks/baseline.json and
+only fails the build under PB_PERF_STRICT=1.
 
 Run commands:
-    # All performance tests
-    pytest tests/test_performance.py -v
-
-    # Skip slow 1M row tests
-    pytest tests/test_performance.py -v -m "not slow"
-
-    # With benchmark output (requires pytest-benchmark)
-    pytest tests/test_performance.py -v --benchmark-only
-
-    # Scalability tests only
-    pytest tests/test_performance.py -v -k "scaling"
+    pytest tests/test_performance.py -v -s              # all (incl. @slow 1M); -s to see prints
+    pytest tests/test_performance.py -v -m "not slow"   # skip 1M
+    pytest tests/test_performance.py -v -m benchmark -s  # the consolidated report + drift table
+    python scripts/benchmark.py [--quick] [--update-baseline]  # standalone report (incl. 1M)
 """
 
+import os
+import sys
 import time
 import tracemalloc
+from pathlib import Path
 
 import numpy as np
 import pytest
 
+# scripts/ (namespace pkg) holds the shared benchmark harness; conftest also adds this.
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
 from processbehavior import ProcessBehavior
 from processbehavior.datasets import synthetic
+from scripts import benchmark as bench
 
 # ============================================================================
 # Data Generation Benchmarks
@@ -329,8 +331,9 @@ class TestMemoryUsage:
         print(f'Peak memory: {peak_mb:.1f} MB')
         print(f'Ratio: {peak_mb / input_mb:.1f}x')
 
-        # Allow 5x input data size for intermediate copies
-        assert peak_mb < input_mb * 10, f'Memory grew {peak_mb / input_mb:.1f}x (limit: 10x)'
+        # Intermediate copies during formulate. Measured ~3.4-3.8x across sizes; cap at
+        # 6x for headroom. (Previously 10x in code but "5x" in docs — reconciled here.)
+        assert peak_mb < input_mb * 6, f'Memory grew {peak_mb / input_mb:.1f}x (limit: 6x)'
 
 
 # ============================================================================
@@ -368,8 +371,9 @@ class TestScalability:
         throughput = actual_size / elapsed
         print(f'\n{actual_size:,} rows: {elapsed:.3f}s ({throughput:,.0f} rows/sec)')
 
-        # Should achieve at least 1000 rows/sec even on slow machines
-        assert throughput > 1000, f'Throughput {throughput:.0f} rows/sec below minimum 1000'
+        # Loose sanity floor (won't flake across hardware); the real linearity guard is
+        # TestScalingShape, which checks per-row time stays flat as N grows.
+        assert throughput > 10_000, f'Throughput {throughput:.0f} rows/sec below floor 10k'
 
     @pytest.mark.parametrize('n_factors', [1, 5, 10, 20])
     def test_factor_count_scaling(self, n_factors, perf_spec):
@@ -461,3 +465,131 @@ class TestFullPipeline:
         print(f'TOTAL: {total:.2f}s ({throughput:,.0f} rows/sec)')
 
         assert chart_data is not None
+
+
+# ============================================================================
+# Worst-Case Residual Path (SDS-2 / MA2 sort) — the historical coverage gap
+# ============================================================================
+
+
+@pytest.mark.slow
+@pytest.mark.benchmark
+class TestWorstCaseMA2:
+    """Exercise the unreplicated (MA2, O(N log N)) residual path.
+
+    The single-factor perf_spec collapses make_design(2) to SDS-1 (the (factor1×time) cell
+    still holds both factor-2 levels), so the rest of this file only ever hits exact-R2.
+    Using BOTH factors makes the cells singletons → MA2 sort — ~8x slower than exact-R2.
+    """
+
+    def test_formulate_ma2_confirms_path_100k(self):
+        """SDS-2 formulate uses the MA2 path and stays well within a sanity ceiling."""
+        df = bench.make_dataset(2, 100_000)
+        pdf = ProcessBehavior(df)
+
+        start = time.perf_counter()
+        study = pdf.formulate(response='y', factors=['factor 1', 'factor 2'], time='time')
+        elapsed = time.perf_counter() - start
+
+        # Confirm we actually exercised the no-replication (MA2) path, not exact-R2.
+        assert study.analytical_design_state.sds == 2, 'expected SDS-2 (no replication) → MA2'
+        throughput = len(df) / elapsed
+        print(f'\nMA2 formulate (100K rows): {elapsed:.2f}s ({throughput:,.0f} rows/sec)')
+        assert elapsed < 30, f'MA2 formulate took {elapsed:.1f}s, sanity ceiling 30s'
+
+    @pytest.mark.slow
+    def test_formulate_ma2_1m(self):
+        """SDS-2 (MA2 sort) formulate at 1M rows — the true worst case."""
+        df = bench.make_dataset(2, 1_000_000)
+        pdf = ProcessBehavior(df)
+
+        start = time.perf_counter()
+        study = pdf.formulate(response='y', factors=['factor 1', 'factor 2'], time='time')
+        elapsed = time.perf_counter() - start
+
+        assert study.analytical_design_state.sds == 2
+        throughput = len(df) / elapsed
+        print(f'\nMA2 formulate (1M rows): {elapsed:.1f}s ({throughput:,.0f} rows/sec)')
+        assert elapsed < 300, f'MA2 formulate took {elapsed:.1f}s, sanity ceiling 300s'
+
+
+class TestExecuteAtScale:
+    """execute() at 1M rows (the rest of the file only measured execute up to 100K)."""
+
+    @pytest.mark.slow
+    def test_execute_xbar_1m(self, large_dataset_1m, perf_spec):
+        pdf = ProcessBehavior(large_dataset_1m)
+        study = pdf.formulate(
+            response=perf_spec['response_var'],
+            factors=perf_spec['rsg_vars'],
+            time=perf_spec['time_var'],
+        )
+        start = time.perf_counter()
+        result = study.execute(chart='Xbar')
+        elapsed = time.perf_counter() - start
+
+        assert result is not None
+        throughput = len(large_dataset_1m) / elapsed
+        print(f'\nExecute Xbar (1M rows): {elapsed:.2f}s ({throughput:,.0f} rows/sec)')
+        assert elapsed < 60, f'Execute took {elapsed:.1f}s, sanity ceiling 60s'
+
+
+# ============================================================================
+# Scaling shape (hardware-independent complexity guard) + drift report
+# ============================================================================
+
+
+def _per_row_us(results, sds, op, size):
+    """Microseconds per row for one (design, op, size) from a benchmark_results list."""
+    for r in results:
+        if r['sds'] == sds and r['op'] == op and r['size'] == size and r.get('seconds'):
+            return r['seconds'] / r['rows'] * 1e6
+    raise AssertionError(f'no result for sds{sds} {op} {size}')
+
+
+@pytest.mark.slow
+@pytest.mark.benchmark
+class TestScalingShape:
+    """Per-row time must stay roughly flat as N grows — catches super-linear regressions
+    independent of hardware (an O(N^2) slip would blow the ratio up regardless of CPU)."""
+
+    # exact-R2 is O(N) → flat; MA2 is O(N log N) → a mild rise. Generous cap absorbs both
+    # plus GC/cache noise while still catching a true complexity change.
+    MAX_RATIO = 3.0
+
+    def test_exact_r2_scales_linearly(self, benchmark_results):
+        small = _per_row_us(benchmark_results, 1, 'formulate', 10_000)
+        large = _per_row_us(benchmark_results, 1, 'formulate', 100_000)
+        print(f'\nSDS-1 formulate per-row: {small:.2f}us (10K) -> {large:.2f}us (100K), ratio {large / small:.2f}')
+        assert large <= small * self.MAX_RATIO, f'exact-R2 per-row grew {large / small:.1f}x (>{self.MAX_RATIO}x)'
+
+    def test_ma2_scales_near_linearly(self, benchmark_results):
+        small = _per_row_us(benchmark_results, 2, 'formulate', 10_000)
+        large = _per_row_us(benchmark_results, 2, 'formulate', 100_000)
+        print(f'\nSDS-2 MA2 per-row: {small:.2f}us (10K) -> {large:.2f}us (100K), ratio {large / small:.2f}')
+        assert large <= small * self.MAX_RATIO, f'MA2 per-row grew {large / small:.1f}x (>{self.MAX_RATIO}x)'
+
+
+@pytest.mark.slow
+@pytest.mark.benchmark
+class TestBenchmarkReport:
+    """Consolidated report + drift check against the committed same-machine baseline.
+
+    Informational by default (prints + writes benchmarks/last_run.json); set PB_PERF_STRICT=1
+    to make a regression beyond the tolerance fail the build (opt-in — CI never flakes on it).
+    """
+
+    def test_report_and_drift(self, benchmark_results):
+        print(bench.format_report(benchmark_results))
+
+        doc = bench.to_document(benchmark_results)
+        bench.LAST_RUN.parent.mkdir(exist_ok=True)
+        bench.LAST_RUN.write_text(__import__('json').dumps(doc, indent=2))
+
+        baseline = bench.load_baseline()
+        drift = bench.compare_to_baseline(benchmark_results, baseline)
+        print('\nDrift vs baseline:\n' + '\n'.join(drift))
+
+        if os.environ.get('PB_PERF_STRICT') == '1':
+            regressions = [d for d in drift if 'REGRESSION' in d]
+            assert not regressions, 'performance regression(s) vs baseline:\n' + '\n'.join(regressions)
