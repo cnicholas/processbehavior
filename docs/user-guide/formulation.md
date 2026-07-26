@@ -452,7 +452,7 @@ loss.plot(structured=True)     # Expands PDC into per-factor components
 |-----------|---------|-----------------|
 | **Centering** | (Ȳ - Target)² | Loss from being off-target |
 | **Unexplained** | Within-cell variance | Irreducible noise (R2) |
-| **PDC** | Between-factor variance | Factor (process design condition) effects |
+| **PDC** | Between-condition variance | Process design condition main effects (R5) |
 | **Time** | Between-time variance | Time period effects |
 | **Interaction** | Factor × time variance | How factor effects change over time |
 

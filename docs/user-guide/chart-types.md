@@ -111,16 +111,16 @@ fig = result.plot(title='Time Effects')
 
 Signals indicate process drift or shifts over time.
 
-### Question: "Are there factor differences after removing time effects?"
+### Question: "Are there design condition differences after removing time effects?"
 
 **Use: X with `value='R5'`**
 
 ```python
 result = study.execute(chart='X', by=['lane'], value='R5')
-fig = result.plot(title='Factor Effects')
+fig = result.plot(title='Design Condition Main Effects')
 ```
 
-Signals indicate true differences between factor levels.
+Signals indicate true differences between process design conditions.
 
 ## Chart Validity by DS
 

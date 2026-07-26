@@ -1286,8 +1286,12 @@ class Study:
         # All possible primary charts
         ALL_PRIMARY = ['Xbar', 'S', 'X', 'mR', 'Histogram']
 
-        # All possible residual charts as (chart_type, residual) tuples
+        # All possible residual charts as (chart_type, residual) tuples.
+        # R1 is location-only (Xbar/X): it is the response shifted by -Ybar, so an S or mR
+        # chart of R1 is numerically identical to the response's and adds no diagnostic.
         ALL_RESIDUALS = [
+            ('Xbar', 'R1'),
+            ('X', 'R1'),
             ('S', 'R2'),
             ('X', 'R2'),
             ('Xbar', 'R3'),

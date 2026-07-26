@@ -182,6 +182,8 @@ class SDSAnalysisPlan:
         'X': 'Is individual variation stable over time?',
         'mR': 'Is range variation stable over time?',
         # Residual charts — keyed by (chart_type, residual)
+        ('Xbar', 'R1'): 'How do subgroup means vary about the overall mean?',
+        ('X', 'R1'): 'How do individual values vary about the overall mean?',
         ('S', 'R2'): 'Is within-subgroup variation stable?',
         ('X', 'R2'): 'Is within-subgroup variation stable?',
         ('X', 'R3'): 'Is there factor×time interaction?',
@@ -205,6 +207,7 @@ class SDSAnalysisPlan:
         Returns (chart_type, residual) tuples matching the ``execute()``
         signature: ``study.execute(chart=chart_type, value=residual)``.
 
+        - R1: Xbar/X only — the response centred at 0 (location, never dispersion)
         - R2: S chart when cells have n>=2, otherwise X
         - R3: Xbar/S when cells have n>=2, otherwise X
         - R4: Xbar/S when has_factors (aggregate across factors by time)
@@ -220,6 +223,12 @@ class SDSAnalysisPlan:
         """
         if not self.vas_residuals_supported:
             return []
+
+        # R1 (Bishop 13.1): the response centred at 0 — a location shift, so only the
+        # location charts. X is unconditional: charting the centred raw data is the whole
+        # diagnostic. No S/mR — R1 differs from the response by a constant, so its
+        # dispersion charts would duplicate the response's exactly.
+        r1 = [('Xbar', 'R1'), ('X', 'R1')]
 
         # R2: S chart when cells have replication (min_cell_size >= 2)
         # X R2 is always available for Maximum Information Analysis
@@ -244,7 +253,7 @@ class SDSAnalysisPlan:
         # giving n>=2 subgroups regardless of cell-level replication
         r6 = [('Xbar', 'R6'), ('S', 'R6')]
 
-        return r2 + r3 + r4 + r5 + r6
+        return r1 + r2 + r3 + r4 + r5 + r6
 
     def __str__(self) -> str:
         """Pretty print the analysis plan."""
