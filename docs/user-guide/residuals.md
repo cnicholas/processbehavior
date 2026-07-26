@@ -6,12 +6,12 @@ Dr. Thomas A. Bishop's **Variance Analysis System (VAS)** decomposes total varia
 
 | Residual | Name | Formula | Questions Answered |
 |----------|------|---------|-------------------|
-| **R1** | Total | Y - Y̅ | How far is each point from the grand mean? |
+| **R1** | Response Centered at 0 | Y - Y̅ | How far is each point from the overall mean? |
 | **R2** | Within-cell | Y - Y̅<sub>kt</sub> | Is measurement variation stable? |
 | **R3** | Interaction | Y - Y̅<sub>k</sub> - Y̅<sub>t</sub> + Y̅ | Do factor effects change over time? |
-| **R4** | Time | Y̅<sub>t</sub> - Y̅ + R2 | Are there time trends or shifts? |
-| **R5** | Factor | Y̅<sub>k</sub> - Y̅ + R2 | Do factors differ from each other? |
-| **R6** | Factor Main Effect | α<sub>i</sub> + R2 | Does a specific factor have a significant effect? |
+| **R4** | Time Main Effect | Y̅<sub>t</sub> - Y̅ + R2 | Are there time trends or shifts? |
+| **R5** | Design Condition Main Effect | Y̅<sub>k</sub> - Y̅ + R2 | Do process design conditions differ from each other? |
+| **R6** | Design Factor Main Effect | α<sub>i</sub> + R2 | Does a specific design factor have a significant effect? |
 
 Where:
 - Y = individual observation
@@ -38,6 +38,41 @@ print(study.dataset[['R1', 'R2', 'R3', 'R4', 'R5']].head())
 result = study.execute()
 print(result.residuals.head())
 ```
+
+## R1: Response Centered at 0
+
+**Purpose**: View the original measurements as ± about zero, so the total range of
+variation is read directly rather than against an arbitrary process mean.
+
+**Formula**: R1 = Y - Y̅ (Bishop §13.1, *Centering the Original PM Data at 0*)
+
+R1 is a pure location shift — it subtracts the overall mean and changes nothing else. It
+is also the building block the other residuals are derived from, which makes it the
+natural starting point when auditing a decomposition: if R1 doesn't look like your raw
+data recentred, nothing downstream will be right either.
+
+**Chart**: Xbar (subgroup means) or X (individual values). There is deliberately no S or
+mR chart for R1 — a constant shift leaves dispersion untouched, so those charts would be
+numerically identical to the response's.
+
+```python
+# Individual values, centred at zero
+result = study.execute(chart='X', by=[], value='R1')
+fig = result.plot(title='Response Centered at 0')
+
+# Subgroup means, centred at zero
+result = study.execute(chart='Xbar', value='R1')
+```
+
+**Interpretation**:
+- The centre line sits at 0 by construction
+- The spread is the total variation in the original data, read as ± about zero
+- Limits use the within-cell noise floor, as all residual charts do, so points falling
+  outside them mark variation the decomposition will attribute to time, condition, or
+  interaction
+
+**Availability**: Bishop notes R1 can be calculated for data produced by all six sampling
+design states.
 
 ## R2: Within-Cell Residuals
 
@@ -81,7 +116,7 @@ fig = result.plot(show_zones=True, title='Factor × Time Interactions')
 - Stable R3 → Factor effects are consistent across time periods
 - Example: Machine A performs worse only on night shift
 
-## R4: Time Effect Residuals
+## R4: Time Main Effect Residuals
 
 **Purpose**: Detect time-related patterns (trends, shifts, cycles).
 
@@ -109,9 +144,9 @@ When charting R4 on Xbar, limits use R2's Sbar (within-cell noise), not R4's own
 - Shifts → Sudden change (adjustment, material change)
 - Cycles → Periodic pattern (daily, weekly)
 
-## R5: Factor Effect Residuals
+## R5: Design Condition Main Effect Residuals
 
-**Purpose**: Detect true differences between factor levels.
+**Purpose**: Detect true differences between process design conditions.
 
 **Formula**: R5 = Y̅<sub>k</sub> - Y̅ + R2
 
@@ -122,11 +157,11 @@ This combines the factor effect with within-cell variation.
 ```python
 # Stratified X — one chart per factor level
 result = study.execute(chart='X', by=['lane'], value='R5')
-fig = result.plot(show_zones=True, title='Factor Effects')
+fig = result.plot(show_zones=True, title='Design Condition Main Effects')
 
 # Xbar — subgroup means by factor
 result = study.execute(chart='Xbar', value='R5')
-fig = result.plot(show_zones=True, title='Factor Effects (Xbar)')
+fig = result.plot(show_zones=True, title='Design Condition Main Effects (Xbar)')
 ```
 
 When charting R5 on Xbar, limits use R2's Sbar (within-cell noise), not R5's own within-group std. This prevents between-cell variance from collapsed dimensions from inflating limits. See [Chart Types: Xbar limits note](chart-types.md#the-xbar-chart) for details.
@@ -136,9 +171,9 @@ When charting R5 on Xbar, limits use R2's Sbar (within-cell noise), not R5's own
 - No signals → Factor differences are within normal variation
 - Use for equipment comparison, operator comparison, etc.
 
-## R6: Factor Main Effect Residuals
+## R6: Design Factor Main Effect Residuals
 
-**Purpose**: Isolate a specific factor's main effect combined with within-cell noise.
+**Purpose**: Isolate a specific design factor's main effect combined with within-cell noise.
 
 **Formula**: R6 = α<sub>i</sub> + R2
 
@@ -216,14 +251,16 @@ Re-centering formulas:
 
 ## Residual Availability by DS
 
-| DS | R1 | R2 | R3 | R4 | R5 |
-|-----|----|----|----|----|-----|
-| 1 (Full Replication) | ✅ | ✅ Within-cell | ✅ | ✅ | ✅ |
-| 2 (No Replication) | ✅ | ✅ MR-based | ✅ | ✅ | ✅ |
-| 3 (Partial) | ✅ | ✅ Hybrid | ✅ | ✅ | ✅ |
-| 4 (Incomplete, No Singletons) → ADS 1 | ✅ | ✅ Within-cell | ✅ | ✅ | ✅ |
-| 5 (Incomplete, No Replication) → ADS 2 | ✅ | ✅ MR-based | ✅ | ✅ | ✅ |
-| 6 (Incomplete, With Singletons) → ADS 3 | ✅ | ✅ Hybrid | ✅ | ✅ | ✅ |
+| DS | R1 | R2 | R3 | R4 | R5 | R6 |
+|-----|----|----|----|----|-----|-----|
+| 1 (Full Replication) | ✅ | ✅ Within-cell | ✅ | ✅ | ✅ | ✅ |
+| 2 (No Replication) | ✅ | ✅ MR-based | ✅ | ✅ | ✅ | ✅ |
+| 3 (Partial) | ✅ | ✅ Hybrid | ✅ | ✅ | ✅ | ✅ |
+| 4 (Incomplete, No Singletons) → ADS 1 | ✅ | ✅ Within-cell | ✅ | ✅ | ✅ | ✅ |
+| 5 (Incomplete, No Replication) → ADS 2 | ✅ | ✅ MR-based | ✅ | ✅ | ✅ | ✅ |
+| 6 (Incomplete, With Singletons) → ADS 3 | ✅ | ✅ Hybrid | ✅ | ✅ | ✅ | ✅ |
+
+R6 requires factors (it is computed from R5 and R2 at `execute()` time).
 
 **Note on R2 calculation**: R2 adapts to your sampling structure:
 - **DS 1**: Within-cell deviation (`R2 = Y - Ȳ_kt`)
@@ -261,7 +298,7 @@ result = study.execute(chart='X', by=['lane'], value='R4')
 fig = result.plot(show_zones=True, show_rules=True)
 ```
 
-### Step 4: Check R5 (Factor Effects)
+### Step 4: Check R5 (Design Condition Main Effects)
 
 ```python
 result = study.execute(chart='X', by=['lane'], value='R5')
@@ -347,14 +384,14 @@ R3 = Y - Ȳ_k - Ȳ_t + Ȳ
    = R1 - FactorEffect - TimeEffect
 ```
 
-### R4: Time Effect + Unexplained
+### R4: Time Main Effect + Unexplained
 
 ```
 R4 = Ȳ_t - Ȳ + R2
    = TimeEffect + WithinVariation
 ```
 
-### R5: Factor Effect + Unexplained
+### R5: Design Condition Main Effect + Unexplained
 
 ```
 R5 = Ȳ_k - Ȳ + R2

@@ -772,10 +772,16 @@ class TestR4R5XbarSAvailability:
             assert ('Xbar', 'R5') in plan.residual_charts
 
     def test_sds1_full_residual_charts(self):
-        """SDS 1 should have full Xbar/S charts for R3, R4, R5, and R6."""
+        """SDS 1 should have R1 on the location charts and full Xbar/S for R3-R6.
+
+        R1 (Bishop 13.1, the response centred at 0) is Xbar/X only — it differs from the
+        response by a constant, so an S chart of R1 would duplicate the response's.
+        """
         plan = SDSRegistry.get_analysis_plan(sds=1, min_cell_size=3)
 
         expected = [
+            ('Xbar', 'R1'),
+            ('X', 'R1'),
             ('S', 'R2'),
             ('X', 'R2'),
             ('Xbar', 'R3'),

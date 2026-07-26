@@ -46,12 +46,18 @@ _EFFECTS_CHART_TYPES = frozenset(
     }
 )
 
+# Readable names for the VAS residual codes, used by _generate_title. A missing key
+# falls back to the code itself and renders as "R6 (R6)", so every residual the library
+# can chart must appear here — see tests/test_residual_labels.py.
 _RESIDUAL_LABELS = {
-    'R1': 'Within-Subgroup',
-    'R2': 'Within-Subgroup Variation',
+    # Bishop 13.1, "Centering the Original PM Data at 0": R1 = Y_ktn - Ybar.., the
+    # response re-expressed as +/- about zero. Not a within-subgroup quantity.
+    'R1': 'Response Centered at 0',
+    'R2': 'Within-Cell',
     'R3': 'Interaction',
-    'R4': 'Time Effects',
-    'R5': 'Factor Effects',
+    'R4': 'Time Main Effects',
+    'R5': 'Design Condition Main Effects',
+    'R6': 'Design Factor Main Effects',
 }
 
 

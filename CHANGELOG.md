@@ -7,7 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **R6 chart titles rendered as ``R6 (R6)``.** ``_RESIDUAL_LABELS`` had no entry for R6, and
+  ``_generate_title`` resolves labels with ``.get(code, code)``, so the code was printed in
+  place of its name. R6's computation was never affected — it is validated against Bishop's
+  Minitab reference in ``validation/e2e_bishop_report.py`` — this was display only.
+- **R1 chart titles carried R2's concept.** R1 was labelled ``Within-Subgroup``, but Bishop
+  §13.1 (*Centering the Original PM Data at 0*) defines ``R1 = Y_ktn − Ȳ..`` — the response
+  re-expressed as ± about zero, a location shift, not a within-subgroup quantity. Now
+  ``Response Centered at 0``.
+- **R1 was advertised but not chartable.** ``study.residuals`` listed R1 while
+  ``study.residual_charts`` omitted it entirely, so ``support`` / ``why_not()`` silently had
+  nothing to say about it. R1 is now in the allowlist for **Xbar and X only** — it differs
+  from the response by a constant, so an S or mR chart of R1 would duplicate the response's
+  dispersion charts exactly.
+
 ### Changed
+- **Residual labels adopt Bishop's design-condition vocabulary.** Chart titles, the user
+  guide, the README, and the tutorials now read ``Design Condition Main Effects`` (R5) and
+  ``Design Factor Main Effects`` (R6) in place of "Factor Effects" / "Factor Main Effect",
+  matching the "process design conditions (PDC)" terminology already used by
+  ``loss_function.py``. R2 is ``Within-Cell`` (was ``Within-Subgroup Variation``) and R4 is
+  ``Time Main Effects``. Display-only: residual codes, ``value=`` arguments, dataset column
+  names, and every computed value are unchanged, and all 280 Bishop reference assertions
+  pass untouched. Callers passing an explicit ``title=`` are unaffected.
+- **The user guide documents R1 as a chartable diagnostic.** ``docs/user-guide/residuals.md``
+  gains an R1 section (it previously appeared only in the formulas appendix), and the
+  availability table gains an R6 column. The README documents R6 for the first time.
 - **Demo dataset ``load_coffee_shop()`` rebuilt into a fuller process-behavior story.**
   New schema — ``date``, ``year_week``, ``week``, ``day_of_week``, ``hour``,
   ``daypart`` (Peak/Off-peak, the process-design factor), ``wait_sec`` — dropping the

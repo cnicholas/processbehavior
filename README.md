@@ -7,7 +7,7 @@
 
 A Python library for **Process Behavior Analysis** following Thomas A. Bishop's Variance Analysis System (VAS) methodology.
 
-Unlike traditional SPC packages, processbehavior faithfully implements Bishop's VAS equation-by-equation: automatic detection of the three-state design lineage (PDS / ODS / ADS), variance decomposition via R1-R5 residuals, and chart selection routed by the data your study can actually analyze.
+Unlike traditional SPC packages, processbehavior faithfully implements Bishop's VAS equation-by-equation: automatic detection of the three-state design lineage (PDS / ODS / ADS), variance decomposition via R1-R6 residuals, and chart selection routed by the data your study can actually analyze.
 
 ## Installation
 
@@ -96,20 +96,22 @@ study.analytical_design_state  # ADS — what the analysis is fit for
 study.design()                 # DesignReport: full lineage in one object
 ```
 
-### Residual System (R1-R5)
+### Residual System (R1-R6)
 
 For factorial designs (ADS 1-3), processbehavior decomposes variation into diagnostic residuals:
 
-- **R1** - Overall deviation from grand mean
+- **R1** - The response centered at 0 (Bishop §13.1); the building block for the rest
 - **R2** - Within-cell noise (measurement error, short-term fluctuation)
-- **R3** - Interaction between factors and time
-- **R4** - Time effects (trends, seasonality, batch effects)
-- **R5** - Factor effects (machine-to-machine, operator bias)
+- **R3** - Interaction between design conditions and time
+- **R4** - Time main effects (trends, seasonality, batch effects)
+- **R5** - Design condition main effects, all factors combined
+- **R6** - A single design factor's main effect (machine-to-machine, operator bias)
 
 ```python
 # Chart any residual
-result = study.execute(chart='X', value='R4')  # Time effects on X chart
-result = study.execute(chart='Xbar', value='R5')  # Factor effects on Xbar chart
+result = study.execute(chart='X', value='R4')  # Time main effects on X chart
+result = study.execute(chart='Xbar', value='R5')  # Design condition main effects
+result = study.execute(chart='Xbar', value='R6', by=['machine'])  # One factor's effect
 ```
 
 ### Stratified Analysis
@@ -145,7 +147,7 @@ The full report renders to `validation/e2e_bishop_report.html`.
 
 - **Three-state lineage**: PDS / ODS / ADS detected automatically; chart selection routes by ADS
 - **Correct charts**: Xbar-S, X (Individual), mR (Moving Range), Histogram with proper limit calculations
-- **Variance decomposition**: R1-R5 residuals for factorial designs
+- **Variance decomposition**: R1-R6 residuals for factorial designs
 - **Effects analysis**: Main effects, time effects, and interaction effects
 - **Stratified charts**: Automatic per-stratum limits for grouped individual data
 - **Signal detection**: Rule 1 (3-sigma) point classification
