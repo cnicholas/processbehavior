@@ -1,119 +1,119 @@
 {
   "meta": {
-    "created": "2026-07-23T02:34:59+00:00",
+    "created": "2026-07-27T01:19:49+00:00",
     "machine": "macOS-26.5.2-arm64-arm-64bit-Mach-O",
     "processor": "arm",
     "python": "3.13.14",
-    "git_sha": "f90518c",
+    "git_sha": "5469ade",
     "note": "Same-machine baseline; absolute times are hardware-specific."
   },
   "results": {
     "sds1|10000|init": {
       "rows": 9680,
-      "seconds": 0.037963750000926666
+      "seconds": 0.04059979098383337
     },
     "sds1|10000|formulate": {
       "rows": 9680,
-      "seconds": 0.03708445798838511
+      "seconds": 0.02980262498022057
     },
     "sds1|10000|execute_xbar": {
       "rows": 9680,
-      "seconds": 0.027989166002953425
+      "seconds": 0.02974075000383891
     },
     "sds1|10000|formulate_peak": {
       "rows": 9680,
       "seconds": null,
-      "peak_mb": 15.249228477478027,
+      "peak_mb": 16.133536338806152,
       "input_mb": 4.529048919677734
     },
     "sds1|100000|init": {
       "rows": 99400,
-      "seconds": 0.3697021670086542
+      "seconds": 0.3970583330083173
     },
     "sds1|100000|formulate": {
       "rows": 99400,
-      "seconds": 0.3010738750017481
+      "seconds": 0.23636470799101517
     },
     "sds1|100000|execute_xbar": {
       "rows": 99400,
-      "seconds": 0.255646165998769
+      "seconds": 0.2779802920122165
     },
     "sds1|100000|formulate_peak": {
       "rows": 99400,
       "seconds": null,
-      "peak_mb": 155.65066623687744,
+      "peak_mb": 164.67178916931152,
       "input_mb": 46.53239440917969
     },
     "sds1|1000000|init": {
       "rows": 999040,
-      "seconds": 3.8842972919956082
+      "seconds": 4.0886151669838
     },
     "sds1|1000000|formulate": {
       "rows": 999040,
-      "seconds": 3.1305988329986576
+      "seconds": 2.2361821670201607
     },
     "sds1|1000000|execute_xbar": {
       "rows": 999040,
-      "seconds": 2.8331398339942098
+      "seconds": 2.9508020840003155
     },
     "sds1|1000000|formulate_peak": {
       "rows": 999040,
       "seconds": null,
-      "peak_mb": 1562.7107095718384,
+      "peak_mb": 1654.095666885376,
       "input_mb": 468.29602432250977
     },
     "sds2|10000|init": {
       "rows": 9940,
-      "seconds": 0.0417076250014361
+      "seconds": 0.04220170801272616
     },
     "sds2|10000|formulate": {
       "rows": 9940,
-      "seconds": 0.25258995799231343
+      "seconds": 0.07244133402127773
     },
     "sds2|10000|execute_x": {
       "rows": 9940,
-      "seconds": 0.04015404100937303
+      "seconds": 0.03985583400935866
     },
     "sds2|10000|formulate_peak": {
       "rows": 9940,
       "seconds": null,
-      "peak_mb": 17.550167083740234,
+      "peak_mb": 18.361602783203125,
       "input_mb": 4.653352737426758
     },
     "sds2|100000|init": {
       "rows": 99904,
-      "seconds": 0.38975787498930003
+      "seconds": 0.40024095799890347
     },
     "sds2|100000|formulate": {
       "rows": 99904,
-      "seconds": 2.463905166994664
+      "seconds": 0.619872209004825
     },
     "sds2|100000|execute_x": {
       "rows": 99904,
-      "seconds": 0.39507454200065695
+      "seconds": 0.3956298749835696
     },
     "sds2|100000|formulate_peak": {
       "rows": 99904,
       "seconds": null,
-      "peak_mb": 176.83868217468262,
+      "peak_mb": 185.88637161254883,
       "input_mb": 46.829715728759766
     },
     "sds2|1000000|init": {
       "rows": 999698,
-      "seconds": 3.9454051250068005
+      "seconds": 4.0754868750227615
     },
     "sds2|1000000|formulate": {
       "rows": 999698,
-      "seconds": 25.174416207999457
+      "seconds": 6.478279500006465
     },
     "sds2|1000000|execute_x": {
       "rows": 999698,
-      "seconds": 4.1116697499965085
+      "seconds": 4.055625915993005
     },
     "sds2|1000000|formulate_peak": {
       "rows": 999698,
       "seconds": null,
-      "peak_mb": 1758.0508127212524,
+      "peak_mb": 1849.4805688858032,
       "input_mb": 468.9205513000488
     }
   }

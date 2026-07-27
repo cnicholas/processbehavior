@@ -981,6 +981,39 @@ class TestStructureDetection:
         assert result.n_empty_cells == 1  # Cell (1,2) has N_kt=0
         assert result.sds in [4, 5, 6]  # Incomplete structure detected
 
+    def test_nkt_counts_only_valid_responses_per_cell(self, detector):
+        """N_kt must be the count of NON-NA responses per cell — not the row count.
+
+        This pins the semantics of the N_kt computation rather than its implementation.
+        It is vectorized (``GroupBy.count()``); the distinction that matters is that a
+        partially-NA cell counts only its valid rows and a fully-NA cell counts 0, since
+        the zero is what separates an incomplete grid (ODS 4/5/6) from a complete one.
+        """
+        df = pd.DataFrame(
+            {
+                'lane': [1, 1, 1, 1, 2, 2, 2, 2],
+                'time': [1, 1, 2, 2, 1, 1, 2, 2],
+                # (1,1) -> 2 valid   (1,2) -> 1 valid + 1 NA
+                # (2,1) -> 0 valid (fully NA)   (2,2) -> 2 valid
+                'weight': [10.5, 10.1, 9.9, pd.NA, pd.NA, pd.NA, 10.0, 10.2],
+            }
+        )
+        spec = FormulationSpec(
+            response_var='weight',
+            rsg_vars=('lane',),
+            rsg_var_name='rsg',
+            time_var='time',
+        )
+
+        result = detector.detect_sds_from_structure(df, spec, response_col='weight')
+
+        # Exactly one cell is fully NA -> one empty cell, so the grid is incomplete.
+        assert result.n_empty_cells == 1
+        assert result.sds in (4, 5, 6)
+        # The partially-NA cell contributes its 1 valid row, so the smallest occupied
+        # cell is 1 — a row-count-based N_kt would have said 2 and mis-detected this.
+        assert result.min_cell_size == 1
+
     def test_detect_sds_with_plan_finds_all_na_cells(self, detector):
         """All-NA cells should be detected when comparing to plan."""
         df = pd.DataFrame(

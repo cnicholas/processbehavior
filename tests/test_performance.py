@@ -1,9 +1,16 @@
 """
 Performance benchmarks for processbehavior at scale.
 
-Covers both residual regimes: SDS-1 (replicated → exact R2, O(N)) and the SDS-2 worst case
-(no replication → MA2 sort, O(N log N)), across 10K/100K/1M rows × 50 columns, for init /
-formulate / execute / memory. Assertions are drift-aware without being hardware-flaky:
+Covers both residual regimes: SDS-1 (replicated → exact R2) and SDS-2 (no replication → MA2),
+across 10K/100K/1M rows × 50 columns, for init / formulate / execute / memory.
+
+Note on what makes SDS-2 slower: it is *cell count*, not the MA2 sort. SDS-2's cells are
+singletons, so groups ≈ rows — every per-cell operation in detection and residuals runs ~20x
+more often than in SDS-1. Profiling at 1M put the MA2 computation itself at 0.09s (0.4% of
+formulate); the dominant cost was a per-group Python callable in ODS detection, since
+vectorized. Don't assume the sort is the bottleneck — profile before optimizing.
+
+Assertions are drift-aware without being hardware-flaky:
 loose sanity ceilings + hardware-independent *scaling shape* (per-row time stays flat as N
 grows ⇒ linear). Absolute per-machine drift is reported against benchmarks/baseline.json and
 only fails the build under PB_PERF_STRICT=1.
@@ -475,11 +482,16 @@ class TestFullPipeline:
 @pytest.mark.slow
 @pytest.mark.benchmark
 class TestWorstCaseMA2:
-    """Exercise the unreplicated (MA2, O(N log N)) residual path.
+    """Exercise the unreplicated (MA2) residual path.
 
     The single-factor perf_spec collapses make_design(2) to SDS-1 (the (factor1×time) cell
     still holds both factor-2 levels), so the rest of this file only ever hits exact-R2.
-    Using BOTH factors makes the cells singletons → MA2 sort — ~8x slower than exact-R2.
+    Using BOTH factors makes the cells singletons → the MA2 path.
+
+    This is the slowest configuration (~3x SDS-1 formulate), but the cost is the singleton
+    cell count, not the MA2 sort itself — see the module docstring. The assertion that
+    matters here is `analytical_design_state.sds == 2`: it keeps the scenario honest, so
+    the path can't silently collapse back to exact-R2 the way it did historically.
     """
 
     def test_formulate_ma2_confirms_path_100k(self):
