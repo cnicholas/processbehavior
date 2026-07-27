@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Performance
+- **``formulate()`` is 1.4-3.8x faster.** Observed-design-state detection computed N_kt (valid
+  responses per cell) with ``groupby(...).apply(lambda s: s.notna().sum())`` — one Python
+  round-trip per cell. ``GroupBy.count()`` computes exactly the same thing in Cython. Cells
+  whose responses are all NA still yield 0, so the "attempted but empty" semantics that ODS
+  4-6 detection depends on are unchanged, as are all N_kt values, design-state
+  classifications, residuals, limits, and the 280 Bishop reference assertions.
+
+  The win scales with cell count, so it is largest where cells are singletons:
+
+  | 1M rows | before | after | |
+  |---|---|---|---|
+  | SDS-2 (no replication) formulate | 25.17s | **6.56s** | 40K → 152K rows/sec |
+  | SDS-1 (full replication) formulate | 3.13s | **2.25s** | 319K → 444K rows/sec |
+
+  Profiling also corrected a long-standing misattribution: the MA2 sort, previously blamed
+  for SDS-2's cost, is 0.09s at 1M — 0.4% of formulate. The perf-suite docstrings said
+  otherwise and have been fixed. Peak memory is ~5% higher (3.9x input, against a 6x cap).
+
 ### Fixed
 - **R6 chart titles rendered as ``R6 (R6)``.** ``_RESIDUAL_LABELS`` had no entry for R6, and
   ``_generate_title`` resolves labels with ``.get(code, code)``, so the code was printed in

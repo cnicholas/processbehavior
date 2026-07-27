@@ -453,7 +453,12 @@ class SDSRegistry:
         # Compute N_kt = count of VALID responses per cell
         # groupby naturally yields 0 for cells where ALL responses are NA
         if kt_cols:
-            nkt_observed = structure_view.groupby(kt_cols, observed=True)[response_col].apply(lambda s: s.notna().sum())
+            # GroupBy.count() is exactly `notna().sum()` per group, but runs in Cython.
+            # The previous `.apply(lambda s: s.notna().sum())` paid one Python round-trip
+            # per group, which dominated formulate — 73% of runtime at 1M rows with
+            # singleton cells (18.3s -> 0.06s here). Cells whose responses are ALL NA
+            # still yield 0, which is what ODS 4-6 detection depends on.
+            nkt_observed = structure_view.groupby(kt_cols, observed=True)[response_col].count()
         else:
             # No factors or time - single cell
             # NOTE: This uses regular Index (not MultiIndex). _classify_by_nkt must tolerate both.
