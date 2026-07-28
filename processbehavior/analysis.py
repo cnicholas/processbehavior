@@ -29,7 +29,9 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
+from functools import reduce
 
+import numpy as np
 import pandas as pd
 
 from .analysis_dataset import AnalysisDataSet
@@ -41,7 +43,6 @@ from .spc_constants import (
     calculate_limits,
     calculate_limits_vectorized,
     calibrated_limits,
-    detect_beyond_limits,
 )
 from .types import ChartPayload
 
@@ -570,9 +571,18 @@ class Analysis:
         """
         result = df.copy()
 
-        result['beyond_limits'] = result.apply(
-            lambda row: detect_beyond_limits(x=row[value_col], upl=row[upl_col], lpl=row[lpl_col]), axis=1
-        )
+        # Vectorized form of detect_beyond_limits, which stays the scalar reference (the
+        # Bishop validator exercises it, so it should not become a check of this against
+        # itself). One Python call per *observation* was the dominant cost of execute() on
+        # X/mR charts — 2.14s at 1M rows, versus 0.002s here.
+        #
+        # The nesting order matters: the scalar rule tests `x < lpl` FIRST, then `x > upl`.
+        # NaN compares False both ways in numpy exactly as in Python, so a NaN observation
+        # or a NaN limit still yields 0.
+        values = result[value_col].to_numpy()
+        lower = result[lpl_col].to_numpy()
+        upper = result[upl_col].to_numpy()
+        result['beyond_limits'] = np.where(values < lower, -1, np.where(values > upper, 1, 0))
 
         return result
 
@@ -789,38 +799,34 @@ class Analysis:
         >>> boundaries = self._calculate_lane_boundaries(df, ['factor2'])
         >>> # Returns: [{'position': 5, 'label': 'Y', 'variable': 'factor2'}]
         """
-        if not collapsed_vars:
+        if not collapsed_vars or df.empty:
             return []
 
-        boundaries = []
+        # Combine column-wise rather than with `.agg('_'.join, axis=1)`, which ran once per
+        # row (1.05s at 1M). Deliberately NOT encode_rsg_series: that renders a datetime as
+        # str(Timestamp) ('2024-01-01 00:00:00') where DataFrame.astype(str) gives
+        # '2024-01-01'. These are display labels for a chart divider, not stratum identity,
+        # so they keep the astype rendering — do not "unify" the two.
+        parts = [df[col].astype(str) for col in collapsed_vars]
+        combined = parts[0] if len(parts) == 1 else reduce(lambda left, right: left + '_' + right, parts)
 
-        # Create a combined key for all collapsed variables
-        if len(collapsed_vars) == 1:
-            combined = df[collapsed_vars[0]].astype(str)
-        else:
-            combined = df[collapsed_vars].astype(str).agg('_'.join, axis=1)
+        # Positional comparison against the previous row. The old form built a boolean mask,
+        # took df.index[mask], dropped the first entry, then called df.index.get_loc() per
+        # boundary — and get_loc is not O(1) on these frames (~1.3ms a call, ~1.8s total).
+        # Comparing the array to itself shifted gives the 0-based positions directly.
+        labels = combined.to_numpy()
+        changed = np.empty(len(labels), dtype=bool)
+        changed[0] = False  # the first row is a start, not a boundary
+        changed[1:] = labels[1:] != labels[:-1]
 
-        # Find where the combined key changes
-        changes = combined != combined.shift(1)
-
-        # Get positions (skip first row - it's always a "change" from NaN)
-        change_positions = df.index[changes].tolist()
-        if change_positions and change_positions[0] == df.index[0]:
-            change_positions = change_positions[1:]
-
-        # Build boundary info
-        for pos in change_positions:
-            idx = df.index.get_loc(pos)
-            label = combined.loc[pos]
-            boundaries.append(
-                {
-                    'position': idx,  # 0-based position in the sorted data
-                    'label': label,
-                    'variables': collapsed_vars,
-                }
-            )
-
-        return boundaries
+        return [
+            {
+                'position': int(pos),  # 0-based position in the sorted data
+                'label': labels[pos],
+                'variables': collapsed_vars,
+            }
+            for pos in np.flatnonzero(changed)
+        ]
 
     def _build_output_columns(self, df: pd.DataFrame, value_cols: list[str]) -> pd.DataFrame:
         """
