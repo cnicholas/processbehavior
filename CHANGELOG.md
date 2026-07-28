@@ -7,6 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **``why_not()`` no longer contradicts the error that sends users to it.** Asking for an
+  unavailable chart x residual pair raised a correct ``ChartNotAvailableError`` ending "Use
+  study.why_not('Xbar', value='R2') for details" — and that call replied "'Xbar' (R2) is not a
+  recognized chart type", which is false, then referred on to ``study.support``, which had no
+  row for the pair. ``why_not`` answered only from ``support``, whose residual rows enumerate
+  just the *potentially valid* pairs, so "no row" was conflated with "unknown chart".
+
+  Both ``why_not`` and ``execute`` now answer from one predicate
+  (``Study._residual_pair_problem``), so they cannot disagree. ``why_not`` also distinguishes
+  an unrecognised chart name, an unrecognised residual code (``R9``), and a recognised chart in
+  an invalid pairing — three cases that previously produced the same wrong message — and
+  accepts recentered (``RCR5``) and lowercase forms, matching what ``execute`` already
+  normalised.
+
+### Changed
+- **BREAKING (validation only): ``execute(chart='S', value='R1')`` now raises.** R1 was exempt
+  from the chart x residual check, so ``residual_charts`` claimed R1 was Xbar/X-only while
+  ``execute`` accepted any chart — the two authorities genuinely disagreed, and ``why_not``
+  could not be made correct while both existed. The exemption is deleted;
+  ``residual_charts`` now governs outright. Nothing informative is lost: R1 is the response
+  shifted by a constant, so its S chart is byte-identical to the response's S chart (same N,
+  center, lpl, upl — verified). Use ``chart='Xbar'`` or ``chart='X'`` for R1, or the plain
+  response S chart. ``Histogram`` and ``mR`` residual behaviour is unchanged; both remain
+  structurally exempt by design.
+
 ### Performance
 - **``formulate()`` is 1.4-3.8x faster.** Observed-design-state detection computed N_kt (valid
   responses per cell) with ``groupby(...).apply(lambda s: s.notna().sum())`` — one Python

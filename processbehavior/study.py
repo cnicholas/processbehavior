@@ -48,6 +48,18 @@ if TYPE_CHECKING:
 # Maximum number of combo strings to return in missing_combos/extra_combos
 MAX_COMBO_DISPLAY = 100
 
+# The VAS residual codes a user may name in execute(value=...). Membership only — whether a
+# given code is *available* for this study is a different question (Study.residuals), and
+# whether it can pair with a given chart is a third (Study._residual_pair_problem).
+# Chart names have an equivalent in spc_constants.VALID_BASE_CHARTS, imported above.
+RESIDUAL_CODES = ('R1', 'R2', 'R3', 'R4', 'R5', 'R6')
+
+
+def _base_residual_code(value: str) -> str:
+    """'RCR5' -> 'R5', 'r2' -> 'R2'. Recentring does not change which chart a residual pairs with."""
+    upper = value.upper()
+    return upper[2:] if upper.startswith('RCR') else upper
+
 
 @dataclass
 class DesignReport:
@@ -1418,6 +1430,12 @@ class Study:
 
         >>> study.why_not('Xbar', value='R5')
         "'Xbar' (R5) IS available. Do factors have a significant effect on the mean?"
+
+        A recognised chart in an invalid pairing names the charts that DO work — the same
+        answer ``execute()`` gives, because both read one predicate:
+
+        >>> study.why_not('Xbar', value='R2')
+        "'Xbar' with value='R2' is not valid for ADS 1.\\nValid charts for R2: S, X"
         """
         # Handle old fused syntax: why_not('R5_Xbar') -> why_not('Xbar', value='R5')
         if '_' in chart and value is None:
@@ -1430,20 +1448,48 @@ class Study:
             label = f"'{chart}'" if value is None else f"'{chart}' ({value})"
             return f'{label} unavailable: no valid observations after data cleaning'
 
-        df = self.support
-        if value is not None:
-            row = df[(df['chart'] == chart) & (df['value'] == value)]
-        else:
-            row = df[(df['chart'] == chart) & (df['value'].isna())]
-
         label = f"'{chart}'" if value is None else f"'{chart}' ({value})"
 
+        # Unrecognised chart name — distinct from a recognised chart in an invalid
+        # combination, which is the case this method used to conflate it with.
+        if chart not in VALID_BASE_CHARTS:
+            return (
+                f"'{chart}' is not a recognized chart type. "
+                f'Valid charts: {", ".join(sorted(VALID_BASE_CHARTS))}.'
+            )
+
+        if value is not None:
+            base_residual = _base_residual_code(value)
+            if base_residual not in RESIDUAL_CODES:
+                return (
+                    f"'{value}' is not a recognized residual. "
+                    f'Valid values: {", ".join(RESIDUAL_CODES)} '
+                    f"(prefix with 'RC' for the recentered form, e.g. 'RCR5')."
+                )
+
+            # Same predicate execute() validates against, so the two cannot disagree.
+            problem = self._residual_pair_problem(chart, value)
+            if problem:
+                return problem
+            if chart == 'mR':
+                return (
+                    f'{label} IS available as a companion chart. '
+                    f"Use study.execute(chart='mR', value='{value}', companion=True)."
+                )
+            from .sds_detector import SDSAnalysisPlan
+
+            question = SDSAnalysisPlan.CHART_QUESTIONS.get((chart, base_residual), '')
+            return f'{label} IS available. {question}'.rstrip()
+
+        # Primary chart: the support row carries availability, reason and question.
+        df = self.support
+        row = df[(df['chart'] == chart) & (df['value'].isna())]
         if row.empty:
             return f'{label} is not a recognized chart type. Use study.support to see all options.'
 
         row = row.iloc[0]
         if row['available']:
-            return f'{label} IS available. {row["question"]}'
+            return f'{label} IS available. {row["question"]}'.rstrip()
         else:
             return f'{label} unavailable: {row["reason"]}'
 
@@ -2056,18 +2102,16 @@ class Study:
                 available=available_residuals,
             )
 
-        # Validate (chart, value) combo against ADS mapping.
-        # Histogram is exempt (any residual); mR is handled separately
-        # below (requires companion); R1 is exempt (total deviation).
-        if is_residual and base_chart not in ('Histogram', 'mR'):
-            val_upper = value.upper()
-            base_residual = val_upper[2:] if val_upper.startswith('RCR') else val_upper
-            if base_residual != 'R1' and (base_chart, base_residual) not in self.residual_charts:
+        # Validate (chart, value) combo. The rule itself lives in
+        # _residual_pair_problem so why_not() answers from the same predicate — see
+        # its docstring for the three regimes.
+        if is_residual:
+            problem = self._residual_pair_problem(base_chart, value)
+            if problem:
+                base_residual = _base_residual_code(value)
                 valid_for_value = [c for c, v in self.residual_charts if v == base_residual]
                 raise ChartNotAvailableError(
-                    f"'{base_chart}' with value='{value}' is not valid for "
-                    f'ADS {self.analytical_design_state.sds}.\n'
-                    f'Valid charts for {base_residual}: {", ".join(valid_for_value) if valid_for_value else "None"}\n'
+                    f"{problem}\n"
                     f"Use study.why_not('{base_chart}', value='{value}') for details.",
                     chart=base_chart,
                     available=valid_for_value,
@@ -2083,6 +2127,33 @@ class Study:
 
         return by_validated, value_col, is_residual
 
+    def _residual_pair_problem(self, base_chart: str, value: str) -> str | None:
+        """Why ``(base_chart, value)`` can't be charted — or ``None`` if it can.
+
+        Single source of truth for the chart x residual rule. ``_validate_execute_request``
+        raises on it; ``why_not`` explains it. They cannot disagree because there is one rule.
+
+        Three regimes:
+
+        - ``Histogram`` — accepts any residual (it plots a distribution, not a control chart).
+        - ``mR`` — accepts any residual, but only as a companion; the ``companion=True``
+          requirement is enforced separately by the caller.
+        - ``Xbar`` / ``S`` / ``X`` — governed by :attr:`residual_charts`, which varies by ADS.
+        """
+        base_residual = _base_residual_code(value)
+
+        if base_chart in ('Histogram', 'mR'):
+            return None
+
+        if (base_chart, base_residual) not in self.residual_charts:
+            valid = [c for c, v in self.residual_charts if v == base_residual]
+            return (
+                f"'{base_chart}' with value='{value}' is not valid for "
+                f'ADS {self.analytical_design_state.sds}.\n'
+                f'Valid charts for {base_residual}: {", ".join(valid) if valid else "None"}'
+            )
+        return None
+
     def _validate_recentered(self, value: str | None) -> None:
         """Validate recentered=True requirements."""
         needs_residuals = self._spec.has_grouping and self._spec.has_time
@@ -2092,7 +2163,7 @@ class Study:
                 'Recentered residuals (RCR) reconstruct values relative to '
                 'factor and time means, which require both to be specified.'
             )
-        recenterable = {'R1', 'R2', 'R3', 'R4', 'R5', 'R6'}
+        recenterable = set(RESIDUAL_CODES)
         if value is None:
             raise ValidationError('recentered=True requires a residual value (R1-R6), got value=None')
         if value.upper() not in recenterable:
