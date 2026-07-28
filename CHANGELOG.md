@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **``pb.formulate(df, ...)`` — a module-level entry point**, so the advertised idiom is
+  literally one expression:
+
+  ```python
+  pb.formulate(df, response='y', factors=['machine'], time='shift').execute().plot()
+  ```
+
+  Equivalent to ``ProcessBehavior(df).formulate(...)``; the class remains the path for the
+  fluent derived-variable verbs, which must attach before formulating. This also retires a
+  naming collision: the docs bound ``pb = ProcessBehavior(df)``, shadowing the conventional
+  module alias, so ``pb.formulate`` read as module-level when it was an instance method.
+
+- **``result.statistics(chart, stratum=None)`` — a type-stable statistics accessor.**
+  ``get_statistics()`` returns ``{'N','center','lpl','upl'}`` for an unstratified result but
+  ``{stratum: {...}}`` for a stratified one, so ``stats['center']`` works on one dataset and
+  raises ``KeyError`` on the next depending on whether the chart happened to stratify. The
+  new method always returns the four-key dict and asks for a stratum when the answer would
+  otherwise be ambiguous, naming the available strata. ``get_statistics`` is unchanged.
+
+- **``execute(stratify_by=...)`` — an explicit spelling of ``by=`` for X/mR.** ``by`` composes
+  the subgroup for Xbar/S but splits into separate charts for X/mR; the alias puts which
+  operation is intended at the call site. Same parameter underneath; passing both raises.
+  ``by=`` is unchanged and still accepts either meaning.
+
 ### Fixed
 - **Lane boundaries were malformed when a boundary fell on a duplicated index label.**
   ``_calculate_lane_boundaries`` mapped positions back through ``df.index.get_loc()``, which

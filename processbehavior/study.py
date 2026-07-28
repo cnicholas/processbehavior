@@ -1755,6 +1755,7 @@ class Study:
         n_sigma: float = 3.0,
         n_mode: Literal['actual', 'average'] = 'actual',
         calibration: Calibration | str | None = None,
+        stratify_by: list[str] | None = None,
     ) -> AnalysisResult:
         """
         Run the analysis and return results.
@@ -1920,6 +1921,20 @@ class Study:
         # Import here to avoid circular imports
         from .analysis import Analysis
         from .formulation_spec import ChartRequest
+
+        # 0a. `stratify_by` is an explicit spelling of `by` for the X/mR regime, where the
+        # argument means "split into separate charts" rather than "compose the subgroup".
+        # Same parameter underneath — the alias exists so the call site says which of the
+        # two operations is intended, since the return shape differs between them.
+        if stratify_by is not None:
+            if by is not None:
+                raise ValidationError(
+                    "Pass either 'by' or 'stratify_by', not both — they set the same "
+                    "parameter.\n"
+                    "'stratify_by' is the explicit spelling for X/mR (separate chart per "
+                    "stratum); 'by' also composes subgroups for Xbar/S."
+                )
+            by = stratify_by
 
         # 0. Resolve calibration (label string -> attached Calibration object).
         calibration_obj = self._resolve_calibration(calibration)

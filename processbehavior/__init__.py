@@ -19,11 +19,7 @@ Quick Start
     df = pb.make_design(state=1, seed=42)
 
     # Formulate the study (detects PDS / ODS / ADS, builds analysis dataset)
-    study = pb.ProcessBehavior(df).formulate(
-        response='y',
-        time='time',
-        factors=['factor 1', 'factor 2'],
-    )
+    study = pb.formulate(df, response='y', time='time', factors=['factor 1', 'factor 2'])
     print(f"Observed:   ODS {study.observed_design_state.sds}")
     print(f"Analytical: ADS {study.analytical_design_state.sds}")
     print(f"Recommended chart: {study.recommended_chart}")
@@ -85,7 +81,7 @@ from processbehavior.maximum_information import MaximumInformationResult
 
 # Plotting/theming
 from processbehavior.plotting import ChartTheme, get_theme, list_themes, register_theme
-from processbehavior.process_behavior import ColumnRef, ProcessBehavior
+from processbehavior.process_behavior import ColumnRef, ProcessBehavior, formulate
 
 # Design-state lineage type (re-exported for type-hint use)
 from processbehavior.sds_detector import SDSResult
@@ -96,6 +92,7 @@ from processbehavior.study import DesignReport, Study
 __all__ = [
     # Main API
     'ProcessBehavior',
+    'formulate',
     'ColumnRef',
     'Study',
     'DesignReport',

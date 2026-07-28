@@ -543,6 +543,64 @@ class AnalysisResult:
             )
         return self.charts[name]['statistics'].copy()
 
+    def statistics(self, chart: str, stratum: str | None = None) -> dict:
+        """Chart statistics with a shape that does not depend on the data.
+
+        :meth:`get_statistics` returns ``{'N', 'center', 'lpl', 'upl'}`` for an unstratified
+        result but ``{stratum: {...}}`` for a stratified one — so ``stats['center']`` works
+        on one dataset and raises ``KeyError`` on the next, depending on whether the chart
+        happened to stratify. This method always returns the four-key dict, and asks for a
+        stratum when the answer would otherwise be ambiguous.
+
+        Parameters
+        ----------
+        chart : str
+            Chart name, e.g. ``'Xbar'``.
+        stratum : str, optional
+            Required when the result is stratified; rejected when it is not, so a call that
+            names a stratum can never silently return whole-result numbers.
+
+        Returns
+        -------
+        dict
+            Always ``{'N', 'center', 'lpl', 'upl'}`` (plus any chart-specific extras). See
+            :meth:`get_statistics` for what ``None`` values mean when limits vary.
+
+        Raises
+        ------
+        ValidationError
+            If a stratum is needed and not given, given and not needed, or unknown.
+
+        Examples
+        --------
+        >>> result.statistics('Xbar')['center']
+        >>> result.statistics('X', stratum='Machine1')['upl']
+        """
+        stats = self.get_statistics(chart)
+
+        if not self.is_stratified:
+            if stratum is not None:
+                raise ValidationError(
+                    f"This result is not stratified, so stratum={stratum!r} does not apply.\n"
+                    f'Use result.statistics({chart!r}) with no stratum.'
+                )
+            return stats
+
+        available = self.strata
+        if stratum is None:
+            raise ValidationError(
+                f'This result is stratified, so a stratum is required to return one set of '
+                f'statistics.\n'
+                f'Available strata: {available}\n'
+                f"Use result.statistics({chart!r}, stratum={available[0]!r}) "
+                f'— or result.get_statistics({chart!r}) for every stratum at once.'
+            )
+        if stratum not in stats:
+            raise ValidationError(
+                f"Stratum {stratum!r} not found in chart {chart!r}.\nAvailable strata: {available}"
+            )
+        return dict(stats[stratum])
+
     def get_residual(self, residual_type: str) -> pd.Series:
         """
         Get a specific residual series.

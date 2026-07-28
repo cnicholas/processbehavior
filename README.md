@@ -32,7 +32,8 @@ df = pb.make_design(state=1, seed=42)
 # Columns: 'time', 'factor 1', 'factor 2', 'y'
 
 # Formulate — detects PDS / ODS / ADS and builds the analysis dataset
-study = pb.ProcessBehavior(df).formulate(
+study = pb.formulate(
+    df,
     response='y',
     time='time',
     factors=['factor 1', 'factor 2'],
@@ -43,8 +44,13 @@ print(f"Recommended chart: {study.recommended_chart}")
 
 # Execute analysis (routes by ADS)
 result = study.execute()                       # uses the recommended chart
-stats = result.get_statistics('Xbar')          # {'N', 'center', 'lpl', 'upl'}
-print(f"Center: {stats['center']}, UPL: {stats['upl']}")
+stats = result.statistics('Xbar')              # always {'N', 'center', 'lpl', 'upl'}
+print(f"Center: {stats['center']}")
+
+# When subgroup sizes differ the limits differ per subgroup, so the scalar
+# 'lpl'/'upl' are None and stats['limits_vary'] is True. The per-subgroup
+# limits live in the chart table:
+print(result.get_chart('Xbar')[['center', 'lpl', 'upl']].head())
 
 # Plot (interactive plotly figure)
 result.plot()
@@ -53,7 +59,15 @@ result.plot()
 result.to_excel('analysis.xlsx')
 ```
 
-When working with your own data, `pb.cols.<column_name>` provides IDE auto-completion for column references in `formulate(...)`.
+The whole pipeline is one expression when you don't need the intermediate objects:
+
+```python
+pb.formulate(df, response='y', factors=['factor 1'], time='time').execute().plot()
+```
+
+Use `pb.ProcessBehavior(df)` directly when you want the fluent derived-variable verbs
+(`.transform(...)`, `.bin(...)`), which attach before formulating. With that object in hand,
+`pbd.cols.<column_name>` provides IDE auto-completion for column references.
 
 ## Key Concepts
 
