@@ -16,7 +16,7 @@ import pandas as pd
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
-from ..data_preparation import encode_rsg
+from ..data_preparation import encode_rsg, encode_rsg_series
 from ..exceptions import ChartNotAvailableError, ValidationError
 from ..spc_constants import normalize_chart_name
 from ..types import ChartPayload
@@ -1076,9 +1076,7 @@ class Plotter:
                     stratify_col = stratify_by[0]
                 elif len(stratify_by) > 1:
                     combined_data = combined_data.copy()
-                    combined_data['_stratify_key'] = combined_data[stratify_by].apply(
-                        lambda row: encode_rsg(tuple(row)), axis=1
-                    )
+                    combined_data['_stratify_key'] = encode_rsg_series(combined_data, stratify_by)
                     stratify_col = '_stratify_key'
                 else:
                     stratify_col = None

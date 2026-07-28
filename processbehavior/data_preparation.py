@@ -16,6 +16,7 @@ Follows the Pythonic Hadley philosophy:
 from __future__ import annotations
 
 import logging
+from functools import reduce
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -103,6 +104,40 @@ def encode_rsg(factor_values, delimiter: str = '_') -> str:
     if isinstance(factor_values, (tuple, list)):
         return delimiter.join(str(v) for v in factor_values)
     return str(factor_values)
+
+
+def _column_as_rsg_strings(series: pd.Series) -> pd.Series:
+    """One column's values as the strings :func:`encode_rsg` would produce for them.
+
+    ``astype(str)`` matches ``str(scalar)`` for every dtype we encounter except
+    datetime64, where a midnight timestamp renders as ``'2024-01-01'`` rather than
+    ``'2024-01-01 00:00:00'``. Datetime factors are rare, so that branch takes the slower
+    element-wise path rather than risk a different stratum identity.
+    """
+    from pandas.api.types import is_datetime64_any_dtype
+
+    if is_datetime64_any_dtype(series):
+        return series.apply(str)
+    return series.astype(str)
+
+
+def encode_rsg_series(df: pd.DataFrame, cols: list[str], delimiter: str = '_') -> pd.Series:
+    """Vectorized :func:`encode_rsg` over whole columns — the same encoding, column-wise.
+
+    Use this instead of ``df[cols].apply(lambda row: encode_rsg(tuple(row)), axis=1)``,
+    which materialises every row as a Series (~31x slower at 1M rows) and, worse, silently
+    changes the answer: a row Series **upcasts mixed dtypes**, so an int factor beside a
+    float factor encodes as ``'1.0'`` instead of ``'1'``. Because plan expansion encodes
+    from Python values (``study.py``), that upcast made observed rsg keys unable to match
+    expected ones, and ``DesignReport.missing_combos`` / ``extra_combos`` then reported
+    every combination as both missing and extra. Converting per column keeps each column
+    on its own dtype and matches the plan-side encoding.
+    """
+    if not cols:
+        raise ValidationError('encode_rsg_series requires at least one column.')
+
+    parts = [_column_as_rsg_strings(df[c]) for c in cols]
+    return reduce(lambda left, right: left + delimiter + right, parts)
 
 
 class DataPreparation:
@@ -559,7 +594,7 @@ class DataPreparation:
 
         # Multiple columns - combine with delimiter using shared encode_rsg()
         out = df.copy()
-        out[col_name] = df[cols_to_combine].apply(lambda row: encode_rsg(tuple(row), delimiter=col_delim), axis=1)
+        out[col_name] = encode_rsg_series(df, cols_to_combine, delimiter=col_delim)
 
         return out
 
