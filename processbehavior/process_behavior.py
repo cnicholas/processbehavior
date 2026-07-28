@@ -5,19 +5,23 @@ This module provides a user-friendly interface with IDE auto-completion for colu
 and automatic chart selection driven by the analytical design state (ADS).
 
 Usage:
-    from processbehavior import ProcessBehavior
-
-    pb = ProcessBehavior(df)
+    import processbehavior as pb
 
     # Step 1: formulate() - analyze structure and get recommendations
-    study = pb.formulate(
-        response=pb.cols.Measurement,
-        factors=[pb.cols.Operator],
-        time=pb.cols.ProductionTime
-    )
+    study = pb.formulate(df, response='Measurement', factors=['Operator'], time='ProductionTime')
 
     # Step 2: execute() - run the chart
     result = study.execute()
+
+Use the ProcessBehavior class directly when you want the fluent derived-variable verbs,
+which attach before formulating, or `.cols` auto-completion for column references:
+
+    pbd = ProcessBehavior(df)
+    study = pbd.transform('torque', 'log').formulate(response=pbd.cols.torque_log)
+
+Note the instance is bound to `pbd`, not `pb`: `pb` is the conventional alias for the
+module itself, and shadowing it makes `pb.formulate(...)` read as the module-level
+function when it is an instance method.
 """
 
 from __future__ import annotations
@@ -1213,3 +1217,49 @@ class ProcessBehavior:
     def __len__(self) -> int:
         """Return number of rows."""
         return len(self.data)
+
+
+def formulate(
+    data,
+    response: str | ColumnRef,
+    factors: list[str | ColumnRef] | None = None,
+    time: str | ColumnRef | None = None,
+    *,
+    plan: dict | None = None,
+    precision: int = 3,
+    unit_of_analysis: str | None = None,
+) -> Study:
+    """Formulate a study directly from a DataFrame — the one-call entry point.
+
+    Equivalent to ``ProcessBehavior(data).formulate(...)``, which is what most analyses
+    want: the intermediate object exists to carry derived-variable specs, and a study that
+    declares none has no use for it.
+
+    >>> study = pb.formulate(df, response='weight', factors=['machine'], time='shift')
+    >>> study.execute().plot()
+
+    Reach for :class:`ProcessBehavior` when you need the fluent derivation verbs, since
+    those must be attached before formulating::
+
+        study = ProcessBehavior(df).transform('torque', 'log').formulate(response='torque_log')
+
+    Parameters
+    ----------
+    data : pd.DataFrame
+        Raw data. Garbage tokens are cleaned and numeric-looking columns converted, exactly
+        as ``ProcessBehavior(data)`` does.
+    response, factors, time, plan, precision, unit_of_analysis
+        Passed through to :meth:`ProcessBehavior.formulate`.
+
+    Returns
+    -------
+    Study
+    """
+    return ProcessBehavior(data).formulate(
+        response=response,
+        factors=factors,
+        time=time,
+        plan=plan,
+        precision=precision,
+        unit_of_analysis=unit_of_analysis,
+    )
