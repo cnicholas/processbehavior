@@ -8,6 +8,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
+- **Lane boundaries were malformed when a boundary fell on a duplicated index label.**
+  ``_calculate_lane_boundaries`` mapped positions back through ``df.index.get_loc()``, which
+  returns a boolean *mask* rather than an integer for a non-unique label — so the boundary
+  came back with ``position`` as a numpy array and ``label`` as a Series, neither of which
+  the plotting layer can use. Positions are now computed positionally and cannot express
+  that state.
+
 - **``DesignReport.missing_combos`` / ``extra_combos`` were wrong for studies mixing integer
   and float factor columns**, reporting *every* combination as both missing and extra even
   when the plan matched the data exactly.
@@ -77,6 +84,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   structurally exempt by design.
 
 ### Performance
+- **``execute()`` on X/mR charts is ~15x faster** — 4.10s → 0.27s at 1M rows, same machine
+  (Xbar improves further too, 0.29s → 0.17s). Two per-row loops, both now array operations:
+
+  - ``_add_beyond_limits_flag`` called ``detect_beyond_limits`` once per **observation** —
+    ~1,000,000 Python calls at 1M rows. It is now a nested ``np.where``. The scalar
+    ``detect_beyond_limits`` is unchanged and stays the reference the Bishop validator
+    exercises. This single method serves **twelve** call sites, so every chart type gains.
+  - ``_calculate_lane_boundaries`` (the X-chart vertical dividers — visual only) combined
+    collapsed factors with a row-wise ``.agg('_'.join, axis=1)`` and then called
+    ``df.index.get_loc()`` once per boundary, which is not O(1) on these frames. Both are
+    now array operations.
+
+  Signal classification is unchanged — the 280 Bishop assertions cover it.
+
 - **``execute()`` is ~10x faster on Xbar/S charts** — 2.82s → 0.29s at 1M rows, same machine.
   The chart builders computed control limits by calling the scalar ``calculate_limits`` once
   per subgroup through ``DataFrame.apply(axis=1)``, each call constructing a ``pd.Series`` to
