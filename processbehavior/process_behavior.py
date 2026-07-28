@@ -45,6 +45,21 @@ logger = logging.getLogger(__name__)
 _NUMERIC_CONVERSION_THRESHOLD = 0.8
 
 
+def _is_text_like(series: pd.Series) -> bool:
+    """True when a column can hold a garbage *string* token.
+
+    Enumerates the dtypes to include rather than excluding numeric ones: a categorical or
+    a pandas ``string`` column holds strings and must still be scanned, but neither is
+    ``object`` and a "not numeric" test would misclassify at least one of them.
+    """
+    from pandas.api.types import is_object_dtype, is_string_dtype
+
+    dtype = series.dtype
+    if isinstance(dtype, pd.CategoricalDtype):
+        return True
+    return bool(is_object_dtype(series) or is_string_dtype(series))
+
+
 def _try_clean_numeric_strings(series: pd.Series) -> pd.Series | None:
     """Try to clean formatted numeric strings (currency, thousands sep, etc.).
 
@@ -75,6 +90,24 @@ def _try_clean_numeric_strings(series: pd.Series) -> pd.Series | None:
     if direct_success >= original_non_na * _NUMERIC_CONVERSION_THRESHOLD:
         return direct
 
+    result = _coerce_formatted_numerics(series)
+
+    # Check success rate against non-NA values only
+    converted_count = result.notna().sum()
+    if converted_count >= original_non_na * _NUMERIC_CONVERSION_THRESHOLD:
+        return result
+
+    return None
+
+
+def _coerce_formatted_numerics(series: pd.Series) -> pd.Series:
+    """The value transform behind :func:`_try_clean_numeric_strings`, without the
+    accept/reject decision.
+
+    Split out so the decision can be scored against a different population than the one
+    transformed — see :func:`_clean_numeric_strings_via_uniques`, which transforms the
+    distinct values but must score frequency-weighted over the full column.
+    """
     # Convert to string for .str operations (handles mixed float/str columns)
     s = series.astype(str)
     # Preserve original NAs
@@ -100,11 +133,68 @@ def _try_clean_numeric_strings(series: pd.Series) -> pd.Series | None:
 
     # Restore original NAs (don't count astype('str') artifacts as conversions)
     result[original_na_mask | str_nan_mask] = pd.NA
+    return result
 
-    # Check success rate against non-NA values only
-    converted_count = result.notna().sum()
-    if converted_count >= original_non_na * _NUMERIC_CONVERSION_THRESHOLD:
-        return result
+
+# Above this share of distinct values, mapping through the uniques stops paying for
+# itself and the direct path is used instead. Measured at 1M rows: label-like columns
+# win at every cardinality (36x at 10 uniques, still 1.4x when every value is distinct),
+# but numeric-like strings — where the fast to_numeric path already short-circuits —
+# break even around 0.10. 0.05 keeps both kinds on the winning side.
+_UNIQUE_MAP_MAX_RATIO = 0.05
+
+
+def _clean_numeric_strings_via_uniques(series: pd.Series) -> pd.Series | None:
+    """``_try_clean_numeric_strings`` applied to the distinct values, then mapped back.
+
+    Cleaning is per-value, so on a low-cardinality column — factor labels, coded levels,
+    anything categorical — the direct path repeats identical string work millions of
+    times. Converting the distinct values and mapping back is 19-36x faster at 1M rows
+    with identical output.
+
+    The threshold is the subtle part. ``_try_clean_numeric_strings`` keeps a conversion
+    when >= 80% of *non-NA values* convert, which is frequency-weighted; the same test
+    over distinct values is not. A column of 9,900 copies of ``'1'`` plus 100 distinct
+    labels converts on the full column (99%) but fails over uniques (1%). So the
+    conversion is re-scored here against the full column, never against the uniques.
+    """
+    from pandas.api.types import is_object_dtype
+
+    # Plain object only. Series.map preserves an extension dtype — mapping a categorical
+    # returns a *categorical* of ints where the direct path returns int64, and a `string`
+    # column maps to int64 where the direct path returns nullable Int64. Both are real
+    # dtype changes (a categorical is not numeric, which would drop the column out of a
+    # client's "numeric columns" picker), and replicating pandas' dtype rules here would
+    # be more fragile than simply not taking the shortcut. Object is where the win is.
+    if not is_object_dtype(series):
+        return _try_clean_numeric_strings(series)
+
+    non_na = series.dropna()
+    if len(non_na) == 0:
+        return None
+
+    uniques = pd.Series(non_na.unique())
+    if len(uniques) > len(series) * _UNIQUE_MAP_MAX_RATIO:
+        return _try_clean_numeric_strings(series)
+
+    threshold = len(non_na) * _NUMERIC_CONVERSION_THRESHOLD
+
+    def _mapped(converted_uniques: pd.Series) -> pd.Series:
+        # Keys come from non-NA values only, so no NaN-is-not-equal-to-itself problem.
+        # Values absent from the mapping (the original NAs) come back as NaN, matching
+        # the direct path.
+        return series.map(dict(zip(uniques, converted_uniques)))
+
+    # Fast path, then slow path — the same order and the same acceptance test as
+    # _try_clean_numeric_strings, but scored over the full column so the frequency
+    # weighting is preserved.
+    direct = _mapped(pd.to_numeric(uniques, errors='coerce'))
+    if direct.notna().sum() >= threshold:
+        return direct
+
+    formatted = _mapped(_coerce_formatted_numerics(uniques))
+    if formatted.notna().sum() >= threshold:
+        return formatted
 
     return None
 
@@ -438,6 +528,14 @@ class ProcessBehavior:
         na_counts = {}
 
         for col in cleaned_df.columns:
+            # A garbage token is a string, so only text-like columns can hold one. Scanning
+            # numeric/datetime/bool columns is a guaranteed no-op and was ~1.6s of a 3.6s
+            # init at 1M x 50. Note the test is "is text-like", not "is not numeric":
+            # a CATEGORICAL OF STRINGS can match, and excluding on numeric-ness alone
+            # would silently stop cleaning it.
+            if not _is_text_like(cleaned_df[col]):
+                continue
+
             # Count how many garbage values we find
             na_mask = cleaned_df[col].isin(all_na_values)
             na_count = na_mask.sum()
@@ -471,7 +569,7 @@ class ProcessBehavior:
         # separators, accounting negatives, percentages) in object columns
         formatting_cleaned = {}
         for col in cleaned_df.columns:
-            result = _try_clean_numeric_strings(cleaned_df[col])
+            result = _clean_numeric_strings_via_uniques(cleaned_df[col])
             if result is not None:
                 formatting_cleaned[col] = int(result.notna().sum())
                 cleaned_df[col] = result

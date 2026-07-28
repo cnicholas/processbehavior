@@ -61,6 +61,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   structurally exempt by design.
 
 ### Performance
+- **``ProcessBehavior(df)`` is ~19x faster** — 4.09s → 0.21s at 1M rows × 50 columns, same
+  machine. It was the single most expensive step in the pipeline, costing more than
+  ``formulate()``, which is not where any of the documentation points.
+
+  Two changes, both output-identical (same values *and* same dtypes — client code reads
+  post-init dtypes to decide what a column can be used for):
+
+  - The garbage-token scan ran on every column. A token is a string, so numeric, datetime
+    and boolean columns cannot contain one; they are now skipped. The test is "is text-like",
+    **not** "is not numeric" — a *categorical of strings* can hold a token and must still be
+    scanned.
+  - Numeric-formatting cleanup ran per row. It now cleans the *distinct* values and maps
+    back, on plain ``object`` columns whose cardinality is under 5% of their length.
+    Subtlety: the 80% acceptance threshold is frequency-weighted, so it is re-scored against
+    the full column rather than the distinct values — a column of 9,900 copies of ``'1'``
+    plus 100 labels converts by row (99%) but not by distinct value (1%). The shortcut is
+    restricted to ``object`` because ``Series.map`` preserves extension dtypes: mapping a
+    categorical returns a categorical of ints where the direct path returns ``int64``.
+
+  Design-state detection is unaffected, and provably so: ``_build_structure_view``
+  normalises missing tokens and canonicalises the kt columns itself on a minimal
+  projection, so N_kt is identical whether or not ``__init__`` cleaned first. That property
+  now has its own test. Cleaning also stays **eager and total** — deferring it to
+  ``formulate()`` would leave a ``['235.5', '*', '237.2']`` column non-numeric at the point a
+  client builds its column pickers, hiding the very column cleaning exists to rescue.
+
 - **``formulate()`` is 1.4-3.8x faster.** Observed-design-state detection computed N_kt (valid
   responses per cell) with ``groupby(...).apply(lambda s: s.notna().sum())`` — one Python
   round-trip per cell. ``GroupBy.count()`` computes exactly the same thing in Cython. Cells
