@@ -84,6 +84,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   structurally exempt by design.
 
 ### Performance
+- **Stratified charts are ~40x faster** — a stratified X at 1M rows goes from 26.5s to 0.66s,
+  bringing them into the same range as the ungrouped path.
+
+  ``_split_strata_by_sufficiency`` decided which strata are publishable by running a
+  full-column comparison *inside a loop over strata* — O(strata × rows), or ~126M element
+  comparisons and 632 intermediate DataFrames at 200K rows, to learn 632 integers. It was 89%
+  of a stratified execute. It now counts once with ``value_counts()``. The companion
+  membership test moved from a list to a set, retiring an O(strata²) scan that was invisible
+  at 632 strata and quadratic beyond.
+
+  The sufficiency *rule* is unchanged — a stratum with fewer than ``min_obs`` rows after the
+  first-mR drop is still unpublishable, and every published stratum is still focusable.
+
+  ``scripts/benchmark.py`` gains an ``execute_x_stratified`` scenario. This defect survived
+  because nothing measured the stratified path: the existing ``by=[]`` scenario never enters
+  it. The new scenario is the guard against it returning.
+
 - **``execute()`` on X/mR charts is ~15x faster** — 4.10s → 0.27s at 1M rows, same machine
   (Xbar improves further too, 0.29s → 0.17s). Two per-row loops, both now array operations:
 

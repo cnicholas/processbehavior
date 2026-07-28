@@ -161,9 +161,23 @@ def _split_strata_by_sufficiency(
     the first-mR drop and would fail downstream consumers.
 
     Returns (insufficient_strata, published_strata).
+
+    One counting pass, not one table scan per stratum. The obvious form —
+
+        [s for s in strata if len(out[out[stratify_col] == s]) < min_obs]
+
+    compares the whole column and materialises a filtered frame for *every* stratum, which
+    is O(strata x rows): 2.4s at 200K rows / 632 strata against 0.006s here, and it was 89%
+    of a stratified execute. The `published` membership test uses a set for the same
+    reason — against a list it is O(strata^2), invisible at 632 strata and quadratic beyond.
+
+    NaN strata count as 0 either way: value_counts() drops NaN, and `col == NaN` is always
+    False.
     """
-    insufficient = [s for s in strata if len(out[out[stratify_col] == s]) < min_obs]
-    published = [s for s in strata if s not in insufficient]
+    counts = out[stratify_col].value_counts()
+    insufficient = [s for s in strata if counts.get(s, 0) < min_obs]
+    insufficient_set = set(insufficient)
+    published = [s for s in strata if s not in insufficient_set]
     return insufficient, published
 
 

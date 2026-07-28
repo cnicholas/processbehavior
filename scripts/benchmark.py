@@ -2,7 +2,7 @@
 """Performance benchmark + drift check for processbehavior.
 
 Runs a fixed set of scenarios — design {SDS-1 exact-R2, SDS-2 MA2 worst-case} × size
-{10K, 100K, 1M} × op {init, formulate, execute} — prints a report table, writes
+{10K, 100K, 1M} × op {init, formulate, execute, execute-stratified} — prints a report table, writes
 ``benchmarks/last_run.json``, and compares against the committed ``benchmarks/baseline.json``.
 
 The baseline is *same-machine* (absolute times are hardware-specific), so a regression flag
@@ -101,6 +101,11 @@ def run_scenario(sds: int, target_rows: int) -> list[dict]:
     t_init, pdf = _time(lambda: ProcessBehavior(df), repeat)
     t_form, study = _time(lambda: pdf.formulate(**spec), repeat)
     t_exec, _ = _time(lambda: study.execute(chart=exec_chart, by=[]), repeat)
+    # Stratified X: the by=[] path above never enters it, so a regression there would be
+    # invisible to the drift check. This scenario exists because that is exactly what
+    # happened — a per-stratum table scan (O(strata x rows)) sat here at 26.5s/1M rows and
+    # went unnoticed because nothing measured it.
+    t_strat, _ = _time(lambda: study.execute(chart="X", by=list(DESIGNS[sds]["factors"])), repeat)
     peak = _peak_mb(lambda: ProcessBehavior(df).formulate(**spec))
 
     common = {"sds": sds, "size": target_rows, "rows": rows}
@@ -108,6 +113,7 @@ def run_scenario(sds: int, target_rows: int) -> list[dict]:
         {**common, "op": "init", "seconds": t_init},
         {**common, "op": "formulate", "seconds": t_form},
         {**common, "op": f"execute_{exec_chart.lower()}", "seconds": t_exec},
+        {**common, "op": "execute_x_stratified", "seconds": t_strat},
         {**common, "op": "formulate_peak", "seconds": None, "peak_mb": peak, "input_mb": input_mb},
     ]
 
@@ -129,20 +135,20 @@ def _key(r: dict) -> str:
 def format_report(results: list[dict]) -> str:
     lines = [
         "",
-        f"{'Design':<14}{'Rows':>10}  {'Op':<16}{'Time (s)':>10}{'Rows/sec':>14}{'Peak MB':>10}",
-        "-" * 76,
+        f"{'Design':<14}{'Rows':>10}  {'Op':<22}{'Time (s)':>10}{'Rows/sec':>14}{'Peak MB':>10}",
+        "-" * 82,
     ]
     for r in results:
         design = DESIGNS[r["sds"]]["label"]
         if r["op"] == "formulate_peak":
             lines.append(
-                f"{design:<14}{r['rows']:>10,}  {'formulate mem':<16}{'':>10}{'':>14}"
+                f"{design:<14}{r['rows']:>10,}  {'formulate mem':<22}{'':>10}{'':>14}"
                 f"{r['peak_mb']:>9.0f} ({r['peak_mb'] / r['input_mb']:.1f}x)"
             )
         else:
             tput = r["rows"] / r["seconds"] if r["seconds"] else 0
             lines.append(
-                f"{design:<14}{r['rows']:>10,}  {r['op']:<16}{r['seconds']:>10.3f}{tput:>14,.0f}{'':>10}"
+                f"{design:<14}{r['rows']:>10,}  {r['op']:<22}{r['seconds']:>10.3f}{tput:>14,.0f}{'':>10}"
             )
     return "\n".join(lines)
 
