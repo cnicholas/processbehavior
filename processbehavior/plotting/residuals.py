@@ -68,13 +68,13 @@ def plot_residuals(
             'Residuals not available for this analysis.\nResiduals require SDS >= 1 (replicated observations).'
         )
 
-    residuals = result.residuals
-    if residual_type not in residuals.columns:
-        available = list(residuals.columns)
-        raise ValidationError(f"Residual '{residual_type}' not found.\nAvailable: {available}")
+    # One lookup, shared with get_residual: it finds stored residuals on the study-level
+    # snapshot and request residuals (R6/RCR6) on this result's dataset. Reading
+    # result.residuals directly here is what made this raise "not found" about a column
+    # the result was holding.
+    r_data = result.get_residual(residual_type).dropna()
 
     theme = get_theme(theme) if isinstance(theme, str) else theme
-    r_data = residuals[residual_type].dropna()
 
     if plot_type == 'all':
         fig = _plot_all_diagnostics(r_data, residual_type, theme, width, height)

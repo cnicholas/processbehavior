@@ -481,6 +481,22 @@ VALID_BASE_CHARTS = {'Xbar', 'S', 'X', 'mR', 'Histogram'}
 # Case-insensitive canonical chart name mapping
 CHART_NAME_CANONICAL: dict[str, str] = {name.lower(): name for name in VALID_BASE_CHARTS}
 
+# The two kinds of VAS residual. They differ in a way that matters to callers:
+#
+#   STORED  — computed once during formulate() and stored as columns on the analysis
+#             dataset. Independent of the execute() request: R5 is the same series
+#             whatever `by=` you pass.
+#   REQUEST — computed during execute() from the request's `by=`, and materialised only
+#             into that result's dataset. R6 with by=['A'] and R6 with by=['B'] are
+#             different series, so there is no canonical study-level R6.
+#
+# An enumeration that omits R6 is correct iff it means STORED. Say which you mean.
+# (`derived` is deliberately not used here — derivations.py owns that word for
+# transform/binning specs.)
+STORED_RESIDUALS = ('R1', 'R2', 'R3', 'R4', 'R5')
+REQUEST_RESIDUALS = ('R6',)
+ALL_RESIDUALS = STORED_RESIDUALS + REQUEST_RESIDUALS
+
 # Removed chart names with migration hints
 _REMOVED_CHART_NAMES: dict[str, str] = {
     'xmr': "Use chart='X' for the individual chart, or chart='X' with companion=True for both X and mR.",

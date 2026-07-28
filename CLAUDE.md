@@ -97,6 +97,27 @@ The codebase had eight overlapping terms for two underlying concepts. Pick from 
 - `strata : list[str]` — collection of stratum identifier values.
 - Bare `stratify` is fine only in prose/docstrings as a verb; do not use it as an identifier.
 
+**Residual scope (which residuals exist where):**
+
+Two genuinely different kinds share the word "residual". An enumeration that omits R6 is
+correct *iff* it means the stored set — say which you mean. Defined in `spc_constants.py`.
+- `STORED_RESIDUALS` — R1–R5 (and the recentered RCR1–RCR5). Computed once during
+  `formulate()`, stored as columns on the analysis dataset. **Independent of `by=`**: R5 is
+  the same series whatever grouping you execute with.
+- `REQUEST_RESIDUALS` — R6 (and RCR6). Computed during `execute()` from that request's `by=`
+  and materialised onto that result only. `R6(by=['A'])` ≠ `R6(by=['B'])`, so there is **no
+  canonical study-level R6** — this is why `result.residuals` excludes it, deliberately.
+- `ALL_RESIDUALS` = stored + request. `study.RESIDUAL_CODES` is this.
+- Prose: "stored residual" / "request residual". **Do not use "derived"** — `derivations.py`
+  owns that word for transform/binning specs.
+- Computing a request residual writes its column onto the study-level dataset, so a *later*
+  unrelated result inherits a stale R6. `AnalysisResult._locate_residual` gates on the
+  result's own chart metadata (`metadata['residual_type']`), never on column presence alone.
+  Don't "simplify" that to a column check.
+- One lookup: `AnalysisResult._locate_residual`. `get_residual` and `plot_residuals` both use
+  it. Nothing else should read `self._residuals` directly to answer "give me residual X" —
+  three sites diverging is what produced the original bug.
+
 **Grain markers (factor × time):**
 - `cell_key : tuple` — the (factor, time) tuple identifying one cell in the analysis grid.
 - `kt_cols : list[str]` — list of column names that together form the factor × time grain. (`k` = factor index, `t` = time index — Bishop notation.)

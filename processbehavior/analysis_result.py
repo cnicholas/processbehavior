@@ -50,9 +50,9 @@ from typing import TYPE_CHECKING, Any, Literal
 
 import pandas as pd
 
-from .exceptions import ChartNotAvailableError
+from .exceptions import ChartNotAvailableError, ValidationError
 from .sds_detector import SDSRegistry
-from .spc_constants import normalize_chart_name
+from .spc_constants import ALL_RESIDUALS, REQUEST_RESIDUALS, STORED_RESIDUALS, normalize_chart_name
 from .types import Charts
 
 if TYPE_CHECKING:
@@ -171,7 +171,9 @@ class AnalysisResult:
         # Extract residuals if calculated
         self._residuals = None
         if analysis_dataset_obj.has_vas_residuals:
-            residual_cols = ['R1', 'R2', 'R3', 'R4', 'R5']
+            # Stored residuals only — request residuals (R6) are by=-dependent and
+            # belong to a single execute() result, not to this study-level snapshot.
+            residual_cols = list(STORED_RESIDUALS)
             available_cols = [c for c in residual_cols if c in self.dataset.columns]
             if available_cols:
                 self._residuals = self.dataset[available_cols].copy()
@@ -261,7 +263,12 @@ class AnalysisResult:
     @property
     def residuals(self) -> pd.DataFrame:
         """
-        Get VAS residuals (R1-R5) if calculated.
+        Get the **stored** VAS residuals (R1-R5) if calculated.
+
+        Deliberately excludes the **request** residuals (R6, RCR6): those are a function
+        of the ``execute()`` request's ``by=``, so there is no single study-level series
+        to put in this frame. Reach them with :meth:`get_residual` on a result that asked
+        for them.
 
         Returns
         -------
@@ -538,32 +545,111 @@ class AnalysisResult:
 
     def get_residual(self, residual_type: str) -> pd.Series:
         """
-        Get specific residual (R1, R2, R3, R4, or R5).
+        Get a specific residual series.
+
+        Finds **stored** residuals (R1-R5, RCR1-RCR5) on the study-level snapshot and
+        **request** residuals (R6, RCR6) on this result's dataset — see
+        :meth:`_locate_residual` for why they live in different places.
 
         Parameters
         ----------
         residual_type : str
-            Residual type ('R1', 'R2', 'R3', 'R4', or 'R5')
+            Residual code, e.g. 'R2', 'R6', or a recentered form such as 'RCR5'.
 
         Returns
         -------
         Series
-            Residual values if calculated, empty Series with proper name otherwise
+            The residual values.
+
+        Raises
+        ------
+        ValidationError
+            If this result carries no residuals, or the code is not present here.
+            Previously this returned an empty Series, which let callers compute on
+            nothing; the message now says which case applies and what to do.
 
         Examples
         --------
-        >>> r1 = result.get_residual('R1')
         >>> r2 = result.get_residual('R2')
+        >>> r6 = study.execute(chart='Xbar', value='R6', by=['machine']).get_residual('R6')
+        """
+        return self._locate_residual(residual_type)
+
+    def _requested_residual(self) -> str | None:
+        """The residual code this result was executed with, or None for a response chart.
+
+        Read from chart metadata rather than inferred from the dataset's columns: computing
+        a request residual writes its column onto the study-level dataset, so column
+        presence alone would let one result claim another request's numbers.
+        """
+        for chart_info in self.charts.values():
+            metadata = chart_info.get('metadata') or {}
+            residual_type = metadata.get('residual_type')
+            if residual_type:
+                return str(residual_type).upper()
+        return None
+
+    def _locate_residual(self, residual_type: str) -> pd.Series:
+        """Return a residual series from wherever it legitimately lives, or raise.
+
+        The VAS residuals come in two kinds, and they are not stored in the same place:
+
+        - **stored** (R1-R5, RCR1-RCR5) — computed during ``formulate()`` and held on the
+          study-level snapshot. Independent of the request: R5 is the same series whatever
+          ``by=`` was passed.
+        - **request** (R6, RCR6) — computed during ``execute()`` from that request's
+          ``by=``, and materialised only into this result's dataset. There is no canonical
+          study-level R6, which is why ``result.residuals`` deliberately excludes it.
+
+        Looking in only one of those two places is what made ``get_residual('R6')`` report
+        "not found" about 4,000 values the same object was holding. This is the single
+        lookup; ``get_residual`` and ``plot_residuals`` both go through it so they cannot
+        diverge again.
         """
         if not self.has_residuals:
-            return pd.Series([], name=residual_type, dtype=float)
+            raise ValidationError(
+                f"No residuals available for this result, so '{residual_type}' cannot be "
+                f'returned.\nResiduals require a factorial design (ADS 1-3) with factors '
+                f'and time in the formulation.'
+            )
 
-        if residual_type not in self._residuals.columns:
-            available = list(self._residuals.columns)
-            logger.warning(f"Residual '{residual_type}' not found. Available: {available}")
-            return pd.Series([], name=residual_type, dtype=float)
+        base = residual_type.upper()
+        base = base[2:] if base.startswith('RCR') else base
 
-        return self._residuals[residual_type].copy()
+        # Stored residuals: the study-level snapshot (R1-R5).
+        if self._residuals is not None and residual_type in self._residuals.columns:
+            return self._residuals[residual_type].copy()
+
+        # Request residuals: only from a result that actually asked for them. Computing R6
+        # writes the column onto the study-level dataset, so a *later* unrelated result
+        # inherits a stale R6 from whatever `by=` ran last. Gate on this result's own chart
+        # metadata so we never hand back another request's numbers.
+        if base in REQUEST_RESIDUALS:
+            if self._requested_residual() == base and residual_type in self.dataset.columns:
+                return self.dataset[residual_type].copy()
+            raise ValidationError(
+                f"'{residual_type}' is computed per request and depends on by=, so it "
+                f'exists only on a result that asked for it.\n'
+                f'This result was not executed with it.\n'
+                f"Use study.execute(chart=..., value='{base}', by=[factor])."
+            )
+
+        # Stored recentered forms (RCR1-RCR5) live on the dataset, not the snapshot.
+        if residual_type in self.dataset.columns:
+            return self.dataset[residual_type].copy()
+
+        if base in ALL_RESIDUALS:
+            available = list(self._residuals.columns) if self._residuals is not None else []
+            raise ValidationError(
+                f"Residual '{residual_type}' is not present in this result.\n"
+                f'Available here: {available or "none"}'
+            )
+
+        raise ValidationError(
+            f"'{residual_type}' is not a recognized residual.\n"
+            f'Valid codes: {", ".join(ALL_RESIDUALS)} '
+            f"(prefix with 'RC' for the recentered form, e.g. 'RCR5')."
+        )
 
     def list_strata(self) -> list[str]:
         """
@@ -1016,7 +1102,8 @@ class AnalysisResult:
         Parameters
         ----------
         residual_type : str, default 'R1'
-            Which residual ('R1'-'R5').
+            Which residual. Stored codes ('R1'-'R5') or a request code ('R6') on a
+            result that was executed with it.
         plot_type : str, default 'all'
             'histogram', 'qq', 'sequence', or 'all'.
         theme : str, default 'processbehavior'
