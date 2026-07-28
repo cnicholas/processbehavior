@@ -34,10 +34,15 @@ import pandas as pd
 
 from .analysis_dataset import AnalysisDataSet
 from .analysis_result import AnalysisResult
-from .data_preparation import encode_rsg
+from .data_preparation import encode_rsg, encode_rsg_series
 from .exceptions import ChartNotAvailableError, ValidationError
 from .formulation_spec import ChartRequest, FormulationSpec
-from .spc_constants import calculate_limits, calibrated_limits, detect_beyond_limits
+from .spc_constants import (
+    calculate_limits,
+    calculate_limits_vectorized,
+    calibrated_limits,
+    detect_beyond_limits,
+)
 from .types import ChartPayload
 
 # Configure module logger
@@ -1043,16 +1048,12 @@ class Analysis:
             )
         else:
             xbar['center'] = _Xbar  # Add center column for Xbar chart
-            xbar[['lpl', 'upl']] = xbar.apply(
-                lambda row: calculate_limits(
-                    mean=row['center'],
-                    sd=_S,
-                    N=row[n_to_use],
-                    limits_type='Xbar',
-                    round_to=spec.round_to,
-                    sigma_multiplier=self.request.n_sigma,
-                ),
-                axis=1,
+            xbar[['lpl', 'upl']] = calculate_limits_vectorized(
+                'Xbar',
+                mean=xbar['center'],
+                sd=_S,
+                N=xbar[n_to_use],
+                sigma_multiplier=self.request.n_sigma,
             )
 
         # Detect beyond limits signals
@@ -1159,7 +1160,7 @@ class Analysis:
         if len(stratify_by) == 1:
             stratify_col = stratify_by[0]
         else:
-            df['_stratify_key'] = df[stratify_by].apply(lambda row: encode_rsg(tuple(row)), axis=1)
+            df['_stratify_key'] = encode_rsg_series(df, stratify_by)
             stratify_col = '_stratify_key'
 
         _limits_col = self._resolve_limits_column(value_col, df)
@@ -1207,16 +1208,12 @@ class Analysis:
                 n_to_use = 'N'
 
             out['center'] = _Xbar
-            out[['lpl', 'upl']] = out.apply(
-                lambda row, _sd=_S, _n_col=n_to_use: calculate_limits(
-                    mean=row['center'],
-                    sd=_sd,
-                    N=row[_n_col],
-                    limits_type='Xbar',
-                    round_to=spec.round_to,
-                    sigma_multiplier=self.request.n_sigma,
-                ),
-                axis=1,
+            out[['lpl', 'upl']] = calculate_limits_vectorized(
+                'Xbar',
+                mean=out['center'],
+                sd=_S,
+                N=out[n_to_use],
+                sigma_multiplier=self.request.n_sigma,
             )
 
             out = self._add_beyond_limits_flag(out, value_col='xbar')
@@ -1331,7 +1328,7 @@ class Analysis:
             if len(stratify_by) == 1:
                 stratify_col = stratify_by[0]
             else:
-                df['_stratify_key'] = df[stratify_by].apply(lambda row: encode_rsg(tuple(row)), axis=1)
+                df['_stratify_key'] = encode_rsg_series(df, stratify_by)
                 stratify_col = '_stratify_key'
             strata = df[stratify_col].unique().tolist()
             per_stratum = None
@@ -1379,16 +1376,11 @@ class Analysis:
                     out[groupby_cols[0]] = out[groupby_cols[0]].astype(str)
 
             out['center'] = _S
-            out[['lpl', 'upl']] = out.apply(
-                lambda row, _n_col=n_to_use: calculate_limits(
-                    mean=0,
-                    sd=row['center'],
-                    N=row[_n_col],
-                    limits_type='S',
-                    round_to=spec.round_to,
-                    sigma_multiplier=self.request.n_sigma,
-                ),
-                axis=1,
+            out[['lpl', 'upl']] = calculate_limits_vectorized(
+                'S',
+                sd=out['center'],
+                N=out[n_to_use],
+                sigma_multiplier=self.request.n_sigma,
             )
 
             out = self._add_beyond_limits_flag(out, value_col='s')
@@ -1562,16 +1554,11 @@ class Analysis:
         else:
             out['center'] = _S
             # Add limits columns
-            out[['lpl', 'upl']] = out.apply(
-                lambda row: calculate_limits(
-                    mean=0,
-                    sd=row['center'],
-                    N=row[n_to_use],
-                    limits_type='S',
-                    round_to=spec.round_to,
-                    sigma_multiplier=self.request.n_sigma,
-                ),
-                axis=1,
+            out[['lpl', 'upl']] = calculate_limits_vectorized(
+                'S',
+                sd=out['center'],
+                N=out[n_to_use],
+                sigma_multiplier=self.request.n_sigma,
             )
 
         # Detect beyond limits signals
@@ -1950,7 +1937,7 @@ class Analysis:
         elif len(stratify_by) == 1:
             stratify_col = stratify_by[0]
         else:
-            out['_stratify_key'] = out[stratify_by].apply(lambda row: encode_rsg(tuple(row)), axis=1)
+            out['_stratify_key'] = encode_rsg_series(out, stratify_by)
             stratify_col = '_stratify_key'
 
         # Canonical sort
@@ -2719,9 +2706,9 @@ class Analysis:
             # Add rsg column so focus() can filter consistently with other chart types
 
             if len(by) == 1:
-                output_data['rsg'] = output_data[by[0]].apply(lambda v: encode_rsg(_py(v)))
+                output_data['rsg'] = encode_rsg_series(output_data, [by[0]])
             else:
-                output_data['rsg'] = output_data[by].apply(lambda row: encode_rsg(tuple(_py(v) for v in row)), axis=1)
+                output_data['rsg'] = encode_rsg_series(output_data, list(by))
 
             return {
                 'Histogram': {

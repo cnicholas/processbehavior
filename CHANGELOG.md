@@ -8,6 +8,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
+- **``DesignReport.missing_combos`` / ``extra_combos`` were wrong for studies mixing integer
+  and float factor columns**, reporting *every* combination as both missing and extra even
+  when the plan matched the data exactly.
+
+  RSG keys were built with ``df[cols].apply(lambda row: encode_rsg(tuple(row)), axis=1)``,
+  and materialising a row as a Series **upcasts mixed dtypes** — so an integer factor beside
+  a float factor encoded as ``'1.0'`` rather than ``'1'``. Plan expansion encodes from Python
+  values and produces ``'1'``, so observed keys could never match expected ones. A new
+  ``encode_rsg_series`` converts per column, which keeps each column on its own dtype, agrees
+  with the plan-side encoding, and is ~31x faster. Six call sites moved to it.
+
+  **This changes rsg key strings** for studies with mixed-dtype factor columns — the point of
+  the fix. Single-factor and same-dtype studies are byte-identical, which has its own
+  regression test. Not reachable from the Streamlit app, whose factor picker offers
+  non-numeric and low-cardinality *integer* columns only.
+
 - **``get_residual('R6')`` no longer reports "not found" about data the result is holding.**
   A single result object gave three answers: ``result.dataset['R6']`` held 4,000 values,
   ``result.residuals`` omitted it, and ``get_residual('R6')`` logged a false "not found" and
@@ -61,6 +77,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   structurally exempt by design.
 
 ### Performance
+- **``execute()`` is ~10x faster on Xbar/S charts** — 2.82s → 0.29s at 1M rows, same machine.
+  The chart builders computed control limits by calling the scalar ``calculate_limits`` once
+  per subgroup through ``DataFrame.apply(axis=1)``, each call constructing a ``pd.Series`` to
+  carry two numbers. At 1M rows that is ~50,000 Python calls per chart. A new
+  ``calculate_limits_vectorized`` does the same arithmetic on whole columns.
+
+  ``calculate_limits`` itself is unchanged and stays the scalar reference — it is what the
+  Bishop validator exercises, so keeping it independent means those 280 assertions remain an
+  external check on the fast path rather than a check of it against itself. Conversion is
+  deliberately partial: the four primary Xbar/S sites are converted; phase-segment and
+  per-stratum sites iterate over a handful of rows, were not hot when measured, and still use
+  the scalar form. That is recorded in the function's docstring so a future reader does not
+  mistake partial conversion for completeness.
+
+- **``formulate()`` gains a further ~20%** on designs with multiple factors (SDS-2 at 1M:
+  6.49s → 5.11s), from the same change described under *Fixed* below.
+
 - **``ProcessBehavior(df)`` is ~19x faster** — 4.09s → 0.21s at 1M rows × 50 columns, same
   machine. It was the single most expensive step in the pipeline, costing more than
   ``formulate()``, which is not where any of the documentation points.
