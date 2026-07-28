@@ -8,6 +8,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
+- **``get_residual('R6')`` no longer reports "not found" about data the result is holding.**
+  A single result object gave three answers: ``result.dataset['R6']`` held 4,000 values,
+  ``result.residuals`` omitted it, and ``get_residual('R6')`` logged a false "not found" and
+  returned an **empty Series** — so a caller who did not check ``len()`` computed on nothing.
+  The lookup consulted a snapshot taken at construction and never looked at the result's own
+  dataset. ``plot_residuals('R6')`` had the same defect and is fixed by the same change;
+  both now route through one lookup.
+
+  ``result.residuals`` still excludes R6, deliberately — see below.
+
+### Changed
+- **The two kinds of VAS residual now have names.** ``spc_constants`` defines
+  ``STORED_RESIDUALS`` (R1-R5, RCR1-RCR5 — computed at ``formulate()``, independent of
+  ``by=``) and ``REQUEST_RESIDUALS`` (R6, RCR6 — computed at ``execute()`` from that
+  request's ``by=``). ``R6(by=['A'])`` and ``R6(by=['B'])`` are different series, so there is
+  no canonical study-level R6 and ``result.residuals`` correctly omits it. Previously both
+  kinds were just "residuals", so an enumeration that omitted R6 was indistinguishable from
+  a bug. ("derived" is deliberately not used — ``derivations.py`` owns it.)
+- **BREAKING (return contract): ``get_residual`` raises instead of returning an empty
+  Series.** Unknown codes, and residuals genuinely absent from a result, now raise
+  ``ValidationError`` with a message saying which case applies and what to do. The empty
+  return was the only silent-wrongness path in the public API.
+- **``get_residual`` will not hand back another request's numbers.** Computing R6 writes its
+  column onto the study-level dataset, so a result created afterwards inherits an R6 it never
+  asked for. The lookup gates on the result's own chart metadata, so that case raises rather
+  than returning values from a different ``by=``.
+
 - **``why_not()`` no longer contradicts the error that sends users to it.** Asking for an
   unavailable chart x residual pair raised a correct ``ChartNotAvailableError`` ending "Use
   study.why_not('Xbar', value='R2') for details" — and that call replied "'Xbar' (R2) is not a

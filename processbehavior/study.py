@@ -28,7 +28,7 @@ from typing import TYPE_CHECKING, Literal
 
 from .exceptions import ChartNotAvailableError, FactorNotFoundError, ValidationError
 from .sds_detector import SDSRegistry
-from .spc_constants import RESIDUAL_ALIASES, VALID_BASE_CHARTS, normalize_chart_name
+from .spc_constants import ALL_RESIDUALS, RESIDUAL_ALIASES, VALID_BASE_CHARTS, normalize_chart_name
 
 if TYPE_CHECKING:
     import pandas as pd
@@ -48,11 +48,12 @@ if TYPE_CHECKING:
 # Maximum number of combo strings to return in missing_combos/extra_combos
 MAX_COMBO_DISPLAY = 100
 
-# The VAS residual codes a user may name in execute(value=...). Membership only — whether a
-# given code is *available* for this study is a different question (Study.residuals), and
-# whether it can pair with a given chart is a third (Study._residual_pair_problem).
+# The VAS residual codes a user may name in execute(value=...) — stored plus request; see
+# spc_constants for what separates them. Membership only: whether a given code is *available*
+# for this study is a different question (Study.residuals), and whether it can pair with a
+# given chart is a third (Study._residual_pair_problem).
 # Chart names have an equivalent in spc_constants.VALID_BASE_CHARTS, imported above.
-RESIDUAL_CODES = ('R1', 'R2', 'R3', 'R4', 'R5', 'R6')
+RESIDUAL_CODES = ALL_RESIDUALS
 
 
 def _base_residual_code(value: str) -> str:
@@ -1298,10 +1299,12 @@ class Study:
         # All possible primary charts
         ALL_PRIMARY = ['Xbar', 'S', 'X', 'mR', 'Histogram']
 
-        # All possible residual charts as (chart_type, residual) tuples.
+        # All possible residual charts as (chart_type, residual) tuples. Named _PAIRS to
+        # keep it distinct from spc_constants.ALL_RESIDUALS, which is a set of residual
+        # codes — different concept, and now one import away.
         # R1 is location-only (Xbar/X): it is the response shifted by -Ybar, so an S or mR
         # chart of R1 is numerically identical to the response's and adds no diagnostic.
-        ALL_RESIDUALS = [
+        ALL_RESIDUAL_PAIRS = [
             ('Xbar', 'R1'),
             ('X', 'R1'),
             ('S', 'R2'),
@@ -1333,7 +1336,7 @@ class Study:
                         'question': SDSAnalysisPlan.CHART_QUESTIONS.get(chart, ''),
                     }
                 )
-            for chart, value in ALL_RESIDUALS:
+            for chart, value in ALL_RESIDUAL_PAIRS:
                 rows.append(
                     {
                         'chart': chart,
@@ -1363,7 +1366,7 @@ class Study:
                 }
             )
 
-        for chart, value in ALL_RESIDUALS:
+        for chart, value in ALL_RESIDUAL_PAIRS:
             available = (chart, value) in self.residual_charts
             rows.append(
                 {

@@ -255,11 +255,15 @@ class TestConvenienceAccessors:
         assert isinstance(r2, pd.Series)
         assert len(r2) > 0
 
-    def test_get_residual_invalid_returns_empty(self, sds1_xbar_result):
-        """Invalid residual type should return empty Series."""
-        r99 = sds1_xbar_result.get_residual('R99')
-        assert isinstance(r99, pd.Series)
-        assert len(r99) == 0
+    def test_get_residual_invalid_raises(self, sds1_xbar_result):
+        """An unrecognized residual code raises rather than returning an empty Series.
+
+        This previously returned empty, which let a caller compute on nothing without ever
+        seeing the warning. Every outcome is now data or an exception — see
+        tests/test_residual_scope.py for the full stored-vs-request contract.
+        """
+        with pytest.raises(ValidationError, match='not a recognized residual'):
+            sds1_xbar_result.get_residual('R99')
 
     def test_get_signals_returns_dataframe(self, sds1_xbar_result):
         """get_signals() should return a DataFrame."""
