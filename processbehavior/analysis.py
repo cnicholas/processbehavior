@@ -181,6 +181,28 @@ def _split_strata_by_sufficiency(
     return insufficient, published
 
 
+def _raise_no_replication(chart: str, sds, insufficient: list, total: int) -> None:
+    """Raise the self-diagnostic error for a subgroup chart with nothing to subgroup.
+
+    Xbar/S both need n >= 2 within a subgroup; with every subgroup at n = 1 there is no
+    within-subgroup dispersion to chart. Shared by the stratified paths so the stratified
+    message matches the ungrouped one — the stratified S path used to fall through to
+    ``pd.concat([])`` and surface a raw pandas "No objects to concatenate" instead.
+    """
+    detail = {2: ' (no replication)', 3: ' (partial replication)'}.get(sds, '')
+    alternative = (
+        "Use chart='X' for individual values, or chart='Xbar' with value='R6' for effects analysis."
+        if chart == 'Xbar'
+        else "Use chart='X' for individual values."
+    )
+    raise ValidationError(
+        f'No subgroups with n > 1 found — {chart} chart requires replicated observations.\n'
+        f'This data has Analytical Design State {sds}{detail}.\n'
+        f'All {total} strata were unusable: {insufficient}.\n'
+        f'{alternative}'
+    )
+
+
 def _build_stratified_mr_payload(
     *,
     mr_spec: _MRChartSpec,
@@ -1247,6 +1269,11 @@ class Analysis:
         all_xbar_frames = []
         chart_statistics = {}
         intermediates_per_stratum = {}
+        # Strata with no replicated subgroup. Recorded rather than silently skipped: a
+        # stratum published in `strata` but absent from `statistics`/`data` fails
+        # result.focus(), which is the contract _split_strata_by_sufficiency exists to
+        # keep on the X/mR path. Xbar/S never adopted it.
+        insufficient_strata: list = []
 
         for stratum in strata:
             sdf = df[df[stratify_col] == stratum].copy()
@@ -1271,6 +1298,7 @@ class Analysis:
                 out = out[~mask_n1].copy()
 
             if out.shape[0] == 0:
+                insufficient_strata.append(stratum)
                 continue
 
             # Per-stratum statistics
@@ -1326,14 +1354,11 @@ class Analysis:
 
         if not all_xbar_frames:
             sds = self.ads._ads_result.sds if self.ads._ads_result else '?'
-            raise ValidationError(
-                f'No subgroups with n > 1 found — Xbar chart requires replicated observations.\n'
-                f'This data has Analytical Design State {sds} '
-                f'({"no replication" if sds == 2 else "partial replication" if sds == 3 else ""}).\n'
-                f"Use chart='X' for individual values, or chart='Xbar' with value='R6' "
-                f'for effects analysis.'
-            )
+            _raise_no_replication('Xbar', sds, insufficient_strata, len(strata))
         chart_out = pd.concat(all_xbar_frames, ignore_index=True)
+
+        # Publish only strata a caller can actually focus() into.
+        published_strata = [s for s in strata if s not in set(insufficient_strata)]
 
         # Select output columns
         group_col = groupby_cols[0] if groupby_cols else None
@@ -1353,15 +1378,20 @@ class Analysis:
                 'stratify_by': list(stratify_by),
                 'n_sigma': self.request.n_sigma,
                 'n_mode': self.request.n_mode,
+                'insufficient_strata': insufficient_strata or None,
             },
-            'strata': strata,
+            'strata': published_strata,
         }
 
         if _return_intermediates:
             result['_intermediates'] = {
                 'stratify_col': stratify_col,
                 'stratify_by': stratify_by,
-                'strata': strata,
+                # Published, not raw: the companion S path indexes per_stratum[stratum]
+                # directly, and a skipped stratum is absent from it — passing the raw list
+                # here raised KeyError on any partially-replicated study.
+                'strata': published_strata,
+                'insufficient_strata': insufficient_strata,
                 'groupby_cols': groupby_cols,
                 'per_stratum': intermediates_per_stratum,
                 'is_stratified': True,
@@ -1399,8 +1429,11 @@ class Analysis:
 
         if _precomputed is not None:
             stratify_col = _precomputed['stratify_col']
+            # Already filtered to the strata Xbar could compute; per_stratum has no entry
+            # for the rest, so iterating the raw list would KeyError.
             strata = _precomputed['strata']
             per_stratum = _precomputed['per_stratum']
+            insufficient_strata = list(_precomputed.get('insufficient_strata') or [])
         else:
             df = self.ads.analysis_dataset.copy()
             if len(stratify_by) == 1:
@@ -1410,7 +1443,9 @@ class Analysis:
                 stratify_col = '_stratify_key'
             strata = df[stratify_col].unique().tolist()
             per_stratum = None
+            insufficient_strata = []
 
+        all_strata = list(strata) + [s for s in insufficient_strata if s not in strata]
         all_s_frames = []
         chart_statistics = {}
 
@@ -1438,6 +1473,7 @@ class Analysis:
                 mask = out['n'].eq(1)
                 out = out[~mask]
                 if out.shape[0] == 0:
+                    insufficient_strata.append(stratum)
                     continue
                 out['N'] = out['n'].max()
                 # CL from R2-based std — S chart plots same basis
@@ -1476,7 +1512,15 @@ class Analysis:
                 **({'limits_vary': True} if not _has_fixed_n else {}),
             }
 
+        if not all_s_frames:
+            # Previously fell through to pd.concat([]), which surfaces as a raw pandas
+            # "No objects to concatenate". The ungrouped S path and the stratified Xbar
+            # path both already raised here; this one was the gap.
+            sds = self.ads._ads_result.sds if self.ads._ads_result else '?'
+            _raise_no_replication('S', sds, insufficient_strata, len(all_strata))
         chart_out = pd.concat(all_s_frames, ignore_index=True)
+
+        published_strata = [s for s in all_strata if s not in set(insufficient_strata)]
 
         group_col = groupby_cols[0] if groupby_cols else None
         cols_to_keep = [stratify_col, group_col, 's', 'center', 'lpl', 'upl', 'beyond_limits']
@@ -1496,8 +1540,9 @@ class Analysis:
                     'stratify_by': list(stratify_by),
                     'n_sigma': self.request.n_sigma,
                     'n_mode': self.request.n_mode,
+                    'insufficient_strata': insufficient_strata or None,
                 },
-                'strata': strata,
+                'strata': published_strata,
             }
         }
 

@@ -43,6 +43,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   ``by=`` is unchanged and still accepts either meaning.
 
 ### Fixed
+- **Stratified Xbar/S mishandled strata with no replication**, three ways from one cause.
+  A stratum whose every subgroup holds a single observation cannot contribute to a
+  subgroup chart; both paths dropped it from the data and statistics but still published
+  it in ``strata``.
+
+  - Stratified **S** with *every* stratum insufficient (ADS 2) concatenated an empty list,
+    so a raw pandas ``ValueError: No objects to concatenate`` reached the analyst. The
+    ungrouped S path and the stratified Xbar path already raised a self-diagnostic error;
+    this one was the gap. All three now share one message.
+  - With *some* strata insufficient, the dropped stratum stayed in ``result.strata`` with
+    no data and no statistics, so ``result.focus(stratum)`` raised "No data found for
+    stratum" — the contract ``_split_strata_by_sufficiency`` keeps on the X/mR path, which
+    Xbar/S had never adopted. Only focusable strata are published now, and the dropped
+    ones are reported in ``metadata['insufficient_strata']`` rather than vanishing.
+  - Companion ``Xbar`` + ``S`` raised ``KeyError`` on a partially-replicated study: Xbar
+    passed its unfiltered stratum list through the shared intermediates while
+    ``per_stratum`` held only the computed ones.
+
+  Output on fully-replicated data is byte-identical — verified by diffing strata,
+  statistics and data across all stratified Xbar/S requests on ADS 1 and ADS 3.
+
 - **The residual alias ``noise`` resolved to R5 — design-condition main effects — when the
   word means R2 everywhere else in the project** ("within-cell noise", "the noise floor",
   "irreducible noise (R2)"). The table contradicted itself, since it also mapped

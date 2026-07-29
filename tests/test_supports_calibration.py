@@ -75,10 +75,10 @@ def test_prediction_matches_execution(df, response):
     for kwargs in _requests():
         try:
             study.execute(**kwargs)
-        except Exception:
+        except ProcessBehaviorError:
             # Not executable at all, so there is no calibration question to answer.
-            # Broad on purpose: one request in this grid still escapes as a raw pandas
-            # ValueError — see test_stratified_S_with_no_sufficient_strata below.
+            # Narrow on purpose: anything escaping as a non-library exception is a defect
+            # in its own right, and this grid is how the stratified-S one was found.
             continue
 
         predicted = study.supports_calibration(**kwargs)
@@ -207,26 +207,21 @@ def test_stratify_by_alias_agrees_with_by(study):
 
 
 # ---------------------------------------------------------------------------
-# Surfaced by the grid; not this change's to fix
+# Surfaced by the grid
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.xfail(
-    reason='Pre-existing: stratified S with zero sufficient strata concatenates an empty '
-           'list and pandas raises. Verified present at a99a534, before any of this work.',
-    strict=True,
-)
 def test_stratified_S_with_no_sufficient_strata(df):
-    """A raw ``ValueError: No objects to concatenate`` reaches the analyst.
+    """Found by the grid above as a raw pandas ``ValueError: No objects to concatenate``.
 
     ADS 2 has no replication, so every stratum fails the subgroup-size check and the
-    stratified S path is left with nothing to concatenate. Whatever the right answer is
-    — an empty result or a self-diagnostic error — a pandas internal message is not it.
-    Flipping to a pass means someone fixed it; update this test then.
+    stratified S path had nothing to concatenate. Now a self-diagnostic library error.
+    Full coverage lives in tests/test_stratified_insufficiency.py; this keeps the case
+    that motivated it attached to where it was found.
     """
     study = pb.formulate(df, response='PM SDS 2', factors=FACTORS, time=TIME)
     assert study.analytical_design_state.sds == 2
-    with pytest.raises(ProcessBehaviorError):
+    with pytest.raises(ProcessBehaviorError, match='requires replicated observations'):
         study.execute(chart='S', by=[TIME])
 
 
