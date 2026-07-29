@@ -8,6 +8,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **``Study.supports_calibration(...)`` and ``CalibrationNotSupportedError``.** Whether a
+  calibration can be applied depended on a private rule, so clients re-derived it — and got
+  it wrong, because the rule is not the one you would guess: Xbar/S stratify on
+  ``by=[time]`` *only when charting the response*, so the same ``by`` is refused for the
+  response and accepted for a residual. The predicate takes the same arguments as
+  ``execute()`` (minus the calibration itself, which never affects the answer) and returns a
+  bool without running the analysis. The refusal is now a typed exception carrying a
+  ``context`` attribute rather than a message to string-match; it subclasses
+  ``ValidationError``, so existing handlers are unaffected.
+
 - **``pb.formulate(df, ...)`` — a module-level entry point**, so the advertised idiom is
   literally one expression:
 
@@ -33,6 +43,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   ``by=`` is unchanged and still accepts either meaning.
 
 ### Fixed
+- **The residual alias ``noise`` resolved to R5 — design-condition main effects — when the
+  word means R2 everywhere else in the project** ("within-cell noise", "the noise floor",
+  "irreducible noise (R2)"). The table contradicted itself, since it also mapped
+  ``within_cell`` to R2. ``noise`` now resolves to R2.
+
+- **Every multi-word residual alias was unreachable.** ``_parse_chart_request`` tested for an
+  underscore *before* consulting the alias table, so ``within_cell`` was handed to the
+  old-syntax parser, split into ``within`` + ``cell``, matched no base chart, and produced a
+  generic "Invalid chart name". Four of the five aliases could never produce their guidance
+  message. The alias check now runs first; old-syntax guidance is unchanged.
+
+- **Three residual vocabularies collapsed into one.** ``RESIDUAL_ALIASES`` carried its own
+  per-entry ``label``/``description`` — read by nothing, and drifted far enough to label R5
+  "Noise / Unexplained variation". The canonical names now live in
+  ``spc_constants.RESIDUAL_LABELS``, which the plotting layer re-exports rather than
+  redefines. Aliases cover R1–R6 (R6 was absent entirely); the unused
+  ``RESIDUAL_ID_TO_ALIAS`` reverse map is gone, since several spellings may share a code.
+
+- **Benchmark baselines were attributed to the wrong commit.** ``--update-baseline`` runs
+  before the commit containing the measured code exists, so the recorded ``git_sha`` always
+  named the *previous* commit. The run now also records ``git_dirty``, making the record
+  true — "this commit, plus uncommitted changes" — instead of naming a commit that does not
+  contain the code.
+
+- **README understated signal detection** as "Rule 1 (3-sigma)". X/mR evaluate all eight
+  Western Electric rules; Xbar/S evaluate Rule 1 alone, because the run- and zone-based
+  rules need a time order that subgroup comparisons do not have.
+
 - **Lane boundaries were malformed when a boundary fell on a duplicated index label.**
   ``_calculate_lane_boundaries`` mapped positions back through ``df.index.get_loc()``, which
   returns a boolean *mask* rather than an integer for a non-unique label — so the boundary

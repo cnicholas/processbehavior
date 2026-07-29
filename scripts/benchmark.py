@@ -173,21 +173,38 @@ def compare_to_baseline(results: list[dict], baseline: dict | None) -> list[str]
     return drift or [f"  no regressions beyond ±{REGRESS_TOL:.0%} vs baseline"]
 
 
-def _git_sha() -> str:
+def _git_state() -> tuple[str, bool]:
+    """(short sha of HEAD, whether the tree has uncommitted changes).
+
+    HEAD alone systematically mis-attributes a baseline. ``--update-baseline`` is run
+    *before* committing the code being measured, so HEAD names the previous commit —
+    every baseline ever recorded here was labelled one commit behind the work it
+    measured. Predicting the next sha is not possible, so record the honest pair
+    instead: this commit, plus a flag saying the tree had changes on top of it.
+    """
     try:
-        return subprocess.check_output(["git", "rev-parse", "--short", "HEAD"], cwd=ROOT, text=True).strip()
+        sha = subprocess.check_output(["git", "rev-parse", "--short", "HEAD"], cwd=ROOT, text=True).strip()
     except Exception:
-        return "unknown"
+        return "unknown", False
+    try:
+        dirty = bool(subprocess.check_output(["git", "status", "--porcelain"], cwd=ROOT, text=True).strip())
+    except Exception:
+        dirty = False
+    return sha, dirty
 
 
 def to_document(results: list[dict]) -> dict:
+    sha, dirty = _git_state()
     return {
         "meta": {
             "created": datetime.now(timezone.utc).isoformat(timespec="seconds"),
             "machine": platform.platform(),
             "processor": platform.processor() or platform.machine(),
             "python": platform.python_version(),
-            "git_sha": _git_sha(),
+            "git_sha": sha,
+            # True means the measured code is sha + uncommitted changes, which is the
+            # normal case when recording a baseline. See _git_state.
+            "git_dirty": dirty,
             "note": "Same-machine baseline; absolute times are hardware-specific.",
         },
         "results": {_key(r): {k: v for k, v in r.items() if k not in ("sds", "size", "op")} for r in results},

@@ -9,7 +9,8 @@ Exception Hierarchy
 ProcessBehaviorError (base)
 ├── ValidationError - Invalid input data, parameters, or configuration
 │   ├── ColumnNotFoundError - Required column missing from DataFrame
-│   └── FactorNotFoundError - Invalid factor/variable name specified
+│   ├── FactorNotFoundError - Invalid factor/variable name specified
+│   └── CalibrationNotSupportedError - Calibration not available on this chart path
 └── ChartNotAvailableError - Chart type invalid or unavailable for this SDS
 
 Examples
@@ -119,6 +120,39 @@ class FactorNotFoundError(ValidationError):
         self.factor = factor
         self.suggestion = suggestion
         self.available = available
+
+
+class CalibrationNotSupportedError(ValidationError):
+    """A calibration was supplied on a chart path that cannot apply it.
+
+    Calibration is applied on global and grouped (single-chart) Xbar/S/X/mR paths.
+    Stratified paths (one chart per stratum) and phased X/mR are a documented
+    follow-up, so a calibration passed to one of those is refused rather than
+    silently ignored.
+
+    Ask *before* executing with :meth:`Study.supports_calibration`, which answers
+    the same question without raising — preferable to catching this, and far
+    preferable to re-deriving the rule client-side.
+
+    Subclasses :class:`ValidationError`, so existing ``except ValidationError``
+    handlers are unaffected.
+
+    Attributes
+    ----------
+    context : str | None
+        The unsupported path, e.g. ``'stratified Xbar'`` or ``'phased X/mR'``.
+
+    Examples
+    --------
+    >>> if study.supports_calibration(chart='X', by=['Machine']):
+    ...     result = study.execute(chart='X', by=['Machine'], calibration=cal)
+    ... else:
+    ...     result = study.execute(chart='X', by=['Machine'])
+    """
+
+    def __init__(self, message: str, context: str | None = None):
+        super().__init__(message)
+        self.context = context
 
 
 class ChartNotAvailableError(ProcessBehaviorError):

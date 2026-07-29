@@ -37,7 +37,7 @@ import pandas as pd
 from .analysis_dataset import AnalysisDataSet
 from .analysis_result import AnalysisResult
 from .data_preparation import encode_rsg, encode_rsg_series
-from .exceptions import ChartNotAvailableError, ValidationError
+from .exceptions import CalibrationNotSupportedError, ChartNotAvailableError, ValidationError
 from .formulation_spec import ChartRequest, FormulationSpec
 from .spc_constants import (
     calculate_limits,
@@ -479,18 +479,76 @@ class Analysis:
     # Helper Methods (DRY principle)
     # =========================================================================
 
+    def _resolve_xmr_stratification(self) -> tuple[list[str], list[str]]:
+        """(stratify_by, collapsed_factors) for the X/mR path.
+
+        ``by`` means *stratify by* here, not *aggregate by* — the opposite half of
+        the dual semantics that :meth:`_resolve_by_grouping` implements for Xbar/S.
+
+        Single source of truth: both :meth:`_calculate_xmr` and
+        :meth:`calibration_rejection_reason` call this. Inlining it in either place
+        is how the two answers drift apart.
+        """
+        rsg_vars = self.spec.rsg_vars_list
+        by = list(self.request.by) if self.request.by is not None else None
+
+        if by is None:
+            # No `by` at all: one chart per factor combination.
+            return ([self.spec.rsg_var_name] if rsg_vars else []), []
+        if by == []:
+            # Explicit collapse: one chart, every factor folded into the sequence.
+            return [], list(rsg_vars)
+        return list(by), [v for v in rsg_vars if v not in by]
+
+    def calibration_rejection_reason(self) -> str | None:
+        """The path description a calibration would be refused for, or None if it applies.
+
+        Calibration is applied on global and grouped (single-chart) Xbar/S/X/mR paths.
+        Stratified paths and phased X/mR are a documented follow-up.
+
+        This is the predicate behind :meth:`Study.supports_calibration`. It asks the
+        same two resolvers the chart code asks — :meth:`_resolve_by_grouping` for
+        Xbar/S and :meth:`_resolve_xmr_stratification` for X/mR — rather than
+        restating when stratification happens, because that rule is not obvious:
+        Xbar/S stratify on ``by=[time]`` **only when charting the response**, so the
+        same ``by`` is refused for the response and accepted for a residual.
+        """
+        residual = self.request.residual
+        if residual:
+            chart_type = self.request.residual_chart_type or 'X'
+            value_col = f'{"RCR" if self.request.recentered else "R"}{residual[1:]}'
+        else:
+            chart_type = self.analysis_type
+            value_col = self.spec.response_var
+
+        if chart_type in ('Xbar', 'S'):
+            _, _, stratify_by = self._resolve_by_grouping(value_col)
+            return f'stratified {chart_type}' if stratify_by else None
+
+        if chart_type in ('X', 'mR'):
+            stratify_by, collapsed_factors = self._resolve_xmr_stratification()
+            if stratify_by:
+                return 'stratified X/mR'
+            if self.request.phased and collapsed_factors:
+                return 'phased X/mR'
+            return None
+
+        # Histogram and anything else limit-free: nothing for a calibration to change.
+        return None
+
     def _reject_calibration(self, context: str) -> None:
         """Raise if a calibration is set on a path that does not yet support it.
 
-        Calibration is currently applied to global and grouped (single-chart)
-        Xbar/S/X/mR paths. Stratified (separate-chart-per-combo) and phased
-        paths are a documented follow-up.
+        Called at the branch points that would otherwise silently ignore it. The
+        same rule, asked ahead of time, is :meth:`calibration_rejection_reason`.
         """
         if self.calibration is not None:
-            raise ValidationError(
+            raise CalibrationNotSupportedError(
                 f'calibration is not supported with {context} yet. '
                 'Apply a calibration to a non-stratified, non-phased chart '
-                '(e.g. study.execute(chart="X", by=[], calibration=cal)).'
+                '(e.g. study.execute(chart="X", by=[], calibration=cal)). '
+                'Ask first with study.supports_calibration(chart=..., by=...).',
+                context=context,
             )
 
     def _calibrated_row(self, limits_type: str, N: int | None = None) -> pd.Series:
@@ -1724,19 +1782,7 @@ class Analysis:
         logger.debug('In calculate statistics %s', mr_spec.chart_type)
 
         # --- Determine stratification (shared logic) ---
-        by = list(self.request.by) if self.request.by is not None else None
-        rsg_vars = spec.rsg_vars_list
-
-        if by is None:
-            stratify_by = [spec.rsg_var_name] if rsg_vars else []
-            collapsed_factors = []
-        elif by == []:
-            stratify_by = []
-            collapsed_factors = list(rsg_vars)
-        else:
-            stratify_by = list(by)
-            collapsed_factors = [v for v in rsg_vars if v not in by]
-
+        stratify_by, collapsed_factors = self._resolve_xmr_stratification()
         is_stratified = len(stratify_by) > 0
 
         # --- Resolve plot column ---

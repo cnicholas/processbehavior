@@ -70,6 +70,7 @@ from processbehavior.derivations import (
 
 # Exceptions
 from processbehavior.exceptions import (
+    CalibrationNotSupportedError,
     ChartNotAvailableError,
     ColumnNotFoundError,
     FactorNotFoundError,
@@ -118,6 +119,7 @@ __all__ = [
     'ColumnNotFoundError',
     'FactorNotFoundError',
     'ChartNotAvailableError',
+    'CalibrationNotSupportedError',
     # Plotting/theming
     'ChartTheme',
     'get_theme',

@@ -18,7 +18,7 @@ from plotly.subplots import make_subplots
 
 from ..data_preparation import encode_rsg, encode_rsg_series
 from ..exceptions import ChartNotAvailableError, ValidationError
-from ..spc_constants import normalize_chart_name
+from ..spc_constants import RESIDUAL_LABELS, normalize_chart_name
 from ..types import ChartPayload
 from .contracts import PlotError, build_render_context, build_render_spec
 from .control_chart import ControlChartFigure
@@ -49,16 +49,10 @@ _EFFECTS_CHART_TYPES = frozenset(
 # Readable names for the VAS residual codes, used by _generate_title. A missing key
 # falls back to the code itself and renders as "R6 (R6)", so every residual the library
 # can chart must appear here — see tests/test_residual_labels.py.
-_RESIDUAL_LABELS = {
-    # Bishop 13.1, "Centering the Original PM Data at 0": R1 = Y_ktn - Ybar.., the
-    # response re-expressed as +/- about zero. Not a within-subgroup quantity.
-    'R1': 'Response Centered at 0',
-    'R2': 'Within-Cell',
-    'R3': 'Interaction',
-    'R4': 'Time Main Effects',
-    'R5': 'Design Condition Main Effects',
-    'R6': 'Design Factor Main Effects',
-}
+#
+# Re-exported, not redefined: this used to be a second copy, and a third in
+# spc_constants.RESIDUAL_ALIASES drifted far enough to label R5 "Noise". One table now.
+_RESIDUAL_LABELS = RESIDUAL_LABELS
 
 
 class Plotter:
