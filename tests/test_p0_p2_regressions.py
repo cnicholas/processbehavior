@@ -6,7 +6,7 @@ Uses validation dataset per CLAUDE.md.
 import pandas as pd
 import pytest
 
-from processbehavior import ProcessBehavior, ValidationError
+from processbehavior import ProcessBehavior
 
 
 @pytest.fixture
@@ -43,22 +43,31 @@ class TestR6MutationSafety:
 
 
 class TestRChartResidualValidation:
-    """P2: chart='mR' with a residual value must raise ValidationError early."""
+    """chart='mR' with a residual value works, standalone or as a companion.
 
-    def test_r_chart_with_residual_raises_validation_error(self, sds1_study):
-        """execute(chart='mR', value='R3') must raise ValidationError."""
-        with pytest.raises(ValidationError, match='not supported for residual'):
-            sds1_study.execute(chart='mR', value='R3', by=[])
+    These three cases asserted the opposite until the restriction was lifted. The P2 fix in
+    ``bb9f68e`` was aimed at a *late unhelpful error* — the real defect was a missing
+    ``'mR'`` entry in ``_RESIDUAL_SOLO_STRATEGY_MAP``, which failed deep inside
+    ``Analysis.calculate()``. The guard made that failure fail *nicely* rather than making
+    it work. Adding the dispatch entry produces output identical to the companion path
+    (see tests/test_solo_mr_residuals.py), so the guard is gone and these now assert the
+    working behaviour. The early-error goal of the original fix is unaffected: genuinely
+    invalid pairs still raise in validation, via ``_residual_pair_problem``.
+    """
 
-    def test_r_chart_with_r5_raises_validation_error(self, sds1_study):
-        """execute(chart='mR', value='R5') must raise ValidationError."""
-        with pytest.raises(ValidationError, match='not supported for residual'):
-            sds1_study.execute(chart='mR', value='R5', by=[])
+    def test_r_chart_with_residual_works(self, sds1_study):
+        """execute(chart='mR', value='R3') returns a standalone moving-range chart."""
+        result = sds1_study.execute(chart='mR', value='R3', by=[])
+        assert list(result.charts) == ['mR']
 
-    def test_r_chart_with_residual_no_companion_still_raises(self, sds1_study):
-        """execute(chart='mR', value='R3', companion=False) must still raise."""
-        with pytest.raises(ValidationError, match='not supported for residual'):
-            sds1_study.execute(chart='mR', value='R3', by=[], companion=False)
+    def test_r_chart_with_r5_works(self, sds1_study):
+        result = sds1_study.execute(chart='mR', value='R5', by=[])
+        assert list(result.charts) == ['mR']
+
+    def test_r_chart_with_residual_no_companion_returns_only_mr(self, sds1_study):
+        """companion=False means the X chart is not included — not that it fails."""
+        result = sds1_study.execute(chart='mR', value='R3', by=[], companion=False)
+        assert list(result.charts) == ['mR']
 
     def test_r_chart_with_residual_companion_works(self, sds1_study):
         """execute(chart='mR', value='R3', companion=True) returns both X and mR."""

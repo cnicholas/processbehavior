@@ -1482,8 +1482,8 @@ class Study:
                 return problem
             if chart == 'mR':
                 return (
-                    f'{label} IS available as a companion chart. '
-                    f"Use study.execute(chart='mR', value='{value}', companion=True)."
+                    f'{label} IS available. Is the moving range of {value} stable? '
+                    f"Add companion=True to get the X chart alongside it."
                 )
             from .sds_detector import SDSAnalysisPlan
 
@@ -2232,14 +2232,6 @@ class Study:
                     available=valid_for_value,
                 )
 
-        if is_residual and base_chart == 'mR' and not companion:
-            raise ValidationError(
-                f"Chart type 'mR' (moving range) is not supported for residual charts.\n"
-                f'Residual charts support: Xbar, S, X, Histogram.\n'
-                f"Use: study.execute(chart='X', value='{value}') or "
-                f"study.execute(chart='mR', value='{value}', companion=True)"
-            )
-
         return by_validated, value_col, is_residual
 
     def _residual_pair_problem(self, base_chart: str, value: str) -> str | None:
@@ -2251,9 +2243,14 @@ class Study:
         Three regimes:
 
         - ``Histogram`` — accepts any residual (it plots a distribution, not a control chart).
-        - ``mR`` — accepts any residual, but only as a companion; the ``companion=True``
-          requirement is enforced separately by the caller.
+        - ``mR`` — accepts any residual, standalone or as a companion. A moving range is
+          computed from consecutive values of whatever series is charted, so it is defined
+          for a residual exactly as it is for the response.
         - ``Xbar`` / ``S`` / ``X`` — governed by :attr:`residual_charts`, which varies by ADS.
+
+        Neither ``Histogram`` nor ``mR`` appears in :attr:`residual_charts`, so that
+        attribute is *not* the whole rule — a caller testing ``(chart, value) in
+        residual_charts`` alone will wrongly reject both.
         """
         base_residual = _base_residual_code(value)
 
