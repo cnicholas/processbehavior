@@ -164,7 +164,7 @@ The full report renders to `validation/e2e_bishop_report.html`.
 - **Variance decomposition**: R1-R6 residuals for factorial designs
 - **Effects analysis**: Main effects, time effects, and interaction effects
 - **Stratified charts**: Automatic per-stratum limits for grouped individual data
-- **Signal detection**: Rule 1 (3-sigma) point classification
+- **Signal detection**: all eight Western Electric rules on X/mR; Rule 1 (3-sigma) on Xbar/S, where the run- and zone-based rules need a time order that subgroup comparisons don't have
 - **IDE support**: Column auto-completion via `pb.cols`
 - **Self-diagnostic errors**: Helpful messages that say what's available and how to fix it
 - **Excel export**: Publication-ready workbooks with charts and statistics

@@ -28,7 +28,13 @@ from typing import TYPE_CHECKING, Literal
 
 from .exceptions import ChartNotAvailableError, FactorNotFoundError, ValidationError
 from .sds_detector import SDSRegistry
-from .spc_constants import ALL_RESIDUALS, RESIDUAL_ALIASES, VALID_BASE_CHARTS, normalize_chart_name
+from .spc_constants import (
+    ALL_RESIDUALS,
+    RESIDUAL_ALIASES,
+    RESIDUAL_LABELS,
+    VALID_BASE_CHARTS,
+    normalize_chart_name,
+)
 
 if TYPE_CHECKING:
     import pandas as pd
@@ -1973,6 +1979,97 @@ class Study:
         analysis = Analysis(self._spec, request, analysis_dataset=self._ads)
         return analysis.calculate()
 
+    def supports_calibration(
+        self,
+        chart: Literal['Histogram', 'Xbar', 'S', 'X', 'mR'] | str | None = None,
+        by: list[str] | None = None,
+        value: Literal['response', 'R1', 'R2', 'R3', 'R4', 'R5', 'R6'] | str | None = None,
+        recentered: bool = False,
+        bins: int | None = None,
+        companion: bool = False,
+        phased: bool = False,
+        n_sigma: float = 3.0,
+        n_mode: Literal['actual', 'average'] = 'actual',
+        stratify_by: list[str] | None = None,
+    ) -> bool:
+        """Would ``execute(..., calibration=cal)`` apply the calibration, or refuse it?
+
+        Takes the same arguments as :meth:`execute` (minus ``calibration`` itself —
+        the answer depends on the chart path, not on which calibration) and answers
+        without running the analysis, so a caller can enable a control or pick a
+        code path before committing to the work.
+
+        **Use this instead of re-deriving the rule.** It is not the one-liner it
+        looks like. Xbar/S stratify on ``by=[time]`` *only when charting the
+        response*, so the same ``by`` is refused for the response and accepted for a
+        residual; X/mR stratify whenever ``by`` is non-empty **or absent**, and
+        ``by=[]`` is the collapsed case that phasing then rules out. A hand-written
+        copy of this predicate is wrong on the first of those rows.
+
+        Returns
+        -------
+        bool
+            True if a calibration would be applied; False if
+            :class:`~processbehavior.exceptions.CalibrationNotSupportedError`
+            would be raised.
+
+        Raises
+        ------
+        ValidationError, ChartNotAvailableError
+            If the request is not executable at all. The question "can this be
+            calibrated?" has no answer for a chart that cannot be produced, so it
+            fails the same way :meth:`execute` would rather than returning False.
+
+        Examples
+        --------
+        >>> study.supports_calibration(chart='X', by=[])
+        True
+        >>> study.supports_calibration(chart='X', by=['Machine'])
+        False
+
+        See Also
+        --------
+        execute : Runs the analysis; raises when a calibration cannot be applied.
+        """
+        if stratify_by is not None:
+            if by is not None:
+                raise ValidationError(
+                    "Pass either 'by' or 'stratify_by', not both — they set the same "
+                    'parameter.'
+                )
+            by = stratify_by
+
+        from .analysis import Analysis
+        from .formulation_spec import ChartRequest
+
+        base_chart = self._resolve_execute_chart(chart)
+        by_validated, value_col, is_residual = self._validate_execute_request(
+            base_chart=base_chart,
+            by=by,
+            value=value,
+            recentered=recentered,
+            companion=companion,
+            bins=bins,
+            phased=phased,
+            n_sigma=n_sigma,
+            n_mode=n_mode,
+        )
+        request = ChartRequest(
+            chart=base_chart,
+            by=tuple(by_validated) if by_validated is not None else None,
+            value_col=value_col,
+            residual=value.upper() if is_residual else None,
+            residual_chart_type=base_chart if is_residual else None,
+            recentered=recentered,
+            companion=companion,
+            bins=bins,
+            phased=phased,
+            n_sigma=n_sigma,
+            n_mode=n_mode,
+        )
+        analysis = Analysis(self._spec, request, analysis_dataset=self._ads)
+        return analysis.calibration_rejection_reason() is None
+
     def _resolve_calibration(self, calibration: Calibration | str | None) -> Calibration | None:
         """Resolve a calibration argument to a Calibration object (or None).
 
@@ -2276,12 +2373,7 @@ class Study:
         if chart in VALID_BASE_CHARTS:
             return chart
 
-        # Detect old residual chart syntax and provide migration guidance
-        if '_' in chart:
-            # Old syntax: R5_Xbar, noise_Xbar, rc_R5_Xbar, RCR5_Xbar
-            self._raise_old_syntax_error(chart)
-
-        # R1-R5 without base chart
+        # R1-R6 without base chart
         if re.match(r'^R\d+$', chart) or re.match(r'^RCR\d+$', chart):
             raise ValidationError(
                 f"'{chart}' is a residual identifier, not a chart type.\n"
@@ -2289,14 +2381,26 @@ class Study:
                 f"Or: study.execute(chart='X', value='{chart}')"
             )
 
-        # Alias without base chart
+        # Alias without base chart.
+        #
+        # Must precede the old-syntax branch below. Every alias but 'noise' contains an
+        # underscore, so testing '_' first sent them all to _raise_old_syntax_error,
+        # which finds no base chart in the trailing word ('within_cell' -> 'cell') and
+        # falls through to the generic "Invalid chart name". Four of the five original
+        # aliases could never produce this message.
         if chart in RESIDUAL_ALIASES:
-            residual_id = RESIDUAL_ALIASES[chart]['id']
+            residual_id = RESIDUAL_ALIASES[chart]
             raise ValidationError(
-                f"'{chart}' is a residual alias for {residual_id}, not a chart type.\n"
+                f"'{chart}' is a residual alias for {residual_id} "
+                f'({RESIDUAL_LABELS[residual_id]}), not a chart type.\n'
                 f"Use: study.execute(chart='Xbar', value='{residual_id}')\n"
                 f"Or: study.execute(chart='X', value='{residual_id}')"
             )
+
+        # Detect old residual chart syntax and provide migration guidance
+        if '_' in chart:
+            # Old syntax: R5_Xbar, noise_Xbar, rc_R5_Xbar, RCR5_Xbar
+            self._raise_old_syntax_error(chart)
 
         raise ValidationError(f"Unknown chart '{chart}'. Valid chart types: {', '.join(sorted(VALID_BASE_CHARTS))}")
 
@@ -2320,7 +2424,7 @@ class Study:
             elif residual_part.startswith('R') and residual_part[1:].isdigit():
                 residual_id = residual_part
             elif residual_part in RESIDUAL_ALIASES:
-                residual_id = RESIDUAL_ALIASES[residual_part]['id']
+                residual_id = RESIDUAL_ALIASES[residual_part]
             else:
                 residual_id = residual_part
 

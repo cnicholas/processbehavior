@@ -618,23 +618,40 @@ def normalize_chart_name(name: str) -> str:
     return name
 
 
-# Human-readable residual aliases
-# Maps alias -> {id, label, description}
-RESIDUAL_ALIASES = {
-    'mean_removed': {'id': 'R1', 'label': 'Mean Removed', 'description': 'Residual after removing grand mean'},
-    'within_cell': {'id': 'R2', 'label': 'Within Cell', 'description': 'Within-cell variation (per VAS definition)'},
-    'structure_removed': {
-        'id': 'R3',
-        'label': 'Structure Removed',
-        'description': 'Residual after removing factor structure',
-    },
-    'time_structure_removed': {
-        'id': 'R4',
-        'label': 'Time Structure Removed',
-        'description': 'Residual after removing time structure',
-    },
-    'noise': {'id': 'R5', 'label': 'Noise', 'description': 'Unexplained variation'},
+# The one place a residual gets a human name. Chart titles (plotting.plotter),
+# error messages, and docs all read from here — a second copy is how R5 came to be
+# labelled "Noise / Unexplained variation", which is R2's meaning, in a table that
+# also mapped `within_cell` to R2 and so contradicted itself.
+RESIDUAL_LABELS: dict[str, str] = {
+    # Bishop 13.1, "Centering the Original PM Data at 0": R1 = Y_ktn - Ybar.., the
+    # response re-expressed as +/- about zero. Not a within-subgroup quantity.
+    'R1': 'Response Centered at 0',
+    'R2': 'Within-Cell',
+    'R3': 'Interaction',
+    'R4': 'Time Main Effects',
+    'R5': 'Design Condition Main Effects',
+    'R6': 'Design Factor Main Effects',
 }
 
-# Reverse lookup: "R5" -> "noise"
-RESIDUAL_ID_TO_ALIAS = {v['id']: k for k, v in RESIDUAL_ALIASES.items()}
+# Spellings accepted in place of a residual code, purely so an error message can say
+# "'noise' means R2" instead of "unknown chart". Several spellings may share a code;
+# there is deliberately no reverse map, because "the" alias for a code is not defined.
+#
+# `noise` maps to **R2**. It previously mapped to R5 — design-condition main effects —
+# which is the opposite of what the word means here and of how every doc uses it
+# ("within-cell noise", "the noise floor", "irreducible noise (R2)"). Nothing outside
+# this file consumed the mapping's labels, so the wrong answer was only ever visible
+# to someone reading the source, or to a user who typed `noise` and was pointed at
+# factor effects.
+RESIDUAL_ALIASES: dict[str, str] = {
+    'response_centered': 'R1',
+    'mean_removed': 'R1',
+    'within_cell': 'R2',
+    'noise': 'R2',
+    'interaction': 'R3',
+    'structure_removed': 'R3',
+    'time_main_effects': 'R4',
+    'time_structure_removed': 'R4',
+    'design_condition_main_effects': 'R5',
+    'design_factor_main_effects': 'R6',
+}

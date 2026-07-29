@@ -143,9 +143,14 @@ class TestAliasWithoutChart:
             study._parse_chart_request('noise')
 
     def test_within_cell_without_chart(self, study):
-        """Bare 'within_cell' has underscore so triggers old syntax error path."""
-        # within_cell has an underscore, so it looks like old syntax
-        with pytest.raises(ValidationError, match='no longer supported|Invalid chart'):
+        """Bare 'within_cell' gets the same alias guidance as any other alias.
+
+        This test used to assert the opposite — that the underscore diverted it to the
+        old-syntax path and produced 'Invalid chart name'. That was the bug written
+        down as an expectation: the alias check now runs before the underscore split,
+        so every alias in the table is reachable. See tests/test_residual_aliases.py.
+        """
+        with pytest.raises(ValidationError, match='residual alias'):
             study._parse_chart_request('within_cell')
 
 
