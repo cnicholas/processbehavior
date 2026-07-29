@@ -43,6 +43,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   ``by=`` is unchanged and still accepts either meaning.
 
 ### Fixed
+- **A moving-range chart of residuals now works standalone**, not only as a companion.
+  ``execute(chart='mR', value='R2')`` raised *"Chart type 'mR' (moving range) is not
+  supported for residual charts"* while ``execute(chart='mR', value='R2', companion=True)``
+  returned exactly the chart it called unsupported. A moving range is the absolute
+  difference between consecutive values of whatever series is plotted, so it is as well
+  defined for a residual as for the response.
+
+  The cause was a missing ``'mR'`` entry in ``_RESIDUAL_SOLO_STRATEGY_MAP`` — present in
+  ``_SOLO_STRATEGY_MAP``, and under a comment claiming the two tables held the same
+  entries. That omission failed late and confusingly, and the response to it had been to
+  add an early guard with a friendlier message rather than to add the entry. Both are gone:
+  the dispatch entry is restored and the guard deleted. Output is byte-identical to what
+  the companion path already produced for R1–R5 and their recentered forms.
+
+  ``why_not('mR', value)`` had always answered "IS available", disagreeing with
+  ``execute``; the two now agree. ``residual_charts`` still lists no ``mR`` (or
+  ``Histogram``) entries — neither chart is ADS-gated — so it remains an incomplete basis
+  for "can this pair be charted"; ``_residual_pair_problem`` documents all three regimes.
+
 - **Stratified Xbar/S mishandled strata with no replication**, three ways from one cause.
   A stratum whose every subgroup holds a single observation cannot contribute to a
   subgroup chart; both paths dropped it from the data and statistics but still published

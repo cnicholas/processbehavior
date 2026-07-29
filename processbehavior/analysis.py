@@ -305,9 +305,9 @@ _SOLO_STRATEGY_MAP: dict[str, str] = {
 }
 
 # Residual charts call the companion-style methods (Xbar_S / Xmr_R)
-# when companion=True, the solo methods otherwise. Only Histogram
-# differs from _SOLO_STRATEGY_MAP — residual context uses the same
-# four base entry points.
+# when companion=True, the solo methods otherwise. Both tables mirror their
+# response-chart counterparts entry for entry — residual context uses the same
+# five base entry points.
 _RESIDUAL_COMPANION_STRATEGY_MAP: dict[str, str] = {
     'Xbar': '_calculate_xbar_s',
     'S': '_calculate_xbar_s',
@@ -320,6 +320,10 @@ _RESIDUAL_SOLO_STRATEGY_MAP: dict[str, str] = {
     'Xbar': '_calculate_xbar',
     'S': '_calculate_s',
     'X': '_calculate_xmr',
+    # 'mR' was missing here while _SOLO_STRATEGY_MAP had it, so a standalone
+    # moving-range chart of residuals was unreachable even though the companion
+    # path computed exactly that. See tests/test_solo_mr_residuals.py.
+    'mR': '_calculate_r',
     'Histogram': '_calculate_histogram',
 }
 
