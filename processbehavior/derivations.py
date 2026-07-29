@@ -482,7 +482,20 @@ def _evaluate_bin(spec: Derivation, col: pd.Series) -> EvalResult:
         )
 
     labels, label_msg = _bin_label_names(params.get('bin_labels', 'range'), edges, right)
-    cats = pd.cut(x, bins=edges, right=right, labels=labels, include_lowest=True, ordered=True)
+
+    # Close the top edge so the maximum lands in a bin — which is what _range_labels already
+    # promises by rendering the final interval with a closed bracket. `include_lowest` is
+    # pandas' equivalent for the *bottom* edge and covers right=True; nothing covered the
+    # top, so under right=False (the default) every observation equal to the maximum binned
+    # to NaN and silently left the analysis. Only right=False needs this: the minimum was
+    # always included, by include_lowest for right=True and by the half-open interval
+    # otherwise. nextafter is the minimal correct widening — no epsilon to tune. `edges`
+    # itself is untouched, so fitted['edges'] and the labels keep the true cut points.
+    cut_edges = list(edges)
+    if not right and math.isfinite(cut_edges[-1]):
+        cut_edges[-1] = float(np.nextafter(cut_edges[-1], math.inf))
+
+    cats = pd.cut(x, bins=cut_edges, right=right, labels=labels, include_lowest=True, ordered=True)
     values = pd.Series(cats, index=x.index)
 
     fitted = {

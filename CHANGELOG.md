@@ -43,6 +43,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   ``by=`` is unchanged and still accepts either meaning.
 
 ### Fixed
+- **Binning silently dropped every observation equal to the column maximum.** With
+  ``right=False`` — the default — ``pd.cut`` leaves the top edge exclusive, and pandas'
+  ``include_lowest`` only closes the *bottom* one. So the maximum, and every value tied with
+  it, came back with no category. A row whose category is missing leaves the analysis
+  entirely once the binned column is used as a factor.
+
+  It was silent in the worst way: ``_range_labels`` renders that final interval with a
+  closed bracket (``[239.03, 243.225]``), under a comment saying the rendering exists "so
+  the extreme value is included". The label promised what the binning did not deliver.
+
+  Affected ``equal_freq`` and ``equal_width``, whose edges are fitted from the data so an
+  edge coincides with an observation. ``sd`` and ``breaks`` bound with ±inf and were never
+  affected, nor was any ``right=True`` binning. The fix widens only the edge passed to
+  ``pd.cut``, by one float step — ``fitted['edges']`` and the range labels still report the
+  true quantile / linspace cut points.
+
 - **A moving-range chart of residuals now works standalone**, not only as a companion.
   ``execute(chart='mR', value='R2')`` raised *"Chart type 'mR' (moving range) is not
   supported for residual charts"* while ``execute(chart='mR', value='R2', companion=True)``
