@@ -6,12 +6,13 @@ is properly cleaned and handled gracefully, including financial/monetary
 formatted strings (currency symbols, thousands separators, accounting negatives).
 """
 
+import warnings
 from pathlib import Path
 
 import pandas as pd
 import pytest
 
-from processbehavior import ProcessBehavior
+from processbehavior import ProcessBehavior, ProcessBehaviorWarning
 
 
 class TestDefaultGarbageCharacterHandling:
@@ -158,39 +159,51 @@ class TestDataIntegrity:
 
 
 class TestWarningMessages:
-    """Test that appropriate warnings are logged."""
+    """Cleaning reports reach the user as filterable warnings.
 
-    def test_warning_logged_when_garbage_found(self, caplog):
-        """Test that a warning is logged when garbage characters are found."""
+    These were `logger.warning` calls, but the library installs no logging
+    handler, so they were invisible in an ordinary session and could not be
+    silenced or escalated by callers. They are now
+    `ProcessBehaviorWarning`, which `warnings.simplefilter` controls.
+    """
+
+    def test_warning_raised_when_garbage_found(self):
         df = pd.DataFrame({'TIME': [1, 2, 3], 'Y': [235.5, '*', 237.2]})
 
-        with caplog.at_level('WARNING'):
+        with pytest.warns(ProcessBehaviorWarning) as record:
             ProcessBehavior(df)
 
-        # Should have warning about garbage values
-        assert 'garbage/NA values' in caplog.text
-        assert 'Y' in caplog.text
+        text = '\n'.join(str(w.message) for w in record)
+        assert 'garbage/NA values' in text
+        assert 'Y' in text
 
-    def test_warning_shows_column_counts(self, caplog):
-        """Test that warning shows how many values per column."""
+    def test_warning_shows_column_counts(self):
         df = pd.DataFrame({'TIME': [1, 2, 3, 4], 'Y': [235.5, '*', '?', 237.2], 'FACTOR': ['A', '--', 'C', 'D']})
 
-        with caplog.at_level('WARNING'):
+        with pytest.warns(ProcessBehaviorWarning) as record:
             ProcessBehavior(df)
 
-        # Should show counts for both columns
-        assert 'Y: 2 values' in caplog.text
-        assert 'FACTOR: 1 values' in caplog.text
+        text = '\n'.join(str(w.message) for w in record)
+        assert 'Y: 2 values' in text
+        assert 'FACTOR: 1 values' in text
 
-    def test_no_warning_when_no_garbage(self, caplog):
-        """Test that no warning is logged for clean data."""
+    def test_no_warning_when_no_garbage(self, recwarn):
         df = pd.DataFrame({'TIME': [1, 2, 3, 4], 'Y': [235.5, 237.2, 239.1, 236.8]})
 
-        with caplog.at_level('WARNING'):
+        ProcessBehavior(df)
+
+        text = '\n'.join(str(w.message) for w in recwarn)
+        assert 'garbage/NA values' not in text
+
+    def test_warning_is_filterable(self):
+        """The point of the category: callers can silence it."""
+        df = pd.DataFrame({'TIME': [1, 2, 3], 'Y': [235.5, '*', 237.2]})
+
+        with warnings.catch_warnings(record=True) as record:
+            warnings.simplefilter('ignore', ProcessBehaviorWarning)
             ProcessBehavior(df)
 
-        # Should not have warning
-        assert 'garbage/NA values' not in caplog.text
+        assert not [w for w in record if issubclass(w.category, ProcessBehaviorWarning)]
 
 
 class TestIntegrationWithAnalysis:
@@ -363,25 +376,27 @@ class TestNumericStringWithGarbageChars:
 class TestNumericStringWarnings:
     """Test warning messages for numeric string cleaning."""
 
-    def test_warning_logged_when_monetary_cleaned(self, caplog):
+    def test_warning_raised_when_monetary_cleaned(self):
         df = pd.DataFrame({'Y': ['$1.50', '$2.00', '$3.50']})
-        with caplog.at_level('WARNING'):
+        with pytest.warns(ProcessBehaviorWarning) as record:
             ProcessBehavior(df)
-        assert 'Cleaned numeric formatting' in caplog.text
-        assert 'Y' in caplog.text
+        text = '\n'.join(str(w.message) for w in record)
+        assert 'Cleaned numeric formatting' in text
+        assert 'Y' in text
 
-    def test_no_warning_when_no_monetary(self, caplog):
+    def test_no_warning_when_no_monetary(self, recwarn):
         df = pd.DataFrame({'Y': [1.0, 2.0, 3.0]})
-        with caplog.at_level('WARNING'):
-            ProcessBehavior(df)
-        assert 'Cleaned numeric formatting' not in caplog.text
+        ProcessBehavior(df)
+        text = '\n'.join(str(w.message) for w in recwarn)
+        assert 'Cleaned numeric formatting' not in text
 
-    def test_warning_shows_column_names(self, caplog):
+    def test_warning_shows_column_names(self):
         df = pd.DataFrame({'REVENUE': ['$100', '$200'], 'COST': ['$50', '$75']})
-        with caplog.at_level('WARNING'):
+        with pytest.warns(ProcessBehaviorWarning) as record:
             ProcessBehavior(df)
-        assert 'REVENUE' in caplog.text
-        assert 'COST' in caplog.text
+        text = '\n'.join(str(w.message) for w in record)
+        assert 'REVENUE' in text
+        assert 'COST' in text
 
 
 class TestGrossRevenueDatabase:

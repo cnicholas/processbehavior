@@ -16,6 +16,7 @@ from typing import TYPE_CHECKING
 
 import pandas as pd
 
+from .data_preparation import encode_rsg_series
 from .exceptions import ChartNotAvailableError
 
 if TYPE_CHECKING:
@@ -198,7 +199,12 @@ def _join_n_column(result: AnalysisResult, chart_data: pd.DataFrame) -> pd.DataF
     if spec.has_time and spec.time_var in ads.columns and spec.time_var in chart_data.columns:
         kt_cols.append(spec.time_var)
     if not kt_cols:
-        return chart_data
+        # Xbar/S identify a subgroup with a single composite "group" column
+        # (rsg and time already joined, e.g. 'F1_1_F2_1_3') rather than the
+        # separate key columns X/mR carry. Rebuild the same composite on the
+        # ads side and join on that — otherwise `n` silently never lands on
+        # exactly the charts whose limits vary with it.
+        return _join_n_on_composite_group(ads, spec, chart_data)
 
     n_per_kt = ads.groupby(kt_cols, observed=True)["n"].first().reset_index()
 
@@ -211,6 +217,37 @@ def _join_n_column(result: AnalysisResult, chart_data: pd.DataFrame) -> pd.DataF
 
     with contextlib.suppress(ValueError, TypeError):
         chart_data = chart_data.merge(n_per_kt, on=kt_cols, how="left")
+    return chart_data
+
+
+def _join_n_on_composite_group(ads: pd.DataFrame, spec, chart_data: pd.DataFrame) -> pd.DataFrame:
+    """Merge `n` onto a chart keyed by a single composite subgroup column.
+
+    Xbar/S label each subgroup with the encoded (rsg, time) cell — the same
+    encoding :func:`encode_rsg_series` produces — so the join key is rebuilt
+    rather than matched column-by-column. Returns `chart_data` unchanged if
+    the composite cannot be formed or does not match.
+    """
+    if "group" not in chart_data.columns:
+        return chart_data
+
+    key_cols = [c for c in (spec.rsg_var_name, spec.time_var) if c and c in ads.columns]
+    if len(key_cols) < 2:
+        return chart_data
+
+    n_per_cell = ads.groupby(key_cols, observed=True)["n"].first().reset_index()
+    n_per_cell["group"] = encode_rsg_series(n_per_cell, key_cols)
+    n_per_cell = n_per_cell[["group", "n"]]
+
+    chart_data = chart_data.copy()
+    chart_data["group"] = chart_data["group"].astype(str)
+
+    with contextlib.suppress(ValueError, TypeError):
+        merged = chart_data.merge(n_per_cell, on="group", how="left")
+        # Only adopt the merge if it actually matched; a delimiter collision
+        # would otherwise replace a missing column with a column of NaN.
+        if merged["n"].notna().any():
+            return merged
     return chart_data
 
 
@@ -231,9 +268,15 @@ def _output_column_plan(
         output_cols.append("obs_id")
         renames["obs_id"] = "Obs"
 
-    if "rsg" in chart_data.columns:
-        output_cols.append("rsg")
-        renames["rsg"] = "subgroup"
+    # The subgroup identifier is "rsg" on X/mR charts but "group" on Xbar/S.
+    # Only "rsg" was recognised, so chart_table('Xbar') silently dropped the
+    # subgroup column (and "n" with it) that its own docstring promises.
+    subgroup_col = next(
+        (col for col in ("rsg", "group") if col in chart_data.columns), None
+    )
+    if subgroup_col:
+        output_cols.append(subgroup_col)
+        renames[subgroup_col] = "subgroup"
 
     if "n" in chart_data.columns:
         output_cols.append("n")

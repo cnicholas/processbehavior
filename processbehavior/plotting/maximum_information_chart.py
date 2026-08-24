@@ -10,6 +10,8 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import plotly.graph_objects as go
+
+from ..exceptions import ValidationError
 from plotly.subplots import make_subplots
 
 if TYPE_CHECKING:
@@ -52,7 +54,7 @@ def create_maximum_information_chart(
     go.Figure
     """
     if view not in ('combined', 'xmr', 'histogram'):
-        raise ValueError(f"view must be 'combined', 'xmr', or 'histogram', got {view!r}")
+        raise ValidationError(f"view must be 'combined', 'xmr', or 'histogram', got {view!r}")
 
     if theme is None or isinstance(theme, str):
         from .themes import get_theme

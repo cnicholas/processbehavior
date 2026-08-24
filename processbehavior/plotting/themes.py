@@ -10,6 +10,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
+from ..exceptions import ValidationError
+
 if TYPE_CHECKING:
     import plotly.graph_objects as go
 
@@ -471,7 +473,7 @@ def get_theme(name: str) -> ChartTheme:
 
     if name not in _THEME_REGISTRY:
         available = list(_THEME_REGISTRY.keys())
-        raise ValueError(f"Unknown theme: '{name}'.\nAvailable themes: {available}")
+        raise ValidationError(f"Unknown theme: '{name}'.\nAvailable themes: {available}")
 
     # Return a copy so modifications don't affect the registry
     import copy

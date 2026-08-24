@@ -72,6 +72,19 @@ class _MRChartSpec:
     lane_boundary_offset: int  # 0 for X, -1 for mR
 
 
+def _mr_family_subgroup_n(chart_type: str) -> int:
+    """Subgroup size to report in an MR-family chart's statistics dict.
+
+    An X chart plots one observation per point; an mR chart plots the range of
+    a two-observation moving window. Reporting these keeps ``statistics['N']``
+    meaning the same thing — subgroup size — on every chart family, which is
+    what ``get_statistics`` documents. The X/mR paths used to omit the key
+    entirely, so code written against the documented four-key contract raised
+    ``KeyError`` on exactly the charts where it was promised.
+    """
+    return 2 if chart_type == 'mR' else 1
+
+
 _XMR_SPEC = _MRChartSpec(
     chart_type='X',
     limits_type='XmR',
@@ -1993,6 +2006,7 @@ class Analysis:
         for stratum in strata:
             row = r_grouped[r_grouped[stratify_col] == stratum].iloc[0]
             chart_statistics[stratum] = {
+                'N': _mr_family_subgroup_n(mr_spec.chart_type),
                 'center': round(row['center'], spec.round_to),
                 'lpl': round(row[r_lpl_col], spec.round_to),
                 'upl': round(row[r_upl_col], spec.round_to),
@@ -2280,6 +2294,7 @@ class Analysis:
         for stratum in strata:
             row = grouped[grouped[stratify_col] == stratum].iloc[0]
             chart_statistics[stratum] = {
+                'N': _mr_family_subgroup_n(mr_spec.chart_type),
                 'center': round(row['center'], spec.round_to),
                 'lpl': round(row['lpl'], spec.round_to),
                 'upl': round(row['upl'], spec.round_to),
@@ -2437,6 +2452,7 @@ class Analysis:
             )
 
             chart_statistics = {
+                'N': _mr_family_subgroup_n(mr_spec.chart_type),
                 'center': round(center_r, spec.round_to),
                 'lpl': round(r_lims['lpl'], spec.round_to),
                 'upl': round(r_lims['upl'], spec.round_to),
@@ -2623,6 +2639,7 @@ class Analysis:
         )
 
         chart_statistics = {
+            'N': _mr_family_subgroup_n(mr_spec.chart_type),
             'center': round(center_val, spec.round_to),
             'lpl': round(lims['lpl'], spec.round_to),
             'upl': round(lims['upl'], spec.round_to),

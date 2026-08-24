@@ -100,7 +100,7 @@ def create_capability_chart(
 
     # --- Validation ---
     if view not in ('current', 'potential'):
-        raise ValueError(f"view must be 'current' or 'potential', got {view!r}")
+        raise ValidationError(f"view must be 'current' or 'potential', got {view!r}")
 
     if view == 'potential' and cap.sigma_hat_r2 is None:
         raise ValidationError(f'Cannot plot potential capability: {cap.potential_unavailable_reason}')

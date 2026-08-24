@@ -27,6 +27,7 @@ function when it is an instance method.
 from __future__ import annotations
 
 import logging
+import warnings
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
@@ -35,7 +36,7 @@ import pandas as pd
 from .derivations import Derivation
 from .derivations import evaluate as _evaluate_derivation
 from .derivations import validate as _validate_derivation
-from .exceptions import ColumnNotFoundError, ValidationError
+from .exceptions import ColumnNotFoundError, ProcessBehaviorWarning, ValidationError
 from .formulation_spec import FormulationSpec
 from .sds_detector import SDSRegistry, SDSResult
 
@@ -560,13 +561,18 @@ class ProcessBehavior:
                     # Keep as-is if conversion fails (likely string data)
                     pass
 
-        # Warn user if we found and cleaned garbage characters
+        # Tell the user what we changed on their behalf. This is a warning, not
+        # a log record: the library configures no logging handler, so a
+        # logger.warning here was invisible in most sessions and could not be
+        # filtered or escalated by callers.
         if columns_with_na:
             total_na = sum(na_counts.values())
-            logger.warning(
+            warnings.warn(
                 f'Found {total_na} garbage/NA values across {len(columns_with_na)} column(s):\n'
                 + '\n'.join([f'  • {col}: {count} values' for col, count in na_counts.items()])
-                + '\n\nThese values were converted to NA and will be excluded from analysis.'
+                + '\n\nThese values were converted to NA and will be excluded from analysis.',
+                ProcessBehaviorWarning,
+                stacklevel=3,
             )
 
         # Phase 2: Clean numeric formatting (currency symbols, thousands
@@ -579,11 +585,13 @@ class ProcessBehavior:
                 cleaned_df[col] = result
 
         if formatting_cleaned:
-            logger.warning(
+            warnings.warn(
                 f'Cleaned numeric formatting in {len(formatting_cleaned)} column(s):\n'
                 + '\n'.join([f'  • {col}: {count} values converted' for col, count in formatting_cleaned.items()])
                 + '\n\nCurrency symbols, thousands separators, and '
-                'accounting negatives were removed.'
+                'accounting negatives were removed.',
+                ProcessBehaviorWarning,
+                stacklevel=3,
             )
 
         self.data = cleaned_df

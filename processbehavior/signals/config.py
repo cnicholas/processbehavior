@@ -9,6 +9,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Callable, Literal
 
+from ..exceptions import ValidationError
+
 # Chart-type-based rule defaults
 # ================================
 # WECO rules 2-8 require sequential/temporal ordering of observations.
@@ -143,7 +145,7 @@ class SignalConfig:
         }
 
         if preset not in presets:
-            raise ValueError(f"Unknown preset '{preset}'.\\nValid presets: {list(presets.keys())}")
+            raise ValidationError(f"Unknown preset '{preset}'.\\nValid presets: {list(presets.keys())}")
 
         return presets[preset]
 
@@ -189,7 +191,7 @@ class SignalConfig:
 
         # This shouldn't happen (already resolved in __post_init__)
         # but handle just in case
-        raise ValueError(f"Invalid enabled_rules state: {self.enabled_rules}. Expected list or 'default'.")
+        raise ValidationError(f"Invalid enabled_rules state: {self.enabled_rules}. Expected list or 'default'.")
 
 
 class RuleSet:

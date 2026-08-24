@@ -720,7 +720,7 @@ class DesignReport:
                 lines.append('    PDS (Planned):    no plan supplied')
             empty_detail = f' — {ods.n_empty_cells} empty cells' if ods.n_empty_cells > 0 else ''
             ods_reason = self._humanize_reason(ods.reason)
-            lines.append(f'    SDS (Sampling):   {ods.sds} ({ods_reason}){empty_detail}')
+            lines.append(f'    ODS (Observed):   {ods.sds} ({ods_reason}){empty_detail}')
             lines.append(f'    ADS (Analytical): {ads.sds} ({self._humanize_reason(ads.reason)})')
         elif self.sds_reason_detail:
             lines.append(f'  Classification reason: {self.sds_reason_detail}')
