@@ -44,7 +44,6 @@ Variance Analysis System implementation.
 """
 
 import logging
-from typing import Optional
 
 import numpy as np
 import pandas as pd
@@ -84,10 +83,10 @@ def make_sds1(
     factor2_effect_size: float = 1.5,
     time_effect_size: float = 1.0,
     interaction_effect_size: float = 0.5,
-    seed: Optional[int] = None,
+    seed: int | None = None,
     include_truth: bool = False,
-    factor1_names: Optional[list[str]] = None,
-    factor2_names: Optional[list[str]] = None,
+    factor1_names: list[str] | None = None,
+    factor2_names: list[str] | None = None,
 ) -> pd.DataFrame:
     """
     Generate Sampling Design State 1 data (full replication).
@@ -269,10 +268,10 @@ def make_sds2(
     factor2_effect_size: float = 1.5,
     time_effect_size: float = 1.2,
     interaction_effect_size: float = 0.6,
-    seed: Optional[int] = None,
+    seed: int | None = None,
     include_truth: bool = False,
-    factor1_names: Optional[list[str]] = None,
-    factor2_names: Optional[list[str]] = None,
+    factor1_names: list[str] | None = None,
+    factor2_names: list[str] | None = None,
 ) -> pd.DataFrame:
     """
     Generate Sampling Design State 2 data (no replication).
@@ -405,11 +404,11 @@ def make_sds3(  # noqa: C901
     factor2_effect_size: float = 1.5,
     time_effect_size: float = 1.0,
     interaction_effect_size: float = 0.5,
-    seed: Optional[int] = None,
+    seed: int | None = None,
     replication_pattern: str = 'random',
     include_truth: bool = False,
-    factor1_names: Optional[list[str]] = None,
-    factor2_names: Optional[list[str]] = None,
+    factor1_names: list[str] | None = None,
+    factor2_names: list[str] | None = None,
 ) -> pd.DataFrame:
     """
     Generate Sampling Design State 3 data (partial replication).
@@ -604,9 +603,9 @@ def make_sds4(
     factor1_effect_size: float = 2.0,
     factor2_effect_size: float = 1.5,
     time_effect_size: float = 1.0,
-    seed: Optional[int] = None,
-    factor1_names: Optional[list[str]] = None,
-    factor2_names: Optional[list[str]] = None,
+    seed: int | None = None,
+    factor1_names: list[str] | None = None,
+    factor2_names: list[str] | None = None,
 ) -> pd.DataFrame:
     """
     Generate Observed Design State 4 (ODS 4) data.
@@ -727,9 +726,9 @@ def make_sds5(
     factor1_effect_size: float = 2.0,
     factor2_effect_size: float = 1.5,
     time_effect_size: float = 1.0,
-    seed: Optional[int] = None,
-    factor1_names: Optional[list[str]] = None,
-    factor2_names: Optional[list[str]] = None,
+    seed: int | None = None,
+    factor1_names: list[str] | None = None,
+    factor2_names: list[str] | None = None,
 ) -> pd.DataFrame:
     """
     Generate Observed Design State 5 (ODS 5) data.
@@ -843,9 +842,9 @@ def make_sds6(  # noqa: C901
     factor1_effect_size: float = 2.0,
     factor2_effect_size: float = 1.5,
     time_effect_size: float = 1.0,
-    seed: Optional[int] = None,
-    factor1_names: Optional[list[str]] = None,
-    factor2_names: Optional[list[str]] = None,
+    seed: int | None = None,
+    factor1_names: list[str] | None = None,
+    factor2_names: list[str] | None = None,
 ) -> pd.DataFrame:
     """
     Generate Observed Design State 6 (ODS 6) data.
@@ -935,7 +934,7 @@ def make_sds6(  # noqa: C901
     if singleton_flags.all():
         singleton_flags[-1] = False
 
-    occupied_to_singleton = dict(zip(occupied_indices, singleton_flags.tolist()))
+    occupied_to_singleton = dict(zip(occupied_indices, singleton_flags.tolist(), strict=False))
 
     rows = []
     cell_idx = 0
@@ -987,7 +986,7 @@ def make_design(
     K1: int = 3,
     K2: int = 2,
     T: int = 8,
-    seed: Optional[int] = None,
+    seed: int | None = None,
     **kwargs,
 ) -> pd.DataFrame:
     """
@@ -1168,7 +1167,7 @@ def make_edge_cases() -> dict[str, pd.DataFrame]:
 
 
 def compare_sds_characteristics(
-    sds_list: Optional[list[int]] = None, K1: int = 3, K2: int = 2, T: int = 8, seed: int = 42
+    sds_list: list[int] | None = None, K1: int = 3, K2: int = 2, T: int = 8, seed: int = 42
 ) -> pd.DataFrame:
     """
     Generate comparison table of SDS characteristics.

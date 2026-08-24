@@ -328,4 +328,4 @@ Do you have factors?
 
 - [Plotting & Themes](plotting.md) - Visualization options for all charts
 - [VAS Residuals](residuals.md) - Deep dive into VAS residuals
-- [Stratified Analysis](../tutorials/stratified-analysis.ipynb) - Stratified X chart tutorial
+- [Coffee Shop](../tutorials/coffee-shop.ipynb) - A complete analysis, start to finish

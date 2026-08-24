@@ -188,7 +188,7 @@ def _clean_numeric_strings_via_uniques(series: pd.Series) -> pd.Series | None:
         # Keys come from non-NA values only, so no NaN-is-not-equal-to-itself problem.
         # Values absent from the mapping (the original NAs) come back as NaN, matching
         # the direct path.
-        return series.map(dict(zip(uniques, converted_uniques)))
+        return series.map(dict(zip(uniques, converted_uniques, strict=False)))
 
     # Fast path, then slow path — the same order and the same acceptance test as
     # _try_clean_numeric_strings, but scored over the full column so the frequency

@@ -20,6 +20,8 @@ import math
 import numpy as np
 import pandas as pd
 
+from .exceptions import ValidationError
+
 # ============================================================================
 # Statistical Control Chart Constants
 # ============================================================================
@@ -592,10 +594,24 @@ STORED_RESIDUALS = ('R1', 'R2', 'R3', 'R4', 'R5')
 REQUEST_RESIDUALS = ('R6',)
 ALL_RESIDUALS = STORED_RESIDUALS + REQUEST_RESIDUALS
 
-# Removed chart names with migration hints
-_REMOVED_CHART_NAMES: dict[str, str] = {
+# Names an analyst reasonably types that this library does not use, each with the
+# spelling to use instead. These are redirects, not silent aliases: 'XmR' and 'IMR'
+# name a chart *pair*, so mapping them to one chart would guess which half was
+# wanted. The Minitab spellings are here because the README teaches the
+# equivalence (XmR = IMR) and an analyst arriving from Minitab types what they
+# know. Keys are lowercase; a stratum that happens to be named one of these is
+# not addressable by name, the same tradeoff already made for 'r'.
+_CHART_ALIAS_GUIDANCE: dict[str, str] = {
     'xmr': "Use chart='X' for the individual chart, or chart='X' with companion=True for both X and mR.",
     'r': "Use chart='mR' for the moving range chart.",
+    'imr': "Use chart='X' for the individual chart, or chart='X' with companion=True for both X and mR.",
+    'i-mr': "Use chart='X' for the individual chart, or chart='X' with companion=True for both X and mR.",
+    'i': "Use chart='X' for the individual chart.",
+    'individuals': "Use chart='X' for the individual chart.",
+    'xbar-s': "Execute chart='Xbar' and chart='S' separately, or chart='Xbar' with companion=True for both.",
+    'xbars': "Execute chart='Xbar' and chart='S' separately, or chart='Xbar' with companion=True for both.",
+    'x-bar': "Use chart='Xbar' for the subgroup-mean chart.",
+    'mr-chart': "Use chart='mR' for the moving range chart.",
 }
 
 
@@ -603,19 +619,38 @@ def normalize_chart_name(name: str) -> str:
     """Normalize chart name to canonical form (case-insensitive).
 
     Returns the canonical name if recognized, otherwise returns input unchanged.
-    This allows stratum names (e.g. 'Alice') to pass through unmodified.
+    This allows stratum names (e.g. 'Alice') to pass through unmodified — which
+    is why there is deliberately no did-you-mean guessing here. Suggestions
+    belong at the call sites that know a chart name was meant; this function
+    cannot tell a typo from a stratum.
 
     Raises
     ------
-    ValueError
-        If the name matches a removed chart name (e.g., 'XmR').
+    ValidationError
+        If the name is one this library does not use but an analyst plausibly
+        types (e.g. 'XmR', 'IMR', 'Xbar-S'), carrying the spelling to use.
     """
     lower = name.lower()
     if lower in CHART_NAME_CANONICAL:
         return CHART_NAME_CANONICAL[lower]
-    if lower in _REMOVED_CHART_NAMES:
-        raise ValueError(f"Chart name '{name}' has been removed. {_REMOVED_CHART_NAMES[lower]}")
+    if lower in _CHART_ALIAS_GUIDANCE:
+        raise ValidationError(f"Chart name '{name}' is not used by this library. {_CHART_ALIAS_GUIDANCE[lower]}")
     return name
+
+
+def suggest_chart_name(name: str) -> str:
+    """A ``Did you mean 'Xbar'?`` clause for an unrecognised chart name, or ''.
+
+    For the raise sites that already know a chart name was intended. Matches
+    against the canonical names only — alias redirects are handled by
+    :func:`normalize_chart_name` before anything reaches here.
+    """
+    import difflib
+
+    close = difflib.get_close_matches(name.lower(), list(CHART_NAME_CANONICAL), n=1, cutoff=0.6)
+    if not close:
+        return ''
+    return f" Did you mean '{CHART_NAME_CANONICAL[close[0]]}'?"
 
 
 # The one place a residual gets a human name. Chart titles (plotting.plotter),

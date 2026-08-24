@@ -10,9 +10,9 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 
 from ..exceptions import ValidationError
-from plotly.subplots import make_subplots
 
 if TYPE_CHECKING:
     from ..maximum_information import MaximumInformationResult

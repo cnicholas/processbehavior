@@ -40,7 +40,7 @@ At a consumer site::
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, TypedDict, Union
+from typing import TYPE_CHECKING, TypedDict
 
 try:  # Python 3.11+
     from typing import NotRequired
@@ -124,7 +124,7 @@ class ChartMetadata(TypedDict, total=False):
 
 
 # Statistics can be flat (unstratified) or nested-by-stratum (stratified).
-ChartStatisticsValue = Union[ChartStatistics, dict[str, ChartStatistics]]
+ChartStatisticsValue = ChartStatistics | dict[str, ChartStatistics]
 
 
 class ChartPayload(TypedDict):

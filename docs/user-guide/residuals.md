@@ -425,6 +425,6 @@ mi.plot(view='histogram', bins=15)  # Percentage histogram only
 
 ## Next Steps
 
-- [Xbar-S Analysis](../tutorials/xbar-s-analysis.ipynb) - Practical VAS analysis
+- [Coffee Shop](../tutorials/coffee-shop.ipynb) - Practical analysis walkthrough
 - [Chart Types](chart-types.md) - All residual chart types
 - [API Reference](../reference/api.md) - Complete Study API

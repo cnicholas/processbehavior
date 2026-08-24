@@ -8,6 +8,7 @@ operations, keeping the AnalysisResult class focused on data access.
 from __future__ import annotations
 
 import logging
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 import pandas as pd
@@ -49,6 +50,9 @@ class ExcelExporter:
     def __init__(self, result: AnalysisResult):
         """Initialize exporter with an AnalysisResult."""
         self.result = result
+        # Companion HTML files written by the current export(), so the
+        # Visual_Charts tab can name them instead of asserting they exist.
+        self._html_exported: list[Path] = []
 
     def export(
         self,
@@ -61,8 +65,8 @@ class ExcelExporter:
         include_full_dataset: bool = False,
         format_cells: bool = True,
         include_chart_images: bool = True,
-        export_html: bool = True,
-    ) -> None:
+        export_html: bool = False,
+    ) -> list[Path]:
         """
         Export analysis results to Excel with each component on a separate tab.
 
@@ -94,13 +98,11 @@ class ExcelExporter:
             Apply formatting (bold headers, auto-width, freeze panes)
         include_chart_images : bool, default=True
             Include visual charts tab with embedded chart images (requires plotly)
-        export_html : bool, default=True
-            Export companion interactive HTML files alongside Excel file
-
-        Returns
-        -------
-        None
-            File is written to disk
+        export_html : bool, default=False
+            Also write companion interactive HTML files next to the workbook.
+            Off by default: these are full standalone plotly documents and run
+            to several megabytes, which is a surprising thing to receive from a
+            call that named one ``.xlsx`` file.
 
         Examples
         --------
@@ -127,9 +129,19 @@ class ExcelExporter:
         - Summary tab includes SDS info and signal counts
         - Formatting includes frozen headers and auto-sized columns
         - Visual_Charts tab includes embedded images (requires Chrome for kaleido)
-        - Interactive HTML files are exported alongside Excel for full interactivity
-        - HTML charts support zoom, pan, and hover tooltips
+        - ``export_html=True`` additionally writes companion interactive HTML
+          files next to the workbook, and every written path is returned
+
+        Returns
+        -------
+        list[Path]
+            Every file written: the workbook, plus any companion HTML. Nothing
+            is written that is not in this list.
         """
+        # Companion HTML first: the Visual_Charts tab points the reader at these
+        # files by name, so they have to exist (or not) before the tab is written.
+        self._html_exported = self._export_html_charts(filepath) if export_html else []
+
         # Create Excel writer
         with pd.ExcelWriter(filepath, engine='openpyxl') as writer:
             # 1. Summary Tab
@@ -160,11 +172,9 @@ class ExcelExporter:
             if include_chart_images:
                 self._write_visual_charts_tab(writer, filepath)
 
-        # 8. Export companion interactive HTML files
-        if export_html:
-            self._export_html_charts(filepath)
-
+        written = [Path(filepath), *self._html_exported]
         logger.info(f'Analysis results exported to: {filepath}')
+        return written
 
     def _write_summary_tab(self, writer: pd.ExcelWriter, format_cells: bool) -> None:
         """Write summary tab with analysis metadata."""
@@ -485,7 +495,7 @@ class ExcelExporter:
                         row_dict = {'Interaction': interaction_name}
 
                         # Add each index level as a separate column
-                        for level_name, level_val in zip(interaction_values.index.names, idx_tuple):
+                        for level_name, level_val in zip(interaction_values.index.names, idx_tuple, strict=False):
                             row_dict[level_name] = level_val
 
                         row_dict['Value'] = val
@@ -579,27 +589,42 @@ class ExcelExporter:
 
                         logger.info(f'Added {chart_name} chart image to Excel')
 
+                    except ImportError as e:
+                        # Static export is unavailable for every chart, not just
+                        # this one — say so once instead of repeating it per chart.
+                        logger.warning(f'Static chart images unavailable: {e}')
+                        ws[f'A{current_row}'] = (
+                            'Static images unavailable — install with: '
+                            "pip install 'processbehavior[images]'"
+                        )
+                        current_row += 2
+                        break
                     except Exception as e:
                         logger.warning(f'Could not add {chart_name} chart image: {e}')
-                        ws[f'A{current_row}'] = f'Error generating {chart_name} chart'
+                        ws[f'A{current_row}'] = f'Could not render {chart_name} chart: {e}'
                         current_row += 2
 
-            # Add note about interactive HTML files
-            current_row += 2
-            ws[f'A{current_row}'] = 'INTERACTIVE CHARTS'
-            ws[f'A{current_row}'].font = Font(bold=True, size=14)
-            current_row += 1
-            ws[f'A{current_row}'] = 'Interactive HTML files have been exported alongside this Excel file.'
-            current_row += 1
-            ws[f'A{current_row}'] = (
-                'Open the .html files in a web browser for full interactivity (zoom, pan, hover tooltips).'
-            )
+            # Note the companion HTML files — but only when they were asked for.
+            # This block used to claim them unconditionally, so a default export
+            # (which writes no HTML) shipped a workbook telling the reader to
+            # open files that were never created.
+            if self._html_exported:
+                current_row += 2
+                ws[f'A{current_row}'] = 'INTERACTIVE CHARTS'
+                ws[f'A{current_row}'].font = Font(bold=True, size=14)
+                current_row += 1
+                names = ', '.join(path.name for path in self._html_exported)
+                ws[f'A{current_row}'] = f'Interactive HTML exported alongside this workbook: {names}'
+                current_row += 1
+                ws[f'A{current_row}'] = (
+                    'Open them in a web browser for full interactivity (zoom, pan, hover tooltips).'
+                )
 
         except ImportError as e:
             logger.warning(f'Could not create visual charts tab: {e}')
             logger.warning('Install kaleido for image export: pip install kaleido')
 
-    def _export_html_charts(self, filepath: str) -> None:
+    def _export_html_charts(self, filepath: str) -> list[Path]:
         """
         Export interactive HTML charts alongside the Excel file.
 
@@ -607,9 +632,8 @@ class ExcelExporter:
         - {basename}_combined.html - Combined Xbar/S charts
         - {basename}_stratified.html - Stratified X charts (if applicable)
         """
+        written: list[Path] = []
         try:
-            from pathlib import Path
-
             from ..plotting import Plotter
 
             output_path = Path(filepath)
@@ -627,6 +651,7 @@ class ExcelExporter:
                     width=1400, height=800, theme='processbehavior', title=f'Control Charts: {base_name}'
                 )
                 fig.save_html(str(html_file))
+                written.append(html_file)
                 logger.info(f'Exported interactive combined charts to: {html_file}')
 
             # Export stratified charts if present
@@ -643,10 +668,12 @@ class ExcelExporter:
                     width=1800, height=1200, theme='processbehavior', title=f'Stratified Control Charts: {base_name}'
                 )
                 fig.save_html(str(html_file))
+                written.append(html_file)
                 logger.info(f'Exported interactive stratified charts to: {html_file}')
 
         except Exception as e:
             logger.warning(f'Could not export HTML charts: {e}')
+        return written
 
     def _apply_formatting(self, worksheet) -> None:
         """

@@ -252,6 +252,6 @@ ProcessBehavior follows Wheeler's philosophy:
 
 ## Next Steps
 
-- [Basic X Chart](../tutorials/basic-imr.ipynb) - Create your first X chart
+- [Coffee Shop](../tutorials/coffee-shop.ipynb) - Create your first chart, end to end
 - [Design States](../user-guide/sds-detection.md) - Deep dive into DS
 - [VAS Residuals](../user-guide/residuals.md) - Understanding VAS residuals

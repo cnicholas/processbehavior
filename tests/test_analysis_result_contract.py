@@ -332,7 +332,7 @@ class TestStatisticsKeyContract:
     @pytest.mark.parametrize('chart', ['X', 'mR'])
     def test_ungrouped_xmr_has_four_keys(self, state, chart):
         result = self._study(state).execute(chart=chart, by=[])
-        assert self.CONTRACT <= set(result.get_statistics(chart))
+        assert set(result.get_statistics(chart)) >= self.CONTRACT
 
     @pytest.mark.parametrize('state', [1, 2, 3])
     @pytest.mark.parametrize('chart', ['X', 'mR'])
@@ -341,17 +341,17 @@ class TestStatisticsKeyContract:
         stats = result.get_statistics(chart)
         assert stats, 'stratified result reported no statistics'
         for stratum, per_stratum in stats.items():
-            assert self.CONTRACT <= set(per_stratum), f'stratum {stratum!r} missing keys'
+            assert set(per_stratum) >= self.CONTRACT, f'stratum {stratum!r} missing keys'
 
     @pytest.mark.parametrize('state,chart', [(1, 'Xbar'), (1, 'S'), (3, 'Xbar'), (3, 'S')])
     def test_xbar_s_has_four_keys(self, state, chart):
         result = self._study(state).execute(chart=chart)
-        assert self.CONTRACT <= set(result.get_statistics(chart))
+        assert set(result.get_statistics(chart)) >= self.CONTRACT
 
     @pytest.mark.parametrize('state', [1, 2, 3])
     def test_histogram_has_four_keys(self, state):
         result = self._study(state).execute(chart='Histogram')
-        assert self.CONTRACT <= set(result.get_statistics('Histogram'))
+        assert set(result.get_statistics('Histogram')) >= self.CONTRACT
 
     def test_x_reports_subgroup_size_one(self):
         """An X chart plots one observation per point."""
@@ -366,7 +366,7 @@ class TestStatisticsKeyContract:
     def test_statistics_accessor_also_honours_contract(self):
         """The type-stable `statistics()` accessor returns the same shape."""
         study = self._study(1)
-        assert self.CONTRACT <= set(study.execute(chart='X', by=[]).statistics('X'))
+        assert set(study.execute(chart='X', by=[]).statistics('X')) >= self.CONTRACT
         stratified = study.execute(chart='X', by=['factor 1'])
         stratum = stratified.strata[0]
-        assert self.CONTRACT <= set(stratified.statistics('X', stratum=stratum))
+        assert set(stratified.statistics('X', stratum=stratum)) >= self.CONTRACT
