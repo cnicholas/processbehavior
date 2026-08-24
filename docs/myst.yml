@@ -55,6 +55,8 @@ project:
       children:
         - file: reference/api.md
           title: API Reference
+        - file: reference/validation.md
+          title: Validation vs. Bishop's Minitab Results
         - file: reference/weco-rules.md
           title: Western Electric Rules
     - title: Appendix

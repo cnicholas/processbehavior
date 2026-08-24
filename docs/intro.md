@@ -166,9 +166,23 @@ If you use ProcessBehavior in your research, please cite:
 
 ```bibtex
 @software{processbehavior,
-  author = {Nicholas, Chris and Bishop, Tom},
-  title = {ProcessBehavior: Python Process Behavior Charts},
-  year = {2025},
-  url = {https://github.com/cnicholas/processbehavior}
+  author = {Nicholas, Chris and Bishop, Thomas A.},
+  title  = {processbehavior: Process Behavior Charts and Variance Analysis for Python},
+  year   = {2026},
+  url    = {https://github.com/cnicholas/processbehavior}
+}
+```
+
+`CITATION.cff` in the repository root carries the same metadata in machine-readable
+form — GitHub's "Cite this repository" button reads it. Keep the two in step.
+
+For the methodology itself, cite the book it implements:
+
+```bibtex
+@book{bishop2021,
+  author    = {Bishop, Thomas A.},
+  title     = {The Scientific Basis for Modern Analytic Practice},
+  year      = {2021},
+  publisher = {Lulu Press, Inc.}
 }
 ```

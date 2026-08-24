@@ -69,6 +69,20 @@ jobs:
             docs/tutorials/derived-variables.ipynb \
             docs/tutorials/loss-function.ipynb \
             --tb=short
+      - name: Validate against Bishop's reference results (ubuntu / 3.13 only)
+        # The 280-assertion ground-truth check. It lives outside tests/ because
+        # it also renders a report, but nothing was running it — so a drift in
+        # the numbers the README advertises would have gone unnoticed.
+        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.13'
+        run: python validation/e2e_bishop_report.py
+
+      - name: Fail if the validation summary drifted from the committed page
+        # The docs page is generated. If a code change moves the numbers, the
+        # regenerated page differs and this catches it here rather than in a
+        # docs build days later.
+        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.13'
+        run: git diff --exit-code -- docs/reference/validation.md
+
       - name: Upload coverage to Codecov
         if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.11'
         uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7.0.0
@@ -162,7 +176,7 @@ jobs:
               ProcessBehavior, ColumnRef, Study, DesignReport, AnalysisResult,
               SpecLimits, CapabilityResult, LossResult, MaximumInformationResult,
               ProcessBehaviorError, ValidationError, ColumnNotFoundError,
-              FactorNotFoundError, ChartNotAvailableError,
+              FactorNotFoundError, ChartNotAvailableError, ProcessBehaviorWarning,
               ChartTheme, get_theme, list_themes, register_theme,
               Calibration, Derivation, evaluate, validate,
               make_design,

@@ -1,0 +1,46 @@
+cff-version: 1.2.0
+message: "If you use processbehavior in your research, please cite it as below."
+title: "processbehavior: Process Behavior Charts and Variance Analysis for Python"
+abstract: >-
+  A Python implementation of Thomas A. Bishop's Variance Analysis System (VAS):
+  three-state design-state lineage detection (planned / observed / analytical),
+  process behavior charts, R1-R6 residual variance decomposition, capability
+  indices, and Taguchi loss functions. Analytical outputs are validated
+  assertion-by-assertion against Bishop's published Minitab reference results.
+type: software
+authors:
+  - family-names: Nicholas
+    given-names: Chris
+    email: 4948774+cnicholas@users.noreply.github.com
+  - family-names: Bishop
+    given-names: Thomas
+    name-suffix: A.
+repository-code: "https://github.com/cnicholas/processbehavior"
+url: "https://cnicholas.github.io/processbehavior/"
+license: Apache-2.0
+version: 0.1.1
+keywords:
+  - statistical process control
+  - process behavior charts
+  - variance analysis
+  - control charts
+  - quality control
+  - shewhart
+  - design of experiments
+
+references:
+  - type: book
+    title: "The Scientific Basis for Modern Analytic Practice"
+    abstract: >-
+      The methodological foundation for the Variance Analysis System this
+      package implements: applied-research foundations, scientific methodology,
+      Shewhart's inductive analytic approach and process behavior charts,
+      operational definitions and research protocols, and case studies.
+    authors:
+      - family-names: Bishop
+        given-names: Thomas
+    year: 2021
+    month: 4
+    publisher:
+      name: "Lulu Press, Inc."
+    url: "https://www.lulu.com/shop/thomas-bishop/the-scientific-basis-for-modern-analytic-practice/paperback/product-k7e8dk.html"

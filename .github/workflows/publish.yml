@@ -3,7 +3,10 @@ name: Publish
 on:
   push:
     tags: ["v*"]
-  workflow_dispatch:
+
+# Deliberately tag-only. workflow_dispatch was removed: it can fire from any
+# ref, so it could reach the publish job from an arbitrary commit, and with the
+# tag/version guard below it has no ref to check against anyway.
 
 permissions:
   contents: read
@@ -50,9 +53,21 @@ jobs:
       - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
         with:
           python-version: "3.11"
-      - name: Build sdist + wheel
+      - name: Verify tag matches package version
+        # A tag that disagrees with __version__ publishes a version nobody
+        # can reproduce from the repository. Fails before any artifact exists.
         run: |
           python -m pip install --upgrade pip
+          pip install -e .
+          PKG=$(python -c "import processbehavior; print(processbehavior.__version__)")
+          TAG="${GITHUB_REF_NAME#v}"
+          echo "tag=$TAG  __version__=$PKG"
+          if [ "$PKG" != "$TAG" ]; then
+            echo "::error::Tag v$TAG does not match __version__ $PKG"
+            exit 1
+          fi
+      - name: Build sdist + wheel
+        run: |
           pip install build twine
           python -m build
           twine check dist/*

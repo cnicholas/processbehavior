@@ -1,4 +1,20 @@
 repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-toml
+      - id: check-merge-conflict
+      - id: check-added-large-files
+        # Notebooks with embedded plotly output are legitimately large; the
+        # coffee-shop tutorial is ~5 MB. This is a backstop against committing
+        # a stray build artefact, not a limit on tracked notebooks.
+        args: [--maxkb=6000]
+      - id: mixed-line-ending
+        args: [--fix=lf]
+
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.15.20
     hooks:

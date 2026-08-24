@@ -1,0 +1,63 @@
+name: Bug report
+description: Something computes the wrong answer, crashes, or contradicts the docs
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting. The most useful bug report is one we can run.
+
+        If this is a **silent miscalculation** — a number that looks plausible
+        but is wrong — please say so explicitly. Those are the ones we treat as
+        most serious (see SECURITY.md).
+
+  - type: textarea
+    id: repro
+    attributes:
+      label: Reproducer
+      description: >-
+        Ideally self-contained. `pb.make_design(state=..., seed=...)` generates
+        data for every design state, so a repro usually needs no attachment.
+      render: python
+      placeholder: |
+        import processbehavior as pb
+
+        df = pb.make_design(state=1, seed=42)
+        study = pb.formulate(df, response='y', factors=['factor 1'], time='time')
+        result = study.execute()
+        # ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected, and what happened instead
+      description: For a wrong number, include both values and where the expected one comes from.
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: processbehavior version
+      description: "`python -c \"import processbehavior; print(processbehavior.__version__)\"`"
+    validations:
+      required: true
+
+  - type: input
+    id: env
+    attributes:
+      label: Python version and OS
+      placeholder: "3.12 on macOS 15"
+    validations:
+      required: true
+
+  - type: textarea
+    id: design_state
+    attributes:
+      label: Design-state lineage (if relevant)
+      description: >-
+        Output of `print(study.design())`. Most analysis behaviour is routed by
+        the ADS, so this usually explains what the library was trying to do.
+      render: text

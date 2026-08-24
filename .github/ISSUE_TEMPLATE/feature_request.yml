@@ -1,0 +1,40 @@
+name: Feature request
+description: Suggest a capability or an API change
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What are you trying to do?
+      description: >-
+        The analysis you are trying to run, not the API you have in mind for it.
+        Knowing the underlying task usually changes the design.
+    validations:
+      required: true
+
+  - type: textarea
+    id: workaround
+    attributes:
+      label: How are you doing it today?
+      description: What the current API makes you write, if anything.
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed API (optional)
+      render: python
+
+  - type: checkboxes
+    id: methodology
+    attributes:
+      label: Methodology
+      options:
+        - label: >-
+            This follows Bishop's VAS methodology (if you know the reference —
+            chapter, equation, or table — please cite it below)
+        - label: This is a convenience or ergonomics change, not a methodology change
+
+  - type: textarea
+    id: reference
+    attributes:
+      label: Methodology reference (if applicable)
