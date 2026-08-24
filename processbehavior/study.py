@@ -721,7 +721,13 @@ class DesignReport:
                 lines.append('    PDS (Planned):    no plan supplied')
             empty_detail = f' — {ods.n_empty_cells} empty cells' if ods.n_empty_cells > 0 else ''
             ods_reason = self._humanize_reason(ods.reason)
-            lines.append(f'    ODS (Observed):   {ods.sds} ({ods_reason}){empty_detail}')
+            # Label deliberately reads "SDS (Sampling)", not "ODS (Observed)":
+            # Bishop calls the state produced by executing the sampling plan the
+            # Sampling Design State. The rest of the library still says ODS, and
+            # reconciling the two is a pedagogy decision to settle with Tom —
+            # tracked in issue #100. Do not "fix" this inconsistency in passing;
+            # it is a known, open question, not an oversight.
+            lines.append(f'    SDS (Sampling):   {ods.sds} ({ods_reason}){empty_detail}')
             lines.append(f'    ADS (Analytical): {ads.sds} ({self._humanize_reason(ads.reason)})')
         elif self.sds_reason_detail:
             lines.append(f'  Classification reason: {self.sds_reason_detail}')
