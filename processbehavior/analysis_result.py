@@ -56,6 +56,8 @@ from .spc_constants import ALL_RESIDUALS, REQUEST_RESIDUALS, STORED_RESIDUALS, n
 from .types import Charts
 
 if TYPE_CHECKING:
+    from pathlib import Path
+
     from .analysis_dataset import AnalysisDataSet
     from .plotting.control_chart import ControlChartFigure
     from .signals.result import SignalResult
@@ -968,7 +970,7 @@ class AnalysisResult:
     # Excel Export
     # =========================================================================
 
-    def to_excel(self, filepath: str, **kwargs) -> None:
+    def to_excel(self, filepath: str, **kwargs) -> list[Path]:
         """
         Export analysis results to Excel with each component on a separate tab.
 
@@ -989,12 +991,19 @@ class AnalysisResult:
             - include_full_dataset : bool, default=False
             - format_cells : bool, default=True
             - include_chart_images : bool, default=True
-            - export_html : bool, default=True
+            - export_html : bool, default=False
+
+        Returns
+        -------
+        list[Path]
+            Every file written. With ``export_html=True`` that includes the
+            companion HTML documents, so nothing lands on disk unannounced.
 
         Examples
         --------
         >>> result.to_excel('analysis.xlsx')
-        >>> result.to_excel('full.xlsx', include_full_dataset=True)
+        [PosixPath('analysis.xlsx')]
+        >>> result.to_excel('full.xlsx', include_full_dataset=True)  # doctest: +SKIP
         """
         from .exporters import ExcelExporter
 

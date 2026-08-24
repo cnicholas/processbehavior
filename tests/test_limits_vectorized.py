@@ -45,13 +45,13 @@ def test_matches_the_scalar_reference_exactly(sample, limits_type, sigma_multipl
 
     if limits_type == 'Xbar':
         vec = calculate_limits_vectorized('Xbar', mean=mean, sd=sd, N=N, sigma_multiplier=sigma_multiplier)
-        rows = [{'mean': m, 'sd': s, 'N': int(k)} for m, s, k in zip(mean, sd, N)]
+        rows = [{'mean': m, 'sd': s, 'N': int(k)} for m, s, k in zip(mean, sd, N, strict=False)]
     elif limits_type == 'S':
         vec = calculate_limits_vectorized('S', sd=sd, N=N, sigma_multiplier=sigma_multiplier)
-        rows = [{'mean': 0, 'sd': s, 'N': int(k)} for s, k in zip(sd, N)]
+        rows = [{'mean': 0, 'sd': s, 'N': int(k)} for s, k in zip(sd, N, strict=False)]
     elif limits_type == 'XmR':
         vec = calculate_limits_vectorized('XmR', mean=mean, mR=mR, sigma_multiplier=sigma_multiplier)
-        rows = [{'mean': m, 'mR': r} for m, r in zip(mean, mR)]
+        rows = [{'mean': m, 'mR': r} for m, r in zip(mean, mR, strict=False)]
     else:
         vec = calculate_limits_vectorized('R', mR=mR, sigma_multiplier=sigma_multiplier)
         rows = [{'mean': 0, 'sd': 0, 'N': 0, 'mR': r} for r in mR]

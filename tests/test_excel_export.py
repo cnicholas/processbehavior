@@ -6,11 +6,13 @@ to multi-sheet Excel workbooks.
 """
 
 import os
+from pathlib import Path
 
 import pandas as pd
 import pytest
 from conftest import detect_sds_for_test, make_request, make_spec
 
+from processbehavior import ProcessBehavior
 from processbehavior.analysis import Analysis
 
 # Import test data generators
@@ -464,3 +466,63 @@ def test_excel_export_round_trip_summary(temp_excel_file):
     # Should contain key metadata
     text = summary_df.to_string()
     assert 'ADS' in text or 'ads' in text.lower()
+
+
+# ============================================================================
+# to_excel returns what it wrote, and writes nothing it did not name
+# ============================================================================
+
+
+class TestExportWritesWhatItSays:
+    """One call naming one .xlsx should not leave a second file behind.
+
+    `export_html` defaulted to True, so `to_excel('analysis.xlsx')` also wrote a
+    standalone plotly document — several megabytes, undocumented in the return
+    (there wasn't one) and unmentioned by the call. The workbook then carried an
+    "INTERACTIVE CHARTS" note pointing at files that a default export never
+    created once the default flipped, so that note is now conditional too.
+    """
+
+    @staticmethod
+    def _result():
+        df = make_design(1, K1=3, K2=2, T=5, n_min=2, n_max=3, seed=42)
+        return (
+            ProcessBehavior(df)
+            .formulate(response='y', factors=['factor 1'], time='time')
+            .execute()
+        )
+
+    def test_default_writes_only_the_workbook(self, tmp_path):
+        target = tmp_path / 'analysis.xlsx'
+        self._result().to_excel(str(target))
+
+        assert [p.name for p in sorted(tmp_path.iterdir())] == ['analysis.xlsx']
+
+    def test_default_returns_only_the_workbook(self, tmp_path):
+        target = tmp_path / 'analysis.xlsx'
+        written = self._result().to_excel(str(target))
+
+        assert [Path(p).name for p in written] == ['analysis.xlsx']
+
+    def test_html_opt_in_writes_and_reports_both(self, tmp_path):
+        target = tmp_path / 'analysis.xlsx'
+        written = self._result().to_excel(str(target), export_html=True)
+
+        names = sorted(Path(p).name for p in written)
+        assert 'analysis.xlsx' in names
+        assert any(n.endswith('.html') for n in names)
+
+    def test_every_returned_path_exists(self, tmp_path):
+        target = tmp_path / 'analysis.xlsx'
+        written = self._result().to_excel(str(target), export_html=True)
+
+        assert all(Path(p).exists() for p in written)
+
+    def test_nothing_written_is_unreported(self, tmp_path):
+        """The return value must account for every file that appeared."""
+        target = tmp_path / 'analysis.xlsx'
+        written = self._result().to_excel(str(target), export_html=True)
+
+        on_disk = {p.name for p in tmp_path.iterdir()}
+        reported = {Path(p).name for p in written}
+        assert on_disk == reported

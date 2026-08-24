@@ -452,7 +452,7 @@ def apply_x_axis_layout(
             xref = "x"
             yref = "paper"
 
-        for idx, (mid, lbl) in enumerate(zip(band.midpoints, band.labels)):
+        for idx, (mid, lbl) in enumerate(zip(band.midpoints, band.labels, strict=False)):
             if idx % band.stride != 0:
                 continue
             fig.add_annotation(

@@ -334,5 +334,5 @@ fig.save_image('fillweight_xbar.png')
 ## Next Steps
 
 - [Excel Export](excel-export.md) - Include charts in Excel exports
-- [Signal Detection](../tutorials/signal-detection.ipynb) - Visualizing rule violations
+- [Western Electric Rules](../reference/weco-rules.md) - The rules behind the signal flags
 - [Chart Types](chart-types.md) - Available chart types

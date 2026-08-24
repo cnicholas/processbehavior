@@ -181,7 +181,13 @@ extend-exclude = [
 ]
 
 [tool.mypy]
-python_version = "3.10"
+# NOT the support floor (that is requires-python = ">=3.10"). This is the
+# version mypy parses *stubs* as, and numpy's bundled stubs use 3.12 `type`
+# statements — below 3.12 mypy aborts on numpy/__init__.pyi before checking a
+# single file of ours, which is why type-checking was silently dead. The cost
+# is that mypy will not flag 3.11/3.12-only syntax that would break on 3.10;
+# ruff's target-version = "py310" and the 3.10 CI leg cover that.
+python_version = "3.12"
 strict = false
 warn_unused_ignores = false
 warn_redundant_casts = true
@@ -223,6 +229,9 @@ module = [
     "processbehavior.formulation_spec",
     "processbehavior.spc_constants",
     "processbehavior.analysis_dataset",
+    "processbehavior.types",
+    "processbehavior.process_behavior",
+    "processbehavior.plotting.control_chart",
 ]
 enable_error_code = ["arg-type", "return-value", "assignment"]
 

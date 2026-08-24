@@ -18,12 +18,48 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
+def _translate_image_error(exc: Exception) -> Exception:
+    """Turn a static-export failure into an error naming what to actually do.
+
+    Three outcomes, because they need three different fixes:
+
+    - kaleido missing -> ``ImportError`` telling you to install it.
+    - kaleido present but no browser -> ``RuntimeError`` about Chrome. This
+      used to be reported as "Image export requires kaleido" because the
+      handler substring-matched "kaleido" in the message, sending people to
+      reinstall a package they already had.
+    - anything else -> returned unchanged; not every failure here is about
+      the export backend.
+    """
+    text = str(exc).lower()
+    origin = type(exc).__module__ or ''
+
+    if isinstance(exc, ImportError) or 'install kaleido' in text or 'requires kaleido' in text:
+        return ImportError(
+            'Image export requires kaleido.\n'
+            "Install with: pip install 'processbehavior[images]'\n"
+            'Or use .save_html() for interactive HTML export'
+        )
+
+    if 'chrome' in text or 'chromium' in text or 'browser' in text or origin.startswith('kaleido'):
+        return RuntimeError(
+            f'Static image export needs a Chrome/Chromium browser, which kaleido could not find.\n'
+            f'Install one with: plotly_get_chrome\n'
+            f'Or use .save_html() for interactive HTML export.\n'
+            f'Underlying error: {exc}'
+        )
+
+    return exc
+
+
 class ControlChartFigure:
     """
     Wrapper around plotly Figure with domain-specific methods.
 
     This class extends Plotly figures with processbehavior-specific
-    functionality while maintaining full access to Plotly's API.
+    functionality while maintaining full access to Plotly's API: anything
+    not defined here is delegated to the wrapped figure, so plotly methods
+    and attributes work as they would on the figure itself.
 
     Examples
     --------
@@ -32,6 +68,15 @@ class ControlChartFigure:
     >>> fig.save_html('report.html')  # Export to HTML
     >>> fig.save_image('chart.png')  # Export to image
     >>> fig.update_layout(title='Custom Title')  # Full Plotly API
+
+    Plotly's own spellings work too, via delegation:
+
+    >>> fig.write_html('report.html')
+    >>> fig.update_traces(marker_size=4)
+    >>> fig.add_hline(y=10)
+    >>> fig.data  # the underlying traces
+
+    The wrapped figure is also available directly as ``fig.figure``.
     """
 
     def __init__(self, plotly_fig: go.Figure, analysis_result: AnalysisResult):
@@ -94,13 +139,21 @@ class ControlChartFigure:
             self._fig.write_image(str(filepath), width=width, height=height, scale=scale)
             logger.info(f'✓ Saved static image to: {filepath}')
         except Exception as e:
-            if 'kaleido' in str(e).lower():
-                raise ImportError(
-                    'Image export requires kaleido.\n'
-                    'Install with: pip install kaleido\n'
-                    'Or use .save_html() for interactive HTML export'
-                ) from e
-            raise
+            raise _translate_image_error(e) from e
+
+    # Plotly's own spellings, so muscle memory works. write_image routes through
+    # the same error translation as save_image rather than surfacing kaleido's
+    # raw failure.
+    def write_html(self, *args, **kwargs):
+        """Alias for plotly's ``write_html`` (see also :meth:`save_html`)."""
+        return self._fig.write_html(*args, **kwargs)
+
+    def write_image(self, *args, **kwargs):
+        """Alias for plotly's ``write_image``, with translated export errors."""
+        try:
+            return self._fig.write_image(*args, **kwargs)
+        except Exception as e:
+            raise _translate_image_error(e) from e
 
     def add_annotation(self, text: str, x, y, **kwargs) -> ControlChartFigure:
         """Add text annotation to the figure.
@@ -119,6 +172,26 @@ class ControlChartFigure:
         """
         self._fig.update_layout(**kwargs)
         return self
+
+    def __getattr__(self, name: str):
+        """Delegate anything we do not define to the wrapped plotly figure.
+
+        Only called when normal lookup fails, so the methods defined above are
+        never shadowed. Dunder names are refused outright: letting them fall
+        through makes copy/pickle/IPython probing find bound methods of the
+        *figure* and behave erratically. ``_fig`` itself is refused for the
+        same reason — during unpickling ``__getattr__`` can run before the
+        instance dict exists, and delegating would recurse forever.
+        """
+        if name.startswith('__') and name.endswith('__'):
+            raise AttributeError(name)
+        if name in ('_fig', '_result'):
+            raise AttributeError(name)
+        return getattr(self._fig, name)
+
+    def __dir__(self):
+        """Own attributes plus the wrapped figure's, so completion finds both."""
+        return sorted(set(super().__dir__()) | set(dir(self._fig)))
 
     @property
     def figure(self) -> go.Figure:

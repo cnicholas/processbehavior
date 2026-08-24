@@ -64,7 +64,7 @@ def test_residuals_match_bishop_reference(sds_num: int) -> None:
     )
 
     # --- Assert each residual matches ---
-    for our_col, ref_col in zip(RESIDUAL_COLS, REF_RESIDUAL_COLS):
+    for our_col, ref_col in zip(RESIDUAL_COLS, REF_RESIDUAL_COLS, strict=False):
         ours = merged[our_col]
         toms = merged[ref_col]
 

@@ -28,8 +28,8 @@ from __future__ import annotations
 
 import math
 import uuid
+from collections.abc import Callable
 from dataclasses import dataclass, field, replace
-from typing import Callable
 
 import numpy as np
 import pandas as pd
@@ -98,7 +98,7 @@ def _dejsonify(obj):
 
 
 def _ascending(seq) -> bool:
-    return all(a < b for a, b in zip(seq, seq[1:]))
+    return all(a < b for a, b in zip(seq, seq[1:], strict=False))
 
 
 # ============================================================================

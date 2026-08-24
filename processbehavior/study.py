@@ -34,6 +34,7 @@ from .spc_constants import (
     RESIDUAL_LABELS,
     VALID_BASE_CHARTS,
     normalize_chart_name,
+    suggest_chart_name,
 )
 
 if TYPE_CHECKING:
@@ -2450,7 +2451,10 @@ class Study:
             # Old syntax: R5_Xbar, noise_Xbar, rc_R5_Xbar, RCR5_Xbar
             self._raise_old_syntax_error(chart)
 
-        raise ValidationError(f"Unknown chart '{chart}'. Valid chart types: {', '.join(sorted(VALID_BASE_CHARTS))}")
+        raise ValidationError(
+            f"Unknown chart '{chart}'. Valid chart types: {', '.join(sorted(VALID_BASE_CHARTS))}."
+            f'{suggest_chart_name(chart)}'
+        )
 
     def _raise_old_syntax_error(self, chart: str) -> None:
         """Raise helpful error for old residual chart syntax."""

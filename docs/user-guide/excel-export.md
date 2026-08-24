@@ -4,7 +4,12 @@ ProcessBehavior can export complete analysis results to Excel workbooks with mul
 
 ## Requirements
 
-Excel export uses `openpyxl`, which is installed automatically with processbehavior. No additional installation is needed.
+Excel export uses `openpyxl`, which is **not** a runtime dependency — it ships in
+the `excel` extra so that users who never export do not pay for it:
+
+```bash
+pip install "processbehavior[excel]"
+```
 
 ## Basic Export
 
@@ -28,8 +33,19 @@ result.to_excel(
     include_full_dataset=False,  # Complete dataset (can be large)
     format_cells=True,           # Apply Excel formatting
     include_chart_images=True,   # Embed chart images
-    export_html=True             # Also create HTML files
+    export_html=False,           # Also write companion HTML files (opt-in)
 )
+```
+
+`to_excel` returns the list of every file it wrote, so nothing lands on disk
+unannounced:
+
+```python
+written = result.to_excel('analysis_results.xlsx')
+# [PosixPath('analysis_results.xlsx')]
+
+written = result.to_excel('analysis_results.xlsx', export_html=True)
+# [PosixPath('analysis_results.xlsx'), PosixPath('analysis_results_combined.html')]
 ```
 
 ## Workbook Structure
@@ -106,23 +122,33 @@ When `include_chart_images=True`, ProcessBehavior:
 2. Embeds them in a "Charts" sheet
 3. Sizes them appropriately
 
-Requires kaleido:
+Requires kaleido, and a Chrome/Chromium browser for it to drive:
 
 ```bash
-pip install kaleido
+pip install "processbehavior[images]"
+plotly_get_chrome
 ```
+
+If either is missing, the workbook is still written — the charts sheet says
+which piece is absent instead of failing the export.
 
 ## HTML Companion Files
 
-When `export_html=True`, creates interactive HTML files alongside the Excel:
+`export_html` is **off by default**. These are standalone Plotly documents and
+run to several megabytes each — a surprising thing to receive from a call that
+named a single `.xlsx` file. Opt in when you want them:
+
+```python
+written = result.to_excel('analysis_results.xlsx', export_html=True)
+```
 
 ```
-analysis_results.xlsx      # Main workbook
-analysis_results_Xbar.html # Interactive Xbar chart
-analysis_results_S.html    # Interactive S chart
+analysis_results.xlsx           # Main workbook
+analysis_results_combined.html  # Interactive charts
 ```
 
-HTML files retain full Plotly interactivity (zoom, hover, etc.).
+HTML files retain full Plotly interactivity (zoom, hover, etc.), and every path
+written is in the returned list.
 
 ## Formatting
 
@@ -212,17 +238,22 @@ print(f"Exported with {signals.count} signals detected")
 
 ### "No module named 'openpyxl'"
 
-openpyxl is a core dependency and should be installed automatically. If missing:
+openpyxl lives in the `excel` extra:
 
 ```bash
-pip install openpyxl
+pip install "processbehavior[excel]"
 ```
 
 ### Chart Images Not Appearing
 
+Static export needs both kaleido and a browser:
+
 ```bash
-pip install kaleido
+pip install "processbehavior[images]"
+plotly_get_chrome
 ```
+
+The error says which of the two is missing — they need different fixes.
 
 ### Large File Size
 
@@ -239,5 +270,5 @@ pip install kaleido
 ## Next Steps
 
 - [Plotting & Themes](plotting.md) - Chart customization before export
-- [Xbar-S Analysis](../tutorials/xbar-s-analysis.ipynb) - Complete analysis workflow
+- [Coffee Shop](../tutorials/coffee-shop.ipynb) - Complete analysis workflow
 - [API Reference](../reference/api.md) - Full to_excel() API
