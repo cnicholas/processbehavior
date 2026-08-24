@@ -1,5 +1,5 @@
 # Changelog
 
 ```{include} ../../CHANGELOG.md
-:start-after: "# Changelog"
+:start-after: # Changelog
 ```
