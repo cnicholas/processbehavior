@@ -17,7 +17,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from processbehavior.exceptions import ColumnNotFoundError, FactorNotFoundError
+from processbehavior.exceptions import ColumnNotFoundError, FactorNotFoundError, ValidationError
 from processbehavior.process_behavior import ColumnAccessor, ProcessBehavior
 
 # ============================================================================
@@ -1010,3 +1010,71 @@ class TestDatetimeInputPreserved:
         })
         study = ProcessBehavior(df).formulate(response='wait', factors=['machine'], time='day')
         assert pd.api.types.is_datetime64_any_dtype(study.dataset['day'])
+
+
+# ============================================================================
+# Test: single-stream formulation (factors omitted)
+# ============================================================================
+
+
+class TestSingleStreamFormulation:
+    """A response and a time column is a complete study.
+
+    Omitting `factors` used to be refused outright while the equivalent
+    `factors=[]` was accepted and worked — two spellings of "no factors"
+    doing opposite things, with the refusal naming neither. An individuals
+    chart of one measurement over time is the most common SPC study there is,
+    so it is the one thing that must not need a trick to express.
+    """
+
+    @staticmethod
+    def _stream():
+        rng = np.random.default_rng(0)
+        return pd.DataFrame({
+            'hour': range(30),
+            'weight': rng.normal(100, 2, 30),
+        })
+
+    def test_factors_omitted_is_accepted(self):
+        study = ProcessBehavior(self._stream()).formulate(response='weight', time='hour')
+        assert study.analytical_design_state.sds > 0
+        assert study.recommended_chart
+
+    def test_factors_omitted_executes(self):
+        study = ProcessBehavior(self._stream()).formulate(response='weight', time='hour')
+        result = study.execute(chart='X', by=[])
+        assert len(result.get_chart('X')) > 0
+
+    def test_factors_omitted_matches_empty_factors(self):
+        """The two spellings must produce the same study, not merely both work."""
+        df = self._stream()
+        omitted = ProcessBehavior(df).formulate(response='weight', time='hour')
+        explicit = ProcessBehavior(df).formulate(response='weight', factors=[], time='hour')
+
+        assert omitted.analytical_design_state.sds == explicit.analytical_design_state.sds
+        assert omitted.recommended_chart == explicit.recommended_chart
+        pd.testing.assert_frame_equal(omitted.dataset, explicit.dataset)
+
+    def test_module_level_formulate_agrees(self):
+        import processbehavior as pb
+
+        study = pb.formulate(self._stream(), response='weight', time='hour')
+        assert study.recommended_chart
+
+    def test_no_structure_at_all_is_refused(self):
+        """No factors, no plan, no time — no grid and no order to plot in."""
+        df = self._stream()
+        with pytest.raises(ValidationError) as exc:
+            ProcessBehavior(df).formulate(response='weight')
+
+        message = str(exc.value)
+        assert 'time' in message and 'factors' in message
+        assert "time='hour'" in message or "time='<column>'" in message
+
+    def test_factors_and_plan_together_still_rejected(self):
+        df = self._stream()
+        df['machine'] = ['A', 'B'] * 15
+        with pytest.raises(ValidationError):
+            ProcessBehavior(df).formulate(
+                response='weight', factors=['machine'], plan={'machine': ['A', 'B']}, time='hour'
+            )

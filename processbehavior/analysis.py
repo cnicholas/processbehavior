@@ -194,6 +194,31 @@ def _split_strata_by_sufficiency(
     return insufficient, published
 
 
+def _no_replication_alternative(chart: str) -> str:
+    """What to reach for instead, when a subgroup chart has nothing to subgroup."""
+    return (
+        "Use chart='X' for individual values, or chart='Xbar' with value='R6' for effects analysis."
+        if chart == 'Xbar'
+        else "Use chart='X' for individual values."
+    )
+
+
+def _raise_no_replicated_subgroups(chart: str, sds) -> None:
+    """Raise for an *ungrouped* Xbar/S chart with nothing to subgroup.
+
+    Sibling of :func:`_raise_no_replication`, which serves the stratified paths and
+    adds the per-stratum detail. Both are the enforcement half of the rule
+    :meth:`Study._response_pair_problem` reports in advance, so ``why_not()`` and
+    ``execute()`` can no longer disagree about whether Xbar can chart the response.
+    Change one, change all three.
+    """
+    raise ValidationError(
+        f'No subgroups with n > 1 found — {chart} chart requires replicated observations.\n'
+        f'This data has Analytical Design State {sds}.\n'
+        f'{_no_replication_alternative(chart)}'
+    )
+
+
 def _raise_no_replication(chart: str, sds, insufficient: list, total: int) -> None:
     """Raise the self-diagnostic error for a subgroup chart with nothing to subgroup.
 
@@ -203,11 +228,7 @@ def _raise_no_replication(chart: str, sds, insufficient: list, total: int) -> No
     ``pd.concat([])`` and surface a raw pandas "No objects to concatenate" instead.
     """
     detail = {2: ' (no replication)', 3: ' (partial replication)'}.get(sds, '')
-    alternative = (
-        "Use chart='X' for individual values, or chart='Xbar' with value='R6' for effects analysis."
-        if chart == 'Xbar'
-        else "Use chart='X' for individual values."
-    )
+    alternative = _no_replication_alternative(chart)
     raise ValidationError(
         f'No subgroups with n > 1 found — {chart} chart requires replicated observations.\n'
         f'This data has Analytical Design State {sds}{detail}.\n'
@@ -1119,8 +1140,11 @@ class Analysis:
             out['N'] = _N
 
         # Filter out groups with n=1 (can't compute c4 for variance estimation)
-        # Xbar charts require n >= 2 for within-group variance
-        # Note: SDS 2 (all n=1) is already handled upstream - Xbar not in valid_charts
+        # Xbar charts require n >= 2 for within-group variance.
+        # Xbar stays in valid_charts on ADS 2 — the chart family is valid there
+        # (Xbar of a residual, or of a pooled subgroup, computes fine); it is
+        # only charting *the response* that has nothing to subgroup. See
+        # Study._response_pair_problem, which reports that in advance.
         mask_n1 = out['n'].eq(1)
         if mask_n1.any():
             n_filtered = mask_n1.sum()
@@ -1130,12 +1154,7 @@ class Analysis:
         # Handle case where no subgroups have >1 observation
         if out.shape[0] == 0:
             sds = self.ads._ads_result.sds if self.ads._ads_result else '?'
-            raise ValidationError(
-                f'No subgroups with n > 1 found — Xbar chart requires replicated observations.\n'
-                f'This data has Analytical Design State {sds}.\n'
-                f"Use chart='X' for individual values, or chart='Xbar' with value='R6' "
-                f'for effects analysis.'
-            )
+            _raise_no_replicated_subgroups('Xbar', sds)
 
         # Use Bishop VAS grand mean (mean of cell means on value_col) as center
         _Xbar = _Ybar
@@ -1642,11 +1661,7 @@ class Analysis:
                 # Handle case where no subgroups have >1 observation
                 if out.shape[0] == 0:
                     sds = self.ads._ads_result.sds if self.ads._ads_result else '?'
-                    raise ValidationError(
-                        f'No subgroups with n > 1 found — S chart requires replicated observations.\n'
-                        f'This data has Analytical Design State {sds}.\n'
-                        f"Use chart='X' for individual values."
-                    )
+                    _raise_no_replicated_subgroups('S', sds)
 
                 out['N'] = out['n'].max()
 
