@@ -404,12 +404,20 @@ class ColumnAccessor:
 
 
 def _validate_factors_or_plan_args(
-    factors: list | None, plan: dict | None
+    factors: list | None, plan: dict | None, time: object | None = None
 ) -> None:
     """Enforce the factors XOR plan contract for formulate().
 
-    Both None is rejected (Bishop's design states require a factor × time
-    grid). Both provided is rejected (ambiguous source of factor structure).
+    Both provided is rejected (ambiguous source of factor structure).
+
+    Omitting both is fine as long as there is a ``time`` column: that is a
+    single measurement stream over time — the most common SPC study there is,
+    and an X/mR chart handles it. It used to be refused outright, while the
+    equivalent ``factors=[]`` was accepted and worked, so the two spellings of
+    "no factors" did opposite things and the refusal named neither.
+
+    With no factors, no plan *and* no time there is nothing to analyse
+    against: no grid, and no order to plot in.
     """
     if factors is not None and plan is not None:
         raise ValidationError(
@@ -417,14 +425,16 @@ def _validate_factors_or_plan_args(
             '  • factors=[...] to infer structure from observed data (complete designs)\n'
             '  • plan={col: [levels], ...} to specify expected structure (complete + incomplete designs)'
         )
-    if factors is None and plan is None:
+    if factors is None and plan is None and time is None:
         raise ValidationError(
-            'Cannot analyze response-only data without grouping structure.\n\n'
-            "Bishop's design states (codes 1-6) require a factor × time grid.\n"
-            'Please specify:\n'
-            '  - factors: categorical variables defining subgroups (e.g., Machine, Operator)\n'
-            '  - plan: expected factor levels for detecting incomplete designs\n\n'
-            'See documentation for examples of proper study formulation.'
+            'A study needs either a time order or a grouping structure — this has neither.\n\n'
+            'Add whichever describes your data:\n'
+            "  • time='<column>' — a single measurement stream in order (X/mR charts)\n"
+            "  • factors=['<column>', ...] — categorical variables defining subgroups\n"
+            '  • plan={column: [levels], ...} — expected factor levels, which also\n'
+            '    lets incomplete designs be detected\n\n'
+            'A single stream is the common case:\n'
+            "  study = pb.formulate(df, response='weight', time='hour')"
         )
 
 
@@ -1079,10 +1089,17 @@ class ProcessBehavior:
         If your observations are NOT in temporal order, you MUST specify the
         ``time`` parameter to ensure correct analysis.
 
-        **Factors Required**
+        **Factors are optional; structure is not**
 
-        At least one grouping factor (via ``factors`` or ``plan``) is required.
-        Bishop's SDS classification assumes a factor × time grid structure.
+        Supply a grouping structure (``factors`` or ``plan``), a ``time``
+        column, or both. Bishop's design-state classification works over a
+        factor × time grid, and a single measurement stream in time order is
+        the degenerate case of one — charted with X/mR::
+
+            study = pb.formulate(df, response='weight', time='hour')
+
+        Only a study with no factors, no plan *and* no time is refused: there
+        is no grid to classify and no order to plot in.
 
         **SDS Detection**
 
@@ -1096,7 +1113,7 @@ class ProcessBehavior:
         ColumnRef : Column reference with .levels property for discoverability
         """
         # 1. Validate the factors/plan combination + presence.
-        _validate_factors_or_plan_args(factors, plan)
+        _validate_factors_or_plan_args(factors, plan, time)
 
         # 2. Normalize inputs into (response_str, time_str, factors_str,
         #    sampling_plan, factor_order, T_planned, N_planned).

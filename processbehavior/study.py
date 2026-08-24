@@ -1123,14 +1123,26 @@ class Study:
         """
         Chart types that are valid for this data structure.
 
-        These are the primary control charts that can be created
-        based on the Analytical Design State (ADS).
+        This is *chart-family* validity, decided by the Analytical Design
+        State: whether the chart has any legitimate use on this study. It is
+        not the same question as "will ``execute(chart=...)`` succeed".
+
+        On ADS 2, for instance, ``'Xbar'`` is listed — an Xbar of a residual
+        (``value='R6'``) or of a pooled subgroup (``by=[factor]``) computes
+        fine — while charting the *response* has nothing to subgroup and
+        raises. For that narrower question use :attr:`support` (which carries
+        a ``reason``) or :meth:`why_not`.
 
         Returns
         -------
         list of str
             Valid chart types (e.g., ['Histogram', 'Xbar', 'S', 'X', 'mR']).
             Empty list when ADS=0 (no valid observations after cleaning).
+
+        See Also
+        --------
+        support : Availability matrix including data-aware reasons.
+        why_not : Explains a specific refusal.
         """
         if self.analytical_design_state.sds == 0:
             return []
@@ -1360,14 +1372,19 @@ class Study:
         invalid_reasons = self._parse_invalid_charts()
 
         for chart in ALL_PRIMARY:
+            # Availability here is about charting *the response*, which is what
+            # a bare execute(chart=...) does — so it must account for the
+            # replication rule execute() enforces, not just chart-family
+            # validity. See _response_pair_problem.
+            response_problem = self._response_pair_problem(chart) if chart in self.valid_charts else None
             rows.append(
                 {
                     'chart': chart,
                     'value': None,
                     'category': 'primary',
-                    'available': chart in self.valid_charts,
+                    'available': chart in self.valid_charts and response_problem is None,
                     'recommended': chart == self.recommended_chart,
-                    'reason': invalid_reasons.get(chart),
+                    'reason': invalid_reasons.get(chart) or response_problem,
                     'question': SDSAnalysisPlan.CHART_QUESTIONS.get(chart, ''),
                 }
             )
@@ -2233,6 +2250,40 @@ class Study:
                 )
 
         return by_validated, value_col, is_residual
+
+    def _response_pair_problem(self, base_chart: str) -> str | None:
+        """Why ``base_chart`` can't chart *the response* — or ``None`` if it can.
+
+        The advisory half of the rule ``analysis._raise_no_replicated_subgroups``
+        enforces at compute time. Xbar and S summarise a subgroup, so charting
+        the response needs cells with more than one observation in them; on
+        ADS 2 there are none and ``execute()`` refuses.
+
+        This is deliberately *not* the same question as :attr:`valid_charts`,
+        which answers at the chart-family level and stays true on ADS 2 —
+        ``execute(chart='Xbar', value='R6', by=[...])`` and
+        ``execute(chart='Xbar', by=[time])`` are both legal there, because a
+        residual and a time-aggregated subgroup do have replication. Conflating
+        the two questions is what let ``why_not('Xbar')`` answer "IS available"
+        about a call that then raised.
+        """
+        if base_chart not in ('Xbar', 'S'):
+            return None
+        if self._plan.has_replication != 'none':
+            return None
+
+        factors = self._spec.rsg_vars_list
+        pool_hint = f"by=['{factors[0]}']" if factors else 'by=[<factor>]'
+        return (
+            f"'{base_chart}' cannot chart the response here: every factor x time cell holds "
+            f'a single observation, so there is no within-subgroup variation to summarise '
+            f'(ADS {self.analytical_design_state.sds}, no replication).\n'
+            f'Available instead:\n'
+            f"  • chart='X' — the response as individuals\n"
+            f'  • a coarser subgroup that pools those single observations — e.g. '
+            f'{pool_hint}\n'
+            f"  • a residual — e.g. value='R6', {pool_hint}"
+        )
 
     def _residual_pair_problem(self, base_chart: str, value: str) -> str | None:
         """Why ``(base_chart, value)`` can't be charted — or ``None`` if it can.
