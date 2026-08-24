@@ -24,6 +24,8 @@ from typing import TYPE_CHECKING, ClassVar, Literal
 
 import pandas as pd
 
+from .exceptions import ValidationError
+
 # Formal vocabulary for SDS classification reasons (per Bishop Table 1)
 SDSReasonType = Literal[
     # Complete/Semi-Complete (SDS 1, 2, 3) - no empty cells
@@ -181,6 +183,7 @@ class SDSAnalysisPlan:
         'S': 'Is within-subgroup variation stable?',
         'X': 'Is individual variation stable over time?',
         'mR': 'Is range variation stable over time?',
+        'Histogram': 'What shape does the response distribution take?',
         # Residual charts — keyed by (chart_type, residual)
         ('Xbar', 'R1'): 'How do subgroup means vary about the overall mean?',
         ('X', 'R1'): 'How do individual values vary about the overall mean?',
@@ -466,7 +469,7 @@ class SDSRegistry:
 
         # Validate we have some data
         if nkt_observed.sum() == 0:
-            raise ValueError('No valid response values found after filtering')
+            raise ValidationError('No valid response values found after filtering')
 
         if plan is not None:
             # WITH PLAN: Compare to canonicalized plan

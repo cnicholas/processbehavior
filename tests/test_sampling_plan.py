@@ -1657,7 +1657,7 @@ class TestDesignReportLineage:
         """When ODS != ADS, DesignReport must show both."""
         study = pb_validation.formulate(response='PM SDS 5', factors=['FACTOR 1', 'FACTOR 2'], time='PRODUCTION TIME')
         report = repr(study.design())
-        assert 'Sampling' in report
+        assert 'Observed' in report
         assert 'Analytical' in report
 
     def test_agreeing_report_shows_single(self, pb_validation):
@@ -1665,7 +1665,7 @@ class TestDesignReportLineage:
         study = pb_validation.formulate(response='PM SDS 1', factors=['FACTOR 1', 'FACTOR 2'], time='PRODUCTION TIME')
         report = repr(study.design())
         assert 'Design-state lineage' in report
-        assert 'SDS (Sampling):' in report
+        assert 'ODS (Observed):' in report
         assert 'ADS (Analytical):' in report
 
 

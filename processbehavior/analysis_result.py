@@ -155,9 +155,10 @@ class AnalysisResult:
         # Store chart data
         self.charts: Charts = charts
 
-        # Store reference to full dataset
+        # Backing reference to the study-level frame. Public access goes
+        # through the `dataset` property, which hands out a copy — see there.
         self._ads = analysis_dataset_obj
-        self.dataset = analysis_dataset_obj.analysis_dataset
+        self._dataset = analysis_dataset_obj.analysis_dataset
 
         # Store the executed analysis type (passed from Analysis)
         self._analysis_type = analysis_type
@@ -174,9 +175,9 @@ class AnalysisResult:
             # Stored residuals only — request residuals (R6) are by=-dependent and
             # belong to a single execute() result, not to this study-level snapshot.
             residual_cols = list(STORED_RESIDUALS)
-            available_cols = [c for c in residual_cols if c in self.dataset.columns]
+            available_cols = [c for c in residual_cols if c in self._dataset.columns]
             if available_cols:
-                self._residuals = self.dataset[available_cols].copy()
+                self._residuals = self._dataset[available_cols].copy()
 
         # Extract effects and interactions
         self._effects = analysis_dataset_obj.effects if analysis_dataset_obj.effects else None
@@ -184,6 +185,24 @@ class AnalysisResult:
 
         # Build comprehensive summary
         self._summary = self._build_summary()
+
+    @property
+    def dataset(self) -> pd.DataFrame:
+        """
+        Full analysis dataset with means and residuals.
+
+        Returns a fresh copy on every access, matching ``Study.dataset``.
+        The underlying frame is shared by the study and every result executed
+        from it — and ``execute()`` can add columns to it (a request residual
+        such as R6) — so handing out the live frame would let one result's
+        caller mutate another's data.
+
+        Returns
+        -------
+        pd.DataFrame
+            Copy of the analysis dataset.
+        """
+        return self._dataset.copy()
 
     def _build_summary(self) -> dict:
         """
@@ -221,7 +240,7 @@ class AnalysisResult:
             'grouping_vars': self._ads.spec.rsg_vars,
             'time_var': self._ads.spec.time_var,
             # Data dimensions
-            'n_observations': len(self.dataset),
+            'n_observations': len(self._dataset),
             'n_charts': len(self.charts),
             'chart_types': list(self.charts.keys()),
             # Capabilities
@@ -531,6 +550,11 @@ class AnalysisResult:
             Statistics dictionary. Every chart guarantees the same four
             unified keys: ``{'N', 'center', 'lpl', 'upl'}``.
 
+            ``N`` is the subgroup size behind one plotted point. On Xbar/S
+            that is the cell size; on an X chart it is ``1`` (one
+            observation per point); on an mR chart it is ``2`` (the moving
+            window the range is taken over).
+
             When the control limits or subgroup size vary across
             subgroups (e.g. Xbar/S with ``n_mode='actual'`` on unbalanced
             data, phased charts, or any chart whose limits aren't a
@@ -701,8 +725,8 @@ class AnalysisResult:
         # inherits a stale R6 from whatever `by=` ran last. Gate on this result's own chart
         # metadata so we never hand back another request's numbers.
         if base in REQUEST_RESIDUALS:
-            if self._requested_residual() == base and residual_type in self.dataset.columns:
-                return self.dataset[residual_type].copy()
+            if self._requested_residual() == base and residual_type in self._dataset.columns:
+                return self._dataset[residual_type].copy()
             raise ValidationError(
                 f"'{residual_type}' is computed per request and depends on by=, so it "
                 f'exists only on a result that asked for it.\n'
@@ -711,8 +735,8 @@ class AnalysisResult:
             )
 
         # Stored recentered forms (RCR1-RCR5) live on the dataset, not the snapshot.
-        if residual_type in self.dataset.columns:
-            return self.dataset[residual_type].copy()
+        if residual_type in self._dataset.columns:
+            return self._dataset[residual_type].copy()
 
         if base in ALL_RESIDUALS:
             available = list(self._residuals.columns) if self._residuals is not None else []
@@ -857,7 +881,7 @@ class AnalysisResult:
             f'AnalysisResult(\n'
             f'  analytical_sds={self.analytical_sds} ({self.analytical_sds_info["description"]}),\n'
             f'  charts=[{charts_str}],\n'
-            f'  n_obs={len(self.dataset)},\n'
+            f'  n_obs={len(self._dataset)},\n'
             f'  has_residuals={self.has_residuals},\n'
             f'  has_effects={self.has_effects},\n'
             f'  n_signals={self.summary["n_signals_total"]}\n'

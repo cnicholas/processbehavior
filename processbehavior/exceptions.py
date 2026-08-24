@@ -7,11 +7,17 @@ Users can catch errors by category and get self-diagnostic error messages.
 Exception Hierarchy
 -------------------
 ProcessBehaviorError (base)
-├── ValidationError - Invalid input data, parameters, or configuration
-│   ├── ColumnNotFoundError - Required column missing from DataFrame
-│   ├── FactorNotFoundError - Invalid factor/variable name specified
-│   └── CalibrationNotSupportedError - Calibration not available on this chart path
-└── ChartNotAvailableError - Chart type invalid or unavailable for this SDS
+└── ValidationError - Invalid input data, parameters, or configuration
+    ├── ColumnNotFoundError - Required column missing from DataFrame
+    ├── FactorNotFoundError - Invalid factor/variable name specified
+    ├── CalibrationNotSupportedError - Calibration not available on this chart path
+    └── ChartNotAvailableError - Chart type invalid or unavailable for this SDS
+
+Warnings
+--------
+ProcessBehaviorWarning (UserWarning) - Something was changed or assumed on the
+user's behalf (e.g. garbage tokens converted to NA during cleaning). Filterable
+with ``warnings.simplefilter('ignore', ProcessBehaviorWarning)``.
 
 Examples
 --------
@@ -155,7 +161,7 @@ class CalibrationNotSupportedError(ValidationError):
         self.context = context
 
 
-class ChartNotAvailableError(ProcessBehaviorError):
+class ChartNotAvailableError(ValidationError):
     """
     Chart type invalid or unavailable for this SDS/data structure.
 
@@ -179,3 +185,32 @@ class ChartNotAvailableError(ProcessBehaviorError):
         super().__init__(message)
         self.chart = chart
         self.available = available
+
+
+class ProcessBehaviorWarning(UserWarning):
+    """
+    Something was changed or assumed on your behalf.
+
+    Raised (as a warning, not an exception) when the library alters input
+    rather than rejecting it — most often during the automatic cleaning that
+    converts garbage tokens to NA when a DataFrame is loaded.
+
+    These were previously emitted through ``logging``, which the library never
+    configures a handler for, so they were invisible in most sessions and
+    could not be filtered programmatically. As warnings they show up by
+    default and obey the standard filters.
+
+    Examples
+    --------
+    Silence them:
+
+    >>> import warnings
+    >>> warnings.simplefilter('ignore', ProcessBehaviorWarning)
+
+    Turn them into errors (useful in a validated pipeline where silent
+    coercion is unacceptable):
+
+    >>> warnings.simplefilter('error', ProcessBehaviorWarning)
+    """
+
+    pass

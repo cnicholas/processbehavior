@@ -17,6 +17,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
+from .exceptions import ValidationError
+
 if TYPE_CHECKING:
     from .calibration import Calibration
 
@@ -73,7 +75,7 @@ class FormulationSpec:
 
     def __post_init__(self):
         if self.response_var is None:
-            raise ValueError('A response variable is required!')
+            raise ValidationError('A response variable is required!')
 
     @property
     def has_grouping(self) -> bool:

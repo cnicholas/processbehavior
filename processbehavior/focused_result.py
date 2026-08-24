@@ -214,19 +214,32 @@ class FocusedAnalysisResult(AnalysisResult):
         self._ads = original_result._ads
         self._analysis_type = original_result._analysis_type
 
-        rsg_col = next(
-            (
-                col for col in original_result.dataset.columns
-                if col in ("rsg", "RSG") or "rsg" in col.lower()
-            ),
-            None,
-        )
+        parent_dataset = original_result.dataset
         stratum_id = encode_rsg(focused_stratum)
-        if rsg_col:
-            mask = original_result.dataset[rsg_col].astype(str) == stratum_id
-            self.dataset = original_result.dataset[mask].copy()
+
+        # Filter by the column the charts were actually stratified on. The
+        # rsg column is a different vocabulary whenever `by=` is a subset of
+        # the factors — with factors=['machine','op'] and by=['machine'], rsg
+        # holds 'M1_A' while the stratum is 'M1', so an rsg comparison matched
+        # nothing and the focused result reported zero observations.
+        stratify_col = self._parent_stratify_col(original_result)
+        if stratify_col and stratify_col in parent_dataset.columns:
+            mask = parent_dataset[stratify_col].astype(str) == str(focused_stratum)
+            self._dataset = parent_dataset[mask].copy()
+            rsg_col = stratify_col
         else:
-            self.dataset = original_result.dataset.copy()
+            rsg_col = next(
+                (
+                    col for col in parent_dataset.columns
+                    if col in ("rsg", "RSG") or "rsg" in col.lower()
+                ),
+                None,
+            )
+            if rsg_col:
+                mask = parent_dataset[rsg_col].astype(str) == stratum_id
+                self._dataset = parent_dataset[mask].copy()
+            else:
+                self._dataset = parent_dataset.copy()
 
         self.observed_sds = original_result.observed_sds
         self.analytical_sds = original_result.analytical_sds
@@ -240,12 +253,25 @@ class FocusedAnalysisResult(AnalysisResult):
                 mask = original_result._residuals[rsg_col].astype(str) == stratum_id
                 self._residuals = original_result._residuals[mask].copy()
             else:
-                self._residuals = original_result._residuals.loc[self.dataset.index].copy()
+                self._residuals = original_result._residuals.loc[self._dataset.index].copy()
 
         self._effects = original_result._effects
         self._interactions = original_result._interactions
         self._original_summary = original_result._summary.copy()
         self._summary = self._build_focused_summary()
+
+    @staticmethod
+    def _parent_stratify_col(original_result: AnalysisResult) -> str | None:
+        """The column the parent's charts were stratified on, if any.
+
+        Same source `focus_on` uses to slice chart rows, so the dataset and the
+        charts always agree about what a stratum is.
+        """
+        for chart_info in original_result.charts.values():
+            stratify_col = (chart_info.get("metadata") or {}).get("stratify_col")
+            if stratify_col:
+                return str(stratify_col)
+        return None
 
     def _build_focused_summary(self) -> dict:
         """Summary for the focused result — n_signals re-counted, strata flag off."""
@@ -258,7 +284,7 @@ class FocusedAnalysisResult(AnalysisResult):
         summary = self._original_summary.copy()
         summary.update(
             {
-                "n_observations": len(self.dataset),
+                "n_observations": len(self._dataset),
                 "n_charts": len(self.charts),
                 "chart_types": list(self.charts.keys()),
                 "is_stratified": False,
@@ -296,7 +322,7 @@ class FocusedAnalysisResult(AnalysisResult):
             f"  analytical_sds={self.analytical_sds} "
             f"({self.analytical_sds_info['description']}),\n"
             f"  charts=[{charts_str}],\n"
-            f"  n_obs={len(self.dataset)},\n"
+            f"  n_obs={len(self._dataset)},\n"
             f"  has_residuals={self.has_residuals},\n"
             f"  has_effects={self.has_effects}\n"
             f")"

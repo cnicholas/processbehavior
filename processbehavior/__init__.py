@@ -75,6 +75,7 @@ from processbehavior.exceptions import (
     ColumnNotFoundError,
     FactorNotFoundError,
     ProcessBehaviorError,
+    ProcessBehaviorWarning,
     ValidationError,
 )
 from processbehavior.loss_function import LossResult
@@ -120,6 +121,7 @@ __all__ = [
     'FactorNotFoundError',
     'ChartNotAvailableError',
     'CalibrationNotSupportedError',
+    'ProcessBehaviorWarning',
     # Plotting/theming
     'ChartTheme',
     'get_theme',

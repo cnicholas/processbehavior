@@ -303,3 +303,70 @@ class TestConvenienceAccessors:
         s1['analytical_sds'] = -999
         s2 = sds1_xbar_result.summary
         assert s2['analytical_sds'] != -999
+
+
+# ============================================================================
+# Statistics-dict contract — the four unified keys, on every chart family
+# ============================================================================
+
+
+class TestStatisticsKeyContract:
+    """`{'N', 'center', 'lpl', 'upl'}` on every chart, stratified or not.
+
+    X and mR used to omit `'N'` entirely — not set to None, absent — so code
+    written against the documented contract raised KeyError on exactly the
+    chart family the docs promised it for. These tests pin the shape across
+    the full chart × design-state × stratification grid.
+    """
+
+    CONTRACT = {'N', 'center', 'lpl', 'upl'}
+
+    @staticmethod
+    def _study(state):
+        df = make_design(state=state, seed=42)
+        return ProcessBehavior(df).formulate(
+            response='y', factors=['factor 1', 'factor 2'], time='time'
+        )
+
+    @pytest.mark.parametrize('state', [1, 2, 3])
+    @pytest.mark.parametrize('chart', ['X', 'mR'])
+    def test_ungrouped_xmr_has_four_keys(self, state, chart):
+        result = self._study(state).execute(chart=chart, by=[])
+        assert self.CONTRACT <= set(result.get_statistics(chart))
+
+    @pytest.mark.parametrize('state', [1, 2, 3])
+    @pytest.mark.parametrize('chart', ['X', 'mR'])
+    def test_stratified_xmr_has_four_keys_per_stratum(self, state, chart):
+        result = self._study(state).execute(chart=chart, by=['factor 1'])
+        stats = result.get_statistics(chart)
+        assert stats, 'stratified result reported no statistics'
+        for stratum, per_stratum in stats.items():
+            assert self.CONTRACT <= set(per_stratum), f'stratum {stratum!r} missing keys'
+
+    @pytest.mark.parametrize('state,chart', [(1, 'Xbar'), (1, 'S'), (3, 'Xbar'), (3, 'S')])
+    def test_xbar_s_has_four_keys(self, state, chart):
+        result = self._study(state).execute(chart=chart)
+        assert self.CONTRACT <= set(result.get_statistics(chart))
+
+    @pytest.mark.parametrize('state', [1, 2, 3])
+    def test_histogram_has_four_keys(self, state):
+        result = self._study(state).execute(chart='Histogram')
+        assert self.CONTRACT <= set(result.get_statistics('Histogram'))
+
+    def test_x_reports_subgroup_size_one(self):
+        """An X chart plots one observation per point."""
+        result = self._study(1).execute(chart='X', by=[])
+        assert result.get_statistics('X')['N'] == 1
+
+    def test_mr_reports_subgroup_size_two(self):
+        """An mR chart plots the range of a two-observation moving window."""
+        result = self._study(1).execute(chart='mR', by=[])
+        assert result.get_statistics('mR')['N'] == 2
+
+    def test_statistics_accessor_also_honours_contract(self):
+        """The type-stable `statistics()` accessor returns the same shape."""
+        study = self._study(1)
+        assert self.CONTRACT <= set(study.execute(chart='X', by=[]).statistics('X'))
+        stratified = study.execute(chart='X', by=['factor 1'])
+        stratum = stratified.strata[0]
+        assert self.CONTRACT <= set(stratified.statistics('X', stratum=stratum))

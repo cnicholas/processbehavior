@@ -323,6 +323,8 @@ class DataPreparation:
         - All grouping variables exist
         - Time variable exists (if specified)
         - Response variable exists and is numeric
+        - No column holds two roles (response/factor/time), and no factor
+          is listed twice
 
         This function follows "Fail Fast, Fail Helpful" - it raises
         immediately with a message that explains WHAT is wrong, WHY
@@ -396,6 +398,47 @@ class DataPreparation:
                 f"Response variable '{spec.response_var}' must be numeric.\n"
                 f'Current type: {df[spec.response_var].dtype}\n'
                 f'Fix: Convert to numeric or choose a different column'
+            )
+
+        # Validate one column, one role. Without this, a column named as both
+        # response and factor survives into the analysis frame twice, and the
+        # duplicate label surfaces much later as an opaque pandas error while
+        # building cell means.
+        self._validate_column_roles(spec)
+
+    @staticmethod
+    def _validate_column_roles(spec: FormulationSpec) -> None:
+        """Reject a column that holds more than one role, or a repeated factor.
+
+        Note what is *not* rejected: the time column may also appear in
+        ``factors``. That is a supported VAS pattern — declaring time as a
+        factor makes each cell a single (factor, time) combination — and
+        ``_get_output_cols`` guards the column against being selected twice.
+        Only the response has no such guard, and no meaning as a factor.
+        """
+        factors = spec.rsg_vars_list
+
+        if spec.response_var in factors:
+            raise ValidationError(
+                f"Column '{spec.response_var}' is named as both the response and a factor.\n"
+                f'A column can hold only one role in a study.\n'
+                f'Fix: choose a different response, or drop '
+                f"'{spec.response_var}' from factors."
+            )
+
+        if spec.has_time and spec.time_var == spec.response_var:
+            raise ValidationError(
+                f"Column '{spec.response_var}' is named as both the response and the time variable.\n"
+                f'A column can hold only one role in a study.\n'
+                f'Fix: choose a different response or a different time column.'
+            )
+
+        duplicates = sorted({f for f in factors if factors.count(f) > 1})
+        if duplicates:
+            raise ValidationError(
+                f'Factor(s) listed more than once: {duplicates}.\n'
+                f'Each factor must appear exactly once.\n'
+                f'Fix: remove the duplicate entries from factors.'
             )
 
         logger.debug('Column validation passed')
@@ -583,7 +626,7 @@ class DataPreparation:
         # on the output, so we must check inputs
         if df[cols_to_combine].isna().any().any():
             missing_counts = df[cols_to_combine].isna().sum()
-            raise ValueError(
+            raise ValidationError(
                 f"Cannot build RSG '{col_name}': missing values in factor columns. "
                 f'Missing counts: {missing_counts.to_dict()}'
             )
