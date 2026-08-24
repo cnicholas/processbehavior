@@ -131,6 +131,7 @@ include = [
   "validation/PBTESTDATABASE_T100.csv",
   "README.md",
   "LICENSE",
+  "CITATION.cff",
   "CHANGELOG.md",
   "CONTRIBUTING.md",
   "CODE_OF_CONDUCT.md",

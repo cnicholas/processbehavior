@@ -70,12 +70,13 @@ API. Breaking changes to those symbols require a `## [Unreleased]` entry in
 - Add or update tests for behavioral changes
 - Update `CHANGELOG.md` under `## [Unreleased]`
 - Confirm `pytest tests/`, `ruff check .`, and `mypy processbehavior` pass
-- Use the commit-message structure in the PR template
+- Fill in the PR template (`.github/pull_request_template.md`); it is a
+  checklist of the invariants most easily broken by accident
 
 ## Reporting bugs
 
 Open an issue at <https://github.com/cnicholas/processbehavior/issues> with:
-- a minimal reproducer (DataFrame snippet or `make_sds(...)` call)
+- a minimal reproducer (DataFrame snippet or `pb.make_design(state=..., seed=...)` call)
 - the version of processbehavior, pandas, and Python
 - the full traceback or wrong output
 

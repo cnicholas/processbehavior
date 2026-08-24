@@ -3,16 +3,11 @@ name: Docs
 on:
   push:
     branches: [main]
+  pull_request:
   workflow_dispatch:
 
 permissions:
   contents: read
-  pages: write
-  id-token: write
-
-concurrency:
-  group: pages
-  cancel-in-progress: true
 
 jobs:
   build:
@@ -30,7 +25,10 @@ jobs:
           python -m pip install --upgrade pip
           pip install -e ".[docs,images]"
       - name: Install MyST CLI
-        run: npm install -g mystmd
+        # Pinned: an unpinned global npm install floats to whatever mystmd
+        # released today, and its CLI has had breaking changes between minors.
+        # Dependabot does not see npm installs inside run steps — bump by hand.
+        run: npm install -g mystmd@1.10.1
       - name: Build site
         working-directory: docs
         run: myst build --html
@@ -39,8 +37,20 @@ jobs:
           path: docs/_build/html
 
   deploy:
+    # Only main deploys. PRs build to catch a broken TOC or a dead file
+    # reference before it lands, which a push-only trigger could not do.
+    if: github.event_name != 'pull_request'
     needs: build
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    # Scoped to the deploy job so concurrent PR builds do not queue behind
+    # each other on the shared `pages` group.
+    concurrency:
+      group: pages
+      cancel-in-progress: true
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
