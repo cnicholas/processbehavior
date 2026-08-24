@@ -33,6 +33,8 @@ So: if a change would move fold names, fold ordering, gating rules, or the Analy
 
 This is not hypothetical. A design review of this codebase read the `analysis_pack.py` docstring, understood it as a product-architecture choice, and recommended re-deciding it — because the actual reason was written down nowhere. That is what this section fixes.
 
+**The public statement of this boundary lives in `CONTRIBUTING.md` → "What this library is, and what it is not."** This file is not part of the published repository, so it cannot be the only place the rule is written; CONTRIBUTING.md is what an outside contributor (or a future maintainer) actually reads. Keep the two in agreement — if you change the boundary here, change it there.
+
 ## Engineering Philosophy
 
 - **Analyst-first API**: The API mirrors the analyst's workflow, not the programmer's. `formulate()` is how analysts think: understand your data structure before computing. `execute()` is the computation. This two-step pattern is non-negotiable — it's not an architecture choice, it's a reflection of how analysis works.
