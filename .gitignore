@@ -87,6 +87,8 @@ id_rsa*
 /2026-*.md
 /COMPREHENSIVE_*.md
 /CLAUDE.md
+.claude/
+docs/review/
 /pythonic_hadley_persona.md
 /create_sds_charts_doc.py
 /visualize_design_states.py

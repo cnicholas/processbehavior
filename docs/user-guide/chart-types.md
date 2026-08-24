@@ -194,8 +194,12 @@ Effects charts require `result.has_effects == True` (i.e., the study must have f
 You can also access the raw effects data:
 
 ```python
-result.effects       # Dict with 'k_effects', 't_effects'
-result.interactions  # Dict of interaction terms
+# Keys are named after your own factor columns, plus 'main_effect' and 'time'.
+# For factors=['machine', 'shift']:
+result.effects['machine']   # per-level main effects  (column: Main_Effect)
+result.effects['time']      # time main effects       (column: PT_ME)
+result.effects              # see AnalysisResult.effects for the full key list
+result.interactions         # Dict of interaction terms
 ```
 
 ## Understanding Xbar-S Charts

@@ -23,7 +23,7 @@ jobs:
         # macOS billed at 10x so we run it only on the newest Python as
         # a release-readiness check. The maintainer develops on macOS,
         # so regressions also surface in local dev between CI runs.
-        python-version: ["3.9", "3.11", "3.13"]
+        python-version: ["3.10", "3.11", "3.13"]
         os: [ubuntu-latest, windows-latest]
         include:
           - os: macos-latest
@@ -44,7 +44,7 @@ jobs:
         run: ruff check .
       - name: Typecheck (ubuntu / 3.11 only, advisory)
         # mypy is advisory until the chart-payload TypedDict contract is tightened
-        # (GitHub issue #77, "mypy re-enable"). It still runs and surfaces errors in
+        # (GitHub issue #47, "mypy re-enable"). It still runs and surfaces errors in
         # the logs; it does not gate the build. Flip continue-on-error to false once
         # the remaining analysis.py TypedDict mismatches are resolved.
         if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.11'
@@ -56,15 +56,16 @@ jobs:
         # Allowlist of notebooks known to execute against the current API.
         # The remaining tutorials (basic-imr, signal-detection,
         # stratified-analysis, xbar-s-analysis, sds-validation,
-        # sds1-complete-analysis) have stale code; they need rewriting
-        # against the current API before joining this gate.
+        # sds1-complete-analysis) have stale code; they are pulled from the
+        # docs TOC and need rewriting against the current API before they
+        # are republished and join this gate.
         if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.13'
         run: |
           pytest --nbmake \
             docs/getting-started/quickstart.ipynb \
+            docs/tutorials/coffee-shop.ipynb \
             docs/tutorials/process-capability.ipynb \
             docs/tutorials/process-capability-before-after.ipynb \
-            docs/tutorials/calibration.ipynb \
             docs/tutorials/derived-variables.ipynb \
             docs/tutorials/loss-function.ipynb \
             --tb=short
@@ -133,7 +134,7 @@ jobs:
       matrix:
         # macOS only on the newest Python (see test job rationale).
         os: [ubuntu-latest, windows-latest]
-        python-version: ["3.9", "3.13"]
+        python-version: ["3.10", "3.13"]
         include:
           - os: macos-latest
             python-version: "3.13"

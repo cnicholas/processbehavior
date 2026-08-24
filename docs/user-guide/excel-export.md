@@ -173,7 +173,7 @@ xbar_stats = result.get_statistics('Xbar')
 residuals = result.residuals
 
 # Get effects
-effects = result.effects  # Dict with 'k_effects', 't_effects'
+effects = result.effects  # Keyed by your factor names, plus 'main_effect' / 'time'
 ```
 
 This allows custom processing before export.

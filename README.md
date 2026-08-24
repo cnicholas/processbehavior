@@ -123,10 +123,14 @@ For factorial designs (ADS 1-3), processbehavior decomposes variation into diagn
 
 ```python
 # Chart any residual
-result = study.execute(chart='X', value='R4')  # Time main effects on X chart
+result = study.execute(chart='Xbar', value='R4')  # Time main effects
 result = study.execute(chart='Xbar', value='R5')  # Design condition main effects
 result = study.execute(chart='Xbar', value='R6', by=['machine'])  # One factor's effect
 ```
+
+Not every chart pairs with every residual — the valid pairs depend on the ADS.
+`study.residual_charts` lists them, and `study.why_not('X', value='R4')` explains
+any pair it refuses.
 
 ### Stratified Analysis
 
@@ -165,7 +169,7 @@ The full report renders to `validation/e2e_bishop_report.html`.
 - **Effects analysis**: Main effects, time effects, and interaction effects
 - **Stratified charts**: Automatic per-stratum limits for grouped individual data
 - **Signal detection**: all eight Western Electric rules on X/mR; Rule 1 (3-sigma) on Xbar/S, where the run- and zone-based rules need a time order that subgroup comparisons don't have
-- **IDE support**: Column auto-completion via `pb.cols`
+- **IDE support**: Column auto-completion via `ProcessBehavior(df).cols`
 - **Self-diagnostic errors**: Helpful messages that say what's available and how to fix it
 - **Excel export**: Publication-ready workbooks with charts and statistics
 - **Interactive plots**: Plotly-based charts with hover details

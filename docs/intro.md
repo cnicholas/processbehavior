@@ -143,7 +143,7 @@ pip install "processbehavior[images]"  # adds kaleido for static PNG/SVG export
 ## Quick Links
 
 - [Quickstart](getting-started/quickstart.ipynb) - Get up and running in 5 minutes
-- [Basic X Chart](tutorials/basic-imr.ipynb) - Your first control chart
+- [Coffee Shop](tutorials/coffee-shop.ipynb) - A complete analysis, start to finish
 - [Design-state lineage](user-guide/sds-detection.md) - Understanding PDS / ODS / ADS
 - [API Reference](reference/api.md) - Complete API reference
 
