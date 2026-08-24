@@ -55,7 +55,7 @@ This is not hypothetical. A design review of this codebase read the `analysis_pa
 ## Domain & Architecture
 
 ### Critical Invariants
-- **ODS detection runs on RAW data** (before dropping NA response rows). Cells with all-NA responses count as "attempted" cells — required to detect ODS 4-6 (incomplete designs). ADS is then computed on the tidied data; ODS {4,5,6} collapse to ADS {1,2,3}.
+- **ODS detection runs on RAW data** (before dropping NA response rows). A cell whose responses are all NA counts as *attempted but empty* — it is an empty cell in the grid, not an occupied one, which is what makes ODS 4-6 (incomplete designs) detectable. ADS is then computed on the tidied data; ODS {4,5,6} collapse to ADS {1,2,3}.
 - **R2 is structure-dependent** (exact/ma2/hybrid based on cell sizes). R1, R3, R4, R5 are pure algebra.
 - **`rsg_vars` dual semantics**: variance decomposition groups for Xbar/S; stratification (separate charts) for IMR/R.
 - **obs_id assigned BEFORE sort**, cell_key = (factor × time) tuple. Canonical sort: (cell_key, obs_id).
@@ -70,7 +70,7 @@ This is not hypothetical. A design review of this codebase read the `analysis_pa
 ### Key Classes
 - `ProcessBehavior` → `.formulate()` → `Study` → `.execute()` → `AnalysisResult`
 - `AnalysisDataSet` orchestrates: `DataPreparation` → `SDSRegistry` → `ResidualCalculator` / `EffectsCalculator`
-- `DataPrepConfig` (base config) → `AnalysisSpecification` (adds analysis_type)
+- `FormulationSpec` (frozen, structural, built once in `formulate()`) → `ChartRequest` (frozen, ephemeral, one per `execute()`)
 
 ### Dependency boundaries
 - Runtime deps (in `[project.dependencies]`): `numpy>=1.23`, `pandas>=2.0,<3`, `natsort>=8.0`, `plotly>=5.18,<7`. Upper bounds on pandas/plotly are intentional — the next major bumps both have documented breaking changes.
@@ -81,10 +81,10 @@ This is not hypothetical. A design review of this codebase read the `analysis_pa
 ### Validation & Testing
 - `validation/PBTESTDATABASE_T100.csv`: Bishop's reference data. PM SDS 1–6 columns, `*` = NA
 - pytest with `.venv/bin/python -m pytest tests/`
-- Synthetic data: top-level `pb.make_sds(...)` (re-exported); module path `from processbehavior.datasets.synthetic import make_sds`
+- Synthetic data: top-level `pb.make_design(state=1..6, seed=...)` (re-exported); module path `from processbehavior.datasets.synthetic import make_design`
 - Use pytest's `tmp_path` for any file the test writes; never `tempfile.NamedTemporaryFile(delete=False)` + manual `os.remove`. The hand-rolled pattern races with openpyxl/pandas readers on Windows (WinError 32). The `temp_excel_file` fixture in `tests/test_excel_export.py` is the reference pattern.
-- CI matrix is `[3.9, 3.11, 3.13]` × `[ubuntu, macos, windows]`. Lint + mypy run only on `ubuntu/3.11` to avoid platform-specific drift.
-- Python 3.9 has conditional pins in `[lint]`/`[test]`: pytest>=9 and filelock>=3.20 / virtualenv>=20.36 dropped 3.9 wheels, so those floors are gated on `python_version >= '3.10'`.
+- CI matrix is `[3.10, 3.11, 3.13]` × `[ubuntu, macos, windows]`. Lint + mypy run only on `ubuntu/3.11` to avoid platform-specific drift.
+- Python floor is 3.10 (3.9 went EOL Oct 2025 and was dropped pre-publish). `typing_extensions` is still a conditional dep below 3.11 — `NotRequired` only entered `typing` in 3.11.
 - Run a fast local slice with `.venv/bin/python -m pytest tests/ -m "not slow"`.
 
 ### Wheeler Terminology

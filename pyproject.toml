@@ -1,5 +1,5 @@
 [build-system]
-requires = ["hatchling>=1.21"]
+requires = ["hatchling>=1.27"]
 build-backend = "hatchling.build"
 
 [project]
@@ -7,7 +7,7 @@ name = "processbehavior"
 dynamic = ["version"]
 description = "Python-native Process Behavior & Control Charts (spec-driven SPC with tidy outputs)"
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 authors = [{name = "cnicholas", email = "chris.nicholas@gmail.com"}]
 license = "Apache-2.0"
 license-files = ["LICENSE"]
@@ -15,7 +15,10 @@ keywords = [
   "spc",
   "quality-control",
   "control-charts",
+  "control-chart",
   "process-behavior",
+  "process-behavior-chart",
+  "xmr",
   "shewhart",
   "variance-analysis",
   "bishop-vas",
@@ -27,13 +30,15 @@ classifiers = [
   "Intended Audience :: Science/Research",
   "Intended Audience :: Manufacturing",
   "Programming Language :: Python :: 3",
-  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3 :: Only",
   "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
   "Topic :: Scientific/Engineering :: Information Analysis",
   "Topic :: Scientific/Engineering",
+  "Operating System :: OS Independent",
+  "Typing :: Typed",
 ]
 dependencies = [
   "numpy>=1.23",
@@ -41,7 +46,7 @@ dependencies = [
   "natsort>=8.0.0",
   "plotly>=5.18,<7",
   # NotRequired (used in processbehavior.types) is only in typing from 3.11;
-  # on 3.9/3.10 it comes from typing_extensions.
+  # on 3.10 it comes from typing_extensions.
   "typing_extensions>=4.0; python_version < '3.11'",
 ]
 
@@ -56,9 +61,7 @@ Documentation = "https://cnicholas.github.io/processbehavior/"
 excel = ["openpyxl>=3.1"]
 images = ["kaleido>=0.2"]
 test = [
-  # pytest 9.x requires Python 3.10+; keep 3.9 on the latest 8.x line.
-  "pytest>=9.0.3; python_version >= '3.10'",
-  "pytest>=8.4.2,<9; python_version < '3.10'",
+  "pytest>=9.0.3",
   "pytest-cov>=5",
   "pytest-timeout>=2.4",
   "pyarrow>=14.0",
@@ -71,10 +74,9 @@ lint = [
   "ruff>=0.5",
   "mypy>=1.10",
   "pre-commit>=3.7",
-  # Transitive CVE-driven floors. filelock>=3.20 and virtualenv>=20.36
-  # drop Python 3.9 wheels, so the floors are conditioned on >= 3.10.
-  "filelock>=3.20.3; python_version >= '3.10'",
-  "virtualenv>=20.36.1; python_version >= '3.10'",
+  # Transitive CVE-driven floors.
+  "filelock>=3.20.3",
+  "virtualenv>=20.36.1",
 ]
 docs = [
   "jupyter-book>=2.0",
@@ -150,6 +152,10 @@ exclude = [
 addopts = "-q"
 testpaths = ["tests"]
 pythonpath = ["tests"]
+# A hung test would otherwise block the whole CI matrix until GitHub's 6h kill.
+# "thread" is the portable method (the default "signal" needs SIGALRM, absent on Windows).
+timeout = 300
+timeout_method = "thread"
 markers = [
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",
     "benchmark: performance benchmark tests",
@@ -165,7 +171,7 @@ lint.select = ["E","F","I","UP","B","SIM","C90"]
 lint.ignore = []
 lint.mccabe.max-complexity = 15
 format.quote-style = "single"
-target-version = "py39"
+target-version = "py310"
 extend-exclude = [
   "validation",
   "examples",
@@ -175,7 +181,7 @@ extend-exclude = [
 ]
 
 [tool.mypy]
-python_version = "3.9"
+python_version = "3.10"
 strict = false
 warn_unused_ignores = false
 warn_redundant_casts = true

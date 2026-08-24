@@ -29,14 +29,6 @@ project:
           title: Tutorial Overview
         - file: tutorials/coffee-shop.ipynb
           title: Coffee Shop — A Complete Story
-        - file: tutorials/basic-imr.ipynb
-          title: Basic XmR Chart
-        - file: tutorials/signal-detection.ipynb
-          title: Signal Detection
-        - file: tutorials/xbar-s-analysis.ipynb
-          title: Xbar-S Analysis
-        - file: tutorials/stratified-analysis.ipynb
-          title: Stratified Analysis
         - file: tutorials/process-capability.ipynb
           title: Process Capability
         - file: tutorials/process-capability-before-after.ipynb
@@ -45,10 +37,6 @@ project:
           title: Derived Variables — Transforms & Binning
         - file: tutorials/loss-function.ipynb
           title: Loss Function
-        - file: tutorials/sds-validation.ipynb
-          title: SDS Validation
-        - file: tutorials/sds1-complete-analysis.ipynb
-          title: Complete SDS1 Analysis
     - title: User Guide
       children:
         - file: user-guide/formulation.md

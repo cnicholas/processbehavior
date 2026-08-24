@@ -289,19 +289,37 @@ class AnalysisResult:
         This is intentional: each effect type has different semantics and
         structure, and users typically work with one effect type at a time.
 
+        Keys are named after your own factor columns, so they vary by study.
+        For ``factors=['machine', 'shift']`` the dict holds:
+
+        - ``'machine'``, ``'shift'`` — per-factor main effects, one row per
+          level, in a ``Main_Effect`` column.
+        - ``'main_effect'`` — main effects of the composite rational subgroup,
+          one row per ``rsg`` value.
+        - ``'time'`` — time main effects, one row per time point, in a
+          ``PT_ME`` column.
+        - ``'machine_MEs'``, ``'shift_MEs'`` — observation-level main-effect
+          scores (one row per observation, not per level).
+        - ``'factor_interaction_effects'`` — observation-level interaction
+          effects; present only when two or more factors were declared.
+
+        Because the keys carry your column names, a factor literally named
+        ``time`` or ``main_effect`` collides with the library's own keys.
+
         Returns
         -------
         dict[str, DataFrame]
-            Dictionary with main effects:
-            - 'k_effects': Factor effects DataFrame
-            - 't_effects': Time effects DataFrame
-            Empty dict if not calculated.
+            Main effects keyed as described above. Empty dict if not
+            calculated (no factors, or a design state without effects).
 
         Examples
         --------
-        >>> effects = result.effects
-        >>> factor_effects = effects['k_effects']
-        >>> time_effects = effects['t_effects']
+        >>> effects = result.effects            # doctest: +SKIP
+        >>> sorted(effects)                     # doctest: +SKIP
+        ['factor_interaction_effects', 'machine', 'machine_MEs', 'main_effect',
+         'shift', 'shift_MEs', 'time']
+        >>> effects['machine']                  # doctest: +SKIP
+        >>> effects['time']                     # doctest: +SKIP
         """
         return self._effects.copy() if self._effects else {}
 
