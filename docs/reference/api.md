@@ -293,7 +293,7 @@ result.get_signals(chart_name=None)    # -> DataFrame of detected signals
 
 `rules` accepts `'standard'` (rules 1–4, the default), `'extended'` / `'all'`
 (rules 1–8), an explicit list like `['rule_1', 'rule_4']`, or a
-[`RuleSet`](#signal-detection-processbehaviorsignals). Rules are filtered by
+[`RuleSet`](#signal-detection). Rules are filtered by
 chart type: **Xbar and S charts evaluate rule 1 only; X and mR charts evaluate
 all eight** (aggregation across subgroups invalidates the run-based rules'
 independence assumptions).
@@ -412,6 +412,7 @@ mi.plot(*, view='combined',        # 'combined' | 'xmr' | 'histogram'
         bins=10, theme=None, width=900, height=700, title=None)
 ```
 
+(derived-variables)=
 ## Derived Variables
 
 Specs and functions behind `pb.transform()` / `pb.bin()`:
@@ -436,6 +437,7 @@ replace_derived(pb, id, spec)
 The word *derived* belongs to this module: transform/binning specs. (VAS
 residuals are "stored" or "request" residuals, never "derived".)
 
+(signal-detection)=
 ## Signal Detection (`processbehavior.signals`)
 
 Secondary surface — import from the subpackage:
