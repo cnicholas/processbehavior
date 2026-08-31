@@ -51,6 +51,16 @@ project:
           title: Bishop Reference Validation
         - file: tutorials/sds1-complete-analysis.ipynb
           title: Complete Design-State-1 Analysis
+    - title: Examples
+      children:
+        - file: examples/index.md
+          title: Worked Examples
+        - file: examples/xmr-chart-in-python.md
+          title: XmR Chart in Python
+        - file: examples/control-chart-in-python.md
+          title: Control Chart in Python
+        - file: examples/process-behavior-chart.md
+          title: Process Behavior Chart
     - title: User Guide
       children:
         - file: user-guide/formulation.md
