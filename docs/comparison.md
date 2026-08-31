@@ -1,12 +1,5 @@
 # Compared to Other Python SPC Tools
 
-:::{warning}
-**Draft** — the claims on this page about other projects are pending maintainer
-verification. Each carries an inline `VERIFY` marker with the source consulted;
-the marker (and this banner) come off only when the claim has been checked
-against the project's own documentation.
-:::
-
 Several Python packages draw control charts. This page is an honest map of the
 landscape: what to look for, where ProcessBehavior sits, and when a different
 tool — or a spreadsheet — is the better choice.
@@ -46,7 +39,6 @@ counts, a general-purpose charting library is less ceremony.
 
 ### pyspc
 
-<!-- VERIFY(maintainer): claims below from https://github.com/carlosqsilva/pyspc (checked 2026-08-31) -->
 
 A general-purpose control-chart library with the broadest chart menu of the
 Python options: variables charts (Xbar-R, Xbar-S, X/mR), EWMA, CUSUM,
@@ -61,7 +53,6 @@ codebases and the maintenance status.
 
 ### statprocon
 
-<!-- VERIFY(maintainer): claims below from https://github.com/mattmccormick/statprocon (checked 2026-08-31) -->
 
 A deliberately small helper for XmR (process behaviour) charts in the Wheeler
 tradition: it computes the chart *data* — limits, center lines, moving ranges
@@ -74,7 +65,6 @@ subgrouped charts, no structure detection, no rule engine.
 
 ### mvSPC
 
-<!-- VERIFY(maintainer): claims below from https://pypi.org/project/mvSPC/ (checked 2026-08-31) -->
 
 Implements methods from Montgomery's *Statistical Quality Control* (7th ed.),
 with a textbook orientation — useful when you want the Montgomery formulation
@@ -92,7 +82,6 @@ error that inflates limits), no run rules, and no answer when someone asks
 
 ## Feature summary
 
-<!-- VERIFY(maintainer): every non-ProcessBehavior cell below inherits the per-project markers above -->
 
 | | ProcessBehavior | pyspc | statprocon |
 |---|---|---|---|
@@ -107,7 +96,7 @@ error that inflates limits), no run rules, and no answer when someone asks
 | Taguchi loss decomposition | ✅ | — | — |
 | Validated against published reference | ✅ ([in CI](reference/validation.md)) | — | — |
 | Plotting | plotly, themeable | yes | none (by design) |
-| License | Apache-2.0 | GPL-3.0 | MIT <!-- VERIFY(maintainer): statprocon license --> |
+| License | Apache-2.0 | GPL-3.0 | MIT |
 
 ## When you don't need ProcessBehavior
 
