@@ -13,6 +13,7 @@ These tutorials walk through ProcessBehavior from first chart to full factorial 
 | 7 | [Xbar-S Analysis](xbar-s-analysis.ipynb) | Subgrouped data: the S chart in its own right, residuals on S |
 | 8 | [Signal Detection](signal-detection.ipynb) | The 8 WECO rules: presets, RuleSet builder, per-rule drill-down |
 | 9 | [Stratified Analysis](stratified-analysis.ipynb) | One chart per stream: strata, focus(), stratified vs. combined |
+| 10 | [Complete Design-State-1 Analysis](sds1-complete-analysis.ipynb) | The by= matrix, residual charts, effects & interaction plots |
 
 More tutorials are being rewritten against the current API and will return here.
 

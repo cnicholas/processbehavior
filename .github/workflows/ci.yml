@@ -54,10 +54,9 @@ jobs:
         run: pytest tests/ -m "not slow" --cov=processbehavior --cov-report=xml --cov-report=term-missing
       - name: Execute docs notebooks (ubuntu / 3.13 only)
         # Allowlist of notebooks known to execute against the current API.
-        # The remaining tutorials (sds-validation, sds1-complete-analysis)
-        # have stale code; they are pulled from the docs TOC and need
-        # rewriting against the current API before they are republished and
-        # join this gate.
+        # The remaining tutorial (sds-validation) has stale code; it is
+        # pulled from the docs TOC and needs rewriting against the current
+        # API before it is republished and joins this gate.
         if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.13'
         run: |
           pytest --nbmake \
@@ -71,6 +70,7 @@ jobs:
             docs/tutorials/xbar-s-analysis.ipynb \
             docs/tutorials/signal-detection.ipynb \
             docs/tutorials/stratified-analysis.ipynb \
+            docs/tutorials/sds1-complete-analysis.ipynb \
             --tb=short
       - name: Validate against Bishop's reference results (ubuntu / 3.13 only)
         # The 280-assertion ground-truth check. It lives outside tests/ because
