@@ -43,6 +43,8 @@ project:
           title: Xbar-S Analysis
         - file: tutorials/signal-detection.ipynb
           title: Signal Detection
+        - file: tutorials/stratified-analysis.ipynb
+          title: Stratified Analysis
     - title: User Guide
       children:
         - file: user-guide/formulation.md
