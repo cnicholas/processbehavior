@@ -149,6 +149,7 @@ When you see existing code using a non-canonical alias and you're touching nearb
 - Jupyter Book / MyST is the only doc system. Config: `docs/myst.yml`. The previous `mkdocs.yml` was deleted in Phase 2; do not restore it.
 - Root `CHANGELOG.md` is the source of truth — `docs/appendix/changelog.md` is a `{include}` of it.
 - The `Docs` workflow at `.github/workflows/docs.yml` builds with the MyST CLI and deploys to GitHub Pages on push to `main` (gated on Pages being enabled in repo Settings).
+- Docs versioning policy (single live version tracking `main`; no version strings in prose; hand-pinned mystmd) is in `CONTRIBUTING.md` → "Docs versioning".
 
 ### Audit history
 - Phase 3 release-prep follow-ups (mypy re-enable, broad-except cleanup, lockfile, etc.) are tracked in GitHub Issue #77.
