@@ -41,6 +41,8 @@ project:
           title: Loss Function
         - file: tutorials/xbar-s-analysis.ipynb
           title: Xbar-S Analysis
+        - file: tutorials/signal-detection.ipynb
+          title: Signal Detection
     - title: User Guide
       children:
         - file: user-guide/formulation.md
