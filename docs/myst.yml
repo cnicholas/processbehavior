@@ -27,6 +27,8 @@ project:
       children:
         - file: tutorials/index.md
           title: Tutorial Overview
+        - file: tutorials/first-xmr-chart.ipynb
+          title: Your First X/mR Chart
         - file: tutorials/coffee-shop.ipynb
           title: Coffee Shop — A Complete Story
         - file: tutorials/process-capability.ipynb
@@ -37,6 +39,28 @@ project:
           title: Derived Variables — Transforms & Binning
         - file: tutorials/loss-function.ipynb
           title: Loss Function
+        - file: tutorials/xbar-s-analysis.ipynb
+          title: Xbar-S Analysis
+        - file: tutorials/signal-detection.ipynb
+          title: Signal Detection
+        - file: tutorials/stratified-analysis.ipynb
+          title: Stratified Analysis
+        - file: tutorials/design-state-tour.ipynb
+          title: Design-State Tour
+        - file: tutorials/sds-validation.ipynb
+          title: Bishop Reference Validation
+        - file: tutorials/sds1-complete-analysis.ipynb
+          title: Complete Design-State-1 Analysis
+    - title: Examples
+      children:
+        - file: examples/index.md
+          title: Worked Examples
+        - file: examples/xmr-chart-in-python.md
+          title: XmR Chart in Python
+        - file: examples/control-chart-in-python.md
+          title: Control Chart in Python
+        - file: examples/process-behavior-chart.md
+          title: Process Behavior Chart
     - title: User Guide
       children:
         - file: user-guide/formulation.md
@@ -61,6 +85,8 @@ project:
           title: Validation vs. Bishop's Minitab Results
         - file: reference/weco-rules.md
           title: Western Electric Rules
+    - file: comparison.md
+      title: Compared to Other Python SPC Tools
     - title: Appendix
       children:
         - file: appendix/wheeler-terminology.md

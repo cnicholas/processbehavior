@@ -97,6 +97,30 @@ summary.
 If a Bishop check fails after your change, the change is wrong — not the
 reference.
 
+## Docs versioning
+
+The docs have one live version, deliberately, until 1.0:
+
+- **The site tracks `main`** — it always describes the latest release plus any
+  unreleased changes. There are no per-version documentation archives before
+  1.0; `CHANGELOG.md` is the only version-history surface.
+- **No version strings in docs prose.** A hand-written "as of version X"
+  drifts silently. The only pages that may state a version are generated or
+  drift-guarded ones — `docs/reference/validation.md` is regenerated in CI and
+  checked with `git diff --exit-code`. Everything else should describe
+  behavior, not versions (the installation page prints
+  `processbehavior.__version__` with a placeholder expected output for exactly
+  this reason).
+- **Deploys are `main`-only** via `.github/workflows/docs.yml`; PR builds
+  verify the site compiles but do not deploy.
+- **The `mystmd` version is pinned by hand** in `docs.yml` (an `npm install -g
+  mystmd@<version>` run step Dependabot cannot see). Bumping it is release
+  housekeeping: build locally with the new version, eyeball the rendered site,
+  then update the pin.
+
+Revisit at 1.0: if breaking releases start, versioned deploy paths (e.g.
+`/v1.0/`) with a switcher become worth the CI work. Not before.
+
 ## API contract
 
 The current public surface is the two-step analyst workflow:

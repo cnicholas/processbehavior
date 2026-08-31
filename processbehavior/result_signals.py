@@ -100,13 +100,16 @@ def _build_config(rules: Any, config: Any | None, kwargs: dict[str, Any]) -> Any
     if config is not None:
         return config
 
-    config = SignalConfig()
-
-    if rules is not None:
-        if isinstance(rules, RuleSet):
-            config.enabled_rules = rules.get_rules()
-        elif isinstance(rules, (str, list)):
-            config.enabled_rules = rules
+    # Route `rules` through the constructor: SignalConfig.__post_init__ is what
+    # resolves preset strings ('standard'/'extended'/'all') to rule lists.
+    # Assigning enabled_rules after construction bypasses it, leaving a raw
+    # string that get_rules_for_chart() rejects.
+    if rules is None:
+        config = SignalConfig()
+    elif isinstance(rules, RuleSet):
+        config = SignalConfig(enabled_rules=rules.get_rules())
+    else:
+        config = SignalConfig(enabled_rules=rules)
 
     for key, value in kwargs.items():
         if hasattr(config, key):
