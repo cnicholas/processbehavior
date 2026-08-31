@@ -180,7 +180,15 @@ processbehavior is the **computational engine** for Bishop's VAS methodology. It
 
 For the **curated analyst experience** — guided workflows, interactive dashboards, and collaboration features — see [processbehavior.com](https://processbehavior.com).
 
-For the **methodological foundation** — the theory behind VAS, design-state classification, and residual interpretation — see the forthcoming book by Dr. Thomas A. Bishop and Chris Nicholas.
+For the **methodological foundation** — the theory behind VAS, design-state classification, and residual interpretation — see Bishop's published book below and the forthcoming book by Dr. Thomas A. Bishop and Chris Nicholas.
+
+## References
+
+The methodology this library implements:
+
+> Bishop, Thomas A. (2021). *[The Scientific Basis for Modern Analytic Practice](https://www.lulu.com/shop/thomas-bishop/the-scientific-basis-for-modern-analytic-practice/paperback/product-k7e8dk.html)*. Lulu Press. 279 pp.
+
+To cite the software itself, see [`CITATION.cff`](CITATION.cff).
 
 ## License
 
