@@ -45,6 +45,10 @@ project:
           title: Signal Detection
         - file: tutorials/stratified-analysis.ipynb
           title: Stratified Analysis
+        - file: tutorials/design-state-tour.ipynb
+          title: Design-State Tour
+        - file: tutorials/sds-validation.ipynb
+          title: Bishop Reference Validation
         - file: tutorials/sds1-complete-analysis.ipynb
           title: Complete Design-State-1 Analysis
     - title: User Guide
