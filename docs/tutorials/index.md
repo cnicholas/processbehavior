@@ -12,6 +12,7 @@ These tutorials walk through ProcessBehavior from first chart to full factorial 
 | 6 | [Taguchi Loss Function](loss-function.ipynb) | Loss decomposition: 5 components, Pareto charts, PDC breakdown |
 | 7 | [Xbar-S Analysis](xbar-s-analysis.ipynb) | Subgrouped data: the S chart in its own right, residuals on S |
 | 8 | [Signal Detection](signal-detection.ipynb) | The 8 WECO rules: presets, RuleSet builder, per-rule drill-down |
+| 9 | [Stratified Analysis](stratified-analysis.ipynb) | One chart per stream: strata, focus(), stratified vs. combined |
 
 More tutorials are being rewritten against the current API and will return here.
 
