@@ -10,6 +10,7 @@ These tutorials walk through ProcessBehavior from first chart to full factorial 
 | 4 | [Capability — Before vs. After](process-capability-before-after.ipynb) | Quantifying an improvement: two studies, one comparison |
 | 5 | [Derived Variables](derived-variables.ipynb) | Transforms and binning: deriving factors before formulating |
 | 6 | [Taguchi Loss Function](loss-function.ipynb) | Loss decomposition: 5 components, Pareto charts, PDC breakdown |
+| 7 | [Xbar-S Analysis](xbar-s-analysis.ipynb) | Subgrouped data: the S chart in its own right, residuals on S |
 
 More tutorials are being rewritten against the current API and will return here.
 

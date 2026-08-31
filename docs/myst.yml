@@ -39,6 +39,8 @@ project:
           title: Derived Variables — Transforms & Binning
         - file: tutorials/loss-function.ipynb
           title: Loss Function
+        - file: tutorials/xbar-s-analysis.ipynb
+          title: Xbar-S Analysis
     - title: User Guide
       children:
         - file: user-guide/formulation.md
