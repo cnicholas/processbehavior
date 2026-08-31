@@ -556,9 +556,8 @@ def test_gate_08_chart_table_join_logic_stable():
     """Gate 08: chart_table() joins are stable across key naming variants."""
 
 
-@SC
-def test_gate_09_top_level_exports_scoped():
-    """Gate 09: top-level exports align with documented stability contract."""
+# Gate 09 (top-level exports align with documented stability contract) is now
+# enforced for real by tests/test_api_reference.py.
 
 
 @SC
