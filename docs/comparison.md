@@ -22,15 +22,16 @@ tool — or a spreadsheet — is the better choice.
 
 ## Where ProcessBehavior sits
 
-ProcessBehavior implements Tom Bishop's Variance Analysis System (VAS) on top
-of Wheeler-style process behavior charts. What makes it different is the
-formulate-then-execute split: it classifies your data's *structure* (the
-design state) before computing anything, and only offers the charts that
-structure supports. Its numbers are pinned to Bishop's Minitab reference
-output by [a validation suite](reference/validation.md) that runs in CI, and
-signal detection applies the Western Electric rules with chart-appropriate
-filtering (run rules on time-ordered charts only). Everything is
-pandas-native and plots are interactive plotly figures.
+ProcessBehavior implements Thomas A. Bishop's Variance Analysis System (VAS)
+on top of Wheeler-style process behavior charts. What makes it different is
+the formulate-then-execute split: it classifies your data's *structure* — the
+three-state design lineage (PDS / ODS / ADS) — before computing anything, and
+only offers the charts that structure supports. Its numbers are pinned to
+Bishop's Minitab reference output by [a 280-assertion validation
+suite](reference/validation.md) that runs in CI, and signal detection applies
+the Western Electric rules with chart-appropriate filtering (run rules on
+time-ordered charts only). Everything is pandas-native and plots are
+interactive plotly figures.
 
 The trade-off: it is opinionated. If you want a quick c-chart of defect
 counts, a general-purpose charting library is less ceremony.
