@@ -27,6 +27,8 @@ project:
       children:
         - file: tutorials/index.md
           title: Tutorial Overview
+        - file: tutorials/first-xmr-chart.ipynb
+          title: Your First X/mR Chart
         - file: tutorials/coffee-shop.ipynb
           title: Coffee Shop — A Complete Story
         - file: tutorials/process-capability.ipynb

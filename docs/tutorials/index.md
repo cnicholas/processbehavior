@@ -4,14 +4,14 @@ These tutorials walk through ProcessBehavior from first chart to full factorial 
 
 | # | Tutorial | What You'll Learn |
 |---|----------|-------------------|
-| 1 | [Coffee Shop — A Complete Story](coffee-shop.ipynb) | The whole workflow end to end: formulate, execute, read the chart, act |
-| 2 | [Process Capability](process-capability.ipynb) | Pp/Ppk, Cp/Cpk, one-sided specs, comparing scenarios |
-| 3 | [Capability — Before vs. After](process-capability-before-after.ipynb) | Quantifying an improvement: two studies, one comparison |
-| 4 | [Derived Variables](derived-variables.ipynb) | Transforms and binning: deriving factors before formulating |
-| 5 | [Taguchi Loss Function](loss-function.ipynb) | Loss decomposition: 5 components, Pareto charts, PDC breakdown |
+| 1 | [Your First X/mR Chart](first-xmr-chart.ipynb) | The shortest path: wrap, formulate, execute, read the limits |
+| 2 | [Coffee Shop — A Complete Story](coffee-shop.ipynb) | The whole workflow end to end: formulate, execute, read the chart, act |
+| 3 | [Process Capability](process-capability.ipynb) | Pp/Ppk, Cp/Cpk, one-sided specs, comparing scenarios |
+| 4 | [Capability — Before vs. After](process-capability-before-after.ipynb) | Quantifying an improvement: two studies, one comparison |
+| 5 | [Derived Variables](derived-variables.ipynb) | Transforms and binning: deriving factors before formulating |
+| 6 | [Taguchi Loss Function](loss-function.ipynb) | Loss decomposition: 5 components, Pareto charts, PDC breakdown |
 
-More tutorials — signal detection, Xbar-S, stratified analysis, and a full design-state
-walkthrough — are being rewritten against the current API and will return here.
+More tutorials are being rewritten against the current API and will return here.
 
 ## Prerequisites
 

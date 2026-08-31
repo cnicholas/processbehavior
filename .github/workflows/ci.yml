@@ -54,15 +54,16 @@ jobs:
         run: pytest tests/ -m "not slow" --cov=processbehavior --cov-report=xml --cov-report=term-missing
       - name: Execute docs notebooks (ubuntu / 3.13 only)
         # Allowlist of notebooks known to execute against the current API.
-        # The remaining tutorials (basic-imr, signal-detection,
-        # stratified-analysis, xbar-s-analysis, sds-validation,
-        # sds1-complete-analysis) have stale code; they are pulled from the
-        # docs TOC and need rewriting against the current API before they
-        # are republished and join this gate.
+        # The remaining tutorials (signal-detection, stratified-analysis,
+        # xbar-s-analysis, sds-validation, sds1-complete-analysis) have
+        # stale code; they are pulled from the docs TOC and need rewriting
+        # against the current API before they are republished and join
+        # this gate.
         if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.13'
         run: |
           pytest --nbmake \
             docs/getting-started/quickstart.ipynb \
+            docs/tutorials/first-xmr-chart.ipynb \
             docs/tutorials/coffee-shop.ipynb \
             docs/tutorials/process-capability.ipynb \
             docs/tutorials/process-capability-before-after.ipynb \
