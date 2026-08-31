@@ -931,42 +931,6 @@ class AnalysisResult:
         return '\n'.join(lines)
 
     # =========================================================================
-    # Dictionary-like access (for backward compatibility)
-    # =========================================================================
-
-    def __getitem__(self, key):
-        """Allow dict-like access to charts for backward compatibility."""
-        return self.charts[key]
-
-    def __contains__(self, key):
-        """Check if chart exists."""
-        return key in self.charts
-
-    def keys(self):
-        """Get chart names (for backward compatibility)."""
-        return self.charts.keys()
-
-    def values(self):
-        """Get chart info (for backward compatibility)."""
-        return self.charts.values()
-
-    def items(self):
-        """Get chart items (for backward compatibility)."""
-        return self.charts.items()
-
-    def __len__(self):
-        """Return number of charts (for backward compatibility)."""
-        return len(self.charts)
-
-    def __iter__(self):
-        """Iterate over chart names (for backward compatibility)."""
-        return iter(self.charts)
-
-    def get(self, key, default=None):
-        """Get chart by name with default (for backward compatibility)."""
-        return self.charts.get(key, default)
-
-    # =========================================================================
     # Excel Export
     # =========================================================================
 

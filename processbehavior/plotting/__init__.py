@@ -17,7 +17,10 @@ from .effects_charts import (
     create_time_effects_chart,
     create_time_interaction_chart,
 )
-from .plotter import Plotter
+
+# Redundant alias marks this as a deliberate re-export that is intentionally
+# absent from __all__ — the convention both ruff and type checkers understand.
+from .plotter import Plotter as Plotter
 from .themes import ChartTheme, get_theme, list_themes, register_theme
 
 __all__ = [
@@ -33,6 +36,11 @@ __all__ = [
     'create_time_effects_chart',
     'create_time_interaction_chart',
     'create_factor_interaction_chart',
-    # Internal — kept importable for library internals; not part of public API
-    'Plotter',
 ]
+
+# `Plotter` is imported above and stays importable for library internals
+# (analysis_result, excel_exporter) and for anyone who reaches for it
+# deliberately. It is deliberately absent from __all__: it was already labelled
+# internal, and listing an internal class in the star-import surface is how it
+# becomes a semver commitment by accident.
+

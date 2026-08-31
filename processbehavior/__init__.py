@@ -47,7 +47,7 @@ its ``.sds`` field. Internally some modules still use the legacy "SDS"
 prefix (e.g. ``sds_detector.py``); the model itself is three-state.
 """
 
-__version__ = '0.1.1'
+__version__ = '0.2.0'
 
 # Result object
 from processbehavior.analysis_result import AnalysisResult

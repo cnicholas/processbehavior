@@ -55,6 +55,8 @@ project:
       children:
         - file: reference/api.md
           title: API Reference
+        - file: reference/sds_definitions.md
+          title: Design-State Reference Scale (1-6)
         - file: reference/validation.md
           title: Validation vs. Bishop's Minitab Results
         - file: reference/weco-rules.md
