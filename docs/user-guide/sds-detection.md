@@ -74,9 +74,9 @@ study = pb.formulate(
     time='batch'
 )
 
-print(f"DS: {study.observed_design_state.sds}")
-print(f"Reason: {study.sds_reason}")
-print(f"Description: {study.sds_description}")
+print(f"ODS: {study.observed_design_state.sds}  ADS: {study.analytical_design_state.sds}")
+print(f"Reason: {study.ads_reason}")
+print(f"Description: {study.ads_description}")
 ```
 
 ## The VAS Problem Formulation

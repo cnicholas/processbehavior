@@ -78,7 +78,7 @@ print("Installation verified!")
 
 Expected output:
 ```
-ProcessBehavior version: 0.1.1
+ProcessBehavior version: <your installed version>
 Observed:   ODS 2
 Analytical: ADS 2
 Valid charts: ['Histogram', 'Xbar', 'S', 'X', 'mR']
