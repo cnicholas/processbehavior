@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-08-31
+
+### Removed
+- **Dict-emulation on ``AnalysisResult``.** ``result['Xbar']``, ``result.keys()``,
+  ``result.values()``, ``result.items()``, ``result.get(...)``, ``len(result)``,
+  ``in result`` and iteration are gone. They were labelled "for backward
+  compatibility" with no released version to be compatible with, and they gave a
+  second, undocumented way to reach chart payloads that shadowed the real
+  accessors. Use ``result.get_chart(name)`` for chart data,
+  ``result.get_statistics(name)`` for statistics, ``result.all_charts`` for the
+  list of chart names, and ``result.charts`` for the raw payload map.
+
+- **``Plotter`` from ``processbehavior.plotting.__all__``.** It was already
+  labelled internal; listing it in the star-import surface made it a semver
+  commitment by accident. Still importable
+  (``from processbehavior.plotting import Plotter``) for anyone who wants it.
+
+Both are removed now rather than deprecated because nothing has been published
+yet, so no one is depending on them. After the first release each would have
+cost a deprecation cycle.
+
 ### Added
 - **``Study.supports_calibration(...)`` and ``CalibrationNotSupportedError``.** Whether a
   calibration can be applied depended on a private rule, so clients re-derived it — and got
@@ -704,6 +725,7 @@ and may change between minor versions until 1.0.
 - `natsort >= 8.0`
 - `plotly >= 5.18, < 7`
 
-[Unreleased]: https://github.com/cnicholas/processbehavior/compare/v0.1.1...HEAD
+[Unreleased]: https://github.com/cnicholas/processbehavior/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/cnicholas/processbehavior/compare/v0.1.1...v0.2.0
 [0.1.1]: https://github.com/cnicholas/processbehavior/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/cnicholas/processbehavior/releases/tag/v0.1.0

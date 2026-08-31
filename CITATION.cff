@@ -18,7 +18,7 @@ authors:
 repository-code: "https://github.com/cnicholas/processbehavior"
 url: "https://cnicholas.github.io/processbehavior/"
 license: Apache-2.0
-version: 0.1.1
+version: 0.2.0
 keywords:
   - statistical process control
   - process behavior charts
