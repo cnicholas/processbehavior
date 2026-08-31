@@ -27,6 +27,7 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Literal
 
 from .exceptions import ChartNotAvailableError, FactorNotFoundError, ValidationError
+from .residual_calculator import resolve_r6_groupby
 from .sds_detector import SDSRegistry
 from .spc_constants import (
     ALL_RESIDUALS,
@@ -1031,7 +1032,9 @@ class Study:
         - R1-R5: VAS residuals (where applicable for the SDS)
         - RCR1-RCR5: Re-centered residuals (Y reconstructed from components)
 
-        Returns a copy to preserve immutability.
+        Returns a copy to preserve immutability. The frame itself is immutable
+        after formulate() — execute() never adds columns to it; request
+        residuals (R6/RCR6) live only on the result that asked for them.
 
         Returns
         -------
@@ -2214,22 +2217,28 @@ class Study:
                 available=available_list,
             )
 
-        # Resolve value column (response or residual; R6 has its own compute path).
-        if value is not None and value.upper() == 'R6':
-            value_col = self._compute_r6(by_validated, recentered)
+        # Resolve value column (response or residual; R6 is computed per request).
+        is_r6 = value is not None and value.upper() == 'R6'
+        if is_r6:
+            # Raises the by=/factors ValidationErrors; validation stays pure — the
+            # frame is untouched. Analysis re-derives the key when it computes.
+            resolve_r6_groupby(by_validated, self._spec.rsg_vars_list)
+            value_col = 'RCR6' if recentered else 'R6'
         else:
             value_col = self._resolve_value_column(value, recentered)
 
         is_residual = value is not None and value.upper().startswith('R')
 
         # Validate residual availability (Histogram exempt — plots any numeric column).
-        if (
-            is_residual
-            and base_chart != 'Histogram'
-            and value_col not in self._ads.analysis_dataset.columns
-        ):
+        # R6 never lives on the study frame; check its prerequisites instead — the
+        # same predicate residual_charts uses, so execute() and why_not() agree.
+        ads_columns = self._ads.analysis_dataset.columns
+        residual_col_missing = (
+            not {'R5', 'R2'}.issubset(ads_columns) if is_r6 else value_col not in ads_columns
+        )
+        if is_residual and base_chart != 'Histogram' and residual_col_missing:
             available_residuals = [
-                c for c in self._ads.analysis_dataset.columns
+                c for c in ads_columns
                 if c.upper().startswith('R') and c[1:2].isdigit()
             ]
             raise ChartNotAvailableError(
@@ -2338,44 +2347,6 @@ class Study:
             raise ValidationError('recentered=True requires a residual value (R1-R6), got value=None')
         if value.upper() not in recenterable:
             raise ValidationError(f"recentered=True requires a residual value (R1-R6), got '{value}'")
-
-    def _compute_r6(self, by: list[str] | None, recentered: bool) -> str:
-        """Compute R6 (factor main effect residual) on the fly.
-
-        R6 = α_i + R2 where α_i = mean(R5 | factor level(s)).
-        Accepts one or more factors via ``by``.
-        """
-        factors = self._spec.rsg_vars_list
-        if not factors:
-            raise ValidationError('R6 requires factors. No factors defined in this study.')
-
-        # Determine which factor(s) from by
-        if by is not None:
-            by_factors = [b for b in by if b in factors]
-            if not by_factors:
-                raise ValidationError(
-                    f'R6 requires at least one factor in by=.\n'
-                    f'Available factors: {factors}\n'
-                    f"Example: study.execute(chart='Xbar', value='R6', by=['{factors[0]}'])"
-                )
-            groupby_key = by_factors if len(by_factors) > 1 else by_factors[0]
-        elif len(factors) == 1:
-            groupby_key = factors[0]
-        else:
-            raise ValidationError(
-                f'R6 requires by=[factor(s)] to specify which factor(s).\n'
-                f'Available factors: {factors}\n'
-                f"Example: study.execute(chart='Xbar', value='R6', by=['{factors[0]}'])"
-            )
-
-        df = self._ads.analysis_dataset.copy()
-        alpha = df.groupby(groupby_key)['R5'].transform('mean')
-
-        df['R6'] = alpha + df['R2']
-        if recentered:
-            df['RCR6'] = df['Ybar'] + alpha + df['R2']
-        self._ads.analysis_dataset = df
-        return 'RCR6' if recentered else 'R6'
 
     def _validate_phased(self, base_chart: str, by_validated: list[str] | None) -> None:
         """Validate phased=True requirements."""

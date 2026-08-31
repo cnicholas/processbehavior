@@ -26,15 +26,20 @@ Module structure:
   calculate_r4_residual, calculate_r5_residual
 - Consolidated R2: calculate_r2(df, y, r2_method, n_per_cell)
 - Orchestration: calculate_vas_residuals(df, spec, r2_method, ...)
+- Request residuals: resolve_r6_groupby, calculate_r6_residuals — R6/RCR6 are
+  computed per execute() request from that request's by=, never stored on the
+  study-level frame (see spc_constants.REQUEST_RESIDUALS)
 """
 
 from __future__ import annotations
 
 import logging
+from collections.abc import Sequence
 from typing import TYPE_CHECKING
 
 import pandas as pd
 
+from .exceptions import ValidationError
 from .sds_detector import R2Method
 
 if TYPE_CHECKING:
@@ -492,3 +497,76 @@ def calculate_vas_residuals(
 
     logger.debug('VAS residuals calculated successfully')
     return out
+
+
+# ============================================================================
+# Request Residuals: R6 / RCR6 (computed per execute() request, never stored)
+# ============================================================================
+
+
+def resolve_r6_groupby(by: Sequence[str] | None, factors: Sequence[str]) -> str | list[str]:
+    """Resolve which factor(s) an R6 request groups on, or raise the reason it cannot.
+
+    One rule, two callers: ``Study._validate_execute_request`` calls this for its
+    ValidationErrors (validation stays pure — no frame is touched), and
+    ``Analysis._build_request_frame`` calls it again to compute. They cannot drift.
+
+    Parameters
+    ----------
+    by : Sequence[str] | None
+        The request's ``by=`` (list or ChartRequest tuple).
+    factors : Sequence[str]
+        The study's factors (``spec.rsg_vars_list``).
+
+    Returns
+    -------
+    str | list[str]
+        A single factor name, or the list of factors when ``by`` names several —
+        the exact shape ``DataFrame.groupby`` receives.
+    """
+    if not factors:
+        raise ValidationError('R6 requires factors. No factors defined in this study.')
+
+    # Determine which factor(s) from by
+    if by is not None:
+        by_factors = [b for b in by if b in factors]
+        if not by_factors:
+            raise ValidationError(
+                f'R6 requires at least one factor in by=.\n'
+                f'Available factors: {factors}\n'
+                f"Example: study.execute(chart='Xbar', value='R6', by=['{factors[0]}'])"
+            )
+        return by_factors if len(by_factors) > 1 else by_factors[0]
+    if len(factors) == 1:
+        return factors[0]
+    raise ValidationError(
+        f'R6 requires by=[factor(s)] to specify which factor(s).\n'
+        f'Available factors: {factors}\n'
+        f"Example: study.execute(chart='Xbar', value='R6', by=['{factors[0]}'])"
+    )
+
+
+def calculate_r6_residuals(df: pd.DataFrame, groupby_key: str | list[str], recentered: bool) -> pd.DataFrame:
+    """Return a new frame carrying R6 (and RCR6 when recentered). Never mutates ``df``.
+
+    R6 = α_i + R2 where α_i = mean(R5 | factor level(s)).
+
+    Bit-identity constraints — this math moved verbatim from the old
+    ``Study._compute_r6`` and must keep producing identical floats:
+
+    - ``groupby`` keeps its default kwargs (no ``observed=``, no ``dropna=``) to
+      preserve row alignment and values exactly.
+    - RCR6 is ``Ybar + alpha + R2`` evaluated left-to-right. Do not rewrite it as
+      ``Ybar + R6``: float addition is non-associative, so the two differ in the
+      last ulp.
+
+    A recentered request carries **both** columns: the mR-of-RCR6 path reads the
+    plain R6 column (``_resolve_mr_source_column('RCR6') == 'R6'``).
+    """
+    df = df.copy()
+    alpha = df.groupby(groupby_key)['R5'].transform('mean')
+
+    df['R6'] = alpha + df['R2']
+    if recentered:
+        df['RCR6'] = df['Ybar'] + alpha + df['R2']
+    return df

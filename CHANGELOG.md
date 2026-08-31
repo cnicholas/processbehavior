@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **R6/RCR6 are computed onto a per-request frame.** ``Study._compute_r6`` used to
+  write the request residual onto the shared study-level dataset from inside
+  ``execute()``'s validation — so ``execute()`` (and even a
+  ``supports_calibration(value='R6', ...)`` probe) mutated ``Study.dataset``, and a
+  later unrelated result inherited a stale R6 column that
+  ``AnalysisResult._locate_residual`` had to gate against with chart metadata. The
+  computation now lives in ``Analysis.calculate()``
+  (``residual_calculator.calculate_r6_residuals``) and lands on the requesting
+  result's own frame: ``execute()`` and the probes are pure, the study-level frame
+  is immutable after ``formulate()``, and the metadata gate is gone because the
+  condition it defended against no longer exists. The math moved verbatim —
+  numeric output is bit-identical (verified across 48 R6/RCR6 scenarios on the
+  T100 validation data and unbalanced synthetic designs). Visible side effects:
+  a plain result's ``dataset`` (and its Excel ``Full_Dataset`` sheet) no longer
+  shows a stale R6 column from an earlier request, and requesting R6 when R5/R2
+  are absent now raises ``ChartNotAvailableError`` instead of a raw ``KeyError``.
+
 ## [0.2.0] - 2026-08-31
 
 ### Removed

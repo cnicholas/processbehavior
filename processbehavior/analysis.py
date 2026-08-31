@@ -39,7 +39,9 @@ from .analysis_result import AnalysisResult
 from .data_preparation import encode_rsg, encode_rsg_series
 from .exceptions import CalibrationNotSupportedError, ChartNotAvailableError, ValidationError
 from .formulation_spec import ChartRequest, FormulationSpec
+from .residual_calculator import calculate_r6_residuals, resolve_r6_groupby
 from .spc_constants import (
+    REQUEST_RESIDUALS,
     calculate_limits,
     calculate_limits_vectorized,
     calibrated_limits,
@@ -416,6 +418,11 @@ class Analysis:
         self.calibration = request.calibration
         self._calibration_center_zero = bool(request.residual) and not request.recentered
 
+        # Per-request frame for request residuals (R6/RCR6): built in calculate(),
+        # None for every other request. The shared study-level frame is never
+        # mutated — strategies read through _source_frame().
+        self._request_frame: pd.DataFrame | None = None
+
         # Use pre-calculated AnalysisDataSet if provided, otherwise calculate
         if analysis_dataset is not None:
             self.ads = analysis_dataset
@@ -464,15 +471,20 @@ class Analysis:
             chart_type = self.request.residual_chart_type or 'X'
             recentered = self.request.recentered
 
+            # Request residuals (R6/RCR6) are computed here, onto this request's own
+            # frame — the shared study-level frame is never mutated.
+            if residual in REQUEST_RESIDUALS:
+                self._request_frame = self._build_request_frame(recentered)
+
             # Determine column name
             col_prefix = 'RCR' if recentered else 'R'
             residual_num = residual[1:]  # Extract number from 'R2', 'R3', 'R10', etc.
             col_name = f'{col_prefix}{residual_num}'
 
             # Validate column exists
-            if col_name not in self.ads.analysis_dataset.columns:
+            if col_name not in self._source_frame().columns:
                 available = [
-                    c for c in self.ads.analysis_dataset.columns if c.startswith('R') or c == self.spec.response_var
+                    c for c in self._source_frame().columns if c.startswith('R') or c == self.spec.response_var
                 ]
                 raise ChartNotAvailableError(
                     f"Residual column '{col_name}' not found.\n"
@@ -533,11 +545,46 @@ class Analysis:
 
         # Wrap in AnalysisResult for unified access
         # Pass analysis_type so result.summary reports the executed chart type, not the recommended one
-        return AnalysisResult(charts=chart_data, analysis_dataset_obj=self.ads, analysis_type=self.analysis_type)
+        return AnalysisResult(
+            charts=chart_data,
+            analysis_dataset_obj=self.ads,
+            analysis_type=self.analysis_type,
+            request_dataset=self._request_frame,
+        )
 
     # =========================================================================
     # Helper Methods (DRY principle)
     # =========================================================================
+
+    def _source_frame(self) -> pd.DataFrame:
+        """The frame this request's strategies read from.
+
+        The per-request copy carrying R6/RCR6 for a request residual, else the
+        shared study-level frame. Callers must ``.copy()`` before mutating,
+        exactly as with the shared frame.
+        """
+        return self._request_frame if self._request_frame is not None else self.ads.analysis_dataset
+
+    def _build_request_frame(self, recentered: bool) -> pd.DataFrame:
+        """Compute this request's R6/RCR6 onto a copy of the study-level frame.
+
+        R6 = α_i + R2 with α_i = mean(R5 | this request's by= factor(s)) — see
+        residual_calculator.calculate_r6_residuals for the math and its
+        bit-identity constraints.
+        """
+        shared = self.ads.analysis_dataset
+        missing = [c for c in ('R5', 'R2') if c not in shared.columns]
+        if missing:
+            available = [c for c in shared.columns if c.startswith('R') or c == self.spec.response_var]
+            raise ChartNotAvailableError(
+                f'R6 requires the stored residuals {missing} which are not present.\n'
+                f'Available columns: {available}\n'
+                f"This may indicate the analytical design state (ADS) doesn't support this residual type.",
+                chart='R6',
+                available=available,
+            )
+        groupby_key = resolve_r6_groupby(self.request.by, self.spec.rsg_vars_list)
+        return calculate_r6_residuals(shared, groupby_key, recentered)
 
     def _resolve_xmr_stratification(self) -> tuple[list[str], list[str]]:
         """(stratify_by, collapsed_factors) for the X/mR path.
@@ -753,7 +800,7 @@ class Analysis:
         for an Xbar chart on this column.
 
         Each VAS residual is recentered around a baseline computed at a specific
-        grain (see `analysis_dataset.py:364-371` and `study.py:2009`). The
+        grain (see `analysis_dataset.py:364-371` and `residual_calculator.calculate_r6_residuals`). The
         canonical grand mean of an RCRk chart averages over that grain — equal
         weight per cell — yielding Bishop's unweighted center line.
 
@@ -1062,7 +1109,7 @@ class Analysis:
 
         result = {}
         statistics = {}
-        df = self.ads.analysis_dataset.copy()
+        df = self._source_frame().copy()
 
         logger.debug('In calculate statistics XbarS')
         logger.debug('Dataframe has columns: %s', df.columns.to_list())
@@ -1088,7 +1135,7 @@ class Analysis:
         # vs unweighted differ only on unbalanced designs, and Bishop's principle
         # is that the practical difference is negligible -- the methodology still
         # requires the unweighted form. Each residual is recentered at a specific
-        # grain (analysis_dataset.py:364-371; study.py:2009 for R6), and the grand
+        # grain (analysis_dataset.py:364-371; residual_calculator.calculate_r6_residuals for R6), and the grand
         # mean averages over that grain:
         #   R3 (interaction)        -> (rsg, time) full cell grid
         #   R4 (time effect)        -> (rsg) factor grain (time component removed)
@@ -1289,7 +1336,7 @@ class Analysis:
             Chart data with 'strata' key for stratified output.
         """
         spec = self.spec
-        df = self.ads.analysis_dataset.copy()
+        df = self._source_frame().copy()
         result = {}
 
         # Determine stratification column
@@ -1471,7 +1518,7 @@ class Analysis:
             per_stratum = _precomputed['per_stratum']
             insufficient_strata = list(_precomputed.get('insufficient_strata') or [])
         else:
-            df = self.ads.analysis_dataset.copy()
+            df = self._source_frame().copy()
             if len(stratify_by) == 1:
                 stratify_col = stratify_by[0]
             else:
@@ -1625,7 +1672,7 @@ class Analysis:
                 out = out.drop(columns=['s_value'])
         else:
             # Independent calculation (existing logic)
-            df = self.ads.analysis_dataset.copy()
+            df = self._source_frame().copy()
 
             # Resolve grouping based on `by` parameter
             groupby_cols, _, stratify_by = self._resolve_by_grouping(value_col)
@@ -2072,7 +2119,7 @@ class Analysis:
 
         # --- Independent calculation (no precomputed values) ---
         result = {}
-        out = self.ads.analysis_dataset.copy()
+        out = self._source_frame().copy()
         logger.debug('Dataframe has columns: %s', out.columns.to_list())
 
         # Determine stratification column
@@ -2487,7 +2534,7 @@ class Analysis:
             return result
 
         # --- Independent calculation ---
-        out = self.ads.analysis_dataset.copy()
+        out = self._source_frame().copy()
         out = out.sort_values('sort_key', kind='stable')
         out = out.reset_index(drop=True)
 
@@ -2796,7 +2843,7 @@ class Analysis:
         if value_col is None:
             value_col = self.request.value_col if self.request.value_col else spec.response_var
 
-        data = self.ads.analysis_dataset.copy()
+        data = self._source_frame().copy()
         values = data[value_col].dropna()
 
         # Calculate global statistics
