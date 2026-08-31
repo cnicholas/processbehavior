@@ -116,13 +116,14 @@ def test_r6_xbar_center_is_factor_grain_not_full_cell_grid():
     df = synthetic.make_design(3, K1=3, K2=2, T=4, p_replicated=0.5, n_when_replicated=4, seed=42)
     pb_obj = ProcessBehavior(df)
     study = pb_obj.formulate(response='y', factors=['factor 1', 'factor 2'], time='time')
-    # Force RCR6 column to materialize
     result = study.execute(chart='Xbar', by=['factor 2'], value='R6', recentered=True)
     actual_center = result.get_statistics('Xbar')['center']
 
-    ads = study._ads.analysis_dataset
-    rsg_grain_center = ads.groupby(['factor 1', 'factor 2'], observed=True)['RCR6'].mean().mean()
-    full_grid_center = ads.groupby(['factor 1', 'factor 2', 'time'], observed=True)['RCR6'].mean().mean()
+    # RCR6 is request-scoped: it lives on the requesting result's own frame,
+    # never on the study-level frame.
+    ds = result.dataset
+    rsg_grain_center = ds.groupby(['factor 1', 'factor 2'], observed=True)['RCR6'].mean().mean()
+    full_grid_center = ds.groupby(['factor 1', 'factor 2', 'time'], observed=True)['RCR6'].mean().mean()
 
     # Tolerance for chart round_to=3.
     assert abs(actual_center - rsg_grain_center) <= 1e-3, (

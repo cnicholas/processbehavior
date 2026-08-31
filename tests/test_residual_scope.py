@@ -132,24 +132,60 @@ def test_r6_multi_factor_groupby_matches_hand_computed(study):
 
 
 # ---------------------------------------------------------------------------
-# The staleness trap
+# Request scope — R6 belongs to the result that asked, and to nothing else
 # ---------------------------------------------------------------------------
 
 
 def test_a_result_never_returns_another_requests_r6(study):
-    """Computing R6 writes the column onto the study-level dataset, so a result created
-    afterwards inherits an R6 column it never asked for.
-
-    Returning it would be worse than the original bug: silently wrong numbers from a
-    different by= rather than an empty Series. The lookup gates on this result's own chart
-    metadata, so it must raise here even though the column is right there.
+    """R6 is computed onto the requesting result's own frame; the study-level frame
+    never carries it. A result created after an R6 execute therefore has no R6
+    column at all — and its lookup must say how to get one, not hand back numbers
+    from someone else's by=.
     """
     study.execute(chart='Xbar', value='R6', by=['FACTOR 1'])
     plain = study.execute(chart='Xbar')
 
-    assert 'R6' in plain.dataset.columns, 'precondition: the stale column is present'
+    assert 'R6' not in plain.dataset.columns, 'the shared frame must never carry R6'
     with pytest.raises(ValidationError, match='computed per request'):
         plain.get_residual('R6')
+
+
+def test_execute_never_mutates_the_shared_frame(study):
+    """execute() is pure: no request — R6, recentered R6, or plain — may rebind or
+    alter the study-level frame."""
+    frame_id = id(study._ads.analysis_dataset)
+    before = study.dataset
+
+    study.execute(chart='Xbar', value='R6', by=['FACTOR 1'])
+    study.execute(chart='Xbar', value='R6', by=['FACTOR 2'], recentered=True)
+    study.execute(chart='Xbar')
+
+    assert id(study._ads.analysis_dataset) == frame_id, 'execute() rebound the shared frame'
+    pd.testing.assert_frame_equal(study.dataset, before)
+
+
+def test_supports_calibration_probe_is_pure(study):
+    """A mere probe must not write anything — it validates the same way execute()
+    does, and that validation touches no frame."""
+    frame_id = id(study._ads.analysis_dataset)
+    before = study.dataset
+
+    study.supports_calibration(chart='Xbar', value='R6', by=['FACTOR 1'])
+
+    assert id(study._ads.analysis_dataset) == frame_id, 'the probe rebound the shared frame'
+    pd.testing.assert_frame_equal(study.dataset, before)
+
+
+def test_r6_result_keeps_its_frame_after_a_later_r6(study):
+    """The series-level counterpart of the P1 chart pin: an earlier R6 result's
+    numbers survive a later R6 execute with a different by=."""
+    a = study.execute(chart='Xbar', value='R6', by=['FACTOR 1'])
+    ds = study.dataset
+    expected = ds.groupby('FACTOR 1')['R5'].transform('mean') + ds['R2']
+
+    study.execute(chart='Xbar', value='R6', by=['FACTOR 2'])
+
+    pd.testing.assert_series_equal(a.get_residual('R6'), expected, check_names=False)
 
 
 # ---------------------------------------------------------------------------

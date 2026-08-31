@@ -124,10 +124,14 @@ correct *iff* it means the stored set — say which you mean. Defined in `spc_co
 - `ALL_RESIDUALS` = stored + request. `study.RESIDUAL_CODES` is this.
 - Prose: "stored residual" / "request residual". **Do not use "derived"** — `derivations.py`
   owns that word for transform/binning specs.
-- Computing a request residual writes its column onto the study-level dataset, so a *later*
-  unrelated result inherits a stale R6. `AnalysisResult._locate_residual` gates on the
-  result's own chart metadata (`metadata['residual_type']`), never on column presence alone.
-  Don't "simplify" that to a column check.
+- Request residuals are computed in `Analysis.calculate()` onto a per-request frame
+  (`residual_calculator.calculate_r6_residuals`); the study-level frame is **never mutated
+  after `formulate()`** — `execute()` and the probes (`why_not`, `supports_calibration`) are
+  pure. A result's `_dataset` carries R6/RCR6 iff that request computed them, so
+  `_locate_residual`'s column check on the result's own frame is the correct and sufficient
+  test. Don't reintroduce writes to `AnalysisDataSet.analysis_dataset` to "share" R6 — a
+  canonical study-level R6 does not exist, and the shared-frame version of this design
+  required a metadata gate to contain the stale-column leak it created.
 - One lookup: `AnalysisResult._locate_residual`. `get_residual` and `plot_residuals` both use
   it. Nothing else should read `self._residuals` directly to answer "give me residual X" —
   three sites diverging is what produced the original bug.

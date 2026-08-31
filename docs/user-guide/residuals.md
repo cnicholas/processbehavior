@@ -193,7 +193,7 @@ result = study.execute(chart='Xbar', value='R6', by=['factor 1'], recentered=Tru
 ```
 
 **Key details**:
-- R6 is computed on-the-fly during `execute()` (not stored in the dataset like R1-R5)
+- R6 is computed on-the-fly during `execute()` (not stored in the dataset like R1-R5); it lives on the requesting result — `result.dataset['R6']` / `result.get_residual('R6')`
 - The `by` parameter is required and specifies which factor(s) to compute the main effect for
 - Available when the study has factors and R5/R2 are present
 - Re-centered R6 (RCR6) adds back the grand mean: RCR6 = Ȳ + α<sub>i</sub> + R2

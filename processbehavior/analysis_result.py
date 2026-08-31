@@ -137,7 +137,13 @@ class AnalysisResult:
     >>> focused.to_excel('machine1.xlsx')
     """
 
-    def __init__(self, charts: Charts, analysis_dataset_obj: AnalysisDataSet, analysis_type: str | None = None):
+    def __init__(
+        self,
+        charts: Charts,
+        analysis_dataset_obj: AnalysisDataSet,
+        analysis_type: str | None = None,
+        request_dataset: pd.DataFrame | None = None,
+    ):
         """
         Initialize AnalysisResult from chart data and AnalysisDataSet.
 
@@ -153,14 +159,19 @@ class AnalysisResult:
             The executed chart type ('Xbar', 'S', 'X', 'mR').
             Passed from Analysis at execute() time so result.summary
             reports the executed chart, not the recommended one.
+        request_dataset : pd.DataFrame, optional
+            This request's own frame, carrying its request residual (R6/RCR6).
+            Only a request-residual execute() passes one; every other result
+            reads the shared study-level frame.
         """
         # Store chart data
         self.charts: Charts = charts
 
-        # Backing reference to the study-level frame. Public access goes
-        # through the `dataset` property, which hands out a copy — see there.
+        # Backing frame: the shared study-level frame, or — for a request
+        # residual (R6/RCR6) — this request's own augmented copy. Public access
+        # goes through the `dataset` property, which hands out a copy — see there.
         self._ads = analysis_dataset_obj
-        self._dataset = analysis_dataset_obj.analysis_dataset
+        self._dataset = request_dataset if request_dataset is not None else analysis_dataset_obj.analysis_dataset
 
         # Store the executed analysis type (passed from Analysis)
         self._analysis_type = analysis_type
@@ -194,10 +205,10 @@ class AnalysisResult:
         Full analysis dataset with means and residuals.
 
         Returns a fresh copy on every access, matching ``Study.dataset``.
-        The underlying frame is shared by the study and every result executed
-        from it — and ``execute()`` can add columns to it (a request residual
-        such as R6) — so handing out the live frame would let one result's
-        caller mutate another's data.
+        The frame behind a plain result is shared by the study and every other
+        plain result, so handing out the live frame would let one caller mutate
+        another's data. A request-residual result (R6/RCR6) is backed by its
+        own frame carrying that request's residual columns.
 
         Returns
         -------
@@ -677,20 +688,6 @@ class AnalysisResult:
         """
         return self._locate_residual(residual_type)
 
-    def _requested_residual(self) -> str | None:
-        """The residual code this result was executed with, or None for a response chart.
-
-        Read from chart metadata rather than inferred from the dataset's columns: computing
-        a request residual writes its column onto the study-level dataset, so column
-        presence alone would let one result claim another request's numbers.
-        """
-        for chart_info in self.charts.values():
-            metadata = chart_info.get('metadata') or {}
-            residual_type = metadata.get('residual_type')
-            if residual_type:
-                return str(residual_type).upper()
-        return None
-
     def _locate_residual(self, residual_type: str) -> pd.Series:
         """Return a residual series from wherever it legitimately lives, or raise.
 
@@ -699,9 +696,9 @@ class AnalysisResult:
         - **stored** (R1-R5, RCR1-RCR5) — computed during ``formulate()`` and held on the
           study-level snapshot. Independent of the request: R5 is the same series whatever
           ``by=`` was passed.
-        - **request** (R6, RCR6) — computed during ``execute()`` from that request's
-          ``by=``, and materialised only into this result's dataset. There is no canonical
-          study-level R6, which is why ``result.residuals`` deliberately excludes it.
+        - **request** (R6, RCR6) — computed during ``execute()`` onto that request's own
+          frame, from that request's ``by=``. There is no canonical study-level R6, which
+          is why ``result.residuals`` deliberately excludes it.
 
         Looking in only one of those two places is what made ``get_residual('R6')`` report
         "not found" about 4,000 values the same object was holding. This is the single
@@ -722,12 +719,11 @@ class AnalysisResult:
         if self._residuals is not None and residual_type in self._residuals.columns:
             return self._residuals[residual_type].copy()
 
-        # Request residuals: only from a result that actually asked for them. Computing R6
-        # writes the column onto the study-level dataset, so a *later* unrelated result
-        # inherits a stale R6 from whatever `by=` ran last. Gate on this result's own chart
-        # metadata so we never hand back another request's numbers.
+        # Request residuals: only from a result that actually asked for them. The shared
+        # study-level frame never carries R6/RCR6 — a result's own frame carries them iff
+        # that request computed them — so column presence here is the correct test.
         if base in REQUEST_RESIDUALS:
-            if self._requested_residual() == base and residual_type in self._dataset.columns:
+            if residual_type in self._dataset.columns:
                 return self._dataset[residual_type].copy()
             raise ValidationError(
                 f"'{residual_type}' is computed per request and depends on by=, so it "
