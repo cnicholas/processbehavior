@@ -73,6 +73,12 @@ class TestDetectSignalsForResult:
         with pytest.raises(ProcessBehaviorError):
             detect_signals_for_result(_StubResult(), chart="Bad")  # type: ignore[arg-type]
 
+    def test_rules_preset_string_end_to_end(self, xbar_result):
+        """The documented presets work through the public detect path."""
+        for preset in ("standard", "extended", "all"):
+            out = detect_signals_for_result(xbar_result, chart="Xbar", rules=preset)
+            assert hasattr(out, "count")
+
     def test_rules_list_explicit(self, xbar_result):
         """rules=['rule_1'] is accepted; passed through."""
         result = detect_signals_for_result(xbar_result, chart="Xbar", rules=["rule_1"])
@@ -149,9 +155,19 @@ class TestBuildConfig:
         assert cfg is not None
         assert hasattr(cfg, "enabled_rules")
 
-    def test_rules_string_applied(self):
+    def test_rules_preset_string_resolves_to_rule_list(self):
+        """Preset strings resolve through SignalConfig.__post_init__.
+
+        Regression: assigning enabled_rules after construction bypassed the
+        preset resolution, so detect_signals(rules='standard') — the documented
+        public path — raised 'Invalid enabled_rules state' while
+        SignalConfig(enabled_rules='standard') worked.
+        """
         cfg = _build_config(rules="extended", config=None, kwargs={})
-        assert cfg.enabled_rules == "extended"
+        assert cfg.enabled_rules == [f"rule_{i}" for i in range(1, 9)]
+
+        cfg = _build_config(rules="standard", config=None, kwargs={})
+        assert cfg.enabled_rules == ["rule_1", "rule_2", "rule_3", "rule_4"]
 
     def test_rules_list_applied(self):
         cfg = _build_config(rules=["rule_1", "rule_2"], config=None, kwargs={})
