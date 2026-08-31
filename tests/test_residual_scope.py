@@ -92,6 +92,46 @@ def test_r6_depends_on_by(study):
 
 
 # ---------------------------------------------------------------------------
+# The formula — pins R6/RCR6 numerically, bit for bit
+# ---------------------------------------------------------------------------
+
+
+def test_r6_matches_hand_computed_alpha_plus_r2(study):
+    """R6 = α_i + R2 where α_i = mean(R5 | factor level). Exact, no tolerance.
+
+    Written against the study-level frame so it holds regardless of *where* the
+    library computes R6 — it pins the numbers themselves.
+    """
+    result = study.execute(chart='Xbar', value='R6', by=['FACTOR 1'])
+    ds = study.dataset
+    alpha = ds.groupby('FACTOR 1')['R5'].transform('mean')
+    expected = alpha + ds['R2']
+    pd.testing.assert_series_equal(result.get_residual('R6'), expected, check_names=False)
+
+
+def test_rcr6_matches_hand_computed_reconstruction(study):
+    """RCR6 = Ybar + α_i + R2, in that exact expression order.
+
+    Float addition is non-associative: (Ybar + α) + R2 differs from Ybar + (α + R2)
+    in the last ulp. The library evaluates left-to-right from Ybar; so does this.
+    """
+    result = study.execute(chart='Xbar', value='R6', by=['FACTOR 1'], recentered=True)
+    ds = study.dataset
+    alpha = ds.groupby('FACTOR 1')['R5'].transform('mean')
+    expected = ds['Ybar'] + alpha + ds['R2']
+    pd.testing.assert_series_equal(result.get_residual('RCR6'), expected, check_names=False)
+
+
+def test_r6_multi_factor_groupby_matches_hand_computed(study):
+    """by= with two factors groups on the list, not on either factor alone."""
+    result = study.execute(chart='Xbar', value='R6', by=['FACTOR 1', 'FACTOR 2'])
+    ds = study.dataset
+    alpha = ds.groupby(['FACTOR 1', 'FACTOR 2'])['R5'].transform('mean')
+    expected = alpha + ds['R2']
+    pd.testing.assert_series_equal(result.get_residual('R6'), expected, check_names=False)
+
+
+# ---------------------------------------------------------------------------
 # The staleness trap
 # ---------------------------------------------------------------------------
 
