@@ -75,6 +75,8 @@ project:
           title: Validation vs. Bishop's Minitab Results
         - file: reference/weco-rules.md
           title: Western Electric Rules
+    - file: comparison.md
+      title: Compared to Other Python SPC Tools
     - title: Appendix
       children:
         - file: appendix/wheeler-terminology.md
