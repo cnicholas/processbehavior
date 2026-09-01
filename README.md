@@ -157,7 +157,7 @@ processbehavior's analytical outputs are continuously verified against Dr. Thoma
 
 Reference data is Bishop's published Minitab golden output. The library matches every chart center, control limit, signal classification, capability index, and loss-function value to within the precision Bishop reports.
 
-ODS 4–6 (incomplete-grid scenarios) are detected and routed correctly but their end-to-end Bishop-reference coverage is pending. The synthetic generators in `make_design(state=4|5|6)` produce data with the structural shape Bishop's Table 1 specifies; full numerical validation against Bishop's incomplete-grid Minitab output is on the 0.2.0 roadmap.
+ODS 4–6 (incomplete-grid scenarios) are detected and routed correctly but their end-to-end Bishop-reference coverage is pending. The synthetic generators in `make_design(state=4|5|6)` produce data with the structural shape Bishop's Table 1 specifies; full numerical validation against Bishop's incomplete-grid Minitab output is on the roadmap (issue #109).
 
 The full report renders to `validation/e2e_bishop_report.html`.
 

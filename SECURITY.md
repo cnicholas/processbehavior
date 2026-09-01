@@ -3,7 +3,7 @@
 ## Supported versions
 
 processbehavior is in **alpha** (0.1.x). Only the most recent 0.1.x release
-receives security fixes. When a 0.2.0 ships, 0.1.x will no longer be patched.
+receives security fixes. 0.2.x is the supported line; 0.1.x is not patched.
 
 | Version | Supported          |
 | ------- | ------------------ |
