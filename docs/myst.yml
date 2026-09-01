@@ -96,6 +96,8 @@ project:
 
 site:
   template: book-theme
+  domains:
+    - cnicholas.github.io/processbehavior
   title: ProcessBehavior
   nav: []
   actions:

@@ -31,7 +31,18 @@ jobs:
         run: npm install -g mystmd@1.10.1
       - name: Build site
         working-directory: docs
+        env:
+          # The site serves from the /processbehavior/ subpath on Pages;
+          # without this, myst emits root-relative asset URLs that 404 there.
+          BASE_URL: /processbehavior
         run: myst build --html
+      - name: Point sitemap and robots at the public URL
+        # mystmd's static export hardcodes localhost:3000 in sitemap.xml and
+        # robots.txt (site.domains only applies to its hosted deploys).
+        working-directory: docs
+        run: |
+          sed -i 's|http://localhost:3000|https://cnicholas.github.io/processbehavior|g' \
+            _build/html/sitemap.xml _build/html/robots.txt
       - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
         with:
           path: docs/_build/html
