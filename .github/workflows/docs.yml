@@ -43,6 +43,13 @@ jobs:
         run: |
           sed -i 's|http://localhost:3000|https://cnicholas.github.io/processbehavior|g' \
             _build/html/sitemap.xml _build/html/robots.txt
+      - name: Inject Google Search Console verification tag
+        # Google checks the property root for this tag; mystmd 1.10.1 has no
+        # head-injection hook, so it goes in post-build.
+        working-directory: docs
+        run: |
+          sed -i 's|<head>|<head><meta name="google-site-verification" content="DU_vmXbk9SxCOd3mNHKYljEZZFbVluUofDkZg7cTYzk"/>|' \
+            _build/html/index.html
       - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
         with:
           path: docs/_build/html
