@@ -9,11 +9,6 @@ This directory contains VS Code configuration files for the processbehavior proj
 - **`launch.json`** - Debug configurations for running and debugging tests
 - **`tasks.json`** - Custom tasks for running specific test suites
 
-### Documentation
-- **`TESTING_GUIDE.md`** - Complete guide to using unittest in VS Code
-- **`KEYBOARD_SHORTCUTS.md`** - Keyboard shortcuts and quick reference
-- **`README.md`** - This file
-
 ## 🚀 Quick Start
 
 ### 1. Open the Testing Panel
