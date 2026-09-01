@@ -11,7 +11,6 @@ type: software
 authors:
   - family-names: Nicholas
     given-names: Chris
-    email: 4948774+cnicholas@users.noreply.github.com
   - family-names: Bishop
     given-names: Thomas
     name-suffix: A.

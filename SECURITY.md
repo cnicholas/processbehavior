@@ -14,7 +14,10 @@ receives security fixes. When a 0.2.0 ships, 0.1.x will no longer be patched.
 
 Please **do not** open a public GitHub issue for security problems.
 
-Email **4948774+cnicholas@users.noreply.github.com** with:
+Report it privately through GitHub: **Security tab → Report a
+vulnerability** on this repository ([direct
+link](https://github.com/cnicholas/processbehavior/security/advisories/new)).
+Include:
 
 - a description of the issue
 - a minimal reproducer (input DataFrame, code snippet, or attached file)
