@@ -8,6 +8,7 @@ Usage:
     python validation/e2e_bishop_report.py
 """
 import json
+import sys
 import math
 from pathlib import Path
 
@@ -873,6 +874,7 @@ def main():
 
     all_results = []
     aux_by_sds = {}   # {sds_num: {'capability': [...], 'loss': [...]}}
+    total_fails = 0
 
     for sds_num, config in SDS_CONFIGS.items():
         print(f'\nProcessing SDS {sds_num}...')
@@ -909,6 +911,7 @@ def main():
             elif row['match'] is False:
                 fails += 1
         print(f'  Results: {passes} passed, {fails} failed')
+        total_fails += fails
 
     print('\nGenerating HTML report...')
     html = generate_html(all_results, aux_by_sds)
@@ -918,6 +921,14 @@ def main():
     MYST_OUTPUT.parent.mkdir(parents=True, exist_ok=True)
     MYST_OUTPUT.write_text(generate_myst_summary(all_results, aux_by_sds))
     print(f'Docs summary written to: {MYST_OUTPUT}')
+
+    # The reports above are evidence; this exit code is the gate. Reference
+    # disagreement must fail the build itself, not just drift the docs page —
+    # otherwise committing the drifted page makes CI green with wrong numbers.
+    # 'pending' rows (match is None, the ODS 4-6 backlog) are never fatal.
+    if total_fails:
+        print(f'\nVALIDATION FAILED: {total_fails} assertion(s) diverge from Bishop reference values.')
+        sys.exit(1)
 
 
 if __name__ == '__main__':

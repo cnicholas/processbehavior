@@ -43,6 +43,14 @@ jobs:
           pip install -e ".[test]"
       - name: Tests
         run: pytest tests/ -m "not slow"
+      - name: Validate against Bishop's reference results (ubuntu / 3.13 only)
+        # Same ground-truth gate ci.yml runs: no tag publishes with numbers
+        # that diverge from the Bishop reference values.
+        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.13'
+        run: python validation/e2e_bishop_report.py
+      - name: Fail if the validation summary drifted from the committed page
+        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.13'
+        run: git diff --exit-code -- docs/reference/validation.md
 
   build:
     name: build & verify distribution
