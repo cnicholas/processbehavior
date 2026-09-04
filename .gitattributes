@@ -1,0 +1,5 @@
+# Bishop reference ground truth checks out byte-for-byte on every platform.
+# Without -text, Windows checkouts CRLF-convert these files and their pinned
+# SHA-256 hashes (tests/test_reference_integrity.py) no longer match.
+validation/PBTESTDATABASE_T100.csv -text
+tests/fixtures/bishop_analyses/*.json -text

@@ -25,10 +25,22 @@ import pytest
 ROOT = Path(__file__).resolve().parents[1]
 
 REFERENCE_ARTIFACTS = [
-    ('validation/PBTESTDATABASE_T100.csv', '7b6e407cf33dbd84380bb0894a31dc5e5863a27f3f101fe958e3c8ef94989328'),
-    ('tests/fixtures/bishop_analyses/vassds1analysis.json', 'e34f276446584b6ce2c765dfc7f8a154fa74bd01e82e6335b13e2af1b85e8c26'),
-    ('tests/fixtures/bishop_analyses/vassds2analysis.json', 'aeaebaf82cdef7c121ffc73dad9419ef0ac723b1f8369a451d8bc6a3eb1b62cb'),
-    ('tests/fixtures/bishop_analyses/vassds3analysis.json', 'b5a34385cf3d3184f1a016854c62901fe1ab44111897ca80e1ca8fae6c2f3440'),
+    (
+        'validation/PBTESTDATABASE_T100.csv',
+        '7b6e407cf33dbd84380bb0894a31dc5e5863a27f3f101fe958e3c8ef94989328',
+    ),
+    (
+        'tests/fixtures/bishop_analyses/vassds1analysis.json',
+        'e34f276446584b6ce2c765dfc7f8a154fa74bd01e82e6335b13e2af1b85e8c26',
+    ),
+    (
+        'tests/fixtures/bishop_analyses/vassds2analysis.json',
+        'aeaebaf82cdef7c121ffc73dad9419ef0ac723b1f8369a451d8bc6a3eb1b62cb',
+    ),
+    (
+        'tests/fixtures/bishop_analyses/vassds3analysis.json',
+        'b5a34385cf3d3184f1a016854c62901fe1ab44111897ca80e1ca8fae6c2f3440',
+    ),
 ]
 
 
