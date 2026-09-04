@@ -3,6 +3,7 @@
 [![PyPI version](https://img.shields.io/pypi/v/processbehavior.svg)](https://pypi.org/project/processbehavior/)
 [![Python versions](https://img.shields.io/pypi/pyversions/processbehavior.svg)](https://pypi.org/project/processbehavior/)
 [![CI](https://github.com/cnicholas/processbehavior/actions/workflows/ci.yml/badge.svg)](https://github.com/cnicholas/processbehavior/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/cnicholas/processbehavior/graph/badge.svg)](https://codecov.io/gh/cnicholas/processbehavior)
 [![License](https://img.shields.io/pypi/l/processbehavior.svg)](https://github.com/cnicholas/processbehavior/blob/main/LICENSE)
 
 A Python library for **Process Behavior Analysis** following Thomas A. Bishop's Variance Analysis System (VAS) methodology.
