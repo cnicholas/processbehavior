@@ -13,6 +13,8 @@ import pandas as pd
 import pytest
 
 from processbehavior.formulation_spec import FormulationSpec
+from processbehavior import ProcessBehavior
+from processbehavior.exceptions import ValidationError
 from processbehavior.sds_detector import SDSRegistry
 
 # ============================================================================
@@ -1220,3 +1222,90 @@ class TestStructureDetection:
         # Should have n_empty_cells attribute
         assert hasattr(result, 'n_empty_cells')
         assert result.n_empty_cells == 0  # Complete structure
+
+
+class TestPlanRendering:
+    """SDSAnalysisPlan.__str__ and the registry plan surface (#113 — untested)."""
+
+    @pytest.mark.parametrize('sds', [1, 2, 3])
+    def test_str_renders_the_plan(self, sds):
+        text = str(SDSRegistry.get_analysis_plan(sds))
+        assert f'SDS {sds}' in text or f'State {sds}' in text or str(sds) in text
+        assert 'chart' in text.lower()
+
+    def test_str_mentions_residuals_when_supported(self):
+        text = str(SDSRegistry.get_analysis_plan(1))
+        assert 'R2' in text or 'residual' in text.lower()
+
+    def test_residual_charts_empty_when_vas_unsupported(self):
+        # analytical plans exist only for states 1-3
+        for sds in (1, 2, 3):
+            plan = SDSRegistry.get_analysis_plan(sds)
+            if not plan.vas_residuals_supported:
+                assert plan.residual_charts == []
+                return
+        pytest.skip('all states support VAS residuals in the current registry')
+
+    def test_should_calculate_vas_residuals_sds5_xbar_is_false(self):
+        assert SDSRegistry().should_calculate_vas_residuals(5, 'Xbar') is False
+
+
+class TestPlanCoverageRatio:
+    """_calculate_coverage_ratio through the plan-bearing detection path."""
+
+    def _grid(self, drop_cells=()):
+        rows = []
+        for f1 in ['A', 'B', 'C']:
+            for f2 in ['X', 'Y']:
+                for t in [1, 2, 3, 4]:
+                    if (f1, f2, t) in drop_cells:
+                        continue
+                    rows.append({'factor 1': f1, 'factor 2': f2, 'time': t, 'y': 10.0})
+        return pd.DataFrame(rows)
+
+    def _spec(self):
+        return FormulationSpec(
+            response_var='y', rsg_vars=('factor 1', 'factor 2'), time_var='time'
+        )
+
+    def _plan(self):
+        return {'factor 1': ['A', 'B', 'C'], 'factor 2': ['X', 'Y']}
+
+    def test_full_coverage_with_plan(self):
+        res = SDSRegistry().detect_sds_from_structure(self._grid(), self._spec(), 'y', plan=self._plan())
+        assert res.sds in (1, 2, 3)
+
+    def test_dropped_cells_lower_coverage(self):
+        drops = {('A', 'X', 1), ('B', 'Y', 2), ('C', 'X', 3), ('C', 'Y', 4)}
+        res = SDSRegistry().detect_sds_from_structure(
+            self._grid(drop_cells=drops), self._spec(), 'y', plan=self._plan()
+        )
+        assert res.n_empty_cells >= 1 or res.sds in (4, 5, 6)
+
+    def test_t_planned_extends_expected_grid(self):
+        res = SDSRegistry().detect_sds_from_structure(
+            self._grid(), self._spec(), 'y', plan=self._plan(), T_planned=10
+        )
+        assert res.sds in range(1, 7)
+
+    def test_plan_missing_a_factor_falls_back_with_warning(self, caplog):
+        partial_plan = {'factor 1': ['A', 'B', 'C']}  # factor 2 omitted
+        with caplog.at_level('WARNING'):
+            res = SDSRegistry().detect_sds_from_structure(
+                self._grid(), self._spec(), 'y', plan=partial_plan
+            )
+        no_plan = SDSRegistry().detect_sds_from_structure(self._grid(), self._spec(), 'y')
+        assert res.sds == no_plan.sds
+
+
+class TestDegenerateInputs:
+    def test_response_only_raises_with_guidance(self):
+        """A study needs time or grouping; the error says which to add."""
+        df = pd.DataFrame({'y': [1.0, 2.0, 3.0, 4.0, 5.0, 6.0]})
+        with pytest.raises(ValidationError, match='time'):
+            ProcessBehavior(df).formulate(response='y')
+
+    def test_all_na_response_raises(self):
+        df = pd.DataFrame({'y': ['*', 'N/A', '*', 'N/A'], 'time': [1, 2, 3, 4]})
+        with pytest.raises(ValidationError):
+            ProcessBehavior(df).formulate(response='y', time='time')

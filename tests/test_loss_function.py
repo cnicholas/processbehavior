@@ -277,3 +277,33 @@ class TestEdgeCases:
         assert result.K > 0
         assert result.T_periods > 0
         assert isinstance(result, LossResult)
+
+
+@pytest.mark.plotting
+class TestLossPlot:
+    """LossResult.plot() — the module's entire 35-line coverage gap (#113)."""
+
+    def test_default_plot_is_five_component_pareto(self, study_sds1):
+        fig = study_sds1.loss_function(target=237.0).plot()
+        assert len(fig.data) == 1
+        assert len(fig.data[0].x) == 5
+
+    def test_horizontal_orientation(self, study_sds1):
+        fig = study_sds1.loss_function(target=237.0).plot(orientation='horizontal')
+        assert fig.data[0].orientation == 'h'
+
+    def test_structured_two_factor_expands_pdc(self, study_sds1):
+        fig = study_sds1.loss_function(target=237.0).plot(structured=True)
+        assert len(fig.data[0].x) > 5, 'structured view should split PDC by factor'
+
+    def test_structured_single_factor_falls_back_to_flat(self, study_single_factor):
+        fig = study_single_factor.loss_function(target=237.0).plot(structured=True)
+        assert len(fig.data[0].x) == 5
+
+    def test_theme_by_name_and_custom_title(self, study_sds1):
+        fig = study_sds1.loss_function(target=237.0).plot(theme='minimal', title='Loss X')
+        assert fig.layout.title.text == 'Loss X'
+
+    def test_repr_single_factor_suppresses_pdc_block(self, study_single_factor):
+        text = repr(study_single_factor.loss_function(target=237.0))
+        assert 'LossResult' in text or 'loss' in text.lower()

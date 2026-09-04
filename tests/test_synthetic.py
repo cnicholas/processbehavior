@@ -195,3 +195,104 @@ class TestReproducibility:
         df1 = make_design(1, K1=3, K2=2, T=4, seed=42)
         df2 = make_design(1, K1=3, K2=2, T=4, seed=123)
         assert not df1['y'].equals(df2['y'])
+
+
+class TestGeneratorValidation:
+    """The kwargs/validation surface of every make_design state (#113).
+
+    Only the happy 'random' paths were exercised before; these pin the raises,
+    the include_truth augmentation, and the SDS-3 replication patterns.
+    """
+
+    # -- name-length mismatches raise for every state that takes names --
+
+    @pytest.mark.parametrize('state', [1, 2, 3, 4])
+    def test_factor1_names_length_mismatch_raises(self, state):
+        with pytest.raises(ValidationError):
+            make_design(state, K1=3, factor1_names=['only-one'], seed=1)
+
+    @pytest.mark.parametrize('state', [1, 5, 6])
+    def test_factor2_names_length_mismatch_raises(self, state):
+        with pytest.raises(ValidationError):
+            make_design(state, factor2_names=['only-one'], seed=1)
+
+    # -- range checks --
+
+    def test_sds4_p_drop_out_of_range(self):
+        with pytest.raises(ValidationError):
+            make_design(4, p_drop=0, seed=1)
+
+    def test_sds4_n_min_below_two(self):
+        with pytest.raises(ValidationError):
+            make_design(4, n_min=1, seed=1)
+
+    def test_sds4_n_max_below_n_min(self):
+        with pytest.raises(ValidationError):
+            make_design(4, n_min=3, n_max=2, seed=1)
+
+    def test_sds5_p_drop_out_of_range(self):
+        with pytest.raises(ValidationError):
+            make_design(5, p_drop=1.5, seed=1)
+
+    def test_sds6_p_singleton_out_of_range(self):
+        with pytest.raises(ValidationError):
+            make_design(6, p_singleton=0, seed=1)
+
+    def test_sds6_n_min_below_two(self):
+        with pytest.raises(ValidationError):
+            make_design(6, n_min=1, seed=1)
+
+    def test_sds6_n_max_below_n_min(self):
+        with pytest.raises(ValidationError):
+            make_design(6, n_min=3, n_max=2, seed=1)
+
+    def test_sds6_grid_too_small(self):
+        with pytest.raises(ValidationError):
+            make_design(6, K1=1, K2=1, T=2, p_drop=0.1, seed=1)
+
+    # -- include_truth --
+
+    @pytest.mark.parametrize('state', [1, 2, 3])
+    def test_include_truth_adds_truth_columns(self, state):
+        df = make_design(state, include_truth=True, seed=42)
+        truth_cols = [c for c in df.columns if c.startswith('true_')]
+        assert truth_cols, f'state {state}: include_truth added no true_* columns'
+
+    def test_include_truth_off_by_default(self):
+        df = make_design(1, seed=42)
+        assert not any(c.startswith('true_') for c in df.columns)
+
+
+class TestReplicationPatterns:
+    """make_design(3, replication_pattern=...) — only 'random' was tested."""
+
+    @pytest.mark.parametrize('pattern', ['random', 'early_times', 'late_times', 'checkerboard', 'corners'])
+    def test_pattern_produces_partial_replication(self, pattern):
+        df = make_design(3, K1=3, K2=2, T=6, replication_pattern=pattern, seed=42)
+        sizes = df.groupby(['factor 1', 'factor 2', 'time'], observed=True).size()
+        assert (sizes == 1).any(), f'{pattern}: no singleton cells'
+        assert (sizes >= 2).any(), f'{pattern}: no replicated cells'
+
+    def test_early_vs_late_differ_in_where_replication_lands(self):
+        early = make_design(3, T=6, replication_pattern='early_times', seed=42)
+        late = make_design(3, T=6, replication_pattern='late_times', seed=42)
+        def replicated_times(df):
+            sizes = df.groupby(['factor 1', 'factor 2', 'time'], observed=True).size()
+            return {t for (_, _, t), n in sizes.items() if n >= 2}
+        assert replicated_times(early) != replicated_times(late)
+
+    def test_unknown_pattern_raises(self):
+        with pytest.raises(ValidationError):
+            make_design(3, replication_pattern='bogus', seed=1)
+
+
+class TestSds6Guarantees:
+    """ODS-6 must always contain both singleton and replicated cells."""
+
+    @pytest.mark.parametrize('p_singleton', [0.01, 0.5, 0.99])
+    @pytest.mark.parametrize('seed', [0, 7, 42])
+    def test_both_cell_kinds_always_present(self, p_singleton, seed):
+        df = make_design(6, K1=3, K2=2, T=8, p_singleton=p_singleton, seed=seed)
+        sizes = df.groupby(['factor 1', 'factor 2', 'time'], observed=True).size()
+        assert (sizes == 1).any(), 'clamp failed: no singleton cell'
+        assert (sizes >= 2).any(), 'clamp failed: no replicated cell'

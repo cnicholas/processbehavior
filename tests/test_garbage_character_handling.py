@@ -442,3 +442,17 @@ class TestGrossRevenueDatabase:
         # XmR with factors requires explicit by parameter
         result = study.execute(chart='X', by=['HOME TEAM'])
         assert result is not None
+
+
+def test_whitespace_only_response_treated_as_missing():
+    """A '   ' cell is garbage, same as '*' — normalized to NA, not parsed."""
+    import pandas as pd
+
+    from processbehavior import ProcessBehavior
+
+    df = pd.DataFrame({
+        'y': [10.0, '   ', 12.0, 11.0, 13.0, 12.5],
+        'time': [1, 2, 3, 4, 5, 6],
+    })
+    study = ProcessBehavior(df).formulate(response='y', time='time')
+    assert len(study.dataset) == 5, 'whitespace-only cell should drop like any garbage token'
