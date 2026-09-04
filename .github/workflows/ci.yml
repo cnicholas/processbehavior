@@ -90,10 +90,11 @@ jobs:
         uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7.0.0
         with:
           files: coverage.xml
-          # Best-effort: tokenless uploads are rejected without a CODECOV_TOKEN,
-          # which should not fail the build. Set true again once a token is
-          # configured in repo secrets.
-          fail_ci_if_error: false
+          # Tokenless uploads work now the repo is public (and fork PRs can
+          # only ever upload tokenless - secrets don't flow to forks). Loud on
+          # failure: once codecov/patch is a required check, a missed upload
+          # must be visible, not silent.
+          fail_ci_if_error: true
 
   audit:
     name: audit dependencies
