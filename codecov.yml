@@ -1,0 +1,14 @@
+# Staged ahead of token setup (#113): this config is inert until the repo is
+# linked at codecov.io and CODECOV_TOKEN lands in secrets. Then:
+# flip fail_ci_if_error: true in ci.yml, add the badge, and make
+# codecov/patch a required check on main.
+coverage:
+  status:
+    patch:
+      default:
+        target: 90%          # new/changed lines must arrive tested
+    project:
+      default:
+        target: auto         # a PR may not lower project coverage...
+        threshold: 1%        # ...beyond this much slack
+comment: false
