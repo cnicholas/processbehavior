@@ -7,6 +7,7 @@ operations, keeping the AnalysisResult class focused on data access.
 
 from __future__ import annotations
 
+import contextlib
 import logging
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -242,11 +243,6 @@ class ExcelExporter:
         if self.result.summary['is_stratified']:
             # Stratified analysis: combine all stratified charts into single tab
             self._write_stratified_chart_tab(writer, format_cells)
-
-            # For stratified X/mR charts, also create a summary tab for quick comparison
-            chart_type = self.result._analysis_type
-            if chart_type in ['X', 'mR']:
-                self._write_stratified_summary_tab(writer, format_cells)
         else:
             # Standard analysis: each chart gets its own tab
             for chart_name, chart_info in self.result.charts.items():
@@ -331,85 +327,6 @@ class ExcelExporter:
                         ws = writer.sheets[tab_name]
                         self._apply_formatting(ws)
 
-    def _write_stratified_summary_tab(self, writer: pd.ExcelWriter, format_cells: bool) -> None:
-        """
-        Create a summary tab for stratified X/mR charts.
-
-        Provides a high-level comparison across all strata showing:
-        - Stratum identifier (RSG)
-        - Number of observations per stratum
-        - Mean, LPL, UPL for each stratum
-        - Total signals (beyond_limits != 0)
-        - Signal rate (% of observations with signals)
-        """
-        # Collect data from all stratified charts
-        all_chart_data = []
-
-        for chart_name, chart_info in self.result.charts.items():
-            # Skip standard charts
-            if chart_name in STANDARD_CHART_NAMES:
-                continue
-
-            chart_data = chart_info.get('data')
-            if chart_data is not None and isinstance(chart_data, pd.DataFrame):
-                all_chart_data.append(chart_data)
-
-        # Combine all chart data
-        if not all_chart_data:
-            return
-
-        combined_data = pd.concat(all_chart_data, ignore_index=True)
-
-        # Group by stratum (rsg column) and calculate summary statistics
-        if 'rsg' not in combined_data.columns:
-            return
-
-        summary_rows = []
-
-        for stratum, group in combined_data.groupby('rsg', sort=False, observed=True):
-            n_obs = len(group)
-
-            # Get mean, lpl, upl (should be constant within stratum)
-            mean_val = group['mean'].iloc[0] if 'mean' in group.columns else None
-            lpl_val = group['lpl'].iloc[0] if 'lpl' in group.columns else None
-            upl_val = group['upl'].iloc[0] if 'upl' in group.columns else None
-
-            # Count signals
-            if 'beyond_limits' in group.columns:
-                n_signals = (group['beyond_limits'] != 0).sum()
-                signal_rate = (n_signals / n_obs * 100) if n_obs > 0 else 0
-            else:
-                n_signals = None
-                signal_rate = None
-
-            summary_rows.append(
-                {
-                    'Stratum': stratum,
-                    'Observations': n_obs,
-                    'Mean': mean_val,
-                    'LPL': lpl_val,
-                    'UPL': upl_val,
-                    'Signals': n_signals,
-                    'Signal_Rate_%': signal_rate,
-                }
-            )
-
-        if summary_rows:
-            # Create summary DataFrame
-            summary_df = pd.DataFrame(summary_rows)
-
-            # Sort by signal count (descending) so worst strata appear first
-            if 'Signals' in summary_df.columns:
-                summary_df = summary_df.sort_values('Signals', ascending=False)
-
-            # Write to Excel
-            tab_name = 'Stratified_Summary'
-            summary_df.to_excel(writer, sheet_name=tab_name, index=False)
-
-            if format_cells:
-                ws = writer.sheets[tab_name]
-                self._apply_formatting(ws)
-
     def _write_residuals_tab(self, writer: pd.ExcelWriter, format_cells: bool) -> None:
         """Write residuals tab with original data columns."""
         if self.result.residuals is not None:
@@ -466,11 +383,6 @@ class ExcelExporter:
                     level = row[level_col]
 
                     effects_data.append({'Effect_Type': effect_name, 'Level': str(level), 'Value': val})
-            elif isinstance(effect_values, pd.Series):
-                for idx, val in effect_values.items():
-                    effects_data.append({'Effect_Type': effect_name, 'Level': str(idx), 'Value': val})
-            elif isinstance(effect_values, (int, float)):
-                effects_data.append({'Effect_Type': effect_name, 'Level': '', 'Value': effect_values})
 
         if effects_data:
             effects_df = pd.DataFrame(effects_data)
@@ -698,11 +610,9 @@ class ExcelExporter:
             column_letter = column[0].column_letter
 
             for cell in column:
-                try:
+                with contextlib.suppress(Exception):
                     if cell.value:
                         max_length = max(max_length, len(str(cell.value)))
-                except Exception:  # noqa: S110
-                    pass
 
             adjusted_width = min(max_length + 2, 50)  # Cap at 50
             worksheet.column_dimensions[column_letter].width = adjusted_width

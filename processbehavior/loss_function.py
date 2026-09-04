@@ -24,7 +24,6 @@ from .spc_constants import c4
 
 if TYPE_CHECKING:
     from .analysis_dataset import AnalysisDataSet
-    from .study import Study
 
 
 # ============================================================================
@@ -397,10 +396,8 @@ def _compute_pareto(
 # ============================================================================
 
 
-def _coerce_ads(source: Study | AnalysisDataSet) -> AnalysisDataSet:
-    """Accept Study or AnalysisDataSet and return ADS."""
-    if hasattr(source, '_ads'):
-        return source._ads
+def _coerce_ads(source: AnalysisDataSet) -> AnalysisDataSet:
+    """Pass-through kept as the single coercion seam; Study callers pass study._ads."""
     return source
 
 
@@ -410,7 +407,7 @@ def _coerce_ads(source: Study | AnalysisDataSet) -> AnalysisDataSet:
 
 
 def assess_loss(
-    source: Study | AnalysisDataSet,
+    source: AnalysisDataSet,
     target: float | None = None,
     round_to: int = 3,
 ) -> LossResult:
@@ -419,8 +416,8 @@ def assess_loss(
 
     Parameters
     ----------
-    source : Study | AnalysisDataSet
-        Data source with VAS residuals computed.
+    source : AnalysisDataSet
+        Data source with VAS residuals computed (Study callers pass study._ads).
     target : float, optional
         Target value. Defaults to grand mean (centering = 0).
     round_to : int, default 3

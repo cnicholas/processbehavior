@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Removed
+- **Seven never-called utilities from ``datasets.synthetic``** — ``make_edge_cases``
+  (unseeded, non-deterministic), ``compare_sds_characteristics`` (its docstring
+  table was factually wrong), ``validate_sds_detection`` (vacuous: it compared
+  ``observed_sds`` to the very value it was handed, so it always returned True),
+  ``generate_test_suite``, ``get_sds_info`` + ``print_sds_summary`` (a second,
+  drifting copy of ``SDSRegistry`` metadata), and ``make_large_dataset``. Zero
+  callers existed anywhere in the package, tests, docs, or examples.
+- ``SDSRegistry.print_all_analysis_plans`` and ``SDSRegistry.get_capability_matrix``
+  (same finding: no callers).
+- Dead branches: the Excel exporter's ``_write_stratified_summary_tab`` (unreachable
+  since stratified charts moved to the single-entry ``strata`` payload) and its
+  Series/scalar effects arms; the plotter's legacy underscore-name stratification
+  arm and unused ``_get_data_legend_name``; the ``Study`` arm of the loss
+  function's ``_coerce_ads`` (``assess_loss`` takes an ``AnalysisDataSet``).
+
+### CI / Infrastructure
+- **The Bishop validation gate now bites.** ``validation/e2e_bishop_report.py``
+  exits nonzero when any of its 280 assertions diverge from the reference values
+  (previously it only rendered PASS/FAIL into the report), the publish workflow
+  runs the same gate before any release, the four reference artifacts are
+  SHA-256-pinned by ``tests/test_reference_integrity.py`` and check out
+  byte-exact on every platform, and CODEOWNERS routes any change to the gate's
+  inputs through the maintainer.
+
 ## [0.2.0] - 2026-08-31
 
 ### Removed

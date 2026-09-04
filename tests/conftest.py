@@ -248,34 +248,6 @@ def sds4_minimal():
     return synthetic.make_design(4, T=10, seed=42)
 
 
-@pytest.fixture
-def sds5_small():
-    """
-    SDS 5: Nested/hierarchical design.
-
-    Structure: 2 locations × 3 units per location × 4 time points
-    Total rows: ~24 (varies based on p_active)
-    Columns: factor 1, factor 2, time, y
-
-    Use for: Nested designs, multi-head/multi-location scenarios
-    """
-    return synthetic.make_design(5, L=2, H_per_L=3, T=4, seed=42)
-
-
-@pytest.fixture
-def sds6_small():
-    """
-    SDS 6: Incomplete/irregular grid.
-
-    Structure: Sparse 3×2 factorial over 8 time points
-    Total rows: ~20 (incomplete grid)
-    Columns: factor 1, factor 2, time, y
-
-    Use for: Irregular sampling, missing combinations, stratified analysis
-    """
-    return synthetic.make_design(6, T=8, K1=3, K2=2, p_sampled=0.5, seed=42)
-
-
 # ============================================================================
 # Purpose-Specific Data Fixtures
 # ============================================================================

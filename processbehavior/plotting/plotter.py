@@ -1102,11 +1102,6 @@ class Plotter:
                 else:
                     stratified[name] = chart_info
 
-            elif '_' in str(name) or any(
-                key in chart_info.get('metadata', {}) for key in ['stratum', 'level', 'group']
-            ):
-                stratified[name] = chart_info
-
         return stratified if stratified else self.charts
 
 
@@ -1312,12 +1307,6 @@ class Plotter:
         if value_col:
             return value_col.capitalize()
         return 'Value'
-
-    def _get_data_legend_name(self) -> str:
-        response_var = self.summary.get('response_var')
-        if response_var:
-            return response_var.replace('_', ' ').title()
-        return 'Data'
 
     # ---- Effects bar chart helpers (used by plot_effects) ----
 
