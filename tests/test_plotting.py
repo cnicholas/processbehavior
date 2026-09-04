@@ -895,3 +895,87 @@ class TestYAxisLabels:
         # Faceted/stratified path resolves the label from chart_type too.
         result = replicated_study.execute(chart='X', by=['group'])
         assert self._yaxis(result, 'X') == 'Individual Value'
+
+
+class TestHistogramPlotting:
+    """Histogram was never plotted by any test (#113); it exercises the whole
+    bin-edges / y-range helper pair plus the y-label fallback chain."""
+
+    @pytest.fixture
+    def factorial_study(self):
+        from processbehavior.datasets.synthetic import make_design
+        df = make_design(1, K1=3, K2=2, T=5, seed=42)
+        return ProcessBehavior(df).formulate(
+            response='y', factors=['factor 1', 'factor 2'], time='time'
+        )
+
+    def test_single_histogram_structure(self, factorial_study):
+        fig = factorial_study.execute(chart='Histogram').plot()
+        assert len(fig.figure.data) == 1
+        assert fig.figure.layout.bargap == 0.05
+        assert fig.figure.layout.yaxis.title.text == 'Count'
+        assert fig.figure.layout.xaxis.title.text == 'y'
+        assert fig.figure.layout.showlegend is False
+
+    def test_explicit_bins_respected(self, factorial_study):
+        fig = factorial_study.execute(chart='Histogram', bins=12).plot()
+        assert len(fig.figure.data) == 1
+
+    def test_faceted_histogram_one_panel_per_stratum(self, factorial_study):
+        result = factorial_study.execute(chart='Histogram', by=['factor 1'])
+        assert result.is_stratified
+        fig = result.plot(facet=True)
+        assert len(fig.figure.data) == 3, 'one histogram trace per factor-1 level'
+
+    def test_faceted_ncols_one(self, factorial_study):
+        result = factorial_study.execute(chart='Histogram', by=['factor 1'])
+        fig = result.plot(facet=True, ncols=1)
+        assert len(fig.figure.data) == 3
+
+
+class TestEffectsPlotting:
+    """plot_effects was only ever called with effect_type='all' (#113)."""
+
+    @pytest.fixture
+    def two_factor_result(self):
+        from processbehavior.datasets.synthetic import make_design
+        df = make_design(1, K1=3, K2=2, T=5, seed=42)
+        study = ProcessBehavior(df).formulate(
+            response='y', factors=['factor 1', 'factor 2'], time='time'
+        )
+        return study.execute(chart='Xbar')
+
+    @pytest.fixture
+    def one_factor_result(self):
+        from processbehavior.datasets.synthetic import make_design
+        df = make_design(1, K1=3, K2=2, T=5, seed=42)
+        df = df[df['factor 2'] == df['factor 2'].iloc[0]].drop(columns=['factor 2'])
+        study = ProcessBehavior(df).formulate(response='y', factors=['factor 1'], time='time')
+        return study.execute(chart='Xbar')
+
+    def test_factor_effects_default_two_factors(self, two_factor_result):
+        fig = two_factor_result.plot_effects(effect_type='factor')
+        assert len(fig.figure.data) >= 2, 'one bar set per factor'
+
+    def test_factor_effects_single_factor(self, one_factor_result):
+        fig = one_factor_result.plot_effects(effect_type='factor')
+        assert len(fig.figure.data) >= 1
+
+    def test_time_effects(self, two_factor_result):
+        fig = two_factor_result.plot_effects(effect_type='time')
+        assert len(fig.figure.data) == 1
+
+    def test_all_effects(self, two_factor_result):
+        fig = two_factor_result.plot_effects(effect_type='all')
+        assert len(fig.figure.data) >= 3
+
+    def test_invalid_effect_type_raises(self, two_factor_result):
+        with pytest.raises(Exception, match='(?i)effect'):
+            two_factor_result.plot_effects(effect_type='bogus')
+
+
+class TestPlotterEdgeLabels:
+    def test_unknown_chart_type_display_raises(self):
+        from processbehavior.plotting.plotter import PlotError, Plotter
+        with pytest.raises(PlotError, match='Unknown chart type'):
+            Plotter._get_chart_type_display('Bogus')

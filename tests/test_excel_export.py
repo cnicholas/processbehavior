@@ -526,3 +526,98 @@ class TestExportWritesWhatItSays:
         on_disk = {p.name for p in tmp_path.iterdir()}
         reported = {Path(p).name for p in written}
         assert on_disk == reported
+
+
+class TestStratifiedAndOptionSurface:
+    """The export paths #113's audit found unexercised."""
+
+    @pytest.fixture
+    def factorial_study(self):
+        from processbehavior.datasets.synthetic import make_design
+        df = make_design(1, K1=3, K2=2, T=5, seed=42)
+        return ProcessBehavior(df).formulate(
+            response='y', factors=['factor 1', 'factor 2'], time='time'
+        )
+
+    def test_stratified_histogram_gets_combined_tab(self, factorial_study, temp_excel_file):
+        """Histogram is the one chart outside STANDARD_CHART_NAMES, so it is the
+        live route into _write_stratified_chart_tab."""
+        factorial_study.execute(chart='Histogram', by=['factor 1']).to_excel(temp_excel_file)
+        sheets = pd.ExcelFile(temp_excel_file, engine='openpyxl').sheet_names
+        assert 'Chart_Histogram_Stratified' in sheets
+        tab = pd.read_excel(temp_excel_file, sheet_name='Chart_Histogram_Stratified')
+        assert len(tab) > 0
+
+    def test_stratified_two_grouping_vars(self, factorial_study, temp_excel_file):
+        factorial_study.execute(chart='Histogram', by=['factor 1', 'factor 2']).to_excel(temp_excel_file)
+        sheets = pd.ExcelFile(temp_excel_file, engine='openpyxl').sheet_names
+        assert any(s.startswith('Chart_Histogram') for s in sheets)
+
+    def test_multiindex_interactions_sheet(self, factorial_study, temp_excel_file):
+        """SDS-1 factor x time interactions arrive MultiIndexed; the sheet
+        flattens them into a Combination column."""
+        factorial_study.execute(chart='Xbar').to_excel(temp_excel_file)
+        tab = pd.read_excel(temp_excel_file, sheet_name='Interactions')
+        assert 'Combination' in tab.columns
+        assert len(tab) > 0
+
+    def test_disable_summary_charts_and_images(self, factorial_study, temp_excel_file):
+        written = factorial_study.execute(chart='Xbar').to_excel(
+            temp_excel_file,
+            include_summary=False,
+            include_charts=False,
+            include_chart_images=False,
+        )
+        sheets = pd.ExcelFile(temp_excel_file, engine='openpyxl').sheet_names
+        assert 'Summary' not in sheets
+        assert not any(s.startswith('Chart_') for s in sheets)
+        assert 'Visual_Charts' not in sheets
+        assert [Path(w).name for w in written] == [Path(temp_excel_file).name]
+
+    def test_export_html_stratified_companion_writes_combined_html(
+        self, factorial_study, temp_excel_file
+    ):
+        result = factorial_study.execute(chart='X', by=['factor 1'], companion=True)
+        written = result.to_excel(temp_excel_file, export_html=True)
+        names = sorted(Path(w).name for w in written)
+        assert any(n.endswith('_combined.html') for n in names)
+
+
+class TestVisualChartsErrorPaths:
+    """The kaleido-absent and render-failure branches, simulated by monkeypatch
+    (never by installing/uninstalling the extra)."""
+
+    @pytest.fixture
+    def result(self):
+        from processbehavior.datasets.synthetic import make_design
+        df = make_design(1, K1=3, K2=2, T=5, seed=42)
+        study = ProcessBehavior(df).formulate(
+            response='y', factors=['factor 1', 'factor 2'], time='time'
+        )
+        return study.execute(chart='Xbar')
+
+    def _visual_cell_text(self, path):
+        tab = pd.read_excel(path, sheet_name='Visual_Charts', header=None)
+        return ' '.join(str(v) for v in tab.values.ravel() if pd.notna(v))
+
+    def test_missing_kaleido_writes_install_hint(self, result, temp_excel_file, monkeypatch):
+        import plotly.graph_objects as go
+
+        def raise_import(self, *a, **k):
+            raise ImportError('kaleido not installed')
+
+        monkeypatch.setattr(go.Figure, 'write_image', raise_import)
+        result.to_excel(temp_excel_file, include_chart_images=True)
+        text = self._visual_cell_text(temp_excel_file)
+        assert 'images' in text or 'kaleido' in text.lower()
+
+    def test_render_failure_writes_could_not_render(self, result, temp_excel_file, monkeypatch):
+        import plotly.graph_objects as go
+
+        def raise_runtime(self, *a, **k):
+            raise RuntimeError('renderer exploded')
+
+        monkeypatch.setattr(go.Figure, 'write_image', raise_runtime)
+        result.to_excel(temp_excel_file, include_chart_images=True)
+        text = self._visual_cell_text(temp_excel_file)
+        assert 'Could not render' in text or 'could not' in text.lower()
