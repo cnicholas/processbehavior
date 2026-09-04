@@ -1,0 +1,8 @@
+# Changes to the validation gate and its inputs route through the owner.
+# These paths define what "correct" means for the package: the ground-truth
+# reference data, the gate that enforces it, and the workflows that run it.
+/validation/                        @cnicholas
+/.github/                           @cnicholas
+/docs/reference/validation.md       @cnicholas
+/tests/fixtures/bishop_analyses/    @cnicholas
+/tests/test_reference_integrity.py  @cnicholas
