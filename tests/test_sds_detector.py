@@ -12,9 +12,9 @@ Tests cover:
 import pandas as pd
 import pytest
 
-from processbehavior.formulation_spec import FormulationSpec
 from processbehavior import ProcessBehavior
 from processbehavior.exceptions import ValidationError
+from processbehavior.formulation_spec import FormulationSpec
 from processbehavior.sds_detector import SDSRegistry
 
 # ============================================================================
