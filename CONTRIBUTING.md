@@ -164,8 +164,12 @@ Releases are published to PyPI by the `Publish` workflow on tag push.
    in `CHANGELOG.md` and update the compare links at the bottom.
 3. Bump the version in `processbehavior/__init__.py` (`__version__`).
    `pyproject.toml` reads it via `[tool.hatch.version]`.
-4. Commit with subject `Release vX.Y.Z`, push to `main`.
-5. Tag and push:
+4. Run `python validation/e2e_bishop_report.py` and commit the regenerated
+   `docs/reference/validation.md`. Its header carries the version string, and
+   the publish workflow fails if the committed page has drifted from what the
+   validator writes.
+5. Commit with subject `Release vX.Y.Z`, push to `main`.
+6. Tag and push:
    ```bash
    git tag -s vX.Y.Z -m "Release vX.Y.Z"
    git push origin vX.Y.Z
@@ -173,7 +177,7 @@ Releases are published to PyPI by the `Publish` workflow on tag push.
    The tag push triggers `.github/workflows/publish.yml`, which builds,
    verifies with `twine check`, and uploads to PyPI via OIDC trusted
    publishing — no API tokens.
-6. Verify the release on https://pypi.org/project/processbehavior/ and run
+7. Verify the release on https://pypi.org/project/processbehavior/ and run
    `pip install processbehavior==X.Y.Z` in a fresh venv to confirm the
    README quickstart still runs end-to-end.
 
