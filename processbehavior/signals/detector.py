@@ -7,11 +7,12 @@ Orchestrates rule detection and builds comprehensive results.
 from __future__ import annotations
 
 import logging
+import warnings
 from typing import TYPE_CHECKING
 
 import pandas as pd
 
-from ..exceptions import ValidationError
+from ..exceptions import ProcessBehaviorWarning, ValidationError
 from .config import SignalConfig
 from .detectors import (
     detect_avoiding_center,
@@ -65,6 +66,21 @@ class SignalDetector:
         'rule_6': '14+ consecutive points alternating',
         'rule_7': '15+ consecutive points in Zone C',
         'rule_8': '8+ consecutive points avoiding Zone C',
+    }
+
+    # Structural minimum for each rule: the fewest points at which the pattern
+    # can occur at all. A rule is skipped (not failed) below its minimum. This is
+    # distinct from ``SignalConfig.min_observations``, the advisory series-length
+    # threshold below which the whole evaluation is reported as partial.
+    RULE_MIN_OBSERVATIONS = {
+        'rule_1': 1,
+        'rule_2': 3,
+        'rule_3': 5,
+        'rule_4': 8,
+        'rule_5': 6,
+        'rule_6': 14,
+        'rule_7': 15,
+        'rule_8': 8,
     }
 
     def detect(
@@ -146,9 +162,12 @@ class SignalDetector:
 
         # Detect violations for each applicable rule
         all_violations = pd.DataFrame(index=filtered_data.index)
+        n_obs = len(filtered_data)
         # Applicable rules skipped for too few observations (rule -> reason), so the
         # result can report partial evaluation instead of raising.
         rules_skipped: dict[str, str] = {}
+        # Applicable rules that actually ran — the numerator of "k of n rules".
+        rules_evaluated: list[str] = []
 
         for rule_name in applicable_rules:
             if rule_name not in self.RULE_DETECTORS:
@@ -157,12 +176,11 @@ class SignalDetector:
 
             # Check minimum observations — skip (don't abort) rules the group is too small for.
             min_obs = self._get_min_observations(rule_name)
-            if len(filtered_data) < min_obs:
-                logger.debug(
-                    f'Skipping {rule_name}: insufficient observations (need {min_obs}, have {len(filtered_data)})'
-                )
-                rules_skipped[rule_name] = f'needs {min_obs} observations, have {len(filtered_data)}'
+            if n_obs < min_obs:
+                logger.debug(f'Skipping {rule_name}: insufficient observations (need {min_obs}, have {n_obs})')
+                rules_skipped[rule_name] = f'needs {min_obs} observations, have {n_obs}'
                 continue
+            rules_evaluated.append(rule_name)
 
             # Apply detector
             detector = self.RULE_DETECTORS[rule_name]
@@ -184,10 +202,30 @@ class SignalDetector:
                 logger.error(f'Error detecting {rule_name}: {e}')
                 all_violations[rule_name] = False
 
+        # Below the advisory threshold the evaluation is reported as partial even
+        # when every rule that *could* run did run: at short lengths most run-rules
+        # are structurally inert, and a bare "no signals" would read as an
+        # all-clear the series has not earned. One warning per detect() call; a
+        # pipeline that has accounted for this silences it with
+        # warnings.simplefilter('ignore', ProcessBehaviorWarning).
+        n_applicable = len(rules_evaluated) + len(rules_skipped)
+        if n_obs < config.min_observations:
+            warnings.warn(
+                f'Signal detection on {n_obs} observations is below min_observations='
+                f'{config.min_observations}: {len(rules_evaluated)} of {n_applicable} '
+                f'applicable rules could be evaluated. The result is marked partial; '
+                f'do not read "no signals" as an all-clear.',
+                ProcessBehaviorWarning,
+                # detect() <- _detect_for_chart <- detect_signals_for_result
+                # <- AnalysisResult.detect_signals <- caller
+                stacklevel=5,
+            )
+
         # Build result
         return self._build_result(
             data=filtered_data, violations=all_violations, stats=stats, value_col=value_col,
-            chart_name=chart_name, rules_skipped=rules_skipped,
+            chart_name=chart_name, rules_skipped=rules_skipped, rules_evaluated=rules_evaluated,
+            n_observations=n_obs, min_observations=config.min_observations,
         )
 
     def _validate_inputs(self, data: pd.DataFrame, stats: dict):
@@ -218,22 +256,15 @@ class SignalDetector:
         return filtered
 
     def _get_min_observations(self, rule_name: str) -> int:
-        """Get minimum observations for a rule."""
-        minimums = {
-            'rule_1': 1,
-            'rule_2': 3,
-            'rule_3': 5,
-            'rule_4': 8,
-            'rule_5': 6,
-            'rule_6': 14,
-            'rule_7': 15,
-            'rule_8': 8,
-        }
-        return minimums.get(rule_name, 1)
+        """Structural minimum observations for a rule (see ``RULE_MIN_OBSERVATIONS``)."""
+        return self.RULE_MIN_OBSERVATIONS.get(rule_name, 1)
 
     def _build_result(
         self, data: pd.DataFrame, violations: pd.DataFrame, stats: dict, value_col: str, chart_name: str,
         rules_skipped: dict[str, str] | None = None,
+        rules_evaluated: list[str] | None = None,
+        n_observations: int | None = None,
+        min_observations: int | None = None,
     ) -> SignalResult:
         """Build SignalResult from violation matrix."""
         # Create violation records
@@ -268,8 +299,11 @@ class SignalDetector:
 
         violation_df = pd.DataFrame(records) if records else pd.DataFrame()
 
-        return SignalResult(violations=violation_df, chart_name=chart_name, data=data, stats=stats,
-                            rules_skipped=rules_skipped)
+        return SignalResult(
+            violations=violation_df, chart_name=chart_name, data=data, stats=stats,
+            rules_skipped=rules_skipped, rules_evaluated=rules_evaluated,
+            n_observations=n_observations, min_observations=min_observations,
+        )
 
     def _limits_vary(self, stats: dict) -> bool:
         """Check if control limits vary (per-row limits)."""

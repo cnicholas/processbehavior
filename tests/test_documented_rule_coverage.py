@@ -76,3 +76,33 @@ def test_readme_does_not_claim_rule_1_only():
     assert '**Signal detection**' in text, 'the Features bullet was renamed; update this test'
     line = next(ln for ln in text.splitlines() if '**Signal detection**' in ln)
     assert 'eight' in line.lower(), f'README understates rule coverage: {line}'
+
+
+def test_docs_minimum_observations_table_matches_detector():
+    """``weco-rules.md`` restates ``RULE_MIN_OBSERVATIONS``; keep the two identical."""
+    import re
+
+    from processbehavior.signals.detector import SignalDetector
+
+    doc = (Path(__file__).resolve().parent.parent / 'docs' / 'reference' / 'weco-rules.md').read_text(
+        encoding='utf-8'
+    )
+    table = re.findall(r'^\| (\d) \| (\d+) \|$', doc, flags=re.MULTILINE)
+    assert {f'rule_{r}': int(n) for r, n in table} == SignalDetector.RULE_MIN_OBSERVATIONS
+
+
+def test_four_point_ramp_is_not_an_all_clear():
+    """The GHSA-hw63-2x95-fmpv reproducer: a pure ramp at T=4 must not print ✓."""
+
+    from processbehavior import ProcessBehaviorWarning
+
+    df = pd.DataFrame({'t': range(4), 'y': [10_000.0, 10_400.0, 10_800.0, 11_200.0]})
+    st = pb.formulate(df, response='y', time='t')
+    r = st.execute(chart='X', companion=True)
+    with pytest.warns(ProcessBehaviorWarning, match='below min_observations=20'):
+        signals = r.detect_signals()['X']
+    assert signals.is_partial
+    assert signals.rules_evaluated == ['rule_1', 'rule_2']
+    assert signals.rules_applicable == 8
+    assert not signals.summary.startswith('✓')
+    assert 'No signals detected' not in signals.summary

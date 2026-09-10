@@ -5,10 +5,13 @@ Tests the signal detection framework including configuration,
 detection, and result handling.
 """
 
+import warnings
+
 import numpy as np
 import pandas as pd
 import pytest
 
+from processbehavior.exceptions import ProcessBehaviorWarning
 from processbehavior.signals import RuleSet, SignalConfig, SignalDetector, ZoneDefinition
 
 
@@ -202,6 +205,79 @@ class TestSignalDetector:
         assert 'rule_1' not in result.rules_skipped
         # Flat, in-limits data → no violations among the rules that ran.
         assert not result.has_signals
+        # The result carries the denominator and says so in the summary.
+        assert result.rules_evaluated == ['rule_1', 'rule_2', 'rule_3']
+        assert result.rules_applicable == 8
+        assert result.n_observations == 5
+        assert result.summary.startswith('⚠ Partial evaluation')
+        assert '3 of 8 rules applicable at n=5' in result.summary
+        assert 'No signals detected' not in result.summary
+
+    def test_below_min_observations_is_partial_and_warns(self, simple_stats):
+        """Every runnable rule ran, but the series is under the advisory threshold.
+
+        GHSA-hw63-2x95-fmpv / #114: ``min_observations`` was unreachable and a
+        short series printed an unqualified all-clear. Below the threshold the
+        detector now warns, naming both numbers, and the result is partial.
+        """
+        data = pd.DataFrame({'mean': [100.0] * 10, 'obs_id': range(10)})
+        detector = SignalDetector()
+        config = SignalConfig(enabled_rules=['rule_1'], min_observations=20)
+
+        with pytest.warns(ProcessBehaviorWarning, match='10 observations is below min_observations=20'):
+            result = detector.detect(data, simple_stats, config, chart_type='X')
+
+        assert result.rules_skipped == {}  # rule_1 needs 1 point; it ran
+        assert result.rules_evaluated == ['rule_1']
+        assert result.below_min_observations
+        assert result.is_partial
+        assert result.evaluation_status == 'partial'
+        assert '1 of 1 rules applicable at n=10 (below min_observations=20)' in result.evaluation_note
+        assert not result.summary.startswith('✓')
+        assert "evaluation='partial'" in repr(result)
+
+    def test_at_min_observations_is_complete_and_silent(self, simple_data, simple_stats):
+        """An adequate series with every rule run is complete: no warning, checkmark summary."""
+        detector = SignalDetector()
+        config = SignalConfig(enabled_rules=['rule_1'], min_observations=30)  # fixture has 30 rows
+
+        with warnings.catch_warnings():
+            warnings.simplefilter('error', ProcessBehaviorWarning)
+            result = detector.detect(simple_data, simple_stats, config, chart_type='X')
+
+        assert not result.below_min_observations
+        assert not result.is_partial
+        assert result.evaluation_status == 'complete'
+        assert result.evaluation_note == ''
+        assert result.summary == '✓ No signals detected in Chart'
+
+    def test_min_observations_does_not_change_which_rules_run(self, simple_data, simple_stats):
+        """The advisory threshold marks the result; it never suppresses a rule."""
+        detector = SignalDetector()
+        loose = SignalConfig(min_observations=1)
+        strict = SignalConfig(min_observations=1000)
+
+        with warnings.catch_warnings():
+            warnings.simplefilter('ignore', ProcessBehaviorWarning)
+            r_loose = detector.detect(simple_data, simple_stats, loose, chart_type='X')
+            r_strict = detector.detect(simple_data, simple_stats, strict, chart_type='X')
+
+        assert r_loose.rules_evaluated == r_strict.rules_evaluated
+        assert r_loose.rules_skipped == r_strict.rules_skipped
+        assert r_loose.count == r_strict.count
+        assert not r_loose.is_partial and r_strict.is_partial
+
+    def test_signals_present_and_partial_shows_evaluation_line(self, simple_stats):
+        """With violations AND a short series, the banner summary says it was partial."""
+        data = pd.DataFrame({'mean': [100.0, 100.0, 130.0, 100.0], 'obs_id': range(4)})
+        detector = SignalDetector()
+        with warnings.catch_warnings():
+            warnings.simplefilter('ignore', ProcessBehaviorWarning)
+            result = detector.detect(data, simple_stats, SignalConfig(), chart_type='X')
+
+        assert result.has_signals
+        assert result.is_partial
+        assert 'Evaluation: partial (2 of 8 rules applicable at n=4' in result.summary
 
     def test_empty_data_raises_validation_error(self, simple_stats):
         """Empty data is still a genuine error — now a ValidationError."""

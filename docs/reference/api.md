@@ -451,7 +451,8 @@ from processbehavior.signals import SignalConfig, RuleSet, SignalResult
 Returned by `result.detect_signals()`.
 
 - Status: `.count`, `.has_signals`, `.is_partial`, `.evaluation_status`,
-  `.rules_skipped`
+  `.evaluation_note`, `.rules_evaluated`, `.rules_skipped`, `.rules_applicable`,
+  `.n_observations`, `.min_observations`, `.below_min_observations`
 - Views: `.violations` (list), `.by_rule` (dict), `.by_observation` (dict),
   `.flagged_observations`, `.summary`
 - Filters: `.get_rule_violations(rule_name)`, `.get_observation_violations(obs_id)`

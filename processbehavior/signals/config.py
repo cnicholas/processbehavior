@@ -97,7 +97,11 @@ class SignalConfig:
     zone_definition : ZoneDefinition, optional
         Custom zone definitions
     min_observations : int, default 20
-        Minimum observations required
+        Advisory minimum series length for a complete evaluation. Rules that
+        structurally need more points than are present are always skipped (see
+        ``SignalDetector.RULE_MIN_OBSERVATIONS``); below this threshold the
+        result is additionally marked partial and a ``ProcessBehaviorWarning``
+        is emitted naming both numbers. It does not change which rules run.
     ignore_first_n : int, default 0
         Ignore first N observations (startup period)
     ignore_last_n : int, default 0
