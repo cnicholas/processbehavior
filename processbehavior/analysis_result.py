@@ -1029,10 +1029,15 @@ class AnalysisResult:
         >>> from processbehavior.signals import SignalConfig
         >>> config = SignalConfig(
         ...     enabled_rules=['rule_1', 'rule_2'],
-        ...     min_observations=30,
+        ...     min_observations=30,   # below 30 points the result is marked partial
         ...     ignore_first_n=5
         ... )
         >>> signals = result.detect_signals(config=config)
+
+        A short series never returns an unqualified all-clear: when rules were
+        skipped for length, or the series is below ``min_observations``,
+        ``signals.is_partial`` is True and ``signals.summary`` says which rules
+        were evaluated.
 
         Access violations:
 

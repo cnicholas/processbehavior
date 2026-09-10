@@ -7,6 +7,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **A short series no longer returns an unqualified all-clear from
+  ``detect_signals``.** ``SignalConfig.min_observations`` (default 20) was
+  unreachable: ``SignalDetector`` read a hardcoded per-rule table and never
+  consulted the config, so ``SignalConfig(min_observations=30)`` changed nothing.
+  Separately, the detector already recorded which rules it skipped for length
+  (``rules_skipped``, added in 0.2.0) but ``SignalResult.summary`` ignored that and
+  printed ``✓ No signals detected`` regardless. On a four-point X chart six of the
+  eight rules cannot fire, and the one that can is weakened by any trend in the
+  data, so the checkmark described an examination that had mostly not happened.
+
+  Now: the per-rule table is the *structural* minimum (``RULE_MIN_OBSERVATIONS``,
+  a rule is skipped below it, as before) and ``min_observations`` is the *advisory*
+  minimum. Below it the detector emits a ``ProcessBehaviorWarning`` naming both
+  numbers (one per chart evaluated; silence it with
+  ``warnings.simplefilter('ignore', ProcessBehaviorWarning)`` once a pipeline has
+  accounted for it) and the result is marked partial even when every runnable
+  rule ran.
+  ``SignalResult`` gains ``rules_evaluated``, ``rules_applicable``,
+  ``n_observations``, ``min_observations``, ``below_min_observations`` and
+  ``evaluation_note``; ``is_partial`` / ``evaluation_status`` now also reflect the
+  advisory threshold. A partial evaluation prints
+  ``⚠ Partial evaluation in X: 2 of 8 rules applicable at n=4 (...). No signals
+  from the rules evaluated.`` and the checkmark line is reserved for a complete
+  evaluation. Which rules run, and what they flag, is unchanged. Excel export's
+  Summary sheet adds evaluation status. Reported privately (GHSA-hw63-2x95-fmpv)
+  and in #114.
+- ``SECURITY.md`` supported-versions table said 0.1.x while the prose said 0.2.x.
+  The table now matches the prose.
+
 ### Removed
 - **Seven never-called utilities from ``datasets.synthetic``** — ``make_edge_cases``
   (unseeded, non-deterministic), ``compare_sds_characteristics`` (its docstring

@@ -2,13 +2,13 @@
 
 ## Supported versions
 
-processbehavior is in **alpha** (0.1.x). Only the most recent 0.1.x release
-receives security fixes. 0.2.x is the supported line; 0.1.x is not patched.
+processbehavior is in **alpha**. Only the most recent 0.2.x release receives
+security fixes; 0.1.x is not patched.
 
 | Version | Supported          |
 | ------- | ------------------ |
-| 0.1.x   | :white_check_mark: |
-| < 0.1   | :x:                |
+| 0.2.x   | :white_check_mark: |
+| < 0.2   | :x:                |
 
 ## Reporting a vulnerability
 

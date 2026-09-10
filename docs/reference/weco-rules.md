@@ -263,7 +263,12 @@ Not all rules apply to all chart types:
 
 ## Minimum Observations
 
-Each rule requires a minimum number of observations:
+There are two minimums, and they answer different questions.
+
+### Structural minimum, per rule
+
+Each rule needs a certain number of points before its pattern can occur at all.
+A rule below its minimum is skipped, not failed:
 
 | Rule | Minimum Observations |
 |------|---------------------|
@@ -276,7 +281,55 @@ Each rule requires a minimum number of observations:
 | 7 | 15 |
 | 8 | 8 |
 
-ProcessBehavior automatically skips rules that can't be evaluated due to insufficient data.
+These live in `SignalDetector.RULE_MIN_OBSERVATIONS` and are not configurable:
+a run of eight cannot exist in six points.
+
+### Advisory minimum, per evaluation
+
+`SignalConfig.min_observations` (default 20) is the series length below which the
+evaluation as a whole is reported as **partial**, even if every rule that could run
+did run. At four points, six of the eight X/mR rules are structurally inert and the
+remaining two have very little to work with. Below the threshold the detector emits
+a `ProcessBehaviorWarning` naming both numbers, and the result carries the detail:
+
+```python
+signals = result.detect_signals(chart='X')
+signals.is_partial          # True
+signals.evaluation_status   # 'partial'
+signals.rules_evaluated     # ['rule_1', 'rule_2']
+signals.rules_skipped       # {'rule_3': 'needs 5 observations, have 4', ...}
+signals.evaluation_note     # '2 of 8 rules applicable at n=4 (below min_observations=20); skipped: ...'
+```
+
+### Reading the summary
+
+A partial evaluation never prints the clean-series checkmark. Compare:
+
+```
+✓ No signals detected in X
+```
+
+which means every applicable rule ran on an adequate series and none fired, with:
+
+```
+⚠ Partial evaluation in X: 2 of 8 rules applicable at n=4 (below min_observations=20);
+skipped: rule_3 (needs 5), rule_4 (needs 8), rule_5 (needs 6), rule_6 (needs 14),
+rule_7 (needs 15), rule_8 (needs 8). No signals from the rules evaluated.
+```
+
+which means most of the examination could not be performed. The second is not an
+all-clear. On a short series that is also trending, the one rule that can still fire
+(Rule 1) is weakened by the trend itself, because the trend inflates the moving range
+that sets the limits. Treat a partial result as "not yet examined", and see the
+series-length guidance in the user guide before quoting limits from a short series.
+
+To silence the warning in a pipeline that has already accounted for it:
+
+```python
+import warnings
+from processbehavior import ProcessBehaviorWarning
+warnings.simplefilter('ignore', ProcessBehaviorWarning)
+```
 
 ## Interpreting Results
 

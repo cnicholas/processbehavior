@@ -37,7 +37,10 @@ class SignalResult:
     """
 
     def __init__(self, violations: pd.DataFrame, chart_name: str, data: pd.DataFrame, stats: dict,
-                 rules_skipped: dict[str, str] | None = None):
+                 rules_skipped: dict[str, str] | None = None,
+                 rules_evaluated: list[str] | None = None,
+                 n_observations: int | None = None,
+                 min_observations: int | None = None):
         self.violations = violations
         self.chart_name = chart_name
         self.data = data
@@ -46,6 +49,14 @@ class SignalResult:
         # points (rule_name -> reason). Lets callers distinguish "no signals found"
         # from "not fully evaluated" (e.g. a small stratified subgroup).
         self.rules_skipped = rules_skipped or {}
+        # Applicable rules that did run. Together with ``rules_skipped`` this gives
+        # the "k of n rules applicable" denominator the summary reports.
+        self.rules_evaluated = list(rules_evaluated or [])
+        # Post-filter observation count the rules were evaluated on, and the
+        # advisory threshold from ``SignalConfig.min_observations``. Either may be
+        # None when a result is constructed directly rather than by the detector.
+        self.n_observations = n_observations
+        self.min_observations = min_observations
 
     @property
     def count(self) -> int:
@@ -58,14 +69,55 @@ class SignalResult:
         return self.count > 0
 
     @property
+    def rules_applicable(self) -> int:
+        """Number of rules that applied to this chart (evaluated + skipped)."""
+        return len(self.rules_evaluated) + len(self.rules_skipped)
+
+    @property
+    def below_min_observations(self) -> bool:
+        """True when the series is shorter than the configured advisory minimum.
+
+        Rules that could run still ran; this flags that the evaluation as a whole
+        is not one the analyst should treat as complete.
+        """
+        return (
+            self.n_observations is not None
+            and self.min_observations is not None
+            and self.n_observations < self.min_observations
+        )
+
+    @property
     def is_partial(self) -> bool:
-        """True when some applicable rules were skipped for too few observations."""
-        return bool(self.rules_skipped)
+        """True when some applicable rules were skipped, or the series is below
+        ``min_observations``. Either way, "no signals" is not an all-clear."""
+        return bool(self.rules_skipped) or self.below_min_observations
 
     @property
     def evaluation_status(self) -> str:
-        """'complete' when every applicable rule ran, else 'partial'."""
-        return 'partial' if self.rules_skipped else 'complete'
+        """'complete' when every applicable rule ran on an adequate series, else 'partial'."""
+        return 'partial' if self.is_partial else 'complete'
+
+    @property
+    def evaluation_note(self) -> str:
+        """One-line account of what was and was not evaluated.
+
+        Empty when the evaluation is complete. Otherwise, e.g.::
+
+            2 of 8 rules applicable at n=4 (below min_observations=20); skipped:
+            rule_3 (needs 5), rule_4 (needs 8), ...
+        """
+        if not self.is_partial:
+            return ''
+        n_txt = f'n={self.n_observations}' if self.n_observations is not None else 'this series length'
+        parts = [f'{len(self.rules_evaluated)} of {self.rules_applicable} rules applicable at {n_txt}']
+        if self.below_min_observations:
+            parts[0] += f' (below min_observations={self.min_observations})'
+        if self.rules_skipped:
+            skipped = ', '.join(
+                f'{rule} ({reason.split(" observations")[0]})' for rule, reason in self.rules_skipped.items()
+            )
+            parts.append(f'skipped: {skipped}')
+        return '; '.join(parts)
 
     @property
     def flagged_observations(self) -> set:
@@ -130,8 +182,17 @@ class SignalResult:
 
     @property
     def summary(self) -> str:
-        """Human-readable summary of detected signals."""
+        """Human-readable summary of detected signals.
+
+        A partial evaluation never reads as an all-clear: the clean-series
+        checkmark line is reserved for a complete evaluation.
+        """
         if not self.has_signals:
+            if self.is_partial:
+                return (
+                    f'⚠ Partial evaluation in {self.chart_name}: {self.evaluation_note}. '
+                    f'No signals from the rules evaluated.'
+                )
             return f'✓ No signals detected in {self.chart_name}'
 
         lines = [
@@ -140,8 +201,10 @@ class SignalResult:
             f'{"=" * 70}',
             f'Total violations: {self.count}',
             f'Flagged observations: {len(self.flagged_observations)}',
-            '',
         ]
+        if self.is_partial:
+            lines.append(f'Evaluation: partial ({self.evaluation_note})')
+        lines.append('')
 
         # Breakdown by rule
         rule_counts = self.violations['rule_name'].value_counts()
@@ -198,8 +261,14 @@ class SignalResult:
 
             # Summary sheet
             summary_data = {
-                'Metric': ['Total Violations', 'Flagged Observations', 'Chart Name'],
-                'Value': [self.count, len(self.flagged_observations), self.chart_name],
+                'Metric': [
+                    'Total Violations', 'Flagged Observations', 'Chart Name',
+                    'Evaluation Status', 'Rules Evaluated / Applicable',
+                ],
+                'Value': [
+                    self.count, len(self.flagged_observations), self.chart_name,
+                    self.evaluation_status, f'{len(self.rules_evaluated)} / {self.rules_applicable}',
+                ],
             }
             pd.DataFrame(summary_data).to_excel(writer, sheet_name='Summary', index=False)
 
@@ -207,7 +276,10 @@ class SignalResult:
 
     def to_json(self, filepath: str):
         """
-        Export violations to JSON.
+        Export violations to JSON (a list of violation records).
+
+        Evaluation status is not part of this file; read ``evaluation_status``,
+        ``rules_evaluated`` and ``rules_skipped`` on the result instead.
 
         Parameters
         ----------
@@ -222,10 +294,11 @@ class SignalResult:
         logger.info(f'✓ Exported violations to: {filepath}')
 
     def __repr__(self):
+        partial = ", evaluation='partial'" if self.is_partial else ''
         return (
             f'SignalResult(violations={self.count}, '
             f'flagged_obs={len(self.flagged_observations)}, '
-            f"chart='{self.chart_name}')"
+            f"chart='{self.chart_name}'{partial})"
         )
 
     def __str__(self):

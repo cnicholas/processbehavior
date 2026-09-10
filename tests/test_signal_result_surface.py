@@ -87,6 +87,36 @@ class TestSummary:
     def test_summary_clean(self, clean):
         assert 'No signals' in clean.summary
 
+    def test_summary_partial_is_not_an_all_clear(self):
+        """Skipped rules, or a series under min_observations, never yield the ✓ line."""
+        data = pd.DataFrame({'mean': [100.0] * 4})
+        stats = {'center': 100.0, 'upl': 115.0, 'lpl': 85.0}
+        partial = SignalResult(
+            pd.DataFrame(),
+            'Short Chart',
+            data,
+            stats,
+            rules_skipped={'rule_4': 'needs 8 observations, have 4'},
+            rules_evaluated=['rule_1', 'rule_2'],
+            n_observations=4,
+            min_observations=20,
+        )
+        text = partial.summary
+        assert text.startswith('⚠ Partial evaluation in Short Chart')
+        assert '2 of 3 rules applicable at n=4 (below min_observations=20)' in text
+        assert 'skipped: rule_4 (needs 8)' in text
+        assert 'No signals detected' not in text
+        assert '✓' not in text
+        assert partial.evaluation_status == 'partial'
+
+    def test_positional_construction_still_complete(self, clean):
+        """The 4-arg form (no evaluation metadata) reads as a complete evaluation."""
+        assert clean.rules_evaluated == []
+        assert clean.rules_applicable == 0
+        assert clean.n_observations is None
+        assert not clean.below_min_observations
+        assert not clean.is_partial
+
     def test_repr_and_str(self, signals, clean):
         assert 'SignalResult' in repr(signals)
         assert isinstance(str(signals), str) and str(signals)
