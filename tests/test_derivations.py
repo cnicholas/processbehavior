@@ -140,6 +140,40 @@ def test_tie_drop_uses_fitted_count_labels_and_message():
     assert 'requested 5 bins' in r.message and 'produced 3' in r.message
 
 
+@pytest.mark.parametrize('method', ['equal_freq', 'equal_width', 'sd'])
+def test_constant_column_is_no_spread_for_every_method(method):
+    """A constant column is a routine state, so evaluate() returns rather than raises.
+
+    Only equal_freq used to reach the no-spread branch (np.unique collapses its quantiles to
+    one edge). equal_width fits identical finite edges and sd fits a zero-sigma set of edges;
+    both slipped past the guard and pd.cut raised "Bin edges must be unique". Found through
+    the app, on a T=1 file whose TIME column is a constant.
+    """
+    const = pd.Series([1.0] * 30)
+    r = evaluate(Derivation.bin('t', method=method, n=4), const)
+    assert r.message == 'column has no spread; cannot bin'
+    assert r.fitted['method'] == method
+    assert r.fitted['n_bins'] == 0 and r.fitted['edges'] == [] and r.fitted['labels'] == []
+    assert r.values.isna().all() and len(r.values.cat.categories) == 0
+    assert r.n_invalid == 0
+
+
+def test_constant_column_with_explicit_breaks_still_bins():
+    """Breaks are the analyst's own cut points: a constant column bins into one of them."""
+    r = evaluate(Derivation.bin('t', method='breaks', breaks=[0.5, 1.5]), pd.Series([1.0] * 30))
+    assert r.fitted['n_bins'] == 3
+    assert r.values.notna().all() and r.values.nunique() == 1
+
+
+def test_constant_column_validates_without_raising():
+    """validate() evaluates internally; it must survive the no-spread result too."""
+    df = pd.DataFrame({'t': [1.0] * 30})
+    for method in ('equal_freq', 'equal_width', 'sd'):
+        check = validate(Derivation.bin('t', method=method, n=4, bin_labels=['a', 'b']), df)
+        # No label_count complaint against zero bins is not required either way; it must not raise.
+        assert isinstance(check.ok, bool)
+
+
 def test_range_labels_from_fitted_edges():
     r = evaluate(Derivation.bin('w', method='equal_width', n=2, bin_labels='range'),
                  pd.Series([0.0, 10.0]))
