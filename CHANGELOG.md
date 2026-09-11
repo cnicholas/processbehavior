@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **``evaluate`` no longer raises on a constant column.** Binning a column with no spread
+  (every value identical) returned the documented no-spread result for ``equal_freq`` but
+  raised ``ValueError: Bin edges must be unique`` from ``pd.cut`` for ``equal_width`` and
+  ``sd``, because their fitted edges were identical yet finite and slipped past the guard.
+  The derivations module promises ``evaluate`` never raises on a routine state; a constant
+  column is one. All three methods now return the same no-spread result, whose ``fitted``
+  dict also carries ``n_bins: 0``, ``edges: []`` and ``labels: []`` so callers see one
+  shape. Explicit ``breaks`` on a constant column still bin. Found through the app on a
+  single-time-point file whose TIME column was a constant.
+
 ## [0.2.1] - 2026-09-09
 
 ### Fixed

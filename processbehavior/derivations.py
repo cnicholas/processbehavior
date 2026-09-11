@@ -473,11 +473,23 @@ def _evaluate_bin(spec: Derivation, col: pd.Series) -> EvalResult:
 
     edges, fit_msg = _fit_edges(spec, x[present])
 
-    # Degenerate fit (no spread) — cannot bin.
-    if len(edges) < 2 or any(not math.isfinite(e) for e in edges[1:-1]):
+    # Degenerate fit (no spread) — cannot bin. A constant column produces three shapes,
+    # one per method: a single edge (equal_freq, after np.unique collapses the quantiles),
+    # identical finite edges (equal_width, linspace(lo, lo)), and a zero-sigma sd fit
+    # ([-inf, mu, mu, mu, mu, inf]). pd.cut raises "Bin edges must be unique" on the latter
+    # two, and evaluate() promises never to raise on a routine state, so all three return
+    # the same no-spread result. User-supplied breaks are validated ascending elsewhere and
+    # bin a constant column fine (everything lands in one interval), so they never trip this.
+    degenerate = (
+        len(edges) < 2
+        or any(not math.isfinite(e) for e in edges[1:-1])
+        or any(b <= a for a, b in zip(edges, edges[1:], strict=False))  # not strictly increasing
+    )
+    if degenerate:
         return EvalResult(
             values=pd.Series(pd.Categorical([np.nan] * len(x)), index=x.index),
-            n_invalid=0, invalid_index=empty_index, fitted={'method': params['method']},
+            n_invalid=0, invalid_index=empty_index,
+            fitted={'method': params['method'], 'n_bins': 0, 'edges': [], 'labels': []},
             message='column has no spread; cannot bin',
         )
 
