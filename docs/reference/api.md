@@ -163,6 +163,8 @@ study.analytical_design_state   # SDSResult — ADS: what the analysis runs at
 study.plan_design_state         # SDSResult | None — PDS, when plan= was given
 study.ads_reason                # str — machine-readable reason ('full_replication', ...)
 study.ads_description           # str — human-readable description
+study.series_length             # SeriesLengthPrecision — where sigma comes from at this structure, and how precise at this T
+study.series_length_description # str — the 'Series length:' sentence from the design report (may be empty)
 ```
 
 `SDSResult.sds` is the design state on Bishop's 1–6 reference scale — see the
