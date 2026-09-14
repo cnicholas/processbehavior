@@ -32,16 +32,12 @@ class TestAssessSeriesLength:
         r = assess_series_length(T=4, within_cell_df=0, sigma_from_time=True)
         assert r.n_moving_ranges == 3
         assert r.mr_interval_80 == MR_SIGMA_INTERVAL_80[4]
-        assert r.description == (
-            'T=4. Sigma for X/mR rests on 3 moving ranges; on a stable process, '
-            '80% of such estimates fall between 0.43x and 1.68x the true sigma.'
-        )
+        assert r.description == 'T=4. Sigma for X/mR rests on 3 moving ranges.'
 
     def test_unreplicated_beyond_table_is_bounded_by_the_last_row(self):
         r = assess_series_length(T=400, within_cell_df=0, sigma_from_time=True)
         assert r.n_moving_ranges == 399 and r.mr_interval_80 is None
-        assert '399 moving ranges' in r.description
-        assert 'within 0.79x to 1.22x the true sigma or narrower' in r.description
+        assert r.description == 'T=400. Sigma for X/mR rests on 399 moving ranges.'
 
     def test_two_points_is_a_single_moving_range(self):
         r = assess_series_length(T=2, within_cell_df=0, sigma_from_time=True)
@@ -51,16 +47,15 @@ class TestAssessSeriesLength:
     def test_replicated_does_not_depend_on_T(self):
         r1 = assess_series_length(T=1, within_cell_df=25, sigma_from_time=False)
         assert r1.n_moving_ranges is None and r1.mr_interval_80 is None
-        assert r1.description == (
-            'T=1. Sigma rests on within-cell replication (25 degrees of freedom), not on the time sequence.'
-        )
+        assert r1.within_cell_df == 25
+        assert r1.description == 'T=1. Sigma rests on within-cell replication.'
         r_none = assess_series_length(T=None, within_cell_df=25, sigma_from_time=False)
-        assert r_none.description.startswith('Sigma rests on within-cell replication (25 degrees of freedom)')
+        assert r_none.description == 'Sigma rests on within-cell replication.'
 
-    def test_partial_replication_states_both_facts(self):
+    def test_partial_replication_names_the_moving_range_and_keeps_the_df(self):
         r = assess_series_length(T=8, within_cell_df=32, sigma_from_time=True)
-        assert '7 moving ranges' in r.description
-        assert 'Replicated cells also carry 32 within-cell degrees of freedom for Xbar/S.' in r.description
+        assert r.description == 'T=8. Sigma for X/mR rests on 7 moving ranges.'
+        assert r.within_cell_df == 32 and r.mr_interval_80 == MR_SIGMA_INTERVAL_80[8]
 
     def test_no_time_and_no_replication_says_nothing(self):
         r = assess_series_length(T=None, within_cell_df=0, sigma_from_time=True)
@@ -69,7 +64,17 @@ class TestAssessSeriesLength:
     def test_no_verdict_words(self):
         for T in (2, 3, 4, 6, 12, 20, 30, 31, 400):
             text = assess_series_length(T, 0, True).description.lower()
-            for word in ('short', 'adequate', 'provisional', 'warning', 'insufficient', 'too few'):
+            for word in (
+                'short',
+                'adequate',
+                'provisional',
+                'warning',
+                'insufficient',
+                'too few',
+                'degrees of freedom',
+                'estimate',
+                'stable process',
+            ):
                 assert word not in text, (T, word)
 
     def test_result_is_frozen(self):
@@ -134,13 +139,14 @@ class TestStudySurface:
         assert st.analytical_design_state.sds == 1
         sl = st.series_length
         assert sl.T == 1 and not sl.sigma_from_time and sl.within_cell_df == 25
-        assert 'Series length: T=1. Sigma rests on within-cell replication (25 degrees of freedom)' in repr(st.design())
+        assert 'Series length: T=1. Sigma rests on within-cell replication.' in repr(st.design())
 
     def test_no_time_variable_with_replication_still_states_the_source(self):
         df = pd.DataFrame({'TEMP': np.repeat([0, 25, 50], 4), 'LIFE': np.arange(12, dtype=float)})
         st = pb.formulate(df, response='LIFE', factors=['TEMP'])
         assert st.series_length.T is None
-        assert 'within-cell replication (9 degrees of freedom); no time sequence' in repr(st.design())
+        assert st.series_length.within_cell_df == 9
+        assert 'Series length: Sigma rests on within-cell replication.' in repr(st.design())
 
     def test_no_warning_is_emitted_for_a_short_series(self, recwarn):
         pb.formulate(_stable(3), response='y', time='t').design()

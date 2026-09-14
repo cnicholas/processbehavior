@@ -2,18 +2,21 @@
 Series-length precision of the sigma estimate.
 
 One fact for the design report: where the sigma behind the natural process
-limits comes from at the observed structure, and how precise that estimate is
-at the observed series length. No threshold, label, or warning is attached;
-the analyst weighs it (Bishop: judgment belongs to the analyst, not to a rule).
+limits comes from at the observed structure and series length. No threshold,
+label, or warning is attached; the analyst weighs it (Bishop: judgment belongs
+to the analyst, not to a rule).
 
 Two sources of sigma:
 
-- Replicated cells (ADS 1): within-cell deviation. Precision is a matter of the
-  within-cell degrees of freedom, sum over cells of (N_kt - 1). The number of
-  time periods is irrelevant; T = 1 is a complete study.
+- Every cell replicated (ADS 1): within-cell deviation. The number of time
+  periods does not enter; T = 1 is a complete study.
 - Any singleton cell (ADS 2, ADS 3): the 2-point moving range over the ordered
-  sequence, T - 1 ranges for T time points. Its precision at short T is
-  tabulated in ``MR_SIGMA_INTERVAL_80`` (see #114).
+  sequence, T - 1 ranges for T time points.
+
+The sentence names the source and the count. The within-cell degrees of freedom
+and the 80% interval of the moving-range estimate at this T
+(``MR_SIGMA_INTERVAL_80``, from #114) ride on the result for callers who want
+them; the report does not print them.
 """
 
 from __future__ import annotations
@@ -46,8 +49,9 @@ class SeriesLengthPrecision:
         stable process, from ``MR_SIGMA_INTERVAL_80``; only when
         ``sigma_from_time`` and 3 <= T <= 30.
     description : str
-        The sentence printed in the design report. Empty when there is nothing
-        to say (no time variable and no replication).
+        The sentence printed in the design report, e.g.
+        ``T=4. Sigma for X/mR rests on 3 moving ranges.`` Empty when there is
+        nothing to say (no time variable and no replication).
     """
 
     T: int | None
@@ -61,6 +65,10 @@ class SeriesLengthPrecision:
 def assess_series_length(T: int | None, within_cell_df: int, sigma_from_time: bool) -> SeriesLengthPrecision:
     """
     Build the precision statement for a study.
+
+    The sentence names only the source of sigma at this structure and T. The
+    numbers behind it (``within_cell_df``, ``mr_interval_80``) ride on the
+    result for callers who want them; the report does not print them.
 
     Parameters
     ----------
@@ -76,18 +84,11 @@ def assess_series_length(T: int | None, within_cell_df: int, sigma_from_time: bo
     SeriesLengthPrecision
     """
     if not sigma_from_time:
-        n_mr = None
-        interval = None
         if T is None:
-            description = (
-                f'Sigma rests on within-cell replication ({within_cell_df} degrees of freedom); no time sequence.'
-            )
+            description = 'Sigma rests on within-cell replication.'
         else:
-            description = (
-                f'T={T}. Sigma rests on within-cell replication ({within_cell_df} degrees of freedom), '
-                f'not on the time sequence.'
-            )
-        return SeriesLengthPrecision(T, n_mr, within_cell_df, False, interval, description)
+            description = f'T={T}. Sigma rests on within-cell replication.'
+        return SeriesLengthPrecision(T, None, within_cell_df, False, None, description)
 
     if T is None:
         return SeriesLengthPrecision(None, None, within_cell_df, True, None, '')
@@ -99,20 +100,6 @@ def assess_series_length(T: int | None, within_cell_df: int, sigma_from_time: bo
         description = f'T={T}. Sigma for X/mR rests on the moving range, which needs at least 2 time points.'
     elif T == 2:
         description = 'T=2. Sigma for X/mR rests on a single moving range.'
-    elif interval is not None:
-        lo, hi = interval
-        description = (
-            f'T={T}. Sigma for X/mR rests on {n_mr} moving ranges; on a stable process, '
-            f'80% of such estimates fall between {lo:.2f}x and {hi:.2f}x the true sigma.'
-        )
     else:
-        lo, hi = MR_SIGMA_INTERVAL_80[_TABLE_MAX]
-        description = (
-            f'T={T}. Sigma for X/mR rests on {n_mr} moving ranges; on a stable process, '
-            f'80% of such estimates fall within {lo:.2f}x to {hi:.2f}x the true sigma or narrower.'
-        )
-    if within_cell_df > 0 and description:
-        # Partial replication (ADS 3): X/mR limits rest on the moving range, while the
-        # replicated cells still carry within-cell degrees of freedom for Xbar/S.
-        description += f' Replicated cells also carry {within_cell_df} within-cell degrees of freedom for Xbar/S.'
+        description = f'T={T}. Sigma for X/mR rests on {n_mr} moving ranges.'
     return SeriesLengthPrecision(T, n_mr, within_cell_df, True, interval, description)

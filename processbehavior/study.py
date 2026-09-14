@@ -767,9 +767,9 @@ class DesignReport:
         lines.append('')
         lines.append(f'  Structure: {self.structure_summary}')
 
-        # Series length: where sigma comes from at this structure, and how precise it is at
-        # this T. A fact beside the design state, not a verdict on it — ADS 2 is ADS 2
-        # whether T is 4 or 400 (#114). No threshold, label, or warning is attached.
+        # Series length: where sigma comes from at this structure and T. A fact beside the
+        # design state, not a verdict on it — ADS 2 is ADS 2 whether T is 4 or 400 (#114).
+        # No threshold, label, or warning is attached.
         if self._series_length is not None and self._series_length.description:
             lines.append(f'  Series length: {self._series_length.description}')
 
@@ -1122,13 +1122,15 @@ class Study:
     @property
     def series_length(self) -> SeriesLengthPrecision:
         """
-        Where sigma comes from at this structure, and how precise it is at this T.
+        Where sigma comes from at this structure and series length.
 
         A fact stated beside the design state, not a judgment on it: no
         threshold, label, or warning. With any singleton cell the limits rest on
-        T - 1 moving ranges and the 80% interval of that estimate at this T is
-        reported from ``MR_SIGMA_INTERVAL_80``; with every cell replicated they
-        rest on within-cell degrees of freedom and T does not enter.
+        T - 1 moving ranges; with every cell replicated they rest on within-cell
+        replication and T does not enter. The result also carries
+        ``within_cell_df`` and, for the moving-range case, ``mr_interval_80``
+        (from ``MR_SIGMA_INTERVAL_80``) for callers who want the numbers; the
+        report prints only the sentence.
 
         Returns
         -------
