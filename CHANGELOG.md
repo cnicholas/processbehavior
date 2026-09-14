@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **The R2 method for partial replication is reported as ``ma2``, not ``hybrid``.** The
+  docs described a per-cell hybrid for design state 3 (exact deviation where a cell has
+  n ≥ 2, moving average where n = 1) and said it was validated by Monte Carlo. The code
+  has not done that since cb037f8 (2026-03-05): with any singleton cell, R2 is Bishop's
+  ungrouped 2-point moving average over the full canonical sequence (Eq 13.7–13.9) for
+  every observation, and the 89 ADS 3 reference assertions hold against that. Only the word
+  survived, in six docs pages (three of which described it three different ways), the
+  detector's method token, the analysis-plan limitation text, two docstrings and two test
+  names. All now say what the code does. ``R2Method`` is ``Literal['exact', 'ma2']``;
+  ``SDSRegistry.get_r2_method`` returns ``'ma2'`` where it returned ``'hybrid'``;
+  ``get_sds_characteristics`` and ``SDSAnalysisPlan.residual_calculation_method`` use the
+  same two spellings in place of ``'within_cell'``, ``'moving_average'`` and ``'hybrid'``.
+  No arithmetic changed; none of these names is exported from the package top level.
+
 ### Fixed
 - **``evaluate`` no longer raises on a constant column.** Binning a column with no spread
   (every value identical) returned the documented no-spread result for ``equal_freq`` but

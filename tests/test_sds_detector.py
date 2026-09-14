@@ -15,7 +15,7 @@ import pytest
 from processbehavior import ProcessBehavior
 from processbehavior.exceptions import ValidationError
 from processbehavior.formulation_spec import FormulationSpec
-from processbehavior.sds_detector import SDSRegistry
+from processbehavior.sds_detector import SDSRegistry, StructureStats
 
 # ============================================================================
 # Fixtures
@@ -263,7 +263,7 @@ def test_get_sds_characteristics_sds1(detector):
     assert info['sds'] == 1
     assert 'Full replication' in info['description']
     assert info['replication_type'] == 'full'
-    assert info['r2_method'] == 'within_cell'
+    assert info['r2_method'] == 'exact'
     assert info['interaction_analysis'] is True
     assert info['variance_decomposition'] is True
     assert 'full_vas' in info['capabilities']
@@ -275,7 +275,7 @@ def test_get_sds_characteristics_sds2(detector):
 
     assert info['sds'] == 2
     assert 'No replication' in info['description']
-    assert info['r2_method'] == 'moving_average'
+    assert info['r2_method'] == 'ma2'
     assert info['interaction_analysis'] == 'limited'
 
 
@@ -285,7 +285,7 @@ def test_get_sds_characteristics_sds3(detector):
 
     assert info['sds'] == 3
     assert 'Partial replication' in info['description']
-    assert info['r2_method'] == 'hybrid'
+    assert info['r2_method'] == 'ma2'  # any singleton: MA2 over the full sequence, no per-cell mixing
     assert info['interaction_analysis'] == 'partial'
 
 
@@ -425,7 +425,7 @@ def test_should_calculate_vas_sds2_with_xbar_returns_true(detector):
 
 
 def test_should_calculate_vas_sds3_with_xbar_returns_true(detector):
-    """SDS 3 with Xbar - uses VAS with hybrid approach."""
+    """SDS 3 with Xbar - VAS residuals are supported (R2 by MA2)."""
     result = detector.should_calculate_vas_residuals(sds=3, analysis_type='Xbar')
     assert result is True
 
@@ -607,7 +607,7 @@ def test_realistic_scenario_manufacturing_4_lanes_hourly(detector):
     assert result.sds == 1  # Full replication
     # min_cell_size is kt-level: 32 cells (4 lanes × 8 hours), each with n=5
     assert result.min_cell_size == 5
-    assert info['r2_method'] == 'within_cell'
+    assert info['r2_method'] == 'exact'
     assert should_calc_vas is True
 
 
@@ -1309,3 +1309,31 @@ class TestDegenerateInputs:
         df = pd.DataFrame({'y': ['*', 'N/A', '*', 'N/A'], 'time': [1, 2, 3, 4]})
         with pytest.raises(ValidationError):
             ProcessBehavior(df).formulate(response='y', time='time')
+
+
+class TestR2MethodSelection:
+    """``get_r2_method`` has two answers, and structure alone decides between them.
+
+    The docs once described a third, per-cell "hybrid" for mixed cell sizes. It was removed in
+    cb037f8: with any singleton cell, R2 is Bishop's ungrouped MA2 (Eq 13.7-13.9) for every
+    observation, which the ADS 3 reference assertions validate. These pin the vocabulary to that.
+    """
+
+    @staticmethod
+    def _stats(n_min, n_max):
+        return StructureStats(has_grouping=True, has_order=True, n_cell_min=n_min, n_cell_max=n_max, K_obs=2)
+
+    def test_all_replicated_is_exact(self, detector):
+        assert detector.get_r2_method(self._stats(2, 3)) == 'exact'
+
+    def test_all_singletons_is_ma2(self, detector):
+        assert detector.get_r2_method(self._stats(1, 1)) == 'ma2'
+
+    def test_mixed_cells_is_ma2_not_a_third_method(self, detector):
+        assert detector.get_r2_method(self._stats(1, 3)) == 'ma2'
+
+    def test_analysis_plans_use_one_spelling(self, detector):
+        methods = {SDSRegistry.get_analysis_plan(sds=s).residual_calculation_method for s in (1, 2, 3)}
+        assert methods == {'exact', 'ma2'}
+        chars = {detector.get_sds_characteristics(s)['r2_method'] for s in (1, 2, 3, 4, 5, 6)}
+        assert chars == {'exact', 'ma2'}

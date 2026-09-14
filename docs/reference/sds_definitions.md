@@ -52,7 +52,7 @@ For background on the lineage itself (Planned → Observed → Analytical), see 
 - **Grid Status**: Semi-Complete
 - **Description**: Mix of cells - some have n=1, others have n≥2
 - **Implications**:
-  - Hybrid R2 calculation required (exact where n≥2, moving average where n=1)
+  - R2 by moving average over the full sequence (any singleton cell forces `ma2` for every observation)
   - **Most common in real-world data**
   - Partial interaction effect estimation
   - Requires careful handling of mixed replication
@@ -121,10 +121,10 @@ To determine the DS for a dataset:
 | 0 | N/A | No VAS decomposition |
 | 1 | Exact (within-cell) | Pooled within-cell variance |
 | 2 | Moving Average | Approximate via sequential differences |
-| 3 | Hybrid | Exact where n≥2, moving average where n=1 |
+| 3 | Moving Average | Any singleton cell: `ma2` over the full sequence, same as DS 2 |
 | 4 | Exact (present cells) | Within-cell for available data |
 | 5 | Moving Average | All present cells are unreplicated |
-| 6 | Hybrid | Complex handling of missing + mixed |
+| 6 | Moving Average | Collapses to ADS 3 after cleaning; `ma2` over the full sequence |
 
 ## References
 

@@ -94,7 +94,7 @@ Wheeler identifies six design states that determine valid analysis approaches.
 
 **ProcessBehavior Detection**: Some cells with n=1, others with n>=2
 
-**Capabilities**: Hybrid variance estimation
+**Capabilities**: R2 by moving average over the full sequence (mixed cell sizes)
 
 ---
 

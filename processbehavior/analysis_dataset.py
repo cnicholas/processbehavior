@@ -183,7 +183,7 @@ class AnalysisDataSet:
             - n_cell_min: minimum observations per cell
             - n_cell_max: maximum observations per cell
             - K_obs: number of unique factor levels observed
-            - r2_method: 'exact', 'ma2', or 'hybrid'
+            - r2_method: 'exact' or 'ma2'
             Returns None if structure stats haven't been computed.
         """
         if self._structure_stats is None:

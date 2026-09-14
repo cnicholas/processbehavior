@@ -278,14 +278,14 @@ The design report shows:
 ```
 
 **Capabilities**:
-- ⚠️ Hybrid R2 estimation (exact where n >= 2, ma2 where n = 1)
+- ⚠️ R2 by the 2-point moving average over the full sequence (any singleton cell forces `ma2` for every observation)
 - ⚠️ VAS residuals available but interpretation requires care
-- ✅ Xbar-S analysis with hybrid limits
+- ✅ Xbar-S analysis with R2-based limits
 
 **Valid Charts**: Histogram, Xbar, S, X, mR
 
-!!! note "Why Mixed is treated conservatively"
-    For R2 calculation, DS 3 uses the hybrid method: exact within-cell deviation where cells have n >= 2, and the ma2 (moving average) method where cells have n = 1. This conservative approach was validated by Monte Carlo simulation — it produces more reliable variance estimates than attempting to use only the replicated cells. The recommended chart is X (not Xbar) because the mixed replication makes subgroup-mean interpretation less straightforward.
+!!! note "Why DS 3 does not mix methods"
+    For R2 in DS 3 the library does not combine an exact estimate from the replicated cells with a moving-average estimate from the singletons. Bishop's moving-average residual (Eq 13.7–13.9) is defined over the whole ordered sequence, j = 2 … J, with no grouping by cell. Once any cell is a singleton, every observation gets R2 = (Y_j − Y_{j−1}) / 2 on the canonical sort, and only the first observation in the sequence has no value. The replicated cells' within-cell deviations are not used for R2. This is the same calculation as DS 2, and the ADS 3 reference assertions in the [validation page](../reference/validation.md) hold against it. The recommended chart is X rather than Xbar because subgroup means over mixed cell sizes are uneven to interpret, not because the variance estimate differs.
 
 ## DS 4: Incomplete, No Singletons
 
@@ -379,7 +379,7 @@ The R2 method is determined by the tidy data structure (ADS), not the raw DS:
 |-----|-----------|-------------|
 | 1 | exact | Within-cell standard deviation (`R2 = Y - Ȳ_kt`) |
 | 2 | ma2 | 2-point moving average for unreplicated designs |
-| 3 | hybrid | Exact where n >= 2, ma2 where n = 1 |
+| 3 | ma2 | Any singleton cell: moving average over the full sequence (same as DS 2) |
 
 ### 2. Available Charts
 
@@ -389,7 +389,7 @@ The R2 method is determined by the tidy data structure (ADS), not the raw DS:
 |-----|--------|----------------|
 | 1 | ✅ | ✅ |
 | 2 | ✅ (MR-based limits) | ✅ |
-| 3 | ✅ (hybrid limits) | ✅ |
+| 3 | ✅ (R2-based limits) | ✅ |
 | 4 | ❌ | ✅ |
 | 5 | ❌ | ✅ |
 | 6 | ❌ | ✅ |
@@ -486,10 +486,10 @@ print(cell_counts['n'].value_counts())
 |----------------|-----|-----------------------|---------------|
 | Full replication (n>=2 per cell) | 1 | 1 | Xbar with full VAS |
 | One observation per cell | 2 | 2 | X with MA2-based R2 |
-| Mixed replication | 3 | 3 | X with hybrid R2 |
+| Mixed replication | 3 | 3 | X with MA2 R2 |
 | Incomplete grid, all observed replicated | 4 | 1 | Xbar with full VAS |
 | Incomplete grid, all observed n=1 | 5 | 2 | X with MA2-based R2 |
-| Incomplete grid, mixed observed | 6 | 3 | X with hybrid R2 |
+| Incomplete grid, mixed observed | 6 | 3 | X with MA2 R2 |
 
 ## Next Steps
 

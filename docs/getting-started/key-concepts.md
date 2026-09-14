@@ -46,7 +46,7 @@ See [DS Definitions](../reference/sds_definitions.md) for the formal classificat
 
 The DS determines:
 - Which chart types are valid
-- How within-group variance is estimated (R2 method: exact, ma2, or hybrid)
+- How within-group variance is estimated (R2 method: exact or ma2)
 - Which VAS residuals can be computed
 - What conclusions you can draw
 

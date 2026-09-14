@@ -81,7 +81,7 @@ design states.
 **Formula by DS**:
 - **DS 1 (Full Replication)**: R2 = Y - Y̅<sub>kt</sub> (exact within-cell deviation)
 - **DS 2 (No Replication)**: R2 = (Y<sub>j</sub> - Y<sub>j-1</sub>) / 2 (backward 2-point moving average)
-- **DS 3 (Partial)**: Hybrid approach
+- **DS 3 (Partial)**: same moving average as DS 2, over the full sequence
 
 **Chart**: S chart with `value='R2'` (for replicated data) or X
 
@@ -255,17 +255,20 @@ Re-centering formulas:
 |-----|----|----|----|----|-----|-----|
 | 1 (Full Replication) | ✅ | ✅ Within-cell | ✅ | ✅ | ✅ | ✅ |
 | 2 (No Replication) | ✅ | ✅ MR-based | ✅ | ✅ | ✅ | ✅ |
-| 3 (Partial) | ✅ | ✅ Hybrid | ✅ | ✅ | ✅ | ✅ |
+| 3 (Partial) | ✅ | ✅ MR-based | ✅ | ✅ | ✅ | ✅ |
 | 4 (Incomplete, No Singletons) → ADS 1 | ✅ | ✅ Within-cell | ✅ | ✅ | ✅ | ✅ |
 | 5 (Incomplete, No Replication) → ADS 2 | ✅ | ✅ MR-based | ✅ | ✅ | ✅ | ✅ |
-| 6 (Incomplete, With Singletons) → ADS 3 | ✅ | ✅ Hybrid | ✅ | ✅ | ✅ | ✅ |
+| 6 (Incomplete, With Singletons) → ADS 3 | ✅ | ✅ MR-based | ✅ | ✅ | ✅ | ✅ |
 
 R6 requires factors (it is computed from R5 and R2 at `execute()` time).
 
-**Note on R2 calculation**: R2 adapts to your sampling structure:
-- **DS 1**: Within-cell deviation (`R2 = Y - Ȳ_kt`)
-- **DS 2, 6**: Moving average method (`R2 = Y - MA2`) for unreplicated/sparse designs
-- **DS 3, 4, 5**: Hybrid approach (within-cell for n>1 cells, zero for n=1 cells)
+**Note on R2 calculation**: R2 is the one residual whose formula depends on structure, and the
+choice is made on the analytical design state (ADS), after cleaning:
+- **ADS 1** (every cell n ≥ 2): within-cell deviation, `R2 = Y - Ȳ_kt` (Eq 59)
+- **ADS 2 and 3** (any singleton cell): 2-point moving average over the full canonical sequence,
+  `R2 = (Y_j - Y_{j-1}) / 2` (Eq 13.7–13.9), for every observation; no per-cell mixing
+
+DS 4, 5 and 6 are sampling states; they collapse to ADS 1, 2 and 3 once empty cells are dropped.
 
 ## Analysis Workflow with Residuals
 

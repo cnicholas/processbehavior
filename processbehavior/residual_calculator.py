@@ -338,14 +338,14 @@ def calculate_r2(df: pd.DataFrame, y: str, r2_method: R2Method, n_per_cell: pd.S
     R2 is the ONLY structure-dependent residual. The method is determined by
     observed cell sizes (via SDSRegistry.get_r2_method()):
 
-    - exact (state 1): R2 = Y - Ȳ_kt (Eq 59), all cells have n >= 2
-    - ma2 (states 2 & 3): R2 = (Y_j - Y_{j-1}) / 2 (Eq 13.8-13.9),
+    - exact (ADS 1): R2 = Y - Ȳ_kt (Eq 59), every cell has n >= 2
+    - ma2 (ADS 2 and 3): R2 = (Y_j - Y_{j-1}) / 2 (Eq 13.7-13.9),
       any cell has n = 1
 
     When any cell has n=1, MA2 is applied to ALL observations across the
-    entire canonical-sorted stream — no grouping by rsg_key, no hybrid
-    per-cell selection. Bishop Eq 13.7-13.9 specify j=2,...,J with no
-    grouping; only j=1 gets R2=0.
+    entire canonical-sorted stream — no grouping by rsg_key, no per-cell
+    selection between exact and MA2. Bishop Eq 13.7-13.9 specify j=2,...,J
+    with no grouping; only j=1 has no value.
 
     Parameters
     ----------
@@ -354,8 +354,9 @@ def calculate_r2(df: pd.DataFrame, y: str, r2_method: R2Method, n_per_cell: pd.S
     y : str
         Name of response variable
     r2_method : R2Method
-        'exact', 'ma2', or 'hybrid' — retained for API compatibility.
-        Branching is driven by n_per_cell.
+        'exact' or 'ma2', as chosen by SDSRegistry.get_r2_method(). Kept for
+        callers and logging; the branch below re-derives it from n_per_cell so
+        the two can never disagree.
     n_per_cell : pd.Series, optional
         Pre-computed observations per cell. Pass from ADS to avoid recomputation.
 
@@ -427,7 +428,7 @@ def calculate_vas_residuals(
     spec : FormulationSpec
         Analysis specification
     r2_method : R2Method
-        'exact', 'ma2', or 'hybrid' - determines R2 calculation
+        'exact' or 'ma2' - determines R2 calculation
     n_per_cell : pd.Series, optional
         Pre-computed observations per cell. Pass from ADS to avoid recomputation.
     ybar_kt : pd.Series, optional

@@ -4,7 +4,7 @@ Unit tests for VAS residual calculations.
 Tests cover:
 - All mean calculations (Ybar, Ybar_k, Ybar_kt, Ybar_t)
 - All residuals (R1-R5)
-- R2 method variants (exact, ma2, hybrid)
+- R2 method variants (exact, ma2)
 - Orchestration via calculate_vas_residuals
 - Tom Bishop validation data
 """
@@ -178,7 +178,7 @@ def test_calculate_r2_ma2():
     assert pytest.approx(result.iloc[2], 0.01) == 0.5
 
 
-def test_calculate_r2_hybrid():
+def test_calculate_r2_mixed_cells_uses_ma2_for_all():
     """R2 with any singletons uses MA2 across entire sorted stream.
 
     When any cell has n=1, ALL observations use MA2 on the full
@@ -198,7 +198,7 @@ def test_calculate_r2_hybrid():
     )
     n_per_cell = pd.Series([2, 2, 1, 1])
 
-    result = calculate_r2(df, 'weight', r2_method='hybrid', n_per_cell=n_per_cell)
+    result = calculate_r2(df, 'weight', r2_method='ma2', n_per_cell=n_per_cell)
 
     # MA2 across full sorted stream (no grouping):
     # j=0 (10.0): first obs → NaN (no predecessor)
@@ -370,7 +370,7 @@ def test_calculate_vas_residuals_sds2_uses_moving_average(spec_sds1):
     assert pytest.approx(result['R2'].iloc[2], 0.01) == 0.5
 
 
-def test_calculate_vas_residuals_sds3_hybrid_uses_ma2_for_all(spec_sds1):
+def test_calculate_vas_residuals_sds3_uses_ma2_for_all(spec_sds1):
     """SDS 3 (any singletons) uses MA2 across entire sorted stream.
 
     When any cell has n=1, ALL observations use MA2 on the full
@@ -381,7 +381,7 @@ def test_calculate_vas_residuals_sds3_hybrid_uses_ma2_for_all(spec_sds1):
     sds3_df = pd.DataFrame({'lane': ['A', 'A', 'B', 'B'], 'time': [1, 1, 1, 2], 'weight': [10.0, 10.5, 9.0, 11.0]})
     df = _prepare_for_vas(sds3_df, spec_sds1)
     n_per_cell = df.groupby('cell_key', observed=True)['weight'].transform('size')
-    result = calculate_vas_residuals(df, spec_sds1, r2_method='hybrid', n_per_cell=n_per_cell)
+    result = calculate_vas_residuals(df, spec_sds1, r2_method='ma2', n_per_cell=n_per_cell)
 
     # MA2 across full sorted stream (A×1(0), A×1(1), B×1(0), B×2(0)):
     # Only the very first observation in the entire stream gets R2=NaN
@@ -490,7 +490,7 @@ def sds2_df():
 
 @pytest.fixture
 def sds3_df():
-    """SDS 3 data - mixed cell sizes (uses hybrid)."""
+    """SDS 3 data - mixed cell sizes (R2 by MA2 for every observation)."""
     return pd.DataFrame(
         {
             'lane': ['A', 'A', 'A', 'A', 'B', 'B', 'B'],
@@ -505,7 +505,7 @@ def sds3_df():
     [
         ('exact', 'sds1'),
         ('ma2', 'sds2'),
-        ('hybrid', 'sds3'),
+        ('ma2', 'sds3'),
     ],
 )
 def test_no_nan_residuals_all_r2_methods(r2_method, df_key, sds1_df, sds2_df, sds3_df, spec_sds1):
@@ -535,7 +535,7 @@ def test_no_nan_residuals_all_r2_methods(r2_method, df_key, sds1_df, sds2_df, sd
         for col in ['R2', 'R3', 'R4', 'R5']:
             assert result[col].isna().sum() == 0, f'{col} has NaN with r2_method=exact'
     else:
-        # MA2 methods (ma2, hybrid): j=1 has no predecessor → exactly 1 NaN
+        # MA2 (any singleton cell): j=1 has no predecessor → exactly 1 NaN
         for col in ['R2', 'R3', 'R4', 'R5']:
             assert result[col].isna().sum() == 1, (
                 f'{col} should have exactly 1 NaN (j=1) with r2_method={r2_method}, got {result[col].isna().sum()}'
