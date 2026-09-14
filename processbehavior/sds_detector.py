@@ -39,7 +39,7 @@ SDSReasonType = Literal[
 ]
 
 # R2 calculation method - structure-driven, not SDS-driven
-R2Method = Literal['exact', 'ma2', 'hybrid']
+R2Method = Literal['exact', 'ma2']
 
 
 @dataclass(frozen=True)
@@ -116,7 +116,7 @@ class SDSAnalysisPlan:
     residuals_available : list[str]
         Which residuals can be calculated
     residual_calculation_method : str
-        How R2 is calculated ('exact', 'moving_average', 'hybrid', or 'none')
+        How R2 is calculated ('exact', 'ma2', or 'none')
     main_effects_supported : bool
         Whether main effect calculations are supported
     interaction_effects_supported : bool
@@ -158,7 +158,7 @@ class SDSAnalysisPlan:
     # VAS residual capabilities
     vas_residuals_supported: bool
     residuals_available: list[str]
-    residual_calculation_method: str  # 'exact', 'moving_average', 'hybrid', 'none'
+    residual_calculation_method: str  # 'exact', 'ma2', 'none'
 
     # Effects and interactions
     main_effects_supported: bool
@@ -383,7 +383,7 @@ class SDSRegistry:
 
     **SDS 3**: Semi-Complete - Partial replication
         - Min N_kt = 1 and Max N_kt ≥ 2 (mixed)
-        - Hybrid variance estimation
+        - R2 by moving average across the full sequence (any singleton forces MA2)
 
     **Incomplete** (has empty cells, requires sampling plan to detect):
 
@@ -664,7 +664,7 @@ class SDSRegistry:
         >>> info['description']
         'Full replication (all cells n≥2)'
         >>> info['r2_method']
-        'within_cell'
+        'exact'
         >>> info['capabilities']
         ['full_vas', 'all_residuals', 'interactions', 'main_effects']
         """
@@ -680,7 +680,7 @@ class SDSRegistry:
             1: {
                 'description': 'Full replication (all cells n≥2)',
                 'replication_type': 'full',
-                'r2_method': 'within_cell',
+                'r2_method': 'exact',
                 'capabilities': ['full_vas', 'all_residuals', 'interactions', 'main_effects'],
                 'interaction_analysis': True,
                 'variance_decomposition': True,
@@ -688,7 +688,7 @@ class SDSRegistry:
             2: {
                 'description': 'No replication (all cells n=1)',
                 'replication_type': 'none',
-                'r2_method': 'moving_average',
+                'r2_method': 'ma2',
                 'capabilities': ['all_residuals', 'limited_interactions', 'main_effects'],
                 'interaction_analysis': 'limited',
                 'variance_decomposition': True,
@@ -696,7 +696,7 @@ class SDSRegistry:
             3: {
                 'description': 'Partial replication (mixed n=1 and n≥2)',
                 'replication_type': 'partial',
-                'r2_method': 'hybrid',
+                'r2_method': 'ma2',  # Any singleton: MA2 over the full sequence (Bishop Eq 13.7-13.9)
                 'capabilities': ['all_residuals', 'partial_interactions', 'main_effects'],
                 'interaction_analysis': 'partial',
                 'variance_decomposition': True,
@@ -720,7 +720,7 @@ class SDSRegistry:
             6: {
                 'description': 'Incomplete grid with singletons (has 0s, 1s, and ≥2s)',
                 'replication_type': 'partial',
-                'r2_method': 'hybrid',
+                'r2_method': 'ma2',
                 'capabilities': ['partial_vas', 'main_effects', 'stratification'],
                 'interaction_analysis': False,
                 'variance_decomposition': True,
@@ -751,23 +751,24 @@ class SDSRegistry:
         Returns
         -------
         R2Method
-            'exact' if all cells have replication (n_cell_min >= 2)
-            'ma2' if all cells are singletons (n_cell_max == 1)
-            'hybrid' for mixed replication (exact where n >= 2, MA2 where n = 1)
+            'exact' if every cell has replication (n_cell_min >= 2)
+            'ma2' if any cell is a singleton (n_cell_min == 1), whether all
+            cells are singletons (ADS 2) or only some (ADS 3)
 
         Notes
         -----
         Deterministic rule based on Bishop methodology:
-        - Eq 59 (exact): R2 = Y - Ȳ_kt, requires replication
-        - Eq 66 (MA2): R2 = (Y_j - Y_{j-1}) / 2, for singletons
-        - Hybrid: exact where replicated, MA2 where singleton
+        - Eq 59 (exact): R2 = Y - Ȳ_kt, requires replication in every cell
+        - Eq 13.7-13.9 (MA2): R2 = (Y_j - Y_{j-1}) / 2 over the whole ordered
+          sequence, j = 2..J, with no grouping by cell. Once any cell is a
+          singleton this applies to every observation; the replicated cells'
+          within-cell deviations are not used for R2. There is no per-cell
+          mixing of the two (the earlier "hybrid" was removed in cb037f8, and
+          the ADS 3 reference assertions validate the ungrouped MA2).
         """
         if stats.n_cell_min >= 2:
             return 'exact'
-        elif stats.n_cell_max == 1:
-            return 'ma2'
-        else:
-            return 'hybrid'
+        return 'ma2'
 
     def validate_sds_for_analysis(self, sds: int, analysis_type: str) -> bool:
         """
@@ -1296,7 +1297,7 @@ class SDSRegistry:
                 invalid_charts=[],
                 vas_residuals_supported=True,
                 residuals_available=['R1', 'R2', 'R3', 'R4', 'R5', 'R6'],
-                residual_calculation_method='moving_average',
+                residual_calculation_method='ma2',
                 main_effects_supported=True,
                 interaction_effects_supported=True,
                 supports_stratification=True,
@@ -1324,7 +1325,7 @@ class SDSRegistry:
                 invalid_charts=[],
                 vas_residuals_supported=True,
                 residuals_available=['R1', 'R2', 'R3', 'R4', 'R5', 'R6'],
-                residual_calculation_method='hybrid',
+                residual_calculation_method='ma2',
                 main_effects_supported=True,
                 interaction_effects_supported=True,
                 supports_stratification=True,
@@ -1335,7 +1336,8 @@ class SDSRegistry:
                     'Pilot studies with targeted replication',
                 ],
                 limitations=[
-                    'R2 uses hybrid calculation (exact where possible, approximate elsewhere)',
+                    'R2 uses the 2-point moving average over the full sequence (Bishop Eq 13.7-13.9); '
+                    'the replicated cells contribute no separate within-cell estimate',
                     'Variance estimates less precise than SDS 1',
                     'May have unequal subgroup sizes',
                 ],

@@ -309,7 +309,7 @@ Do you have factors?
     ├── No → Use Xbar to compare factors
     └── Yes → Do you have replication (n>=2 per cell)?
         ├── All cells → DS 1: Full Xbar-S + VAS residuals
-        ├── Some cells → DS 3: Hybrid Xbar-S + limited VAS
+        ├── Some cells → DS 3: Xbar-S with MA2-based limits + limited VAS
         └── No cells → DS 2: Xbar-S with MR-based limits
 ```
 

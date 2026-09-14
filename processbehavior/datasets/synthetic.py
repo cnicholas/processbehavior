@@ -416,13 +416,13 @@ def make_sds3(  # noqa: C901
     Characteristics:
     ---------------
     - Some cells have n=1, others have n≥2
-    - Requires hybrid R2 estimation
+    - Mixed cell sizes: R2 by MA2 across the full sequence
     - Reflects real-world data collection reality
     - Most challenging to analyze correctly
 
     Use Cases:
     ---------
-    - Testing hybrid variance estimation algorithms
+    - Testing R2 selection with mixed cell sizes
     - Demonstrating real-world data structures
     - Validating robustness to missing data
     - Development of SDS detection logic
