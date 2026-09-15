@@ -47,6 +47,11 @@ See [DS Definitions](../reference/sds_definitions.md) for the formal classificat
 The DS determines:
 - Which chart types are valid
 - How within-group variance is estimated (R2 method: exact or ma2)
+- Where the sigma behind the limits comes from at the observed structure and series length.
+  The design report states this as one line under `Structure` (`study.series_length`): with
+  any singleton cell, `Sigma for X/mR rests on T − 1 moving ranges`; with every cell
+  replicated, `Sigma rests on within-cell replication`, and T does not enter. No threshold
+  or warning is attached; the analyst weighs it.
 - Which VAS residuals can be computed
 - What conclusions you can draw
 

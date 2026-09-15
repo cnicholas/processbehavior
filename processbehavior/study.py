@@ -29,6 +29,7 @@ from typing import TYPE_CHECKING, Literal
 from .exceptions import ChartNotAvailableError, FactorNotFoundError, ValidationError
 from .residual_calculator import resolve_r6_groupby
 from .sds_detector import SDSRegistry
+from .series_length import SeriesLengthPrecision, assess_series_length
 from .spc_constants import (
     ALL_RESIDUALS,
     RESIDUAL_ALIASES,
@@ -173,6 +174,7 @@ class DesignReport:
     _pds_result: SDSResult | None = None  # Plan Design State
     _ods_result: SDSResult | None = None  # Observed Design State
     _ads_result: SDSResult | None = None  # Analytical Design State
+    _series_length: SeriesLengthPrecision | None = None  # Where sigma comes from, and how precise
 
     @property
     def factors_table(self) -> pd.DataFrame:
@@ -765,6 +767,12 @@ class DesignReport:
         lines.append('')
         lines.append(f'  Structure: {self.structure_summary}')
 
+        # Series length: where sigma comes from at this structure and T. A fact beside the
+        # design state, not a verdict on it — ADS 2 is ADS 2 whether T is 4 or 400 (#114).
+        # No threshold, label, or warning is attached.
+        if self._series_length is not None and self._series_length.description:
+            lines.append(f'  Series length: {self._series_length.description}')
+
         # Available analyses (derived from ADS)
         if self._ads_result and self._ads_result.sds > 0:
             lines.extend(self._repr_available_analyses())
@@ -1110,6 +1118,39 @@ class Study:
         Returns None when ADS=0 (no valid observations after data cleaning).
         """
         return self.analytical_design_state.reason
+
+    @property
+    def series_length(self) -> SeriesLengthPrecision:
+        """
+        Where sigma comes from at this structure and series length.
+
+        A fact stated beside the design state, not a judgment on it: no
+        threshold, label, or warning. With any singleton cell the limits rest on
+        T - 1 moving ranges; with every cell replicated they rest on within-cell
+        replication and T does not enter. The result also carries
+        ``within_cell_df`` and, for the moving-range case, ``mr_interval_80``
+        (from ``MR_SIGMA_INTERVAL_80``) for callers who want the numbers; the
+        report prints only the sentence.
+
+        Returns
+        -------
+        SeriesLengthPrecision
+        """
+        ads_df = self._ads.analysis_dataset
+        T = None
+        if self._spec.time_var and self._spec.time_var in ads_df.columns:
+            T = int(ads_df[self._spec.time_var].nunique())
+        within_cell_df = 0
+        if 'cell_key' in ads_df.columns and len(ads_df):
+            sizes = ads_df.groupby('cell_key', observed=True).size()
+            within_cell_df = int((sizes - 1).sum())
+        sigma_from_time = self.analytical_design_state.sds != 1
+        return assess_series_length(T, within_cell_df, sigma_from_time)
+
+    @property
+    def series_length_description(self) -> str:
+        """The series-length sentence printed in the design report (may be empty)."""
+        return self.series_length.description
 
     @property
     def ads_description(self) -> str:
@@ -1667,6 +1708,7 @@ class Study:
             _pds_result=self._pds_result,
             _ods_result=self._sds_result,
             _ads_result=self._ads.analytical_design_state,
+            _series_length=self.series_length,
         )
 
     def capability(
