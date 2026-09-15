@@ -69,3 +69,35 @@ def test_faceted_charts_are_unchanged():
     """by=['unit'] gives one panel per lane: no boundaries inside a panel, so no gaps."""
     fig = _lane_study().execute(chart='X', by=['unit'], companion=True).plot(chart='X', facet=True, ncols=3)
     assert not [t for t in fig.data if t.name and t.name.endswith('(lanes)')]
+
+
+# ---------------------------------------------------------------------------
+# The helpers, directly: both boundary shapes, out-of-range positions, both gap modes
+# ---------------------------------------------------------------------------
+
+
+def test_lane_positions_accepts_flat_and_per_stratum_boundaries():
+    from processbehavior.plotting.renderers import _lane_positions
+
+    flat = [{'position': 4, 'label': 'B'}, {'position': 8, 'label': 'C'}]
+    assert _lane_positions(flat, 'X', n_rows=12) == [4, 8]
+    per_stratum = {'X': flat, 'mR': [{'position': 3}]}
+    assert _lane_positions(per_stratum, 'X', n_rows=12) == [4, 8]
+    assert _lane_positions(per_stratum, 'mR', n_rows=12) == [3]
+    assert _lane_positions(per_stratum, 'Histogram', n_rows=12) == []
+    assert _lane_positions(None, 'X', n_rows=12) == [] and _lane_positions([], 'X', n_rows=12) == []
+
+
+def test_lane_positions_ignores_row_zero_and_out_of_range():
+    from processbehavior.plotting.renderers import _lane_positions
+
+    raw = [{'position': 0}, {'position': 5}, {'position': 5}, {'position': 12}, {'position': 99}]
+    assert _lane_positions(raw, 'X', n_rows=12) == [5]
+
+
+def test_with_gaps_inserts_none_for_y_and_repeats_x():
+    from processbehavior.plotting.renderers import _with_gaps
+
+    assert _with_gaps([10, 11, 12, 13], [2]) == [10, 11, None, 12, 13]
+    assert _with_gaps(['a', 'b', 'c', 'd'], [2], repeat=True) == ['a', 'b', 'c', 'c', 'd']
+    assert _with_gaps([1, 2, 3], []) == [1, 2, 3]
