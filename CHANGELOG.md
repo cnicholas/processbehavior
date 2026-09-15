@@ -7,6 +7,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **Derived variables: ``evaluate`` and ``validate`` now keep their never-raises promise.**
+  An adversarial pass (36,000 fuzzed evaluations) found four ways to make them raise from
+  pandas: ±inf in the source column (``equal_freq`` / ``equal_width``: "bins must increase
+  monotonically"), range labels that collide at six significant digits on a tiny range or a
+  near-constant ``sd`` fit ("labels must be unique"), duplicate or null explicit
+  ``bin_labels``, and a string ``shift`` / ``exponent`` reaching numpy. Now: ±inf leaves the
+  bin fit, becomes NaN, and is counted in ``n_invalid`` with a message; range labels gain
+  precision until distinct (numbered bins as the last resort, with a message); explicit
+  labels must be non-empty, null-free and unique; ``shift``, ``exponent`` and ``breaks`` must
+  be finite numbers; ``on_invalid`` must be ``'error'`` or ``'na'``; ``n`` must be a positive
+  integer (numpy integers accepted, booleans rejected) — all at construction, as
+  ``ValidationError``. A datetime or categorical source now evaluates to an all-NA result
+  with a message instead of transforming nanoseconds or category codes. A permanent seeded
+  fuzz test guards the contract.
+
+### Changed
+- **Every non-finite transform result is a domain violation.** ``log``/``sqrt`` of ``inf``,
+  ``square`` overflow and ``inverse`` of a denormal used to return ``inf`` with
+  ``n_invalid=0`` (only ``power`` overflow was flagged); all are now violations, so
+  ``on_invalid`` applies and an ``inf`` can no longer reach the limits. A z-score of a
+  constant (or single-value) column is now a violation for every value rather than a silent
+  all-NaN column, so ``on_invalid='error'`` names the derivation at ``formulate``.
+  ``arcsin`` on values in (1, 100] adds the hint "if these are percentages, divide by 100".
+  Requesting more equal-frequency / equal-width bins than there are distinct values now fits
+  one bin per distinct value and says so. ``'ordinal'`` labels above five bins say they fell
+  back to numbered bins. ``to_dict`` converts numpy scalars and arrays (it was documented
+  JSON-safe but was not); ``from_dict`` decodes the ``Infinity``/``NaN`` tags only under
+  numeric keys, so a bin labelled ``"NaN"`` stays a string; a missing ``id`` is a
+  ``ValidationError``, not a ``KeyError``. Finite inputs with distinct labels produce
+  byte-identical edges, labels and values.
+
 ## [0.3.0] - 2026-09-14
 
 ### Added

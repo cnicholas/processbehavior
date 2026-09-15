@@ -27,6 +27,7 @@ registry leaves a clean slot to add it behind an optional import later.
 from __future__ import annotations
 
 import math
+import numbers
 import uuid
 from collections.abc import Callable
 from dataclasses import dataclass, field, replace
@@ -66,9 +67,14 @@ _ORDINAL_LABELS: dict[int, list[str]] = {
 
 
 def _jsonify(obj):
-    """Recursively make a value JSON-safe, encoding non-finite floats as tags."""
+    """Recursively make a value JSON-safe: numpy scalars/arrays become Python values,
+    non-finite floats become the tags ``'Infinity'`` / ``'-Infinity'`` / ``'NaN'``."""
     if isinstance(obj, bool):
         return obj
+    if isinstance(obj, np.ndarray):
+        return _jsonify(obj.tolist())
+    if isinstance(obj, np.generic):
+        return _jsonify(obj.item())
     if isinstance(obj, float):
         if math.isinf(obj):
             return 'Infinity' if obj > 0 else '-Infinity'
@@ -82,18 +88,20 @@ def _jsonify(obj):
     return obj
 
 
-def _dejsonify(obj):
-    """Inverse of :func:`_jsonify`."""
-    if obj == 'Infinity':
-        return math.inf
-    if obj == '-Infinity':
-        return -math.inf
-    if obj == 'NaN':
-        return math.nan
+# Keys whose values are numbers (so the non-finite tags decode there, and only there).
+# Label lists are never decoded: a bin labelled "NaN" or "Infinity" stays a string.
+_NUMERIC_KEYS = frozenset({'edges', 'breaks', 'mu', 'sigma', 'shift', 'exponent', 'n_bins'})
+_FLOAT_TAGS = {'Infinity': math.inf, '-Infinity': -math.inf, 'NaN': math.nan}
+
+
+def _dejsonify(obj, numeric: bool = False):
+    """Inverse of :func:`_jsonify`. Tags decode only under numeric keys."""
+    if isinstance(obj, str):
+        return _FLOAT_TAGS[obj] if numeric and obj in _FLOAT_TAGS else obj
     if isinstance(obj, dict):
-        return {k: _dejsonify(v) for k, v in obj.items()}
+        return {k: _dejsonify(v, numeric=(k in _NUMERIC_KEYS)) for k, v in obj.items()}
     if isinstance(obj, list):
-        return [_dejsonify(v) for v in obj]
+        return [_dejsonify(v, numeric=numeric) for v in obj]
     return obj
 
 
@@ -143,6 +151,32 @@ class ValidationResult:
         return '; '.join(i.get('message', i.get('code', '')) for i in self.issues)
 
 
+def _validate_bin_labels(bl) -> None:
+    """A style name, or an explicit list of names that is non-empty, null-free and unique."""
+    if isinstance(bl, str):
+        if bl not in BIN_LABEL_STYLES:
+            raise ValidationError(
+                f'Unknown bin_labels style {bl!r}. Use one of {list(BIN_LABEL_STYLES)} '
+                'or an explicit list of names.'
+            )
+        return
+    if not isinstance(bl, (list, tuple)):
+        raise ValidationError(f'bin_labels must be a style name or a list of names, got {type(bl).__name__}.')
+    names = list(bl)
+    if not names:
+        raise ValidationError('Explicit bin_labels must not be empty.')
+    if any(v is None or (isinstance(v, float) and math.isnan(v)) for v in names):
+        raise ValidationError('Explicit bin_labels must not contain null values.')
+    if len({str(v) for v in names}) != len(names):
+        raise ValidationError(f'Explicit bin_labels must be unique, got {names!r}.')
+
+
+def _require_finite_real(value, name: str) -> None:
+    """Raise ValidationError unless ``value`` is a finite real number (bools excluded)."""
+    if isinstance(value, bool) or not isinstance(value, numbers.Real) or not math.isfinite(float(value)):
+        raise ValidationError(f'{name} must be a finite number, got {value!r}.')
+
+
 # ============================================================================
 # Derivation spec
 # ============================================================================
@@ -170,48 +204,49 @@ class Derivation:
     def __post_init__(self) -> None:
         if not self.column or not isinstance(self.column, str):
             raise ValidationError('Derivation.column must be a non-empty string.')
-
         if self.family == 'transform':
-            if self.function not in TRANSFORM_FUNCTIONS:
-                raise ValidationError(
-                    f"Unknown transform function {self.function!r}. "
-                    f'Supported: {list(TRANSFORM_FUNCTIONS)} (ln is an alias for log).'
-                )
-            if self.function == 'power' and 'exponent' not in self.params:
-                raise ValidationError("transform 'power' requires an 'exponent' param.")
-
+            self._validate_transform()
         elif self.family == 'bin':
-            if self.function != 'bin':
-                raise ValidationError(
-                    f"bin derivations must have function='bin', got {self.function!r}."
-                )
-            method = self.params.get('method')
-            if method not in BIN_METHODS:
-                raise ValidationError(
-                    f"Unknown bin method {method!r}. Supported: {list(BIN_METHODS)}."
-                )
-            if method == 'breaks':
-                breaks = self.params.get('breaks')
-                if not breaks or len(breaks) < 1 or not _ascending(breaks):
-                    raise ValidationError(
-                        "bin method 'breaks' requires an ascending list of cut points."
-                    )
-            elif method in ('equal_freq', 'equal_width'):
-                n = self.params.get('n')
-                if not (isinstance(n, int) and n > 0):
-                    raise ValidationError(
-                        f"bin method {method!r} requires an integer n > 0, got {n!r}."
-                    )
-            bl = self.params.get('bin_labels', 'range')
-            if isinstance(bl, str) and bl not in BIN_LABEL_STYLES:
-                raise ValidationError(
-                    f"Unknown bin_labels style {bl!r}. Use one of {list(BIN_LABEL_STYLES)} "
-                    'or an explicit list of names.'
-                )
+            self._validate_bin()
         else:
             raise ValidationError(
                 f"Derivation.family must be 'transform' or 'bin', got {self.family!r}."
             )
+
+    def _validate_transform(self) -> None:
+        if self.function not in TRANSFORM_FUNCTIONS:
+            raise ValidationError(
+                f"Unknown transform function {self.function!r}. "
+                f'Supported: {list(TRANSFORM_FUNCTIONS)} (ln is an alias for log).'
+            )
+        if self.function == 'power' and 'exponent' not in self.params:
+            raise ValidationError("transform 'power' requires an 'exponent' param.")
+        on_invalid = self.params.get('on_invalid', 'error')
+        if on_invalid not in ('error', 'na'):
+            raise ValidationError(f"on_invalid must be 'error' or 'na', got {on_invalid!r}.")
+        for key in ('shift', 'exponent'):
+            if self.params.get(key) is not None:
+                _require_finite_real(self.params[key], key)
+
+    def _validate_bin(self) -> None:
+        if self.function != 'bin':
+            raise ValidationError(f"bin derivations must have function='bin', got {self.function!r}.")
+        method = self.params.get('method')
+        if method not in BIN_METHODS:
+            raise ValidationError(f'Unknown bin method {method!r}. Supported: {list(BIN_METHODS)}.')
+        if method == 'breaks':
+            breaks = self.params.get('breaks')
+            if not breaks:
+                raise ValidationError("bin method 'breaks' requires an ascending list of cut points.")
+            for b in breaks:
+                _require_finite_real(b, 'breaks')
+            if not _ascending(breaks):
+                raise ValidationError("bin method 'breaks' requires an ascending list of cut points.")
+        elif method in ('equal_freq', 'equal_width'):
+            n = self.params.get('n')
+            if isinstance(n, bool) or not isinstance(n, numbers.Integral) or n <= 0:
+                raise ValidationError(f'bin method {method!r} requires an integer n > 0, got {n!r}.')
+        _validate_bin_labels(self.params.get('bin_labels', 'range'))
 
     # -- factories ---------------------------------------------------------
     @classmethod
@@ -229,9 +264,11 @@ class Derivation:
         fn = 'log' if function == 'ln' else function
         params: dict = {'on_invalid': on_invalid}
         if shift is not None:
-            params['shift'] = shift
+            _require_finite_real(shift, 'shift')
+            params['shift'] = float(shift)
         if exponent is not None:
-            params['exponent'] = exponent
+            _require_finite_real(exponent, 'exponent')
+            params['exponent'] = float(exponent)
         return cls(family='transform', column=column, function=fn, label=label, params=params)
 
     @classmethod
@@ -247,11 +284,20 @@ class Derivation:
         right: bool = False,
     ) -> Derivation:
         """Build a binning spec."""
-        params: dict = {'method': method, 'bin_labels': bin_labels, 'right': right}
+        if isinstance(bin_labels, (list, tuple)):
+            bin_labels = [v.item() if isinstance(v, np.generic) else v for v in bin_labels]
+        params: dict = {'method': method, 'bin_labels': bin_labels, 'right': bool(right)}
         if method == 'breaks':
-            params['breaks'] = list(breaks) if breaks is not None else None
+            if breaks is not None:
+                for b in breaks:
+                    _require_finite_real(b, 'breaks')
+                params['breaks'] = [float(b) for b in breaks]
+            else:
+                params['breaks'] = None
         else:
-            params['n'] = n
+            if isinstance(n, bool) or not isinstance(n, numbers.Integral):
+                raise ValidationError(f'bin method {method!r} requires an integer n > 0, got {n!r}.')
+            params['n'] = int(n)
         return cls(family='bin', column=column, function='bin', label=label, params=params)
 
     # -- naming / serialization -------------------------------------------
@@ -275,6 +321,8 @@ class Derivation:
     @classmethod
     def from_dict(cls, d: dict) -> Derivation:
         """Reconstruct from :meth:`to_dict`. Takes ``id`` from the dict (never mints)."""
+        if 'id' not in d:
+            raise ValidationError("Derivation.from_dict needs an 'id' (use to_dict() output).")
         return cls(
             family=d['family'],
             column=d['column'],
@@ -341,7 +389,11 @@ _TRANSFORM_REGISTRY: dict[str, tuple[Callable, Callable]] = {
 
 def _evaluate_transform(spec: Derivation, col: pd.Series) -> EvalResult:
     x = pd.to_numeric(col, errors='coerce').astype('float64')
+    finite = np.isfinite(x.to_numpy())
     present = x.notna()
+    # ±inf is a domain violation for every transform: no finite result exists.
+    nonfinite_in = present & ~finite
+    present = present & finite
     params = spec.params
     shift = params.get('shift')
     if shift is not None:
@@ -351,7 +403,7 @@ def _evaluate_transform(spec: Derivation, col: pd.Series) -> EvalResult:
     message: str | None = None
 
     if spec.function == 'zscore':
-        clamped, violation = x, pd.Series(False, index=x.index)
+        violation = pd.Series(False, index=x.index)
         vals = x[present]
         mu = float(vals.mean()) if present.any() else math.nan
         sigma = float(vals.std(ddof=1)) if present.sum() > 1 else math.nan
@@ -359,21 +411,30 @@ def _evaluate_transform(spec: Derivation, col: pd.Series) -> EvalResult:
         with np.errstate(all='ignore'):
             y = (x - mu) / sigma
         if not (sigma and math.isfinite(sigma) and sigma > 0):
+            # No z-score exists for any value, so every present value is a violation
+            # (on_invalid then applies) rather than a silent all-NaN column.
             message = 'zero or undefined variance; zscore is undefined'
+            violation = present.copy()
 
     elif spec.function == 'power':
         exponent = params['exponent']
         with np.errstate(all='ignore'):
             y = pd.Series(np.power(x.to_numpy(), exponent), index=x.index)
-        # A power is a domain violation where it cannot be represented as a
-        # finite real (negative base to a fractional power, 0 to a negative power).
-        violation = present & ~np.isfinite(y)
+        violation = pd.Series(False, index=x.index)
 
     else:
         fn, domain = _TRANSFORM_REGISTRY[spec.function]
         clamped, violation = domain(x, present)
         with np.errstate(all='ignore'):
             y = pd.Series(fn(clamped.to_numpy()), index=x.index)
+        if spec.function == 'arcsin' and violation.any():
+            xv = x[present]
+            if len(xv) and xv.max() > 1.0 and xv.min() >= 0.0 and xv.max() <= 100.0:
+                message = 'values exceed 1; if these are percentages, divide by 100 first'
+
+    # A result that is not a finite real is a domain violation, for every function:
+    # negative base to a fractional power, 0 to a negative power, overflow to inf.
+    violation = violation | (present & ~np.isfinite(y.to_numpy(dtype=float))) | nonfinite_in
 
     # Violations -> NaN in the output (NA inputs already produce NaN).
     y = y.where(~violation)
@@ -393,15 +454,16 @@ def _fmt(v: float) -> str:
     return f'{v:g}'
 
 
-def _range_labels(edges, right: bool) -> list[str]:
+def _range_labels(edges, right: bool, digits: int = 6) -> list[str]:
     labels = []
     count = len(edges) - 1
+    fmt = lambda v: f'{v:.{digits}g}'  # noqa: E731
     for i in range(count):
         a, b = edges[i], edges[i + 1]
         if math.isinf(a):
-            labels.append(f'< {_fmt(b)}' if not right else f'<= {_fmt(b)}')
+            labels.append(f'< {fmt(b)}' if not right else f'<= {fmt(b)}')
         elif math.isinf(b):
-            labels.append(f'>= {_fmt(a)}' if not right else f'> {_fmt(a)}')
+            labels.append(f'>= {fmt(a)}' if not right else f'> {fmt(a)}')
         else:
             left = '[' if not right else '('
             rb = ')' if not right else ']'
@@ -411,8 +473,24 @@ def _range_labels(edges, right: bool) -> list[str]:
                 rb = ']'
             if right and i == 0:
                 left = '['
-            labels.append(f'{left}{_fmt(a)}, {_fmt(b)}{rb}')
+            labels.append(f'{left}{fmt(a)}, {fmt(b)}{rb}')
     return labels
+
+
+def _unique_range_labels(edges, right: bool):
+    """Range labels that are guaranteed distinct. Returns (labels, message).
+
+    Six significant digits read well but collide on a tiny range (edges 1.00000001 and
+    1.00000002 both print as ``1``), and pd.cut refuses duplicate labels. Add precision
+    until the labels differ; if even 17 digits cannot separate them, number the bins.
+    """
+    for digits in range(6, 18):
+        labels = _range_labels(edges, right, digits)
+        if len(set(labels)) == len(labels):
+            return labels, None
+    return [f'Bin {i + 1}' for i in range(len(edges) - 1)], (
+        'bin edges too close to label as ranges; using numbered bins'
+    )
 
 
 def _bin_label_names(bin_labels, edges, right: bool):
@@ -420,21 +498,24 @@ def _bin_label_names(bin_labels, edges, right: bool):
     count = len(edges) - 1
     if isinstance(bin_labels, (list, tuple)):
         if len(bin_labels) != count:
-            return _range_labels(edges, right), (
+            labels, _ = _unique_range_labels(edges, right)
+            return labels, (
                 f'{len(bin_labels)} labels supplied but {count} bins fitted; using range labels'
             )
         return list(bin_labels), None
     if bin_labels == 'ordinal':
         if count in _ORDINAL_LABELS:
             return list(_ORDINAL_LABELS[count]), None
-        return [f'Bin {i + 1}' for i in range(count)], None  # fall back to number
+        return [f'Bin {i + 1}' for i in range(count)], (
+            f'ordinal labels are defined for 2 to 5 bins; {count} fitted, using numbered bins'
+        )
     if bin_labels == 'number':
         return [f'Bin {i + 1}' for i in range(count)], None
-    return _range_labels(edges, right), None
+    return _unique_range_labels(edges, right)
 
 
 def _fit_edges(spec: Derivation, present_vals: pd.Series):
-    """Return (edges, message) for the requested method, fitted on non-NA values."""
+    """Return (edges, message) for the requested method, fitted on finite non-NA values."""
     params = spec.params
     method = params['method']
     message = None
@@ -445,30 +526,42 @@ def _fit_edges(spec: Derivation, present_vals: pd.Series):
         mu = float(present_vals.mean())
         sigma = float(present_vals.std(ddof=1)) if len(present_vals) > 1 else math.nan
         edges = [-math.inf, mu - 2 * sigma, mu - sigma, mu + sigma, mu + 2 * sigma, math.inf]
-    elif method == 'equal_width':
+    else:
         n = params['n']
-        lo, hi = float(present_vals.min()), float(present_vals.max())
-        edges = list(np.linspace(lo, hi, n + 1))
-    else:  # equal_freq
-        n = params['n']
-        qs = np.linspace(0.0, 1.0, n + 1)
-        edges = list(np.unique(np.quantile(present_vals, qs)))
-        if len(edges) - 1 != n:
-            message = f'requested {n} bins, ties produced {len(edges) - 1}'
+        n_distinct = int(present_vals.nunique())
+        if n_distinct and n > n_distinct:
+            # More bins than distinct values can only produce empty bins.
+            message = f'requested {n} bins, only {n_distinct} distinct values; fitted {n_distinct}'
+            n = n_distinct
+        if method == 'equal_width':
+            lo, hi = float(present_vals.min()), float(present_vals.max())
+            edges = list(np.linspace(lo, hi, n + 1))
+        else:  # equal_freq
+            qs = np.linspace(0.0, 1.0, n + 1)
+            edges = list(np.unique(np.quantile(present_vals, qs)))
+            if len(edges) - 1 != n:
+                message = f'requested {params["n"]} bins, ties produced {len(edges) - 1}'
     return edges, message
 
 
 def _evaluate_bin(spec: Derivation, col: pd.Series) -> EvalResult:
     x = pd.to_numeric(col, errors='coerce').astype('float64')
-    present = x.notna()
+    finite = np.isfinite(x.to_numpy())
+    # ±inf cannot be placed in any finite bin: it leaves the fit, becomes NaN in the
+    # output, and is counted (the bin analogue of a transform's domain violation).
+    nonfinite = x.notna() & ~finite
+    present = x.notna() & finite
+    n_nonfinite = int(nonfinite.sum())
+    nonfinite_msg = f'{n_nonfinite} non-finite value(s) cannot be binned' if n_nonfinite else None
     params = spec.params
     right = params.get('right', False)
-    empty_index = x.index[[]]
 
     if present.sum() == 0:
         return EvalResult(
             values=pd.Series(pd.Categorical([np.nan] * len(x)), index=x.index),
-            n_invalid=0, invalid_index=empty_index, fitted={}, message='no non-NA values to bin',
+            n_invalid=n_nonfinite, invalid_index=x.index[nonfinite],
+            fitted={'method': params['method'], 'n_bins': 0, 'edges': [], 'labels': []},
+            message='; '.join(m for m in ('no finite values to bin', nonfinite_msg) if m),
         )
 
     edges, fit_msg = _fit_edges(spec, x[present])
@@ -488,9 +581,9 @@ def _evaluate_bin(spec: Derivation, col: pd.Series) -> EvalResult:
     if degenerate:
         return EvalResult(
             values=pd.Series(pd.Categorical([np.nan] * len(x)), index=x.index),
-            n_invalid=0, invalid_index=empty_index,
+            n_invalid=n_nonfinite, invalid_index=x.index[nonfinite],
             fitted={'method': params['method'], 'n_bins': 0, 'edges': [], 'labels': []},
-            message='column has no spread; cannot bin',
+            message='; '.join(m for m in ('column has no spread; cannot bin', nonfinite_msg) if m),
         )
 
     labels, label_msg = _bin_label_names(params.get('bin_labels', 'range'), edges, right)
@@ -507,7 +600,9 @@ def _evaluate_bin(spec: Derivation, col: pd.Series) -> EvalResult:
     if not right and math.isfinite(cut_edges[-1]):
         cut_edges[-1] = float(np.nextafter(cut_edges[-1], math.inf))
 
-    cats = pd.cut(x, bins=cut_edges, right=right, labels=labels, include_lowest=True, ordered=True)
+    cats = pd.cut(
+        x.where(present), bins=cut_edges, right=right, labels=labels, include_lowest=True, ordered=True
+    )
     values = pd.Series(cats, index=x.index)
 
     fitted = {
@@ -521,9 +616,10 @@ def _evaluate_bin(spec: Derivation, col: pd.Series) -> EvalResult:
         fitted['mu'] = float(x[present].mean())
         fitted['sigma'] = float(x[present].std(ddof=1)) if present.sum() > 1 else math.nan
 
-    message = '; '.join(m for m in (fit_msg, label_msg) if m) or None
+    message = '; '.join(m for m in (fit_msg, label_msg, nonfinite_msg) if m) or None
     return EvalResult(
-        values=values, n_invalid=0, invalid_index=empty_index, fitted=fitted, message=message
+        values=values, n_invalid=n_nonfinite, invalid_index=x.index[nonfinite], fitted=fitted,
+        message=message,
     )
 
 
@@ -538,9 +634,32 @@ def evaluate(spec: Derivation, column: pd.Series) -> EvalResult:
     Pre-existing NA passes through as NA; ``n_invalid`` counts only domain
     violations among non-NA values. Never raises.
     """
+    if not _is_numeric_source(column):
+        empty = column.index[[]]
+        if spec.family == 'bin':
+            values = pd.Series(pd.Categorical([np.nan] * len(column)), index=column.index)
+            fitted = {'method': spec.params['method'], 'n_bins': 0, 'edges': [], 'labels': []}
+        else:
+            values = pd.Series(np.nan, index=column.index, dtype='float64')
+            fitted = {}
+        return EvalResult(
+            values=values, n_invalid=0, invalid_index=empty, fitted=fitted,
+            message=f'column {column.name!r} is not numeric; nothing derived',
+        )
     if spec.family == 'transform':
         return _evaluate_transform(spec, column)
     return _evaluate_bin(spec, column)
+
+
+def _is_numeric_source(column: pd.Series) -> bool:
+    """Numeric (bool included) or object/string that coerces to numbers; not datetime/categorical."""
+    dtype = column.dtype
+    if pd.api.types.is_bool_dtype(dtype) or pd.api.types.is_numeric_dtype(dtype):
+        return True
+    if pd.api.types.is_object_dtype(dtype) or pd.api.types.is_string_dtype(dtype):
+        coerced = pd.to_numeric(column, errors='coerce')
+        return bool(coerced.notna().any()) or not bool(column.notna().any())
+    return False
 
 
 def validate(spec: Derivation, dataset: pd.DataFrame, existing_names=None) -> ValidationResult:
