@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-09-14
+
 ### Added
 - **The design report states where sigma comes from at the observed structure and
   series length.** One line under ``Structure``: ``Series length: T=4. Sigma for X/mR
@@ -36,6 +38,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   ``get_sds_characteristics`` and ``SDSAnalysisPlan.residual_calculation_method`` use the
   same two spellings in place of ``'within_cell'``, ``'moving_average'`` and ``'hybrid'``.
   No arithmetic changed; none of these names is exported from the package top level.
+
+### Dependencies
+- ``plotly>=5.18,<8`` (was ``<7``). plotly 7.0.0 (2026-08-25) was tested against the full
+  suite before the bound moved: its breaking changes (mapbox traces, decimal-fraction
+  ``rgb()`` strings, ``hsv()``, Kaleido < 1.0, figure_factory) touch nothing here. #116.
 
 ### Fixed
 - **A missing value in a factor column no longer makes a two-factor study fail.** With one
@@ -862,7 +869,8 @@ and may change between minor versions until 1.0.
 - `natsort >= 8.0`
 - `plotly >= 5.18, < 7`
 
-[Unreleased]: https://github.com/cnicholas/processbehavior/compare/v0.2.1...HEAD
+[Unreleased]: https://github.com/cnicholas/processbehavior/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/cnicholas/processbehavior/compare/v0.2.1...v0.3.0
 [0.2.1]: https://github.com/cnicholas/processbehavior/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/cnicholas/processbehavior/compare/v0.1.1...v0.2.0
 [0.1.1]: https://github.com/cnicholas/processbehavior/compare/v0.1.0...v0.1.1
