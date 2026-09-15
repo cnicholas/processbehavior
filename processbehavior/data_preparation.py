@@ -16,6 +16,7 @@ Follows the Pythonic Hadley philosophy:
 from __future__ import annotations
 
 import logging
+import warnings
 from functools import reduce
 from typing import TYPE_CHECKING
 
@@ -24,7 +25,7 @@ import pandas as pd
 from natsort import natsorted
 from pandas.api.types import is_numeric_dtype
 
-from .exceptions import ColumnNotFoundError, FactorNotFoundError, ValidationError
+from .exceptions import ColumnNotFoundError, FactorNotFoundError, ProcessBehaviorWarning, ValidationError
 
 if TYPE_CHECKING:
     from .formulation_spec import FormulationSpec
@@ -281,6 +282,13 @@ class DataPreparation:
 
         # Add composite grouping variable if needed
         if spec.has_grouping:
+            # A row with no value in a factor column belongs to no cell, so it leaves the
+            # analysis here — for one factor or many. The single-factor path used to drop
+            # such rows silently via the rsg dropna below; the multi-factor path raised
+            # from _add_composite_column before reaching it, so the same file formulated
+            # with one factor and failed with two (Tom's survey file, 7,980 blank
+            # SURVEY QUESTION rows). Both paths now drop first and say so.
+            out = self._drop_rows_missing_factor_values(out, spec)
             out = self._add_grouping_column(out, spec)
 
             # Drop rows with missing values in analysis-critical columns BEFORE
@@ -532,6 +540,30 @@ class DataPreparation:
     # ========================================================================
     # Private Helper Methods
     # ========================================================================
+
+    def _drop_rows_missing_factor_values(self, df: pd.DataFrame, spec: FormulationSpec) -> pd.DataFrame:
+        """
+        Drop rows with a missing value in any factor column, and report it.
+
+        Reported as a ``ProcessBehaviorWarning`` (the house style for "the
+        library changed your data on your behalf"), naming the count per
+        factor, so an analyst sees that 7,980 rows left the study rather than
+        discovering a smaller N later.
+        """
+        factor_cols = spec.rsg_vars_list
+        missing = df[factor_cols].isna()
+        if not missing.any().any():
+            return df
+        per_col = {col: int(n) for col, n in missing.sum().items() if n}
+        n_rows = int(missing.any(axis=1).sum())
+        warnings.warn(
+            f'Dropped {n_rows:,} of {len(df):,} rows with no value in a factor column: '
+            + ', '.join(f'{col} ({n:,} missing)' for col, n in per_col.items())
+            + '. A row with no factor value belongs to no cell, so it is excluded from the analysis.',
+            ProcessBehaviorWarning,
+            stacklevel=6,
+        )
+        return df.loc[~missing.any(axis=1)]
 
     def _add_grouping_column(self, df: pd.DataFrame, spec: FormulationSpec) -> pd.DataFrame:
         """

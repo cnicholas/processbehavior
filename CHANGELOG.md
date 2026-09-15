@@ -38,6 +38,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   No arithmetic changed; none of these names is exported from the package top level.
 
 ### Fixed
+- **A missing value in a factor column no longer makes a two-factor study fail.** With one
+  factor, rows with a blank factor value were dropped silently; with two or more, the
+  composite subgroup label was built before that drop and ``formulate`` raised
+  ``ValidationError: Cannot build RSG ... missing values in factor columns``. The same
+  file formulated with either factor alone and failed with both (a 85,101-row survey
+  file with 7,980 blank ``SURVEY QUESTION`` rows). Rows with no value in any factor
+  column now leave the analysis before the label is built, for any number of factors,
+  and the library says so with a ``ProcessBehaviorWarning`` naming the count per
+  factor. Response and time missing values are handled as before.
 - **``evaluate`` no longer raises on a constant column.** Binning a column with no spread
   (every value identical) returned the documented no-spread result for ``equal_freq`` but
   raised ``ValueError: Bin edges must be unique`` from ``pd.cut`` for ``equal_width`` and
