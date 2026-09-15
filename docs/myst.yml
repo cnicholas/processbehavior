@@ -67,6 +67,10 @@ project:
           title: Data Formulation
         - file: user-guide/sds-detection.md
           title: Design-State Lineage (PDS / ODS / ADS)
+        - file: user-guide/series-length.md
+          title: Series Length & Where Sigma Comes From
+        - file: user-guide/derived-variables.md
+          title: Derived Variables
         - file: user-guide/chart-types.md
           title: Chart Types
         - file: user-guide/plotting.md

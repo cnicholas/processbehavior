@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **The connecting line on a lane chart no longer crosses lane boundaries.** On an X or mR
+  chart with factors and ``by=[]`` (one chart, subgroups side by side), the last point of
+  each subgroup was joined to the first point of the next, so every boundary drew a steep
+  rise or drop that was only the sort order. The line is now its own trace with a gap at
+  each boundary, drawn under the markers; the markers trace keeps hover, legend and
+  signal highlighting exactly as before. Single-series and faceted charts are unchanged. #121
+
+### Added
+- Docs: a user-guide page on series length and where sigma comes from (the position, the
+  n = 3..30 precision table from ``validation/short_series_bands.py`` with credit to
+  @rabujamra, the trending-series and not-one-process cautions, the formulation lesson from
+  #114, and the two-audiences position on run rules), and a user-guide page stating the
+  derived-variables contract (never raises, what counts as a violation, what bins promise,
+  what construction rejects).
+
 ## [0.3.1] - 2026-09-14
 
 ### Fixed
