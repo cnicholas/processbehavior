@@ -8,6 +8,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
+- **Binning a heavily tied column no longer collapses to one bin.** 0.3.1 capped the
+  requested bin count at the number of distinct values *before* taking the quantiles, and on
+  a column of 3,000 ones and 1,000 twos the halved quantile positions both landed on 1, so
+  one bin fitted where 0.3.0 fitted two. When at least as many bins are requested as there
+  are distinct values, the fit now cuts at the midpoints between neighbouring values: one
+  bin per distinct value, every value in its own bin, with the message ``requested n bins,
+  ties produced k (one per distinct value)``. Requesting fewer bins than distinct values is
+  untouched (the original quantile / equal-width path). Found by the app's preview test.
 - **The connecting line on a lane chart no longer crosses lane boundaries.** On an X or mR
   chart with factors and ``by=[]`` (one chart, subgroups side by side), the last point of
   each subgroup was joined to the first point of the next, so every boundary drew a steep

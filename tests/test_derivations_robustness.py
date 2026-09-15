@@ -183,11 +183,25 @@ class TestBinRobustness:
         r = evaluate(B('x', method='sd'), pd.Series([-0.085, -0.085, -0.085, -0.085000001]))
         assert r.fitted['n_bins'] == 5 and r.values.notna().all()
 
-    def test_more_bins_than_distinct_values_is_capped_with_a_message(self):
+    def test_more_bins_than_distinct_values_gives_one_bin_per_value(self):
         r = evaluate(B('x', n=1000), pd.Series(np.arange(1.0, 21.0)))
-        assert r.fitted['n_bins'] == 20 and 'only 20 distinct values' in r.message
+        assert r.fitted['n_bins'] == 20 and 'ties produced 20 (one per distinct value)' in r.message
+        assert r.values.value_counts(sort=False).tolist() == [1] * 20
         r = evaluate(B('x', method='equal_width', n=9), pd.Series([1.0, 2.0, 3.0]))
         assert r.fitted['n_bins'] == 3 and r.values.notna().all()
+        assert r.fitted['edges'] == [1.0, 1.5, 2.5, 3.0]
+
+    def test_heavily_tied_column_keeps_one_bin_per_distinct_value(self):
+        """Regression: capping n before the quantiles collapsed 3,000 ones + 1,000 twos to one bin."""
+        tied = pd.Series([1.0] * 3000 + [2.0] * 1000)
+        r = evaluate(B('x', n=4), tied)
+        assert r.fitted['n_bins'] == 2 and 'ties' in r.message
+        assert r.values.value_counts(sort=False).tolist() == [3000, 1000]
+
+    def test_fewer_bins_than_distinct_values_is_untouched(self):
+        """n below the distinct count takes the original quantile / linspace path."""
+        r = evaluate(B('x', n=4), pd.Series(np.arange(1.0, 21.0)))
+        assert r.fitted['edges'] == [1.0, 5.75, 10.5, 15.25, 20.0] and r.message is None
 
     def test_ordinal_beyond_five_bins_says_so(self):
         r = evaluate(B('x', n=6, bin_labels='ordinal'), pd.Series(np.arange(1.0, 61.0)))
