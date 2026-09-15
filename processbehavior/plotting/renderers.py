@@ -35,6 +35,36 @@ if TYPE_CHECKING:
 # ---------------------------------------------------------------------------
 
 
+def _lane_positions(lane_boundaries, chart_name: str, n_rows: int) -> list[int]:
+    """0-based row positions where a new lane starts (excluding row 0), for this chart.
+
+    Accepts the flat ``list[dict]`` form or the per-stratum ``dict`` form of the
+    ``lane_boundaries`` metadata; returns ``[]`` when there are no boundaries.
+    """
+    if not lane_boundaries:
+        return []
+    if isinstance(lane_boundaries, dict):
+        lane_boundaries = lane_boundaries.get(chart_name) or []
+    positions = sorted({int(b['position']) for b in lane_boundaries if 0 < int(b['position']) < n_rows})
+    return positions
+
+
+def _with_gaps(values: list, positions: list[int], repeat: bool = False) -> list:
+    """Insert a gap entry before each position so Plotly breaks the line there.
+
+    For ``y`` the gap is ``None`` (a null y breaks the line). For ``x`` pass
+    ``repeat=True`` to insert the position's own x value instead, so the x array
+    stays numeric/categorical throughout and axis consumers never see a null.
+    """
+    out: list = []
+    cut = set(positions)
+    for i, v in enumerate(values):
+        if i in cut:
+            out.append(v if repeat else None)
+        out.append(v)
+    return out
+
+
 def _build_hover(
     data: pd.DataFrame,
     ctx: RenderContext,
@@ -136,10 +166,32 @@ def render_control_chart(
 
     # 2. Main data trace
     customdata, hovertemplate = _build_hover(data, ctx, value_col)
+    lane_positions = _lane_positions(spec.lane_boundaries, ctx.chart_name, len(data))
+    if lane_positions:
+        # Lane chart: the connecting line must not cross a lane boundary. The last point
+        # of one subgroup joined to the first of the next drew a steep "event" at every
+        # boundary that was only the sort order (#121). Draw the line as its own trace
+        # with a gap at each boundary, under the markers; the markers trace keeps the
+        # hover, customdata and legend exactly as before.
+        _add_trace(
+            fig,
+            go.Scatter(
+                x=_with_gaps(list(x_data), lane_positions, repeat=True),
+                y=_with_gaps(list(data[value_col]), lane_positions),
+                mode='lines',
+                line=dict(color=theme.data_color, width=ctx.line_width),
+                opacity=theme.data_opacity,
+                hoverinfo='skip',
+                showlegend=False,
+                name=f'{ctx.chart_name} (lanes)',
+            ),
+            row,
+            col,
+        )
     trace_kw = dict(
         x=x_data,
         y=data[value_col],
-        mode='lines+markers',
+        mode='markers' if lane_positions else 'lines+markers',
         name=ctx.chart_name,
         marker=dict(size=ctx.marker_size, color=theme.data_color),
         line=dict(color=theme.data_color, width=ctx.line_width),

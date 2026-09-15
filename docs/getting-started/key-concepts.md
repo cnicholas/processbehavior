@@ -51,7 +51,8 @@ The DS determines:
   The design report states this as one line under `Structure` (`study.series_length`): with
   any singleton cell, `Sigma for X/mR rests on T − 1 moving ranges`; with every cell
   replicated, `Sigma rests on within-cell replication`, and T does not enter. No threshold
-  or warning is attached; the analyst weighs it.
+  or warning is attached; the analyst weighs it. See
+  [Series length](../user-guide/series-length.md).
 - Which VAS residuals can be computed
 - What conclusions you can draw
 
