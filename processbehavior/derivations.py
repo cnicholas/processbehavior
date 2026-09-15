@@ -528,19 +528,24 @@ def _fit_edges(spec: Derivation, present_vals: pd.Series):
         edges = [-math.inf, mu - 2 * sigma, mu - sigma, mu + sigma, mu + 2 * sigma, math.inf]
     else:
         n = params['n']
-        n_distinct = int(present_vals.nunique())
-        if n_distinct and n > n_distinct:
-            # More bins than distinct values can only produce empty bins.
-            message = f'requested {n} bins, only {n_distinct} distinct values; fitted {n_distinct}'
-            n = n_distinct
-        if method == 'equal_width':
+        distinct = np.unique(present_vals.to_numpy(dtype=float))
+        if len(distinct) >= 2 and n >= len(distinct):
+            # More bins than distinct values: one bin per distinct value, cut at the
+            # midpoints between neighbours. Capping n and re-taking quantiles instead
+            # collapsed heavily tied columns (3,000 ones and 1,000 twos fitted one bin);
+            # the requested-n quantiles interpolated between the values and left mostly
+            # empty bins when n was large.
+            mids = (distinct[:-1] + distinct[1:]) / 2.0
+            edges = [float(distinct[0]), *[float(m) for m in mids], float(distinct[-1])]
+            message = f'requested {n} bins, ties produced {len(distinct)} (one per distinct value)'
+        elif method == 'equal_width':
             lo, hi = float(present_vals.min()), float(present_vals.max())
             edges = list(np.linspace(lo, hi, n + 1))
         else:  # equal_freq
             qs = np.linspace(0.0, 1.0, n + 1)
             edges = list(np.unique(np.quantile(present_vals, qs)))
             if len(edges) - 1 != n:
-                message = f'requested {params["n"]} bins, ties produced {len(edges) - 1}'
+                message = f'requested {n} bins, ties produced {len(edges) - 1}'
     return edges, message
 
 

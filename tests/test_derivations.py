@@ -133,11 +133,18 @@ def test_equal_freq_labels_and_fitted_edges():
 
 
 def test_tie_drop_uses_fitted_count_labels_and_message():
+    """Fewer bins than distinct values, on a tied column: the quantile edges collide.
+
+    Requesting 4 bins on six 1s and one each of 2..5 puts three quartile edges on 1, so
+    only 2 bins fit. Labels are keyed on that fitted count, and the message says so.
+    (Requesting *at least* as many bins as distinct values now fits one per value; see
+    test_derivations_robustness.)
+    """
     tie = pd.Series([1, 1, 1, 1, 1, 1, 2, 3, 4, 5], dtype=float)
-    r = evaluate(Derivation.bin('t', n=5, bin_labels='ordinal'), tie)
-    assert r.fitted['n_bins'] == 3                      # qcut dropped duplicate edges
-    assert r.fitted['labels'] == ['Low', 'Medium', 'High']  # keyed on FITTED count, not 5
-    assert 'requested 5 bins' in r.message and 'produced 3' in r.message
+    r = evaluate(Derivation.bin('t', n=4, bin_labels='ordinal'), tie)
+    assert r.fitted['n_bins'] == 2  # quantile edges collided on the tied value
+    assert r.fitted['labels'] == ['Low', 'High']  # keyed on FITTED count, not 4
+    assert 'requested 4 bins' in r.message and 'produced 2' in r.message
 
 
 @pytest.mark.parametrize('method', ['equal_freq', 'equal_width', 'sd'])
@@ -252,8 +259,8 @@ def test_validate_structured_results():
 
 def test_validate_label_count_against_fitted_not_requested():
     df = pd.DataFrame({'t': [1, 1, 1, 1, 1, 1, 2, 3, 4, 5]})
-    # request 5 bins with 5 labels, but ties produce 3 bins -> mismatch caught
-    res = validate(Derivation.bin('t', n=5, bin_labels=['a', 'b', 'c', 'd', 'e']), df)
+    # request 4 bins with 4 labels, but ties produce 2 bins -> mismatch caught
+    res = validate(Derivation.bin('t', n=4, bin_labels=['a', 'b', 'c', 'd']), df)
     assert res.ok is False
     assert any(i['code'] == 'label_count' for i in res.issues)
 
