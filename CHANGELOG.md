@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Docs: the chart-types guide now explains the three views of a study with factors and
+  time (the combined ``by=[]`` chart, the ``phased=True`` view, and full stratification),
+  how to read a signal at a subgroup boundary on the combined chart (evidence about the
+  traversal, kept in the calculation deliberately because it reproduces Bishop's reference
+  limits), and which claims survive reordering the lanes, with the R5 chart's limits
+  caveat for DS 2 and 3. The ``phased`` view is documented in the user guide for the first
+  time. From the #114 discussion with @rabujamra, whose permutation check is
+  ``validation/mr_permutation_invariance.py``.
+
 ## [0.3.2] - 2026-09-15
 
 ### Fixed

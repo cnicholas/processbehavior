@@ -283,6 +283,76 @@ result = study.execute(chart='X', by=[])  # Collapse all factors
 fig = result.plot(chart='X')  # Vertical lines show factor transitions
 ```
 
+### Three Views of the Same Study
+
+With factors and time, the same observations can be charted three ways. Each answers a
+different question, and the library gives you the question rather than one chart with one
+set of limits.
+
+**1. Is this one process?** Every subgroup on one chart, one center line and one set of
+limits across the whole study. Points are ordered subgroup first, then time within
+subgroup, so each subgroup occupies its own lane at a common scale and the same pattern
+can be read lane by lane. The moving range runs across the whole sequence in that order,
+including the step from the last point of one subgroup to the first point of the next.
+
+```python
+combined = study.execute(chart='X', by=[], companion=True)
+combined.plot(chart='X')
+```
+
+**2. How does each subgroup behave, side by side?** The same lanes, each with its own
+center line and limits computed from its own moving ranges. The transitions between
+subgroups no longer enter the calculation.
+
+```python
+phased = study.execute(chart='X', by=[], phased=True, companion=True)
+phased.plot(chart='X')
+```
+
+**3. One subgroup at a time.** Full stratification: one chart per subgroup, each with
+its own limits.
+
+```python
+per_lane = study.execute(chart='X', by=['lane'], companion=True)
+per_lane.plot(chart='X', facet=True, ncols=2)
+```
+
+### Reading a Boundary Signal
+
+On the combined chart, the moving range at a subgroup transition is the difference between
+one subgroup's last observation and the next subgroup's first. A signal there is evidence
+about the traversal: those two subgroups, in that order, do not join into one stable
+stream. It is not a pairwise property of the two subgroups. Reorder the lanes and
+different transitions are flagged, even though the overall conclusion, one process or
+not, survives any ordering. On a trending process the boundary step also resets time,
+from the last period of one lane to the first period of the next, so it is systematically
+larger than a plain difference in level.
+
+The transitions stay in the calculation deliberately. That is how Bishop computes the
+combined chart, and it is what reproduces his reference limits (see
+[Validation](../reference/validation.md)). The connecting line is not drawn across a
+boundary, so the eye is not led to read the step as a movement within a subgroup.
+
+### Which Claims Are Order-Free
+
+Different charts make different claims, and not all of them survive a change in lane
+order. `validation/mr_permutation_invariance.py` holds every observation fixed, shuffles
+only the lane order, and reports which results move.
+
+| Claim | Chart | Survives reordering the lanes? |
+|-------|-------|--------------------------------|
+| "These subgroups are not one process" | `chart='X', by=[]` | Yes. The signal count never reaches zero under any ordering tested. |
+| "This transition is a signal" | `chart='mR', by=[]` | No. Which transitions are flagged depends on which lanes are adjacent. |
+| "Subgroup *k* differs in level" | `chart='Xbar', by=['lane'], value='R5', recentered=True` | The points, yes: each is a subgroup mean. The limits, not entirely in DS 2 and 3: they are set from R2, which is built from the same lane-major sequence. In DS 1, R2 is within-cell and carries no order. |
+| "Subgroup *k* is stable on its own" | `phased=True`, or `by=['lane']` | Yes. Only that subgroup's own ranges enter. |
+
+So a boundary signal should be read as evidence along the path, and claims about the
+subgroups themselves should come from the charts that have no path: the R5 chart for
+which subgroups differ in level, and the phased or stratified view for how each behaves.
+This was worked out with a contributor on
+[issue #114](https://github.com/cnicholas/processbehavior/issues/114), whose permutation
+check is the script above.
+
 ## Re-centered Residual Charts
 
 By default, residual charts are centered at zero. Use `recentered=True` to show residuals on the original measurement scale:
@@ -317,6 +387,8 @@ Do you have factors?
 
 | Question | Chart | Signal Meaning |
 |----------|-------|----------------|
+| Is this one process? | `chart='X', by=[], companion=True` | Subgroups do not join into one stable stream |
+| Each subgroup on its own? | `chart='X', by=[], phased=True` | Special cause within that subgroup |
 | Are groups different? | `chart='Xbar'` | Group deviates from average |
 | Is variation stable? | `chart='S'` | Group has unusual variation |
 | Process over time? | `chart='X', by=[...]` | Special cause detected |
