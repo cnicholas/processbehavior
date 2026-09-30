@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **Individuals and moving-range limits now use the constants exactly as Bishop's VAS manual
+  defines them.** The individuals-chart multiplier is 3/1.128 = 2.659574 (previously the
+  rounded 2.66) and the moving-range upper limit is 1 + 3(0.8525)/1.128 = 3.267287 (previously
+  3.268), built from the manual's d₂ = 1.128 and d₃ = 0.8525 (Eq 12.4, 12.5, 12.10, 12.11). The
+  manual prints the rounded values; Bishop's VAS software computes them without rounding, and PB's
+  X and mR limits now match it digit for digit (Medicare first chart: ±3838.32 and 4715.38).
+  Limits move by 0.016% and 0.02%, so a signal changes only for a point within that distance of a
+  limit. The d₂ used on the calibration path and by the maximum-information chart is now exactly
+  1.128 (it was 3/2.66 = 1.1278), and `MR_SIGMA_INTERVAL_80` was regenerated: five entries move
+  by 0.001. New constant `D3_N2` in `processbehavior.spc_constants`.
+
 ### Added
 - Docs: the chart-types guide now explains the three views of a study with factors and
   time (the combined ``by=[]`` chart, the ``phased=True`` view, and full stratification),

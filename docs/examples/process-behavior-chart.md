@@ -36,7 +36,7 @@ Output:
 
 ```
 Center line: 147.38
-Natural process limits: (139.07, 155.69)
+Natural process limits: (139.071, 155.689)
 Signals: 26
 ```
 

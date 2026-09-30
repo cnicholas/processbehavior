@@ -12,6 +12,10 @@ import pandas as pd
 import pytest
 
 from processbehavior.spc_constants import (
+    D2_N2,
+    D3_N2,
+    R_UPPER_LIMIT_MULTIPLIER,
+    XMR_LIMIT_MULTIPLIER,
     b3,
     b4,
     c4,
@@ -122,6 +126,34 @@ def test_b3_b4_raises_on_invalid_n(func):
 
 
 # ============================================================================
+# Test: moving-range constants (n = 2)
+# ============================================================================
+
+
+class TestMovingRangeConstants:
+    """The XmR and mR constants follow Bishop's VAS manual (Eq 12.4, 12.5, 12.10, 12.11)
+    and are computed from d2 = 1.128 and d3 = 0.8525 without rounding, as VAS does."""
+
+    def test_building_blocks_are_the_manuals(self):
+        assert D2_N2 == 1.128
+        assert D3_N2 == 0.8525
+
+    def test_multipliers_are_the_manuals_formulas(self):
+        assert XMR_LIMIT_MULTIPLIER == 3 / D2_N2
+        assert R_UPPER_LIMIT_MULTIPLIER == 1 + 3 * D3_N2 / D2_N2
+
+    def test_multipliers_match_the_vas_software(self):
+        # Measured from Bishop's VAS charts: Medicare 3838.32 / 1443.21 and 4715.38 / 1443.21.
+        assert abs(XMR_LIMIT_MULTIPLIER - 2.659574) < 1e-6
+        assert abs(R_UPPER_LIMIT_MULTIPLIER - 3.267287) < 1e-6
+
+    def test_multipliers_round_to_the_manuals_printed_values(self):
+        # The manual prints 2.66 and 3.268 (3.686/1.128, with 3.686 itself rounded).
+        assert round(XMR_LIMIT_MULTIPLIER, 2) == 2.66
+        assert abs(R_UPPER_LIMIT_MULTIPLIER - 3.268) < 0.001
+
+
+# ============================================================================
 # Test: calculate_limits
 # ============================================================================
 
@@ -133,10 +165,10 @@ def test_b3_b4_raises_on_invalid_n(func):
         ('Xbar', dict(mean=10.0, sd=0.5, N=5), 9.286, 10.714, 0.01, 0.01),
         # S: sd=0.5, N=5 → LPL=0.5*b3(5)=0, UPL=0.5*b4(5)≈1.044
         ('S', dict(sd=0.5, N=5), 0.0, 1.044, 0.001, 0.01),
-        # XmR: mean=10, mR=0.3 → 10±2.66*0.3=10±0.798
-        ('XmR', dict(mean=10.0, mR=0.3), 10.0 - 2.66 * 0.3, 10.0 + 2.66 * 0.3, 0.001, 0.001),
-        # R: mR=0.3 → LPL=0, UPL=0.3*3.268
-        ('R', dict(mR=0.3), 0.0, 0.3 * 3.268, 0.001, 0.001),
+        # XmR: mean=10, mR=0.3 → 10 ± (3/1.128)·0.3 = 10 ± 0.7979
+        ('XmR', dict(mean=10.0, mR=0.3), 10.0 - 3 / 1.128 * 0.3, 10.0 + 3 / 1.128 * 0.3, 1e-12, 1e-12),
+        # R: mR=0.3 → LPL=0, UPL = (1 + 3·0.8525/1.128)·0.3
+        ('R', dict(mR=0.3), 0.0, (1 + 3 * 0.8525 / 1.128) * 0.3, 1e-12, 1e-12),
     ],
     ids=['Xbar', 'S', 'XmR', 'R'],
 )

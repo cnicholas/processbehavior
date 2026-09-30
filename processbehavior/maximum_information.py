@@ -21,7 +21,7 @@ import numpy as np
 import pandas as pd
 
 from .exceptions import ValidationError
-from .spc_constants import R_UPPER_LIMIT_MULTIPLIER, XMR_LIMIT_MULTIPLIER
+from .spc_constants import D2_N2, R_UPPER_LIMIT_MULTIPLIER, XMR_LIMIT_MULTIPLIER
 
 if TYPE_CHECKING:
     from .analysis_dataset import AnalysisDataSet
@@ -48,9 +48,9 @@ class MaximumInformationResult:
     sigma_hat : float
         mR / d2 — noise floor sigma estimate.
     upl : float
-        Upper natural process limit (R2 mean + 2.66 * mR).
+        Upper natural process limit (R2 mean + E2 * mR, E2 = 3/1.128 ≈ 2.66).
     lpl : float
-        Lower natural process limit (R2 mean - 2.66 * mR).
+        Lower natural process limit (R2 mean - E2 * mR).
     n_signals : int
         Points beyond limits on XmR.
     round_to : int
@@ -159,9 +159,6 @@ class MaximumInformationResult:
 # Pure Function
 # ============================================================================
 
-# d2 for n=2 (moving range of consecutive pairs)
-_D2 = 1.128
-
 
 def assess_maximum_information(
     ads: AnalysisDataSet,
@@ -204,7 +201,7 @@ def assess_maximum_information(
     r2_mean = float(np.mean(r2_values))
     mr_values = np.abs(np.diff(r2_values))
     r2_mR = float(np.mean(mr_values))
-    sigma_hat = r2_mR / _D2
+    sigma_hat = r2_mR / D2_N2
 
     # Limits: mean ± E2 * mR
     upl = r2_mean + XMR_LIMIT_MULTIPLIER * r2_mR

@@ -29,15 +29,19 @@ from .exceptions import ValidationError
 # Control limit multiplier (3-sigma limits are standard in SPC)
 SIGMA_MULTIPLIER = 3
 
-# E2 constant for XmR charts (n=2, moving range of 2 consecutive observations)
-# Used for calculating control limits on individual values
-# E2 = d2 / d3 for n=2, where d2 = 1.128 and d3 = 0.8525
-XMR_LIMIT_MULTIPLIER = 2.66
+# Moving-range constants for n = 2 (consecutive pairs), as in Bishop's VAS manual:
+# sigma = mR / d2 (Eq 12.4), X limits = X ± 3·mR/d2 (Eq 12.10-12.11), and the
+# moving-range upper limit = (1 + 3·d3/d2)·mR (Eq 12.5). The manual prints the
+# rounded values 2.66 and 3.268; Bishop's VAS software computes them from d2 and
+# d3 without rounding, and so does this library.
+D2_N2 = 1.128
+D3_N2 = 0.8525
 
-# D4 constant for R charts (n=2, range of 2 consecutive observations)
-# Used for upper control limit on moving range
-# D4 = 1 + 3(d3/d2) for n=2
-R_UPPER_LIMIT_MULTIPLIER = 3.268
+# E2 for XmR charts: X ± E2·mR, E2 = 3/d2 (≈ 2.66)
+XMR_LIMIT_MULTIPLIER = SIGMA_MULTIPLIER / D2_N2
+
+# D4 for the moving-range chart: upper limit = D4·mR, D4 = 1 + 3·d3/d2 (≈ 3.267)
+R_UPPER_LIMIT_MULTIPLIER = 1 + SIGMA_MULTIPLIER * D3_N2 / D2_N2
 
 
 # ============================================================================
@@ -260,8 +264,8 @@ def calculate_limits(
     -----
     Xbar limits: X̄ ± (3 * Wd) / sqrt(n), where Wd = S / c4(n)
     S limits: S * b3(n) to S * b4(n)
-    XmR limits: X̄ ± (E2 * mR), where E2 = 2.66
-    R limits: 0 to mR * D4, where D4 = 3.268
+    XmR limits: X̄ ± (E2 * mR), where E2 = 3/d2 = 3/1.128 (≈ 2.66)
+    R limits: 0 to mR * D4, where D4 = 1 + 3·d3/d2 = 1 + 3(0.8525)/1.128 (≈ 3.267)
 
     References
     ----------
@@ -414,11 +418,8 @@ def calculate_limits_vectorized(
     return pd.DataFrame({'lpl': lpl, 'upl': upl}, index=index)
 
 
-# d2 bias constant for the n=2 moving range, derived from the library's own E2
-# (E2 = sigma_multiplier / d2 at n=2, with the default 3-sigma multiplier). Used
-# only on the calibration path so calibrated X/mR limits stay internally
-# consistent with the data-path XmR/R constants.
-D2_N2 = 3.0 / XMR_LIMIT_MULTIPLIER
+# calibrated_limits uses D2_N2 (defined with the XmR constants above), so
+# calibrated X/mR limits stay consistent with the data-path XmR/R constants.
 
 
 def calibrated_limits(
@@ -714,12 +715,12 @@ MR_SIGMA_INTERVAL_80: dict[int, tuple[float, float]] = {
     9: (0.618, 1.418),
     10: (0.637, 1.396),
     11: (0.656, 1.375),
-    12: (0.670, 1.360),
+    12: (0.670, 1.359),
     13: (0.680, 1.344),
-    14: (0.694, 1.330),
+    14: (0.694, 1.329),
     15: (0.703, 1.315),
     16: (0.714, 1.310),
-    17: (0.722, 1.300),
+    17: (0.721, 1.300),
     18: (0.730, 1.288),
     19: (0.739, 1.280),
     20: (0.745, 1.274),
@@ -728,9 +729,9 @@ MR_SIGMA_INTERVAL_80: dict[int, tuple[float, float]] = {
     23: (0.761, 1.253),
     24: (0.766, 1.249),
     25: (0.771, 1.243),
-    26: (0.775, 1.238),
+    26: (0.774, 1.238),
     27: (0.780, 1.234),
     28: (0.784, 1.229),
-    29: (0.787, 1.224),
+    29: (0.787, 1.223),
     30: (0.790, 1.220),
 }
