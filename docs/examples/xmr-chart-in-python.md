@@ -29,8 +29,8 @@ result.plot()   # interactive plotly figure: X on top, mR below
 Output:
 
 ```
-{'N': 1, 'center': 91.883, 'lpl': 83.209, 'upl': 100.557}
-{'N': 2, 'center': 3.261, 'lpl': 0.0, 'upl': 10.657}
+{'N': 1, 'center': 91.883, 'lpl': 83.211, 'upl': 100.556}
+{'N': 2, 'center': 3.261, 'lpl': 0.0, 'upl': 10.654}
 ```
 
 ## Reading it

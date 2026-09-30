@@ -242,7 +242,7 @@ Plots the **standard deviation** of each subgroup.
 Plots each individual observation.
 
 - **Centerline**: Average of all observations (X̅)
-- **Control Limits**: X̅ ± 2.66 × R̅ (average moving range)
+- **Control Limits**: X̅ ± (3/1.128) × R̅, about X̅ ± 2.66 × R̅ (R̅ is the average moving range)
 - **Interpretation**: Points beyond limits indicate special causes
 
 ### The mR (Moving Range) Chart
@@ -250,7 +250,7 @@ Plots each individual observation.
 Plots the absolute difference between consecutive observations.
 
 - **Centerline**: Average moving range (R̅)
-- **UCL**: 3.27 × R̅
+- **UCL**: (1 + 3 × 0.8525/1.128) × R̅, about 3.267 × R̅
 - **LCL**: 0 (range cannot be negative)
 - **Interpretation**: Large ranges indicate sudden changes
 
