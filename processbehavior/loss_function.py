@@ -20,7 +20,6 @@ from typing import TYPE_CHECKING
 import numpy as np
 
 from .exceptions import ValidationError
-from .spc_constants import c4
 
 if TYPE_CHECKING:
     from .analysis_dataset import AnalysisDataSet
@@ -309,13 +308,15 @@ def _compute_centering(y_bar: float, target: float) -> float:
 
 def _compute_unexplained_replicated(df, response_var: str) -> float:
     """
-    Eq 15.16/15.17: within-cell variance for fully replicated designs.
+    10-1 manual Eq 15-14/15-16: within-cell variance for fully replicated designs (ADS 1).
 
-    unexplained = (1/KT) Σ (S_kt / c4(n_kt))²
+    unexplained = (1/KT) Σ S_kt²
+
+    Each cell's sample variance (n_kt - 1 divisor) estimates σ² without bias, so the
+    average is used as is; earlier manuals divided each S_kt by c4(n_kt), which reads high.
     """
-    cell_stats = df.groupby('cell_key', observed=True)[response_var].agg(['std', 'count'])
-    cell_stats['sigma_sq'] = (cell_stats['std'] / cell_stats['count'].apply(c4)) ** 2
-    return float(cell_stats['sigma_sq'].mean())
+    cell_var = df.groupby('cell_key', observed=True)[response_var].var()
+    return float(cell_var.mean())
 
 
 def _compute_unexplained_pooled(df) -> float:

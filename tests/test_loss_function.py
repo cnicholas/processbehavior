@@ -74,17 +74,17 @@ def study_no_time(pb):
 
 
 class TestValidationPMSDS1:
-    """Match Tom's reference output: Fig 15-4 / 15-5."""
+    """Match Tom's VAS run of 10/3/2026 (10-1 manual), PM SDS 1 deck slides 30-31."""
 
     def test_unstructured_percentages(self, study_sds1):
         """5-component Pareto matches Tom's reference."""
         result = study_sds1.loss_function(target=237.0)
 
-        assert round(result.pct_interaction, 1) == 43.3
-        assert round(result.pct_unexplained, 1) == 23.0
-        assert round(result.pct_centering, 1) == 16.8
-        assert round(result.pct_pdc, 1) == 14.2
-        assert round(result.pct_time, 1) == 2.7
+        assert round(result.pct_interaction, 1) == 44.5
+        assert round(result.pct_unexplained, 1) == 20.9
+        assert round(result.pct_centering, 1) == 17.3
+        assert round(result.pct_pdc, 1) == 14.6
+        assert round(result.pct_time, 1) == 2.8
 
     def test_structured_pdc_decomposition(self, study_sds1):
         """PDC broken into F1, F2, PDF INT matches Tom's reference."""
@@ -95,9 +95,9 @@ class TestValidationPMSDS1:
         f2_pct = result.pdc_by_factor['FACTOR 2'] / total * 100
         pdc_int_pct = result.pdc_factor_interaction / total * 100
 
-        assert round(f1_pct, 1) == 8.9
-        assert round(f2_pct, 1) == 3.7
-        assert round(pdc_int_pct, 1) == 1.5
+        assert round(f1_pct, 1) == 9.2
+        assert round(f2_pct, 1) == 3.8
+        assert round(pdc_int_pct, 1) == 1.6
 
     def test_target_237(self, study_sds1):
         result = study_sds1.loss_function(target=237.0)
@@ -171,10 +171,12 @@ class TestDecompositionIdentities:
 
 class TestUnexplained:
     def test_sds1_uses_per_cell(self, study_sds1):
-        """SDS 1 (replicated) uses per-cell S/c4 path."""
+        """SDS 1 (replicated): unexplained is the average cell variance (Eq 15-16), no c4."""
         result = study_sds1.loss_function()
         assert result.sds == 1
-        assert result.unexplained > 0.0
+        df = study_sds1.dataset
+        expected = df.groupby('cell_key', observed=True)['PM SDS 1'].var().mean()
+        assert result.unexplained == pytest.approx(expected, rel=1e-12)
 
     def test_sds2_percentages(self, study_sds2):
         """SDS 2 5-component Pareto — Eq 15.18 pooled R2 path."""

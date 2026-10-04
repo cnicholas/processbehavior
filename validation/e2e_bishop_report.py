@@ -81,12 +81,13 @@ CAPABILITY_METRICS = [
 # tolerance is half-unit of last decimal place.
 LOSS_TOLERANCE = 0.05
 EXPECTED_LOSS = {
+    # SDS 1: Tom's VAS run of 10/3/2026 (10-1 manual, Eq 15-16 without c4).
     1: {
-        'pct_centering':   16.8,  # Tom: "mean"
-        'pct_unexplained': 23.0,
-        'pct_pdc':         14.2,
-        'pct_time':         2.7,  # Tom: "pt"
-        'pct_interaction': 43.3,  # Tom: "pdcxpt"
+        'pct_centering':   17.3,  # Tom: "mean"
+        'pct_unexplained': 20.9,
+        'pct_pdc':         14.6,
+        'pct_time':         2.8,  # Tom: "pt"
+        'pct_interaction': 44.5,  # Tom: "pdcxpt"
     },
     2: {
         # 5-component decomposition
