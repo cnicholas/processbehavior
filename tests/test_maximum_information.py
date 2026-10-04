@@ -198,3 +198,29 @@ class TestPlotting:
     def test_plot_with_bins(self):
         fig = self.result.plot(bins=15)
         assert isinstance(fig, go.Figure)
+
+
+# ---------------------------------------------------------------------------
+# 10-1 manual R2: limits match Tom's VAS run of 10/3/2026 (slide 33 of each deck)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ('response', 'mask', 'half_width'),
+    [
+        ('PM SDS 2', None, 2.76),  # ADS 2, complete grid (M = KT = 800)
+        ('PM SDS 3', None, 3.70),  # ADS 3, mixed replication (M = 3042)
+        ('PM INERT', 'PM SDS 5', 3.51),  # ADS 2 from an incomplete grid (SDS 5 pattern, M = 641)
+    ],
+)
+def test_r2_chart_limits_match_vas_10_1(response, mask, half_width):
+    df = pd.read_csv(VALIDATION_CSV, na_values=['*'])
+    if mask is not None:
+        df[response] = df[response].where(df[mask].notna())
+    study = ProcessBehavior(df).formulate(
+        response=response, factors=['FACTOR 1', 'FACTOR 2'], time='PRODUCTION TIME', precision=12
+    )
+    mi = study.maximum_information()
+    assert mi.r2_mean == pytest.approx(0.0, abs=0.005)
+    assert mi.lpl == pytest.approx(-half_width, abs=0.005)
+    assert mi.upl == pytest.approx(half_width, abs=0.005)

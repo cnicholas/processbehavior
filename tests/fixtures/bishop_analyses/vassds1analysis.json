@@ -1,6 +1,6 @@
 {
-  "source_file": "vassds1analysis.pptm",
-  "extraction_method": "Structured extraction from PDF text generated from the PowerPoint; this deck exposes chart text in the rendered PDF, which allowed direct parsing of page titles, chart text, limits, axis labels, and package footer metadata. Missing values were preserved as null when not present on the slide.",
+  "source_file": "PM SDS1.pptm (VAS run of 10/3/2026, 10-1 manual); earlier: vassds1analysis.pptm",
+  "extraction_method": "Values read from the text drawn in the Minitab charts of the 10/3/2026 VAS deck (displayed precision); structure and null pattern kept from the earlier extraction.",
   "pages_extracted": 34,
   "items": [
     {
@@ -476,7 +476,7 @@
       "package": {
         "analysis_design_state": "ANALYTIC DESIGN STATE 1: N > 1 COMPLETE"
       },
-      "notes": null
+      "notes": "SDS 1 deck of 10/3 draws this factor S chart on PDC subgroups (limits equal to page 21), unlike the SDS 2 deck and the manual R6 subgrouping (by factor level); kept the factor-level reference."
     },
     {
       "page_number": 26,
@@ -514,7 +514,7 @@
       "package": {
         "analysis_design_state": "ANALYTIC DESIGN STATE 1: N > 1 COMPLETE"
       },
-      "notes": null
+      "notes": "SDS 1 deck of 10/3 draws this factor S chart on PDC subgroups (limits equal to page 21), unlike the SDS 2 deck and the manual R6 subgrouping (by factor level); kept the factor-level reference."
     },
     {
       "page_number": 28,

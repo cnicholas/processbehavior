@@ -1,6 +1,6 @@
 {
-  "source_file": "vassds2analysis.pptm",
-  "extraction_method": "Structured extraction from PDF text generated from the PowerPoint; the deck appears to use embedded chart images/vector content rather than native PowerPoint chart objects. Missing values visible as placeholders or omitted in the source were preserved as null.",
+  "source_file": "PM SDS2.pptm (VAS run of 10/3/2026, 10-1 manual); earlier: vassds2analysis.pptm",
+  "extraction_method": "Values read from the text drawn in the Minitab charts of the 10/3/2026 VAS deck (displayed precision); structure and null pattern kept from the earlier extraction.",
   "pages_extracted": 34,
   "items": [
     {
@@ -390,7 +390,7 @@
       "chart_subtitle": "PM2 in Grams",
       "context_subtitle": null,
       "variable": "RSG STDEV",
-      "CL": 0.64,
+      "CL": 0.91,
       "LBL": null,
       "UBL": null,
       "axis_labels": {
@@ -428,7 +428,7 @@
       "chart_subtitle": "PM2 in Grams",
       "context_subtitle": null,
       "variable": "RSG STDEV",
-      "CL": 0.56,
+      "CL": 0.85,
       "LBL": null,
       "UBL": null,
       "axis_labels": {
@@ -466,7 +466,7 @@
       "chart_subtitle": "PM2 in Grams",
       "context_subtitle": "PD Factor - F1",
       "variable": "RSG STDEV",
-      "CL": 0.64,
+      "CL": 0.91,
       "LBL": null,
       "UBL": null,
       "axis_labels": {
@@ -504,7 +504,7 @@
       "chart_subtitle": "PM2 in Grams",
       "context_subtitle": "PD Factor - F2",
       "variable": "RSG STDEV",
-      "CL": 0.66,
+      "CL": 0.94,
       "LBL": null,
       "UBL": null,
       "axis_labels": {
@@ -524,8 +524,8 @@
       "context_subtitle": null,
       "variable": "R3 RESIDUALS",
       "CL": 237.79,
-      "LBL": 233.94,
-      "UBL": 241.63,
+      "LBL": 233.04,
+      "UBL": 242.53,
       "axis_labels": {
         "x": "PDCxPT RSG",
         "y": "Individual Value"
@@ -542,9 +542,9 @@
       "chart_subtitle": "PM2 in Grams",
       "context_subtitle": null,
       "variable": "MOVING RANGE",
-      "CL": 1.44,
+      "CL": 1.78,
       "LBL": 0.0,
-      "UBL": 4.72,
+      "UBL": 5.83,
       "axis_labels": {
         "x": "PDCxPT RSG",
         "y": "Moving Range"
@@ -619,8 +619,8 @@
       "context_subtitle": null,
       "variable": "R2 RESIDUALS",
       "CL": 0.0,
-      "LBL": -1.94,
-      "UBL": 1.94,
+      "LBL": -2.76,
+      "UBL": 2.76,
       "axis_labels": {
         "x": "PDCxPT RSG",
         "y": "Individual Value"

@@ -1,9 +1,10 @@
 """Individuals and moving-range chart limits match Bishop's VAS software.
 
 The expected values are read from Bishop's VAS output decks of 29 September 2026 (Medicare and
-PM SDS 2), at the precision the charts print. They pin the XmR constants E2 = 3/1.128 and
-D4 = 1 + 3(0.8525)/1.128 from the manual (Eq 12.4, 12.5, 12.10, 12.11): with the rounded 2.66 and
-3.268 the Medicare limits miss by 0.6 and 1.0, and the PM SDS 2 moving-range limit prints 2.84.
+PM SDS 2) and, for the R2 chart, 3 October 2026, at the precision the charts print. They pin the
+XmR constants E2 = 3/1.128 and D4 = 1 + 3(0.8525)/1.128 from the manual (Eq 12.4, 12.5, 12.10,
+12.11): with the rounded 2.66 and 3.268 the Medicare limits miss by 0.6 and 1.0, and the PM SDS 2
+moving-range limit prints 2.84.
 """
 
 from pathlib import Path
@@ -84,3 +85,24 @@ class TestPmSds2FirstChart:
         s = pm_sds_2.execute(chart='mR', by=[]).get_statistics('mR')
         assert round(s['center'], 2) == 0.87
         assert round(s['upl'], 2) == 2.83
+
+
+class TestMedicareR2Chart:
+    """VAS run of 10/3/2026 (10-1 manual R2), MEDICARE PCE slide 60: R2 chart -1.15 (-1045.19 / 1042.88).
+
+    R2 here is the condition-and-period-adjusted series differenced along the ACO-then-year
+    stream and divided by twice the R2 scale factor c(24, 96); the raw-difference R2 of
+    earlier releases gave limits about three times wider.
+    """
+
+    def test_maximum_information_limits(self, medicare):
+        mi = medicare.maximum_information()
+        assert mi.r2_mean == pytest.approx(-1.15, abs=0.005)
+        assert mi.lpl == pytest.approx(-1045.19, abs=0.005)
+        assert mi.upl == pytest.approx(1042.88, abs=0.005)
+
+    def test_individuals_chart_on_r2(self, medicare):
+        s = medicare.execute(chart='X', by=[], value='R2').get_statistics('X')
+        assert s['center'] == pytest.approx(-1.15, abs=0.005)
+        assert s['lpl'] == pytest.approx(-1045.19, abs=0.005)
+        assert s['upl'] == pytest.approx(1042.88, abs=0.005)

@@ -49,17 +49,17 @@ EXPECTED_CAPABILITY = {
         # Current
         'pp': 1.1, 'ppk_upper': 0.93, 'ppk_lower': 1.27,
         'pct_below_lsl': 0.5, 'pct_above_usl': 0.0,
-        # Potential (R2 sigma)
-        'cp': 2.51, 'cpk_upper': 2.12, 'cpk_lower': 2.91,
-        'potential_pct_below_lsl': 0.0, 'potential_pct_above_usl': 0.0,
+        # Potential (R2 sigma) — Tom's VAS run of 10/3/2026 (10-1 manual R2), PM SDS 2 slide 32
+        'cp': 1.78, 'cpk_upper': 1.50, 'cpk_lower': 2.06,
+        'potential_pct_below_lsl': 0.0, 'potential_pct_above_usl': 0.63,
     },
     3: {
         # Current
         'pp': 0.96, 'ppk_upper': 0.8, 'ppk_lower': 1.12,
         'pct_below_lsl': 0.53, 'pct_above_usl': 0.46,
-        # Potential (R2 sigma)
-        'cp': 2.34, 'cpk_upper': 1.95, 'cpk_lower': 2.72,
-        'potential_pct_below_lsl': 0.0, 'potential_pct_above_usl': 0.0,
+        # Potential (R2 sigma) — Tom's VAS run of 10/3/2026 (10-1 manual R2), PM SDS 3 slide 32
+        'cp': 1.57, 'cpk_upper': 1.31, 'cpk_lower': 1.83,
+        'potential_pct_below_lsl': 0.0, 'potential_pct_above_usl': 0.13,
     },
 }
 # (Tom's label) -> (CapabilityResult.as_dict key). Order shown is the order
@@ -89,33 +89,32 @@ EXPECTED_LOSS = {
         'pct_time':         2.8,  # Tom: "pt"
         'pct_interaction': 44.5,  # Tom: "pdcxpt"
     },
+    # SDS 2 and 3: Tom's VAS run of 10/3/2026 (10-1 manual: Eq 15-17 unexplained = S²_R2,
+    # Eq 15-20 interaction by remainder), slides 30-31.
     2: {
         # 5-component decomposition
-        'pct_centering':   16.1,
-        'pct_unexplained': 23.6,
-        'pct_pdc':         15.6,
-        'pct_time':         2.2,
-        'pct_interaction': 42.5,
+        'pct_centering':   21.0,
+        'pct_unexplained': 30.0,
+        'pct_pdc':         20.4,
+        'pct_time':         2.9,
+        'pct_interaction': 25.6,
         # Factor-level decomposition of pct_pdc (synthetic fields; computed
         # from LossResult.pdc_by_factor / total in _build_loss_results)
-        'pct_pdc_f1':                  10.6,
-        'pct_pdc_f2':                   4.1,
-        'pct_pdc_factor_interaction':   0.9,  # Tom: "PDF Int"
+        'pct_pdc_f1':                  13.7,
+        'pct_pdc_f2':                   5.5,
+        'pct_pdc_factor_interaction':   1.2,  # Tom: "PDF Int"
     },
     3: {
         # 5-component decomposition
-        'pct_centering':   16.4,
-        'pct_unexplained': 25.0,
-        'pct_pdc':         13.7,
-        'pct_time':         2.5,
-        'pct_interaction': 42.4,
+        'pct_centering':   18.5,
+        'pct_unexplained': 30.3,
+        'pct_pdc':         15.4,
+        'pct_time':         2.8,
+        'pct_interaction': 33.1,
         # Factor-level decomposition of pct_pdc
-        'pct_pdc_f1':       8.3,
-        'pct_pdc_f2':       3.8,
-        # Tom's initial note said 0.6 but it didn't reconcile with his own
-        # pdc=13.7 (8.3+3.8+0.6=12.7); 1.6 makes the row internally
-        # consistent and matches our 1.59. Confirmed by Tom as 1.6.
-        'pct_pdc_factor_interaction':   1.6,
+        'pct_pdc_f1':       9.3,
+        'pct_pdc_f2':       4.3,
+        'pct_pdc_factor_interaction':   1.8,
     },
 }
 # (Tom's label) -> (LossResult.as_dict key, or synthetic key). Synthetic
@@ -231,11 +230,11 @@ def _augment_loss_with_factor_percentages(loss_dict):
     # positionally so this stays robust if factor names ever change.
     factor_keys = list(pdc_by_factor.keys())
     if len(factor_keys) >= 1:
-        derived['pct_pdc_f1'] = round(100 * pdc_by_factor[factor_keys[0]] / total, 3)
+        derived['pct_pdc_f1'] = 100 * pdc_by_factor[factor_keys[0]] / total
     if len(factor_keys) >= 2:
-        derived['pct_pdc_f2'] = round(100 * pdc_by_factor[factor_keys[1]] / total, 3)
+        derived['pct_pdc_f2'] = 100 * pdc_by_factor[factor_keys[1]] / total
     if pdc_fi is not None:
-        derived['pct_pdc_factor_interaction'] = round(100 * pdc_fi / total, 3)
+        derived['pct_pdc_factor_interaction'] = 100 * pdc_fi / total
     return derived
 
 
@@ -467,8 +466,10 @@ def run_sds_validation(sds_num, pb, study, json_data):  # noqa: C901
             # No other category produces a meaningful chart-row; drop it.
             continue
 
-    capability_results = _build_capability_results(sds_num, computed['capability'].as_dict())
-    loss_results = _build_loss_results(sds_num, computed['loss'].as_dict())
+    # Compare at full precision: Tom's figures are displayed to 1-2 decimals and the tolerance
+    # absorbs that; rounding our side first would double-count the rounding.
+    capability_results = _build_capability_results(sds_num, computed['capability'].as_dict(round_to=12))
+    loss_results = _build_loss_results(sds_num, computed['loss'].as_dict(round_to=12))
 
     return {
         'charts': results,

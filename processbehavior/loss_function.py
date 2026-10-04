@@ -14,6 +14,7 @@ Bishop, T.  *Variance Analysis System* — Chapter 15.
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
@@ -23,6 +24,8 @@ from .exceptions import ValidationError
 
 if TYPE_CHECKING:
     from .analysis_dataset import AnalysisDataSet
+
+logger = logging.getLogger(__name__)
 
 
 # ============================================================================
@@ -56,9 +59,13 @@ class LossResult:
     sds : int
         Analytical SDS.
     centering, unexplained, pdc, time, interaction : float
-        The 5 loss components (squared-loss units).
+        The 5 loss components (squared-loss units). In ADS 1 each is estimated
+        directly (10-1 manual Eq 15-16). In ADS 2/3 the interaction is what the
+        other four leave of the total loss (Ȳ.. - T)² + S² (Eqs 15-18 to 15-20),
+        set to 0 when that remainder is negative.
     total : float
-        Sum of 5 components.
+        Sum of 5 components. In ADS 2/3 this equals (Ȳ.. - T)² + S² unless the
+        interaction was set to 0, in which case it is larger.
     pct_centering, pct_unexplained, pct_pdc, pct_time, pct_interaction : float
         Each component as percentage of total.
     pdc_by_factor : dict[str, float] | None
@@ -302,7 +309,7 @@ class LossResult:
 
 
 def _compute_centering(y_bar: float, target: float) -> float:
-    """Eq 15.13 term 1: (Ȳ.. - T)²."""
+    """10-1 manual Eq 15-16 / 15-21, first term: (Ȳ.. - T)²."""
     return (y_bar - target) ** 2
 
 
@@ -321,17 +328,17 @@ def _compute_unexplained_replicated(df, response_var: str) -> float:
 
 def _compute_unexplained_pooled(df) -> float:
     """
-    Eq 15.18/15.19: pooled sigma from R2 for ADS 2/3.
+    10-1 manual Eq 15-17: unexplained loss for ADS 2/3 is the sample variance of R2.
 
-    Uses std(R2, ddof=1) / 0.7 then squares (Bishop Eq 15.18).
+    unexplained = S²_R2 (n - 1 divisor). R2 is already on the noise scale (the R2
+    scale factor puts it there), so no further correction is applied.
     """
     r2 = df['R2'].dropna().to_numpy(dtype=float)
-    sigma_hat = np.std(r2, ddof=1) / 0.7
-    return float(sigma_hat**2)
+    return float(np.var(r2, ddof=1))
 
 
 def _compute_pdc(df, rsg_var_name: str) -> float:
-    """Eq 15.20: (1/K) Σ (Ȳ_k. - Ȳ..)²."""
+    """10-1 manual Eq 15-22: (1/K) Σ (Ȳ_k. - Ȳ..)²."""
     ybar = df['Ybar'].iloc[0]
     ybar_k = df.groupby(rsg_var_name, observed=True)['Ybar_k'].first()
     rho_k = ybar_k - ybar
@@ -339,7 +346,7 @@ def _compute_pdc(df, rsg_var_name: str) -> float:
 
 
 def _compute_time(df, time_var: str) -> float:
-    """Eq 15.13 term 4: (1/T) Σ (Ȳ_.t - Ȳ..)²."""
+    """10-1 manual Eq 15-16 / 15-21, time term: (1/T) Σ (Ȳ_.t - Ȳ..)²."""
     ybar = df['Ybar'].iloc[0]
     ybar_t = df.groupby(time_var, observed=True)['Ybar_t'].first()
     tau_t = ybar_t - ybar
@@ -347,11 +354,29 @@ def _compute_time(df, time_var: str) -> float:
 
 
 def _compute_interaction(df, time_var: str) -> float:
-    """Eq 15.13 term 5: (1/KT) Σ (ρτ_kt)²."""
+    """10-1 manual Eq 15-16, last term (ADS 1): (1/KT) Σ (Ȳ_kt - Ȳ_k. - Ȳ_.t + Ȳ..)²."""
     ybar = df['Ybar'].iloc[0]
     cell = df.groupby('cell_key', observed=True)[['Ybar_kt', 'Ybar_k', 'Ybar_t']].first()
     rho_tau = cell['Ybar_kt'] - cell['Ybar_k'] - cell['Ybar_t'] + ybar
     return float((rho_tau**2).mean())
+
+
+def _compute_interaction_remainder(df, response_var: str, pdc: float, time_loss: float, unexplained: float) -> float:
+    """
+    10-1 manual Eqs 15-18 to 15-20 (ADS 2/3): interaction is what the other parts leave of the total.
+
+    The total loss is (Ȳ.. - T)² + S², with S² the sample variance of all
+    observations (Eq 15-18). Subtracting the mean, condition, time and unexplained
+    parts leaves the PDC×PT interaction (Eq 15-20), set to 0 when negative. With
+    one observation per subgroup, interaction and noise cannot be told apart cell
+    by cell, so the interaction is backed out rather than estimated directly.
+    """
+    s2 = float(np.var(df[response_var].to_numpy(dtype=float), ddof=1))
+    remainder = s2 - pdc - time_loss - unexplained
+    if remainder < 0.0:
+        logger.debug('Eq 15-20 interaction remainder %.6g is negative; set to 0', remainder)
+        return 0.0
+    return remainder
 
 
 def _compute_pdc_decomposition(
@@ -466,15 +491,16 @@ def assess_loss(
     # --- 5 components ---
     centering = _compute_centering(y_bar, target)
 
-    # Unexplained: branch on cell replication
-    if ads._structure_stats.n_cell_min >= 2:
-        unexplained = _compute_unexplained_replicated(df, response_var)
-    else:
-        unexplained = _compute_unexplained_pooled(df)
-
     pdc = _compute_pdc(df, rsg_var_name)
     time_loss = _compute_time(df, time_var)
-    interaction = _compute_interaction(df, time_var)
+
+    # Unexplained and interaction: branch on cell replication (10-1 manual §15.4)
+    if ads._structure_stats.n_cell_min >= 2:
+        unexplained = _compute_unexplained_replicated(df, response_var)  # Eq 15-16
+        interaction = _compute_interaction(df, time_var)  # Eq 15-16
+    else:
+        unexplained = _compute_unexplained_pooled(df)  # Eq 15-17
+        interaction = _compute_interaction_remainder(df, response_var, pdc, time_loss, unexplained)  # Eq 15-20
 
     total = centering + unexplained + pdc + time_loss + interaction
 

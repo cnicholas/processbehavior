@@ -1,7 +1,7 @@
 """The Bishop reference artifacts must never change quietly.
 
 These files ARE the ground truth: the T100 validation database and the three
-Minitab reference-analysis fixtures that e2e_bishop_report.py's 280 assertions
+Minitab reference-analysis fixtures that e2e_bishop_report.py's assertions
 check against. Every number the library claims to validate traces back to them,
 so an edit here is an edit to what "correct" means for the whole package.
 
@@ -31,15 +31,15 @@ REFERENCE_ARTIFACTS = [
     ),
     (
         'tests/fixtures/bishop_analyses/vassds1analysis.json',
-        'e34f276446584b6ce2c765dfc7f8a154fa74bd01e82e6335b13e2af1b85e8c26',
+        '8e4cb7b746d1560340d62a8b5627ed2a6804b63dd9f1409f42ad91d2cb86600a',
     ),
     (
         'tests/fixtures/bishop_analyses/vassds2analysis.json',
-        'aeaebaf82cdef7c121ffc73dad9419ef0ac723b1f8369a451d8bc6a3eb1b62cb',
+        '7320e41b67c35c3d1120a2788b41a82e59402e8e681b74d1e2d3a593deef7ab7',
     ),
     (
         'tests/fixtures/bishop_analyses/vassds3analysis.json',
-        'b5a34385cf3d3184f1a016854c62901fe1ab44111897ca80e1ca8fae6c2f3440',
+        '038d04ce0f852374a01b045d96f47d320d15060ecd3de2db497214bbc0210ec3',
     ),
 ]
 
