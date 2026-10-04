@@ -9,6 +9,8 @@ Tests cover:
 - Tom Bishop validation data
 """
 
+import math
+
 import pandas as pd
 import pytest
 
@@ -25,6 +27,7 @@ from processbehavior.residual_calculator import (
     calculate_r5_residual,
     calculate_time_means,
     calculate_vas_residuals,
+    r2_scale_factor,
 )
 
 # ============================================================================
@@ -134,6 +137,25 @@ def test_calculate_r1_residual_sum_is_zero():
     r1 = calculate_r1_residual(df, 'weight', grand_mean)
 
     assert pytest.approx(r1.sum(), abs=1e-10) == 0.0
+
+
+@pytest.mark.parametrize(
+    ('k', 'm', 'expected'),
+    [
+        (8, 641, 0.65729),  # PM SDS 5 layout: 8 conditions, 641 observations
+        (8, 800, 0.65812),  # PM SDS 2 layout: 8 x 100, one per cell
+        (24, 96, 0.59843),  # Medicare ACO file: 24 organisations x 4 years
+    ],
+)
+def test_r2_scale_factor_matches_manual_layouts(k, m, expected):
+    """c(K, M) = sqrt((K-1)/(2K) * (1 - K/(M-1))), Eq 14-8 / 14-13."""
+    assert r2_scale_factor(k, m) == pytest.approx(expected, abs=5e-6)
+
+
+@pytest.mark.parametrize(('k', 'm'), [(1, 50), (1, 2), (5, 6), (5, 5), (0, 10)])
+def test_r2_scale_factor_undefined_is_nan(k, m):
+    """Undefined for K < 2 or M < K + 2: NaN, never an exception."""
+    assert math.isnan(r2_scale_factor(k, m))
 
 
 def test_calculate_r2_exact():

@@ -34,6 +34,7 @@ Module structure:
 from __future__ import annotations
 
 import logging
+import math
 from collections.abc import Sequence
 from typing import TYPE_CHECKING
 
@@ -329,6 +330,37 @@ def calculate_r5_residual(factor_means: pd.Series, grand_mean: float, r2: pd.Ser
 # ============================================================================
 # R2: Structure-dependent residual (consolidated)
 # ============================================================================
+
+
+def r2_scale_factor(n_conditions: int, n_observations: int) -> float:
+    """
+    R2 scale factor c(K, M) for the singleton design states.
+
+    Bishop's 10-1 manual Eq 14-8 (SDS 2, where M = KT) and Eq 14-13 (SDS 3, 5, 6)::
+
+        c(K, M) = sqrt( (K - 1) / (2K) * (1 - K / (M - 1)) )
+
+    The R2 scale factor is computed from the layout, not looked up: K is the
+    number of process design conditions present and M is the number of
+    observations in the full analysis frame (never a subset). Dividing the
+    differenced interaction series by 2c puts R2 back on the noise scale.
+
+    Parameters
+    ----------
+    n_conditions : int
+        K, the number of process design conditions (rsg levels) present.
+    n_observations : int
+        M, the number of observations in the analysis frame.
+
+    Returns
+    -------
+    float
+        c(K, M), or NaN where the formula is undefined (K < 2 or M < K + 2).
+        Never raises: an undefined factor means R2 is unavailable, not an error.
+    """
+    if n_conditions < 2 or n_observations < n_conditions + 2:
+        return float('nan')
+    return math.sqrt((n_conditions - 1) / (2 * n_conditions) * (1 - n_conditions / (n_observations - 1)))
 
 
 def calculate_r2(df: pd.DataFrame, y: str, r2_method: R2Method, n_per_cell: pd.Series | None = None) -> pd.Series:
