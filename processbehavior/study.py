@@ -1042,7 +1042,7 @@ class Study:
         - rsg: Rational subgroup identifier
         - Ybar, Ybar_k, Ybar_t, Ybar_kt: Hierarchical means
         - R1-R5: VAS residuals (where applicable for the SDS)
-        - RCR1-RCR5: Re-centered residuals (Y reconstructed from components)
+        - RCR1-RCR5: Re-centred residuals, R + Ybar (10-1 manual Eq 14-26; RCR2 = Ybar_kt + R2)
 
         Returns a copy to preserve immutability. The frame itself is immutable
         after formulate() — execute() never adds columns to it; request
@@ -2391,8 +2391,8 @@ class Study:
         if not needs_residuals:
             raise ValidationError(
                 'recentered=True requires VAS decomposition (factors + time). '
-                'Recentered residuals (RCR) reconstruct values relative to '
-                'factor and time means, which require both to be specified.'
+                'Recentered residuals (RCR) are the VAS residuals moved onto the '
+                'measurement scale (R + grand mean), which needs both to be specified.'
             )
         recenterable = set(RESIDUAL_CODES)
         if value is None:

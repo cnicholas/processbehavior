@@ -799,14 +799,15 @@ class Analysis:
         """Return the cell-grid columns at which to compute Bishop's grand mean
         for an Xbar chart on this column.
 
-        Each VAS residual is recentered around a baseline computed at a specific
-        grain (see `analysis_dataset.py:364-371` and `residual_calculator.calculate_r6_residuals`). The
-        canonical grand mean of an RCRk chart averages over that grain — equal
-        weight per cell — yielding Bishop's unweighted center line.
+        Each re-centred residual is R + Ybar (10-1 manual Eq 14-26; see
+        `AnalysisDataSet._calculate_centered_residuals` and
+        `residual_calculator.calculate_r6_residuals`). The canonical grand mean of an
+        RCRk chart averages over the grain its effect lives at — equal weight per
+        level — yielding Bishop's unweighted center line.
 
         Grain table (None for non-residuals; falls through to other logic):
           R1, R2, R3 -> [rsg_var_name, time_var]   (full cell grid)
-          R4         -> [rsg_var_name]             (time effect removed)
+          R4         -> [time_var]                 (R4 carries the period effect)
           R5, R6     -> [rsg_var_name]             (factor effects live at rsg level)
 
         Returns an empty list when the column isn't a residual or the spec
@@ -820,13 +821,11 @@ class Analysis:
             base = 'R' + base[3:]
         if not (base.startswith('R') and len(base) >= 2 and base[1].isdigit()):
             return []
-        # R5/R6 are factor-effect residuals; R4 is the time-effect residual
-        # (time component removed). For our SDS 3 validation only R3 and R6 are
-        # exercised; R4/R5 grains are inferred from the recentering structure.
+        # R5/R6 carry the condition (factor) effects; R4 carries the period effect.
         if base in ('R5', 'R6'):
             return [spec.rsg_var_name] if spec.rsg_var_name else []
         if base == 'R4':
-            return [spec.rsg_var_name] if spec.rsg_var_name else []
+            return [spec.time_var] if spec.time_var else []
         # R1, R2, R3: full (rsg x time) cell grid
         grain = []
         if spec.rsg_var_name:
@@ -844,9 +843,8 @@ class Analysis:
         whose within-group std inflates limits. R2 (within-cell noise) is the
         correct dispersion basis per Bishop.
 
-        Always uses plain R2 (not RCR2) because recentered residuals add
-        cell-specific offsets that inflate within-group std when groups span
-        multiple cells.
+        Always uses plain R2 (not RCR2): RCR2 adds the cell mean, which would
+        inflate within-group std when groups span multiple cells.
         """
         _EFFECT_RESIDUALS = {'R1', 'R3', 'R4', 'R5', 'RCR1', 'RCR3', 'RCR4', 'RCR5'}
         if value_col is not None and value_col.upper() in _EFFECT_RESIDUALS and 'R2' in df.columns:

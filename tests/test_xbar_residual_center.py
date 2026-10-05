@@ -25,12 +25,11 @@ VALIDATION_CSV = Path(__file__).parent.parent / 'validation' / 'PBTESTDATABASE_T
     not VALIDATION_CSV.exists(),
     reason='Bishop validation CSV not present',
 )
-def test_sds3_r3_pt_xbar_center_matches_bishop():
-    """SDS 3 R3 Xbar by [PRODUCTION TIME] recentered must match Bishop's 237.83.
+def test_sds3_pt_xbar_center_matches_bishop():
+    """SDS 3 period-effects chart (R4 Xbar by [PRODUCTION TIME], recentered) must match Bishop's 237.83.
 
-    Row 22 of validation/e2e_bishop_report.html — the only e2e divergence
-    before the fix. Bishop reports CL = 237.83; the pre-fix code produced
-    237.81 (observation-weighted on unbalanced cells).
+    Page 22 of the e2e report (Tom's 10/3/2026 deck, slide 22). The observation-weighted
+    mean would give 237.81 on these unbalanced cells.
     """
     df = pd.read_csv(VALIDATION_CSV)
     pb_obj = ProcessBehavior(df)
@@ -42,7 +41,7 @@ def test_sds3_r3_pt_xbar_center_matches_bishop():
     result = study.execute(
         chart='Xbar',
         by=[pb_obj.cols.PRODUCTION_TIME],
-        value='R3',
+        value='R4',
         recentered=True,
     )
     center = result.get_statistics('Xbar')['center']

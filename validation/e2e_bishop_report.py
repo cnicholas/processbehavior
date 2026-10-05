@@ -290,14 +290,14 @@ def run_sds_validation(sds_num, pb, study, json_data):  # noqa: C901
     computed['pdc_effects_s'] = study.execute(
         chart='S', by=[pb.cols.FACTOR_1, pb.cols.FACTOR_2], value='R6'
     )
-    # PT effects (pages 22-23) — Xbar/S by time for all SDS
-    # When charted by=[time], each time subgroup has multiple factor levels,
-    # giving n>1 subgroups even in SDS 2, so Xbar/S is correct.
+    # PT effects (pages 22-23) — Xbar/S of R4 by time for all SDS (R4 carries the period effect,
+    # 10-1 manual Eq 14-16). When charted by=[time], each time subgroup has multiple factor
+    # levels, giving n>1 subgroups even in SDS 2, so Xbar/S is correct.
     computed['pt_effects_xbar'] = study.execute(
-        chart='Xbar', by=[pb.cols.PRODUCTION_TIME], value='R3', recentered=True
+        chart='Xbar', by=[pb.cols.PRODUCTION_TIME], value='R4', recentered=True
     )
     computed['pt_effects_s'] = study.execute(
-        chart='S', by=[pb.cols.PRODUCTION_TIME], value='R3', recentered=True
+        chart='S', by=[pb.cols.PRODUCTION_TIME], value='R4', recentered=True
     )
     # Interaction (pages 28-29)
     if xbar_s:
@@ -416,7 +416,7 @@ def run_sds_validation(sds_num, pb, study, json_data):  # noqa: C901
             result_obj = computed['pt_effects_xbar'] if is_location else computed['pt_effects_s']
             chart_type = 'Xbar' if is_location else 'S'
             cl, lpl, upl = stats_from(result_obj, chart_type)
-            append_result(chart_type, '[PRODUCTION_TIME]', 'R3', True, cl, lpl, upl,
+            append_result(chart_type, '[PRODUCTION_TIME]', 'R4', True, cl, lpl, upl,
                           safe_chart_table(result_obj, chart_type))
 
         elif category == 'factor_effects':

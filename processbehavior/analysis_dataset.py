@@ -352,10 +352,15 @@ class AnalysisDataSet:
 
     def _calculate_centered_residuals(self):
         """
-        Calculate centered residuals (Rbar and RCR values).
+        Calculate the re-centred residuals (RCR) and the R1 cell/marginal means (Rbar).
 
-        These calculations center residuals by their means and reconstruct
-        Y from variance components to verify decomposition correctness.
+        Re-centring puts a residual back on the measurement scale without changing what it
+        shows: RCR = R + Ȳ.. (Bishop's 10-1 manual Eq 14-26, for R1, R3, R4, R5 and R6; RCR6
+        is built per request in residual_calculator.calculate_r6_residuals). An effect chart of
+        RCR5 by condition, RCR4 by period or RCR3 by subgroup therefore plots that effect plus
+        R2, centred on the grand mean.
+
+        RCR2 is not part of Eq 14-26; it is kept as Ȳ_kt + R2 (which reconstructs Y in ADS 1).
 
         Note: This method intentionally mutates self.analysis_dataset in-place
         (adding columns directly to the DataFrame). This differs from
@@ -364,12 +369,6 @@ class AnalysisDataSet:
         during __init__ as part of the analysis pipeline, and the columns
         added (Rbar_kt, Rbar_k, Rbar_t, RCR1-RCR5) are outputs of the
         analysis that become part of the dataset.
-
-        Calculates:
-        - Rbar_kt: Mean of R1 per cell (factor x time)
-        - Rbar_k: Mean of R1 per factor level
-        - Rbar_t: Mean of R1 per time point
-        - RCR1-RCR5: Reconstructed Y values from centered residuals
         """
         if not self.spec.has_grouping:
             return
@@ -382,13 +381,9 @@ class AnalysisDataSet:
         df['Rbar_k'] = df.groupby([self.spec.rsg_var_name], observed=True)['R1'].transform('mean')
         df['Rbar_t'] = df.groupby([self.spec.time_var], observed=True)['R1'].transform('mean')
 
-        # Calculate RCR (Reconstructed Centered Residuals)
-        # These verify that Y can be reconstructed from components
-        df['RCR1'] = df['Ybar'] + df['R1']  # Y = Ybar + R1
-        df['RCR2'] = df['Ybar_kt'] + df['R2']  # Y = Ybar_kt + R2
-        # Y = (Ybar_k + Ybar_t - Ybar) + R3
-        df['RCR3'] = (df['Ybar_k'] + df['Ybar_t'] - df['Ybar']) + df['R3']
-        # Y = (Ybar + Ybar_kt - Ybar_t) + R4
-        df['RCR4'] = (df['Ybar'] + df['Ybar_kt'] - df['Ybar_t']) + df['R4']
-        # Y = (Ybar + Ybar_kt - Ybar_k) + R5
-        df['RCR5'] = (df['Ybar'] + df['Ybar_kt'] - df['Ybar_k']) + df['R5']
+        # Re-centred residuals, Eq 14-26: RCR = R + Ybar
+        df['RCR1'] = df['Ybar'] + df['R1']
+        df['RCR2'] = df['Ybar_kt'] + df['R2']  # not in Eq 14-26; reconstructs Y in ADS 1
+        df['RCR3'] = df['Ybar'] + df['R3']
+        df['RCR4'] = df['Ybar'] + df['R4']
+        df['RCR5'] = df['Ybar'] + df['R5']
