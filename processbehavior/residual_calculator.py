@@ -422,7 +422,7 @@ def calculate_r2(
     z = df_sorted[y] - df_sorted['Ybar_k'] - df_sorted['Ybar_t'] + df_sorted['Ybar']
     c = r2_scale_factor(n_conditions, len(df_sorted))
     if math.isnan(c):
-        logger.warning(
+        logger.debug(
             'R2 scale factor undefined for K=%d conditions and M=%d observations; R2 is unavailable.',
             n_conditions,
             len(df_sorted),

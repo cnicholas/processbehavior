@@ -658,7 +658,9 @@ def assess_capability(
     potential_values = None
     potential_outside = {}
 
-    if ads.has_vas_residuals and 'R2' in df.columns:
+    if ads.r2_unavailable_reason is not None:
+        potential_unavailable_reason = ads.r2_unavailable_reason
+    elif ads.has_vas_residuals and 'R2' in df.columns:
         r2_values = df['R2'].dropna().to_numpy(dtype=float)
         n_r2 = len(r2_values)
 

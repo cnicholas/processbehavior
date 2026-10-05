@@ -1,13 +1,16 @@
 from __future__ import annotations
 
 import logging
+import math
+import warnings
 
 import pandas as pd
 
 from .data_preparation import DataPreparation
 from .effects_calculator import EffectsCalculator
+from .exceptions import ProcessBehaviorWarning
 from .formulation_spec import FormulationSpec
-from .residual_calculator import calculate_vas_residuals
+from .residual_calculator import calculate_vas_residuals, r2_scale_factor
 from .sds_detector import SDSRegistry, SDSResult, StructureStats
 
 # Configure module logger
@@ -62,6 +65,9 @@ class AnalysisDataSet:
 
         # ADS result (computed in _initialize on tidy data)
         self._ads_result: SDSResult | None = None
+
+        # Why R2 (and every residual built on it) is unavailable, if it is
+        self._r2_unavailable_reason: str | None = None
 
         # Composition - each component has one job (Single Responsibility Principle)
         # SDS detection was done on raw data by ProcessBehavior. Here we only use
@@ -127,6 +133,7 @@ class AnalysisDataSet:
                 n_per_cell=self._n_per_cell,
                 ybar_kt=self._ybar_kt,
             )
+            self._check_r2_scale_factor(r2_method)
 
             # Calculate centered residuals
             self._calculate_centered_residuals()
@@ -155,6 +162,32 @@ class AnalysisDataSet:
     def has_vas_residuals(self) -> bool:
         """Check if VAS residuals were calculated."""
         return 'R1' in self.analysis_dataset.columns
+
+    @property
+    def r2_unavailable_reason(self) -> str | None:
+        """Why R2 (and R3-R6, which carry it) is unavailable for this layout, or None when it is available."""
+        return self._r2_unavailable_reason
+
+    def _check_r2_scale_factor(self, r2_method: str) -> None:
+        """Record (and warn once) when the layout leaves the R2 scale factor undefined.
+
+        The scaled-difference R2 (10-1 manual Eqs 14-4..14-13) needs at least two process
+        design conditions and more than K + 1 observations; outside that it has no value.
+        """
+        if r2_method != 'ma2':
+            return
+        n_conditions = int(self.analysis_dataset[self.spec.rsg_var_name].nunique())
+        n_obs = len(self.analysis_dataset)
+        if not math.isnan(r2_scale_factor(n_conditions, n_obs)):
+            return
+        self._r2_unavailable_reason = (
+            f'R2 is unavailable for this layout: with a one-observation subgroup, R2 is the '
+            f'condition-and-period-adjusted series differenced and divided by the R2 scale factor '
+            f'c(K, M), which needs at least 2 process design conditions and M >= K + 2 observations '
+            f'(here K={n_conditions}, M={n_obs}). R3-R6, the loss function, maximum information and '
+            f'potential capability depend on R2.'
+        )
+        warnings.warn(self._r2_unavailable_reason, ProcessBehaviorWarning, stacklevel=2)
 
     @property
     def structure_stats(self) -> StructureStats | None:

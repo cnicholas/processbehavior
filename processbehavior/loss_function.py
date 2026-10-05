@@ -469,6 +469,9 @@ def assess_loss(
             'does not have VAS residuals.'
         )
 
+    if ads.r2_unavailable_reason is not None:
+        raise ValidationError(f'Loss function analysis needs R2. {ads.r2_unavailable_reason}')
+
     df = ads.analysis_dataset
     spec = ads.spec
     response_var = spec.response_var

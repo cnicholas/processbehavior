@@ -190,6 +190,9 @@ def assess_maximum_information(
             f'(current SDS: {ads.observed_design_state}).'
         )
 
+    if ads.r2_unavailable_reason is not None:
+        raise ValidationError(f'Maximum information analysis needs R2. {ads.r2_unavailable_reason}')
+
     df = ads.analysis_dataset
     r2_values = df['R2'].dropna().to_numpy(dtype=float)
     n = len(r2_values)
