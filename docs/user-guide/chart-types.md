@@ -128,10 +128,13 @@ Not all charts are valid for all Design States:
 
 | Chart | DS 1 | DS 2 | DS 3 | DS 4 | DS 5-6 |
 |-------|-------|-------|-------|-------|---------|
-| Xbar | ✅ | ✅ | ✅ | ❌ | ❌ |
-| S | ✅ | ✅ | ✅ | ❌ | ❌ |
+| Xbar | ✅ | ✅ | ✅ | ✅ | ✅ |
+| S | ✅ | ✅ | ✅ | ✅ | ✅ |
 | X | ✅ | ✅ | ✅ | ✅ | ✅ |
 | mR | ✅ | ✅ | ✅ | ✅ | ✅ |
+
+DS 4–6 collapse to DS 1–3 once empty cells are dropped, and their charts follow (Xbar is
+recommended for DS 1, 3, 4 and 6; X for DS 2 and 5).
 
 **Residual availability** depends on DS. Use `study.residuals` to check:
 
@@ -212,8 +215,9 @@ Plots the **mean** of each subgroup (factor level at each time point).
 - **Control Limits**: Based on within-subgroup variation; one-observation subgroups have none, so they do not enter the limits
 - **Interpretation**: Points beyond limits indicate subgroups with unusual means
 
-!!! note "Limits for effect-carrying residuals (R4/R5)"
-    When charting R4, R5, or their recentered variants (RCR4, RCR5) on Xbar, limits are based on **R2's within-group standard deviation** (Sbar), not the plotted residual's own standard deviation. This matters when `by` collapses factors — e.g., `by=['factor 1']` in a two-factor study. At collapsed groupings, R5's within-group std would include between-cell variance from the collapsed dimension, inflating limits. Using R2's Sbar isolates the unexplained noise as the limit basis. At the full RSG level (all factors in `by`), R5's within-group std equals R2's, so there is no difference. This follows Dr. Tom Bishop's VAS methodology.
+:::{note} Limits for effect-carrying residuals (R4/R5)
+When charting R4, R5, or their recentered variants (RCR4, RCR5) on Xbar, limits are based on **R2's within-group standard deviation** (Sbar), not the plotted residual's own standard deviation. This matters when `by` collapses factors — e.g., `by=['factor 1']` in a two-factor study. At collapsed groupings, R5's within-group std would include between-cell variance from the collapsed dimension, inflating limits. Using R2's Sbar isolates the unexplained noise as the limit basis. At the full RSG level (all factors in `by`), R5's within-group std equals R2's, so there is no difference. This follows Dr. Tom Bishop's VAS methodology.
+:::
 
 ### The S Chart
 
@@ -223,11 +227,12 @@ Plots the **standard deviation** of each subgroup.
 - **Control Limits**: Based on chi-square distribution
 - **Interpretation**: Points beyond limits indicate subgroups with unusual variation
 
-!!! note "S chart with effect residuals (R3/R4/R5)"
-    When charting an effect residual on S, the data points show R2's
-    within-group standard deviation, not the requested residual's. The S chart always
-    measures the stability of the noise (R2). See [How Effect Residuals Are
-    Charted](residuals.md#how-effect-residuals-are-charted).
+:::{note} S chart with effect residuals (R3/R4/R5)
+When charting an effect residual on S, the data points show R2's
+within-group standard deviation, not the requested residual's. The S chart always
+measures the stability of the noise (R2). See [How Effect Residuals Are
+Charted](residuals.md#how-effect-residuals-are-charted).
+:::
 
 ### Reading Order
 
@@ -376,7 +381,10 @@ zero over conditions.
 ```
 Do you have factors?
 ├── No → Do you have time?
-│   └── Yes → DS 6: Use X
+│   └── Yes → How many observations per time point?
+│       ├── Two or more at every point → DS 1: Xbar-S
+│       ├── One at some points, more at others → DS 3: Xbar-S (recommended)
+│       └── One at every point → DS 2: X
 └── Yes → Do you have time?
     ├── No → Use Xbar to compare factors
     └── Yes → Do you have replication (n>=2 per cell)?
@@ -384,6 +392,8 @@ Do you have factors?
         ├── Some cells → DS 3: Xbar-S (recommended) + VAS residuals (R2 by scaled difference)
         └── No cells → DS 2: X (recommended) + VAS residuals (R2 by scaled difference)
 ```
+
+VAS residuals (R1–R6) need both factors and time.
 
 ## Summary
 

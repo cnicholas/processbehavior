@@ -227,7 +227,7 @@ class SDSAnalysisPlan:
         if not self.vas_residuals_supported:
             return []
 
-        # R1 (Bishop 13.1): the response centred at 0 — a location shift, so only the
+        # R1 (10-1 manual Eq 14-2): the response centred at 0 — a location shift, so only the
         # location charts. X is unconditional: charting the centred raw data is the whole
         # diagnostic. No S/mR — R1 differs from the response by a constant, so its
         # dispersion charts would duplicate the response's exactly.

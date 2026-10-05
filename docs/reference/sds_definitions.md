@@ -115,6 +115,7 @@ To determine the DS for a dataset:
      - If has_singles AND has_multiples → DS 6
 ```
 
+(r2-calculation-methods-by-ds)=
 ## R2 Calculation Methods by DS
 
 Equation numbers refer to Bishop's VAS documentation manual dated 10-1-2026.

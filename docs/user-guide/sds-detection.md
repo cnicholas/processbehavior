@@ -284,8 +284,9 @@ The design report shows:
 
 **Valid Charts**: Histogram, Xbar, S, X, mR
 
-!!! note "Why DS 3 does not mix methods"
-    For R2 in DS 3 the library does not combine an exact estimate from the replicated cells with a separate estimate for the one-observation cells. Bishop's R2 for any layout with a one-observation cell (Eqs 14-9..14-13) is defined over the whole ordered sequence, with no grouping by cell: remove the process mean and the condition and period effects, difference what is left along the canonical condition-then-time sort, and divide by twice the R2 scale factor c(K, M). Only the first observation in the sequence has no value. The replicated cells' within-cell deviations are not used for R2. This is the same calculation as DS 2, and the ADS 3 reference assertions in the [validation page](../reference/validation.md) hold against it. The recommended chart is Xbar (with S), VAS's default for DS 3 and 6. Every subgroup mean, one-observation subgroups included, counts once toward the Xbar center line (per stratum too); one-observation subgroups have no within-subgroup spread, so they do not enter the limits.
+:::{note} Why DS 3 does not mix methods
+For R2 in DS 3 the library does not combine an exact estimate from the replicated cells with a separate estimate for the one-observation cells. Bishop's R2 for any layout with a one-observation cell (Eqs 14-9..14-13) is defined over the whole ordered sequence, with no grouping by cell: remove the process mean and the condition and period effects, difference what is left along the canonical condition-then-time sort, and divide by twice the R2 scale factor c(K, M). Only the first observation in the sequence has no value. The replicated cells' within-cell deviations are not used for R2. This is the same calculation as DS 2, and the ADS 3 reference assertions in the [validation page](../reference/validation.md) hold against it. The recommended chart is Xbar (with S), VAS's default for DS 3 and 6. Every subgroup mean, one-observation subgroups included, counts once toward the Xbar center line (per stratum too); one-observation subgroups have no within-subgroup spread, so they do not enter the limits.
+:::
 
 ## DS 4: Incomplete, No Singletons
 
@@ -397,9 +398,9 @@ capability) is then unavailable, with the reason given by `formulate()`, `execut
 | 1 | ✅ | ✅ |
 | 2 | ✅ (effect residuals; limits from R2) | ✅ |
 | 3 | ✅ (recommended) | ✅ |
-| 4 | ❌ | ✅ |
-| 5 | ❌ | ✅ |
-| 6 | ❌ | ✅ |
+| 4 | ✅ | ✅ |
+| 5 | ✅ (effect residuals; limits from R2) | ✅ |
+| 6 | ✅ (recommended) | ✅ |
 
 #### VAS Residual Charts
 

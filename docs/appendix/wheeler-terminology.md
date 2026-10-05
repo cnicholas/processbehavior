@@ -66,7 +66,7 @@ ProcessBehavior follows Donald Wheeler's terminology and methodology as presente
 
 ## Design States (DS)
 
-Wheeler identifies six design states that determine valid analysis approaches.
+Bishop's VAS defines six sampling design states (DS 1–6) that determine valid analysis approaches.
 
 ### DS 1: Full Replication
 

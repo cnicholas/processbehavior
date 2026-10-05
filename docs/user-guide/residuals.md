@@ -44,7 +44,7 @@ print(result.residuals.head())
 **Purpose**: View the original measurements as ± about zero, so the total range of
 variation is read directly rather than against an arbitrary process mean.
 
-**Formula**: R1 = Y - Y̅ (Bishop §13.1, *Centering the Original PM Data at 0*)
+**Formula**: R1 = Y - Y̅ (Eq 14-2)
 
 R1 is a pure location shift — it subtracts the overall mean and changes nothing else. It
 is also the building block the other residuals are derived from, which makes it the
@@ -74,6 +74,7 @@ result = study.execute(chart='Xbar', value='R1')
 **Availability**: Bishop notes R1 can be calculated for data produced by all six sampling
 design states.
 
+(r2-unexplained-residuals)=
 ## R2: Unexplained Residuals
 
 **Purpose**: Assess the unexplained (noise) variation: what is left once the process mean,
@@ -396,7 +397,9 @@ for residual in ['R3', 'R4', 'R5']:
 R1 = Y - Ȳ
 ```
 
-Sum of R1 across all observations = 0
+R1 averages to zero over the cells: the mean of the cell means of R1 is 0, because Ȳ is the
+unweighted mean of the cell means. The sum over all observations is 0 only when every cell
+has the same number of observations.
 
 ### R2: Within-Cell (DS 1)
 

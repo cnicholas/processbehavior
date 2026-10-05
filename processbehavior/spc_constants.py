@@ -659,7 +659,7 @@ def suggest_chart_name(name: str) -> str:
 # labelled "Noise / Unexplained variation", which is R2's meaning, in a table that
 # also mapped `within_cell` to R2 and so contradicted itself.
 RESIDUAL_LABELS: dict[str, str] = {
-    # Bishop 13.1, "Centering the Original PM Data at 0": R1 = Y_ktn - Ybar.., the
+    # 10-1 manual Eq 14-2 (centring the original PM data at 0): R1 = Y_ktn - Ybar.., the
     # response re-expressed as +/- about zero. Not a within-subgroup quantity.
     'R1': 'Response Centered at 0',
     'R2': 'Within-Cell',

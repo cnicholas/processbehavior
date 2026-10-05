@@ -59,6 +59,12 @@ numbers below are that manual's.
 - **Per-stratum Xbar centre lines count one-observation subgroups.** The centre is Bishop's
   unweighted mean of every subgroup mean; subgroups with n = 1 were dropped before it was
   taken, which moved four of the eight PM SDS 3 per-condition centres by 0.01–0.04.
+- **Docs:** the three note blocks in the chart-types and design-state guides now render on the
+  MyST site (they used mkdocs syntax); the DS 4–6 chart tables and the no-factors branch of the
+  decision tree match what the library offers (a time-only study is DS 1, 2 or 3 by the number
+  of observations per time point, not DS 6); the R1 note no longer claims the residuals sum to
+  zero on unbalanced data (their cell means average to zero); R1 is cited as Eq 14-2, and the
+  design states are attributed to Bishop.
 
 ## [0.3.3] - 2026-09-29
 
