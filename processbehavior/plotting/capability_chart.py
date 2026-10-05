@@ -409,7 +409,7 @@ def _build_index_text(
         # Potential view: show σ̂(R2) and CP/CPL/CPU indices
         lines: list[str] = []
         lines.append(f'n = {cap.n}')
-        lines.append(f'\u0232 = {round(cap.y_bar, r)}')
+        lines.append(f'\u0232 = {round(_view_center(cap, view), r)}')
         lines.append(f'\u03c3\u0302(R2) = {round(cap.sigma_hat_r2, r)}')
 
         if specs.is_two_sided:
@@ -566,8 +566,9 @@ def _add_npl_lines(
     """Add Natural Process Limit lines: mean, LNPL, UNPL."""
     center_color = theme.center_color
 
-    # Select sigma based on view
+    # Select sigma and centre based on view
     sigma = cap.sigma_hat_r2 if view == 'potential' else cap.sigma_hat
+    center = _view_center(cap, view)
 
     is_subplot = row is not None and col is not None
 
@@ -577,8 +578,8 @@ def _add_npl_lines(
         # Mean line — always drawn
         fig.add_shape(
             type='line',
-            x0=cap.y_bar,
-            x1=cap.y_bar,
+            x0=center,
+            x1=center,
             y0=0,
             y1=1,
             xref=xref,
@@ -594,8 +595,8 @@ def _add_npl_lines(
                 logger.warning('sigma <= 0 (sigma=%s); NPL lines omitted', sigma)
             return
 
-        lnpl = cap.y_bar - 3 * sigma
-        unpl = cap.y_bar + 3 * sigma
+        lnpl = center - 3 * sigma
+        unpl = center + 3 * sigma
 
         fig.add_shape(
             type='line',
@@ -622,7 +623,7 @@ def _add_npl_lines(
     else:
         # Mean line — always drawn
         fig.add_vline(
-            x=cap.y_bar,
+            x=center,
             line_color=center_color,
             line_width=2,
             line_dash='solid',
@@ -636,8 +637,8 @@ def _add_npl_lines(
                 logger.warning('sigma <= 0 (sigma=%s); NPL lines omitted', sigma)
             return
 
-        lnpl = cap.y_bar - 3 * sigma
-        unpl = cap.y_bar + 3 * sigma
+        lnpl = center - 3 * sigma
+        unpl = center + 3 * sigma
 
         fig.add_vline(
             x=lnpl,
@@ -655,6 +656,13 @@ def _add_npl_lines(
         )
 
 
+def _view_center(cap: CapabilityResult, view: str) -> float:
+    """Centre line for the view: y_bar for current; y_bar + mean(R2) (``potential_center``) for potential."""
+    if view == 'potential' and cap.potential_center is not None:
+        return cap.potential_center
+    return cap.y_bar
+
+
 def _add_mean_line(
     fig: go.Figure,
     cap: CapabilityResult,
@@ -665,14 +673,15 @@ def _add_mean_line(
 ) -> None:
     """Add only the mean (Y-bar) vertical line — used by potential view."""
     center_color = theme.center_color
+    center = _view_center(cap, 'potential')
     is_subplot = row is not None and col is not None
 
     if is_subplot:
         xref, yref = _get_axis_ref(row, col)
         fig.add_shape(
             type='line',
-            x0=cap.y_bar,
-            x1=cap.y_bar,
+            x0=center,
+            x1=center,
             y0=0,
             y1=1,
             xref=xref,
@@ -682,7 +691,7 @@ def _add_mean_line(
         )
     else:
         fig.add_vline(
-            x=cap.y_bar,
+            x=center,
             line_color=center_color,
             line_width=2,
             line_dash='solid',
@@ -751,7 +760,7 @@ def _add_legend_traces(
         y=[None],
         mode='lines',
         line=dict(color=center_color, width=2, dash='solid'),
-        name=f'Y-bar ({round(cap.y_bar, cap.round_to)})',
+        name=f'Y-bar ({round(_view_center(cap, view), cap.round_to)})',
     )
     if is_subplot:
         fig.add_trace(go.Scatter(**trace_kwargs), row=row, col=col)
@@ -760,8 +769,8 @@ def _add_legend_traces(
 
     # NPL (dashed green) — uses view-dependent sigma; skip for potential view
     if view != 'potential' and sigma is not None and sigma > 0:
-        lnpl = round(cap.y_bar - 3 * sigma, cap.round_to)
-        unpl = round(cap.y_bar + 3 * sigma, cap.round_to)
+        lnpl = round(_view_center(cap, view) - 3 * sigma, cap.round_to)
+        unpl = round(_view_center(cap, view) + 3 * sigma, cap.round_to)
         trace_kwargs = dict(
             x=[None],
             y=[None],

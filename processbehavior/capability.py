@@ -109,9 +109,10 @@ class CapabilityResult:
     pp, ppk_lower, ppk_upper, ppk : float | None
         Current capability indices (from overall sigma).
     sigma_hat_r2 : float | None
-        Unbiased sigma from R2 residuals.
+        Unbiased sigma from R2 residuals: S_R2 / c4(N_R2) (10-1 manual Eq 16-10).
     cp, cpk_lower, cpk_upper, cpk : float | None
-        Potential capability indices (from R2 sigma).
+        Potential capability indices (from R2 sigma), with CPL/CPU measured from
+        ``potential_center``.
     potential_unavailable_reason : str | None
         Why Cp/Cpk are unavailable (if applicable).
     z_lower, z_upper : float | None
@@ -130,6 +131,11 @@ class CapabilityResult:
         Always None in v1.
     round_to : int
         Decimal places used by ``__repr__`` and ``as_dict``.
+    potential_center : float | None
+        Centre of the potential distribution: the mean of ``y_bar + R2``, i.e.
+        ``y_bar + mean(R2)``. Equals ``y_bar`` when R2 averages to zero (ADS 1);
+        with the scaled-difference R2 of ADS 2/3 it differs by mean(R2), which is
+        small. None when potential capability is unavailable.
     """
 
     # Input context
@@ -191,6 +197,9 @@ class CapabilityResult:
     n_total: int | None = None
     window_warning: str | None = None
     observed_values: np.ndarray | None = None  # values summarized (windowed or full)
+
+    # Potential view centre: mean of (y_bar + R2). Last field so positional construction is unchanged.
+    potential_center: float | None = None
 
     # ------------------------------------------------------------------
     # Visualization
@@ -283,6 +292,7 @@ class CapabilityResult:
             'ppk_upper': _r(self.ppk_upper),
             'ppk': _r(self.ppk),
             'sigma_hat_r2': _r(self.sigma_hat_r2),
+            'potential_center': _r(self.potential_center),
             'cp': _r(self.cp),
             'cpk_lower': _r(self.cpk_lower),
             'cpk_upper': _r(self.cpk_upper),
@@ -325,6 +335,7 @@ class CapabilityResult:
             lines.append(f'  Potential Capability: {self.potential_unavailable_reason}')
         else:
             lines.append('  Potential Capability (R2 sigma):')
+            lines.append(f'    centre={d["potential_center"]}, sigma_hat_r2={d["sigma_hat_r2"]}')
             lines.append(f'    Cp={d["cp"]}  Cpk={d["cpk"]}  (lower={d["cpk_lower"]}, upper={d["cpk_upper"]})')
 
         lines.append('')
@@ -656,6 +667,7 @@ def assess_capability(
     cpk = None
     potential_unavailable_reason = None
     potential_values = None
+    potential_center = None
     potential_outside = {}
 
     if ads.r2_unavailable_reason is not None:
@@ -665,13 +677,17 @@ def assess_capability(
         n_r2 = len(r2_values)
 
         if n_r2 >= 2:
-            _, sigma_hat_r2 = compute_sigma_hat(r2_values)
-            pot = compute_capability_indices(y_bar, sigma_hat_r2, specs)
+            _, sigma_hat_r2 = compute_sigma_hat(r2_values)  # Eq 16-10
+            potential_values = y_bar + r2_values
+            # Centre the potential indices on the potential values themselves (Eqs 16-11..16-13 as
+            # VAS computes them): y_bar + mean(R2). Tom's Medicare run of 10/3/2026 prints
+            # "PROCESS MEAN 10831.3" on the potential slide (y_bar 10832.4, mean R2 -1.15).
+            potential_center = float(np.mean(potential_values))
+            pot = compute_capability_indices(potential_center, sigma_hat_r2, specs)
             cp = pot['pp']
             cpk_lower = pot['ppk_lower']
             cpk_upper = pot['ppk_upper']
             cpk = pot['ppk']
-            potential_values = y_bar + r2_values
             potential_outside = compute_pct_outside(potential_values, specs)
         else:
             potential_unavailable_reason = (
@@ -718,5 +734,6 @@ def assess_capability(
         time_var=time_var_meta,
         n_total=n_total,
         window_warning=window_warning,
+        potential_center=potential_center,
         observed_values=y_values,
     )

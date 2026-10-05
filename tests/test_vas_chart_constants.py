@@ -106,3 +106,19 @@ class TestMedicareR2Chart:
         assert s['center'] == pytest.approx(-1.15, abs=0.005)
         assert s['lpl'] == pytest.approx(-1045.19, abs=0.005)
         assert s['upl'] == pytest.approx(1042.88, abs=0.005)
+
+
+class TestMedicarePotentialCapability:
+    """VAS run of 10/3/2026, MEDICARE PCE slide 59 (LSL 6000, USL 16000): PPL 5.36, PP 5.55, PPU 5.74.
+
+    The potential indices are measured from the centre of the potential values, y_bar + mean(R2)
+    ("PROCESS MEAN = 10831.3" on the slide; y_bar is 10832.4 and mean R2 is -1.15). Only PPU
+    discriminates at two decimals: 5.7355 from that centre, 5.734 from y_bar.
+    """
+
+    def test_potential_indices(self, medicare):
+        cap = medicare.capability(lsl=6000, usl=16000)
+        assert cap.potential_center == pytest.approx(10831.27, abs=0.01)
+        assert round(cap.cpk_lower, 2) == 5.36
+        assert round(cap.cp, 2) == 5.55
+        assert round(cap.cpk_upper, 2) == 5.74

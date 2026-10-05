@@ -23,6 +23,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
+import processbehavior as pb
 from processbehavior import ProcessBehavior, SpecLimits, ValidationError
 from processbehavior.capability import (
     CapabilityResult,
@@ -959,3 +960,39 @@ class TestAssessCapabilityDirect:
         specs = SpecLimits(usl=120, lsl=80)
         cap = assess_capability(study, specs, round_to=5)
         assert cap.round_to == 5
+
+
+# ============================================================================
+# Potential centre (y_bar + mean R2) — 10-1 manual potential capability
+# ============================================================================
+
+
+class TestPotentialCenter:
+    def test_ads1_potential_center_is_y_bar(self):
+        """ADS 1: R2 is the within-cell deviation, which averages to zero."""
+        df = pb.make_design(1, K1=2, K2=2, T=4, seed=42)
+        study = pb.formulate(df, response='y', factors=['factor 1', 'factor 2'], time='time', precision=12)
+        cap = study.capability(usl=float(df['y'].max()) + 10, lsl=float(df['y'].min()) - 10)
+        assert cap.potential_center == pytest.approx(cap.y_bar, abs=1e-9)
+
+    def test_ads2_potential_center_is_mean_of_potential_values(self):
+        df = pd.read_csv('validation/PBTESTDATABASE_T100.csv', na_values=['*'])
+        study = pb.formulate(
+            df, response='PM SDS 2', factors=['FACTOR 1', 'FACTOR 2'], time='PRODUCTION TIME', precision=12
+        )
+        cap = study.capability(lsl=232, usl=242)
+        r2 = study.dataset['R2'].dropna()
+        assert cap.potential_center == pytest.approx(cap.y_bar + r2.mean(), rel=1e-12)
+        sigma = cap.sigma_hat_r2
+        assert cap.cpk_upper == pytest.approx((242 - cap.potential_center) / (3 * sigma), rel=1e-12)
+        assert cap.cpk_lower == pytest.approx((cap.potential_center - 232) / (3 * sigma), rel=1e-12)
+
+    def test_potential_chart_centre_line_at_potential_center(self):
+        df = pd.read_csv('validation/PBTESTDATABASE_T100.csv', na_values=['*'])
+        study = pb.formulate(
+            df, response='PM SDS 2', factors=['FACTOR 1', 'FACTOR 2'], time='PRODUCTION TIME', precision=12
+        )
+        cap = study.capability(lsl=232, usl=242)
+        fig = cap.plot(view='potential')
+        xs = [s.x0 for s in (fig.layout.shapes or []) if s.type == 'line' and s.x0 == s.x1]
+        assert any(x == pytest.approx(cap.potential_center) for x in xs)
