@@ -139,6 +139,12 @@ Residual values `'R1'`–`'R5'` are stored on the study at `formulate()` time.
 asked for it. Not every (chart, residual) pair is valid — `study.residual_charts`
 lists the valid ones, and e.g. `execute(chart='S', value='R1')` raises.
 
+When a layout with a one-observation subgroup leaves the R2 scale factor c(K, M)
+undefined (fewer than 2 process design conditions, or M < K + 2 observations),
+`formulate()` emits a `ProcessBehaviorWarning`, only R1 is offered, and
+`execute()` with `value='R2'`–`'R6'` (or a recentered form) raises
+`ChartNotAvailableError` with the reason; `why_not()` gives the same reason.
+
 ### Study.why_not()
 
 ```python
@@ -376,11 +382,19 @@ compatibility first with `study.supports_calibration(...)`.
 ### CapabilityResult
 
 From `study.capability()`. Fields include `pp`, `ppk` (with `ppk_lower`/`ppk_upper`),
-`cp`, `cpk` (with bounds), `sigma_hat`, `sigma_hat_r2`, `y_bar`, `s`, `n`,
-`z_lower`/`z_upper`, out-of-spec counts and percentages
+`cp`, `cpk` (with bounds), `sigma_hat`, `sigma_hat_r2`, `potential_center`, `y_bar`,
+`s`, `n`, `z_lower`/`z_upper`, out-of-spec counts and percentages
 (`n_below_lsl`, `n_above_usl`, `n_outside`, `pct_below_lsl`, `pct_above_usl`,
-`pct_outside`), potential-performance counterparts, `stability_warning`, and the
-capability `window` when one was requested.
+`pct_outside`), potential-performance counterparts, `potential_unavailable_reason`,
+`stability_warning`, and the capability `window` when one was requested.
+
+- `sigma_hat_r2` — S<sub>R2</sub> / c4(N<sub>R2</sub>), the potential σ̂ from R2
+  (10-1 manual Eq 16-10).
+- `potential_center` — the mean of the potential values ȳ + R2, i.e. ȳ + mean(R2).
+  Potential CPL/CPU are measured from it and the potential chart's center line sits
+  there; it equals `y_bar` in ADS 1. `None` when potential capability is unavailable.
+- `potential_unavailable_reason` — why the potential indices are `None` (for example,
+  no VAS residuals, or R2 unavailable for the layout).
 
 ```python
 cap.as_dict(round_to=None)   # -> dict
@@ -397,6 +411,13 @@ From `study.loss_function()`. Taguchi loss decomposition: `centering`,
 counterparts, `pdc_by_factor`, and the `target` used (`target_is_default` says
 whether it was derived).
 
+`unexplained` is the average cell variance in ADS 1 (10-1 manual Eq 15-16) and the
+sample variance of R2 in ADS 2/3 (Eq 15-17). `interaction` is the average squared
+interaction effect in ADS 1; in ADS 2/3 it is what the other parts leave of
+(Ȳ − T)² + S², set to 0 if negative (Eqs 15-18..15-20), so there `total` equals
+(Ȳ − T)² + S² unless the interaction was set to 0. `loss_function()` raises
+`ValidationError` when R2 is unavailable for the layout.
+
 ```python
 loss.as_dict(round_to=None)
 loss.plot(*, structured=False, orientation='vertical', theme=None,
@@ -406,7 +427,9 @@ loss.plot(*, structured=False, orientation='vertical', theme=None,
 ### MaximumInformationResult
 
 From `study.maximum_information()`. Fields: `n`, `r2_mean`, `r2_mR`,
-`sigma_hat`, `upl`, `lpl`, `n_signals`.
+`sigma_hat`, `upl`, `lpl`, `n_signals`. An X chart of R2: limits
+`r2_mean ± (3/1.128)·r2_mR`, `sigma_hat = r2_mR / 1.128`. Raises
+`ValidationError` when R2 is unavailable for the layout.
 
 ```python
 mi.as_dict(round_to=None)
@@ -556,6 +579,13 @@ b3(n, sigma_multiplier=3)    # S-chart lower-limit factor
 b4(n, sigma_multiplier=3)    # S-chart upper-limit factor
 VALID_BASE_CHARTS            # {'Histogram', 'Xbar', 'S', 'X', 'mR'}
 ```
+
+`c4` unbiases σ̂ for capability (S / c4(N), and S<sub>R2</sub> / c4(N<sub>R2</sub>) for the
+potential σ̂). It is not applied in the loss function. The R2 scale factor is not one of
+these constants: it is computed from the layout by
+`processbehavior.residual_calculator.r2_scale_factor(n_conditions, n_observations)`,
+c(K, M) = sqrt((K − 1)/(2K) · (1 − K/(M − 1))), and is NaN where undefined
+(K < 2 or M < K + 2).
 
 ## Exceptions
 

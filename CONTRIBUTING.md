@@ -77,12 +77,12 @@ residuals (R1–R5), DS detection, limit calculations, or variance
 decomposition must keep the relevant Bishop-reference tests green:
 
 ```bash
-pytest tests/test_bishop_reference.py -v
+pytest tests/test_bishop_reference.py -v   # skips unless Bishop's residual workbooks are present
 ```
 
 There is also a full end-to-end check that compares every chart center, control
-limit, capability index and loss component against Bishop's published Minitab
-results — 280 assertions across ADS 1–3:
+limit, capability index and loss component against Bishop's VAS output (his run of
+3 October 2026, for the 10-1-2026 manual) — 254 assertions across ADS 1–3:
 
 ```bash
 python validation/e2e_bishop_report.py

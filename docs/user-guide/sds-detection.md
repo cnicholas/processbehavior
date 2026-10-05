@@ -47,7 +47,7 @@ Each of PDS, ODS, ADS reports a value on this scale.
 |-----|------|--------------------|-------------------|
 | 1 | Full Replication | All N_kt >= 2 | Xbar |
 | 2 | No Replication | All N_kt = 1 | X |
-| 3 | Partial Replication | Mix of N_kt = 1 and N_kt >= 2 | X |
+| 3 | Partial Replication | Mix of N_kt = 1 and N_kt >= 2 | Xbar |
 
 **Incomplete (has empty cells — applies to ODS only; collapses during tidying):**
 
@@ -257,10 +257,10 @@ The design report shows:
 ```
 
 **Capabilities**:
-- ⚠️ Variance estimated via 2-point moving average
-- ⚠️ R2 residuals approximate (using backward moving range)
+- ⚠️ No within-cell variance: R2 is the condition-and-period-adjusted series, differenced along the condition-then-time sequence and divided by twice the R2 scale factor (Eqs 14-4..14-8)
+- ⚠️ R2 needs at least 2 process design conditions (K) and M ≥ K + 2 observations; otherwise it is unavailable
 - ✅ Main effects analysis
-- ✅ Xbar-S analysis (with MR-based limits)
+- ✅ Xbar-S of the effect residuals (R4, R5), with limits from R2
 
 **Valid Charts**: Xbar, S, X
 
@@ -278,14 +278,14 @@ The design report shows:
 ```
 
 **Capabilities**:
-- ⚠️ R2 by the 2-point moving average over the full sequence (any singleton cell forces `ma2` for every observation)
+- ⚠️ R2 by the same scaled difference as DS 2, over every observation (any one-observation cell selects `ma2` for every observation)
 - ⚠️ VAS residuals available but interpretation requires care
-- ✅ Xbar-S analysis with R2-based limits
+- ✅ Xbar-S is the recommended chart (VAS's default for DS 3 and 6)
 
 **Valid Charts**: Histogram, Xbar, S, X, mR
 
 !!! note "Why DS 3 does not mix methods"
-    For R2 in DS 3 the library does not combine an exact estimate from the replicated cells with a moving-average estimate from the singletons. Bishop's moving-average residual (Eq 13.7–13.9) is defined over the whole ordered sequence, j = 2 … J, with no grouping by cell. Once any cell is a singleton, every observation gets R2 = (Y_j − Y_{j−1}) / 2 on the canonical sort, and only the first observation in the sequence has no value. The replicated cells' within-cell deviations are not used for R2. This is the same calculation as DS 2, and the ADS 3 reference assertions in the [validation page](../reference/validation.md) hold against it. The recommended chart is X rather than Xbar because subgroup means over mixed cell sizes are uneven to interpret, not because the variance estimate differs.
+    For R2 in DS 3 the library does not combine an exact estimate from the replicated cells with a separate estimate for the one-observation cells. Bishop's R2 for any layout with a one-observation cell (Eqs 14-9..14-13) is defined over the whole ordered sequence, with no grouping by cell: remove the process mean and the condition and period effects, difference what is left along the canonical condition-then-time sort, and divide by twice the R2 scale factor c(K, M). Only the first observation in the sequence has no value. The replicated cells' within-cell deviations are not used for R2. This is the same calculation as DS 2, and the ADS 3 reference assertions in the [validation page](../reference/validation.md) hold against it. The recommended chart is Xbar (with S), VAS's default for DS 3 and 6. Every subgroup mean, one-observation subgroups included, counts once toward the Xbar center line (per stratum too); one-observation subgroups have no within-subgroup spread, so they do not enter the limits.
 
 ## DS 4: Incomplete, No Singletons
 
@@ -373,13 +373,20 @@ The **Analytical Design State** determines three key aspects of the analysis:
 
 ### 1. Variance Estimation (R2 Method)
 
-The R2 method is determined by the tidy data structure (ADS), not the raw DS:
+The R2 method is determined by the tidy data structure (ADS), not the raw DS. Equation numbers refer to Bishop's VAS documentation manual dated 10-1-2026.
 
 | ADS | R2 Method | Description |
 |-----|-----------|-------------|
-| 1 | exact | Within-cell standard deviation (`R2 = Y - Ȳ_kt`) |
-| 2 | ma2 | 2-point moving average for unreplicated designs |
-| 3 | ma2 | Any singleton cell: moving average over the full sequence (same as DS 2) |
+| 1 | exact | Within-cell deviation (`R2 = Y - Ȳ_kt`, Eq 14-3) |
+| 2 | ma2 | `Z = Y - Ȳ_k - Ȳ_t + Ȳ`, differenced along the condition-then-time sequence and divided by twice the R2 scale factor c(K, M) (Eqs 14-4..14-8) |
+| 3 | ma2 | Any one-observation cell: the same calculation over every observation (Eqs 14-9..14-13) |
+
+The token `ma2` names Bishop's size-2 moving average of Z; R2 is Z minus that average,
+divided by the R2 scale factor. The factor is computed from the layout, with K the number of
+process design conditions present and M the number of observations. It is undefined when
+K < 2 or M < K + 2, and R2 (with R3–R6, the loss function, maximum information and potential
+capability) is then unavailable, with the reason given by `formulate()`, `execute()` and
+`why_not()`.
 
 ### 2. Available Charts
 
@@ -388,8 +395,8 @@ The R2 method is determined by the tidy data structure (ADS), not the raw DS:
 | DS | Xbar-S | Stratified X |
 |-----|--------|----------------|
 | 1 | ✅ | ✅ |
-| 2 | ✅ (MR-based limits) | ✅ |
-| 3 | ✅ (R2-based limits) | ✅ |
+| 2 | ✅ (effect residuals; limits from R2) | ✅ |
+| 3 | ✅ (recommended) | ✅ |
 | 4 | ❌ | ✅ |
 | 5 | ❌ | ✅ |
 | 6 | ❌ | ✅ |
@@ -413,10 +420,9 @@ The available chart types for each residual depend on the **rational subgrouping
 
 This enables Xbar/S analysis for R4 and R5 even when individual cells have n=1, because the aggregated subgroups have larger sample sizes.
 
-**Note on R2 calculation**: R2 adapts to your sampling structure:
-- **DS 1**: Within-cell deviation (`R2 = Y - Ȳ_kt`)
-- **DS 2, 5**: Moving average method (`R2 = Y - MA2`) for unreplicated/sparse designs
-- **DS 3, 4, 6**: Within-cell deviation (R2=0 for cells with n=1)
+**Note on R2 calculation**: R2 adapts to your sampling structure (see the R2 method table above):
+- **DS 1, 4**: Within-cell deviation (`R2 = Y - Ȳ_kt`)
+- **DS 2, 3, 5, 6**: Scaled difference of the condition-and-period-adjusted series (`ma2`), over every observation
 
 ### 3. Signal Detection Rules
 
@@ -485,11 +491,11 @@ print(cell_counts['n'].value_counts())
 | If You Have... | ODS | ADS (after cleansing) | Best Approach |
 |----------------|-----|-----------------------|---------------|
 | Full replication (n>=2 per cell) | 1 | 1 | Xbar with full VAS |
-| One observation per cell | 2 | 2 | X with MA2-based R2 |
-| Mixed replication | 3 | 3 | X with MA2 R2 |
+| One observation per cell | 2 | 2 | X; R2 by scaled difference |
+| Mixed replication | 3 | 3 | Xbar; R2 by scaled difference |
 | Incomplete grid, all observed replicated | 4 | 1 | Xbar with full VAS |
-| Incomplete grid, all observed n=1 | 5 | 2 | X with MA2-based R2 |
-| Incomplete grid, mixed observed | 6 | 3 | X with MA2 R2 |
+| Incomplete grid, all observed n=1 | 5 | 2 | X; R2 by scaled difference |
+| Incomplete grid, mixed observed | 6 | 3 | Xbar; R2 by scaled difference |
 
 ## Next Steps
 

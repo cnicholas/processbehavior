@@ -84,7 +84,7 @@ Wheeler identifies six design states that determine valid analysis approaches.
 
 **ProcessBehavior Detection**: All cell counts == 1
 
-**Capabilities**: MR-based variance estimation, approximate VAS
+**Capabilities**: VAS residuals with R2 estimated without replication: the condition-and-period-adjusted series, differenced and scaled by the R2 scale factor
 
 ---
 
@@ -94,7 +94,7 @@ Wheeler identifies six design states that determine valid analysis approaches.
 
 **ProcessBehavior Detection**: Some cells with n=1, others with n>=2
 
-**Capabilities**: R2 by moving average over the full sequence (mixed cell sizes)
+**Capabilities**: R2 by the same scaled difference as DS 2, over every observation (mixed cell sizes); Xbar/S is the default chart
 
 ---
 
@@ -124,7 +124,7 @@ Wheeler identifies six design states that determine valid analysis approaches.
 
 ## Variance Analysis System (VAS)
 
-Dr. Thomas A. Bishop's framework for decomposing variation into meaningful components. VAS extends Wheeler's process behavior chart methodology with a hierarchical residual decomposition (R1-R5) that isolates within-cell, interaction, time, and factor effects.
+Dr. Thomas A. Bishop's framework for decomposing variation into meaningful components. VAS extends Wheeler's process behavior chart methodology with a hierarchical residual decomposition (R1-R5) that isolates the unexplained noise and the interaction, time, and factor effects.
 
 ### R1: Total Deviation
 
@@ -134,11 +134,13 @@ Dr. Thomas A. Bishop's framework for decomposing variation into meaningful compo
 
 ---
 
-### R2: Within-Cell Residual
+### R2: Unexplained Residual
 
 **Formula (DS 1)**: R2 = Y - Y̅<sub>kt</sub>
 
-**Meaning**: Variation within subgroups, the "unexplained" portion.
+**Formula (DS 2, 3)**: Z = Y - Y̅<sub>k</sub> - Y̅<sub>t</sub> + Y̅, differenced along the condition-then-time sequence and divided by twice the R2 scale factor c(K, M) (see [VAS Residuals](../user-guide/residuals.md#r2-unexplained-residuals))
+
+**Meaning**: The "unexplained" portion: variation within subgroups in DS 1, and the noise left after the mean, condition and period effects are removed in DS 2 and 3.
 
 **Wheeler's Insight**: This represents measurement error and short-term variation.
 
@@ -146,7 +148,7 @@ Dr. Thomas A. Bishop's framework for decomposing variation into meaningful compo
 
 ### R3: Interaction Residual
 
-**Formula**: R3 = Y - Y̅<sub>k</sub> - Y̅<sub>t</sub> + Y̅
+**Formula**: R3 = (Y̅<sub>kt</sub> - Y̅<sub>k</sub> - Y̅<sub>t</sub> + Y̅) + R2, which is Y - Y̅<sub>k</sub> - Y̅<sub>t</sub> + Y̅ in DS 1
 
 **Meaning**: How factor effects change over time.
 
@@ -158,7 +160,7 @@ Dr. Thomas A. Bishop's framework for decomposing variation into meaningful compo
 
 **Formula**: R4 = Y̅<sub>t</sub> - Y̅ + R2
 
-**Meaning**: Time-related patterns combined with within-cell variation.
+**Meaning**: Time-related patterns combined with the unexplained noise (R2).
 
 **Wheeler's Insight**: Chart R4 to detect trends, shifts, and cycles.
 
@@ -168,7 +170,7 @@ Dr. Thomas A. Bishop's framework for decomposing variation into meaningful compo
 
 **Formula**: R5 = Y̅<sub>k</sub> - Y̅ + R2
 
-**Meaning**: Factor differences combined with within-cell variation.
+**Meaning**: Factor differences combined with the unexplained noise (R2).
 
 **Wheeler's Insight**: Chart R5 to identify true factor differences.
 

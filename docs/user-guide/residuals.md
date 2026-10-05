@@ -1,14 +1,14 @@
 # VAS Residuals
 
-Dr. Thomas A. Bishop's **Variance Analysis System (VAS)** decomposes total variation into meaningful components. ProcessBehavior calculates six residuals (R1-R6) that help answer different analytical questions.
+Dr. Thomas A. Bishop's **Variance Analysis System (VAS)** decomposes total variation into meaningful components. ProcessBehavior calculates six residuals (R1-R6) that help answer different analytical questions. Equation numbers on this page refer to Bishop's VAS documentation manual dated 10-1-2026.
 
 ## The Residual Hierarchy
 
 | Residual | Name | Formula | Questions Answered |
 |----------|------|---------|-------------------|
 | **R1** | Response Centered at 0 | Y - Y̅ | How far is each point from the overall mean? |
-| **R2** | Within-cell | Y - Y̅<sub>kt</sub> | Is measurement variation stable? |
-| **R3** | Interaction | Y - Y̅<sub>k</sub> - Y̅<sub>t</sub> + Y̅ | Do factor effects change over time? |
+| **R2** | Unexplained (noise) | Y - Y̅<sub>kt</sub> (DS 1); scaled difference of the effect-adjusted series (DS 2, 3) — see [R2](#r2-unexplained-residuals) | Is measurement variation stable? |
+| **R3** | Interaction | (Y̅<sub>kt</sub> - Y̅<sub>k</sub> - Y̅<sub>t</sub> + Y̅) + R2 | Do factor effects change over time? |
 | **R4** | Time Main Effect | Y̅<sub>t</sub> - Y̅ + R2 | Are there time trends or shifts? |
 | **R5** | Design Condition Main Effect | Y̅<sub>k</sub> - Y̅ + R2 | Do process design conditions differ from each other? |
 | **R6** | Design Factor Main Effect | α<sub>i</sub> + R2 | Does a specific design factor have a significant effect? |
@@ -67,28 +67,48 @@ result = study.execute(chart='Xbar', value='R1')
 **Interpretation**:
 - The centre line sits at 0 by construction
 - The spread is the total variation in the original data, read as ± about zero
-- Limits use the within-cell noise floor, as all residual charts do, so points falling
+- Limits use the noise floor (R2), as all residual charts do, so points falling
   outside them mark variation the decomposition will attribute to time, condition, or
   interaction
 
 **Availability**: Bishop notes R1 can be calculated for data produced by all six sampling
 design states.
 
-## R2: Within-Cell Residuals
+## R2: Unexplained Residuals
 
-**Purpose**: Assess measurement/within-subgroup variation.
+**Purpose**: Assess the unexplained (noise) variation: what is left once the process mean,
+the condition and period effects and their interaction are accounted for (the interaction
+exactly in DS 1, approximately in DS 2 and 3, where differencing the adjusted series removes
+interaction that changes smoothly over time).
 
 **Formula by DS**:
-- **DS 1 (Full Replication)**: R2 = Y - Y̅<sub>kt</sub> (exact within-cell deviation)
-- **DS 2 (No Replication)**: R2 = (Y<sub>j</sub> - Y<sub>j-1</sub>) / 2 (backward 2-point moving average)
-- **DS 3 (Partial)**: same moving average as DS 2, over the full sequence
+- **DS 1 (Full Replication)**: R2 = Y - Y̅<sub>kt</sub>, the deviation from the cell mean (Eq 14-3)
+- **DS 2 (No Replication)** and **DS 3 (Partial)**: with any one-observation subgroup there is
+  no within-cell deviation to use, so R2 is built from the whole series in three steps
+  (Eqs 14-4..14-8 for DS 2, 14-9..14-13 for DS 3, 5 and 6):
+  1. Remove the process mean and the condition and period effects:
+     Z = Y - Y̅<sub>k</sub> - Y̅<sub>t</sub> + Y̅ (Y̅<sub>k</sub>, Y̅<sub>t</sub> and Y̅ are
+     unweighted means of cell means).
+  2. Difference Z along the condition-then-time sequence (the canonical lane-major order,
+     running across condition boundaries with no grouping). Only the first observation has
+     no value.
+  3. Divide by twice the **R2 scale factor** c(K, M), computed from the layout:
+     K is the number of process design conditions present and M the number of observations
+     (M = KT in DS 2).
+
+Because Z carries no condition or period effect, the step from one condition's last period
+to the next condition's first period no longer carries the level difference between
+conditions, and a trend common to all conditions is not read as noise. The scale factor puts
+R2 on the noise (sigma) scale, so the standard deviation of R2 estimates sigma directly.
+Internally this method is named `ma2`: Bishop's step is a size-2 moving average of Z, and
+R2<sub>j</sub> is Z<sub>j</sub> minus that average, divided by c.
 
 **Chart**: S chart with `value='R2'` (for replicated data) or X
 
 ```python
-# Chart the within-cell variation
+# Chart the unexplained (noise) variation
 result = study.execute(chart='S', value='R2')
-fig = result.plot(show_zones=True, title='Within-Cell Variation')
+fig = result.plot(show_zones=True, title='Unexplained Variation (R2)')
 ```
 
 **Interpretation**:
@@ -100,9 +120,10 @@ fig = result.plot(show_zones=True, title='Within-Cell Variation')
 
 **Purpose**: Detect factor × time interactions.
 
-**Formula**: R3 = Y - Y̅<sub>k</sub> - Y̅<sub>t</sub> + Y̅
+**Formula**: R3 = (Y̅<sub>kt</sub> - Y̅<sub>k</sub> - Y̅<sub>t</sub> + Y̅) + R2 (Eq 14-14)
 
-This removes both main effects, leaving only the interaction.
+This removes both main effects, leaving the interaction plus the unexplained noise. In DS 1,
+where R2 = Y - Y̅<sub>kt</sub>, it reduces to Y - Y̅<sub>k</sub> - Y̅<sub>t</sub> + Y̅.
 
 **Chart**: X with `value='R3'`
 
@@ -122,7 +143,7 @@ fig = result.plot(show_zones=True, title='Factor × Time Interactions')
 
 **Formula**: R4 = Y̅<sub>t</sub> - Y̅ + R2
 
-This combines the time effect with within-cell variation.
+This combines the time effect with the unexplained noise (R2).
 
 **Chart**: X with `value='R4'` (stratified by factor), or Xbar with `value='R4'` (aggregated across factors).
 
@@ -136,7 +157,7 @@ result = study.execute(chart='Xbar', value='R4')
 fig = result.plot(show_zones=True, title='Time Effects (Xbar)')
 ```
 
-When charting R4 on Xbar, limits use R2's Sbar (within-cell noise), not R4's own within-group std. See [Chart Types: Xbar limits note](chart-types.md#the-xbar-chart) for details.
+When charting R4 on Xbar, limits use R2's Sbar (the noise), not R4's own within-group std. See [Chart Types: Xbar limits note](chart-types.md#the-xbar-chart) for details.
 
 **Interpretation**:
 - Signals in R4 → Process is changing over time
@@ -150,7 +171,7 @@ When charting R4 on Xbar, limits use R2's Sbar (within-cell noise), not R4's own
 
 **Formula**: R5 = Y̅<sub>k</sub> - Y̅ + R2
 
-This combines the factor effect with within-cell variation.
+This combines the factor effect with the unexplained noise (R2).
 
 **Chart**: X with `value='R5'` (stratified by factor), or Xbar with `value='R5'` (aggregated by factor).
 
@@ -164,7 +185,7 @@ result = study.execute(chart='Xbar', value='R5')
 fig = result.plot(show_zones=True, title='Design Condition Main Effects (Xbar)')
 ```
 
-When charting R5 on Xbar, limits use R2's Sbar (within-cell noise), not R5's own within-group std. This prevents between-cell variance from collapsed dimensions from inflating limits. See [Chart Types: Xbar limits note](chart-types.md#the-xbar-chart) for details.
+When charting R5 on Xbar, limits use R2's Sbar (the noise), not R5's own within-group std. This prevents between-cell variance from collapsed dimensions from inflating limits. See [Chart Types: Xbar limits note](chart-types.md#the-xbar-chart) for details.
 
 **Interpretation**:
 - Signals in R5 → Factors truly differ from each other
@@ -173,7 +194,7 @@ When charting R5 on Xbar, limits use R2's Sbar (within-cell noise), not R5's own
 
 ## R6: Design Factor Main Effect Residuals
 
-**Purpose**: Isolate a specific design factor's main effect combined with within-cell noise.
+**Purpose**: Isolate a specific design factor's main effect combined with the unexplained noise (R2).
 
 **Formula**: R6 = α<sub>i</sub> + R2
 
@@ -208,7 +229,7 @@ When you chart an effect-carrying residual (R3, R4, or R5) on Xbar or S, the sys
 
 ### Why R2 sets the limits
 
-R3, R4, and R5 contain structural effects by design — that's what makes them useful. But if R4's own standard deviation set the Xbar limits, the time effect would widen them, defeating the purpose of looking for signals *beyond* the expected variation. By substituting R2 (pure within-cell noise), the limits reflect only unexplained variation, making structural effects visible as signals.
+R3, R4, and R5 contain structural effects by design — that's what makes them useful. But if R4's own standard deviation set the Xbar limits, the time effect would widen them, defeating the purpose of looking for signals *beyond* the expected variation. By substituting R2 (the unexplained noise: within-cell in DS 1, the scaled difference in DS 2 and 3), the limits reflect only unexplained variation, making structural effects visible as signals.
 
 ### Chart-by-chart behavior
 
@@ -220,11 +241,11 @@ R3, R4, and R5 contain structural effects by design — that's what makes them u
 
 ### The S chart surprise
 
-This is the most counterintuitive behavior: `execute(chart='S', value='R3')` plots R2's within-group standard deviation, not R3's. The S chart always answers "is within-cell noise stable?" regardless of which residual you request. This is correct — the S chart's job is to verify that the dispersion basis (R2) is stable before you interpret the Xbar chart above it.
+This is the most counterintuitive behavior: `execute(chart='S', value='R3')` plots R2's within-group standard deviation, not R3's. The S chart always answers "is the noise stable?" regardless of which residual you request. This is correct — the S chart's job is to verify that the dispersion basis (R2) is stable before you interpret the Xbar chart above it.
 
 ### When does this matter?
 
-The R2 substitution only matters when `by` collapses factors. At the full RSG level (all factors in `by`), the residual's within-group standard deviation equals R2's, so there is no visible difference. When you collapse — e.g., `by=['factor1']` in a two-factor study — R2 correctly isolates within-cell noise while the residual's own std would include between-cell variance from the collapsed dimension.
+The R2 substitution only matters when `by` collapses factors. At the full RSG level (all factors in `by`), the residual's within-group standard deviation equals R2's, so there is no visible difference. When you collapse — e.g., `by=['factor1']` in a two-factor study — R2 still measures only the noise, while the residual's own std would include between-cell variance from the collapsed dimension.
 
 For X charts, there is no substitution. The moving range is always computed from the requested residual's own values.
 
@@ -235,7 +256,7 @@ By default, residual charts are centered at zero. Use `recentered=True` to show 
 ```python
 # Zero-centered (default)
 result = study.execute(chart='X', by=['lane'], value='R4')
-# Centerline at 0, values show deviation from time mean
+# Centerline at 0, values show the time effect plus R2
 
 # Re-centered on original scale
 result = study.execute(chart='X', by=['lane'], value='R4', recentered=True)
@@ -243,32 +264,46 @@ result = study.execute(chart='X', by=['lane'], value='R4', recentered=True)
 ```
 
 Re-centering formulas:
-- RCR3 = R3 + (Y̅<sub>k</sub> + Y̅<sub>t</sub> - Y̅) — adds back factor and time main effects
-- RCR4 = R4 + Y̅<sub>t</sub>
-- RCR5 = R5 + Y̅<sub>k</sub>
+- RCR = R + Y̅ for R1, R3, R4, R5 and R6 (Eq 14-26) — each adds back the grand mean only, so a
+  re-centered chart is the zero-centered chart shifted onto the measurement scale
+- RCR2 = Y̅<sub>kt</sub> + R2 — not part of Eq 14-26; in DS 1 this reconstructs Y
 
-**Note on recentered moving ranges**: For recentered residuals on X charts, the moving range is computed from the non-recentered version (e.g., RCR3 uses MR from R3). This avoids structural jumps between factor levels inflating the moving ranges.
+So an effect chart of RCR5 by condition, RCR4 by period, or RCR3 by subgroup plots that
+effect plus R2 on the measurement scale. Chart period effects from R4: an Xbar of RCR3 by
+period is flat, because the interaction sums to zero over conditions. Re-centering shifts the
+chart by Y̅; the limit width still comes from R2 (Xbar/S) or the residual's own moving
+ranges (X).
+
+**Note on recentered moving ranges**: For recentered residuals on X charts, the moving range is computed from the non-recentered version (e.g., RCR3 uses MR from R3). For RCR1 and RCR3–RCR6 this changes nothing, since re-centering adds a constant; for RCR2 it keeps the steps between cell means out of the moving ranges.
 
 ## Residual Availability by DS
 
 | DS | R1 | R2 | R3 | R4 | R5 | R6 |
 |-----|----|----|----|----|-----|-----|
 | 1 (Full Replication) | ✅ | ✅ Within-cell | ✅ | ✅ | ✅ | ✅ |
-| 2 (No Replication) | ✅ | ✅ MR-based | ✅ | ✅ | ✅ | ✅ |
-| 3 (Partial) | ✅ | ✅ MR-based | ✅ | ✅ | ✅ | ✅ |
+| 2 (No Replication) | ✅ | ✅ Scaled difference | ✅ | ✅ | ✅ | ✅ |
+| 3 (Partial) | ✅ | ✅ Scaled difference | ✅ | ✅ | ✅ | ✅ |
 | 4 (Incomplete, No Singletons) → ADS 1 | ✅ | ✅ Within-cell | ✅ | ✅ | ✅ | ✅ |
-| 5 (Incomplete, No Replication) → ADS 2 | ✅ | ✅ MR-based | ✅ | ✅ | ✅ | ✅ |
-| 6 (Incomplete, With Singletons) → ADS 3 | ✅ | ✅ MR-based | ✅ | ✅ | ✅ | ✅ |
+| 5 (Incomplete, No Replication) → ADS 2 | ✅ | ✅ Scaled difference | ✅ | ✅ | ✅ | ✅ |
+| 6 (Incomplete, With Singletons) → ADS 3 | ✅ | ✅ Scaled difference | ✅ | ✅ | ✅ | ✅ |
 
 R6 requires factors (it is computed from R5 and R2 at `execute()` time).
 
 **Note on R2 calculation**: R2 is the one residual whose formula depends on structure, and the
 choice is made on the analytical design state (ADS), after cleaning:
-- **ADS 1** (every cell n ≥ 2): within-cell deviation, `R2 = Y - Ȳ_kt` (Eq 59)
-- **ADS 2 and 3** (any singleton cell): 2-point moving average over the full canonical sequence,
-  `R2 = (Y_j - Y_{j-1}) / 2` (Eq 13.7–13.9), for every observation; no per-cell mixing
+- **ADS 1** (every cell n ≥ 2): within-cell deviation, `R2 = Y - Ȳ_kt` (Eq 14-3)
+- **ADS 2 and 3** (any one-observation cell): the condition-and-period-adjusted series Z,
+  differenced along the full canonical sequence and divided by twice the R2 scale factor,
+  for every observation (Eqs 14-4..14-13); no per-cell mixing. See [R2](#r2-unexplained-residuals).
 
 DS 4, 5 and 6 are sampling states; they collapse to ADS 1, 2 and 3 once empty cells are dropped.
+
+**When R2 is unavailable**: in ADS 2 and 3 the R2 scale factor is undefined when there are
+fewer than 2 process design conditions or fewer than K + 2 observations (M < K + 2). R2 then
+has no value: `formulate()` warns, R2–R6 (and their re-centered forms) are not offered, and
+`execute()` and `why_not()` give the reason. `loss_function()` and `maximum_information()`
+raise `ValidationError`, and `capability()` reports potential capability as unavailable with
+the same reason. R1 is still available.
 
 ## Analysis Workflow with Residuals
 
@@ -369,49 +404,57 @@ Sum of R1 across all observations = 0
 R2 = Y - Ȳ_kt
 ```
 
-Where Y̅<sub>kt</sub> is the mean of observations in cell (k, t).
+Where Y̅<sub>kt</sub> is the mean of observations in cell (k, t) (Eq 14-3).
 
-### R2: Within-Cell (DS 2, Backward Moving Average)
-
-```
-R2_j = (Y_j - Y_{j-1}) / 2
-```
-
-For the first observation, R2 = 0 or uses forward difference.
-
-### R3: Interaction
+### R2: Scaled Difference (DS 2 and 3, any one-observation cell)
 
 ```
-R3 = Y - Ȳ_k - Ȳ_t + Ȳ
-   = R1 - (Ȳ_k - Ȳ) - (Ȳ_t - Ȳ)
-   = R1 - FactorEffect - TimeEffect
+Z    = Y - Ȳ_k - Ȳ_t + Ȳ
+R2_j = (Z_j - Z_{j-1}) / (2 · c(K, M))      j = 2 … M, condition-then-time order
+c(K, M) = sqrt( (K - 1) / (2K) · (1 - K / (M - 1)) )
 ```
+
+K is the number of process design conditions present and M the number of observations
+(M = KT in DS 2); c(K, M) is the R2 scale factor (Eqs 14-4..14-8 for DS 2, 14-9..14-13 for
+DS 3, 5 and 6). The first observation in the sequence has no value (NaN). The scale factor
+is undefined, and R2 unavailable, when K < 2 or M < K + 2.
+
+### R3: Interaction + Unexplained
+
+```
+R3 = (Ȳ_kt - Ȳ_k - Ȳ_t + Ȳ) + R2
+   = InteractionEffect + R2
+```
+
+(Eq 14-14.) In DS 1 this equals Y - Ȳ_k - Ȳ_t + Ȳ, since Y = Ȳ_kt + R2 there.
 
 ### R4: Time Main Effect + Unexplained
 
 ```
 R4 = Ȳ_t - Ȳ + R2
-   = TimeEffect + WithinVariation
+   = TimeEffect + R2
 ```
 
 ### R5: Design Condition Main Effect + Unexplained
 
 ```
 R5 = Ȳ_k - Ȳ + R2
-   = FactorEffect + WithinVariation
+   = FactorEffect + R2
 ```
-
-## Next Steps
 
 ## Maximum Information Analysis
 
 The **Maximum Information** analysis examines the noise floor of your process by analyzing R2 residuals via an X chart and percentage histogram. It answers: *What variation is inherent to the system, and is it predictable?*
 
+The X chart of R2 has limits mean ± (3/1.128)·mR̄ and σ̂ = mR̄/1.128. The values are whatever R2
+is at your design state (the scaled difference in ADS 2 and 3), and `maximum_information()`
+raises `ValidationError` when R2 is unavailable.
+
 ```python
 mi = study.maximum_information()
 
 # Key statistics
-print(f"Noise floor sigma: {mi.sigma_hat}")   # Unbiased sigma from R2
+print(f"Noise floor sigma: {mi.sigma_hat}")   # mR-bar / 1.128 of R2
 print(f"Natural process limits: [{mi.lpl}, {mi.upl}]")
 print(f"Signals in noise: {mi.n_signals}")     # Points beyond limits
 
@@ -423,7 +466,7 @@ mi.plot(view='histogram', bins=15)  # Percentage histogram only
 
 **Interpretation**:
 - **Stable R2 on X chart** (no signals) → The noise floor is predictable. Any variation beyond this level is attributable to factors, time, or interactions.
-- **Signals in R2** → Special causes exist *within* subgroups. Investigate measurement system or within-cell process variation before interpreting R3-R5.
+- **Signals in R2** → Special causes exist in the noise itself (*within* subgroups, in DS 1). Investigate the measurement system or the short-term process variation before interpreting R3-R5.
 - **σ̂ (sigma_hat)** → The irreducible noise floor. This is the best the process can achieve even if all assignable causes are eliminated.
 
 ## Next Steps

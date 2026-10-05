@@ -19,7 +19,7 @@ Use the `value` parameter to chart residuals instead of the response:
 
 | Residual | Chart | Purpose |
 |----------|-------|---------|
-| **R2** | S or X | Check within-group variation stability |
+| **R2** | S or X | Check that the unexplained noise is stable |
 | **R3** | Xbar, S, or X | Detect factor × time interactions |
 | **R4** | Xbar, S, or X | Detect time effects |
 | **R5** | Xbar, S, or X | Detect factor effects |
@@ -140,7 +140,7 @@ print(f"Valid charts: {study.valid_charts}")
 print(f"Available residuals: {study.residuals}")
 ```
 
-**Note on R2**: DS 2 and 5 use the moving average method; DS 1, 3, 4, 6 use within-cell deviation (R2 = Y - Ȳ_kt). See [VAS Residuals](residuals.md) for details.
+**Note on R2**: DS 1 and 4 (every cell replicated) use the within-cell deviation, R2 = Y - Ȳ_kt. DS 2, 3, 5 and 6 (any one-observation cell) remove the condition and period effects, difference what is left along the condition-then-time sequence, and divide by twice the R2 scale factor. See [VAS Residuals](residuals.md) for details.
 
 ## Companion Charts
 
@@ -208,12 +208,12 @@ result.interactions         # Dict of interaction terms
 
 Plots the **mean** of each subgroup (factor level at each time point).
 
-- **Centerline**: Grand mean (Y̅)
-- **Control Limits**: Based on within-subgroup variation
+- **Centerline**: Grand mean (Y̅), the unweighted mean of the cell means, each cell counted once. In DS 3, one-observation subgroups count toward it (per-stratum center lines included)
+- **Control Limits**: Based on within-subgroup variation; one-observation subgroups have none, so they do not enter the limits
 - **Interpretation**: Points beyond limits indicate subgroups with unusual means
 
 !!! note "Limits for effect-carrying residuals (R4/R5)"
-    When charting R4, R5, or their recentered variants (RCR4, RCR5) on Xbar, limits are based on **R2's within-group standard deviation** (Sbar), not the plotted residual's own standard deviation. This matters when `by` collapses factors — e.g., `by=['factor 1']` in a two-factor study. At collapsed groupings, R5's within-group std would include between-cell variance from the collapsed dimension, inflating limits. Using R2's Sbar isolates within-cell noise as the limit basis. At the full RSG level (all factors in `by`), R5's within-group std equals R2's, so there is no difference. This follows Dr. Tom Bishop's VAS methodology.
+    When charting R4, R5, or their recentered variants (RCR4, RCR5) on Xbar, limits are based on **R2's within-group standard deviation** (Sbar), not the plotted residual's own standard deviation. This matters when `by` collapses factors — e.g., `by=['factor 1']` in a two-factor study. At collapsed groupings, R5's within-group std would include between-cell variance from the collapsed dimension, inflating limits. Using R2's Sbar isolates the unexplained noise as the limit basis. At the full RSG level (all factors in `by`), R5's within-group std equals R2's, so there is no difference. This follows Dr. Tom Bishop's VAS methodology.
 
 ### The S Chart
 
@@ -226,7 +226,7 @@ Plots the **standard deviation** of each subgroup.
 !!! note "S chart with effect residuals (R3/R4/R5)"
     When charting an effect residual on S, the data points show R2's
     within-group standard deviation, not the requested residual's. The S chart always
-    measures within-cell noise stability. See [How Effect Residuals Are
+    measures the stability of the noise (R2). See [How Effect Residuals Are
     Charted](residuals.md#how-effect-residuals-are-charted).
 
 ### Reading Order
@@ -343,7 +343,7 @@ only the lane order, and reports which results move.
 |-------|-------|--------------------------------|
 | "These subgroups are not one process" | `chart='X', by=[]` | Yes. The signal count never reaches zero under any ordering tested. |
 | "This transition is a signal" | `chart='mR', by=[]` | No. Which transitions are flagged depends on which lanes are adjacent. |
-| "Subgroup *k* differs in level" | `chart='Xbar', by=['lane'], value='R5', recentered=True` | The points, yes: each is a subgroup mean. The limits, not entirely in DS 2 and 3: they are set from R2, which is built from the same lane-major sequence. In DS 1, R2 is within-cell and carries no order. |
+| "Subgroup *k* differs in level" | `chart='Xbar', by=['lane'], value='R5', recentered=True` | The points, yes: each is a subgroup mean. The limits, not entirely in DS 2 and 3: they are set from R2, which differences the condition-and-period-adjusted series along the same lane-major sequence. The level difference between lanes no longer enters R2, but which observations are paired still depends on lane order. In DS 1, R2 is within-cell and carries no order. |
 | "Subgroup *k* is stable on its own" | `phased=True`, or `by=['lane']` | Yes. Only that subgroup's own ranges enter. |
 
 So a boundary signal should be read as evidence along the path, and claims about the
@@ -365,9 +365,11 @@ result = study.execute(chart='X', by=['lane'], value='R4')
 result = study.execute(chart='X', by=['lane'], value='R4', recentered=True)
 ```
 
-Re-centering uses:
-- R4: RCR4 = R4 + Y̅_t (adds back time mean)
-- R5: RCR5 = R5 + Y̅_k (adds back factor mean)
+Re-centering adds back the grand mean, RCR = R + Y̅ (Bishop's 10-1 manual, Eq 14-26, for R1
+and R3–R6), so a re-centered chart plots the effect plus R2 on the measurement scale. The
+chart shifts by Y̅; the limit width is unchanged. RCR2 is the exception: Y̅_kt + R2. Chart
+period effects from R4; an Xbar of RCR3 by period is flat, because the interaction sums to
+zero over conditions.
 
 ## Decision Tree
 
@@ -378,9 +380,9 @@ Do you have factors?
 └── Yes → Do you have time?
     ├── No → Use Xbar to compare factors
     └── Yes → Do you have replication (n>=2 per cell)?
-        ├── All cells → DS 1: Full Xbar-S + VAS residuals
-        ├── Some cells → DS 3: Xbar-S with MA2-based limits + limited VAS
-        └── No cells → DS 2: Xbar-S with MR-based limits
+        ├── All cells → DS 1: Full Xbar-S + VAS residuals (R2 within-cell)
+        ├── Some cells → DS 3: Xbar-S (recommended) + VAS residuals (R2 by scaled difference)
+        └── No cells → DS 2: X (recommended) + VAS residuals (R2 by scaled difference)
 ```
 
 ## Summary

@@ -30,15 +30,17 @@ The **Design State** describes the structure of your data. ProcessBehavior autom
 |-----|------|------------|-------------------|
 | 1 | Full Replication | All N_kt >= 2 | Xbar |
 | 2 | No Replication | All N_kt = 1 | X |
-| 3 | Partial Replication | Mix of N_kt = 1 and N_kt >= 2 | X |
+| 3 | Partial Replication | Mix of N_kt = 1 and N_kt >= 2 | Xbar |
 
 **Incomplete (has empty cells):**
 
+The recommended chart follows the analytical state each one collapses to (4 → 1, 5 → 2, 6 → 3).
+
 | DS | Name | Cell Sizes | Recommended Chart |
 |-----|------|------------|-------------------|
-| 4 | Incomplete, No Singletons | Empty cells + all observed N_kt >= 2 | X |
+| 4 | Incomplete, No Singletons | Empty cells + all observed N_kt >= 2 | Xbar |
 | 5 | Incomplete, No Replication | Empty cells + all observed N_kt = 1 | X |
-| 6 | Incomplete, With Singletons | Empty cells + mixed N_kt | X |
+| 6 | Incomplete, With Singletons | Empty cells + mixed N_kt | Xbar |
 
 See [DS Definitions](../reference/sds_definitions.md) for the formal classification table per Dr. Thomas A. Bishop's VAS methodology.
 
@@ -46,7 +48,7 @@ See [DS Definitions](../reference/sds_definitions.md) for the formal classificat
 
 The DS determines:
 - Which chart types are valid
-- How within-group variance is estimated (R2 method: exact or ma2)
+- How the unexplained noise (R2) is estimated: `exact`, the within-cell deviation, when every cell is replicated; `ma2`, the condition-and-period-adjusted series differenced and divided by twice the R2 scale factor, when any cell has one observation
 - Where the sigma behind the limits comes from at the observed structure and series length.
   The design report states this as one line under `Structure` (`study.series_length`): with
   any singleton cell, `Sigma for X/mR rests on T − 1 moving ranges`; with every cell
@@ -128,19 +130,19 @@ study.ads_description         # e.g., "Full replication (all cells n>=2)"
 
 ## Bishop's Variance Analysis System (VAS)
 
-For replicated designs (DS 1-3), ProcessBehavior computes five residual decompositions:
+For designs with factors and time, ProcessBehavior computes five stored residuals:
 
 | Residual | Formula | Questions Answered |
 |----------|---------|-------------------|
 | **R1** | Y - Y&#x0304; | Total deviation from grand mean |
-| **R2** | Y - Y&#x0304;<sub>kt</sub> | Within-cell variation (unexplained) |
-| **R3** | Y - Y&#x0304;<sub>k</sub> - Y&#x0304;<sub>t</sub> + Y&#x0304; | Factor-time interaction |
+| **R2** | Y - Y&#x0304;<sub>kt</sub> (DS 1); scaled difference of the condition-and-period-adjusted series (DS 2, 3) | Unexplained variation (noise) |
+| **R3** | (Y&#x0304;<sub>kt</sub> - Y&#x0304;<sub>k</sub> - Y&#x0304;<sub>t</sub> + Y&#x0304;) + R2 | Factor-time interaction + unexplained |
 | **R4** | Y&#x0304;<sub>t</sub> - Y&#x0304; + R2 | Time effects + unexplained |
 | **R5** | Y&#x0304;<sub>k</sub> - Y&#x0304; + R2 | Factor effects + unexplained |
 
 ### Interpreting VAS Residuals
 
-- **R2 (Within-cell)**: Is measurement variation stable? Are there special causes within subgroups?
+- **R2 (Unexplained)**: Is measurement variation stable? Are there special causes in the noise?
 - **R3 (Interaction)**: Does the factor effect change over time?
 - **R4 (Time)**: Are there trends, shifts, or time-related patterns?
 - **R5 (Factor)**: Do factors differ significantly from each other?

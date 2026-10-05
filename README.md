@@ -148,15 +148,15 @@ for stratum in result.strata:
 
 ## Validation
 
-processbehavior's analytical outputs are continuously verified against Dr. Thomas A. Bishop's Minitab reference results. The validator at `validation/e2e_bishop_report.py` runs **280 numerical assertions** through the full formulate → execute → capability / loss / maximum-information pipeline:
+processbehavior's analytical outputs are continuously verified against Dr. Thomas A. Bishop's VAS (Minitab-based) reference results. The validator at `validation/e2e_bishop_report.py` runs **254 numerical assertions** through the full formulate → execute → capability / loss / maximum-information pipeline:
 
 | Analytical Design State | Datasets validated | Assertions | Status |
 |---|---|---|---|
 | ADS 1 (full replication) | `PM SDS 1` from `PBTESTDATABASE_T100.csv` | 102 | ✅ all pass |
-| ADS 2 (no replication) | `PM SDS 2` | 89 | ✅ all pass |
-| ADS 3 (partial replication) | `PM SDS 3` | 89 | ✅ all pass |
+| ADS 2 (no replication) | `PM SDS 2` | 103 | ✅ all pass |
+| ADS 3 (partial replication) | `PM SDS 3` | 49 | ✅ all pass |
 
-Reference data is Bishop's published Minitab golden output. The library matches every chart center, control limit, signal classification, capability index, and loss-function value to within the precision Bishop reports.
+Reference data is Bishop's VAS output for the 10-1-2026 manual (his run of 3 October 2026). The library matches every chart center, control limit, signal classification, capability index, and loss-function value that output prints, to within the precision Bishop reports. ADS 3 charts are Xbar/S with limits that vary by subgroup size; those limits are not printed on the reference slides, so ADS 3 is checked on centre lines until Bishop's numeric export is in hand.
 
 ODS 4–6 (incomplete-grid scenarios) are detected and routed correctly but their end-to-end Bishop-reference coverage is pending. The synthetic generators in `make_design(state=4|5|6)` produce data with the structural shape Bishop's Table 1 specifies; full numerical validation against Bishop's incomplete-grid Minitab output is on the roadmap (issue #109).
 

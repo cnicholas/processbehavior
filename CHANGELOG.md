@@ -7,6 +7,59 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+This release aligns the library with Bishop's VAS documentation manual dated 10-1-2026 and
+reproduces his VAS run of 3 October 2026 (PM SDS, PM INERT and Medicare decks). Equation
+numbers below are that manual's.
+
+### Changed
+- **R2 for designs with a one-observation subgroup (ADS 2 and 3) follows the 10-1 manual.**
+  The data are first stripped of the process mean and the condition and period effects
+  (Z = Y − Ȳ_k − Ȳ_t + Ȳ, Eq 14-4 / 14-9), Z is differenced along the condition-then-time
+  sequence, and the difference is divided by twice the R2 scale factor
+  c(K, M) = √((K − 1)/(2K) · (1 − K/(M − 1))), computed from the layout (Eqs 14-5..14-13).
+  Previously R2 was half the difference of consecutive raw values, so every step from one
+  condition's last period to the next condition's first carried the level difference between
+  them, a common trend was read as noise, and the result sat on a smaller scale than σ. R3–R6,
+  the effects, maximum information and potential capability follow. PM SDS 2 R2 chart limits
+  ±1.94 → ±2.76, PM SDS 3 ±2.47 → ±3.70, potential Cp on PM SDS 2 (specs 232/242)
+  2.51 → 1.78; on the Medicare ACO file the R2 σ falls from about 1,023 to 300 and the
+  organisation chart (recentred R5 by ACO) flags 19 of 24 organisations instead of 8. ADS 1
+  R2 (within-cell deviation, Eq 14-3) is unchanged. `calculate_r2` now dispatches on
+  `r2_method` and takes `n_conditions`; its `n_per_cell` argument is gone.
+- **Taguchi loss follows the 10-1 manual.** ADS 1 unexplained loss is the average cell
+  variance (1/KT)·ΣS²_kt, without dividing each S_kt by c4 (Eq 15-16). ADS 2/3 unexplained
+  loss is the sample variance of R2 (Eq 15-17; the 1/0.7 correction is gone), and the
+  interaction is what the other parts leave of the total loss (Ȳ − T)² + S², set to 0 when
+  negative (Eqs 15-18..15-20), so the parts add to the total. PM SDS 1 at target 237:
+  unexplained 23.0% → 20.9%, interaction 43.3% → 44.5%; PM SDS 2: interaction 42.5% → 25.6%,
+  unexplained 23.6% → 30.0%; pure noise (PM INERT) now shows 0% interaction in ADS 2/3.
+- **Re-centred residuals are the residual plus the grand mean (Eq 14-26).** RCR3, RCR4 and
+  RCR5 were "reconstructed Y" (each algebraically Ȳ_kt + R2), so a recentred interaction
+  chart plotted close to the raw cell means. They now plot the effect plus R2 on the
+  measurement scale, as VAS does; RCR2 is unchanged. Xbar means by condition (RCR5) or
+  period (RCR4) are unchanged on complete designs; period effects are charted from R4.
+- **ADS 3 recommends the Xbar chart** (was X): Xbar/S is VAS's default for SDS 3 and 6.
+- **Validation gate re-referenced to Tom's 3 October 2026 VAS run**
+  (`validation/e2e_bishop_report.py`, `tests/fixtures/bishop_analyses/`). PM SDS 3 is checked
+  as Xbar/S, as VAS now draws it; its limits vary with subgroup size and are not printed on the
+  slides, so they carry no reference yet. The gate now reports 254 assertions passing and 61
+  with no reference value (was 280 / 35); PB's side is compared at full precision.
+
+### Added
+- **R2 is reported unavailable, with the reason, when the R2 scale factor is undefined**
+  (fewer than two process design conditions, or M < K + 2 observations). `formulate()` warns;
+  R2–R6 are not offered; `execute()` and `why_not()` give the reason; `loss_function()` and
+  `maximum_information()` raise `ValidationError`; `capability()` reports potential capability
+  unavailable. Previously these layouts produced half-differences of the raw data.
+- **`CapabilityResult.potential_center`**: the centre of the potential values, ȳ + mean(R2).
+  Potential CPL/CPU and the potential chart's centre line use it, as VAS does (Medicare potential
+  PPU 5.74; ȳ alone gives 5.73). It equals ȳ in ADS 1.
+
+### Fixed
+- **Per-stratum Xbar centre lines count one-observation subgroups.** The centre is Bishop's
+  unweighted mean of every subgroup mean; subgroups with n = 1 were dropped before it was
+  taken, which moved four of the eight PM SDS 3 per-condition centres by 0.01–0.04.
+
 ## [0.3.3] - 2026-09-29
 
 ### Changed
