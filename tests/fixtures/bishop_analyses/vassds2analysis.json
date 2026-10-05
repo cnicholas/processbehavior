@@ -372,8 +372,8 @@
       "context_subtitle": null,
       "variable": "RSG AVG",
       "CL": 237.78,
-      "LBL": null,
-      "UBL": null,
+      "LBL": 237.51,
+      "UBL": 238.06,
       "axis_labels": {
         "x": "PDC RSG",
         "y": "Sample Average"
@@ -391,8 +391,8 @@
       "context_subtitle": null,
       "variable": "RSG STDEV",
       "CL": 0.91,
-      "LBL": null,
-      "UBL": null,
+      "LBL": 0.72,
+      "UBL": 1.11,
       "axis_labels": {
         "x": "PDC RSG",
         "y": "Sample Standard Deviation"
@@ -410,8 +410,8 @@
       "context_subtitle": null,
       "variable": "RSG AVG",
       "CL": 237.78,
-      "LBL": null,
-      "UBL": null,
+      "LBL": 236.85,
+      "UBL": 238.72,
       "axis_labels": {
         "x": "PT RSG",
         "y": "Sample Average"
@@ -429,8 +429,8 @@
       "context_subtitle": null,
       "variable": "RSG STDEV",
       "CL": 0.85,
-      "LBL": null,
-      "UBL": null,
+      "LBL": 0.16,
+      "UBL": 1.55,
       "axis_labels": {
         "x": "PT RSG",
         "y": "Sample Standard Deviation"
@@ -448,8 +448,8 @@
       "context_subtitle": "PD Factor - F1",
       "variable": "RSG AVG",
       "CL": 237.79,
-      "LBL": null,
-      "UBL": null,
+      "LBL": 237.59,
+      "UBL": 237.98,
       "axis_labels": {
         "x": "PD Factor RSG",
         "y": "Sample Average"
@@ -467,8 +467,8 @@
       "context_subtitle": "PD Factor - F1",
       "variable": "RSG STDEV",
       "CL": 0.91,
-      "LBL": null,
-      "UBL": null,
+      "LBL": 0.78,
+      "UBL": 1.05,
       "axis_labels": {
         "x": "PD Factor RSG",
         "y": "Sample Standard Deviation"
@@ -486,8 +486,8 @@
       "context_subtitle": "PD Factor - F2",
       "variable": "RSG AVG",
       "CL": 237.79,
-      "LBL": null,
-      "UBL": null,
+      "LBL": 237.65,
+      "UBL": 237.93,
       "axis_labels": {
         "x": "PD Factor RSG",
         "y": "Sample Average"
@@ -514,7 +514,7 @@
       "package": {
         "analysis_design_state": "ANALYTIC DESIGN STATE 2: N = 1 COMPLETE"
       },
-      "notes": null
+      "notes": "10/3 deck prints limits 0.85/1.02 for this F2 S chart; factor-level subgroups (n=400) give 0.84/1.03 and no clean subgroup size gives the deck's values. Limits left unreferenced pending Tom."
     },
     {
       "page_number": 28,

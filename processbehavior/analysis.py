@@ -1375,7 +1375,11 @@ class Analysis:
 
             out['N'] = out['n'].max()
 
-            # Filter subgroups with n=1
+            # Centre first: Bishop's unweighted mean of the subgroup means, every
+            # subgroup counted once — a one-observation subgroup is still a cell.
+            _Xbar = out['xbar'].mean()
+
+            # Filter subgroups with n=1 (no within-subgroup spread for the limits)
             mask_n1 = out['n'].eq(1)
             if mask_n1.any():
                 out = out[~mask_n1].copy()
@@ -1385,7 +1389,6 @@ class Analysis:
                 continue
 
             # Per-stratum statistics
-            _Xbar = out['xbar'].mean()
             _S = out['s'].mean()
             n_to_use, n_max = self._determine_n_to_use(out)
 

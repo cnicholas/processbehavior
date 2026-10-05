@@ -379,11 +379,12 @@ class SDSRegistry:
 
     **SDS 2**: Semi-Complete - No replication
         - Min N_kt = 1 and Max N_kt = 1 (all cells are singletons)
-        - Requires moving average for R2
+        - R2 by the scaled difference of the effect-adjusted series (10-1 manual Eqs 14-4..14-8)
 
     **SDS 3**: Semi-Complete - Partial replication
         - Min N_kt = 1 and Max N_kt ≥ 2 (mixed)
-        - R2 by moving average across the full sequence (any singleton forces MA2)
+        - R2 by the same scaled difference over every observation (Eqs 14-9..14-13);
+          Xbar/S is the default chart
 
     **Incomplete** (has empty cells, requires sampling plan to detect):
 
@@ -696,7 +697,7 @@ class SDSRegistry:
             3: {
                 'description': 'Partial replication (mixed n=1 and n≥2)',
                 'replication_type': 'partial',
-                'r2_method': 'ma2',  # Any singleton: MA2 over the full sequence (Bishop Eq 13.7-13.9)
+                'r2_method': 'ma2',  # Any singleton: scaled difference over every observation (Eqs 14-9..14-13)
                 'capabilities': ['all_residuals', 'partial_interactions', 'main_effects'],
                 'interaction_analysis': 'partial',
                 'variance_decomposition': True,
@@ -712,10 +713,10 @@ class SDSRegistry:
             5: {
                 'description': 'Incomplete grid without replication (has 0s, max=1)',
                 'replication_type': 'none',
-                'r2_method': 'ma2',  # No replication, use moving average
+                'r2_method': 'ma2',  # No replication: scaled difference (Eqs 14-9..14-13)
                 'capabilities': ['partial_vas', 'stratification'],
                 'interaction_analysis': False,
-                'variance_decomposition': True,  # VAS supported via moving average
+                'variance_decomposition': True,  # VAS supported via the scaled-difference R2
             },
             6: {
                 'description': 'Incomplete grid with singletons (has 0s, 1s, and ≥2s)',
@@ -757,14 +758,13 @@ class SDSRegistry:
 
         Notes
         -----
-        Deterministic rule based on Bishop methodology:
-        - Eq 59 (exact): R2 = Y - Ȳ_kt, requires replication in every cell
-        - Eq 13.7-13.9 (MA2): R2 = (Y_j - Y_{j-1}) / 2 over the whole ordered
-          sequence, j = 2..J, with no grouping by cell. Once any cell is a
-          singleton this applies to every observation; the replicated cells'
-          within-cell deviations are not used for R2. There is no per-cell
-          mixing of the two (the earlier "hybrid" was removed in cb037f8, and
-          the ADS 3 reference assertions validate the ungrouped MA2).
+        Deterministic rule based on Bishop's 10-1 manual:
+        - Eq 14-3 (exact): R2 = Y - Ȳ_kt, requires replication in every cell
+        - Eqs 14-4..14-13 (ma2): Z = Y - Ȳ_k - Ȳ_t + Ȳ, differenced over the whole
+          condition-then-time sequence (j = 2..M, no grouping by cell) and divided
+          by twice the R2 scale factor c(K, M). Once any cell is a singleton this
+          applies to every observation; the replicated cells' within-cell
+          deviations are not used for R2. There is no per-cell mixing of the two.
         """
         if stats.n_cell_min >= 2:
             return 'exact'
@@ -1308,7 +1308,7 @@ class SDSRegistry:
                     'Screening experiments',
                 ],
                 limitations=[
-                    'R2 estimated via moving average (approximate, not exact)',
+                    'R2 reconstructed from the effect-adjusted series (scaled difference), not observed within cells',
                     'Interaction confounded with pure error',
                 ],
                 bishop_reference='Bishop Methodology: No Replication (SDS 2)',
@@ -1321,7 +1321,7 @@ class SDSRegistry:
                 has_time=True,
                 has_replication='partial',
                 valid_charts=['Histogram', 'Xbar', 'S', 'X', 'mR'],
-                recommended_chart='X',
+                recommended_chart='Xbar',  # 10-1 manual: Xbar/S is VAS's default for ADS 3
                 invalid_charts=[],
                 vas_residuals_supported=True,
                 residuals_available=['R1', 'R2', 'R3', 'R4', 'R5', 'R6'],
@@ -1336,7 +1336,7 @@ class SDSRegistry:
                     'Pilot studies with targeted replication',
                 ],
                 limitations=[
-                    'R2 uses the 2-point moving average over the full sequence (Bishop Eq 13.7-13.9); '
+                    'R2 uses the scaled difference over the full sequence (10-1 manual Eqs 14-9..14-13); '
                     'the replicated cells contribute no separate within-cell estimate',
                     'Variance estimates less precise than SDS 1',
                     'May have unequal subgroup sizes',

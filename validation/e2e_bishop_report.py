@@ -30,7 +30,7 @@ SPEC_TARGET = 237
 SDS_CONFIGS = {
     1: {'response_attr': 'PM_SDS_1', 'json': 'vassds1analysis.json', 'chart': 'Xbar'},
     2: {'response_attr': 'PM_SDS_2', 'json': 'vassds2analysis.json', 'chart': 'X'},
-    3: {'response_attr': 'PM_SDS_3', 'json': 'vassds3analysis.json', 'chart': 'X'},
+    3: {'response_attr': 'PM_SDS_3', 'json': 'vassds3analysis.json', 'chart': 'Xbar'},
 }
 
 # Tom's process-capability reference indices (LSL=232, USL=242, Target=237).
@@ -269,8 +269,12 @@ def run_sds_validation(sds_num, pb, study, json_data):  # noqa: C901
     # Pre-compute results we'll need
     computed = {}
 
+    # Xbar/S wherever some subgroups are replicated: ADS 1, and ADS 3, where the 10-1 manual makes
+    # Xbar/S VAS's default (Tom's 10/3/2026 run draws PM SDS 3 that way). ADS 2 uses X/mR.
+    xbar_s = sds_num in (1, 3)
+
     # Overall charts
-    if sds_num == 1:
+    if xbar_s:
         computed['overall'] = study.execute(chart='Xbar', by=[], companion=True)
         computed['stratified'] = study.execute(chart='Xbar', by=[pb.cols.PRODUCTION_TIME], companion=True)
     else:
@@ -296,7 +300,7 @@ def run_sds_validation(sds_num, pb, study, json_data):  # noqa: C901
         chart='S', by=[pb.cols.PRODUCTION_TIME], value='R3', recentered=True
     )
     # Interaction (pages 28-29)
-    if sds_num == 1:
+    if xbar_s:
         computed['interaction_xbar'] = study.execute(
             chart='Xbar', by=[pb.cols.FACTOR_1, pb.cols.FACTOR_2, pb.cols.PRODUCTION_TIME],
             value='R3', recentered=True
@@ -381,7 +385,7 @@ def run_sds_validation(sds_num, pb, study, json_data):  # noqa: C901
             return cl, lpl, upl
 
         def primary_chart_type(_loc=is_location):
-            if sds_num == 1:
+            if xbar_s:
                 return 'Xbar' if _loc else 'S'
             return 'X' if _loc else 'mR'
 
@@ -396,7 +400,7 @@ def run_sds_validation(sds_num, pb, study, json_data):  # noqa: C901
             focused = computed['stratified'].focus(stratum)
             chart_type = primary_chart_type()
             cl, lpl, upl = stats_from(focused, chart_type)
-            by_str = '[PRODUCTION_TIME]' if sds_num == 1 else '[FACTOR_1, FACTOR_2]'
+            by_str = '[PRODUCTION_TIME]' if xbar_s else '[FACTOR_1, FACTOR_2]'
             append_result(chart_type, by_str, 'response', False, cl, lpl, upl,
                           safe_chart_table(focused, chart_type), stratum=str(stratum))
 
@@ -436,7 +440,7 @@ def run_sds_validation(sds_num, pb, study, json_data):  # noqa: C901
                           safe_chart_table(result_obj, chart_type))
 
         elif category == 'interaction':
-            if sds_num == 1:
+            if xbar_s:
                 result_obj = computed['interaction_xbar'] if is_location else computed['interaction_s']
                 chart_type = 'Xbar' if is_location else 'S'
                 cl, lpl, upl = stats_from(result_obj, chart_type)

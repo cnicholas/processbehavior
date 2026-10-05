@@ -35,11 +35,11 @@ REFERENCE_ARTIFACTS = [
     ),
     (
         'tests/fixtures/bishop_analyses/vassds2analysis.json',
-        '7320e41b67c35c3d1120a2788b41a82e59402e8e681b74d1e2d3a593deef7ab7',
+        'e6554a133f247fb71c6e9902818d509605b33c34deeaf75916fbb3b8de13630d',
     ),
     (
         'tests/fixtures/bishop_analyses/vassds3analysis.json',
-        '038d04ce0f852374a01b045d96f47d320d15060ecd3de2db497214bbc0210ec3',
+        'c2d17507a29242a130a96e049af720995faefe362ff704d7e7e0cf66cffad264',
     ),
 ]
 

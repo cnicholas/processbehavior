@@ -6,344 +6,344 @@
     {
       "page_number": 1,
       "analysis_title": "Analysis of Original Performance Measurement Behavior",
-      "chart_title": "PM Individuals Chart",
+      "chart_title": "Analysis of PM Sample Averages",
       "chart_subtitle": "PM3 in Grams",
       "context_subtitle": null,
-      "variable": "PM3",
-      "CL": 237.81,
-      "LBL": 234.9,
-      "UBL": 240.72,
+      "variable": "RSG AVG",
+      "CL": 237.83,
+      "LBL": null,
+      "UBL": null,
       "axis_labels": {
         "x": "PDCxPT RSG",
-        "y": "Individual Value"
+        "y": "Sample Average"
       },
       "package": {
         "analysis_design_state": "ANALYTIC DESIGN STATE 3: N=1 AND N>1 COMPLETE"
       },
-      "notes": "SDS 3 deck of 10/3 draws Xbar/S here (10-1 manual ADS 3 default); individuals-chart reference kept until the chart switch."
+      "notes": "Limits vary with subgroup size (ADS 3) and are not printed on the slide; centre line only."
     },
     {
       "page_number": 2,
       "analysis_title": "Analysis of Original Performance Measurement Behavior",
-      "chart_title": "Moving Range Chart",
+      "chart_title": "Analysis of PM Sample Standard Deviations",
       "chart_subtitle": "PM3 in Grams",
       "context_subtitle": null,
-      "variable": "MOVING RANGE",
-      "CL": 1.1,
-      "LBL": 0.0,
-      "UBL": 3.58,
+      "variable": "RSG STDEV",
+      "CL": 0.8,
+      "LBL": null,
+      "UBL": null,
       "axis_labels": {
         "x": "PDCxPT RSG",
-        "y": "Moving Range"
+        "y": "Sample Standard Deviation"
       },
       "package": {
         "analysis_design_state": "ANALYTIC DESIGN STATE 3: N=1 AND N>1 COMPLETE"
       },
-      "notes": "SDS 3 deck of 10/3 draws Xbar/S here (10-1 manual ADS 3 default); individuals-chart reference kept until the chart switch."
+      "notes": "Limits vary with subgroup size (ADS 3) and are not printed on the slide; centre line only."
     },
     {
       "page_number": 3,
       "analysis_title": "Analysis of Original Performance Measurement Behavior",
-      "chart_title": "PM Individuals Chart",
+      "chart_title": "Analysis of PM Sample Averages",
       "chart_subtitle": "PM3 in Grams",
       "context_subtitle": "PDC RSG - 1-1",
-      "variable": "PM3",
-      "CL": 238.2,
-      "LBL": 235.5,
-      "UBL": 240.9,
+      "variable": "RSG AVG",
+      "CL": 238.22,
+      "LBL": null,
+      "UBL": null,
       "axis_labels": {
         "x": "PT RSG",
-        "y": "Individual Value"
+        "y": "Sample Average"
       },
       "package": {
         "analysis_design_state": "ANALYTIC DESIGN STATE 3: N=1 AND N>1 COMPLETE"
       },
-      "notes": "SDS 3 deck of 10/3 draws Xbar/S here (10-1 manual ADS 3 default); individuals-chart reference kept until the chart switch."
+      "notes": "Limits vary with subgroup size (ADS 3) and are not printed on the slide; centre line only."
     },
     {
       "page_number": 4,
       "analysis_title": "Analysis of Original Performance Measurement Behavior",
-      "chart_title": "Moving Range Chart",
+      "chart_title": "Analysis of PM Sample Standard Deviations",
       "chart_subtitle": "PM3 in Grams",
       "context_subtitle": "PDC RSG - 1-1",
-      "variable": "MOVING RANGE",
-      "CL": 1.02,
-      "LBL": 0.0,
-      "UBL": 3.32,
+      "variable": "RSG STDEV",
+      "CL": 0.72,
+      "LBL": null,
+      "UBL": null,
       "axis_labels": {
         "x": "PT RSG",
-        "y": "Moving Range"
+        "y": "Sample Standard Deviation"
       },
       "package": {
         "analysis_design_state": "ANALYTIC DESIGN STATE 3: N=1 AND N>1 COMPLETE"
       },
-      "notes": "SDS 3 deck of 10/3 draws Xbar/S here (10-1 manual ADS 3 default); individuals-chart reference kept until the chart switch."
+      "notes": "Limits vary with subgroup size (ADS 3) and are not printed on the slide; centre line only."
     },
     {
       "page_number": 5,
       "analysis_title": "Analysis of Original Performance Measurement Behavior",
-      "chart_title": "PM Individuals Chart",
+      "chart_title": "Analysis of PM Sample Averages",
       "chart_subtitle": "PM3 in Grams",
       "context_subtitle": "PDC RSG - 1-2",
-      "variable": "PM3",
-      "CL": 238.66,
-      "LBL": 235.81,
-      "UBL": 241.51,
+      "variable": "RSG AVG",
+      "CL": 238.61,
+      "LBL": null,
+      "UBL": null,
       "axis_labels": {
         "x": "PT RSG",
-        "y": "Individual Value"
+        "y": "Sample Average"
       },
       "package": {
         "analysis_design_state": "ANALYTIC DESIGN STATE 3: N=1 AND N>1 COMPLETE"
       },
-      "notes": "SDS 3 deck of 10/3 draws Xbar/S here (10-1 manual ADS 3 default); individuals-chart reference kept until the chart switch."
+      "notes": "Limits vary with subgroup size (ADS 3) and are not printed on the slide; centre line only."
     },
     {
       "page_number": 6,
       "analysis_title": "Analysis of Original Performance Measurement Behavior",
-      "chart_title": "Moving Range Chart",
+      "chart_title": "Analysis of PM Sample Standard Deviations",
       "chart_subtitle": "PM3 in Grams",
       "context_subtitle": "PDC RSG - 1-2",
-      "variable": "MOVING RANGE",
-      "CL": 1.07,
-      "LBL": 0.0,
-      "UBL": 3.5,
+      "variable": "RSG STDEV",
+      "CL": 0.82,
+      "LBL": null,
+      "UBL": null,
       "axis_labels": {
         "x": "PT RSG",
-        "y": "Moving Range"
+        "y": "Sample Standard Deviation"
       },
       "package": {
         "analysis_design_state": "ANALYTIC DESIGN STATE 3: N=1 AND N>1 COMPLETE"
       },
-      "notes": "SDS 3 deck of 10/3 draws Xbar/S here (10-1 manual ADS 3 default); individuals-chart reference kept until the chart switch."
+      "notes": "Limits vary with subgroup size (ADS 3) and are not printed on the slide; centre line only."
     },
     {
       "page_number": 7,
       "analysis_title": "Analysis of Original Performance Measurement Behavior",
-      "chart_title": "PM Individuals Chart",
+      "chart_title": "Analysis of PM Sample Averages",
       "chart_subtitle": "PM3 in Grams",
       "context_subtitle": "PDC RSG - 2-1",
-      "variable": "PM3",
-      "CL": 237.3,
-      "LBL": 234.47,
-      "UBL": 240.13,
+      "variable": "RSG AVG",
+      "CL": 237.33,
+      "LBL": null,
+      "UBL": null,
       "axis_labels": {
         "x": "PT RSG",
-        "y": "Individual Value"
+        "y": "Sample Average"
       },
       "package": {
         "analysis_design_state": "ANALYTIC DESIGN STATE 3: N=1 AND N>1 COMPLETE"
       },
-      "notes": "SDS 3 deck of 10/3 draws Xbar/S here (10-1 manual ADS 3 default); individuals-chart reference kept until the chart switch."
+      "notes": "Limits vary with subgroup size (ADS 3) and are not printed on the slide; centre line only."
     },
     {
       "page_number": 8,
       "analysis_title": "Analysis of Original Performance Measurement Behavior",
-      "chart_title": "Moving Range Chart",
+      "chart_title": "Analysis of PM Sample Standard Deviations",
       "chart_subtitle": "PM3 in Grams",
       "context_subtitle": "PDC RSG - 2-1",
-      "variable": "MOVING RANGE",
-      "CL": 1.06,
-      "LBL": 0.0,
-      "UBL": 3.48,
+      "variable": "RSG STDEV",
+      "CL": 0.81,
+      "LBL": null,
+      "UBL": null,
       "axis_labels": {
         "x": "PT RSG",
-        "y": "Moving Range"
+        "y": "Sample Standard Deviation"
       },
       "package": {
         "analysis_design_state": "ANALYTIC DESIGN STATE 3: N=1 AND N>1 COMPLETE"
       },
-      "notes": "SDS 3 deck of 10/3 draws Xbar/S here (10-1 manual ADS 3 default); individuals-chart reference kept until the chart switch."
+      "notes": "Limits vary with subgroup size (ADS 3) and are not printed on the slide; centre line only."
     },
     {
       "page_number": 9,
       "analysis_title": "Analysis of Original Performance Measurement Behavior",
-      "chart_title": "PM Individuals Chart",
+      "chart_title": "Analysis of PM Sample Averages",
       "chart_subtitle": "PM3 in Grams",
       "context_subtitle": "PDC RSG - 2-2",
-      "variable": "PM3",
-      "CL": 238.99,
-      "LBL": 236.2,
-      "UBL": 241.79,
+      "variable": "RSG AVG",
+      "CL": 239.0,
+      "LBL": null,
+      "UBL": null,
       "axis_labels": {
         "x": "PT RSG",
-        "y": "Individual Value"
+        "y": "Sample Average"
       },
       "package": {
         "analysis_design_state": "ANALYTIC DESIGN STATE 3: N=1 AND N>1 COMPLETE"
       },
-      "notes": "SDS 3 deck of 10/3 draws Xbar/S here (10-1 manual ADS 3 default); individuals-chart reference kept until the chart switch."
+      "notes": "Limits vary with subgroup size (ADS 3) and are not printed on the slide; centre line only."
     },
     {
       "page_number": 10,
       "analysis_title": "Analysis of Original Performance Measurement Behavior",
-      "chart_title": "Moving Range Chart",
+      "chart_title": "Analysis of PM Sample Standard Deviations",
       "chart_subtitle": "PM3 in Grams",
       "context_subtitle": "PDC RSG - 2-2",
-      "variable": "MOVING RANGE",
-      "CL": 1.05,
-      "LBL": 0.0,
-      "UBL": 3.43,
+      "variable": "RSG STDEV",
+      "CL": 0.81,
+      "LBL": null,
+      "UBL": null,
       "axis_labels": {
         "x": "PT RSG",
-        "y": "Moving Range"
+        "y": "Sample Standard Deviation"
       },
       "package": {
         "analysis_design_state": "ANALYTIC DESIGN STATE 3: N=1 AND N>1 COMPLETE"
       },
-      "notes": "SDS 3 deck of 10/3 draws Xbar/S here (10-1 manual ADS 3 default); individuals-chart reference kept until the chart switch."
+      "notes": "Limits vary with subgroup size (ADS 3) and are not printed on the slide; centre line only."
     },
     {
       "page_number": 11,
       "analysis_title": "Analysis of Original Performance Measurement Behavior",
-      "chart_title": "PM Individuals Chart",
+      "chart_title": "Analysis of PM Sample Averages",
       "chart_subtitle": "PM3 in Grams",
       "context_subtitle": "PDC RSG - 3-1",
-      "variable": "PM3",
-      "CL": 236.66,
-      "LBL": 233.58,
-      "UBL": 239.73,
+      "variable": "RSG AVG",
+      "CL": 236.64,
+      "LBL": null,
+      "UBL": null,
       "axis_labels": {
         "x": "PT RSG",
-        "y": "Individual Value"
+        "y": "Sample Average"
       },
       "package": {
         "analysis_design_state": "ANALYTIC DESIGN STATE 3: N=1 AND N>1 COMPLETE"
       },
-      "notes": "SDS 3 deck of 10/3 draws Xbar/S here (10-1 manual ADS 3 default); individuals-chart reference kept until the chart switch."
+      "notes": "Limits vary with subgroup size (ADS 3) and are not printed on the slide; centre line only."
     },
     {
       "page_number": 12,
       "analysis_title": "Analysis of Original Performance Measurement Behavior",
-      "chart_title": "Moving Range Chart",
+      "chart_title": "Analysis of PM Sample Standard Deviations",
       "chart_subtitle": "PM3 in Grams",
       "context_subtitle": "PDC RSG - 3-1",
-      "variable": "MOVING RANGE",
-      "CL": 1.16,
-      "LBL": 0.0,
-      "UBL": 3.78,
+      "variable": "RSG STDEV",
+      "CL": 0.81,
+      "LBL": null,
+      "UBL": null,
       "axis_labels": {
         "x": "PT RSG",
-        "y": "Moving Range"
+        "y": "Sample Standard Deviation"
       },
       "package": {
         "analysis_design_state": "ANALYTIC DESIGN STATE 3: N=1 AND N>1 COMPLETE"
       },
-      "notes": "SDS 3 deck of 10/3 draws Xbar/S here (10-1 manual ADS 3 default); individuals-chart reference kept until the chart switch."
+      "notes": "Limits vary with subgroup size (ADS 3) and are not printed on the slide; centre line only."
     },
     {
       "page_number": 13,
       "analysis_title": "Analysis of Original Performance Measurement Behavior",
-      "chart_title": "PM Individuals Chart",
+      "chart_title": "Analysis of PM Sample Averages",
       "chart_subtitle": "PM3 in Grams",
       "context_subtitle": "PDC RSG - 3-2",
-      "variable": "PM3",
-      "CL": 237.03,
-      "LBL": 234.01,
-      "UBL": 240.05,
+      "variable": "RSG AVG",
+      "CL": 237.1,
+      "LBL": null,
+      "UBL": null,
       "axis_labels": {
         "x": "PT RSG",
-        "y": "Individual Value"
+        "y": "Sample Average"
       },
       "package": {
         "analysis_design_state": "ANALYTIC DESIGN STATE 3: N=1 AND N>1 COMPLETE"
       },
-      "notes": "SDS 3 deck of 10/3 draws Xbar/S here (10-1 manual ADS 3 default); individuals-chart reference kept until the chart switch."
+      "notes": "Limits vary with subgroup size (ADS 3) and are not printed on the slide; centre line only."
     },
     {
       "page_number": 14,
       "analysis_title": "Analysis of Original Performance Measurement Behavior",
-      "chart_title": "Moving Range Chart",
+      "chart_title": "Analysis of PM Sample Standard Deviations",
       "chart_subtitle": "PM3 in Grams",
       "context_subtitle": "PDC RSG - 3-2",
-      "variable": "MOVING RANGE",
-      "CL": 1.14,
-      "LBL": 0.0,
-      "UBL": 3.71,
+      "variable": "RSG STDEV",
+      "CL": 0.8,
+      "LBL": null,
+      "UBL": null,
       "axis_labels": {
         "x": "PT RSG",
-        "y": "Moving Range"
+        "y": "Sample Standard Deviation"
       },
       "package": {
         "analysis_design_state": "ANALYTIC DESIGN STATE 3: N=1 AND N>1 COMPLETE"
       },
-      "notes": "SDS 3 deck of 10/3 draws Xbar/S here (10-1 manual ADS 3 default); individuals-chart reference kept until the chart switch."
+      "notes": "Limits vary with subgroup size (ADS 3) and are not printed on the slide; centre line only."
     },
     {
       "page_number": 15,
       "analysis_title": "Analysis of Original Performance Measurement Behavior",
-      "chart_title": "PM Individuals Chart",
+      "chart_title": "Analysis of PM Sample Averages",
       "chart_subtitle": "PM3 in Grams",
       "context_subtitle": "PDC RSG - 4-1",
-      "variable": "PM3",
-      "CL": 237.51,
-      "LBL": 234.53,
-      "UBL": 240.48,
+      "variable": "RSG AVG",
+      "CL": 237.52,
+      "LBL": null,
+      "UBL": null,
       "axis_labels": {
         "x": "PT RSG",
-        "y": "Individual Value"
+        "y": "Sample Average"
       },
       "package": {
         "analysis_design_state": "ANALYTIC DESIGN STATE 3: N=1 AND N>1 COMPLETE"
       },
-      "notes": "SDS 3 deck of 10/3 draws Xbar/S here (10-1 manual ADS 3 default); individuals-chart reference kept until the chart switch."
+      "notes": "Limits vary with subgroup size (ADS 3) and are not printed on the slide; centre line only."
     },
     {
       "page_number": 16,
       "analysis_title": "Analysis of Original Performance Measurement Behavior",
-      "chart_title": "Moving Range Chart",
+      "chart_title": "Analysis of PM Sample Standard Deviations",
       "chart_subtitle": "PM3 in Grams",
       "context_subtitle": "PDC RSG - 4-1",
-      "variable": "MOVING RANGE",
-      "CL": 1.12,
-      "LBL": 0.0,
-      "UBL": 3.65,
+      "variable": "RSG STDEV",
+      "CL": 0.83,
+      "LBL": null,
+      "UBL": null,
       "axis_labels": {
         "x": "PT RSG",
-        "y": "Moving Range"
+        "y": "Sample Standard Deviation"
       },
       "package": {
         "analysis_design_state": "ANALYTIC DESIGN STATE 3: N=1 AND N>1 COMPLETE"
       },
-      "notes": "SDS 3 deck of 10/3 draws Xbar/S here (10-1 manual ADS 3 default); individuals-chart reference kept until the chart switch."
+      "notes": "Limits vary with subgroup size (ADS 3) and are not printed on the slide; centre line only."
     },
     {
       "page_number": 17,
       "analysis_title": "Analysis of Original Performance Measurement Behavior",
-      "chart_title": "PM Individuals Chart",
+      "chart_title": "Analysis of PM Sample Averages",
       "chart_subtitle": "PM3 in Grams",
       "context_subtitle": "PDC RSG - 4-2",
-      "variable": "PM3",
-      "CL": 238.14,
-      "LBL": 235.23,
-      "UBL": 241.06,
+      "variable": "RSG AVG",
+      "CL": 238.18,
+      "LBL": null,
+      "UBL": null,
       "axis_labels": {
         "x": "PT RSG",
-        "y": "Individual Value"
+        "y": "Sample Average"
       },
       "package": {
         "analysis_design_state": "ANALYTIC DESIGN STATE 3: N=1 AND N>1 COMPLETE"
       },
-      "notes": "SDS 3 deck of 10/3 draws Xbar/S here (10-1 manual ADS 3 default); individuals-chart reference kept until the chart switch."
+      "notes": "Limits vary with subgroup size (ADS 3) and are not printed on the slide; centre line only."
     },
     {
       "page_number": 18,
       "analysis_title": "Analysis of Original Performance Measurement Behavior",
-      "chart_title": "Moving Range Chart",
+      "chart_title": "Analysis of PM Sample Standard Deviations",
       "chart_subtitle": "PM3 in Grams",
       "context_subtitle": "PDC RSG - 4-2",
-      "variable": "MOVING RANGE",
-      "CL": 1.1,
-      "LBL": 0.0,
-      "UBL": 3.58,
+      "variable": "RSG STDEV",
+      "CL": 0.79,
+      "LBL": null,
+      "UBL": null,
       "axis_labels": {
         "x": "PT RSG",
-        "y": "Moving Range"
+        "y": "Sample Standard Deviation"
       },
       "package": {
         "analysis_design_state": "ANALYTIC DESIGN STATE 3: N=1 AND N>1 COMPLETE"
       },
-      "notes": "SDS 3 deck of 10/3 draws Xbar/S here (10-1 manual ADS 3 default); individuals-chart reference kept until the chart switch."
+      "notes": "Limits vary with subgroup size (ADS 3) and are not printed on the slide; centre line only."
     },
     {
       "page_number": 19,
@@ -518,41 +518,41 @@
     },
     {
       "page_number": 28,
-      "analysis_title": "Analysis of PDCxPT Interaction",
-      "chart_title": "R3 Residuals Individuals Chart",
+      "analysis_title": "Process Design Condition by Production Time Interaction Effects",
+      "chart_title": "Analysis of PDCxPT RSG Sample Averages",
       "chart_subtitle": "PM3 in Grams",
       "context_subtitle": null,
-      "variable": "R3 RESIDUALS",
-      "CL": null,
+      "variable": "RSG AVG",
+      "CL": 237.83,
       "LBL": null,
       "UBL": null,
       "axis_labels": {
         "x": "PDCxPT RSG",
-        "y": "Residual Value"
+        "y": "Sample Average"
       },
       "package": {
         "analysis_design_state": "ANALYTIC DESIGN STATE 3: N=1 AND N>1 COMPLETE"
       },
-      "notes": "SDS 3 interaction is Xbar/S in the 10/3 VAS run; individuals-chart reference retired."
+      "notes": "Limits vary with subgroup size (ADS 3) and are not printed on the slide; centre line only."
     },
     {
       "page_number": 29,
-      "analysis_title": "Analysis of R3 Residuals",
-      "chart_title": "Moving Range Chart",
+      "analysis_title": "Process Design Condition by Production Time Interaction Effects",
+      "chart_title": "Analysis of PDCxPT RSG Sample Standard Deviations",
       "chart_subtitle": "PM3 in Grams",
       "context_subtitle": null,
-      "variable": "MOVING RANGE",
-      "CL": null,
+      "variable": "RSG STDEV",
+      "CL": 1.04,
       "LBL": null,
       "UBL": null,
       "axis_labels": {
         "x": "PDCxPT RSG",
-        "y": "Moving Range"
+        "y": "Sample Standard Deviation"
       },
       "package": {
         "analysis_design_state": "ANALYTIC DESIGN STATE 3: N=1 AND N>1 COMPLETE"
       },
-      "notes": "SDS 3 interaction is Xbar/S in the 10/3 VAS run; moving-range reference retired."
+      "notes": "Limits vary with subgroup size (ADS 3) and are not printed on the slide; centre line only."
     },
     {
       "page_number": 30,
