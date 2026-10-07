@@ -2,4 +2,6 @@
 # Without -text, Windows checkouts CRLF-convert these files and their pinned
 # SHA-256 hashes (tests/test_reference_integrity.py) no longer match.
 validation/PBTESTDATABASE_T100.csv -text
+validation/PBTESTKNOWNEFFECTS_T100.csv -text
+validation/aco_per_capita_expenditure.csv -text
 tests/fixtures/bishop_analyses/*.json -text
