@@ -101,7 +101,9 @@ class CapabilityResult:
     n : int
         Total valid (non-NaN) observations.
     y_bar : float
-        Grand mean of valid observations.
+        Process mean: the unweighted mean of the (factor × time) cell means, as VAS
+        computes it, the same centre as the Xbar chart and the loss function. Equals
+        the plain average of the observations when every cell has the same size.
     s : float
         Sample standard deviation (ddof=1).
     sigma_hat : float
@@ -538,6 +540,22 @@ def _coerce_ads(source: Study | AnalysisDataSet) -> AnalysisDataSet:
 # ============================================================================
 
 
+def _process_mean(frame: pd.DataFrame, response_var: str) -> float:
+    """VAS's process mean: the unweighted mean of the (factor × time) cell means.
+
+    Each experimental condition counts once, whatever its cell size, as for the
+    Xbar centre line and the loss function's centring term. VAS prints this as the
+    capability charts' PROCESS MEAN (PM SDS 6: 237.86, where the plain average of
+    the readings is 237.834). The 10-1 manual's Eqs 16-4..16-6 and 16-11..16-13
+    write it as the "overall average" Y-bar; on balanced data the two are equal.
+    A study without cells (no factors or time) has one cell: the plain average.
+    """
+    valid = frame[frame[response_var].notna()]
+    if 'cell_key' in valid.columns and len(valid):
+        return float(valid.groupby('cell_key', observed=True, sort=False)[response_var].mean().mean())
+    return float(valid[response_var].mean())
+
+
 def _time_window_mask(time_col: pd.Series, window: tuple) -> pd.Series:
     """Boolean mask for a half-open time window ``[start, end)``.
 
@@ -646,14 +664,16 @@ def assess_capability(
                 f'sample size; treat as indicative, not authoritative.'
             )
         window_meta, time_var_meta = tuple(window), time_var
+        frame = obs_df
     else:
+        frame = df
         y_values = df[response_var].dropna().to_numpy(dtype=float)
         n = len(y_values)
         if n < 2:
             raise ValidationError(f'Capability analysis requires at least 2 valid observations, got {n}.')
 
     # --- Current capability ---
-    y_bar = float(np.mean(y_values))
+    y_bar = _process_mean(frame, response_var)  # mean of cell means, as VAS (see _process_mean)
     s, sigma_hat = compute_sigma_hat(y_values)
 
     current = compute_capability_indices(y_bar, sigma_hat, specs)

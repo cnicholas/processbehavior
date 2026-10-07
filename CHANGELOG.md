@@ -39,6 +39,12 @@ numbers below are that manual's.
   measurement scale, as VAS does; RCR2 is unchanged. Xbar means by condition (RCR5) or
   period (RCR4) are unchanged on complete designs; period effects are charted from R4.
 - **ADS 3 recommends the Xbar chart** (was X): Xbar/S is VAS's default for SDS 3 and 6.
+- **Capability is centred on the process mean as VAS computes it**: the unweighted mean of the
+  (factor × time) cell means, the same centre as the Xbar chart and the loss function, instead
+  of the plain average of the readings. `CapabilityResult.y_bar`, current PPL/PPU and the
+  potential centre (ȳ + mean(R2)) move when cells have different sizes (SDS 3, 4, 6); balanced
+  designs are unchanged. PM SDS 6 now reads PROCESS MEAN 237.86 and PPL 1.102 / PPU 0.78, as
+  Tom's VAS run does (was 237.834, 1.098 / 0.784).
 - **Validation gate re-referenced to Tom's 3 October 2026 VAS run**
   (`validation/e2e_bishop_report.py`, `tests/fixtures/bishop_analyses/`). PM SDS 3 is checked
   as Xbar/S, as VAS now draws it; its limits vary with subgroup size and are not printed on the
