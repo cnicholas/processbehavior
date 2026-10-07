@@ -607,13 +607,18 @@ def resolve_r6_groupby(by: Sequence[str] | None, factors: Sequence[str]) -> str 
 def calculate_r6_residuals(df: pd.DataFrame, groupby_key: str | list[str], recentered: bool) -> pd.DataFrame:
     """Return a new frame carrying R6 (and RCR6 when recentered). Never mutates ``df``.
 
-    R6 = α_i + R2 where α_i = mean(R5 | factor level(s)).
+    R6 = α_i + R2, where α_i is the factor-level effect: the condition effects ρ̂_k = R5 - R2
+    averaged over the level's rows (10-1 manual Eqs 14-19, 14-24, 14-25).
 
-    Bit-identity constraints — this math moved verbatim from the old
-    ``Study._compute_r6`` and must keep producing identical floats:
+    The manual writes α_i as the level's mean of R5 (Eq 14-24, "≈ α_i"). R5 = ρ̂_k + R2, so
+    that mean also carries the level's average R2, which VAS leaves out: Tom's Medicare run
+    (10/3/2026, slide 52) centres the organisation-effects chart at 10831.1, the effect
+    without it, where the mean of R5 gives 10829.8. On ADS 1, R2 averages to zero inside
+    each cell, so the two agree; on ADS 2/3 they differ by the level's mean R2, which only
+    shows when levels are small.
 
     - ``groupby`` keeps its default kwargs (no ``observed=``, no ``dropna=``) to
-      preserve row alignment and values exactly.
+      preserve row alignment.
     - RCR6 is ``Ybar + alpha + R2`` evaluated left-to-right. Do not rewrite it as
       ``Ybar + R6``: float addition is non-associative, so the two differ in the
       last ulp.
@@ -622,7 +627,8 @@ def calculate_r6_residuals(df: pd.DataFrame, groupby_key: str | list[str], recen
     plain R6 column (``_resolve_mr_source_column('RCR6') == 'R6'``).
     """
     df = df.copy()
-    alpha = df.groupby(groupby_key)['R5'].transform('mean')
+    # ρ̂_k = R5 - R2 on the rows R5 exists (same rows and weighting as the mean of R5)
+    alpha = df.assign(_rho=df['R5'] - df['R2']).groupby(groupby_key)['_rho'].transform('mean')
 
     df['R6'] = alpha + df['R2']
     if recentered:

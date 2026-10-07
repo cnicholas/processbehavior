@@ -12,6 +12,12 @@ reproduces his VAS run of 3 October 2026 (PM SDS, PM INERT and Medicare decks). 
 numbers below are that manual's.
 
 ### Changed
+- **R6's factor-level effect leaves out R2's level mean, as VAS does.** R6 = α_i + R2 with α_i the
+  condition effects ρ̂_k = R5 - R2 averaged over the level (was the level's mean of R5, which also
+  carries the level's average R2; the 10-1 manual's Eq 14-24 writes it that way, "≈ α_i"). ADS 1 is
+  unchanged (R2 averages to zero in each cell); on ADS 2/3 the effect moves by the level's mean R2,
+  which shows when levels are small: Tom's Medicare run centres the organisation-effects chart at
+  10831.1 (PB was 10829.8, now 10831.1).
 - **R2 for designs with a one-observation subgroup (ADS 2 and 3) follows the 10-1 manual.**
   The data are first stripped of the process mean and the condition and period effects
   (Z = Y − Ȳ_k − Ȳ_t + Ȳ, Eq 14-4 / 14-9), Z is differenced along the condition-then-time
