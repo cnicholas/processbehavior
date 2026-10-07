@@ -85,6 +85,14 @@ REFERENCE_ARTIFACTS = [
         'tests/fixtures/bishop_analyses/known_effects_sds_1.json',
         '82b8231ae0cd04d62f56787b24bb64ff76c3c84747c2f15bf3d0c35a671f16b0',
     ),
+    (
+        'validation/aco_per_capita_expenditure.csv',
+        '4c91829f13f3774eaf748be3064c9c9a9e2e288c6e5fa4946271e75fed77ac94',
+    ),
+    (
+        'tests/fixtures/bishop_analyses/aco_medicare.json',
+        '9494ee2e7ca31ce508347f8bd2e216de41252bed332e7d1bfdea78da677fd793',
+    ),
 ]
 
 

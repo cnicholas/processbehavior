@@ -21,7 +21,7 @@ What lives here and why
   e2e_T20_report.py.
 - e2e_bishop_report.py - checks computed results against Tom Bishop's VAS
   (Minitab) runs, value by value, for every run in RUNS: PM SDS 1-6, PM INERT
-  SDS 1-6 and the known-effects SDS 1 run. Each run's reference values, specs
+  SDS 1-6, the known-effects SDS 1 run and the Medicare ACO run. Each run's reference values, specs
   and target are in tests/fixtures/bishop_analyses/<run>.json, read from the
   VAS decks (the decks themselves are not in the repo). Executed in CI;
   regenerates docs/reference/validation.md (drift-guarded there). Writes
@@ -39,7 +39,8 @@ What lives here and why
 - aco_per_capita_expenditure.csv - the synthetic 24-organisation x 4-year
   dataset (96 rows, ADS 2) built with Tom Bishop for GitHub issue #114, from
   the reporter's description of Medicare shared-savings series. Input for
-  mr_permutation_invariance.py.
+  mr_permutation_invariance.py and the Medicare run of the e2e gate (Tom's
+  VAS run of 10/3/2026; specs LSL 6000 / target 11000 / USL 16000).
 - short_series_sampling.py, short_series_bands.py - contributed by the #114
   reporter (PR #119). Self-contained: regenerate the limit-width-vs-T table
   and the sampling distribution of MRbar/d2 for n = 3..30 under a stable

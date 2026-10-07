@@ -2,8 +2,9 @@
 E2E Validation Report: processbehavior vs Tom Bishop's VAS Analyses
 
 Compares the library's output with Tom Bishop's VAS (Minitab) analyses, value by value, for every
-run in RUNS: PM SDS 1-6 and PM INERT SDS 1-6 (PBTESTDATABASE_T100.csv) and the known-effects data
-(PBTESTKNOWNEFFECTS_T100.csv). Each run's reference values, spec limits and target live in
+run in RUNS: PM SDS 1-6 and PM INERT SDS 1-6 (PBTESTDATABASE_T100.csv), the known-effects data
+(PBTESTKNOWNEFFECTS_T100.csv) and the Medicare ACO data (aco_per_capita_expenditure.csv).
+Each run's reference values, spec limits and target live in
 tests/fixtures/bishop_analyses/<run>.json; a reference that is not yet available is "pending" and
 never fails the gate. Writes an HTML report and docs/reference/validation.md; exits 1 on any
 disagreement.
@@ -26,6 +27,7 @@ from processbehavior import ProcessBehavior
 DATA = {
     'T100': Path(__file__).parent / 'PBTESTDATABASE_T100.csv',
     'KNOWN': Path(__file__).parent / 'PBTESTKNOWNEFFECTS_T100.csv',
+    'ACO': Path(__file__).parent / 'aco_per_capita_expenditure.csv',
 }
 FIXTURES_DIR = Path(__file__).parent.parent / 'tests' / 'fixtures' / 'bishop_analyses'
 OUTPUT_HTML = Path(__file__).parent / 'e2e_bishop_report.html'
@@ -45,6 +47,8 @@ class Run:
     data: str      # key of DATA
     response: str
     ads: int
+    factors: tuple[str, ...] = ('FACTOR 1', 'FACTOR 2')
+    time: str = 'PRODUCTION TIME'
 
 
 RUNS = [
@@ -53,6 +57,8 @@ RUNS = [
     # PM INERT SDS k: the PM INERT column with PM SDS k's missing pattern (see load_frames)
     *[Run(f'pm_inert_sds_{k}', f'PM INERT SDS {k}', 'T100', f'PM INERT SDS {k}', ADS_OF_SDS[k]) for k in range(2, 7)],
     Run('known_effects_sds_1', 'PM SDS 1 KNOWN', 'KNOWN', 'PM SDS 1 KNOWN', 1),
+    # Medicare per-capita expenditure: 24 organisations x 4 years, one reading each (issue #114)
+    Run('aco_medicare', 'Medicare ACO (PCE)', 'ACO', 'PER CAPITA EXPENDITURE', 2, factors=('ACO',), time='YEAR'),
 ]
 
 # Tom reports capability to 2 decimals and loss shares to 1; tolerance is half a unit of the last place.
@@ -90,10 +96,11 @@ LOSS_METRICS = [
 ]
 
 
-def context_to_stratum(context_subtitle: str) -> str:
-    """Convert JSON context_subtitle 'PDC RSG - 1-1' to our stratum key."""
-    # Extract '1-1' from 'PDC RSG - 1-1'
-    level = context_subtitle.split(' - ')[1]  # '1-1'
+def context_to_stratum(context_subtitle: str, n_factors: int = 2) -> str:
+    """Convert a slide's context 'PDC RSG - 1-1' (two factors) or 'PDC RSG - ACO-001' (one) to our stratum key."""
+    level = context_subtitle.split(' - ', 1)[1]  # '1-1' or 'ACO-001'
+    if n_factors == 1:
+        return level
     f1, f2 = level.split('-')
     return f'{f1}_{f2}'  # Strata normalized to strings per #73
 
@@ -221,6 +228,9 @@ def run_validation(run, pb, study, ref):  # noqa: C901
     results = []
     items = ref['items']
     specs = ref['specs']
+    tol = ref.get('chart_tolerance', TOLERANCE)
+    factors, time = list(run.factors), run.time
+    f_str, t_str = '[' + ', '.join(factors) + ']', f'[{time}]'
 
     # Pre-compute results we'll need
     computed = {}
@@ -232,56 +242,48 @@ def run_validation(run, pb, study, ref):  # noqa: C901
     # Overall charts
     if xbar_s:
         computed['overall'] = study.execute(chart='Xbar', by=[], companion=True)
-        computed['stratified'] = study.execute(chart='Xbar', by=[pb.cols.PRODUCTION_TIME], companion=True)
+        computed['stratified'] = study.execute(chart='Xbar', by=[time], companion=True)
     else:
         computed['overall'] = study.execute(chart='X', by=[], companion=True)
-        computed['stratified'] = study.execute(chart='X', by=[pb.cols.FACTOR_1, pb.cols.FACTOR_2], companion=True)
+        computed['stratified'] = study.execute(chart='X', by=factors, companion=True)
 
     # Effects charts — all SDS types
     # PDC effects (pages 20-21)
     computed['pdc_effects_xbar'] = study.execute(
-        chart='Xbar', by=[pb.cols.FACTOR_1, pb.cols.FACTOR_2],
+        chart='Xbar', by=factors,
         value='R6', recentered=True
     )
     computed['pdc_effects_s'] = study.execute(
-        chart='S', by=[pb.cols.FACTOR_1, pb.cols.FACTOR_2], value='R6'
+        chart='S', by=factors, value='R6'
     )
     # PT effects (pages 22-23) — Xbar/S of R4 by time for all SDS (R4 carries the period effect,
     # 10-1 manual Eq 14-16). When charted by=[time], each time subgroup has multiple factor
     # levels, giving n>1 subgroups even in SDS 2, so Xbar/S is correct.
     computed['pt_effects_xbar'] = study.execute(
-        chart='Xbar', by=[pb.cols.PRODUCTION_TIME], value='R4', recentered=True
+        chart='Xbar', by=[time], value='R4', recentered=True
     )
     computed['pt_effects_s'] = study.execute(
-        chart='S', by=[pb.cols.PRODUCTION_TIME], value='R4', recentered=True
+        chart='S', by=[time], value='R4', recentered=True
     )
     # Interaction (pages 28-29)
     if xbar_s:
         computed['interaction_xbar'] = study.execute(
-            chart='Xbar', by=[pb.cols.FACTOR_1, pb.cols.FACTOR_2, pb.cols.PRODUCTION_TIME],
+            chart='Xbar', by=[*factors, time],
             value='R3', recentered=True
         )
         computed['interaction_s'] = study.execute(
-            chart='S', by=[pb.cols.FACTOR_1, pb.cols.FACTOR_2, pb.cols.PRODUCTION_TIME],
+            chart='S', by=[*factors, time],
             value='R3', recentered=True
         )
     else:
         computed['r3_xmr'] = study.execute(
             chart='X', by=[], value='R3', recentered=True, companion=True
         )
-    # Individual factor effects (pages 24-27)
-    computed['f1_effects_xbar'] = study.execute(
-        chart='Xbar', by=[pb.cols.FACTOR_1], value='R6', recentered=True
-    )
-    computed['f1_effects_s'] = study.execute(
-        chart='S', by=[pb.cols.FACTOR_1], value='R6'
-    )
-    computed['f2_effects_xbar'] = study.execute(
-        chart='Xbar', by=[pb.cols.FACTOR_2], value='R6', recentered=True
-    )
-    computed['f2_effects_s'] = study.execute(
-        chart='S', by=[pb.cols.FACTOR_2], value='R6'
-    )
+    # Individual factor effects (pages 24-27), when the conditions are built from two factors
+    if len(factors) >= 2:
+        for tag, factor in (('f1', factors[0]), ('f2', factors[1])):
+            computed[f'{tag}_effects_xbar'] = study.execute(chart='Xbar', by=[factor], value='R6', recentered=True)
+            computed[f'{tag}_effects_s'] = study.execute(chart='S', by=[factor], value='R6')
 
     computed['max_info_xmr'] = study.execute(chart='X', by=[], value='R2')
     computed['loss'] = study.loss_function(target=specs['target'])
@@ -323,9 +325,9 @@ def run_validation(run, pb, study, ref):  # noqa: C901
                 'actual_cl': actual_cl,
                 'actual_lpl': actual_lpl,
                 'actual_upl': actual_upl,
-                'match_cl': close(actual_cl, _ecl) if _ecl is not None else None,
-                'match_lpl': close(actual_lpl, _elbl) if _elbl is not None else None,
-                'match_upl': close(actual_upl, _eubl) if _eubl is not None else None,
+                'match_cl': close(actual_cl, _ecl, tol) if _ecl is not None else None,
+                'match_lpl': close(actual_lpl, _elbl, tol) if _elbl is not None else None,
+                'match_upl': close(actual_upl, _eubl, tol) if _eubl is not None else None,
                 'chart_table': table,
                 **extra,
             })
@@ -358,11 +360,11 @@ def run_validation(run, pb, study, ref):  # noqa: C901
             append_result(chart_type, '[]', 'response', False, cl, lpl, upl, safe_chart_table(overall, chart_type))
 
         elif category == 'stratified':
-            stratum = context_to_stratum(context)
+            stratum = context_to_stratum(context, len(run.factors))
             focused = computed['stratified'].focus(stratum)
             chart_type = primary_chart_type()
             cl, lpl, upl = stats_from(focused, chart_type)
-            by_str = '[PRODUCTION_TIME]' if xbar_s else '[FACTOR_1, FACTOR_2]'
+            by_str = t_str if xbar_s else f_str
             append_result(chart_type, by_str, 'response', False, cl, lpl, upl,
                           safe_chart_table(focused, chart_type), stratum=str(stratum))
 
@@ -371,25 +373,25 @@ def run_validation(run, pb, study, ref):  # noqa: C901
             chart_type = 'Xbar' if is_location else 'S'
             cl, lpl, upl = stats_from(result_obj, chart_type)
             recentered = is_location
-            append_result(chart_type, '[FACTOR_1, FACTOR_2]', 'R6', recentered, cl, lpl, upl,
+            append_result(chart_type, f_str, 'R6', recentered, cl, lpl, upl,
                           safe_chart_table(result_obj, chart_type))
 
         elif category == 'pt_effects':
             result_obj = computed['pt_effects_xbar'] if is_location else computed['pt_effects_s']
             chart_type = 'Xbar' if is_location else 'S'
             cl, lpl, upl = stats_from(result_obj, chart_type)
-            append_result(chart_type, '[PRODUCTION_TIME]', 'R4', True, cl, lpl, upl,
+            append_result(chart_type, t_str, 'R4', True, cl, lpl, upl,
                           safe_chart_table(result_obj, chart_type))
 
         elif category == 'factor_effects':
             if context and 'F1' in context:
                 xbar_r = computed['f1_effects_xbar']
                 s_r = computed['f1_effects_s']
-                by_str = '[FACTOR_1]'
+                by_str = f'[{factors[0]}]'
             elif context and 'F2' in context:
                 xbar_r = computed['f2_effects_xbar']
                 s_r = computed['f2_effects_s']
-                by_str = '[FACTOR_2]'
+                by_str = f'[{factors[1]}]'
             else:
                 append_result('?', '?', 'R6', True, None, None, None, None)
                 continue
@@ -406,7 +408,7 @@ def run_validation(run, pb, study, ref):  # noqa: C901
                 result_obj = computed['interaction_xbar'] if is_location else computed['interaction_s']
                 chart_type = 'Xbar' if is_location else 'S'
                 cl, lpl, upl = stats_from(result_obj, chart_type)
-                append_result(chart_type, '[FACTOR_1, FACTOR_2, PRODUCTION_TIME]', 'R3', True,
+                append_result(chart_type, '[' + ', '.join([*factors, time]) + ']', 'R3', True,
                               cl, lpl, upl, safe_chart_table(result_obj, chart_type))
             else:
                 r3 = computed['r3_xmr']
@@ -771,7 +773,8 @@ def generate_myst_summary(all_results, aux_by_run, runs):
     total_pass = sum(v[0] for v in per_run.values())
     total_fail = sum(v[1] for v in per_run.values())
     total_skip = sum(v[2] for v in per_run.values())
-    data_files = {'T100': '`PBTESTDATABASE_T100.csv`', 'KNOWN': '`PBTESTKNOWNEFFECTS_T100.csv`'}
+    data_files = {'T100': '`PBTESTDATABASE_T100.csv`', 'KNOWN': '`PBTESTKNOWNEFFECTS_T100.csv`',
+                  'ACO': '`aco_per_capita_expenditure.csv`'}
 
     lines = [
         '# Validation against Bishop\'s reference results',
@@ -807,7 +810,8 @@ def generate_myst_summary(all_results, aux_by_run, runs):
         'PM SDS 1-6 are one fill-weight dataset with deletions; SDS 4-6 are incomplete grids, analysed',
         'as the complete design that survives tidying (ADS 1-3). PM INERT is pure noise with the same',
         'six missing-data patterns. The known-effects data are built from known condition, time and',
-        'interaction effects plus noise.',
+        'interaction effects plus noise. The Medicare data are per-capita expenditure for 24',
+        'organisations over 4 years, one reading each (issue #114).',
         '',
         '## What is covered',
         '',
@@ -864,11 +868,7 @@ def main():
     for run in RUNS:
         print(f'\nProcessing {run.label}...')
         pb = pbs[run.data]
-        study = pb.formulate(
-            response=run.response,
-            factors=[pb.cols.FACTOR_1, pb.cols.FACTOR_2],
-            time=pb.cols.PRODUCTION_TIME,
-        )
+        study = pb.formulate(response=run.response, factors=list(run.factors), time=run.time)
         ads = study.analytical_design_state
         print(f'  Analytical SDS: {ads}')
         if ads.sds != run.ads:

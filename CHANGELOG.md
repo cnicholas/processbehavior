@@ -56,9 +56,10 @@ numbers below are that manual's.
   as Xbar/S, as VAS now draws it; its limits vary with subgroup size and are not printed on the
   slides, so they carry no reference yet. The gate now reports 254 assertions passing and 61
   with no reference value (was 280 / 35); PB's side is compared at full precision.
-- **The validation gate covers every VAS run on hand** (13 runs, 969 assertions, was 3 runs and
+- **The validation gate covers every VAS run on hand** (14 runs, 1155 assertions, was 3 runs and
   254): PM SDS 1-6, PM INERT SDS 1-6 (the pure-noise column with each design state's missing-data
-  pattern) and Tom's known-effects data (`validation/PBTESTKNOWNEFFECTS_T100.csv`, SDS 1). Each
+  pattern), Tom's known-effects data (`validation/PBTESTKNOWNEFFECTS_T100.csv`, SDS 1) and the
+  Medicare ACO data (`validation/aco_per_capita_expenditure.csv`, 24 organisations x 4 years). Each
   run's reference values, spec limits and target are in its own file,
   `tests/fixtures/bishop_analyses/<run>.json` (the `vassds{1,2,3}analysis.json` references are
   now `pm_sds_{1,2,3}.json`). All six PM runs use target 237; PM SDS 5's loss shares have no
