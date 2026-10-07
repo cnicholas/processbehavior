@@ -1,0 +1,683 @@
+{
+  "run": "pm_sds_3",
+  "label": "PM SDS 3",
+  "analytic_design_state": 3,
+  "specs": {
+    "lsl": 232,
+    "usl": 242,
+    "target": 237
+  },
+  "source_file": "PM SDS3.pptm (VAS run of 10/3/2026, 10-1 manual)",
+  "extraction_method": "Values read from the text drawn in the Minitab charts of the 10/3/2026 VAS deck (displayed precision); structure and null pattern kept from the earlier extraction.",
+  "pages_extracted": 34,
+  "capability": {
+    "pp": 0.96,
+    "ppk_upper": 0.8,
+    "ppk_lower": 1.12,
+    "pct_below_lsl": 0.53,
+    "pct_above_usl": 0.46,
+    "cp": 1.57,
+    "cpk_upper": 1.31,
+    "cpk_lower": 1.83,
+    "potential_pct_below_lsl": 0.0,
+    "potential_pct_above_usl": 0.13
+  },
+  "loss": {
+    "pct_interaction": 33.1,
+    "pct_unexplained": 30.3,
+    "pct_centering": 18.5,
+    "pct_pdc": 15.4,
+    "pct_time": 2.8,
+    "pct_pdc_f1": 9.3,
+    "pct_pdc_f2": 4.3,
+    "pct_pdc_factor_interaction": 1.8
+  },
+  "items": [
+    {
+      "page_number": 1,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "Analysis of PM Sample Averages",
+      "chart_subtitle": "PM3 in Grams",
+      "context_subtitle": null,
+      "variable": "RSG AVG",
+      "CL": 237.83,
+      "LBL": null,
+      "UBL": null,
+      "axis_labels": {
+        "x": "PDCxPT RSG",
+        "y": "Sample Average"
+      },
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 3: N=1 AND N>1 COMPLETE"
+      },
+      "notes": "Limits vary with subgroup size (ADS 3) and are not printed on the slide; centre line only."
+    },
+    {
+      "page_number": 2,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "Analysis of PM Sample Standard Deviations",
+      "chart_subtitle": "PM3 in Grams",
+      "context_subtitle": null,
+      "variable": "RSG STDEV",
+      "CL": 0.8,
+      "LBL": null,
+      "UBL": null,
+      "axis_labels": {
+        "x": "PDCxPT RSG",
+        "y": "Sample Standard Deviation"
+      },
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 3: N=1 AND N>1 COMPLETE"
+      },
+      "notes": "Limits vary with subgroup size (ADS 3) and are not printed on the slide; centre line only."
+    },
+    {
+      "page_number": 3,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "Analysis of PM Sample Averages",
+      "chart_subtitle": "PM3 in Grams",
+      "context_subtitle": "PDC RSG - 1-1",
+      "variable": "RSG AVG",
+      "CL": 238.22,
+      "LBL": null,
+      "UBL": null,
+      "axis_labels": {
+        "x": "PT RSG",
+        "y": "Sample Average"
+      },
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 3: N=1 AND N>1 COMPLETE"
+      },
+      "notes": "Limits vary with subgroup size (ADS 3) and are not printed on the slide; centre line only."
+    },
+    {
+      "page_number": 4,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "Analysis of PM Sample Standard Deviations",
+      "chart_subtitle": "PM3 in Grams",
+      "context_subtitle": "PDC RSG - 1-1",
+      "variable": "RSG STDEV",
+      "CL": 0.72,
+      "LBL": null,
+      "UBL": null,
+      "axis_labels": {
+        "x": "PT RSG",
+        "y": "Sample Standard Deviation"
+      },
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 3: N=1 AND N>1 COMPLETE"
+      },
+      "notes": "Limits vary with subgroup size (ADS 3) and are not printed on the slide; centre line only."
+    },
+    {
+      "page_number": 5,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "Analysis of PM Sample Averages",
+      "chart_subtitle": "PM3 in Grams",
+      "context_subtitle": "PDC RSG - 1-2",
+      "variable": "RSG AVG",
+      "CL": 238.61,
+      "LBL": null,
+      "UBL": null,
+      "axis_labels": {
+        "x": "PT RSG",
+        "y": "Sample Average"
+      },
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 3: N=1 AND N>1 COMPLETE"
+      },
+      "notes": "Limits vary with subgroup size (ADS 3) and are not printed on the slide; centre line only."
+    },
+    {
+      "page_number": 6,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "Analysis of PM Sample Standard Deviations",
+      "chart_subtitle": "PM3 in Grams",
+      "context_subtitle": "PDC RSG - 1-2",
+      "variable": "RSG STDEV",
+      "CL": 0.82,
+      "LBL": null,
+      "UBL": null,
+      "axis_labels": {
+        "x": "PT RSG",
+        "y": "Sample Standard Deviation"
+      },
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 3: N=1 AND N>1 COMPLETE"
+      },
+      "notes": "Limits vary with subgroup size (ADS 3) and are not printed on the slide; centre line only."
+    },
+    {
+      "page_number": 7,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "Analysis of PM Sample Averages",
+      "chart_subtitle": "PM3 in Grams",
+      "context_subtitle": "PDC RSG - 2-1",
+      "variable": "RSG AVG",
+      "CL": 237.33,
+      "LBL": null,
+      "UBL": null,
+      "axis_labels": {
+        "x": "PT RSG",
+        "y": "Sample Average"
+      },
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 3: N=1 AND N>1 COMPLETE"
+      },
+      "notes": "Limits vary with subgroup size (ADS 3) and are not printed on the slide; centre line only."
+    },
+    {
+      "page_number": 8,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "Analysis of PM Sample Standard Deviations",
+      "chart_subtitle": "PM3 in Grams",
+      "context_subtitle": "PDC RSG - 2-1",
+      "variable": "RSG STDEV",
+      "CL": 0.81,
+      "LBL": null,
+      "UBL": null,
+      "axis_labels": {
+        "x": "PT RSG",
+        "y": "Sample Standard Deviation"
+      },
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 3: N=1 AND N>1 COMPLETE"
+      },
+      "notes": "Limits vary with subgroup size (ADS 3) and are not printed on the slide; centre line only."
+    },
+    {
+      "page_number": 9,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "Analysis of PM Sample Averages",
+      "chart_subtitle": "PM3 in Grams",
+      "context_subtitle": "PDC RSG - 2-2",
+      "variable": "RSG AVG",
+      "CL": 239.0,
+      "LBL": null,
+      "UBL": null,
+      "axis_labels": {
+        "x": "PT RSG",
+        "y": "Sample Average"
+      },
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 3: N=1 AND N>1 COMPLETE"
+      },
+      "notes": "Limits vary with subgroup size (ADS 3) and are not printed on the slide; centre line only."
+    },
+    {
+      "page_number": 10,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "Analysis of PM Sample Standard Deviations",
+      "chart_subtitle": "PM3 in Grams",
+      "context_subtitle": "PDC RSG - 2-2",
+      "variable": "RSG STDEV",
+      "CL": 0.81,
+      "LBL": null,
+      "UBL": null,
+      "axis_labels": {
+        "x": "PT RSG",
+        "y": "Sample Standard Deviation"
+      },
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 3: N=1 AND N>1 COMPLETE"
+      },
+      "notes": "Limits vary with subgroup size (ADS 3) and are not printed on the slide; centre line only."
+    },
+    {
+      "page_number": 11,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "Analysis of PM Sample Averages",
+      "chart_subtitle": "PM3 in Grams",
+      "context_subtitle": "PDC RSG - 3-1",
+      "variable": "RSG AVG",
+      "CL": 236.64,
+      "LBL": null,
+      "UBL": null,
+      "axis_labels": {
+        "x": "PT RSG",
+        "y": "Sample Average"
+      },
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 3: N=1 AND N>1 COMPLETE"
+      },
+      "notes": "Limits vary with subgroup size (ADS 3) and are not printed on the slide; centre line only."
+    },
+    {
+      "page_number": 12,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "Analysis of PM Sample Standard Deviations",
+      "chart_subtitle": "PM3 in Grams",
+      "context_subtitle": "PDC RSG - 3-1",
+      "variable": "RSG STDEV",
+      "CL": 0.81,
+      "LBL": null,
+      "UBL": null,
+      "axis_labels": {
+        "x": "PT RSG",
+        "y": "Sample Standard Deviation"
+      },
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 3: N=1 AND N>1 COMPLETE"
+      },
+      "notes": "Limits vary with subgroup size (ADS 3) and are not printed on the slide; centre line only."
+    },
+    {
+      "page_number": 13,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "Analysis of PM Sample Averages",
+      "chart_subtitle": "PM3 in Grams",
+      "context_subtitle": "PDC RSG - 3-2",
+      "variable": "RSG AVG",
+      "CL": 237.1,
+      "LBL": null,
+      "UBL": null,
+      "axis_labels": {
+        "x": "PT RSG",
+        "y": "Sample Average"
+      },
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 3: N=1 AND N>1 COMPLETE"
+      },
+      "notes": "Limits vary with subgroup size (ADS 3) and are not printed on the slide; centre line only."
+    },
+    {
+      "page_number": 14,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "Analysis of PM Sample Standard Deviations",
+      "chart_subtitle": "PM3 in Grams",
+      "context_subtitle": "PDC RSG - 3-2",
+      "variable": "RSG STDEV",
+      "CL": 0.8,
+      "LBL": null,
+      "UBL": null,
+      "axis_labels": {
+        "x": "PT RSG",
+        "y": "Sample Standard Deviation"
+      },
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 3: N=1 AND N>1 COMPLETE"
+      },
+      "notes": "Limits vary with subgroup size (ADS 3) and are not printed on the slide; centre line only."
+    },
+    {
+      "page_number": 15,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "Analysis of PM Sample Averages",
+      "chart_subtitle": "PM3 in Grams",
+      "context_subtitle": "PDC RSG - 4-1",
+      "variable": "RSG AVG",
+      "CL": 237.52,
+      "LBL": null,
+      "UBL": null,
+      "axis_labels": {
+        "x": "PT RSG",
+        "y": "Sample Average"
+      },
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 3: N=1 AND N>1 COMPLETE"
+      },
+      "notes": "Limits vary with subgroup size (ADS 3) and are not printed on the slide; centre line only."
+    },
+    {
+      "page_number": 16,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "Analysis of PM Sample Standard Deviations",
+      "chart_subtitle": "PM3 in Grams",
+      "context_subtitle": "PDC RSG - 4-1",
+      "variable": "RSG STDEV",
+      "CL": 0.83,
+      "LBL": null,
+      "UBL": null,
+      "axis_labels": {
+        "x": "PT RSG",
+        "y": "Sample Standard Deviation"
+      },
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 3: N=1 AND N>1 COMPLETE"
+      },
+      "notes": "Limits vary with subgroup size (ADS 3) and are not printed on the slide; centre line only."
+    },
+    {
+      "page_number": 17,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "Analysis of PM Sample Averages",
+      "chart_subtitle": "PM3 in Grams",
+      "context_subtitle": "PDC RSG - 4-2",
+      "variable": "RSG AVG",
+      "CL": 238.18,
+      "LBL": null,
+      "UBL": null,
+      "axis_labels": {
+        "x": "PT RSG",
+        "y": "Sample Average"
+      },
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 3: N=1 AND N>1 COMPLETE"
+      },
+      "notes": "Limits vary with subgroup size (ADS 3) and are not printed on the slide; centre line only."
+    },
+    {
+      "page_number": 18,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "Analysis of PM Sample Standard Deviations",
+      "chart_subtitle": "PM3 in Grams",
+      "context_subtitle": "PDC RSG - 4-2",
+      "variable": "RSG STDEV",
+      "CL": 0.79,
+      "LBL": null,
+      "UBL": null,
+      "axis_labels": {
+        "x": "PT RSG",
+        "y": "Sample Standard Deviation"
+      },
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 3: N=1 AND N>1 COMPLETE"
+      },
+      "notes": "Limits vary with subgroup size (ADS 3) and are not printed on the slide; centre line only."
+    },
+    {
+      "page_number": 19,
+      "analysis_title": "Current Process Capability",
+      "chart_title": "PM3 H TITLE 1",
+      "chart_subtitle": "PM3 H TITLE 2",
+      "context_subtitle": null,
+      "variable": null,
+      "CL": null,
+      "LBL": null,
+      "UBL": null,
+      "axis_labels": {
+        "x": "PM3 in Grams",
+        "y": "Percent"
+      },
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 3: N=1 AND N>1 COMPLETE"
+      },
+      "notes": "Chart title placeholders 'H TITLE 1/2' appear unreplaced in source slide."
+    },
+    {
+      "page_number": 20,
+      "analysis_title": "Process Design Condition Main Effects Analysis",
+      "chart_title": "Analysis of PDC RSG Sample Averages",
+      "chart_subtitle": "PM3 in Grams",
+      "context_subtitle": null,
+      "variable": "RSG AVG",
+      "CL": 237.83,
+      "LBL": null,
+      "UBL": null,
+      "axis_labels": {
+        "x": "PDC RSG",
+        "y": "Sample Average"
+      },
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 3: N=1 AND N>1 COMPLETE"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 21,
+      "analysis_title": "Process Design Factor Main Effects Analysis",
+      "chart_title": "Analysis of PD Factor Sample Standard Deviations",
+      "chart_subtitle": "PM3 in Grams",
+      "context_subtitle": null,
+      "variable": "RSG STDEV",
+      "CL": 1.06,
+      "LBL": null,
+      "UBL": null,
+      "axis_labels": {
+        "x": "PDC RSG",
+        "y": "Sample Standard Deviation"
+      },
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 3: N=1 AND N>1 COMPLETE"
+      },
+      "notes": "Title OCR was noisy on the slide image; chart context indicates a standard-deviation main-effects chart."
+    },
+    {
+      "page_number": 22,
+      "analysis_title": "Production Time Main Effects Analysis",
+      "chart_title": "Analysis of PT RSG Sample Averages",
+      "chart_subtitle": "PM3 in Grams",
+      "context_subtitle": null,
+      "variable": "RSG AVG",
+      "CL": 237.83,
+      "LBL": null,
+      "UBL": null,
+      "axis_labels": {
+        "x": "PT RSG",
+        "y": "Sample Average"
+      },
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 3: N=1 AND N>1 COMPLETE"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 23,
+      "analysis_title": "Production Time Main Effects Analysis",
+      "chart_title": "Analysis of PT RSG Sample Standard Deviations",
+      "chart_subtitle": "PM3 in Grams",
+      "context_subtitle": null,
+      "variable": "RSG STDEV",
+      "CL": 1.06,
+      "LBL": null,
+      "UBL": null,
+      "axis_labels": {
+        "x": "PT RSG",
+        "y": "Sample Standard Deviation"
+      },
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 3: N=1 AND N>1 COMPLETE"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 24,
+      "analysis_title": "Process Design Factor Main Effects Analysis",
+      "chart_title": "Analysis of PD Factor Sample Averages",
+      "chart_subtitle": "PM3 in Grams",
+      "context_subtitle": "PD Factor - F1",
+      "variable": "RSG AVG",
+      "CL": 237.83,
+      "LBL": null,
+      "UBL": null,
+      "axis_labels": {
+        "x": "PD Factor RSG",
+        "y": "Sample Average"
+      },
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 3: N=1 AND N>1 COMPLETE"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 25,
+      "analysis_title": "Process Design Factor Main Effects Analysis",
+      "chart_title": "Analysis of PD Factor Sample Standard Deviations",
+      "chart_subtitle": "PM3 in Grams",
+      "context_subtitle": "PD Factor - F1",
+      "variable": "RSG STDEV",
+      "CL": 1.06,
+      "LBL": null,
+      "UBL": null,
+      "axis_labels": {
+        "x": "PD Factor RSG",
+        "y": "Sample Standard Deviation"
+      },
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 3: N=1 AND N>1 COMPLETE"
+      },
+      "notes": "Title OCR was noisy on the slide image; corrected using chart context and neighboring slides."
+    },
+    {
+      "page_number": 26,
+      "analysis_title": "Process Design Factor Main Effects Analysis",
+      "chart_title": "Analysis of PD Factor Sample Averages",
+      "chart_subtitle": "PM3 in Grams",
+      "context_subtitle": "PD Factor - F2",
+      "variable": "RSG AVG",
+      "CL": 237.82,
+      "LBL": null,
+      "UBL": null,
+      "axis_labels": {
+        "x": "PD Factor RSG",
+        "y": "Sample Average"
+      },
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 3: N=1 AND N>1 COMPLETE"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 27,
+      "analysis_title": "Process Design Factor Main Effects Analysis",
+      "chart_title": "Analysis of PD Factor Sample Standard Deviations",
+      "chart_subtitle": "PM3 in Grams",
+      "context_subtitle": "PD Factor - F2",
+      "variable": "RSG STDEV",
+      "CL": 1.06,
+      "LBL": null,
+      "UBL": null,
+      "axis_labels": {
+        "x": "PD Factor RSG",
+        "y": "Sample Standard Deviation"
+      },
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 3: N=1 AND N>1 COMPLETE"
+      },
+      "notes": "Title OCR was noisy on the slide image; corrected using chart context and neighboring slides."
+    },
+    {
+      "page_number": 28,
+      "analysis_title": "Process Design Condition by Production Time Interaction Effects",
+      "chart_title": "Analysis of PDCxPT RSG Sample Averages",
+      "chart_subtitle": "PM3 in Grams",
+      "context_subtitle": null,
+      "variable": "RSG AVG",
+      "CL": 237.83,
+      "LBL": null,
+      "UBL": null,
+      "axis_labels": {
+        "x": "PDCxPT RSG",
+        "y": "Sample Average"
+      },
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 3: N=1 AND N>1 COMPLETE"
+      },
+      "notes": "Limits vary with subgroup size (ADS 3) and are not printed on the slide; centre line only."
+    },
+    {
+      "page_number": 29,
+      "analysis_title": "Process Design Condition by Production Time Interaction Effects",
+      "chart_title": "Analysis of PDCxPT RSG Sample Standard Deviations",
+      "chart_subtitle": "PM3 in Grams",
+      "context_subtitle": null,
+      "variable": "RSG STDEV",
+      "CL": 1.04,
+      "LBL": null,
+      "UBL": null,
+      "axis_labels": {
+        "x": "PDCxPT RSG",
+        "y": "Sample Standard Deviation"
+      },
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 3: N=1 AND N>1 COMPLETE"
+      },
+      "notes": "Limits vary with subgroup size (ADS 3) and are not printed on the slide; centre line only."
+    },
+    {
+      "page_number": 30,
+      "analysis_title": "Taguchi Loss Function Analysis",
+      "chart_title": null,
+      "chart_subtitle": "PM3 in Grams",
+      "context_subtitle": null,
+      "variable": null,
+      "CL": null,
+      "LBL": null,
+      "UBL": null,
+      "axis_labels": {
+        "x": "Components Contributing to Average Loss",
+        "y": "Contribution to Average Loss (%)"
+      },
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 3: N=1 AND N>1 COMPLETE"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 31,
+      "analysis_title": "Taguchi Loss Function Analysis",
+      "chart_title": null,
+      "chart_subtitle": "PM3 in Grams",
+      "context_subtitle": null,
+      "variable": null,
+      "CL": null,
+      "LBL": null,
+      "UBL": null,
+      "axis_labels": {
+        "x": "Components Contributing to Average Loss",
+        "y": "Contribution to Average Loss (%)"
+      },
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 3: N=1 AND N>1 COMPLETE"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 32,
+      "analysis_title": "Potential Process Capability",
+      "chart_title": "PM3 H TITLE 1",
+      "chart_subtitle": "PM3 H TITLE 2",
+      "context_subtitle": null,
+      "variable": null,
+      "CL": null,
+      "LBL": null,
+      "UBL": null,
+      "axis_labels": {
+        "x": "PM3 in Grams",
+        "y": "Percent"
+      },
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 3: N=1 AND N>1 COMPLETE"
+      },
+      "notes": "Chart title placeholders 'H TITLE 1/2' appear unreplaced in source slide."
+    },
+    {
+      "page_number": 33,
+      "analysis_title": "Test of Maximum Information",
+      "chart_title": "R2 Residuals Individuals Chart",
+      "chart_subtitle": "PM3 in Grams",
+      "context_subtitle": null,
+      "variable": "R2 RESIDUALS",
+      "CL": 0.0,
+      "LBL": -3.7,
+      "UBL": 3.7,
+      "axis_labels": {
+        "x": "PDCxPT RSG",
+        "y": "Residual Value"
+      },
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 3: N=1 AND N>1 COMPLETE"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 34,
+      "analysis_title": "Maximum Information Analysis",
+      "chart_title": null,
+      "chart_subtitle": "PM3 in Grams",
+      "context_subtitle": null,
+      "variable": null,
+      "CL": null,
+      "LBL": null,
+      "UBL": null,
+      "axis_labels": {
+        "x": "PM3 in Grams",
+        "y": "Percent"
+      },
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 3: N=1 AND N>1 COMPLETE"
+      },
+      "notes": null
+    }
+  ]
+}

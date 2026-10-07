@@ -1,15 +1,20 @@
 """
 E2E Validation Report: processbehavior vs Tom Bishop's VAS Analyses
 
-Generates an HTML report comparing our library output against Tom Bishop's
-Minitab reference analyses for SDS 1-3. Uses PBTESTDATABASE_T100.csv as input.
+Compares the library's output with Tom Bishop's VAS (Minitab) analyses, value by value, for every
+run in RUNS: PM SDS 1-6 and PM INERT SDS 1-6 (PBTESTDATABASE_T100.csv) and the known-effects data
+(PBTESTKNOWNEFFECTS_T100.csv). Each run's reference values, spec limits and target live in
+tests/fixtures/bishop_analyses/<run>.json; a reference that is not yet available is "pending" and
+never fails the gate. Writes an HTML report and docs/reference/validation.md; exits 1 on any
+disagreement.
 
 Usage:
     python validation/e2e_bishop_report.py
 """
 import json
-import sys
 import math
+import sys
+from dataclasses import dataclass
 from pathlib import Path
 
 import pandas as pd
@@ -18,50 +23,40 @@ from processbehavior import ProcessBehavior
 
 # --- Configuration ---
 
-VALIDATION_CSV = Path(__file__).parent / 'PBTESTDATABASE_T100.csv'
+DATA = {
+    'T100': Path(__file__).parent / 'PBTESTDATABASE_T100.csv',
+    'KNOWN': Path(__file__).parent / 'PBTESTKNOWNEFFECTS_T100.csv',
+}
 FIXTURES_DIR = Path(__file__).parent.parent / 'tests' / 'fixtures' / 'bishop_analyses'
 OUTPUT_HTML = Path(__file__).parent / 'e2e_bishop_report.html'
 TOLERANCE = 0.01  # half-unit of last decimal place
 
-SPEC_LSL = 232
-SPEC_USL = 242
-SPEC_TARGET = 237
+# Sampling design state -> analytic design state: incomplete grids (SDS 4-6) are analysed as the
+# complete design that survives tidying.
+ADS_OF_SDS = {1: 1, 2: 2, 3: 3, 4: 1, 5: 2, 6: 3}
 
-SDS_CONFIGS = {
-    1: {'response_attr': 'PM_SDS_1', 'json': 'vassds1analysis.json', 'chart': 'Xbar'},
-    2: {'response_attr': 'PM_SDS_2', 'json': 'vassds2analysis.json', 'chart': 'X'},
-    3: {'response_attr': 'PM_SDS_3', 'json': 'vassds3analysis.json', 'chart': 'Xbar'},
-}
 
-# Tom's process-capability reference indices (LSL=232, USL=242, Target=237).
-# Tom reports to 2 decimals; tolerance is half-unit of last decimal place.
+@dataclass(frozen=True)
+class Run:
+    """One VAS analysis to reproduce: a response column of a data source, at its ADS."""
+
+    id: str        # also the reference file: tests/fixtures/bishop_analyses/<id>.json
+    label: str
+    data: str      # key of DATA
+    response: str
+    ads: int
+
+
+RUNS = [
+    *[Run(f'pm_sds_{k}', f'PM SDS {k}', 'T100', f'PM SDS {k}', ADS_OF_SDS[k]) for k in range(1, 7)],
+    Run('pm_inert_sds_1', 'PM INERT', 'T100', 'PM INERT', 1),
+    # PM INERT SDS k: the PM INERT column with PM SDS k's missing pattern (see load_frames)
+    *[Run(f'pm_inert_sds_{k}', f'PM INERT SDS {k}', 'T100', f'PM INERT SDS {k}', ADS_OF_SDS[k]) for k in range(2, 7)],
+    Run('known_effects_sds_1', 'PM SDS 1 KNOWN', 'KNOWN', 'PM SDS 1 KNOWN', 1),
+]
+
+# Tom reports capability to 2 decimals and loss shares to 1; tolerance is half a unit of the last place.
 CAPABILITY_TOLERANCE = 0.01
-EXPECTED_CAPABILITY = {
-    1: {
-        # Current (overall sigma)
-        'pp': 0.96, 'ppk_upper': 0.80, 'ppk_lower': 1.11,
-        'pct_below_lsl': 0.53, 'pct_above_usl': 0.45,
-        # Potential (R2 sigma)
-        'cp': 2.08, 'cpk_upper': 1.74, 'cpk_lower': 2.42,
-        'potential_pct_below_lsl': 0.0, 'potential_pct_above_usl': 0.0,
-    },
-    2: {
-        # Current
-        'pp': 1.1, 'ppk_upper': 0.93, 'ppk_lower': 1.27,
-        'pct_below_lsl': 0.5, 'pct_above_usl': 0.0,
-        # Potential (R2 sigma) — Tom's VAS run of 10/3/2026 (10-1 manual R2), PM SDS 2 slide 32
-        'cp': 1.78, 'cpk_upper': 1.50, 'cpk_lower': 2.06,
-        'potential_pct_below_lsl': 0.0, 'potential_pct_above_usl': 0.63,
-    },
-    3: {
-        # Current
-        'pp': 0.96, 'ppk_upper': 0.8, 'ppk_lower': 1.12,
-        'pct_below_lsl': 0.53, 'pct_above_usl': 0.46,
-        # Potential (R2 sigma) — Tom's VAS run of 10/3/2026 (10-1 manual R2), PM SDS 3 slide 32
-        'cp': 1.57, 'cpk_upper': 1.31, 'cpk_lower': 1.83,
-        'potential_pct_below_lsl': 0.0, 'potential_pct_above_usl': 0.13,
-    },
-}
 # (Tom's label) -> (CapabilityResult.as_dict key). Order shown is the order
 # they appear in the report table; "Current" block then "Potential" block.
 CAPABILITY_METRICS = [
@@ -77,46 +72,8 @@ CAPABILITY_METRICS = [
     ('Potential % above USL', 'potential_pct_above_usl'),
 ]
 
-# Tom's Taguchi loss-function decomposition (percentages). 1 decimal place;
-# tolerance is half-unit of last decimal place.
+# Loss shares are compared in percent, to 1 decimal.
 LOSS_TOLERANCE = 0.05
-EXPECTED_LOSS = {
-    # SDS 1: Tom's VAS run of 10/3/2026 (10-1 manual, Eq 15-16 without c4).
-    1: {
-        'pct_centering':   17.3,  # Tom: "mean"
-        'pct_unexplained': 20.9,
-        'pct_pdc':         14.6,
-        'pct_time':         2.8,  # Tom: "pt"
-        'pct_interaction': 44.5,  # Tom: "pdcxpt"
-    },
-    # SDS 2 and 3: Tom's VAS run of 10/3/2026 (10-1 manual: Eq 15-17 unexplained = S²_R2,
-    # Eq 15-20 interaction by remainder), slides 30-31.
-    2: {
-        # 5-component decomposition
-        'pct_centering':   21.0,
-        'pct_unexplained': 30.0,
-        'pct_pdc':         20.4,
-        'pct_time':         2.9,
-        'pct_interaction': 25.6,
-        # Factor-level decomposition of pct_pdc (synthetic fields; computed
-        # from LossResult.pdc_by_factor / total in _build_loss_results)
-        'pct_pdc_f1':                  13.7,
-        'pct_pdc_f2':                   5.5,
-        'pct_pdc_factor_interaction':   1.2,  # Tom: "PDF Int"
-    },
-    3: {
-        # 5-component decomposition
-        'pct_centering':   18.5,
-        'pct_unexplained': 30.3,
-        'pct_pdc':         15.4,
-        'pct_time':         2.8,
-        'pct_interaction': 33.1,
-        # Factor-level decomposition of pct_pdc
-        'pct_pdc_f1':       9.3,
-        'pct_pdc_f2':       4.3,
-        'pct_pdc_factor_interaction':   1.8,
-    },
-}
 # (Tom's label) -> (LossResult.as_dict key, or synthetic key). Synthetic
 # keys (pct_pdc_f1, pct_pdc_f2, pct_pdc_factor_interaction) are computed
 # inside _build_loss_results since LossResult only exposes the absolute
@@ -133,7 +90,7 @@ LOSS_METRICS = [
 ]
 
 
-def context_to_stratum(context_subtitle: str, sds: int) -> str:
+def context_to_stratum(context_subtitle: str) -> str:
     """Convert JSON context_subtitle 'PDC RSG - 1-1' to our stratum key."""
     # Extract '1-1' from 'PDC RSG - 1-1'
     level = context_subtitle.split(' - ')[1]  # '1-1'
@@ -198,9 +155,8 @@ def _coerce_float(v):
     return float(v)
 
 
-def _build_capability_results(sds_num, cap_dict):
-    """Validate process-capability indices against EXPECTED_CAPABILITY."""
-    expected = EXPECTED_CAPABILITY.get(sds_num, {})
+def _build_capability_results(expected, cap_dict):
+    """Validate process-capability indices against the run's reference values."""
     rows = []
     for label, field in CAPABILITY_METRICS:
         actual = _coerce_float(cap_dict.get(field))
@@ -238,9 +194,8 @@ def _augment_loss_with_factor_percentages(loss_dict):
     return derived
 
 
-def _build_loss_results(sds_num, loss_dict):
-    """Validate loss-function decomposition (percentages) against EXPECTED_LOSS."""
-    expected = EXPECTED_LOSS.get(sds_num, {})
+def _build_loss_results(expected, loss_dict):
+    """Validate loss-function decomposition (percentages) against the run's reference values."""
     derived = _augment_loss_with_factor_percentages(loss_dict)
     rows = []
     for label, field in LOSS_METRICS:
@@ -254,8 +209,8 @@ def _build_loss_results(sds_num, loss_dict):
     return rows
 
 
-def run_sds_validation(sds_num, pb, study, json_data):  # noqa: C901
-    """Run all validations for one SDS type.
+def run_validation(run, pb, study, ref):  # noqa: C901
+    """Run all validations for one run (a response column at its ADS) against its reference file.
 
     Returns
     -------
@@ -264,14 +219,15 @@ def run_sds_validation(sds_num, pb, study, json_data):  # noqa: C901
         list contains per-row dicts ready for HTML rendering.
     """
     results = []
-    items = json_data['items']
+    items = ref['items']
+    specs = ref['specs']
 
     # Pre-compute results we'll need
     computed = {}
 
     # Xbar/S wherever some subgroups are replicated: ADS 1, and ADS 3, where the 10-1 manual makes
     # Xbar/S VAS's default (Tom's 10/3/2026 run draws PM SDS 3 that way). ADS 2 uses X/mR.
-    xbar_s = sds_num in (1, 3)
+    xbar_s = run.ads in (1, 3)
 
     # Overall charts
     if xbar_s:
@@ -328,8 +284,8 @@ def run_sds_validation(sds_num, pb, study, json_data):  # noqa: C901
     )
 
     computed['max_info_xmr'] = study.execute(chart='X', by=[], value='R2')
-    computed['loss'] = study.loss_function(target=SPEC_TARGET)
-    computed['capability'] = study.capability(lsl=SPEC_LSL, usl=SPEC_USL, target=SPEC_TARGET)
+    computed['loss'] = study.loss_function(target=specs['target'])
+    computed['capability'] = study.capability(lsl=specs['lsl'], usl=specs['usl'], target=specs['target'])
 
     for item in items:
         page = item['page_number']
@@ -343,7 +299,7 @@ def run_sds_validation(sds_num, pb, study, json_data):  # noqa: C901
         is_location = is_location_chart(item)
 
         base = {
-            'sds': sds_num,
+            'run': run.id,
             'page': page,
             'chart_title': chart_title,
             'chart_subtitle': chart_subtitle,
@@ -396,7 +352,7 @@ def run_sds_validation(sds_num, pb, study, json_data):  # noqa: C901
             append_result(chart_type, '[]', 'response', False, cl, lpl, upl, safe_chart_table(overall, chart_type))
 
         elif category == 'stratified':
-            stratum = context_to_stratum(context, sds_num)
+            stratum = context_to_stratum(context)
             focused = computed['stratified'].focus(stratum)
             chart_type = primary_chart_type()
             cl, lpl, upl = stats_from(focused, chart_type)
@@ -472,8 +428,10 @@ def run_sds_validation(sds_num, pb, study, json_data):  # noqa: C901
 
     # Compare at full precision: Tom's figures are displayed to 1-2 decimals and the tolerance
     # absorbs that; rounding our side first would double-count the rounding.
-    capability_results = _build_capability_results(sds_num, computed['capability'].as_dict(round_to=12))
-    loss_results = _build_loss_results(sds_num, computed['loss'].as_dict(round_to=12))
+    capability_results = _build_capability_results(
+        ref.get('capability', {}), computed['capability'].as_dict(round_to=12)
+    )
+    loss_results = _build_loss_results(ref.get('loss', {}), computed['loss'].as_dict(round_to=12))
 
     return {
         'charts': results,
@@ -557,18 +515,18 @@ def _render_metric_table(title: str, rows, value_decimals: int, tolerance: float
     return html
 
 
-def generate_html(all_results, aux_by_sds=None):  # noqa: C901
+def generate_html(all_results, aux_by_run, runs):  # noqa: C901
     """Generate the full HTML report.
 
     Parameters
     ----------
     all_results : list[dict]
-        Per-chart-row result dicts (existing schema).
-    aux_by_sds : dict[int, dict] | None
-        Optional auxiliary results keyed by SDS number, with
-        ``{'capability': [...], 'loss': [...]}`` per SDS.
+        Per-chart-row result dicts, each tagged with its run id.
+    aux_by_run : dict[str, dict]
+        Per run id: ``{'capability': [...], 'loss': [...], 'specs': {...}, 'loss_note': str | None}``.
+    runs : list[Run]
+        The runs, in report order.
     """
-    aux_by_sds = aux_by_sds or {}
     html = """<!DOCTYPE html>
 <html>
 <head>
@@ -601,7 +559,7 @@ summary { cursor: pointer; color: #1565c0; font-size: 12px; }
 </head>
 <body>
 <h1>E2E Bishop Validation Report</h1>
-<p>Comparison of processbehavior library output against Tom Bishop's VAS Minitab analyses (SDS 1-3).</p>
+<p>Comparison of processbehavior library output against Tom Bishop's VAS Minitab analyses, run by run.</p>
 <p class="tolerance">Tolerance: &plusmn;0.01 (half-unit of last decimal place in reference data)</p>
 """
     # Global summary
@@ -623,7 +581,7 @@ summary { cursor: pointer; color: #1565c0; font-size: 12px; }
                 total_skip += 1
 
     # Also fold in capability + loss matches from auxiliary results
-    for aux in aux_by_sds.values():
+    for aux in aux_by_run.values():
         for row in aux.get('capability', []) + aux.get('loss', []):
             if row['match'] is True:
                 total_checks += 1
@@ -644,22 +602,22 @@ out of {total_checks + total_skip} total checks
 </div>
 """
 
-    # Group by SDS
-    for sds_num in [1, 2, 3]:
-        sds_results = [r for r in all_results if r['sds'] == sds_num]
-        if not sds_results:
+    # One section per run
+    for run in runs:
+        run_results = [r for r in all_results if r['run'] == run.id]
+        if not run_results:
             continue
 
-        sds_pass = sum(1 for r in sds_results for k in ('match_cl', 'match_lpl', 'match_upl') if r.get(k) is True)
-        sds_fail = sum(1 for r in sds_results for k in ('match_cl', 'match_lpl', 'match_upl') if r.get(k) is False)
-        sds_skip = sum(1 for r in sds_results for k in ('match_cl', 'match_lpl', 'match_upl') if r.get(k) is None)
+        run_pass = sum(1 for r in run_results for k in ('match_cl', 'match_lpl', 'match_upl') if r.get(k) is True)
+        run_fail = sum(1 for r in run_results for k in ('match_cl', 'match_lpl', 'match_upl') if r.get(k) is False)
+        run_skip = sum(1 for r in run_results for k in ('match_cl', 'match_lpl', 'match_upl') if r.get(k) is None)
 
         html += f"""
-<h2>SDS {sds_num} — Analytic Design State {sds_num}</h2>
+<h2>{run.label} — Analytic Design State {run.ads}</h2>
 <div class="summary">
-<span class="pass-count">{sds_pass} passed</span> /
-<span class="fail-count">{sds_fail} failed</span> /
-<span class="skip-count">{sds_skip} skipped</span>
+<span class="pass-count">{run_pass} passed</span> /
+<span class="fail-count">{run_fail} failed</span> /
+<span class="skip-count">{run_skip} skipped</span>
 </div>
 <table class="main">
 <tr>
@@ -677,7 +635,7 @@ out of {total_checks + total_skip} total checks
     <th>Details</th>
 </tr>
 """
-        for r in sds_results:
+        for r in run_results:
             # Determine overall row status
             matches = [r.get(k) for k in ('match_cl', 'match_lpl', 'match_upl')]
             if any(m is False for m in matches):
@@ -747,12 +705,13 @@ out of {total_checks + total_skip} total checks
         html += '</table>'
 
         # Capability + loss-function sections under each SDS
-        aux = aux_by_sds.get(sds_num, {})
+        aux = aux_by_run.get(run.id, {})
+        specs = aux.get('specs', {})
         cap_rows = aux.get('capability', [])
         loss_rows = aux.get('loss', [])
         if cap_rows:
             html += _render_metric_table(
-                f'Process Capability (LSL={SPEC_LSL}, USL={SPEC_USL}, Target={SPEC_TARGET})',
+                f"Process Capability (LSL={specs.get('lsl')}, USL={specs.get('usl')}, Target={specs.get('target')})",
                 cap_rows, value_decimals=2, tolerance=CAPABILITY_TOLERANCE,
             )
         if loss_rows:
@@ -760,6 +719,8 @@ out of {total_checks + total_skip} total checks
                 'Taguchi Loss Function (% of total)',
                 loss_rows, value_decimals=1, tolerance=LOSS_TOLERANCE,
             )
+            if aux.get('loss_note'):
+                html += f'<p class="tolerance">Pending: {aux["loss_note"]}</p>'
 
     from datetime import datetime
     html += f'<p class="timestamp">Generated: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}</p>'
@@ -774,23 +735,23 @@ out of {total_checks + total_skip} total checks
 MYST_OUTPUT = Path(__file__).parent.parent / 'docs' / 'reference' / 'validation.md'
 
 
-def _tally(all_results, aux_by_sds):
-    """(passed, failed, skipped) per ADS, over charts + capability + loss."""
-    per_sds: dict[int, list[int]] = {}
+def _tally(all_results, aux_by_run):
+    """(passed, failed, pending) per run id, over charts + capability + loss."""
+    per_run: dict[str, list[int]] = {}
     for row in all_results:
-        counts = per_sds.setdefault(row['sds'], [0, 0, 0])
+        counts = per_run.setdefault(row['run'], [0, 0, 0])
         for key in ('match_cl', 'match_lpl', 'match_upl'):
             match = row.get(key)
             counts[0 if match is True else 1 if match is False else 2] += 1
-    for sds_num, aux in (aux_by_sds or {}).items():
-        counts = per_sds.setdefault(sds_num, [0, 0, 0])
+    for run_id, aux in aux_by_run.items():
+        counts = per_run.setdefault(run_id, [0, 0, 0])
         for row in aux['capability'] + aux['loss']:
             match = row['match']
             counts[0 if match is True else 1 if match is False else 2] += 1
-    return per_sds
+    return per_run
 
 
-def generate_myst_summary(all_results, aux_by_sds=None):
+def generate_myst_summary(all_results, aux_by_run, runs):
     """A short, committable summary of the validation run.
 
     Deliberately not the full HTML report: this is the page a reader lands on,
@@ -800,48 +761,47 @@ def generate_myst_summary(all_results, aux_by_sds=None):
     """
     import processbehavior
 
-    per_sds = _tally(all_results, aux_by_sds)
-    total_pass = sum(v[0] for v in per_sds.values())
-    total_fail = sum(v[1] for v in per_sds.values())
-    total_skip = sum(v[2] for v in per_sds.values())
-
-    names = {
-        1: 'ADS 1 — full replication',
-        2: 'ADS 2 — no replication',
-        3: 'ADS 3 — partial replication',
-    }
-    sources = {1: '`PM SDS 1`', 2: '`PM SDS 2`', 3: '`PM SDS 3`'}
+    per_run = _tally(all_results, aux_by_run)
+    total_pass = sum(v[0] for v in per_run.values())
+    total_fail = sum(v[1] for v in per_run.values())
+    total_skip = sum(v[2] for v in per_run.values())
+    data_files = {'T100': '`PBTESTDATABASE_T100.csv`', 'KNOWN': '`PBTESTKNOWNEFFECTS_T100.csv`'}
 
     lines = [
         '# Validation against Bishop\'s reference results',
         '',
         'Every analytical output this library produces is checked, number by number,',
-        "against Dr. Thomas A. Bishop's published Minitab results for the same data.",
+        "against Dr. Thomas A. Bishop's VAS results (Minitab) for the same data.",
         'Not "inspired by" and not spot-checked — the chart centers, control limits,',
-        'signal classifications, capability indices and loss-function components are',
-        'compared to the reference and the run fails if any of them disagree.',
+        'capability indices and loss-function components are compared to the reference',
+        'and the run fails if any of them disagree.',
         '',
         f'**{total_pass} assertions pass**'
         + (f', {total_fail} fail' if total_fail else ', 0 fail')
-        + (f', {total_skip} have no reference value.' if total_skip else '.'),
+        + (f', {total_skip} have no reference value yet.' if total_skip else '.'),
         '',
         f'Generated by `validation/e2e_bishop_report.py` from processbehavior '
-        f'{processbehavior.__version__}, against `validation/PBTESTDATABASE_T100.csv`.',
+        f'{processbehavior.__version__}.',
         '',
         '## Coverage',
         '',
-        '| Analytical Design State | Source column | Assertions | Result |',
-        '|---|---|---|---|',
+        '| Run | Data | Analytic design state | Assertions | No reference yet | Result |',
+        '|---|---|---|---|---|---|',
     ]
-    for sds_num in sorted(per_sds):
-        passed, failed, skipped = per_sds[sds_num]
+    for run in runs:
+        passed, failed, skipped = per_run.get(run.id, [0, 0, 0])
         verdict = '✅ all pass' if failed == 0 else f'❌ {failed} failing'
         lines.append(
-            f'| {names.get(sds_num, f"ADS {sds_num}")} | {sources.get(sds_num, "—")} '
-            f'| {passed + failed} | {verdict} |'
+            f'| `{run.label}` | {data_files[run.data]} | ADS {run.ads} '
+            f'| {passed + failed} | {skipped} | {verdict} |'
         )
 
     lines += [
+        '',
+        'PM SDS 1-6 are one fill-weight dataset with deletions; SDS 4-6 are incomplete grids, analysed',
+        'as the complete design that survives tidying (ADS 1-3). PM INERT is pure noise with the same',
+        'six missing-data patterns. The known-effects data are built from known condition, time and',
+        'interaction effects plus noise.',
         '',
         '## What is covered',
         '',
@@ -851,13 +811,14 @@ def generate_myst_summary(all_results, aux_by_sds=None):
         '  the distribution beyond each specification limit.',
         '- **Loss function** — the Taguchi loss decomposition and its components.',
         '',
-        '## What is not yet covered',
+        '## Values with no reference yet',
         '',
-        'ODS 4-6 (incomplete grids) are detected and routed correctly, and their',
-        'collapse to ADS 1-3 is pinned by tests — an incomplete design is analysed as',
-        'the complete design that survives tidying, so the numbers above are the ones',
-        'that apply. What is still outstanding is an end-to-end comparison against',
-        "Bishop's Minitab output for the incomplete-grid datasets themselves.",
+        '- Charts whose limits vary with subgroup size (unequal subgroups, as in SDS 3, 4 and 6):',
+        '  VAS prints "UNEQUAL" instead of a single limit, so the slides carry no value to compare.',
+        '- The factor S charts of SDS 1 and 4 (pages 25 and 27), which VAS draws on condition',
+        '  subgroups where the manual uses one subgroup per factor level; awaiting Dr. Bishop.',
+        '- PM SDS 5 loss shares: its VAS run used the process mean as the target; the gate uses',
+        '  237 for all six PM runs, pending a VAS rerun at 237.',
         '',
         '## Reproducing this',
         '',
@@ -867,51 +828,65 @@ def generate_myst_summary(all_results, aux_by_sds=None):
         '',
         'That writes this page and a detailed HTML report',
         '(`validation/e2e_bishop_report.html`) with every compared value, expected',
-        'beside actual, grouped by design state.',
+        'beside actual, grouped by run.',
         '',
     ]
     return '\n'.join(lines)
 
 
+def load_frames():
+    """Read every data source. PM INERT SDS k (k = 2..6) is the PM INERT column with PM SDS k's
+    missing pattern, which is how the PM INERT SDS 2-6 columns of Dr. Bishop's VAS runs are built."""
+    frames = {name: pd.read_csv(path) for name, path in DATA.items()}
+    t100 = frames['T100']
+    inert = pd.to_numeric(t100['PM INERT'], errors='coerce')
+    for k in range(2, 7):
+        present = pd.to_numeric(t100[f'PM SDS {k}'], errors='coerce').notna()
+        t100[f'PM INERT SDS {k}'] = inert.where(present)
+    return frames
+
+
 def main():
     print('Loading validation data...')
-    df = pd.read_csv(VALIDATION_CSV)
-    pb = ProcessBehavior(df)
+    frames = load_frames()
+    pbs = {name: ProcessBehavior(df) for name, df in frames.items()}
 
     all_results = []
-    aux_by_sds = {}   # {sds_num: {'capability': [...], 'loss': [...]}}
+    aux_by_run = {}   # {run id: {'capability': [...], 'loss': [...], 'specs': {...}, 'loss_note': ...}}
     total_fails = 0
 
-    for sds_num, config in SDS_CONFIGS.items():
-        print(f'\nProcessing SDS {sds_num}...')
-        response = getattr(pb.cols, config['response_attr'])
+    for run in RUNS:
+        print(f'\nProcessing {run.label}...')
+        pb = pbs[run.data]
         study = pb.formulate(
-            response=response,
+            response=run.response,
             factors=[pb.cols.FACTOR_1, pb.cols.FACTOR_2],
-            time=pb.cols.PRODUCTION_TIME
+            time=pb.cols.PRODUCTION_TIME,
         )
-        print(f'  Analytical SDS: {study.analytical_design_state}')
+        ads = study.analytical_design_state
+        print(f'  Analytical SDS: {ads}')
+        if ads.sds != run.ads:
+            print(f'  ADS MISMATCH: expected {run.ads}')
+            total_fails += 1
 
-        json_path = FIXTURES_DIR / config['json']
-        with open(json_path) as f:
-            json_data = json.load(f)
-
-        sds_payload = run_sds_validation(sds_num, pb, study, json_data)
-        chart_results = sds_payload['charts']
+        ref = json.loads((FIXTURES_DIR / f'{run.id}.json').read_text())
+        payload = run_validation(run, pb, study, ref)
+        chart_results = payload['charts']
         all_results.extend(chart_results)
-        aux_by_sds[sds_num] = {
-            'capability': sds_payload['capability'],
-            'loss': sds_payload['loss'],
+        aux_by_run[run.id] = {
+            'capability': payload['capability'],
+            'loss': payload['loss'],
+            'specs': ref['specs'],
+            'loss_note': ref.get('loss_note'),
         }
 
-        # Print summary across charts + capability/loss
         passes = sum(
             1 for r in chart_results for k in ('match_cl', 'match_lpl', 'match_upl') if r.get(k) is True
         )
         fails = sum(
             1 for r in chart_results for k in ('match_cl', 'match_lpl', 'match_upl') if r.get(k) is False
         )
-        for row in sds_payload['capability'] + sds_payload['loss']:
+        for row in payload['capability'] + payload['loss']:
             if row['match'] is True:
                 passes += 1
             elif row['match'] is False:
@@ -920,18 +895,17 @@ def main():
         total_fails += fails
 
     print('\nGenerating HTML report...')
-    html = generate_html(all_results, aux_by_sds)
-    OUTPUT_HTML.write_text(html)
+    OUTPUT_HTML.write_text(generate_html(all_results, aux_by_run, RUNS))
     print(f'Report written to: {OUTPUT_HTML}')
 
     MYST_OUTPUT.parent.mkdir(parents=True, exist_ok=True)
-    MYST_OUTPUT.write_text(generate_myst_summary(all_results, aux_by_sds))
+    MYST_OUTPUT.write_text(generate_myst_summary(all_results, aux_by_run, RUNS))
     print(f'Docs summary written to: {MYST_OUTPUT}')
 
     # The reports above are evidence; this exit code is the gate. Reference
     # disagreement must fail the build itself, not just drift the docs page —
     # otherwise committing the drifted page makes CI green with wrong numbers.
-    # 'pending' rows (match is None, the ODS 4-6 backlog) are never fatal.
+    # 'pending' rows (match is None: no reference value yet) are never fatal.
     if total_fails:
         print(f'\nVALIDATION FAILED: {total_fails} assertion(s) diverge from Bishop reference values.')
         sys.exit(1)
