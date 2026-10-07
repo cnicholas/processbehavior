@@ -323,6 +323,20 @@ def calculate_limits(
     return pd.Series({'lpl': lpl, 'upl': upl}, index=['lpl', 'upl'])
 
 
+def subgroup_sigma_hat(s, n) -> float:
+    """Bishop's estimate of sigma from R rational subgroups (10-1 manual Eq 11-5).
+
+    The average of each subgroup's own unbiased estimate: sigma_hat = (1/R) sum S_r / c4(N_r).
+    With equal subgroup sizes this is S-bar / c4(N) (Eq 11-6); with unequal sizes it is not,
+    because each S_r is unbiased-corrected with its own c4 before averaging. VAS computes it
+    this way (Tom's Medicare run: one subgroup of 3 among 23 of 4).
+    """
+    s = np.asarray(s, dtype=float)
+    sizes = np.asarray(n)
+    lookup = {int(v): c4(int(v)) for v in np.unique(sizes)}
+    return float(np.mean(s / np.array([lookup[int(v)] for v in sizes.ravel()]).reshape(sizes.shape)))
+
+
 def calculate_limits_vectorized(
     limits_type: str,
     *,
@@ -330,9 +344,15 @@ def calculate_limits_vectorized(
     sd=None,
     N=None,
     mR=None,
+    sigma=None,
     sigma_multiplier: float = 3,
 ) -> pd.DataFrame:
     """Array form of :func:`calculate_limits` — same formulae, whole columns at once.
+
+    ``sigma`` (Xbar only) gives sigma_hat directly, for subgroups of unequal size: the limits
+    are then mean ± multiplier · sigma / sqrt(N_r) for each subgroup (10-1 manual Eqs 11-16,
+    11-17), with sigma from :func:`subgroup_sigma_hat`. Without it, ``sd`` is S-bar and each
+    row's limits use S-bar / c4(N), which is the same thing when every N is equal.
 
     :func:`calculate_limits` stays the scalar reference and is unchanged: it is what the
     Bishop validator exercises, so keeping it independent means the 280 reference
@@ -373,14 +393,18 @@ def calculate_limits_vectorized(
         return np.array([lookup[int(v)] for v in sizes.ravel()]).reshape(sizes.shape)
 
     if limits_type == 'Xbar':
-        if mean is None or sd is None or N is None:
+        if mean is None or (sd is None and sigma is None) or N is None:
             raise ValueError(
-                f'The limits calculation for {limits_type} requires (mean, sd, and N). '
-                f'Got: mean={mean}, sd={sd}, N={N}'
+                f'The limits calculation for {limits_type} requires (mean, sd or sigma, and N). '
+                f'Got: mean={mean}, sd={sd}, sigma={sigma}, N={N}'
             )
         sizes = np.asarray(N)
-        # Wd = S / c4(n), then half-width = (multiplier * Wd) / sqrt(n)
-        half = (sigma_multiplier * (np.asarray(sd) / _per_n(c4, sizes))) / np.sqrt(sizes)
+        if sigma is not None:
+            # Eqs 11-16/11-17: half-width = multiplier * sigma_hat / sqrt(N_r)
+            half = (sigma_multiplier * float(sigma)) / np.sqrt(sizes)
+        else:
+            # Wd = S / c4(n), then half-width = (multiplier * Wd) / sqrt(n)
+            half = (sigma_multiplier * (np.asarray(sd) / _per_n(c4, sizes))) / np.sqrt(sizes)
         lpl, upl = np.asarray(mean) - half, np.asarray(mean) + half
 
     elif limits_type == 'S':

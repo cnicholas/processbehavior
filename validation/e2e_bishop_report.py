@@ -335,6 +335,12 @@ def run_validation(run, pb, study, ref):  # noqa: C901
             center = stats['center']
             lpl_val = stats.get('lpl')
             upl_val = stats.get('upl')
+            if stats.get('limits_vary') and lpl_val is None and upl_val is None:
+                # Limits step with subgroup size (10-1 manual Eqs 11-16/17). VAS/Minitab labels the
+                # limits of the last subgroup, so that is the value its slide carries.
+                table = safe_chart_table(result_obj, chart_type)
+                if table is not None and len(table):
+                    lpl_val, upl_val = table['lpl'].iloc[-1], table['upl'].iloc[-1]
             cl = float(center) if center is not None else None
             lpl = float(lpl_val) if lpl_val is not None else None
             upl = float(upl_val) if upl_val is not None else None

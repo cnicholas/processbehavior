@@ -45,6 +45,7 @@ from .spc_constants import (
     calculate_limits,
     calculate_limits_vectorized,
     calibrated_limits,
+    subgroup_sigma_hat,
 )
 from .types import ChartPayload
 
@@ -1077,6 +1078,30 @@ class Analysis:
     # Chart Calculation Methods (Strategy Pattern)
     # =========================================================================
 
+    def _xbar_limits(self, out: pd.DataFrame, s_bar: float, n_to_use: str) -> pd.DataFrame:
+        """Xbar natural process limits for the subgroups in ``out`` (columns center, s, n, N).
+
+        Equal subgroup sizes (or n_mode="average", Eq 11-20): S-bar / c4(N) for every row.
+        Unequal sizes: sigma_hat is the average of each subgroup's S_r / c4(N_r) (10-1 manual
+        Eq 11-5) and each subgroup's limits are center ± multiplier · sigma_hat / sqrt(N_r)
+        (Eqs 11-16, 11-17), so they step with N_r, as VAS draws them.
+        """
+        if n_to_use == 'n':
+            return calculate_limits_vectorized(
+                'Xbar',
+                mean=out['center'],
+                sigma=subgroup_sigma_hat(out['s'], out['n']),
+                N=out['n'],
+                sigma_multiplier=self.request.n_sigma,
+            )
+        return calculate_limits_vectorized(
+            'Xbar',
+            mean=out['center'],
+            sd=s_bar,
+            N=out[n_to_use],
+            sigma_multiplier=self.request.n_sigma,
+        )
+
     def _calculate_xbar(  # noqa: C901
         self, value_col: str | None = None, _return_intermediates: bool = False
     ) -> dict:
@@ -1163,8 +1188,9 @@ class Analysis:
             agg_dict = {
                 's': pd.NamedAgg(column=_limits_col, aggfunc='std'),
                 'mean': pd.NamedAgg(column=value_col, aggfunc='mean'),
-                # Count on response_var (not value_col) to avoid NaN issues with residuals
-                'n': pd.NamedAgg(column=spec.response_var, aggfunc='count'),
+                # N_r counts the values S_r is computed from: a residual missing on a row (R2's
+                # first value) leaves that subgroup one smaller, as VAS treats it.
+                'n': pd.NamedAgg(column=_limits_col, aggfunc='count'),
             }
             if _limits_col != value_col:
                 agg_dict['s_value'] = pd.NamedAgg(column=value_col, aggfunc='std')
@@ -1190,7 +1216,7 @@ class Analysis:
         # (Xbar of a residual, or of a pooled subgroup, computes fine); it is
         # only charting *the response* that has nothing to subgroup. See
         # Study._response_pair_problem, which reports that in advance.
-        mask_n1 = out['n'].eq(1)
+        mask_n1 = out['n'].lt(2)  # n=1: no S; n=0: every charted value missing
         if mask_n1.any():
             n_filtered = mask_n1.sum()
             logger.info(f'Filtered {n_filtered} subgroup(s) with n=1 from Xbar calculation')
@@ -1229,13 +1255,7 @@ class Analysis:
             )
         else:
             xbar['center'] = _Xbar  # Add center column for Xbar chart
-            xbar[['lpl', 'upl']] = calculate_limits_vectorized(
-                'Xbar',
-                mean=xbar['center'],
-                sd=_S,
-                N=xbar[n_to_use],
-                sigma_multiplier=self.request.n_sigma,
-            )
+            xbar[['lpl', 'upl']] = self._xbar_limits(xbar, _S, n_to_use)
 
         # Detect beyond limits signals
         xbar = self._add_beyond_limits_flag(xbar, value_col='xbar')
@@ -1365,7 +1385,7 @@ class Analysis:
             agg_dict = {
                 's': pd.NamedAgg(column=_limits_col, aggfunc='std'),
                 'xbar': pd.NamedAgg(column=value_col, aggfunc='mean'),
-                'n': pd.NamedAgg(column=spec.response_var, aggfunc='count'),
+                'n': pd.NamedAgg(column=_limits_col, aggfunc='count'),
             }
             if _limits_col != value_col:
                 agg_dict['s_value'] = pd.NamedAgg(column=value_col, aggfunc='std')
@@ -1378,7 +1398,7 @@ class Analysis:
             _Xbar = out['xbar'].mean()
 
             # Filter subgroups with n=1 (no within-subgroup spread for the limits)
-            mask_n1 = out['n'].eq(1)
+            mask_n1 = out['n'].lt(2)
             if mask_n1.any():
                 out = out[~mask_n1].copy()
 
@@ -1398,13 +1418,7 @@ class Analysis:
                 n_to_use = 'N'
 
             out['center'] = _Xbar
-            out[['lpl', 'upl']] = calculate_limits_vectorized(
-                'Xbar',
-                mean=out['center'],
-                sd=_S,
-                N=out[n_to_use],
-                sigma_multiplier=self.request.n_sigma,
-            )
+            out[['lpl', 'upl']] = self._xbar_limits(out, _S, n_to_use)
 
             out = self._add_beyond_limits_flag(out, value_col='xbar')
             out = out.round(spec.round_to)
@@ -1551,10 +1565,10 @@ class Analysis:
                 _limits_col = self._resolve_limits_column(value_col, sdf)
                 agg_dict = {
                     's': pd.NamedAgg(column=_limits_col, aggfunc='std'),
-                    'n': pd.NamedAgg(column=spec.response_var, aggfunc='count'),
+                    'n': pd.NamedAgg(column=_limits_col, aggfunc='count'),
                 }
                 out = sdf.groupby(groupby_cols, as_index=False, observed=True).agg(**agg_dict)
-                mask = out['n'].eq(1)
+                mask = out['n'].lt(2)
                 out = out[~mask]
                 if out.shape[0] == 0:
                     insufficient_strata.append(stratum)
@@ -1698,12 +1712,12 @@ class Analysis:
                 agg_dict = {
                     's': pd.NamedAgg(column=_limits_col, aggfunc='std'),
                     # Count on response_var (not value_col) to avoid NaN issues with residuals
-                    'n': pd.NamedAgg(column=spec.response_var, aggfunc='count'),
+                    'n': pd.NamedAgg(column=_limits_col, aggfunc='count'),
                 }
                 out = df.groupby(groupby_cols, as_index=False, observed=True).agg(**agg_dict)
 
                 # remove groups with a single observation
-                mask = out['n'].eq(1)
+                mask = out['n'].lt(2)
                 out = out[~mask]
 
                 # Handle case where no subgroups have >1 observation

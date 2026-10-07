@@ -69,6 +69,13 @@ numbers below are that manual's.
   PPU 5.74; ȳ alone gives 5.73). It equals ȳ in ADS 1.
 
 ### Fixed
+- **Xbar and S charts with subgroups of unequal size follow the 10-1 manual (Eqs 11-5, 11-16,
+  11-17).** sigma-hat is the average of each subgroup's S_r / c4(N_r) (was S-bar / c4(N_r)), and each
+  subgroup's limits use its own N_r, so they step with subgroup size, as VAS draws them. N_r now
+  counts the values the chart is drawn from (was the response's count): on ADS 2 and 3 residual
+  charts, R2's blank first value leaves one subgroup one smaller. Equal-size charts are unchanged.
+  Found on Tom's Medicare run (slides 52-53): ACO-001 has 3 R6 values, and its limits are wider by
+  sqrt(4/3) on the Xbar chart and use B4(3) on the S chart.
 - **Per-stratum Xbar centre lines count one-observation subgroups.** The centre is Bishop's
   unweighted mean of every subgroup mean; subgroups with n = 1 were dropped before it was
   taken, which moved four of the eight PM SDS 3 per-condition centres by 0.01–0.04.
