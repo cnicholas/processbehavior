@@ -355,7 +355,7 @@ def calculate_limits_vectorized(
     row's limits use S-bar / c4(N), which is the same thing when every N is equal.
 
     :func:`calculate_limits` stays the scalar reference and is unchanged: it is what the
-    Bishop validator exercises, so keeping it independent means the 280 reference
+    Bishop validator exercises, so keeping it independent means the reference
     assertions remain a genuine check on this path rather than a check of it against
     itself.
 
