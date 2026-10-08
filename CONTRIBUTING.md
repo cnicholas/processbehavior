@@ -81,8 +81,8 @@ pytest tests/test_bishop_reference.py -v   # skips unless Bishop's residual work
 ```
 
 There is also a full end-to-end check that compares every chart center, control
-limit, capability index and loss component against Bishop's VAS output (his run of
-3 October 2026, for the 10-1-2026 manual) — 254 assertions across ADS 1–3:
+limit, capability index and loss component against Bishop's VAS runs for the
+10-1-2026 manual (PM SDS 1–6, PM INERT, his known-effects data and the Medicare data):
 
 ```bash
 python validation/e2e_bishop_report.py
@@ -96,6 +96,18 @@ summary.
 
 If a Bishop check fails after your change, the change is wrong — not the
 reference.
+
+## Citing the methodology
+
+Code and docs cite Bishop's VAS documentation manual by edition and equation number:
+`(10-1 manual Eq 14-8)`, `Eqs 14-4..14-13`, `Eqs 11-16/17`. Name the edition once per file and use
+the chapter-number form; `tests/test_manual_citations.py` checks both. The citations are read
+against the manual itself, so a new edition reports every place in the library whose equation
+changed or moved.
+
+Cite an equation only where the code computes exactly that equation. Where it computes something
+close (a different weighting, an approximation, a different sequence), say how it differs instead
+of citing it.
 
 ## Docs versioning
 

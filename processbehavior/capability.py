@@ -391,7 +391,7 @@ def compute_sigma_hat(values: np.ndarray) -> tuple[float, float]:
     -----
     Bishop Ch. 16 — ddof=1 is mandatory.  The c4 correction
     removes the small-sample bias inherent in the sample standard
-    deviation.
+    deviation: sigma_hat = S / alpha_N (10-1 manual Eq 10-13).
     """
     n = len(values)
     s = float(np.std(values, ddof=1))

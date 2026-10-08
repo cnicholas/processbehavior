@@ -29,9 +29,10 @@ from .exceptions import ValidationError
 # Control limit multiplier (3-sigma limits are standard in SPC)
 SIGMA_MULTIPLIER = 3
 
-# Moving-range constants for n = 2 (consecutive pairs), as in Bishop's VAS manual:
-# sigma = mR / d2 (Eq 12.4), X limits = X ± 3·mR/d2 (Eq 12.10-12.11), and the
-# moving-range upper limit = (1 + 3·d3/d2)·mR (Eq 12.5). The manual prints the
+# Moving-range constants for n = 2 (consecutive pairs), as in Bishop's VAS manual
+# (10-1 manual Eq 12-2: E(R) = d2·sigma, sigma_R = d3·sigma): sigma = mR / d2 (Eq 12-4),
+# X limits = X ± 3·mR/d2 (Eqs 12-10, 12-11), and the moving-range upper limit
+# = (1 + 3·d3/d2)·mR (Eq 12-5). The manual prints the
 # rounded values 2.66 and 3.268; Bishop's VAS software computes them from d2 and
 # d3 without rounding, and so does this library.
 D2_N2 = 1.128
@@ -54,7 +55,9 @@ def c4(n: int) -> float:
     Calculate c4 bias constant for Xbar and S charts.
 
     The c4 constant corrects for bias in the standard deviation estimate
-    when using subgroups. It approaches 1.0 as n increases.
+    when using subgroups: E(S) = c4(n)·sigma, the manual's alpha_N (10-1 manual
+    Eq 10-12), so S / c4(n) is unbiased for sigma (Eq 10-13). It approaches 1.0
+    as n increases (the manual sets alpha_N = 1 beyond N = 5000; c4 does not).
 
     Parameters
     ----------
@@ -123,7 +126,9 @@ def b3(n: int, sigma_multiplier: float = 3) -> float:
 
     Notes
     -----
-    Formula: b3(n) = 1 - sigma_multiplier/c4(n) * sqrt(1 - c4(n)²)
+    Formula: b3(n) = 1 - sigma_multiplier/c4(n) * sqrt(1 - c4(n)²), i.e. S-bar
+    less sigma_multiplier estimated standard deviations of S (10-1 manual
+    Eq 10-15), the S chart's lower limit (Eq 11-8).
 
     For small subgroup sizes (n < 6), the raw b3 formula yields negative
     values. Since standard deviations cannot be negative, these values are
@@ -172,7 +177,9 @@ def b4(n: int, sigma_multiplier: float = 3) -> float:
 
     Notes
     -----
-    Formula: b4(n) = 1 + sigma_multiplier/(c4(n)) * sqrt(1 - c4(n)^2)
+    Formula: b4(n) = 1 + sigma_multiplier/(c4(n)) * sqrt(1 - c4(n)^2), i.e. S-bar
+    plus sigma_multiplier estimated standard deviations of S (10-1 manual
+    Eq 10-15), the S chart's upper limit (Eq 11-9).
 
     The b4 constant decreases as subgroup size increases, approaching the
     value of 1 + 3*sqrt(1-1) = 1 for very large subgroups.
@@ -303,8 +310,7 @@ def calculate_limits(
                 f'The limits calculation for {limits_type} requires (mean, and mR). Got: mean={mean}, mR={mR}'
             )
 
-        # LPL = X̄ - (E2 * mR)
-        # UPL = X̄ + (E2 * mR)
+        # LPL = X̄ - (E2 * mR), UPL = X̄ + (E2 * mR)  (10-1 manual Eqs 12-10, 12-11)
         lpl = mean - (XMR_LIMIT_MULTIPLIER * mR)
         upl = mean + (XMR_LIMIT_MULTIPLIER * mR)
 
@@ -313,7 +319,7 @@ def calculate_limits(
             raise ValueError(f'The limits calculation for {limits_type} requires (mR). Got: mR={mR}')
 
         # LPL = 0 (ranges cannot be negative)
-        # UPL = mR * D4
+        # UPL = mR * D4  (10-1 manual Eq 12-5)
         lpl = 0
         upl = mR * R_UPPER_LIMIT_MULTIPLIER
 
@@ -422,13 +428,13 @@ def calculate_limits_vectorized(
                 f'The limits calculation for {limits_type} requires (mean, and mR). '
                 f'Got: mean={mean}, mR={mR}'
             )
-        half = XMR_LIMIT_MULTIPLIER * np.asarray(mR)
+        half = XMR_LIMIT_MULTIPLIER * np.asarray(mR)  # 10-1 manual Eqs 12-10, 12-11
         lpl, upl = np.asarray(mean) - half, np.asarray(mean) + half
 
     elif limits_type == 'R':
         if mR is None:
             raise ValueError(f'The limits calculation for {limits_type} requires (mR). Got: mR={mR}')
-        upl = np.asarray(mR) * R_UPPER_LIMIT_MULTIPLIER
+        upl = np.asarray(mR) * R_UPPER_LIMIT_MULTIPLIER  # 10-1 manual Eq 12-5
         lpl = np.zeros_like(upl)
 
     else:
@@ -510,19 +516,19 @@ def calibrated_limits(
         lims = pd.Series({'lpl': mean - half, 'upl': mean + half}, index=['lpl', 'upl'])
     elif limits_type == 'S':
         assert N is not None
-        center = c4(N) * sigma
+        center = c4(N) * sigma  # E(S) = alpha_N·sigma (10-1 manual Eq 10-12)
         lims = calculate_limits(
             limits_type='S', mean=0, sd=c4(N) * sigma, N=N,
             round_to=round_to, sigma_multiplier=n_sigma,
         )
     elif limits_type == 'XmR':
-        center = mean
+        center = mean  # mean ± 3·sigma (10-1 manual Eq 12-6)
         lims = calculate_limits(
             limits_type='XmR', mean=mean, sd=0, N=0, mR=D2_N2 * sigma,
             round_to=round_to,
         )
     elif limits_type == 'R':
-        center = D2_N2 * sigma
+        center = D2_N2 * sigma  # E(R) = d2·sigma; limits 0 … D4·d2·sigma (10-1 manual Eqs 12-2, 12-3)
         lims = calculate_limits(
             limits_type='R', mean=0, sd=0, N=0, mR=D2_N2 * sigma,
             round_to=round_to,

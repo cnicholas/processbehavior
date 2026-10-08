@@ -2,8 +2,8 @@
 
 The expected values are read from Bishop's VAS output decks of 29 September 2026 (Medicare and
 PM SDS 2) and, for the R2 chart, 3 October 2026, at the precision the charts print. They pin the
-XmR constants E2 = 3/1.128 and D4 = 1 + 3(0.8525)/1.128 from the manual (Eq 12.4, 12.5, 12.10,
-12.11): with the rounded 2.66 and 3.268 the Medicare limits miss by 0.6 and 1.0, and the PM SDS 2
+XmR constants E2 = 3/1.128 and D4 = 1 + 3(0.8525)/1.128 (10-1 manual Eqs 12-4, 12-5, 12-10,
+12-11): with the rounded 2.66 and 3.268 the Medicare limits miss by 0.6 and 1.0, and the PM SDS 2
 moving-range limit prints 2.84.
 """
 

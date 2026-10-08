@@ -1315,7 +1315,7 @@ class TestR2MethodSelection:
     """``get_r2_method`` has two answers, and structure alone decides between them.
 
     The docs once described a third, per-cell "hybrid" for mixed cell sizes. It was removed in
-    cb037f8: with any singleton cell, R2 is Bishop's ungrouped MA2 (Eq 13.7-13.9) for every
+    cb037f8: with any singleton cell, R2 is Bishop's ungrouped MA2 (10-1 manual Eqs 14-9..14-13) for every
     observation, which the ADS 3 reference assertions validate. These pin the vocabulary to that.
     """
 

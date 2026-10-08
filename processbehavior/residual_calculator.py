@@ -2,7 +2,10 @@
 VAS (Variation Analysis System) residual calculations for process behavior analysis.
 
 This module calculates the Bishop VAS residuals (R1-R5) that decompose
-total variation into interpretable components:
+total variation into interpretable components. They estimate the terms of the
+re-parameterized VAS model Y_ktn = mu + rho_k + tau_t + rhotau_kt + e'_ktn
+(10-1 manual Eq 10-3), with the means estimated as unweighted means of the cell
+means (Eq 10-10; on an incomplete grid, SDS 4-6, over the cells present):
 
 - R1: Total deviation from grand mean (pure algebra)
 - R2: Within-cell (unexplained) variation (structure-dependent)
@@ -12,7 +15,7 @@ total variation into interpretable components:
 
 R2 is the ONLY residual whose calculation varies by structure (equation numbers
 are Bishop's 10-1 manual):
-- exact (ADS 1): R2 = Y - Ȳ_kt (Eq 14-3), when every cell has n >= 2
+- exact (ADS 1): R2 = Y - Ȳ_kt (Eq 14-3, the error estimate of Eq 10-11), when every cell has n >= 2
 - ma2 (ADS 2 & 3): when any cell has n = 1. The data are first stripped of the
   process mean and the condition and period effects, Z = Y - Ȳ_k - Ȳ_t + Ȳ
   (Eq 14-4 / 14-9). Z is then differenced along the condition-then-time stream
@@ -159,7 +162,7 @@ def calculate_time_means(df: pd.DataFrame, response_var: str, time_var: str) -> 
 
 def calculate_cell_means(df: pd.DataFrame, response_var: str, rsg_var_name: str, time_var: str) -> pd.Series:
     """
-    Calculate cell means (Ȳ_kt) - average for each (factor × time) cell.
+    Calculate cell means (Ȳ_kt) - average for each (factor × time) cell (10-1 manual Eq 10-8).
 
     Broadcasts the mean for each cell to all rows in that cell.
 
@@ -512,7 +515,7 @@ def calculate_vas_residuals(
 
     # Step 2: Derive marginal means from cell means (unweighted means analysis)
     # Bishop VAS uses mean of cell means, giving each experimental
-    # condition equal weight regardless of sample size within cells.
+    # condition equal weight regardless of sample size within cells (10-1 manual Eq 10-10).
     cell_means_unique = out.groupby([spec.rsg_var_name, spec.time_var], observed=True)['Ybar_kt'].first()
 
     grand_mean = cell_means_unique.mean()

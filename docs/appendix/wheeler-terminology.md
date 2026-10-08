@@ -232,11 +232,11 @@ Wheeler uses the standard SPC constants from Shewhart's work:
 
 | Constant | Purpose | Formula Source |
 |----------|---------|----------------|
-| c₄ | Unbiasing s | Related to gamma function |
+| c₄ | Unbiasing s | Related to gamma function; Bishop's α<sub>N</sub> (10-1 manual Eqs 10-12, 10-13) |
 | A₃ | Xbar limits from s | 3 / (c₄√n) |
-| B₃, B₄ | S chart limits | Functions of c₄ and n |
-| d₂ | Unbiasing range | Tabulated; 1.128 for moving ranges of two |
-| D₃, D₄ | mR chart limits | Functions of d₂ and d₃; D₄ = 1 + 3(0.8525)/1.128 for moving ranges of two |
+| B₃, B₄ | S chart limits | Functions of c₄ and n (Eqs 10-15, 11-8, 11-9) |
+| d₂ | Unbiasing range | Tabulated; 1.128 for moving ranges of two (Eqs 12-2, 12-4) |
+| D₃, D₄ | mR chart limits | Functions of d₂ and d₃; D₄ = 1 + 3(0.8525)/1.128 for moving ranges of two (Eq 12-5) |
 
 ---
 

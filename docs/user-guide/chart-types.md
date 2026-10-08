@@ -246,8 +246,8 @@ Charted](residuals.md#how-effect-residuals-are-charted).
 
 Plots each individual observation.
 
-- **Centerline**: Average of all observations (X̅)
-- **Control Limits**: X̅ ± (3/1.128) × R̅, about X̅ ± 2.66 × R̅ (R̅ is the average moving range)
+- **Centerline**: Average of all observations (X̅) (10-1 manual Eqs 12-7, 12-9)
+- **Control Limits**: X̅ ± (3/1.128) × R̅, about X̅ ± 2.66 × R̅ (R̅ is the average of the T − 1 moving ranges; Eqs 12-1, 12-10, 12-11)
 - **Interpretation**: Points beyond limits indicate special causes
 
 ### The mR (Moving Range) Chart
@@ -255,7 +255,7 @@ Plots each individual observation.
 Plots the absolute difference between consecutive observations.
 
 - **Centerline**: Average moving range (R̅)
-- **UCL**: (1 + 3 × 0.8525/1.128) × R̅, about 3.267 × R̅
+- **UCL**: (1 + 3 × 0.8525/1.128) × R̅, about 3.267 × R̅ (10-1 manual Eq 12-5)
 - **LCL**: 0 (range cannot be negative)
 - **Interpretation**: Large ranges indicate sudden changes
 

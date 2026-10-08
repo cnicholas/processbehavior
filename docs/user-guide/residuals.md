@@ -15,10 +15,10 @@ Dr. Thomas A. Bishop's **Variation Analysis System (VAS)** decomposes total vari
 
 Where:
 - Y = individual observation
-- Y̅ = grand mean
-- Y̅<sub>k</sub> = mean for factor level k
-- Y̅<sub>t</sub> = mean at time t
-- Y̅<sub>kt</sub> = mean for factor k at time t (cell mean)
+- Y̅ = grand mean: the mean of the cell means, each cell counted once (10-1 manual Eq 10-10)
+- Y̅<sub>k</sub> = mean for factor level k: the mean of that level's cell means
+- Y̅<sub>t</sub> = mean at time t: the mean of that period's cell means
+- Y̅<sub>kt</sub> = mean for factor k at time t (cell mean, Eq 10-8)
 
 ## Accessing Residuals
 

@@ -1896,7 +1896,11 @@ class Analysis:
         Shared pipeline for MR-family charts (X and mR).
 
         The X and mR charts share >85% of their calculation logic. The behavioral
-        differences are encoded in ``mr_spec`` — no boolean flags needed.
+        differences are encoded in ``mr_spec`` — no boolean flags needed. The
+        statistics are the 10-1 manual's Chapter 12: mR-bar over the T - 1
+        consecutive ranges (Eq 12-1), X centre Y-bar (Eqs 12-7, 12-9), X limits
+        Y-bar ± 3·mR-bar/d2 (Eqs 12-10, 12-11) and mR limits 0 … D4·mR-bar
+        (Eq 12-5), within each stratum or phase when the chart is split.
 
         Parameters
         ----------
@@ -2668,10 +2672,11 @@ class Analysis:
             return result
 
         # === Global limits path (unchanged) ===
-        # Moving range
+        # Moving range: mR-bar over the T - 1 consecutive ranges (10-1 manual Eq 12-1). A re-centred
+        # R2 chart takes them over R2 (_resolve_mr_source_column), not the plotted RCR2.
         out['mr'] = out[mr_source_col].diff().abs()
         mR = out['mr'].mean()
-        mean_ = out[value_col].mean()
+        mean_ = out[value_col].mean()  # Y-bar, the X chart's centre (Eqs 12-7, 12-9)
 
         # R chart: drop first observation
         if mr_spec.drops_first_mr:

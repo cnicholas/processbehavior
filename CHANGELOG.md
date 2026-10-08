@@ -100,6 +100,12 @@ numbers below are that manual's.
 - **Per-stratum Xbar centre lines count one-observation subgroups.** The centre is Bishop's
   unweighted mean of every subgroup mean; subgroups with n = 1 were dropped before it was
   taken, which moved four of the eight PM SDS 3 per-condition centres by 0.01–0.04.
+- **Code and docs cite the manual's Chapters 10 and 12.** The X/mR limits and constants
+  (Eqs 12-1..12-11), c4 and the S-chart factors (Eqs 10-12, 10-13, 10-15), the cell and marginal
+  means (Eqs 10-8, 10-10) and the model the residuals estimate (Eq 10-3) now cite the 10-1 manual
+  where the code computes exactly those equations; dotted citations ("Eq 12.4") and an older
+  manual's numbering in a test are gone. `tests/test_manual_citations.py` keeps one citation form,
+  and CONTRIBUTING.md describes it. The residuals guide now says Ȳ is the mean of the cell means.
 - **Bishop's methodology is called the Variation Analysis System**, as his VAS documentation
   manual names it (was "Variance Analysis System" in the README, docs, CITATION.cff, docstrings and
   the design report's VAS line). The synthetic-data module no longer credits the design states to

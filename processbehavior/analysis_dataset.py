@@ -243,7 +243,7 @@ class AnalysisDataSet:
 
         # Compute n_per_cell and cell means once
         self._n_per_cell = df.groupby('cell_key', observed=True)[y].transform('size')
-        self._ybar_kt = df.groupby('cell_key', observed=True)[y].transform('mean')
+        self._ybar_kt = df.groupby('cell_key', observed=True)[y].transform('mean')  # Ȳ_kt (10-1 manual Eq 10-8)
 
         # Handle edge case: empty data or all NaN
         if len(self._n_per_cell) == 0 or self._n_per_cell.isna().all():

@@ -428,7 +428,8 @@ loss.plot(*, structured=False, orientation='vertical', theme=None,
 
 From `study.maximum_information()`. Fields: `n`, `r2_mean`, `r2_mR`,
 `sigma_hat`, `upl`, `lpl`, `n_signals`. An X chart of R2: limits
-`r2_mean ± (3/1.128)·r2_mR`, `sigma_hat = r2_mR / 1.128`. Raises
+`r2_mean ± (3/1.128)·r2_mR`, `sigma_hat = r2_mR / 1.128` (10-1 manual Eqs 12-4, 12-10,
+12-11). Raises
 `ValidationError` when R2 is unavailable for the layout.
 
 ```python
@@ -574,9 +575,9 @@ Secondary surface. The control-chart constants are functions of subgroup size:
 ```python
 from processbehavior.spc_constants import c4, b3, b4, VALID_BASE_CHARTS
 
-c4(n)                        # bias-correction factor for s
-b3(n, sigma_multiplier=3)    # S-chart lower-limit factor
-b4(n, sigma_multiplier=3)    # S-chart upper-limit factor
+c4(n)                        # bias-correction factor for s (10-1 manual Eqs 10-12, 10-13)
+b3(n, sigma_multiplier=3)    # S-chart lower-limit factor (Eqs 10-15, 11-8)
+b4(n, sigma_multiplier=3)    # S-chart upper-limit factor (Eqs 10-15, 11-9)
 VALID_BASE_CHARTS            # {'Histogram', 'Xbar', 'S', 'X', 'mR'}
 ```
 
