@@ -6,7 +6,7 @@
 [![codecov](https://codecov.io/gh/cnicholas/processbehavior/graph/badge.svg)](https://codecov.io/gh/cnicholas/processbehavior)
 [![License](https://img.shields.io/pypi/l/processbehavior.svg)](https://github.com/cnicholas/processbehavior/blob/main/LICENSE)
 
-A Python library for **Process Behavior Analysis** following Thomas A. Bishop's Variance Analysis System (VAS) methodology.
+A Python library for **Process Behavior Analysis** following Thomas A. Bishop's Variation Analysis System (VAS) methodology.
 
 Unlike traditional SPC packages, processbehavior faithfully implements Bishop's VAS equation-by-equation: automatic detection of the three-state design lineage (PDS / ODS / ADS), variance decomposition via R1-R6 residuals, and chart selection routed by the data your study can actually analyze.
 

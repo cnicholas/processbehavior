@@ -128,7 +128,7 @@ study.ads_reason              # e.g., "full_replication" (machine-readable)
 study.ads_description         # e.g., "Full replication (all cells n>=2)"
 ```
 
-## Bishop's Variance Analysis System (VAS)
+## Bishop's Variation Analysis System (VAS)
 
 For designs with factors and time, ProcessBehavior computes five stored residuals:
 

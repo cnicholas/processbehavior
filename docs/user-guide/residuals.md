@@ -1,6 +1,6 @@
 # VAS Residuals
 
-Dr. Thomas A. Bishop's **Variance Analysis System (VAS)** decomposes total variation into meaningful components. ProcessBehavior calculates six residuals (R1-R6) that help answer different analytical questions. Equation numbers on this page refer to Bishop's VAS documentation manual dated 10-1-2026.
+Dr. Thomas A. Bishop's **Variation Analysis System (VAS)** decomposes total variation into meaningful components. ProcessBehavior calculates six residuals (R1-R6) that help answer different analytical questions. Equation numbers on this page refer to Bishop's VAS documentation manual dated 10-1-2026.
 
 ## The Residual Hierarchy
 

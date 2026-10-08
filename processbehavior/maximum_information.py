@@ -9,7 +9,7 @@ Together they give the analyst full insight into irreducible variation.
 
 References
 ----------
-Bishop, T.  *Variance Analysis System*.
+Bishop, T.  *Variation Analysis System*.
 """
 
 from __future__ import annotations

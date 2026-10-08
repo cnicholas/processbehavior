@@ -1,5 +1,5 @@
 """
-VAS (Variance Analysis System) residual calculations for process behavior analysis.
+VAS (Variation Analysis System) residual calculations for process behavior analysis.
 
 This module calculates the Bishop VAS residuals (R1-R5) that decompose
 total variation into interpretable components:

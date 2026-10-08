@@ -122,7 +122,7 @@ Bishop's VAS defines six sampling design states (DS 1–6) that determine valid 
 
 ---
 
-## Variance Analysis System (VAS)
+## Variation Analysis System (VAS)
 
 Dr. Thomas A. Bishop's framework for decomposing variation into meaningful components. VAS extends Wheeler's process behavior chart methodology with a hierarchical residual decomposition (R1-R5) that isolates the unexplained noise and the interaction, time, and factor effects.
 

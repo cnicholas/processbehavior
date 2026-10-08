@@ -100,6 +100,10 @@ numbers below are that manual's.
 - **Per-stratum Xbar centre lines count one-observation subgroups.** The centre is Bishop's
   unweighted mean of every subgroup mean; subgroups with n = 1 were dropped before it was
   taken, which moved four of the eight PM SDS 3 per-condition centres by 0.01–0.04.
+- **Bishop's methodology is called the Variation Analysis System**, as his VAS documentation
+  manual names it (was "Variance Analysis System" in the README, docs, CITATION.cff, docstrings and
+  the design report's VAS line). The synthetic-data module no longer credits the design states to
+  Wheeler.
 - **Docs:** the three note blocks in the chart-types and design-state guides now render on the
   MyST site (they used mkdocs syntax); the DS 4–6 chart tables and the no-factors branch of the
   decision tree match what the library offers (a time-only study is DS 1, 2 or 3 by the number

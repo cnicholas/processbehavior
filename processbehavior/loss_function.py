@@ -9,7 +9,7 @@ loss.
 
 References
 ----------
-Bishop, T.  *Variance Analysis System* — Chapter 15.
+Bishop, T.  *Variation Analysis System* — Chapter 15.
 """
 
 from __future__ import annotations

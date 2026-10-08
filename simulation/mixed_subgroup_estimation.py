@@ -23,7 +23,7 @@ References
 Wheeler, D. J. & Chambers, D. S. (1992). Understanding Statistical Process
     Control.
 Wheeler, D. J. (1995). Advanced Topics in Statistical Process Control.
-Bishop, T. & Wheeler, D. J. (2024). Variance Analysis System (VAS).
+Bishop, T. & Wheeler, D. J. (2024). Variation Analysis System (VAS).
 
 Author: Nicholas Hollingsworth
 Date: 2025-02

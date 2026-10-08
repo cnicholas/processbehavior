@@ -19,7 +19,7 @@ Potential Capability (achievable by removing assignable causes):
 
 References
 ----------
-Bishop, T.  *Variance Analysis System* — Chapter 16.
+Bishop, T.  *Variation Analysis System* — Chapter 16.
 """
 
 from __future__ import annotations

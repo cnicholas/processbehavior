@@ -2,7 +2,7 @@
 Sampling Design State (SDS) detection for process behavior analysis.
 
 This module implements the complete SDS classification system from the
-Variance Analysis System (VAS) framework by Bishop.
+Variation Analysis System (VAS) framework by Bishop.
 
 The SDS determines:
 - What type of data structure we have
@@ -281,7 +281,7 @@ class SDSAnalysisPlan:
         lines.extend(
             [
                 '',
-                'Variance Analysis System (VAS):',
+                'Variation Analysis System (VAS):',
                 f'  • VAS supported: {"Yes" if self.vas_residuals_supported else "No"}',
             ]
         )

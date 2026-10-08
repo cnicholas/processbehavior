@@ -1,8 +1,8 @@
 # ProcessBehavior
 
-**Python-native Process Behavior Charts with Bishop's Variance Analysis System**
+**Python-native Process Behavior Charts with Bishop's Variation Analysis System**
 
-ProcessBehavior brings Thomas A. Bishop's rigorous Variance Analysis System (VAS) methodology to Python, with a modern API designed for data scientists and quality engineers.
+ProcessBehavior brings Thomas A. Bishop's rigorous Variation Analysis System (VAS) methodology to Python, with a modern API designed for data scientists and quality engineers.
 
 ## Analyst Workflow
 
@@ -111,7 +111,7 @@ The integer codes are Bishop's reference scale ("Bishop Table 1"):
 
 ODS values in {4, 5, 6} collapse to ADS values in {1, 2, 3} during tidying.
 
-### Dr. Thomas A. Bishop's Variance Analysis System (VAS)
+### Dr. Thomas A. Bishop's Variation Analysis System (VAS)
 For replicated designs, ProcessBehavior computes the complete residual decomposition:
 - **R1**: Total deviation (Y - grand mean)
 - **R2**: Within-cell variation (unexplained noise)
@@ -167,7 +167,7 @@ If you use ProcessBehavior in your research, please cite:
 ```bibtex
 @software{processbehavior,
   author = {Nicholas, Chris and Bishop, Thomas A.},
-  title  = {processbehavior: Process Behavior Charts and Variance Analysis for Python},
+  title  = {processbehavior: Process Behavior Charts and Variation Analysis for Python},
   year   = {2026},
   url    = {https://github.com/cnicholas/processbehavior}
 }

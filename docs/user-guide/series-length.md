@@ -17,7 +17,7 @@ and what a short series can and cannot tell you.
 
 ## The position
 
-The Variance Analysis System was built for analytic studies broadly. Statistical process
+The Variation Analysis System was built for analytic studies broadly. Statistical process
 control, where data arrive quickly and action follows each point, is a special case. VAS
 rests on the scientific method and the nontrivial replication of results, not on prescribed
 tests or rules for how many points a chart needs. Judgment about what the data are saying

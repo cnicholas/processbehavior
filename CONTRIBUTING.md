@@ -1,7 +1,7 @@
 # Contributing to processbehavior
 
 Thanks for your interest. processbehavior is an implementation of Thomas A.
-Bishop's Variance Analysis System (VAS); methodology fidelity is more
+Bishop's Variation Analysis System (VAS); methodology fidelity is more
 important than feature volume. Smaller, well-validated changes are preferred.
 
 ## What this library is, and what it is not

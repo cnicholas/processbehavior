@@ -22,7 +22,7 @@ tool — or a spreadsheet — is the better choice.
 
 ## Where ProcessBehavior sits
 
-ProcessBehavior implements Thomas A. Bishop's Variance Analysis System (VAS)
+ProcessBehavior implements Thomas A. Bishop's Variation Analysis System (VAS)
 on top of Wheeler-style process behavior charts. What makes it different is
 the formulate-then-execute split: it classifies your data's *structure* — the
 three-state design lineage (PDS / ODS / ADS) — before computing anything, and

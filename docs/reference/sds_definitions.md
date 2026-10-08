@@ -1,6 +1,6 @@
 # Bishop's design-state reference scale (1–6)
 
-This document provides the formal definitions of the six structural design states defined by Thomas A. Bishop, Ph.D. in the Variance Analysis System (VAS) framework. These are the integer codes carried by each state in the PDS / ODS / ADS lineage via its `.sds` field.
+This document provides the formal definitions of the six structural design states defined by Thomas A. Bishop, Ph.D. in the Variation Analysis System (VAS) framework. These are the integer codes carried by each state in the PDS / ODS / ADS lineage via its `.sds` field.
 
 For background on the lineage itself (Planned → Observed → Analytical), see [Design-state detection](../user-guide/sds-detection.md).
 
@@ -149,4 +149,4 @@ undefined and R2, with everything built on it, is reported unavailable.
 
 - Wheeler, D. J. (1995). *Advanced Topics in Statistical Process Control*. SPC Press, Knoxville, TN.
 - Wheeler, D. J. & Chambers, D. S. (1992). *Understanding Statistical Process Control*. SPC Press.
-- Bishop, T. A. (2023). Personal communication — Variance Analysis System implementation.
+- Bishop, T. A. (2023). Personal communication — Variation Analysis System implementation.
