@@ -575,11 +575,13 @@ Secondary surface. The control-chart constants are functions of subgroup size:
 ```python
 from processbehavior.spc_constants import c4, b3, b4, VALID_BASE_CHARTS
 
-c4(n)                        # bias-correction factor for s (10-1 manual Eqs 10-12, 10-13)
+c4(n)                        # bias-correction factor for s (10-1 manual Eqs 10-12, 10-13); exact for every n
 b3(n, sigma_multiplier=3)    # S-chart lower-limit factor (Eqs 10-15, 11-8)
 b4(n, sigma_multiplier=3)    # S-chart upper-limit factor (Eqs 10-15, 11-9)
 VALID_BASE_CHARTS            # {'Histogram', 'Xbar', 'S', 'X', 'mR'}
 ```
+
+`c4` is exact for every n. The manual's footnote to Eq 10-12 sets α<sub>N</sub> = 1 above N = 5000, which would put an S chart's limits on its centerline for subgroups that large; PB keeps the exact value, so the limits close in gradually instead. This is a deliberate difference from VAS, and it only affects S charts with subgroups of more than 5000 values.
 
 `c4` unbiases σ̂ for capability (S / c4(N), and S<sub>R2</sub> / c4(N<sub>R2</sub>) for the
 potential σ̂). It is not applied in the loss function. The R2 scale factor is not one of

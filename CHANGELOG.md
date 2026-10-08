@@ -107,6 +107,11 @@ numbers below are that manual's.
 - **Per-stratum Xbar centre lines count one-observation subgroups.** The centre is Bishop's
   unweighted mean of every subgroup mean; subgroups with n = 1 were dropped before it was
   taken, which moved four of the eight PM SDS 3 per-condition centres by 0.01–0.04.
+- **Documented: PB keeps α<sub>N</sub> exact above N = 5000.** The manual (footnote to Eq 10-12) and
+  VAS set α<sub>N</sub> = 1 for N > 5000, which puts an S chart's limits on its centerline for
+  subgroups that large. PB's `c4` stays exact for every N, so the limits close in gradually (S̄ ± 3%
+  at N = 5000, ± 1.5% at 20,000). It is a deliberate difference, decided on 8 October
+  2026, and only S charts with subgroups of more than 5000 values are affected.
 - **Code and docs cite the manual's Chapters 10 and 12.** The X/mR limits and constants
   (Eqs 12-1..12-11), c4 and the S-chart factors (Eqs 10-12, 10-13, 10-15), the cell and marginal
   means (Eqs 10-8, 10-10) and the model the residuals estimate (Eq 10-3) now cite the 10-1 manual

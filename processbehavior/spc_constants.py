@@ -57,7 +57,15 @@ def c4(n: int) -> float:
     The c4 constant corrects for bias in the standard deviation estimate
     when using subgroups: E(S) = c4(n)·sigma, the manual's alpha_N (10-1 manual
     Eq 10-12), so S / c4(n) is unbiased for sigma (Eq 10-13). It approaches 1.0
-    as n increases (the manual sets alpha_N = 1 beyond N = 5000; c4 does not).
+    as n increases.
+
+    Deliberate difference from the manual: its footnote to Eq 10-12 sets
+    alpha_N = 1 for N > 5000, and VAS does. c4 stays exact for every n (computed
+    with log-gamma, so it has no overflow limit). Since sigma_S uses
+    sqrt(1 - alpha_N²) (Eq 10-15), alpha_N = 1 would put an S chart's limits on
+    its centerline for subgroups of more than 5000 values. The exact c4 lets
+    them close in gradually instead: S-bar ± 3% at n = 5000, ± 1.5% at 20,000.
+    Only S charts with subgroups that large are affected.
 
     Parameters
     ----------
