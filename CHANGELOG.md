@@ -62,15 +62,22 @@ numbers below are that manual's.
   Medicare ACO data (`validation/aco_per_capita_expenditure.csv`, 24 organisations x 4 years). Each
   run's reference values, spec limits and target are in its own file,
   `tests/fixtures/bishop_analyses/<run>.json` (the `vassds{1,2,3}analysis.json` references are
-  now `pm_sds_{1,2,3}.json`). All six PM runs use target 237; PM SDS 5's loss shares have no
-  reference until Tom's VAS run at 237, because his 10/3 run used the process mean.
+  now `pm_sds_{1,2,3}.json`). All six PM runs use target 237; PM SDS 5's loss shares come from
+  Tom's rerun at 237 (8 October 2026), because his 10/3 run used the process mean.
 - **Limits VAS prints as "UNEQUAL" are checked against the lines it draws.** Where subgroup sizes
   differ, VAS steps the limits per subgroup and prints no value; the gate now reads every
   subgroup's LBL/UBL from the red limit lines in the VAS chart drawing (scaled by the y-axis ticks,
   good to about one drawing unit) and compares PB subgroup by subgroup, to 1.5 drawing units. 186
   charts in SDS 3-6; the gate reports 1475 assertions passing, 0 failing, and 79 with no
-  reference (was 1155 / 0 / 399). Still without one: the R6 S charts with unequal subgroups
-  (pages 21, 25, 27), PM SDS 5's loss shares and the Medicare factor loss rows.
+  reference (was 1155 / 0 / 399).
+- **The R6 S charts are checked wherever VAS computed them correctly.** VAS's α<sub>N</sub>
+  (Eq 10-12) used Minitab's GAMMA function, which overflows above N = 343; the 10/3 VAS runs held
+  α<sub>N</sub> at 0.9995 from there on, so their S limits followed N = 500 whatever the subgroup size.
+  Dr. Bishop confirmed it (8 October 2026) and is replacing it with a table; PB computes α<sub>N</sub>
+  with log-gamma for any N. The gate now checks the R6 S charts whose subgroups are under 343 (all
+  match), the factor S charts' centerlines (one subgroup per factor level, as Dr. Bishop confirmed),
+  and PM SDS 5's loss shares from his rerun at 237; only the limits for subgroups of 343 or more
+  wait for his rerun. The references' notes now give that cause.
 
 ### Added
 - **R2 is reported unavailable, with the reason, when the R2 scale factor is undefined**

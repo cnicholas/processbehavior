@@ -496,7 +496,7 @@
       "chart_subtitle": "PM INERT",
       "context_subtitle": "PD Factor - F1",
       "variable": "RSG STDEV",
-      "CL": null,
+      "CL": 0.89,
       "LBL": null,
       "UBL": null,
       "axis_labels": {
@@ -506,7 +506,7 @@
       "package": {
         "analysis_design_state": "ANALYTIC DESIGN STATE 1: N > 1 COMPLETE"
       },
-      "notes": "VAS draws this factor S chart on PDC subgroups (limits equal to page 21), unlike the SDS 2 deck and the manual's factor-level subgrouping; no reference until Tom confirms which is intended."
+      "notes": "One subgroup per factor level (confirmed by Dr. Bishop, 10/8/2026). These subgroups have more than 343 values, and the 10/3 VAS held alpha_N (Eq 10-12) at 0.9995 above N = 343 (Minitab's GAMMA limit), so its limits follow N = 500; limits pending his rerun with alpha_N from a table."
     },
     {
       "page_number": 26,
@@ -534,7 +534,7 @@
       "chart_subtitle": "PM INERT",
       "context_subtitle": "PD Factor - F2",
       "variable": "RSG STDEV",
-      "CL": null,
+      "CL": 0.89,
       "LBL": null,
       "UBL": null,
       "axis_labels": {
@@ -544,7 +544,7 @@
       "package": {
         "analysis_design_state": "ANALYTIC DESIGN STATE 1: N > 1 COMPLETE"
       },
-      "notes": "VAS draws this factor S chart on PDC subgroups (limits equal to page 21), unlike the SDS 2 deck and the manual's factor-level subgrouping; no reference until Tom confirms which is intended."
+      "notes": "One subgroup per factor level (confirmed by Dr. Bishop, 10/8/2026). These subgroups have more than 343 values, and the 10/3 VAS held alpha_N (Eq 10-12) at 0.9995 above N = 343 (Minitab's GAMMA limit), so its limits follow N = 500; limits pending his rerun with alpha_N from a table."
     },
     {
       "page_number": 28,

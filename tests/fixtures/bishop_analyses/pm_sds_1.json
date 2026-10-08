@@ -506,7 +506,7 @@
       "package": {
         "analysis_design_state": "ANALYTIC DESIGN STATE 1: N > 1 COMPLETE"
       },
-      "notes": "SDS 1 deck of 10/3 draws this factor S chart on PDC subgroups (limits equal to page 21), unlike the SDS 2 deck and the manual R6 subgrouping (by factor level); kept the factor-level reference."
+      "notes": "The 10/3 VAS run prints 0.73/0.88 here: it held alpha_N (Eq 10-12) at 0.9995 above N = 343, where Minitab's GAMMA function overflows (confirmed by Dr. Bishop, 10/8/2026). Kept the limits from the earlier VAS run, which used the subgroup's own N, as PB does."
     },
     {
       "page_number": 26,
@@ -544,7 +544,7 @@
       "package": {
         "analysis_design_state": "ANALYTIC DESIGN STATE 1: N > 1 COMPLETE"
       },
-      "notes": "SDS 1 deck of 10/3 draws this factor S chart on PDC subgroups (limits equal to page 21), unlike the SDS 2 deck and the manual R6 subgrouping (by factor level); kept the factor-level reference."
+      "notes": "The 10/3 VAS run prints 0.73/0.88 here: it held alpha_N (Eq 10-12) at 0.9995 above N = 343, where Minitab's GAMMA function overflows (confirmed by Dr. Bishop, 10/8/2026). Kept the limits from the earlier VAS run, which used the subgroup's own N, as PB does."
     },
     {
       "page_number": 28,

@@ -705,7 +705,7 @@
         ],
         "LBL": "00000000",
         "UBL": "11111111",
-        "pending": "VAS draws R6 S-chart limits with unequal subgroups that PB does not reproduce (PM SDS 3 page 21: S-bar +/- 0.100 drawn, +/- 0.116 in PB); open with Dr. Bishop alongside the factor S-chart question."
+        "pending": "A subgroup here has 343 or more values. The 10/3 VAS held alpha_N (Eq 10-12) at 0.9995 above N = 343, where Minitab's GAMMA function overflows, so its S limits follow N = 500 instead of the subgroup's own N (confirmed by Dr. Bishop, 10/8/2026). Pending his rerun with alpha_N from a table."
       }
     },
     {
@@ -869,7 +869,7 @@
         ],
         "LBL": "0000",
         "UBL": "1111",
-        "pending": "VAS draws R6 S-chart limits with unequal subgroups that PB does not reproduce (PM SDS 3 page 21: S-bar +/- 0.100 drawn, +/- 0.116 in PB); open with Dr. Bishop alongside the factor S-chart question."
+        "pending": "A subgroup here has 343 or more values. The 10/3 VAS held alpha_N (Eq 10-12) at 0.9995 above N = 343, where Minitab's GAMMA function overflows, so its S limits follow N = 500 instead of the subgroup's own N (confirmed by Dr. Bishop, 10/8/2026). Pending his rerun with alpha_N from a table."
       }
     },
     {
@@ -926,7 +926,7 @@
         ],
         "LBL": "00",
         "UBL": "11",
-        "pending": "VAS draws R6 S-chart limits with unequal subgroups that PB does not reproduce (PM SDS 3 page 21: S-bar +/- 0.100 drawn, +/- 0.116 in PB); open with Dr. Bishop alongside the factor S-chart question."
+        "pending": "A subgroup here has 343 or more values. The 10/3 VAS held alpha_N (Eq 10-12) at 0.9995 above N = 343, where Minitab's GAMMA function overflows, so its S limits follow N = 500 instead of the subgroup's own N (confirmed by Dr. Bishop, 10/8/2026). Pending his rerun with alpha_N from a table."
       }
     },
     {

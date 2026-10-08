@@ -7,7 +7,7 @@
     "usl": 242,
     "target": 237
   },
-  "source_file": "PM SDS5.pptm (VAS run of 10/3/2026, 10-1 manual)",
+  "source_file": "PM SDS5.pptm (VAS run of 10/3/2026, 10-1 manual); loss shares from PM SDS 5 ANALYSIS.pptm (VAS rerun at target 237, 10/8/2026, charts and capability identical to the 10/3 run)",
   "extraction_method": "Values read from the text drawn in the Minitab charts of the VAS deck (displayed precision); page structure and null pattern from the PM SDS reference for the same ADS.",
   "pages_extracted": 34,
   "capability": {
@@ -22,8 +22,16 @@
     "potential_pct_below_lsl": 0.0,
     "potential_pct_above_usl": 0.31
   },
-  "loss": {},
-  "loss_note": "Tom's 10/3 PM SDS 5 run set the target at the process mean (mean share 0.0%); the e2e target is 237 for all six PM runs, so the loss shares await a VAS rerun at 237.",
+  "loss": {
+    "pct_unexplained": 28.5,
+    "pct_pdc": 22.7,
+    "pct_interaction": 22.0,
+    "pct_centering": 21.8,
+    "pct_time": 5.0,
+    "pct_pdc_f1": 15.2,
+    "pct_pdc_f2": 6.6,
+    "pct_pdc_factor_interaction": 0.9
+  },
   "items": [
     {
       "page_number": 1,
@@ -449,8 +457,7 @@
           1.1104
         ],
         "LBL": "10121222",
-        "UBL": "45434443",
-        "pending": "VAS draws R6 S-chart limits with unequal subgroups that PB does not reproduce (PM SDS 3 page 21: S-bar +/- 0.100 drawn, +/- 0.116 in PB); open with Dr. Bishop alongside the factor S-chart question."
+        "UBL": "45434443"
       }
     },
     {
@@ -580,8 +587,7 @@
           1.0486
         ],
         "LBL": "0111",
-        "UBL": "2222",
-        "pending": "VAS draws R6 S-chart limits with unequal subgroups that PB does not reproduce (PM SDS 3 page 21: S-bar +/- 0.100 drawn, +/- 0.116 in PB); open with Dr. Bishop alongside the factor S-chart question."
+        "UBL": "2222"
       }
     },
     {
@@ -638,8 +644,7 @@
           1.0203
         ],
         "LBL": "01",
-        "UBL": "22",
-        "pending": "VAS draws R6 S-chart limits with unequal subgroups that PB does not reproduce (PM SDS 3 page 21: S-bar +/- 0.100 drawn, +/- 0.116 in PB); open with Dr. Bishop alongside the factor S-chart question."
+        "UBL": "22"
       }
     },
     {

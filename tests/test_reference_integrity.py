@@ -35,31 +35,31 @@ REFERENCE_ARTIFACTS = [
     ),
     (
         'tests/fixtures/bishop_analyses/pm_sds_1.json',
-        '94266cd323ca7047163ffdb71bc587116c52be7e71b340df4e62a8aa843358cd',
+        '78c0f9c40239726d7ca56f775c0aa4b22655ab23796d32ad16210c1ce66fcab7',
     ),
     (
         'tests/fixtures/bishop_analyses/pm_sds_2.json',
-        'dbee3923677d6f9c2d1abf645c368a7c33c4195ea0e7ee31aad70aed634e2326',
+        '9b3cc7ec7954da8d9490cb7da9519c11439cdf83febd4eed87e778842b9317f8',
     ),
     (
         'tests/fixtures/bishop_analyses/pm_sds_3.json',
-        '6b6e20858a68aa2d8f12a4bf94b46fc6773b91f2303f3e0aefcc2d9024209d9f',
+        '70811e5f59fcd9995e9dc4437aec1aec08868add3996d95b3b245ed02e07eb7c',
     ),
     (
         'tests/fixtures/bishop_analyses/pm_sds_4.json',
-        '65faa6baf8d1e611de39d31db79a3e065b644b2fcab35e10679c3d1295fdb8fd',
+        'f556d81251ff35706d8f5eddd5ad9b8f46b4af08520cfc19185ed223139f665c',
     ),
     (
         'tests/fixtures/bishop_analyses/pm_sds_5.json',
-        '2c306ea4ebf17d7dd77c70aaa78910afc5ab08d66dab7af617ae4463a384f5a5',
+        '60c205dc4a9dc49398cfa00621272651c11be64f1cfb620115e4a928edab70aa',
     ),
     (
         'tests/fixtures/bishop_analyses/pm_sds_6.json',
-        'e2388419b178238216b6a11f7a21a3484e18aabb6f100959e5d1f1c9a34f8684',
+        '4247d11e987aefb85c75cc0df5ec4aa3dd477eba6d0f6bfc2ee6e53acecc5443',
     ),
     (
         'tests/fixtures/bishop_analyses/pm_inert_sds_1.json',
-        '5b4af30c6904e1a837a8f392e8239552f8aa41ce92f195cabe509138c2ce3002',
+        '32e31db625f6bbeb2d9b9759b5e635b31d0ec4f5ba0235fd7d8c616d72f06f1b',
     ),
     (
         'tests/fixtures/bishop_analyses/pm_inert_sds_2.json',
@@ -67,23 +67,23 @@ REFERENCE_ARTIFACTS = [
     ),
     (
         'tests/fixtures/bishop_analyses/pm_inert_sds_3.json',
-        'c324689071a5af0ab4a5fb55fee6d5948e08140d8ccb91b147ebde5167cd691f',
+        'eab2e47b7781871a82c48a51dc0b3ad156cc33580fe1b3d6074b1341afd86035',
     ),
     (
         'tests/fixtures/bishop_analyses/pm_inert_sds_4.json',
-        'b28cf80db8f2f6aa1e41ef16d12c9607f004a0cd4460de75c787c11a6967832d',
+        '50069462af1eaac4161153be3d35814342521f5976ab80dfe7e9fe7cadb6123b',
     ),
     (
         'tests/fixtures/bishop_analyses/pm_inert_sds_5.json',
-        'df2a0bf40c732f5bdcd21b64a89c0df8fd850374ea773389405fc2212f23b2dc',
+        'aabf897651880dccde74b8aef2a21e034e23878e4ac25adc6f10f19f3291a66b',
     ),
     (
         'tests/fixtures/bishop_analyses/pm_inert_sds_6.json',
-        '79dd31e929a3899e6af03163f77e96c317f650b5ca518e626df45cf8225ac793',
+        '5c5d4a8c88b77d017863a564c653e90d9f38010656342504b5269b8e65ef01cf',
     ),
     (
         'tests/fixtures/bishop_analyses/known_effects_sds_1.json',
-        '82b8231ae0cd04d62f56787b24bb64ff76c3c84747c2f15bf3d0c35a671f16b0',
+        '4d4cbd86327c4c4b820df72cc736b15cc4d4cd82f4e6c8da14f6670e64a49978',
     ),
     (
         'validation/aco_per_capita_expenditure.csv',

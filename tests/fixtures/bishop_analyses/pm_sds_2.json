@@ -544,7 +544,7 @@
       "package": {
         "analysis_design_state": "ANALYTIC DESIGN STATE 2: N = 1 COMPLETE"
       },
-      "notes": "10/3 deck prints limits 0.85/1.02 for this F2 S chart; factor-level subgroups (n=400) give 0.84/1.03 and no clean subgroup size gives the deck's values. Limits left unreferenced pending Tom."
+      "notes": "The 10/3 deck prints 0.85/1.02 for this F2 S chart. N = 400 is above 343, where the 10/3 VAS held alpha_N (Eq 10-12) at 0.9995 (Minitab's GAMMA limit, confirmed by Dr. Bishop, 10/8/2026), so its limits follow N = 500; PB's, with N = 400, are 0.84/1.03. Pending his rerun with alpha_N from a table."
     },
     {
       "page_number": 28,

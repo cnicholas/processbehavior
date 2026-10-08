@@ -457,8 +457,7 @@
           1.219
         ],
         "LBL": "10121212",
-        "UBL": "45434343",
-        "pending": "VAS draws R6 S-chart limits with unequal subgroups that PB does not reproduce (PM SDS 3 page 21: S-bar +/- 0.100 drawn, +/- 0.116 in PB); open with Dr. Bishop alongside the factor S-chart question."
+        "UBL": "45434343"
       }
     },
     {
@@ -589,8 +588,7 @@
           1.1509
         ],
         "LBL": "0001",
-        "UBL": "3222",
-        "pending": "VAS draws R6 S-chart limits with unequal subgroups that PB does not reproduce (PM SDS 3 page 21: S-bar +/- 0.100 drawn, +/- 0.116 in PB); open with Dr. Bishop alongside the factor S-chart question."
+        "UBL": "3222"
       }
     },
     {
@@ -647,8 +645,7 @@
           1.1001
         ],
         "LBL": "00",
-        "UBL": "21",
-        "pending": "VAS draws R6 S-chart limits with unequal subgroups that PB does not reproduce (PM SDS 3 page 21: S-bar +/- 0.100 drawn, +/- 0.116 in PB); open with Dr. Bishop alongside the factor S-chart question."
+        "UBL": "21"
       }
     },
     {
