@@ -50,7 +50,24 @@
       "package": {
         "analysis_design_state": "ANALYTIC DESIGN STATE 3: N=1 AND N>1 COMPLETE"
       },
-      "notes": "Limits vary with subgroup size (ADS 3) and are not printed on the slide; centre line only."
+      "notes": "Limits vary with subgroup size (ADS 3) and are not printed on the slide; centre line only.",
+      "drawn_limits": {
+        "unit": 0.05662,
+        "levels": [
+          235.1911,
+          235.9838,
+          236.3236,
+          236.5501,
+          236.6633,
+          239.0415,
+          239.1547,
+          239.3812,
+          239.7209,
+          240.457
+        ],
+        "LBL": "43144222443243412143413213324322231313431133433232123323444424324132342311443334233332434232243343322124231242232224321243334433300333224432131234343244324344344443424331342424442130242334232132433434323423332243233322343324334343323244332243243242443324213344442331322212434323323243331244324333413432143223314243413233422043233324333234422324434423133323334433323432232110442044323343342432432433423343342243231333111243323443124444433334241324243233404332323243411334323334233434312323201124433043323331333434343343333444423234403234243324112421423432323213123433332333323233442341323344334224143441434424343302244143231224432420324413303423434223243244332332331344224224232224443423332303133333231333333444403444333123423343034333322241321323444231232444432333213332222104323343342321422433243234",
+        "UBL": "56855777556756587856586786675677768686568866566767876676555575675867657688556665766667565767756656677875768757767775678756665566699666775567868765656755675655655556575668657575557869757665767867566565676576667756766677656675665656676755667756756757556675786655557668677787565676676756668755675666586567856776685756586766577956766675666765577675565576866676665566676567767889557955676656657567567566576656657756768666888756676556875555566665758675756766595667676756588665676665766565687676798875566956676668666565656656666555576765596765756675887578576567676786876566667666676766557658676655665775856558565575656697755856768775567579675586696576565776756755667667668655775775767775556576667696866666768666666555596555666876576656965666677758678676555768767555567666786667777895676656657678577566756765"
+      }
     },
     {
       "page_number": 2,
@@ -69,7 +86,19 @@
       "package": {
         "analysis_design_state": "ANALYTIC DESIGN STATE 3: N=1 AND N>1 COMPLETE"
       },
-      "notes": "Limits vary with subgroup size (ADS 3) and are not printed on the slide; centre line only."
+      "notes": "Limits vary with subgroup size (ADS 3) and are not printed on the slide; centre line only.",
+      "drawn_limits": {
+        "unit": 0.014,
+        "levels": [
+          0.0,
+          1.68,
+          1.82,
+          2.058,
+          2.618
+        ],
+        "LBL": "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+        "UBL": "124113331123121434121423422312333242421244221223234322321111312314232132441122213222231213233122122334313243133233312343122211222222331123424321212311231211211112131224213131113423132213234231221212321322233123222332122312212122323112233123123131122313422111132242333431212322323122243112312221421234123322413121423221331232223122232113323112113242223222112223212332344113112322122131231231221322122133123242224443122321124311111222213142313123221122323231214422123222132212124323234431122122322242221212122122221111323211232131223144313413212323234243212222322223232211321423221122133141211412113121223311412324331123132311422213212133231231122322322421133133132333111213222322422222324222222111121112224321322122122223331423423211132432311112322234222333341232212213234133122312321"
+      }
     },
     {
       "page_number": 3,
@@ -88,7 +117,22 @@
       "package": {
         "analysis_design_state": "ANALYTIC DESIGN STATE 3: N=1 AND N>1 COMPLETE"
       },
-      "notes": "Limits vary with subgroup size (ADS 3) and are not printed on the slide; centre line only."
+      "notes": "Limits vary with subgroup size (ADS 3) and are not printed on the slide; centre line only.",
+      "drawn_limits": {
+        "unit": 0.04116,
+        "levels": [
+          236.5535,
+          236.8416,
+          237.0062,
+          237.1709,
+          239.3111,
+          239.4345,
+          239.5992,
+          239.9284
+        ],
+        "LBL": "3203311133213230103230210221321112020232002232212101221233331321302123120033222312222132312113223221",
+        "UBL": "4574466644564547674547567556456665757545775545565676556544446456475654657744555465555645465664554556"
+      }
     },
     {
       "page_number": 4,
@@ -107,7 +151,19 @@
       "package": {
         "analysis_design_state": "ANALYTIC DESIGN STATE 3: N=1 AND N>1 COMPLETE"
       },
-      "notes": "Limits vary with subgroup size (ADS 3) and are not printed on the slide; centre line only."
+      "notes": "Limits vary with subgroup size (ADS 3) and are not printed on the slide; centre line only.",
+      "drawn_limits": {
+        "unit": 0.014,
+        "levels": [
+          0.0,
+          1.498,
+          1.624,
+          1.848,
+          2.338
+        ],
+        "LBL": "0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+        "UBL": "1241133311231214341214234223123332424212442212232343223211113123142321324411222132222312132331221223"
+      }
     },
     {
       "page_number": 5,
@@ -126,7 +182,24 @@
       "package": {
         "analysis_design_state": "ANALYTIC DESIGN STATE 3: N=1 AND N>1 COMPLETE"
       },
-      "notes": "Limits vary with subgroup size (ADS 3) and are not printed on the slide; centre line only."
+      "notes": "Limits vary with subgroup size (ADS 3) and are not printed on the slide; centre line only.",
+      "drawn_limits": {
+        "unit": 0.04572,
+        "levels": [
+          235.8919,
+          236.7149,
+          237.0349,
+          237.2635,
+          237.4007,
+          239.8238,
+          239.9609,
+          240.1895,
+          240.5553,
+          241.3325
+        ],
+        "LBL": "2124231242232224321243334433300333224432131234343244324344344443424331342424442130242334232132433434",
+        "UBL": "7875768757767775678756665566699666775567868765656755675655655556575668657575557869757665767867566565"
+      }
     },
     {
       "page_number": 6,
@@ -145,7 +218,19 @@
       "package": {
         "analysis_design_state": "ANALYTIC DESIGN STATE 3: N=1 AND N>1 COMPLETE"
       },
-      "notes": "Limits vary with subgroup size (ADS 3) and are not printed on the slide; centre line only."
+      "notes": "Limits vary with subgroup size (ADS 3) and are not printed on the slide; centre line only.",
+      "drawn_limits": {
+        "unit": 0.014,
+        "levels": [
+          0.0,
+          1.708,
+          1.862,
+          2.114,
+          2.688
+        ],
+        "LBL": "0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+        "UBL": "3431324313323331234312221122222233112342432121231123121121111213122421313111342313221323423122121"
+      }
     },
     {
       "page_number": 7,
@@ -164,7 +249,22 @@
       "package": {
         "analysis_design_state": "ANALYTIC DESIGN STATE 3: N=1 AND N>1 COMPLETE"
       },
-      "notes": "Limits vary with subgroup size (ADS 3) and are not printed on the slide; centre line only."
+      "notes": "Limits vary with subgroup size (ADS 3) and are not printed on the slide; centre line only.",
+      "drawn_limits": {
+        "unit": 0.02778,
+        "levels": [
+          235.4444,
+          235.7778,
+          236.0,
+          236.1389,
+          238.5278,
+          238.6667,
+          238.8889,
+          239.2222
+        ],
+        "LBL": "2123122211321222112322132232322121332211321321313322131022333312202111013232122121322201332132223023",
+        "UBL": "5654655566456555665455645545455656445566456456464455646755444465575666764545655656455576445645554754"
+      }
     },
     {
       "page_number": 8,
@@ -183,7 +283,19 @@
       "package": {
         "analysis_design_state": "ANALYTIC DESIGN STATE 3: N=1 AND N>1 COMPLETE"
       },
-      "notes": "Limits vary with subgroup size (ADS 3) and are not printed on the slide; centre line only."
+      "notes": "Limits vary with subgroup size (ADS 3) and are not printed on the slide; centre line only.",
+      "drawn_limits": {
+        "unit": 0.014,
+        "levels": [
+          0.0,
+          1.708,
+          1.848,
+          2.1,
+          2.66
+        ],
+        "LBL": "0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+        "UBL": "2321322233123222332122312212122323112233123123131122313422111132242333431212322323122243112312221421"
+      }
     },
     {
       "page_number": 9,
@@ -202,7 +314,24 @@
       "package": {
         "analysis_design_state": "ANALYTIC DESIGN STATE 3: N=1 AND N>1 COMPLETE"
       },
-      "notes": "Limits vary with subgroup size (ADS 3) and are not printed on the slide; centre line only."
+      "notes": "Limits vary with subgroup size (ADS 3) and are not printed on the slide; centre line only.",
+      "drawn_limits": {
+        "unit": 0.02726,
+        "levels": [
+          236.3476,
+          237.111,
+          237.4654,
+          237.6835,
+          237.8199,
+          240.1918,
+          240.3281,
+          240.5463,
+          240.8734,
+          241.6641
+        ],
+        "LBL": "3214322331424341323342204323332433323442232443442313332333443332343223211044204432334334243243243342",
+        "UBL": "6785677668575658676657795676667566676557767556557686667666556667656776788955795567665665756756756657"
+      }
     },
     {
       "page_number": 10,
@@ -221,7 +350,19 @@
       "package": {
         "analysis_design_state": "ANALYTIC DESIGN STATE 3: N=1 AND N>1 COMPLETE"
       },
-      "notes": "Limits vary with subgroup size (ADS 3) and are not printed on the slide; centre line only."
+      "notes": "Limits vary with subgroup size (ADS 3) and are not printed on the slide; centre line only.",
+      "drawn_limits": {
+        "unit": 0.014,
+        "levels": [
+          0.0,
+          1.694,
+          1.834,
+          2.086,
+          2.646
+        ],
+        "LBL": "0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+        "UBL": "2341233224131214232213312322231222321133231121132422232221122232123323441131123221221312312312213"
+      }
     },
     {
       "page_number": 11,
@@ -240,7 +381,24 @@
       "package": {
         "analysis_design_state": "ANALYTIC DESIGN STATE 3: N=1 AND N>1 COMPLETE"
       },
-      "notes": "Limits vary with subgroup size (ADS 3) and are not printed on the slide; centre line only."
+      "notes": "Limits vary with subgroup size (ADS 3) and are not printed on the slide; centre line only.",
+      "drawn_limits": {
+        "unit": 0.04394,
+        "levels": [
+          233.9646,
+          234.7555,
+          235.1071,
+          235.3268,
+          235.4586,
+          237.8754,
+          238.0072,
+          238.2269,
+          238.5784,
+          239.3254
+        ],
+        "LBL": "3343342243231333111243323443124444433334241324243233404332323243411334323334233434312323201124433043",
+        "UBL": "6656657756768666888756676556875555566665758675756766595667676756588665676665766565687676798875566956"
+      }
     },
     {
       "page_number": 12,
@@ -259,7 +417,19 @@
       "package": {
         "analysis_design_state": "ANALYTIC DESIGN STATE 3: N=1 AND N>1 COMPLETE"
       },
-      "notes": "Limits vary with subgroup size (ADS 3) and are not printed on the slide; centre line only."
+      "notes": "Limits vary with subgroup size (ADS 3) and are not printed on the slide; centre line only.",
+      "drawn_limits": {
+        "unit": 0.014,
+        "levels": [
+          0.0,
+          1.708,
+          1.848,
+          2.1,
+          2.66
+        ],
+        "LBL": "0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+        "UBL": "2212213312324222444312232112431111122221314231312322112232323121442212322213221212432323443112212"
+      }
     },
     {
       "page_number": 13,
@@ -278,7 +448,24 @@
       "package": {
         "analysis_design_state": "ANALYTIC DESIGN STATE 3: N=1 AND N>1 COMPLETE"
       },
-      "notes": "Limits vary with subgroup size (ADS 3) and are not printed on the slide; centre line only."
+      "notes": "Limits vary with subgroup size (ADS 3) and are not printed on the slide; centre line only.",
+      "drawn_limits": {
+        "unit": 0.05379,
+        "levels": [
+          234.4784,
+          235.2315,
+          235.6081,
+          235.7695,
+          235.9308,
+          238.2978,
+          238.4054,
+          238.6206,
+          238.9971,
+          239.7502
+        ],
+        "LBL": "3233313334343433433334444232344032342433241124214234323232131234333323333232334423413233443342241434",
+        "UBL": "6766686665656566566665555767655967657566758875785765676767868765666676666767665576586766556657758565"
+      }
     },
     {
       "page_number": 14,
@@ -297,7 +484,19 @@
       "package": {
         "analysis_design_state": "ANALYTIC DESIGN STATE 3: N=1 AND N>1 COMPLETE"
       },
-      "notes": "Limits vary with subgroup size (ADS 3) and are not printed on the slide; centre line only."
+      "notes": "Limits vary with subgroup size (ADS 3) and are not printed on the slide; centre line only.",
+      "drawn_limits": {
+        "unit": 0.01274,
+        "levels": [
+          0.0018,
+          1.6703,
+          1.8104,
+          2.0524,
+          2.6128
+        ],
+        "LBL": "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+        "UBL": "232224222121212212222111132321123213122314431341321232323424321222232222323221132142322112213314121"
+      }
     },
     {
       "page_number": 15,
@@ -316,7 +515,24 @@
       "package": {
         "analysis_design_state": "ANALYTIC DESIGN STATE 3: N=1 AND N>1 COMPLETE"
       },
-      "notes": "Limits vary with subgroup size (ADS 3) and are not printed on the slide; centre line only."
+      "notes": "Limits vary with subgroup size (ADS 3) and are not printed on the slide; centre line only.",
+      "drawn_limits": {
+        "unit": 0.03151,
+        "levels": [
+          234.7824,
+          235.5701,
+          235.9482,
+          236.1688,
+          236.2948,
+          238.7839,
+          238.91,
+          239.1305,
+          239.4771,
+          240.2963
+        ],
+        "LBL": "4143442434330224414323122443242032441330342343422324324433233233134422422423222444342333230313333323",
+        "UBL": "5856557565669775585676877556757967558669657656577675675566766766865577577576777555657666769686666676"
+      }
     },
     {
       "page_number": 16,
@@ -335,7 +551,19 @@
       "package": {
         "analysis_design_state": "ANALYTIC DESIGN STATE 3: N=1 AND N>1 COMPLETE"
       },
-      "notes": "Limits vary with subgroup size (ADS 3) and are not printed on the slide; centre line only."
+      "notes": "Limits vary with subgroup size (ADS 3) and are not printed on the slide; centre line only.",
+      "drawn_limits": {
+        "unit": 0.01401,
+        "levels": [
+          -0.0035,
+          1.7482,
+          1.8884,
+          2.1406,
+          2.7292
+        ],
+        "LBL": "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+        "UBL": "141211312122331141232433112313231142221321213323123112232232242113313313233311121322232242222232"
+      }
     },
     {
       "page_number": 17,
@@ -354,7 +582,24 @@
       "package": {
         "analysis_design_state": "ANALYTIC DESIGN STATE 3: N=1 AND N>1 COMPLETE"
       },
-      "notes": "Limits vary with subgroup size (ADS 3) and are not printed on the slide; centre line only."
+      "notes": "Limits vary with subgroup size (ADS 3) and are not printed on the slide; centre line only.",
+      "drawn_limits": {
+        "unit": 0.03704,
+        "levels": [
+          235.6296,
+          236.3704,
+          236.7037,
+          236.9259,
+          237.037,
+          239.3704,
+          239.4815,
+          239.7037,
+          240.037,
+          240.7778
+        ],
+        "LBL": "1333333444403444333123423343034333322241321323444231232444432333213332222104323343342321422433243234",
+        "UBL": "8666666555596555666876576656965666677758678676555768767555567666786667777895676656657678577566756765"
+      }
     },
     {
       "page_number": 18,
@@ -373,7 +618,19 @@
       "package": {
         "analysis_design_state": "ANALYTIC DESIGN STATE 3: N=1 AND N>1 COMPLETE"
       },
-      "notes": "Limits vary with subgroup size (ADS 3) and are not printed on the slide; centre line only."
+      "notes": "Limits vary with subgroup size (ADS 3) and are not printed on the slide; centre line only.",
+      "drawn_limits": {
+        "unit": 0.01257,
+        "levels": [
+          -0.003,
+          1.6439,
+          1.7822,
+          2.0211,
+          2.5742
+        ],
+        "LBL": "0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+        "UBL": "4222222111121112224321322122122223331423423211132432311112322234222333341232212213234133122312321"
+      }
     },
     {
       "page_number": 19,
@@ -411,7 +668,17 @@
       "package": {
         "analysis_design_state": "ANALYTIC DESIGN STATE 3: N=1 AND N>1 COMPLETE"
       },
-      "notes": null
+      "notes": null,
+      "drawn_limits": {
+        "unit": 0.01169,
+        "levels": [
+          237.6662,
+          237.6779,
+          237.9935
+        ],
+        "LBL": "00100100",
+        "UBL": "22222222"
+      }
     },
     {
       "page_number": 21,
@@ -430,7 +697,17 @@
       "package": {
         "analysis_design_state": "ANALYTIC DESIGN STATE 3: N=1 AND N>1 COMPLETE"
       },
-      "notes": "Title OCR was noisy on the slide image; chart context indicates a standard-deviation main-effects chart."
+      "notes": "Title OCR was noisy on the slide image; chart context indicates a standard-deviation main-effects chart.",
+      "drawn_limits": {
+        "unit": 0.00098,
+        "levels": [
+          0.9602,
+          1.16
+        ],
+        "LBL": "00000000",
+        "UBL": "11111111",
+        "pending": "VAS draws R6 S-chart limits with unequal subgroups that PB does not reproduce (PM SDS 3 page 21: S-bar +/- 0.100 drawn, +/- 0.116 in PB); open with Dr. Bishop alongside the factor S-chart question."
+      }
     },
     {
       "page_number": 22,
@@ -449,7 +726,40 @@
       "package": {
         "analysis_design_state": "ANALYTIC DESIGN STATE 3: N=1 AND N>1 COMPLETE"
       },
-      "notes": null
+      "notes": null,
+      "drawn_limits": {
+        "unit": 0.01087,
+        "levels": [
+          237.1304,
+          237.163,
+          237.1739,
+          237.1957,
+          237.2065,
+          237.2174,
+          237.2283,
+          237.2391,
+          237.25,
+          237.2609,
+          237.2717,
+          237.2826,
+          237.2935,
+          238.3696,
+          238.3804,
+          238.3913,
+          238.4022,
+          238.413,
+          238.4239,
+          238.4348,
+          238.4457,
+          238.4674,
+          238.4783,
+          238.4891,
+          238.5,
+          238.5326
+        ],
+        "LBL": "737c9748c9a659a87177b7759bc7677497995bb349089bb8a6698588caac79a892976765447c769b97a877789734898c96ab",
+        "UBL": "hmidfhlgeffjkffghohifhhkffehjhilfhffkffmlfpgfffgfjjfgkggeffehffgfnfhjijkllhdijfffifgihigfhmlgfgefjff"
+      }
     },
     {
       "page_number": 23,
@@ -468,7 +778,38 @@
       "package": {
         "analysis_design_state": "ANALYTIC DESIGN STATE 3: N=1 AND N>1 COMPLETE"
       },
-      "notes": null
+      "notes": null,
+      "drawn_limits": {
+        "unit": 0.00563,
+        "levels": [
+          0.5488,
+          0.5826,
+          0.5882,
+          0.5995,
+          0.6107,
+          0.622,
+          0.6276,
+          0.6389,
+          0.6502,
+          0.6614,
+          0.6727,
+          0.6783,
+          1.4441,
+          1.4497,
+          1.461,
+          1.4722,
+          1.4835,
+          1.4891,
+          1.5004,
+          1.5116,
+          1.5229,
+          1.5342,
+          1.5398,
+          1.5623
+        ],
+        "LBL": "736b8748a89558987176a7758aa7576487885aa348088aa895588588a99a789882875655447b658a869867688734888a859a",
+        "UBL": "gkgcegjfdeehieefgmggdggieddghggjegeeiddkjenfeddfehhefiffdeedgeefeleghghijjgcghedegefgggfegkjfefdehed"
+      }
     },
     {
       "page_number": 24,
@@ -487,7 +828,16 @@
       "package": {
         "analysis_design_state": "ANALYTIC DESIGN STATE 3: N=1 AND N>1 COMPLETE"
       },
-      "notes": null
+      "notes": null,
+      "drawn_limits": {
+        "unit": 0.00762,
+        "levels": [
+          237.7141,
+          237.9426
+        ],
+        "LBL": "0000",
+        "UBL": "1111"
+      }
     },
     {
       "page_number": 25,
@@ -506,7 +856,17 @@
       "package": {
         "analysis_design_state": "ANALYTIC DESIGN STATE 3: N=1 AND N>1 COMPLETE"
       },
-      "notes": "Title OCR was noisy on the slide image; corrected using chart context and neighboring slides."
+      "notes": "Title OCR was noisy on the slide image; corrected using chart context and neighboring slides.",
+      "drawn_limits": {
+        "unit": 0.00098,
+        "levels": [
+          0.9602,
+          1.16
+        ],
+        "LBL": "0000",
+        "UBL": "1111",
+        "pending": "VAS draws R6 S-chart limits with unequal subgroups that PB does not reproduce (PM SDS 3 page 21: S-bar +/- 0.100 drawn, +/- 0.116 in PB); open with Dr. Bishop alongside the factor S-chart question."
+      }
     },
     {
       "page_number": 26,
@@ -525,7 +885,16 @@
       "package": {
         "analysis_design_state": "ANALYTIC DESIGN STATE 3: N=1 AND N>1 COMPLETE"
       },
-      "notes": null
+      "notes": null,
+      "drawn_limits": {
+        "unit": 0.00409,
+        "levels": [
+          237.7386,
+          237.9106
+        ],
+        "LBL": "00",
+        "UBL": "11"
+      }
     },
     {
       "page_number": 27,
@@ -544,7 +913,17 @@
       "package": {
         "analysis_design_state": "ANALYTIC DESIGN STATE 3: N=1 AND N>1 COMPLETE"
       },
-      "notes": "Title OCR was noisy on the slide image; corrected using chart context and neighboring slides."
+      "notes": "Title OCR was noisy on the slide image; corrected using chart context and neighboring slides.",
+      "drawn_limits": {
+        "unit": 0.00098,
+        "levels": [
+          0.9602,
+          1.16
+        ],
+        "LBL": "00",
+        "UBL": "11",
+        "pending": "VAS draws R6 S-chart limits with unequal subgroups that PB does not reproduce (PM SDS 3 page 21: S-bar +/- 0.100 drawn, +/- 0.116 in PB); open with Dr. Bishop alongside the factor S-chart question."
+      }
     },
     {
       "page_number": 28,
@@ -563,7 +942,24 @@
       "package": {
         "analysis_design_state": "ANALYTIC DESIGN STATE 3: N=1 AND N>1 COMPLETE"
       },
-      "notes": "Limits vary with subgroup size (ADS 3) and are not printed on the slide; centre line only."
+      "notes": "Limits vary with subgroup size (ADS 3) and are not printed on the slide; centre line only.",
+      "drawn_limits": {
+        "unit": 0.07467,
+        "levels": [
+          234.3991,
+          235.3698,
+          235.8179,
+          236.1166,
+          236.3406,
+          239.4022,
+          239.5515,
+          239.8502,
+          240.2983,
+          241.269
+        ],
+        "LBL": "33144222443243412143413213324322231313431133433232123323444424324132342311443334233332434232243343322124231242232224321243334433300333224432131234343244324344344443424331342424442130242334232132433434323423332243233322343324334343323244332243243242443324213344442331322212434323323243331244324333413432143223314243413233422043233324333234422324434423133323334433323432232110442044323343342432432433423343342243231333111243323443124444433334241324243233404332323243411334323334233434312323201124433043323331333434343343333444423234403234243324112421423432323213123433332333323233442341323344334224143441434424343302244143231224432420324413303423434223243244332332331344224224232224443423332303133333231333333444403444333123423343034333322241321323444231232444432333213332222104323343342321422433243234",
+        "UBL": "66855777556756587856586786675677768686568866566767876676555575675867657688556665766667565767756656677875768757767775678756665566699666775567868765656755675655655556575668657575557869757665767867566565676576667756766677656675665656676755667756756757556675786655557668677787565676676756668755675666586567856776685756586766577956766675666765577675565576866676665566676567767889557955676656657567567566576656657756768666888756676556875555566665758675756766595667676756588665676665766565687676798875566956676668666565656656666555576765596765756675887578576567676786876566667666676766557658676655665775856558565575656697755856768775567579675586696576565776756755667667668655775775767775556576667696866666768666666555596555666876576656965666677758678676555768767555567666786667777895676656657678577566756765"
+      }
     },
     {
       "page_number": 29,
@@ -582,7 +978,19 @@
       "package": {
         "analysis_design_state": "ANALYTIC DESIGN STATE 3: N=1 AND N>1 COMPLETE"
       },
-      "notes": "Limits vary with subgroup size (ADS 3) and are not printed on the slide; centre line only."
+      "notes": "Limits vary with subgroup size (ADS 3) and are not printed on the slide; centre line only.",
+      "drawn_limits": {
+        "unit": 0.01866,
+        "levels": [
+          0.0037,
+          2.1866,
+          2.3731,
+          2.6903,
+          3.4179
+        ],
+        "LBL": "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+        "UBL": "224113331123121434121423422312333242421244221223234322321111312314232132441122213222231213233122122334313243133233312343122211222222331123424321212311231211211112131224213131113423132213234231221212321322233123222332122312212122323112233123123131122313422111132242333431212322323122243112312221421234123322413121423221331232223122232113323112113242223222112223212332344113112322122131231231221322122133123242224443122321124311111222213142313123221122323231214422123222132212124323234431122122322242221212122122221111323211232131223144313413212323234243212222322223232211321423221122133141211412113121223311412324331123132311422213212133231231122322322421133133132333111213222322422222324222222111121112224321322122122223331423423211132432311112322234222333341232212213234133122312321"
+      }
     },
     {
       "page_number": 30,
@@ -679,5 +1087,6 @@
       },
       "notes": null
     }
-  ]
+  ],
+  "drawn_limits_method": "Where VAS prints \"UNEQUAL\", the LBL/UBL of every subgroup are read from the red limit lines in the chart drawing (EMF, 576 x 384 units) and scaled by the y-axis ticks: good to about one drawing unit ('unit', in the response's units)."
 }

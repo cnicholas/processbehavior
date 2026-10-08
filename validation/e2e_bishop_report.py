@@ -14,6 +14,7 @@ Usage:
 """
 import json
 import math
+import string
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -112,6 +113,37 @@ def close(actual, expected, tol=TOLERANCE):
     if math.isnan(actual) or math.isnan(expected):
         return False
     return abs(actual - expected) <= tol
+
+
+DRAWN_CODES = string.digits + string.ascii_letters
+DRAWN_UNITS = 1.5  # drawing units a drawn limit may sit from PB's: one for the drawing, half for the axis ticks
+
+
+def compare_drawn(drawn, table, tol=TOLERANCE):
+    """Check PB's limits, subgroup by subgroup, against the limits VAS draws where it prints "UNEQUAL".
+
+    ``drawn`` is an item's ``drawn_limits``: the red limit lines of the VAS chart, read per subgroup and scaled by
+    the y-axis ticks, so each value is good to about one drawing unit (``unit``). Each subgroup's limit is a
+    character indexing ``levels``. Returns the row fields to override: expected (VAS's last subgroup, the one
+    Minitab would label), match and note.
+    """
+    lbl = [drawn['levels'][DRAWN_CODES.index(c)] for c in drawn['LBL']]
+    ubl = [drawn['levels'][DRAWN_CODES.index(c)] for c in drawn['UBL']]
+    tol = max(tol, DRAWN_UNITS * drawn['unit'])
+    pending = drawn.get('pending')
+    out = {'expected_lbl': lbl[-1], 'expected_ubl': ubl[-1]}
+    if table is None or len(table) != len(lbl):
+        charted = 0 if table is None else len(table)
+        match = None if pending else False
+        return {**out, 'match_lpl': match, 'match_upl': match,
+                'note': f'Drawn limits: VAS charts {len(lbl)} subgroups, PB {charted}.'}
+    d_lo = max(abs(float(a) - e) for a, e in zip(table['lpl'], lbl, strict=True))
+    d_hi = max(abs(float(a) - e) for a, e in zip(table['upl'], ubl, strict=True))
+    note = (f'Limits read from the VAS drawing for all {len(lbl)} subgroups: largest difference LBL {d_lo:.4f}, '
+            f'UBL {d_hi:.4f} (tolerance {tol:.4f}).')
+    if pending:
+        return {**out, 'match_lpl': None, 'match_upl': None, 'note': f'{note} Pending: {pending}'}
+    return {**out, 'match_lpl': d_lo <= tol, 'match_upl': d_hi <= tol, 'note': note}
 
 
 def classify_page(item):
@@ -298,6 +330,7 @@ def run_validation(run, pb, study, ref):  # noqa: C901
         expected_cl = item.get('CL')
         expected_lbl = item.get('LBL')
         expected_ubl = item.get('UBL')
+        drawn_limits = item.get('drawn_limits')
         is_location = is_location_chart(item)
 
         base = {
@@ -311,8 +344,11 @@ def run_validation(run, pb, study, ref):  # noqa: C901
 
         def append_result(
             chart_type, by_str, value, recentered, actual_cl, actual_lpl, actual_upl, table,
-            _base=base, _ecl=expected_cl, _elbl=expected_lbl, _eubl=expected_ubl, **extra
+            _base=base, _ecl=expected_cl, _elbl=expected_lbl, _eubl=expected_ubl,
+            _drawn=drawn_limits, **extra
         ):
+            if _drawn is not None and _elbl is None and _eubl is None:
+                extra = {**extra, **compare_drawn(_drawn, table, tol)}
             results.append({
                 **_base,
                 'chart_type': chart_type,
@@ -816,17 +852,20 @@ def generate_myst_summary(all_results, aux_by_run, runs):
         '## What is covered',
         '',
         '- **Charts** — center line and both natural process limits, for the primary',
-        '  chart and for each valid chart x residual pair at that design state.',
+        '  chart and for each valid chart x residual pair at that design state. Where subgroup',
+        '  sizes differ, VAS prints "UNEQUAL" instead of a limit; there the limits of every',
+        '  subgroup are read from the limit lines VAS draws, to within 1.5 drawing units',
+        '  (about 0.01-0.1, by chart), and each line counts as one assertion.',
         '- **Capability** — Pp, Ppk (upper and lower), Cp, Cpk, and the percentage of',
         '  the distribution beyond each specification limit.',
         '- **Loss function** — the Taguchi loss decomposition and its components.',
         '',
         '## Values with no reference yet',
         '',
-        '- Charts whose limits vary with subgroup size (unequal subgroups, as in SDS 3, 4 and 6):',
-        '  VAS prints "UNEQUAL" instead of a single limit, so the slides carry no value to compare.',
         '- The factor S charts of SDS 1 and 4 (pages 25 and 27), which VAS draws on condition',
         '  subgroups where the manual uses one subgroup per factor level; awaiting Dr. Bishop.',
+        '- R6 S charts with unequal subgroups (SDS 3-6, pages 21, 25 and 27): VAS draws limits',
+        '  PB does not reproduce; awaiting Dr. Bishop with the factor S-chart question.',
         '- PM SDS 5 loss shares: its VAS run used the process mean as the target; the gate uses',
         '  237 for all six PM runs, pending a VAS rerun at 237.',
         '',

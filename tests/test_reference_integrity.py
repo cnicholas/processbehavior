@@ -43,19 +43,19 @@ REFERENCE_ARTIFACTS = [
     ),
     (
         'tests/fixtures/bishop_analyses/pm_sds_3.json',
-        '5bcb65168ea86c7d202f8b9dedd188f134673a884f5805c8605c4d676e7e8692',
+        '6b6e20858a68aa2d8f12a4bf94b46fc6773b91f2303f3e0aefcc2d9024209d9f',
     ),
     (
         'tests/fixtures/bishop_analyses/pm_sds_4.json',
-        '03b7102e640485a861dd5bf665e1c697d126e7133e20e775fb1cf2c60a071ad2',
+        '65faa6baf8d1e611de39d31db79a3e065b644b2fcab35e10679c3d1295fdb8fd',
     ),
     (
         'tests/fixtures/bishop_analyses/pm_sds_5.json',
-        'f3c605b89199e036b0b3e9a700fa4f319034ece6e6b52fb36ad49c452023e280',
+        '2c306ea4ebf17d7dd77c70aaa78910afc5ab08d66dab7af617ae4463a384f5a5',
     ),
     (
         'tests/fixtures/bishop_analyses/pm_sds_6.json',
-        '86d63d2d1c77f3444dd6cafd584d13c8c570b89ffca195ff35de4a858bfceb38',
+        'e2388419b178238216b6a11f7a21a3484e18aabb6f100959e5d1f1c9a34f8684',
     ),
     (
         'tests/fixtures/bishop_analyses/pm_inert_sds_1.json',
@@ -67,19 +67,19 @@ REFERENCE_ARTIFACTS = [
     ),
     (
         'tests/fixtures/bishop_analyses/pm_inert_sds_3.json',
-        '7dbd2f7b2175a184fd4950ea442cdd5dd8a983b393616485cd42a05b35e15778',
+        'c324689071a5af0ab4a5fb55fee6d5948e08140d8ccb91b147ebde5167cd691f',
     ),
     (
         'tests/fixtures/bishop_analyses/pm_inert_sds_4.json',
-        '680a357c882d82bebdeece19cdd2a7f211d7c3d9f148c4ce7a2c42102f6896ca',
+        'b28cf80db8f2f6aa1e41ef16d12c9607f004a0cd4460de75c787c11a6967832d',
     ),
     (
         'tests/fixtures/bishop_analyses/pm_inert_sds_5.json',
-        'c4e3b19492c482fb6e06e7bb01c3d79b26ea545e1df21c03cc4c1329c0517345',
+        'df2a0bf40c732f5bdcd21b64a89c0df8fd850374ea773389405fc2212f23b2dc',
     ),
     (
         'tests/fixtures/bishop_analyses/pm_inert_sds_6.json',
-        '942a1c805d8862c478a5599c70f9dd96b23bc6b1cafd76a67c2cd4b49f515e63',
+        '79dd31e929a3899e6af03163f77e96c317f650b5ca518e626df45cf8225ac793',
     ),
     (
         'tests/fixtures/bishop_analyses/known_effects_sds_1.json',

@@ -64,6 +64,13 @@ numbers below are that manual's.
   `tests/fixtures/bishop_analyses/<run>.json` (the `vassds{1,2,3}analysis.json` references are
   now `pm_sds_{1,2,3}.json`). All six PM runs use target 237; PM SDS 5's loss shares have no
   reference until Tom's VAS run at 237, because his 10/3 run used the process mean.
+- **Limits VAS prints as "UNEQUAL" are checked against the lines it draws.** Where subgroup sizes
+  differ, VAS steps the limits per subgroup and prints no value; the gate now reads every
+  subgroup's LBL/UBL from the red limit lines in the VAS chart drawing (scaled by the y-axis ticks,
+  good to about one drawing unit) and compares PB subgroup by subgroup, to 1.5 drawing units. 186
+  charts in SDS 3-6; the gate reports 1475 assertions passing, 0 failing, and 79 with no
+  reference (was 1155 / 0 / 399). Still without one: the R6 S charts with unequal subgroups
+  (pages 21, 25, 27), PM SDS 5's loss shares and the Medicare factor loss rows.
 
 ### Added
 - **R2 is reported unavailable, with the reason, when the R2 scale factor is undefined**

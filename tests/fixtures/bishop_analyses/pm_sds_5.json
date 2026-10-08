@@ -403,7 +403,22 @@
       "package": {
         "analysis_design_state": "ANALYTIC DESIGN STATE 2: N = 1 COMPLETE"
       },
-      "notes": null
+      "notes": null,
+      "drawn_limits": {
+        "unit": 0.01198,
+        "levels": [
+          237.4925,
+          237.5044,
+          237.5164,
+          237.5284,
+          238.0914,
+          238.1034,
+          238.1153,
+          238.1273
+        ],
+        "LBL": "10121223",
+        "UBL": "57655554"
+      }
     },
     {
       "page_number": 21,
@@ -422,7 +437,21 @@
       "package": {
         "analysis_design_state": "ANALYTIC DESIGN STATE 2: N = 1 COMPLETE"
       },
-      "notes": null
+      "notes": null,
+      "drawn_limits": {
+        "unit": 0.00359,
+        "levels": [
+          0.6613,
+          0.6721,
+          0.6792,
+          1.0888,
+          1.0996,
+          1.1104
+        ],
+        "LBL": "10121222",
+        "UBL": "45434443",
+        "pending": "VAS draws R6 S-chart limits with unequal subgroups that PB does not reproduce (PM SDS 3 page 21: S-bar +/- 0.100 drawn, +/- 0.116 in PB); open with Dr. Bishop alongside the factor S-chart question."
+      }
     },
     {
       "page_number": 22,
@@ -441,7 +470,24 @@
       "package": {
         "analysis_design_state": "ANALYTIC DESIGN STATE 2: N = 1 COMPLETE"
       },
-      "notes": null
+      "notes": null,
+      "drawn_limits": {
+        "unit": 0.01571,
+        "levels": [
+          236.5185,
+          236.6442,
+          236.7542,
+          236.8328,
+          236.8956,
+          238.7497,
+          238.7969,
+          238.8754,
+          238.9854,
+          239.1268
+        ],
+        "LBL": "0032031232323123223324123221422240434133134421241442413432342433413322223122223123333324041113323223",
+        "UBL": "9967968767676876776675876778577759565866865578758557586567657566586677776877776876666675958886676776"
+      }
     },
     {
       "page_number": 23,
@@ -460,7 +506,23 @@
       "package": {
         "analysis_design_state": "ANALYTIC DESIGN STATE 2: N = 1 COMPLETE"
       },
-      "notes": null
+      "notes": null,
+      "drawn_limits": {
+        "unit": 0.01267,
+        "levels": [
+          0.0018,
+          0.0272,
+          0.1032,
+          0.1539,
+          1.4971,
+          1.5605,
+          1.6365,
+          1.7379,
+          1.8773
+        ],
+        "LBL": "0021020121212012112213012110311130323022023310130331302321231322302211112011112012222213030002212112",
+        "UBL": "8856857656565765665564765667466648454755754467647446475456546455475566665766665765555564847775565665"
+      }
     },
     {
       "page_number": 24,
@@ -479,7 +541,18 @@
       "package": {
         "analysis_design_state": "ANALYTIC DESIGN STATE 2: N = 1 COMPLETE"
       },
-      "notes": null
+      "notes": null,
+      "drawn_limits": {
+        "unit": 0.00917,
+        "levels": [
+          237.5899,
+          237.5991,
+          238.0211,
+          238.0303
+        ],
+        "LBL": "0111",
+        "UBL": "3322"
+      }
     },
     {
       "page_number": 25,
@@ -498,7 +571,18 @@
       "package": {
         "analysis_design_state": "ANALYTIC DESIGN STATE 2: N = 1 COMPLETE"
       },
-      "notes": null
+      "notes": null,
+      "drawn_limits": {
+        "unit": 0.0027,
+        "levels": [
+          0.7405,
+          0.7514,
+          1.0486
+        ],
+        "LBL": "0111",
+        "UBL": "2222",
+        "pending": "VAS draws R6 S-chart limits with unequal subgroups that PB does not reproduce (PM SDS 3 page 21: S-bar +/- 0.100 drawn, +/- 0.116 in PB); open with Dr. Bishop alongside the factor S-chart question."
+      }
     },
     {
       "page_number": 26,
@@ -517,7 +601,16 @@
       "package": {
         "analysis_design_state": "ANALYTIC DESIGN STATE 2: N = 1 COMPLETE"
       },
-      "notes": null
+      "notes": null,
+      "drawn_limits": {
+        "unit": 0.00491,
+        "levels": [
+          237.6411,
+          237.9504
+        ],
+        "LBL": "00",
+        "UBL": "11"
+      }
     },
     {
       "page_number": 27,
@@ -536,7 +629,18 @@
       "package": {
         "analysis_design_state": "ANALYTIC DESIGN STATE 2: N = 1 COMPLETE"
       },
-      "notes": null
+      "notes": null,
+      "drawn_limits": {
+        "unit": 0.00117,
+        "levels": [
+          0.7998,
+          0.8091,
+          1.0203
+        ],
+        "LBL": "01",
+        "UBL": "22",
+        "pending": "VAS draws R6 S-chart limits with unequal subgroups that PB does not reproduce (PM SDS 3 page 21: S-bar +/- 0.100 drawn, +/- 0.116 in PB); open with Dr. Bishop alongside the factor S-chart question."
+      }
     },
     {
       "page_number": 28,
@@ -671,5 +775,6 @@
       },
       "notes": null
     }
-  ]
+  ],
+  "drawn_limits_method": "Where VAS prints \"UNEQUAL\", the LBL/UBL of every subgroup are read from the red limit lines in the chart drawing (EMF, 576 x 384 units) and scaled by the y-axis ticks: good to about one drawing unit ('unit', in the response's units)."
 }
