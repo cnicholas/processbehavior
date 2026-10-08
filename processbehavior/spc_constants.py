@@ -465,8 +465,8 @@ def calibrated_limits(
     sigma-scaled input that makes the existing formula emit the standards-given
     band:
 
-    - **Xbar** (location): inject ``sd = c4(N)·sigma`` → ``mean ± n_sigma·sigma/√N``
-      (the ``c4`` cancels); center ``= mean``.
+    - **Xbar** (location): ``mean ± n_sigma·sigma/√N``, computed directly (injecting
+      ``sd = c4(N)·sigma`` would cancel, but c4 is undefined for a one-reading subgroup); center ``= mean``.
     - **S** (dispersion): inject ``sd = c4(N)·sigma`` → ``b3·(c4·sigma) = B5·sigma``,
       ``b4·(c4·sigma) = B6·sigma``; center ``= c4(N)·sigma``.
     - **XmR** (X individuals, location): inject ``mR = D2_N2·sigma`` →
@@ -505,10 +505,9 @@ def calibrated_limits(
     if limits_type == 'Xbar':
         assert N is not None
         center = mean
-        lims = calculate_limits(
-            limits_type='Xbar', mean=mean, sd=c4(N) * sigma, N=N,
-            round_to=round_to, sigma_multiplier=n_sigma,
-        )
+        # mean ± n_sigma·sigma/√N directly: a one-reading subgroup (N = 1) has no c4 to cancel
+        half = n_sigma * sigma / math.sqrt(N)
+        lims = pd.Series({'lpl': mean - half, 'upl': mean + half}, index=['lpl', 'upl'])
     elif limits_type == 'S':
         assert N is not None
         center = c4(N) * sigma

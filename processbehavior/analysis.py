@@ -1084,13 +1084,15 @@ class Analysis:
         Equal subgroup sizes (or n_mode="average", Eq 11-20): S-bar / c4(N) for every row.
         Unequal sizes: sigma_hat is the average of each subgroup's S_r / c4(N_r) (10-1 manual
         Eq 11-5) and each subgroup's limits are center ± multiplier · sigma_hat / sqrt(N_r)
-        (Eqs 11-16, 11-17), so they step with N_r, as VAS draws them.
+        (Eqs 11-16, 11-17), so they step with N_r, as VAS draws them. A one-reading subgroup
+        has no S_r: it takes no part in sigma_hat and is charted at center ± multiplier · sigma_hat.
         """
         if n_to_use == 'n':
+            fit = out['n'].ge(2)
             return calculate_limits_vectorized(
                 'Xbar',
                 mean=out['center'],
-                sigma=subgroup_sigma_hat(out['s'], out['n']),
+                sigma=subgroup_sigma_hat(out.loc[fit, 's'], out.loc[fit, 'n']),
                 N=out['n'],
                 sigma_multiplier=self.request.n_sigma,
             )
@@ -1210,40 +1212,39 @@ class Analysis:
             _N = out['n'].max()
             out['N'] = _N
 
-        # Filter out groups with n=1 (can't compute c4 for variance estimation)
-        # Xbar charts require n >= 2 for within-group variance.
-        # Xbar stays in valid_charts on ADS 2 — the chart family is valid there
-        # (Xbar of a residual, or of a pooled subgroup, computes fine); it is
-        # only charting *the response* that has nothing to subgroup. See
-        # Study._response_pair_problem, which reports that in advance.
-        mask_n1 = out['n'].lt(2)  # n=1: no S; n=0: every charted value missing
-        if mask_n1.any():
-            n_filtered = mask_n1.sum()
-            logger.info(f'Filtered {n_filtered} subgroup(s) with n=1 from Xbar calculation')
-            out = out[~mask_n1].copy()
-
-        # Handle case where no subgroups have >1 observation
-        if out.shape[0] == 0:
+        # Every subgroup with a value is charted. A one-reading subgroup has no S, so sigma-hat
+        # comes from the subgroups with n >= 2, and its limits are center ± 3·sigma-hat (10-1
+        # manual Eqs 11-16/17 with N_r = 1), as VAS draws them; the companion S chart keeps only
+        # n >= 2. n counts the limits column, so a reading without one (R2's first value) is not
+        # charted, as in VAS. Xbar stays in valid_charts on ADS 2 — the chart family is valid
+        # there (Xbar of a residual, or of a pooled subgroup, computes fine); it is only charting
+        # *the response* that has nothing to subgroup. See Study._response_pair_problem, which
+        # reports that in advance.
+        out = out[out['n'].ge(1)].copy()  # n=0: every charted value missing
+        fit = out['n'].ge(2)
+        if not fit.any():
             sds = self.ads._ads_result.sds if self.ads._ads_result else '?'
             _raise_no_replicated_subgroups('Xbar', sds)
 
         # Use Bishop VAS grand mean (mean of cell means on value_col) as center
         _Xbar = _Ybar
-        _S = out['s'].mean()
-        _N = out['n'].max()
+        _S = out.loc[fit, 's'].mean()
+        _N = out.loc[fit, 'n'].max()
         if 'N' not in out.columns:
             out['N'] = _N
 
-        # Determine if subgroup sizes are constant or variable
+        # Determine if subgroup sizes are constant or variable: on the Xbar chart, and on the
+        # S chart, which has no one-reading subgroups
         n_to_use, n_max = self._determine_n_to_use(out)
+        s_n_to_use, _ = self._determine_n_to_use(out[fit])
 
         # Override n_to_use if n_mode="average"
         n_mode = self.request.n_mode
         n_avg = None
         if n_mode == 'average':
-            n_avg = out['n'].mean()
+            n_avg = out.loc[fit, 'n'].mean()
             out['N'] = n_avg  # overwrite N column with average
-            n_to_use = 'N'  # force constant-N path
+            n_to_use = s_n_to_use = 'N'  # force constant-N path
 
         # CALCULATE XBAR
         xbar = out.copy()
@@ -1315,11 +1316,11 @@ class Analysis:
         if _return_intermediates:
             result['_intermediates'] = {
                 '_S': _S,
-                'n_to_use': n_to_use,
+                'n_to_use': s_n_to_use,
                 'n_max': n_max,
                 'groupby_cols': groupby_cols,
                 'group_col': group_col,
-                'out': out,  # Pre-aggregated DataFrame with s, n, mean columns
+                'out': out[fit],  # Pre-aggregated subgroups with an S: s, n, mean columns
                 'n_avg': n_avg,
             }
 
@@ -1397,25 +1398,25 @@ class Analysis:
             # subgroup counted once — a one-observation subgroup is still a cell.
             _Xbar = out['xbar'].mean()
 
-            # Filter subgroups with n=1 (no within-subgroup spread for the limits)
-            mask_n1 = out['n'].lt(2)
-            if mask_n1.any():
-                out = out[~mask_n1].copy()
-
-            if out.shape[0] == 0:
+            # Every subgroup with a value is charted; sigma-hat comes from those with n >= 2
+            # (see _calculate_xbar)
+            out = out[out['n'].ge(1)].copy()
+            fit = out['n'].ge(2)
+            if not fit.any():
                 insufficient_strata.append(stratum)
                 continue
 
             # Per-stratum statistics
-            _S = out['s'].mean()
+            _S = out.loc[fit, 's'].mean()
             n_to_use, n_max = self._determine_n_to_use(out)
+            s_n_to_use, _ = self._determine_n_to_use(out[fit])
 
             n_mode = self.request.n_mode
             n_avg = None
             if n_mode == 'average':
-                n_avg = out['n'].mean()
+                n_avg = out.loc[fit, 'n'].mean()
                 out['N'] = n_avg
-                n_to_use = 'N'
+                n_to_use = s_n_to_use = 'N'
 
             out['center'] = _Xbar
             out[['lpl', 'upl']] = self._xbar_limits(out, _S, n_to_use)
@@ -1444,9 +1445,9 @@ class Analysis:
             if _return_intermediates:
                 intermediates_per_stratum[stratum] = {
                     '_S': _S,
-                    'n_to_use': n_to_use,
+                    'n_to_use': s_n_to_use,
                     'n_max': n_max,
-                    'out': out,
+                    'out': out[out['n'].ge(2)],
                     'n_avg': n_avg,
                 }
 

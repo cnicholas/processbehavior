@@ -83,6 +83,13 @@ numbers below are that manual's.
   charts, R2's blank first value leaves one subgroup one smaller. Equal-size charts are unchanged.
   Found on Tom's Medicare run (slides 52-53): ACO-001 has 3 R6 values, and its limits are wider by
   sqrt(4/3) on the Xbar chart and use B4(3) on the S chart.
+- **Xbar charts include one-reading subgroups, as VAS draws them.** A subgroup with one value has
+  no S, so it takes no part in sigma-hat, but it is charted with limits centre ± 3 sigma-hat
+  (Eqs 11-16/17 with N_r = 1); it was left off the chart. The companion S chart still leaves it
+  out. On PM SDS 3 the Xbar chart now has all 800 subgroups (was 783) and on PM SDS 6 all 772
+  (was 642), matching the limit lines in Tom's VAS run subgroup by subgroup; on PM SDS 6's
+  interaction chart the one cell whose single reading has no R2 stays off, as in VAS. Designs
+  without one-reading subgroups (ADS 1) are unchanged.
 - **Per-stratum Xbar centre lines count one-observation subgroups.** The centre is Bishop's
   unweighted mean of every subgroup mean; subgroups with n = 1 were dropped before it was
   taken, which moved four of the eight PM SDS 3 per-condition centres by 0.01–0.04.

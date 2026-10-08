@@ -59,3 +59,42 @@ def test_equal_sizes_unchanged(medicare):
     result = medicare.execute(chart='Xbar', by=['ACO'], recentered=False)
     stats = result.get_statistics('Xbar')
     assert stats.get('limits_vary') is not True and stats['lpl'] is not None
+
+
+@pytest.fixture(scope='module')
+def with_one_reading_cells():
+    """Two conditions x four periods, three readings per cell except two cells with one (ADS 3)."""
+    rng = np.random.default_rng(7)
+    rows = []
+    for f in ('A', 'B'):
+        for t in range(1, 5):
+            n = 1 if (f, t) in {('A', 2), ('B', 4)} else 3
+            rows += [{'F': f, 'T': t, 'Y': 10 + rng.normal()} for _ in range(n)]
+    return pb.formulate(pd.DataFrame(rows), response='Y', factors=['F'], time='T', precision=12)
+
+
+def test_one_reading_subgroups_are_charted_at_three_sigma(with_one_reading_cells):
+    """A one-reading subgroup has no S_r, so it takes no part in sigma_hat (Eq 11-5), but it is charted with
+    limits centre ± 3 sigma_hat (Eqs 11-16/17 with N_r = 1), as VAS draws it (PM SDS 3 and 6, 10/3/2026)."""
+    study = with_one_reading_cells
+    result = study.execute(chart='Xbar', by=[], companion=True)
+    xbar, s = result.chart_table('Xbar'), result.chart_table('S')
+    cells = study.dataset.groupby(['F', 'T'])['Y'].agg(['std', 'count'])
+    replicated = cells[cells['count'] >= 2]
+    sigma = np.mean(replicated['std'] / c4(3))
+    assert len(xbar) == 8 and len(s) == 6
+    one = xbar[xbar['n'] == 1]
+    assert len(one) == 2
+    assert (one['upl'] - one['center']).to_numpy() == pytest.approx([3 * sigma] * 2, rel=1e-9)
+    three = xbar[xbar['n'] == 3]
+    assert (three['upl'] - three['center']).to_numpy() == pytest.approx([3 * sigma / np.sqrt(3)] * 6, rel=1e-9)
+    assert result.get_statistics('Xbar')['limits_vary'] is True
+    # The S chart has only the subgroups with an S, all of size 3: constant B3/B4(3) limits
+    s_stats = result.get_statistics('S')
+    assert s_stats['upl'] == pytest.approx(b4(3) * replicated['std'].mean(), rel=1e-9)
+
+
+def test_one_reading_subgroups_are_charted_per_stratum(with_one_reading_cells):
+    result = with_one_reading_cells.execute(chart='Xbar', by=['T'], companion=True)
+    a = result.focus('A')
+    assert len(a.chart_table('Xbar')) == 4 and len(a.chart_table('S')) == 3
