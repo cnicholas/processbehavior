@@ -1,0 +1,786 @@
+{
+  "run": "pm_inert_sds_5",
+  "label": "PM INERT SDS 5",
+  "analytic_design_state": 2,
+  "specs": {
+    "lsl": -3,
+    "usl": 3,
+    "target": 0
+  },
+  "source_file": "PM5 INERT.pptm (VAS run of 10/3/2026, 10-1 manual)",
+  "extraction_method": "Values read from the text drawn in the Minitab charts of the VAS deck (displayed precision); page structure and null pattern from the PM SDS reference for the same ADS.",
+  "pages_extracted": 34,
+  "capability": {
+    "pp": 1.0,
+    "ppk_upper": 0.98,
+    "ppk_lower": 1.03,
+    "pct_below_lsl": 0.16,
+    "pct_above_usl": 0.62,
+    "cp": 1.02,
+    "cpk_upper": 1.0,
+    "cpk_lower": 1.05,
+    "potential_pct_below_lsl": 0.31,
+    "potential_pct_above_usl": 0.16
+  },
+  "loss": {
+    "pct_unexplained": 84.0,
+    "pct_time": 14.0,
+    "pct_pdc": 1.5,
+    "pct_centering": 0.5,
+    "pct_interaction": 0.0,
+    "pct_pdc_f2": 1.0,
+    "pct_pdc_factor_interaction": 0.4,
+    "pct_pdc_f1": 0.1
+  },
+  "items": [
+    {
+      "page_number": 1,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "PM Individuals Chart",
+      "chart_subtitle": "PM INERT SDS 5",
+      "context_subtitle": null,
+      "variable": "PM2",
+      "CL": 0.07,
+      "LBL": -2.82,
+      "UBL": 2.97,
+      "axis_labels": {
+        "x": "PDCxPT RSG",
+        "y": "Individual Value"
+      },
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 2: N = 1 COMPLETE"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 2,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "Moving Range Chart",
+      "chart_subtitle": "PM INERT SDS 5",
+      "context_subtitle": null,
+      "variable": "MOVING RANGE",
+      "CL": 1.09,
+      "LBL": 0.0,
+      "UBL": 3.56,
+      "axis_labels": {
+        "x": "PDCxPT RSG",
+        "y": "Moving Range"
+      },
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 2: N = 1 COMPLETE"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 3,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "PM Individuals Chart",
+      "chart_subtitle": "PM INERT SDS 5",
+      "context_subtitle": "PDC RSG - 1-1",
+      "variable": "PM2",
+      "CL": 0.24,
+      "LBL": -2.53,
+      "UBL": 3.0,
+      "axis_labels": {
+        "x": "PT RSG",
+        "y": "Individual Value"
+      },
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 2: N = 1 COMPLETE"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 4,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "Moving Range Chart",
+      "chart_subtitle": "PM INERT SDS 5",
+      "context_subtitle": "PDC RSG - 1-1",
+      "variable": "MOVING RANGE",
+      "CL": 1.04,
+      "LBL": 0.0,
+      "UBL": 3.4,
+      "axis_labels": {
+        "x": "PT RSG",
+        "y": "Moving Range"
+      },
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 2: N = 1 COMPLETE"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 5,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "PM Individuals Chart",
+      "chart_subtitle": "PM INERT SDS 5",
+      "context_subtitle": "PDC RSG - 1-2",
+      "variable": "PM2",
+      "CL": -0.13,
+      "LBL": -2.8,
+      "UBL": 2.54,
+      "axis_labels": {
+        "x": "PT RSG",
+        "y": "Individual Value"
+      },
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 2: N = 1 COMPLETE"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 6,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "Moving Range Chart",
+      "chart_subtitle": "PM INERT SDS 5",
+      "context_subtitle": "PDC RSG - 1-2",
+      "variable": "MOVING RANGE",
+      "CL": 1.0,
+      "LBL": 0.0,
+      "UBL": 3.28,
+      "axis_labels": {
+        "x": "PT RSG",
+        "y": "Moving Range"
+      },
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 2: N = 1 COMPLETE"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 7,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "PM Individuals Chart",
+      "chart_subtitle": "PM INERT SDS 5",
+      "context_subtitle": "PDC RSG - 2-1",
+      "variable": "PM2",
+      "CL": 0.21,
+      "LBL": -2.35,
+      "UBL": 2.77,
+      "axis_labels": {
+        "x": "PT RSG",
+        "y": "Individual Value"
+      },
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 2: N = 1 COMPLETE"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 8,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "Moving Range Chart",
+      "chart_subtitle": "PM INERT SDS 5",
+      "context_subtitle": "PDC RSG - 2-1",
+      "variable": "MOVING RANGE",
+      "CL": 0.96,
+      "LBL": 0.0,
+      "UBL": 3.15,
+      "axis_labels": {
+        "x": "PT RSG",
+        "y": "Moving Range"
+      },
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 2: N = 1 COMPLETE"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 9,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "PM Individuals Chart",
+      "chart_subtitle": "PM INERT SDS 5",
+      "context_subtitle": "PDC RSG - 2-2",
+      "variable": "PM2",
+      "CL": 0.03,
+      "LBL": -2.97,
+      "UBL": 3.04,
+      "axis_labels": {
+        "x": "PT RSG",
+        "y": "Individual Value"
+      },
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 2: N = 1 COMPLETE"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 10,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "Moving Range Chart",
+      "chart_subtitle": "PM INERT SDS 5",
+      "context_subtitle": "PDC RSG - 2-2",
+      "variable": "MOVING RANGE",
+      "CL": 1.13,
+      "LBL": 0.0,
+      "UBL": 3.69,
+      "axis_labels": {
+        "x": "PT RSG",
+        "y": "Moving Range"
+      },
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 2: N = 1 COMPLETE"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 11,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "PM Individuals Chart",
+      "chart_subtitle": "PM INERT SDS 5",
+      "context_subtitle": "PDC RSG - 3-1",
+      "variable": "PM2",
+      "CL": 0.23,
+      "LBL": -2.8,
+      "UBL": 3.26,
+      "axis_labels": {
+        "x": "PT RSG",
+        "y": "Individual Value"
+      },
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 2: N = 1 COMPLETE"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 12,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "Moving Range Chart",
+      "chart_subtitle": "PM INERT SDS 5",
+      "context_subtitle": "PDC RSG - 3-1",
+      "variable": "MOVING RANGE",
+      "CL": 1.14,
+      "LBL": 0.0,
+      "UBL": 3.72,
+      "axis_labels": {
+        "x": "PT RSG",
+        "y": "Moving Range"
+      },
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 2: N = 1 COMPLETE"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 13,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "PM Individuals Chart",
+      "chart_subtitle": "PM INERT SDS 5",
+      "context_subtitle": "PDC RSG - 3-2",
+      "variable": "PM2",
+      "CL": -0.07,
+      "LBL": -2.89,
+      "UBL": 2.75,
+      "axis_labels": {
+        "x": "PT RSG",
+        "y": "Individual Value"
+      },
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 2: N = 1 COMPLETE"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 14,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "Moving Range Chart",
+      "chart_subtitle": "PM INERT SDS 5",
+      "context_subtitle": "PDC RSG - 3-2",
+      "variable": "MOVING RANGE",
+      "CL": 1.06,
+      "LBL": 0.0,
+      "UBL": 3.46,
+      "axis_labels": {
+        "x": "PT RSG",
+        "y": "Moving Range"
+      },
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 2: N = 1 COMPLETE"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 15,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "PM Individuals Chart",
+      "chart_subtitle": "PM INERT SDS 5",
+      "context_subtitle": "PDC RSG - 4-1",
+      "variable": "PM2",
+      "CL": 0.07,
+      "LBL": -2.93,
+      "UBL": 3.08,
+      "axis_labels": {
+        "x": "PT RSG",
+        "y": "Individual Value"
+      },
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 2: N = 1 COMPLETE"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 16,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "Moving Range Chart",
+      "chart_subtitle": "PM INERT SDS 5",
+      "context_subtitle": "PDC RSG - 4-1",
+      "variable": "MOVING RANGE",
+      "CL": 1.13,
+      "LBL": 0.0,
+      "UBL": 3.69,
+      "axis_labels": {
+        "x": "PT RSG",
+        "y": "Moving Range"
+      },
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 2: N = 1 COMPLETE"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 17,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "PM Individuals Chart",
+      "chart_subtitle": "PM INERT SDS 5",
+      "context_subtitle": "PDC RSG - 4-2",
+      "variable": "PM2",
+      "CL": 0.0,
+      "LBL": -3.33,
+      "UBL": 3.34,
+      "axis_labels": {
+        "x": "PT RSG",
+        "y": "Individual Value"
+      },
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 2: N = 1 COMPLETE"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 18,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "Moving Range Chart",
+      "chart_subtitle": "PM INERT SDS 5",
+      "context_subtitle": "PDC RSG - 4-2",
+      "variable": "MOVING RANGE",
+      "CL": 1.25,
+      "LBL": 0.0,
+      "UBL": 4.1,
+      "axis_labels": {
+        "x": "PT RSG",
+        "y": "Moving Range"
+      },
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 2: N = 1 COMPLETE"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 19,
+      "analysis_title": "Current Process Capability",
+      "chart_title": "PM2 H TITLE 1",
+      "chart_subtitle": "PM INERT SDS 5",
+      "context_subtitle": null,
+      "variable": null,
+      "CL": null,
+      "LBL": null,
+      "UBL": null,
+      "axis_labels": {
+        "x": "PM2 in Grams",
+        "y": "Percent"
+      },
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 2: N = 1 COMPLETE"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 20,
+      "analysis_title": "Process Design Condition Main Effects Analysis",
+      "chart_title": "Analysis of PDC RSG Sample Averages",
+      "chart_subtitle": "PM INERT SDS 5",
+      "context_subtitle": null,
+      "variable": "RSG AVG",
+      "CL": 0.07,
+      "LBL": null,
+      "UBL": null,
+      "axis_labels": {
+        "x": "PDC RSG",
+        "y": "Sample Average"
+      },
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 2: N = 1 COMPLETE"
+      },
+      "notes": null,
+      "drawn_limits": {
+        "unit": 0.0036,
+        "levels": [
+          -0.2685,
+          -0.2613,
+          -0.2505,
+          -0.2397,
+          0.3905,
+          0.4013,
+          0.4121,
+          0.4193
+        ],
+        "LBL": "10121223",
+        "UBL": "57645554"
+      }
+    },
+    {
+      "page_number": 21,
+      "analysis_title": "Process Design Condition Main Effects Analysis",
+      "chart_title": "Analysis of PDC RSG Sample Standard Deviations",
+      "chart_subtitle": "PM INERT SDS 5",
+      "context_subtitle": null,
+      "variable": "RSG STDEV",
+      "CL": 0.97,
+      "LBL": null,
+      "UBL": null,
+      "axis_labels": {
+        "x": "PDC RSG",
+        "y": "Sample Standard Deviation"
+      },
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 2: N = 1 COMPLETE"
+      },
+      "notes": null,
+      "drawn_limits": {
+        "unit": 0.00243,
+        "levels": [
+          0.7304,
+          0.7402,
+          0.7499,
+          1.1995,
+          1.2093,
+          1.219
+        ],
+        "LBL": "10121212",
+        "UBL": "45434343"
+      }
+    },
+    {
+      "page_number": 22,
+      "analysis_title": "Production Time Main Effects Analysis",
+      "chart_title": "Analysis of PT RSG Sample Averages",
+      "chart_subtitle": "PM INERT SDS 5",
+      "context_subtitle": null,
+      "variable": "RSG AVG",
+      "CL": 0.08,
+      "LBL": null,
+      "UBL": null,
+      "axis_labels": {
+        "x": "PT RSG",
+        "y": "Sample Average"
+      },
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 2: N = 1 COMPLETE"
+      },
+      "notes": null,
+      "drawn_limits": {
+        "unit": 0.01613,
+        "levels": [
+          -1.4516,
+          -1.2903,
+          -1.1774,
+          -1.0806,
+          -1.0,
+          1.1774,
+          1.2581,
+          1.3548,
+          1.4677,
+          1.629
+        ],
+        "LBL": "0032031232323123223324123221422240434133134421241442413432342433413322223122223123333324041113323223",
+        "UBL": "9967968767676876776675876778577759565866865578758557586567657566586677776877776876666675958886676776"
+      }
+    },
+    {
+      "page_number": 23,
+      "analysis_title": "Production Time Main Effects Analysis",
+      "chart_title": "Analysis of PT RSG Sample Standard Deviations",
+      "chart_subtitle": "PM INERT SDS 5",
+      "context_subtitle": null,
+      "variable": "RSG STDEV",
+      "CL": 0.98,
+      "LBL": null,
+      "UBL": null,
+      "axis_labels": {
+        "x": "PT RSG",
+        "y": "Sample Standard Deviation"
+      },
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 2: N = 1 COMPLETE"
+      },
+      "notes": null,
+      "drawn_limits": {
+        "unit": 0.01167,
+        "levels": [
+          -0.0022,
+          0.0328,
+          0.1144,
+          0.1728,
+          1.7828,
+          1.8411,
+          1.9344,
+          2.0511,
+          2.2261
+        ],
+        "LBL": "0021020121212012112213012110311130323022023310130331302321231322302211112011112012222213030002212112",
+        "UBL": "8856857656565765665564765667466648454755754467647446475456546455475566665766665765555564847775565665"
+      }
+    },
+    {
+      "page_number": 24,
+      "analysis_title": "Process Design Factor Main Effects Analysis",
+      "chart_title": "Analysis of PD Factor Sample Averages",
+      "chart_subtitle": "PM INERT SDS 5",
+      "context_subtitle": "PD Factor - F1",
+      "variable": "RSG AVG",
+      "CL": 0.08,
+      "LBL": null,
+      "UBL": null,
+      "axis_labels": {
+        "x": "PD Factor RSG",
+        "y": "Sample Average"
+      },
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 2: N = 1 COMPLETE"
+      },
+      "notes": null,
+      "drawn_limits": {
+        "unit": 0.00238,
+        "levels": [
+          -0.1595,
+          -0.15,
+          0.3,
+          0.3119
+        ],
+        "LBL": "0001",
+        "UBL": "3332"
+      }
+    },
+    {
+      "page_number": 25,
+      "analysis_title": "Process Design Condition Main Effects Analysis",
+      "chart_title": "Analysis of PDC RSG Sample Standard Deviations",
+      "chart_subtitle": "PM INERT SDS 5",
+      "context_subtitle": "PD Factor - F1",
+      "variable": "RSG STDEV",
+      "CL": 0.98,
+      "LBL": null,
+      "UBL": null,
+      "axis_labels": {
+        "x": "PD Factor RSG",
+        "y": "Sample Standard Deviation"
+      },
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 2: N = 1 COMPLETE"
+      },
+      "notes": null,
+      "drawn_limits": {
+        "unit": 0.00182,
+        "levels": [
+          0.8109,
+          0.82,
+          1.1418,
+          1.1509
+        ],
+        "LBL": "0001",
+        "UBL": "3222"
+      }
+    },
+    {
+      "page_number": 26,
+      "analysis_title": "Process Design Factor Main Effects Analysis",
+      "chart_title": "Analysis of PD Factor Sample Averages",
+      "chart_subtitle": "PM INERT SDS 5",
+      "context_subtitle": "PD Factor - F2",
+      "variable": "RSG AVG",
+      "CL": 0.08,
+      "LBL": null,
+      "UBL": null,
+      "axis_labels": {
+        "x": "PD Factor RSG",
+        "y": "Sample Average"
+      },
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 2: N = 1 COMPLETE"
+      },
+      "notes": null,
+      "drawn_limits": {
+        "unit": 0.00161,
+        "levels": [
+          -0.0903,
+          0.2403
+        ],
+        "LBL": "00",
+        "UBL": "11"
+      }
+    },
+    {
+      "page_number": 27,
+      "analysis_title": "Process Design Condition Main Effects Analysis",
+      "chart_title": "Analysis of PDC RSG Sample Standard Deviations",
+      "chart_subtitle": "PM INERT SDS 5",
+      "context_subtitle": "PD Factor - F2",
+      "variable": "RSG STDEV",
+      "CL": 0.98,
+      "LBL": null,
+      "UBL": null,
+      "axis_labels": {
+        "x": "PD Factor RSG",
+        "y": "Sample Standard Deviation"
+      },
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 2: N = 1 COMPLETE"
+      },
+      "notes": null,
+      "drawn_limits": {
+        "unit": 0.00117,
+        "levels": [
+          0.8597,
+          1.0907,
+          1.1001
+        ],
+        "LBL": "00",
+        "UBL": "21"
+      }
+    },
+    {
+      "page_number": 28,
+      "analysis_title": "Analysis of PDCxPT Interaction",
+      "chart_title": "R3 Residuals Individuals Chart",
+      "chart_subtitle": "PM INERT SDS 5",
+      "context_subtitle": null,
+      "variable": "R3 RESIDUALS",
+      "CL": 0.07,
+      "LBL": -5.88,
+      "UBL": 6.03,
+      "axis_labels": {
+        "x": "PDCxPT RSG",
+        "y": "Individual Value"
+      },
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 2: N = 1 COMPLETE"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 29,
+      "analysis_title": "Analysis of R3 Residuals",
+      "chart_title": "Moving Range Chart",
+      "chart_subtitle": "PM INERT SDS 5",
+      "context_subtitle": null,
+      "variable": "MOVING RANGE",
+      "CL": 2.24,
+      "LBL": 0.0,
+      "UBL": 7.31,
+      "axis_labels": {
+        "x": "PDCxPT RSG",
+        "y": "Moving Range"
+      },
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 2: N = 1 COMPLETE"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 30,
+      "analysis_title": "Taguchi Loss Function Analysis",
+      "chart_title": "PM2 in Grams",
+      "chart_subtitle": "PM INERT SDS 5",
+      "context_subtitle": null,
+      "variable": null,
+      "CL": null,
+      "LBL": null,
+      "UBL": null,
+      "axis_labels": {
+        "x": "Components Contributing to Average Loss",
+        "y": "Contribution to Average Loss"
+      },
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 2: N = 1 COMPLETE"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 31,
+      "analysis_title": "Taguchi Loss Function Analysis",
+      "chart_title": "PM2 in Grams",
+      "chart_subtitle": "PM INERT SDS 5",
+      "context_subtitle": null,
+      "variable": null,
+      "CL": null,
+      "LBL": null,
+      "UBL": null,
+      "axis_labels": {
+        "x": "Components Contributing to Average Loss",
+        "y": "Contribution to Average Loss"
+      },
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 2: N = 1 COMPLETE"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 32,
+      "analysis_title": "Potential Process Capability",
+      "chart_title": "PM2 H TITLE 1",
+      "chart_subtitle": null,
+      "context_subtitle": null,
+      "variable": null,
+      "CL": null,
+      "LBL": null,
+      "UBL": null,
+      "axis_labels": {
+        "x": "PM2 in Grams",
+        "y": "Percent"
+      },
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 2: N = 1 COMPLETE"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 33,
+      "analysis_title": "Test of Maximum Information",
+      "chart_title": "R2 Residuals Individuals Chart",
+      "chart_subtitle": "PM INERT SDS 5",
+      "context_subtitle": null,
+      "variable": "R2 RESIDUALS",
+      "CL": 0.0,
+      "LBL": -3.51,
+      "UBL": 3.51,
+      "axis_labels": {
+        "x": "PDCxPT RSG",
+        "y": "Individual Value"
+      },
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 2: N = 1 COMPLETE"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 34,
+      "analysis_title": "Maximum Information Analysis",
+      "chart_title": "PM2 in Grams",
+      "chart_subtitle": null,
+      "context_subtitle": null,
+      "variable": null,
+      "CL": null,
+      "LBL": null,
+      "UBL": null,
+      "axis_labels": {
+        "x": "PM2 in Grams",
+        "y": "Percent"
+      },
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 2: N = 1 COMPLETE"
+      },
+      "notes": null
+    }
+  ],
+  "drawn_limits_method": "Where VAS prints \"UNEQUAL\", the LBL/UBL of every subgroup are read from the red limit lines in the chart drawing (EMF, 576 x 384 units) and scaled by the y-axis ticks: good to about one drawing unit ('unit', in the response's units)."
+}

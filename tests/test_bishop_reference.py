@@ -41,7 +41,10 @@ def _load_reference(sds_num: int) -> pd.DataFrame:
     return pd.read_excel(_ref_path(sds_num), sheet_name=SHEET_NAME)
 
 
-@pytest.mark.parametrize('sds_num', [1, 2, 3, 6])
+# SDS 1 only: its R2 is the within-cell deviation, unchanged by the 10-1 manual. The 3-5-26
+# workbooks for SDS 2, 3 and 6 predate the 10-1 R2 (the condition-and-period-adjusted, rescaled
+# difference) and no longer describe the reference; Tom's 10/3/2026 run replaces them.
+@pytest.mark.parametrize('sds_num', [1])
 def test_residuals_match_bishop_reference(sds_num: int) -> None:
     if not os.path.exists(_ref_path(sds_num)):
         pytest.skip(f'Reference file not found: {_ref_path(sds_num)}')
@@ -68,10 +71,7 @@ def test_residuals_match_bishop_reference(sds_num: int) -> None:
         ours = merged[our_col]
         toms = merged[ref_col]
 
-        # Tom's MA2 files have NaN for the first time period (no prior period
-        # for moving average). Our code outputs 0.0 there. Drop NaN rows from
-        # comparison — the NaN semantics are a display choice, not a formula
-        # disagreement.
+        # Drop rows where the reference leaves a residual blank.
         mask = toms.notna()
 
         np.testing.assert_allclose(

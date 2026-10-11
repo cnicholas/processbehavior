@@ -19,7 +19,7 @@ Potential Capability (achievable by removing assignable causes):
 
 References
 ----------
-Bishop, T.  *Variance Analysis System* — Chapter 16.
+Bishop, T.  *Variation Analysis System* — Chapter 16.
 """
 
 from __future__ import annotations
@@ -101,7 +101,9 @@ class CapabilityResult:
     n : int
         Total valid (non-NaN) observations.
     y_bar : float
-        Grand mean of valid observations.
+        Process mean: the unweighted mean of the (factor × time) cell means, as VAS
+        computes it, the same centre as the Xbar chart and the loss function. Equals
+        the plain average of the observations when every cell has the same size.
     s : float
         Sample standard deviation (ddof=1).
     sigma_hat : float
@@ -109,9 +111,10 @@ class CapabilityResult:
     pp, ppk_lower, ppk_upper, ppk : float | None
         Current capability indices (from overall sigma).
     sigma_hat_r2 : float | None
-        Unbiased sigma from R2 residuals.
+        Unbiased sigma from R2 residuals: S_R2 / c4(N_R2) (10-1 manual Eq 16-10).
     cp, cpk_lower, cpk_upper, cpk : float | None
-        Potential capability indices (from R2 sigma).
+        Potential capability indices (from R2 sigma), with CPL/CPU measured from
+        ``potential_center``.
     potential_unavailable_reason : str | None
         Why Cp/Cpk are unavailable (if applicable).
     z_lower, z_upper : float | None
@@ -130,6 +133,11 @@ class CapabilityResult:
         Always None in v1.
     round_to : int
         Decimal places used by ``__repr__`` and ``as_dict``.
+    potential_center : float | None
+        Centre of the potential distribution: the mean of ``y_bar + R2``, i.e.
+        ``y_bar + mean(R2)``. Equals ``y_bar`` when R2 averages to zero (ADS 1);
+        with the scaled-difference R2 of ADS 2/3 it differs by mean(R2), which is
+        small. None when potential capability is unavailable.
     """
 
     # Input context
@@ -191,6 +199,9 @@ class CapabilityResult:
     n_total: int | None = None
     window_warning: str | None = None
     observed_values: np.ndarray | None = None  # values summarized (windowed or full)
+
+    # Potential view centre: mean of (y_bar + R2). Last field so positional construction is unchanged.
+    potential_center: float | None = None
 
     # ------------------------------------------------------------------
     # Visualization
@@ -283,6 +294,7 @@ class CapabilityResult:
             'ppk_upper': _r(self.ppk_upper),
             'ppk': _r(self.ppk),
             'sigma_hat_r2': _r(self.sigma_hat_r2),
+            'potential_center': _r(self.potential_center),
             'cp': _r(self.cp),
             'cpk_lower': _r(self.cpk_lower),
             'cpk_upper': _r(self.cpk_upper),
@@ -325,6 +337,7 @@ class CapabilityResult:
             lines.append(f'  Potential Capability: {self.potential_unavailable_reason}')
         else:
             lines.append('  Potential Capability (R2 sigma):')
+            lines.append(f'    centre={d["potential_center"]}, sigma_hat_r2={d["sigma_hat_r2"]}')
             lines.append(f'    Cp={d["cp"]}  Cpk={d["cpk"]}  (lower={d["cpk_lower"]}, upper={d["cpk_upper"]})')
 
         lines.append('')
@@ -378,7 +391,7 @@ def compute_sigma_hat(values: np.ndarray) -> tuple[float, float]:
     -----
     Bishop Ch. 16 — ddof=1 is mandatory.  The c4 correction
     removes the small-sample bias inherent in the sample standard
-    deviation.
+    deviation: sigma_hat = S / alpha_N (10-1 manual Eq 10-13).
     """
     n = len(values)
     s = float(np.std(values, ddof=1))
@@ -527,6 +540,22 @@ def _coerce_ads(source: Study | AnalysisDataSet) -> AnalysisDataSet:
 # ============================================================================
 
 
+def _process_mean(frame: pd.DataFrame, response_var: str) -> float:
+    """VAS's process mean: the unweighted mean of the (factor × time) cell means.
+
+    Each experimental condition counts once, whatever its cell size, as for the
+    Xbar centre line and the loss function's centring term. VAS prints this as the
+    capability charts' PROCESS MEAN (PM SDS 6: 237.86, where the plain average of
+    the readings is 237.834). The 10-1 manual's Eqs 16-4..16-6 and 16-11..16-13
+    write it as the "overall average" Y-bar; on balanced data the two are equal.
+    A study without cells (no factors or time) has one cell: the plain average.
+    """
+    valid = frame[frame[response_var].notna()]
+    if 'cell_key' in valid.columns and len(valid):
+        return float(valid.groupby('cell_key', observed=True, sort=False)[response_var].mean().mean())
+    return float(valid[response_var].mean())
+
+
 def _time_window_mask(time_col: pd.Series, window: tuple) -> pd.Series:
     """Boolean mask for a half-open time window ``[start, end)``.
 
@@ -635,14 +664,18 @@ def assess_capability(
                 f'sample size; treat as indicative, not authoritative.'
             )
         window_meta, time_var_meta = tuple(window), time_var
+        frame = obs_df
     else:
+        frame = df
         y_values = df[response_var].dropna().to_numpy(dtype=float)
         n = len(y_values)
         if n < 2:
             raise ValidationError(f'Capability analysis requires at least 2 valid observations, got {n}.')
 
     # --- Current capability ---
-    y_bar = float(np.mean(y_values))
+    # Mean of cell means, as VAS (see _process_mean). The whole study's is already on every row
+    # as Ybar (residual_calculator), as the loss function reads it; a window needs its own.
+    y_bar = float(df['Ybar'].iloc[0]) if window is None and 'Ybar' in df.columns else _process_mean(frame, response_var)
     s, sigma_hat = compute_sigma_hat(y_values)
 
     current = compute_capability_indices(y_bar, sigma_hat, specs)
@@ -656,20 +689,27 @@ def assess_capability(
     cpk = None
     potential_unavailable_reason = None
     potential_values = None
+    potential_center = None
     potential_outside = {}
 
-    if ads.has_vas_residuals and 'R2' in df.columns:
+    if ads.r2_unavailable_reason is not None:
+        potential_unavailable_reason = ads.r2_unavailable_reason
+    elif ads.has_vas_residuals and 'R2' in df.columns:
         r2_values = df['R2'].dropna().to_numpy(dtype=float)
         n_r2 = len(r2_values)
 
         if n_r2 >= 2:
-            _, sigma_hat_r2 = compute_sigma_hat(r2_values)
-            pot = compute_capability_indices(y_bar, sigma_hat_r2, specs)
+            _, sigma_hat_r2 = compute_sigma_hat(r2_values)  # Eq 16-10
+            potential_values = y_bar + r2_values
+            # Centre the potential indices on the potential values themselves (Eqs 16-11..16-13 as
+            # VAS computes them): y_bar + mean(R2). Tom's Medicare run of 10/3/2026 prints
+            # "PROCESS MEAN 10831.3" on the potential slide (y_bar 10832.4, mean R2 -1.15).
+            potential_center = float(np.mean(potential_values))
+            pot = compute_capability_indices(potential_center, sigma_hat_r2, specs)
             cp = pot['pp']
             cpk_lower = pot['ppk_lower']
             cpk_upper = pot['ppk_upper']
             cpk = pot['ppk']
-            potential_values = y_bar + r2_values
             potential_outside = compute_pct_outside(potential_values, specs)
         else:
             potential_unavailable_reason = (
@@ -716,5 +756,6 @@ def assess_capability(
         time_var=time_var_meta,
         n_total=n_total,
         window_warning=window_warning,
+        potential_center=potential_center,
         observed_values=y_values,
     )

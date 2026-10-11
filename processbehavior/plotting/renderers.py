@@ -692,7 +692,7 @@ def _add_histogram_stats(
         vline_kw['annotation_font_size'] = theme.annotation_font_size
     fig.add_vline(**vline_kw, **subplot_kw)
 
-    # Std deviation lines (±1σ, ±2σ, ±3σ)
+    # Std deviation lines (±1σ, ±2σ, ±3σ): Y-bar ± k·S; k = 3 is the manual's 3-sigma band (10-1 manual Eq 10-16)
     if std is None or n < 2 or not np.isfinite(std) or std <= 0:
         return
 

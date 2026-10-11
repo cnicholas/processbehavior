@@ -1,0 +1,683 @@
+{
+  "run": "pm_inert_sds_1",
+  "label": "PM INERT",
+  "analytic_design_state": 1,
+  "specs": {
+    "lsl": -3,
+    "usl": 3,
+    "target": 0
+  },
+  "source_file": "PM1 INERT.pptm (VAS run of 10/3/2026, 10-1 manual)",
+  "extraction_method": "Values read from the text drawn in the Minitab charts of the VAS deck (displayed precision); page structure and null pattern from the PM SDS reference for the same ADS.",
+  "pages_extracted": 34,
+  "capability": {
+    "pp": 1.0,
+    "ppk_upper": 1.0,
+    "ppk_lower": 1.0,
+    "pct_below_lsl": 0.1,
+    "pct_above_usl": 0.15,
+    "cp": 1.12,
+    "cpk_upper": 1.12,
+    "cpk_lower": 1.12,
+    "potential_pct_below_lsl": 0.05,
+    "potential_pct_above_usl": 0.05
+  },
+  "loss": {
+    "pct_unexplained": 82.9,
+    "pct_interaction": 14.8,
+    "pct_time": 2.1,
+    "pct_pdc": 0.2,
+    "pct_centering": 0.0,
+    "pct_pdc_f1": 0.1,
+    "pct_pdc_f2": 0.1,
+    "pct_pdc_factor_interaction": 0.1
+  },
+  "items": [
+    {
+      "page_number": 1,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "Analysis of PM Sample Averages",
+      "chart_subtitle": "PM INERT",
+      "context_subtitle": null,
+      "variable": "RSG AVG",
+      "CL": 0.0,
+      "LBL": -1.33,
+      "UBL": 1.34,
+      "axis_labels": {
+        "x": "PDCxPT RSG",
+        "y": "Sample Average"
+      },
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 1: N > 1 COMPLETE"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 2,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "Analysis of PM Sample Standard Deviations",
+      "chart_subtitle": "PM INERT",
+      "context_subtitle": null,
+      "variable": "RSG STDEV",
+      "CL": 0.94,
+      "LBL": 0.0,
+      "UBL": 1.96,
+      "axis_labels": {
+        "x": "PDCxPT RSG",
+        "y": "Sample Standard Deviation"
+      },
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 1: N > 1 COMPLETE"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 3,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "Analysis of PM Sample Averages",
+      "chart_subtitle": "PM INERT",
+      "context_subtitle": "PDC RSG - 1-1",
+      "variable": "RSG AVG",
+      "CL": 0.04,
+      "LBL": -1.27,
+      "UBL": 1.34,
+      "axis_labels": {
+        "x": "PT RSG",
+        "y": "Sample Average"
+      },
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 1: N > 1 COMPLETE"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 4,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "Analysis of PM Sample Standard Deviations",
+      "chart_subtitle": "PM INERT",
+      "context_subtitle": "PDC RSG - 1-1",
+      "variable": "RSG STDEV",
+      "CL": 0.91,
+      "LBL": 0.0,
+      "UBL": 1.91,
+      "axis_labels": {
+        "x": "PT RSG",
+        "y": "Sample Standard Deviation"
+      },
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 1: N > 1 COMPLETE"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 5,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "Analysis of PM Sample Averages",
+      "chart_subtitle": "PM INERT",
+      "context_subtitle": "PDC RSG - 1-2",
+      "variable": "RSG AVG",
+      "CL": 0.0,
+      "LBL": -1.32,
+      "UBL": 1.33,
+      "axis_labels": {
+        "x": "PT RSG",
+        "y": "Sample Average"
+      },
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 1: N > 1 COMPLETE"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 6,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "Analysis of PM Sample Standard Deviations",
+      "chart_subtitle": "PM INERT",
+      "context_subtitle": "PDC RSG - 1-2",
+      "variable": "RSG STDEV",
+      "CL": 0.93,
+      "LBL": 0.0,
+      "UBL": 1.94,
+      "axis_labels": {
+        "x": "PT RSG",
+        "y": "Sample Standard Deviation"
+      },
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 1: N > 1 COMPLETE"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 7,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "Analysis of PM Sample Averages",
+      "chart_subtitle": "PM INERT",
+      "context_subtitle": "PDC RSG - 2-1",
+      "variable": "RSG AVG",
+      "CL": 0.07,
+      "LBL": -1.27,
+      "UBL": 1.4,
+      "axis_labels": {
+        "x": "PT RSG",
+        "y": "Sample Average"
+      },
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 1: N > 1 COMPLETE"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 8,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "Analysis of PM Sample Standard Deviations",
+      "chart_subtitle": "PM INERT",
+      "context_subtitle": "PDC RSG - 2-1",
+      "variable": "RSG STDEV",
+      "CL": 0.94,
+      "LBL": 0.0,
+      "UBL": 1.96,
+      "axis_labels": {
+        "x": "PT RSG",
+        "y": "Sample Standard Deviation"
+      },
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 1: N > 1 COMPLETE"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 9,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "Analysis of PM Sample Averages",
+      "chart_subtitle": "PM INERT",
+      "context_subtitle": "PDC RSG - 2-2",
+      "variable": "RSG AVG",
+      "CL": -0.02,
+      "LBL": -1.43,
+      "UBL": 1.4,
+      "axis_labels": {
+        "x": "PT RSG",
+        "y": "Sample Average"
+      },
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 1: N > 1 COMPLETE"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 10,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "Analysis of PM Sample Standard Deviations",
+      "chart_subtitle": "PM INERT",
+      "context_subtitle": "PDC RSG - 2-2",
+      "variable": "RSG STDEV",
+      "CL": 0.99,
+      "LBL": 0.0,
+      "UBL": 2.07,
+      "axis_labels": {
+        "x": "PT RSG",
+        "y": "Sample Standard Deviation"
+      },
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 1: N > 1 COMPLETE"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 11,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "Analysis of PM Sample Averages",
+      "chart_subtitle": "PM INERT",
+      "context_subtitle": "PDC RSG - 3-1",
+      "variable": "RSG AVG",
+      "CL": 0.03,
+      "LBL": -1.36,
+      "UBL": 1.42,
+      "axis_labels": {
+        "x": "PT RSG",
+        "y": "Sample Average"
+      },
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 1: N > 1 COMPLETE"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 12,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "Analysis of PM Sample Standard Deviations",
+      "chart_subtitle": "PM INERT",
+      "context_subtitle": "PDC RSG - 3-1",
+      "variable": "RSG STDEV",
+      "CL": 0.97,
+      "LBL": 0.0,
+      "UBL": 2.03,
+      "axis_labels": {
+        "x": "PT RSG",
+        "y": "Sample Standard Deviation"
+      },
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 1: N > 1 COMPLETE"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 13,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "Analysis of PM Sample Averages",
+      "chart_subtitle": "PM INERT",
+      "context_subtitle": "PDC RSG - 3-2",
+      "variable": "RSG AVG",
+      "CL": -0.11,
+      "LBL": -1.44,
+      "UBL": 1.23,
+      "axis_labels": {
+        "x": "PT RSG",
+        "y": "Sample Average"
+      },
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 1: N > 1 COMPLETE"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 14,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "Analysis of PM Sample Standard Deviations",
+      "chart_subtitle": "PM INERT",
+      "context_subtitle": "PDC RSG - 3-2",
+      "variable": "RSG STDEV",
+      "CL": 0.94,
+      "LBL": 0.0,
+      "UBL": 1.96,
+      "axis_labels": {
+        "x": "PT RSG",
+        "y": "Sample Standard Deviation"
+      },
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 1: N > 1 COMPLETE"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 15,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "Analysis of PM Sample Averages",
+      "chart_subtitle": "PM INERT",
+      "context_subtitle": "PDC RSG - 4-1",
+      "variable": "RSG AVG",
+      "CL": -0.01,
+      "LBL": -1.26,
+      "UBL": 1.25,
+      "axis_labels": {
+        "x": "PT RSG",
+        "y": "Sample Average"
+      },
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 1: N > 1 COMPLETE"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 16,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "Analysis of PM Sample Standard Deviations",
+      "chart_subtitle": "PM INERT",
+      "context_subtitle": "PDC RSG - 4-1",
+      "variable": "RSG STDEV",
+      "CL": 0.88,
+      "LBL": 0.0,
+      "UBL": 1.84,
+      "axis_labels": {
+        "x": "PT RSG",
+        "y": "Sample Standard Deviation"
+      },
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 1: N > 1 COMPLETE"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 17,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "Analysis of PM Sample Averages",
+      "chart_subtitle": "PM INERT",
+      "context_subtitle": "PDC RSG - 4-2",
+      "variable": "RSG AVG",
+      "CL": 0.02,
+      "LBL": -1.32,
+      "UBL": 1.36,
+      "axis_labels": {
+        "x": "PT RSG",
+        "y": "Sample Average"
+      },
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 1: N > 1 COMPLETE"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 18,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "Analysis of PM Sample Standard Deviations",
+      "chart_subtitle": "PM INERT",
+      "context_subtitle": "PDC RSG - 4-2",
+      "variable": "RSG STDEV",
+      "CL": 0.94,
+      "LBL": 0.0,
+      "UBL": 1.96,
+      "axis_labels": {
+        "x": "PT RSG",
+        "y": "Sample Standard Deviation"
+      },
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 1: N > 1 COMPLETE"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 19,
+      "analysis_title": "Current Process Capability",
+      "chart_title": "PM1 H TITLE 1",
+      "chart_subtitle": "PM INERT",
+      "context_subtitle": null,
+      "variable": null,
+      "CL": null,
+      "LBL": null,
+      "UBL": null,
+      "axis_labels": {
+        "x": "PM1",
+        "y": "Percent"
+      },
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 1: N > 1 COMPLETE"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 20,
+      "analysis_title": "Process Design Condition Main Effects Analysis",
+      "chart_title": "Analysis of PDC RSG Sample Averages",
+      "chart_subtitle": "PM INERT",
+      "context_subtitle": null,
+      "variable": "RSG AVG",
+      "CL": 0.0,
+      "LBL": -0.12,
+      "UBL": 0.12,
+      "axis_labels": {
+        "x": "PDC RSG",
+        "y": "Sample Average"
+      },
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 1: N > 1 COMPLETE"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 21,
+      "analysis_title": "Process Design Condition Main Effects Analysis",
+      "chart_title": "Analysis of PDC RSG Sample Standard Deviations",
+      "chart_subtitle": "PM INERT",
+      "context_subtitle": null,
+      "variable": "RSG STDEV",
+      "CL": 0.89,
+      "LBL": 0.81,
+      "UBL": 0.98,
+      "axis_labels": {
+        "x": "PDC RSG",
+        "y": "Sample Standard Deviation"
+      },
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 1: N > 1 COMPLETE"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 22,
+      "analysis_title": "Production Time Main Effects Analysis",
+      "chart_title": "Analysis of PT RSG Sample Averages",
+      "chart_subtitle": "PM INERT",
+      "context_subtitle": null,
+      "variable": "RSG AVG",
+      "CL": 0.0,
+      "LBL": -0.42,
+      "UBL": 0.43,
+      "axis_labels": {
+        "x": "PT RSG",
+        "y": "Sample Average"
+      },
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 1: N > 1 COMPLETE"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 23,
+      "analysis_title": "Production Time Main Effects Analysis",
+      "chart_title": "Analysis of PT RSG Sample Standard Deviations",
+      "chart_subtitle": "PM INERT",
+      "context_subtitle": null,
+      "variable": "RSG STDEV",
+      "CL": 0.89,
+      "LBL": 0.59,
+      "UBL": 1.2,
+      "axis_labels": {
+        "x": "PT RSG",
+        "y": "Sample Standard Deviation"
+      },
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 1: N > 1 COMPLETE"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 24,
+      "analysis_title": "Process Design Factor Main Effects Analysis",
+      "chart_title": "Analysis of PD Factor Sample Averages",
+      "chart_subtitle": "PM INERT",
+      "context_subtitle": "PD Factor - F1",
+      "variable": "RSG AVG",
+      "CL": 0.0,
+      "LBL": -0.08,
+      "UBL": 0.09,
+      "axis_labels": {
+        "x": "PD Factor RSG",
+        "y": "Sample Average"
+      },
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 1: N > 1 COMPLETE"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 25,
+      "analysis_title": "Process Design Condition Main Effects Analysis",
+      "chart_title": "Analysis of PDC RSG Sample Standard Deviations",
+      "chart_subtitle": "PM INERT",
+      "context_subtitle": "PD Factor - F1",
+      "variable": "RSG STDEV",
+      "CL": 0.89,
+      "LBL": null,
+      "UBL": null,
+      "axis_labels": {
+        "x": "PD Factor RSG",
+        "y": "Sample Standard Deviation"
+      },
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 1: N > 1 COMPLETE"
+      },
+      "notes": "One subgroup per factor level (confirmed by Dr. Bishop, 10/8/2026). These subgroups have more than 343 values, and the 10/3 VAS held alpha_N (Eq 10-12) at 0.9995 above N = 343 (Minitab's GAMMA limit), so its limits follow N = 500; limits pending his rerun with alpha_N from a table."
+    },
+    {
+      "page_number": 26,
+      "analysis_title": "Process Design Factor Main Effects Analysis",
+      "chart_title": "Analysis of PD Factor Sample Averages",
+      "chart_subtitle": "PM INERT",
+      "context_subtitle": "PD Factor - F2",
+      "variable": "RSG AVG",
+      "CL": 0.0,
+      "LBL": -0.06,
+      "UBL": 0.06,
+      "axis_labels": {
+        "x": "PD Factor RSG",
+        "y": "Sample Average"
+      },
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 1: N > 1 COMPLETE"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 27,
+      "analysis_title": "Process Design Condition Main Effects Analysis",
+      "chart_title": "Analysis of PDC RSG Sample Standard Deviations",
+      "chart_subtitle": "PM INERT",
+      "context_subtitle": "PD Factor - F2",
+      "variable": "RSG STDEV",
+      "CL": 0.89,
+      "LBL": null,
+      "UBL": null,
+      "axis_labels": {
+        "x": "PD Factor RSG",
+        "y": "Sample Standard Deviation"
+      },
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 1: N > 1 COMPLETE"
+      },
+      "notes": "One subgroup per factor level (confirmed by Dr. Bishop, 10/8/2026). These subgroups have more than 343 values, and the 10/3 VAS held alpha_N (Eq 10-12) at 0.9995 above N = 343 (Minitab's GAMMA limit), so its limits follow N = 500; limits pending his rerun with alpha_N from a table."
+    },
+    {
+      "page_number": 28,
+      "analysis_title": "Process Design Condition by Production Time Interaction Effects",
+      "chart_title": "Analysis of PDCxPT RSG Sample Averages",
+      "chart_subtitle": "PM INERT",
+      "context_subtitle": null,
+      "variable": "RSG AVG",
+      "CL": 0.0,
+      "LBL": -1.33,
+      "UBL": 1.34,
+      "axis_labels": {
+        "x": "PDCxPT RSG",
+        "y": "Sample Average"
+      },
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 1: N > 1 COMPLETE"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 29,
+      "analysis_title": "Process Design Condition by Production Time Interaction Effects",
+      "chart_title": "Analysis of PDCxPT RSG Sample Standard Deviations",
+      "chart_subtitle": "PM INERT",
+      "context_subtitle": null,
+      "variable": "RSG STDEV",
+      "CL": 0.94,
+      "LBL": 0.0,
+      "UBL": 1.96,
+      "axis_labels": {
+        "x": "PDCxPT RSG",
+        "y": "Sample Standard Deviation"
+      },
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 1: N > 1 COMPLETE"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 30,
+      "analysis_title": "Taguchi Loss Function Analysis",
+      "chart_title": "PM1",
+      "chart_subtitle": null,
+      "context_subtitle": null,
+      "variable": null,
+      "CL": null,
+      "LBL": null,
+      "UBL": null,
+      "axis_labels": {
+        "x": "Components Contributing to Average Loss",
+        "y": "Contribution to Average Loss"
+      },
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 1: N > 1 COMPLETE"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 31,
+      "analysis_title": "Taguchi Loss Function Analysis",
+      "chart_title": "PM1",
+      "chart_subtitle": null,
+      "context_subtitle": null,
+      "variable": null,
+      "CL": null,
+      "LBL": null,
+      "UBL": null,
+      "axis_labels": {
+        "x": "Components Contributing to Average Loss",
+        "y": "Contribution to Average Loss"
+      },
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 1: N > 1 COMPLETE"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 32,
+      "analysis_title": "Potential Process Capability",
+      "chart_title": "PM1 H TITLE 1",
+      "chart_subtitle": "PM INERT",
+      "context_subtitle": null,
+      "variable": null,
+      "CL": null,
+      "LBL": null,
+      "UBL": null,
+      "axis_labels": {
+        "x": "PM1",
+        "y": "Percent"
+      },
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 1: N > 1 COMPLETE"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 33,
+      "analysis_title": "Test of Maximum Information",
+      "chart_title": "R2 Residuals Individuals Chart",
+      "chart_subtitle": "PM INERT",
+      "context_subtitle": null,
+      "variable": "R2 RESIDUALS",
+      "CL": 0.0,
+      "LBL": -2.94,
+      "UBL": 2.94,
+      "axis_labels": {
+        "x": "PDCxPT RSG",
+        "y": "Individual Value"
+      },
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 1: N > 1 COMPLETE"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 34,
+      "analysis_title": "Maximum Information Analysis",
+      "chart_title": "PM1",
+      "chart_subtitle": null,
+      "context_subtitle": null,
+      "variable": null,
+      "CL": null,
+      "LBL": null,
+      "UBL": null,
+      "axis_labels": {
+        "x": "PM1",
+        "y": "Percent"
+      },
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 1: N > 1 COMPLETE"
+      },
+      "notes": null
+    }
+  ]
+}

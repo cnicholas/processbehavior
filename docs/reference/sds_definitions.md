@@ -1,6 +1,6 @@
 # Bishop's design-state reference scale (1–6)
 
-This document provides the formal definitions of the six structural design states defined by Thomas A. Bishop, Ph.D. in the Variance Analysis System (VAS) framework. These are the integer codes carried by each state in the PDS / ODS / ADS lineage via its `.sds` field.
+This document provides the formal definitions of the six structural design states defined by Thomas A. Bishop, Ph.D. in the Variation Analysis System (VAS) framework. These are the integer codes carried by each state in the PDS / ODS / ADS lineage via its `.sds` field.
 
 For background on the lineage itself (Planned → Observed → Analytical), see [Design-state detection](../user-guide/sds-detection.md).
 
@@ -41,9 +41,9 @@ For background on the lineage itself (Planned → Observed → Analytical), see 
 - **Grid Status**: Semi-Complete
 - **Description**: Every (factor × time) cell has exactly 1 observation
 - **Implications**:
-  - No within-cell variance (must use moving average for R2)
+  - No within-cell variance: R2 is estimated from the condition-and-period-adjusted series, differenced along the condition-then-time sequence and scaled by the R2 scale factor (Eqs 14-4..14-8)
   - Interaction effects confounded with pure error
-  - VAS residuals available but R2 is approximate
+  - VAS residuals available when the R2 scale factor is defined: at least 2 process design conditions and M ≥ K + 2 observations (see [R2 calculation](#r2-calculation-methods-by-ds))
   - Common in unreplicated factorial designs
 
 ### DS 3: Semi-Complete with Partial Replication
@@ -52,7 +52,8 @@ For background on the lineage itself (Planned → Observed → Analytical), see 
 - **Grid Status**: Semi-Complete
 - **Description**: Mix of cells - some have n=1, others have n≥2
 - **Implications**:
-  - R2 by moving average over the full sequence (any singleton cell forces `ma2` for every observation)
+  - R2 by the same scaled difference as DS 2, over every observation (Eqs 14-9..14-13); any one-observation cell selects `ma2` for every observation
+  - Xbar/S is the default chart
   - **Most common in real-world data**
   - Partial interaction effect estimation
   - Requires careful handling of mixed replication
@@ -77,7 +78,7 @@ For background on the lineage itself (Planned → Observed → Analytical), see 
   - Most limited analytical case
   - Sparse, irregular data structure
   - No within-cell variance estimation possible
-  - Moving average methods required throughout
+  - R2 by the scaled difference (`ma2`) throughout; collapses to ADS 2 after cleaning
 
 ### DS 6: Incomplete with Mixed Replication
 
@@ -114,20 +115,38 @@ To determine the DS for a dataset:
      - If has_singles AND has_multiples → DS 6
 ```
 
+(r2-calculation-methods-by-ds)=
 ## R2 Calculation Methods by DS
+
+Equation numbers refer to Bishop's VAS documentation manual dated 10-1-2026.
 
 | DS | R2 Method | Description |
 |-----|-----------|-------------|
 | 0 | N/A | No VAS decomposition |
-| 1 | Exact (within-cell) | Pooled within-cell variance |
-| 2 | Moving Average | Approximate via sequential differences |
-| 3 | Moving Average | Any singleton cell: `ma2` over the full sequence, same as DS 2 |
-| 4 | Exact (present cells) | Within-cell for available data |
-| 5 | Moving Average | All present cells are unreplicated |
-| 6 | Moving Average | Collapses to ADS 3 after cleaning; `ma2` over the full sequence |
+| 1 | Exact (within-cell) | `R2 = Y - Ȳ_kt` (Eq 14-3) |
+| 2 | Scaled difference (`ma2`) | Condition-and-period-adjusted series, differenced and divided by 2·c(K, M), M = KT (Eqs 14-4..14-8) |
+| 3 | Scaled difference (`ma2`) | Any one-observation cell: the same over every observation (Eqs 14-9..14-13) |
+| 4 | Exact (present cells) | Collapses to ADS 1 after cleaning; within-cell for available data |
+| 5 | Scaled difference (`ma2`) | Collapses to ADS 2 after cleaning; all present cells are unreplicated (Eqs 14-9..14-13) |
+| 6 | Scaled difference (`ma2`) | Collapses to ADS 3 after cleaning (Eqs 14-9..14-13) |
+
+The scaled difference first removes the process mean and the condition and period effects,
+Z = Y − Ȳ_k − Ȳ_t + Ȳ (unweighted means of cell means), then differences Z along the
+condition-then-time sequence, across condition boundaries with no grouping, so only the
+first observation has no value. It divides by twice the **R2 scale factor**, computed from
+the layout:
+
+```
+c(K, M) = sqrt( (K - 1) / (2K) · (1 - K / (M - 1)) )
+```
+
+with K the number of process design conditions present and M the number of observations.
+This puts R2 on the noise (sigma) scale. The token `ma2` names Bishop's size-2 moving average
+of Z, of which R2 is the scaled deviation. When K < 2 or M < K + 2 the R2 scale factor is
+undefined and R2, with everything built on it, is reported unavailable.
 
 ## References
 
 - Wheeler, D. J. (1995). *Advanced Topics in Statistical Process Control*. SPC Press, Knoxville, TN.
 - Wheeler, D. J. & Chambers, D. S. (1992). *Understanding Statistical Process Control*. SPC Press.
-- Bishop, T. A. (2023). Personal communication — Variance Analysis System implementation.
+- Bishop, T. A. (2023). Personal communication — Variation Analysis System implementation.

@@ -1,13 +1,16 @@
 from __future__ import annotations
 
 import logging
+import math
+import warnings
 
 import pandas as pd
 
 from .data_preparation import DataPreparation
 from .effects_calculator import EffectsCalculator
+from .exceptions import ProcessBehaviorWarning
 from .formulation_spec import FormulationSpec
-from .residual_calculator import calculate_vas_residuals
+from .residual_calculator import calculate_vas_residuals, r2_scale_factor
 from .sds_detector import SDSRegistry, SDSResult, StructureStats
 
 # Configure module logger
@@ -62,6 +65,9 @@ class AnalysisDataSet:
 
         # ADS result (computed in _initialize on tidy data)
         self._ads_result: SDSResult | None = None
+
+        # Why R2 (and every residual built on it) is unavailable, if it is
+        self._r2_unavailable_reason: str | None = None
 
         # Composition - each component has one job (Single Responsibility Principle)
         # SDS detection was done on raw data by ProcessBehavior. Here we only use
@@ -127,6 +133,7 @@ class AnalysisDataSet:
                 n_per_cell=self._n_per_cell,
                 ybar_kt=self._ybar_kt,
             )
+            self._check_r2_scale_factor(r2_method)
 
             # Calculate centered residuals
             self._calculate_centered_residuals()
@@ -155,6 +162,32 @@ class AnalysisDataSet:
     def has_vas_residuals(self) -> bool:
         """Check if VAS residuals were calculated."""
         return 'R1' in self.analysis_dataset.columns
+
+    @property
+    def r2_unavailable_reason(self) -> str | None:
+        """Why R2 (and R3-R6, which carry it) is unavailable for this layout, or None when it is available."""
+        return self._r2_unavailable_reason
+
+    def _check_r2_scale_factor(self, r2_method: str) -> None:
+        """Record (and warn once) when the layout leaves the R2 scale factor undefined.
+
+        The scaled-difference R2 (10-1 manual Eqs 14-4..14-13) needs at least two process
+        design conditions and more than K + 1 observations; outside that it has no value.
+        """
+        if r2_method != 'ma2':
+            return
+        n_conditions = int(self.analysis_dataset[self.spec.rsg_var_name].nunique())
+        n_obs = len(self.analysis_dataset)
+        if not math.isnan(r2_scale_factor(n_conditions, n_obs)):
+            return
+        self._r2_unavailable_reason = (
+            f'R2 is unavailable for this layout: with a one-observation subgroup, R2 is the '
+            f'condition-and-period-adjusted series differenced and divided by the R2 scale factor '
+            f'c(K, M), which needs at least 2 process design conditions and M >= K + 2 observations '
+            f'(here K={n_conditions}, M={n_obs}). R3-R6, the loss function, maximum information and '
+            f'potential capability depend on R2.'
+        )
+        warnings.warn(self._r2_unavailable_reason, ProcessBehaviorWarning, stacklevel=2)
 
     @property
     def structure_stats(self) -> StructureStats | None:
@@ -210,7 +243,7 @@ class AnalysisDataSet:
 
         # Compute n_per_cell and cell means once
         self._n_per_cell = df.groupby('cell_key', observed=True)[y].transform('size')
-        self._ybar_kt = df.groupby('cell_key', observed=True)[y].transform('mean')
+        self._ybar_kt = df.groupby('cell_key', observed=True)[y].transform('mean')  # Ȳ_kt (10-1 manual Eq 10-8)
 
         # Handle edge case: empty data or all NaN
         if len(self._n_per_cell) == 0 or self._n_per_cell.isna().all():
@@ -319,10 +352,15 @@ class AnalysisDataSet:
 
     def _calculate_centered_residuals(self):
         """
-        Calculate centered residuals (Rbar and RCR values).
+        Calculate the re-centred residuals (RCR) and the R1 cell/marginal means (Rbar).
 
-        These calculations center residuals by their means and reconstruct
-        Y from variance components to verify decomposition correctness.
+        Re-centring puts a residual back on the measurement scale without changing what it
+        shows: RCR = R + Ȳ.. (Bishop's 10-1 manual Eq 14-26, for R1, R3, R4, R5 and R6; RCR6
+        is built per request in residual_calculator.calculate_r6_residuals). An effect chart of
+        RCR5 by condition, RCR4 by period or RCR3 by subgroup therefore plots that effect plus
+        R2, centred on the grand mean.
+
+        RCR2 is not part of Eq 14-26; it is kept as Ȳ_kt + R2 (which reconstructs Y in ADS 1).
 
         Note: This method intentionally mutates self.analysis_dataset in-place
         (adding columns directly to the DataFrame). This differs from
@@ -331,12 +369,6 @@ class AnalysisDataSet:
         during __init__ as part of the analysis pipeline, and the columns
         added (Rbar_kt, Rbar_k, Rbar_t, RCR1-RCR5) are outputs of the
         analysis that become part of the dataset.
-
-        Calculates:
-        - Rbar_kt: Mean of R1 per cell (factor x time)
-        - Rbar_k: Mean of R1 per factor level
-        - Rbar_t: Mean of R1 per time point
-        - RCR1-RCR5: Reconstructed Y values from centered residuals
         """
         if not self.spec.has_grouping:
             return
@@ -349,13 +381,9 @@ class AnalysisDataSet:
         df['Rbar_k'] = df.groupby([self.spec.rsg_var_name], observed=True)['R1'].transform('mean')
         df['Rbar_t'] = df.groupby([self.spec.time_var], observed=True)['R1'].transform('mean')
 
-        # Calculate RCR (Reconstructed Centered Residuals)
-        # These verify that Y can be reconstructed from components
-        df['RCR1'] = df['Ybar'] + df['R1']  # Y = Ybar + R1
-        df['RCR2'] = df['Ybar_kt'] + df['R2']  # Y = Ybar_kt + R2
-        # Y = (Ybar_k + Ybar_t - Ybar) + R3
-        df['RCR3'] = (df['Ybar_k'] + df['Ybar_t'] - df['Ybar']) + df['R3']
-        # Y = (Ybar + Ybar_kt - Ybar_t) + R4
-        df['RCR4'] = (df['Ybar'] + df['Ybar_kt'] - df['Ybar_t']) + df['R4']
-        # Y = (Ybar + Ybar_kt - Ybar_k) + R5
-        df['RCR5'] = (df['Ybar'] + df['Ybar_kt'] - df['Ybar_k']) + df['R5']
+        # Re-centred residuals, Eq 14-26: RCR = R + Ybar
+        df['RCR1'] = df['Ybar'] + df['R1']
+        df['RCR2'] = df['Ybar_kt'] + df['R2']  # not in Eq 14-26; reconstructs Y in ADS 1
+        df['RCR3'] = df['Ybar'] + df['R3']
+        df['RCR4'] = df['Ybar'] + df['R4']
+        df['RCR5'] = df['Ybar'] + df['R5']

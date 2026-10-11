@@ -7,6 +7,128 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+This release aligns the library with Bishop's VAS documentation manual dated 10-1-2026 and
+reproduces his VAS run of 3 October 2026 (PM SDS, PM INERT and Medicare decks). Equation
+numbers below are that manual's.
+
+### Changed
+- **R6's factor-level effect leaves out R2's level mean, as VAS does.** R6 = α_i + R2 with α_i the
+  condition effects ρ̂_k = R5 - R2 averaged over the level (was the level's mean of R5, which also
+  carries the level's average R2; the 10-1 manual's Eq 14-24 writes it that way, "≈ α_i"). ADS 1 is
+  unchanged (R2 averages to zero in each cell); on ADS 2/3 the effect moves by the level's mean R2,
+  which shows when levels are small: Tom's Medicare run centres the organisation-effects chart at
+  10831.1 (PB was 10829.8, now 10831.1).
+- **R2 for designs with a one-observation subgroup (ADS 2 and 3) follows the 10-1 manual.**
+  The data are first stripped of the process mean and the condition and period effects
+  (Z = Y − Ȳ_k − Ȳ_t + Ȳ, Eq 14-4 / 14-9), Z is differenced along the condition-then-time
+  sequence, and the difference is divided by twice the R2 scale factor
+  c(K, M) = √((K − 1)/(2K) · (1 − K/(M − 1))), computed from the layout (Eqs 14-5..14-13).
+  Previously R2 was half the difference of consecutive raw values, so every step from one
+  condition's last period to the next condition's first carried the level difference between
+  them, a common trend was read as noise, and the result sat on a smaller scale than σ. R3–R6,
+  the effects, maximum information and potential capability follow. PM SDS 2 R2 chart limits
+  ±1.94 → ±2.76, PM SDS 3 ±2.47 → ±3.70, potential Cp on PM SDS 2 (specs 232/242)
+  2.51 → 1.78; on the Medicare ACO file the R2 σ falls from about 1,023 to 300 and the
+  organisation chart (recentred R5 by ACO) flags 19 of 24 organisations instead of 8. ADS 1
+  R2 (within-cell deviation, Eq 14-3) is unchanged. `calculate_r2` now dispatches on
+  `r2_method` and takes `n_conditions`; its `n_per_cell` argument is gone.
+- **Taguchi loss follows the 10-1 manual.** ADS 1 unexplained loss is the average cell
+  variance (1/KT)·ΣS²_kt, without dividing each S_kt by c4 (Eq 15-16). ADS 2/3 unexplained
+  loss is the sample variance of R2 (Eq 15-17; the 1/0.7 correction is gone), and the
+  interaction is what the other parts leave of the total loss (Ȳ − T)² + S², set to 0 when
+  negative (Eqs 15-18..15-20), so the parts add to the total. PM SDS 1 at target 237:
+  unexplained 23.0% → 20.9%, interaction 43.3% → 44.5%; PM SDS 2: interaction 42.5% → 25.6%,
+  unexplained 23.6% → 30.0%; pure noise (PM INERT) now shows 0% interaction in ADS 2/3.
+- **Re-centred residuals are the residual plus the grand mean (Eq 14-26).** RCR3, RCR4 and
+  RCR5 were "reconstructed Y" (each algebraically Ȳ_kt + R2), so a recentred interaction
+  chart plotted close to the raw cell means. They now plot the effect plus R2 on the
+  measurement scale, as VAS does; RCR2 is unchanged. Xbar means by condition (RCR5) or
+  period (RCR4) are unchanged on complete designs; period effects are charted from R4.
+- **ADS 3 recommends the Xbar chart** (was X): Xbar/S is VAS's default for SDS 3 and 6.
+- **Capability is centred on the process mean as VAS computes it**: the unweighted mean of the
+  (factor × time) cell means, the same centre as the Xbar chart and the loss function, instead
+  of the plain average of the readings. `CapabilityResult.y_bar`, current PPL/PPU and the
+  potential centre (ȳ + mean(R2)) move when cells have different sizes (SDS 3, 4, 6); balanced
+  designs are unchanged. PM SDS 6 now reads PROCESS MEAN 237.86 and PPL 1.102 / PPU 0.78, as
+  Tom's VAS run does (was 237.834, 1.098 / 0.784).
+- **Validation gate re-referenced to Tom's 3 October 2026 VAS run**
+  (`validation/e2e_bishop_report.py`, `tests/fixtures/bishop_analyses/`). PM SDS 3 is checked
+  as Xbar/S, as VAS now draws it; its limits vary with subgroup size and are not printed on the
+  slides, so they carry no reference yet. The gate now reports 254 assertions passing and 61
+  with no reference value (was 280 / 35); PB's side is compared at full precision.
+- **The validation gate covers every VAS run on hand** (14 runs, 1155 assertions, was 3 runs and
+  254): PM SDS 1-6, PM INERT SDS 1-6 (the pure-noise column with each design state's missing-data
+  pattern), Tom's known-effects data (`validation/PBTESTKNOWNEFFECTS_T100.csv`, SDS 1) and the
+  Medicare ACO data (`validation/aco_per_capita_expenditure.csv`, 24 organisations x 4 years). Each
+  run's reference values, spec limits and target are in its own file,
+  `tests/fixtures/bishop_analyses/<run>.json` (the `vassds{1,2,3}analysis.json` references are
+  now `pm_sds_{1,2,3}.json`). All six PM runs use target 237; PM SDS 5's loss shares come from
+  Tom's rerun at 237 (8 October 2026), because his 10/3 run used the process mean.
+- **Limits VAS prints as "UNEQUAL" are checked against the lines it draws.** Where subgroup sizes
+  differ, VAS steps the limits per subgroup and prints no value; the gate now reads every
+  subgroup's LBL/UBL from the red limit lines in the VAS chart drawing (scaled by the y-axis ticks,
+  good to about one drawing unit) and compares PB subgroup by subgroup, to 1.5 drawing units. 186
+  charts in SDS 3-6; the gate reports 1475 assertions passing, 0 failing, and 79 with no
+  reference (was 1155 / 0 / 399).
+- **The R6 S charts are checked wherever VAS computed them correctly.** VAS's α<sub>N</sub>
+  (Eq 10-12) used Minitab's GAMMA function, which overflows above N = 343; the 10/3 VAS runs held
+  α<sub>N</sub> at 0.9995 from there on, so their S limits followed N = 500 whatever the subgroup size.
+  Dr. Bishop confirmed it (8 October 2026) and is replacing it with a table; PB computes α<sub>N</sub>
+  with log-gamma for any N. The gate now checks the R6 S charts whose subgroups are under 343 (all
+  match), the factor S charts' centerlines (one subgroup per factor level, as Dr. Bishop confirmed),
+  and PM SDS 5's loss shares from his rerun at 237; only the limits for subgroups of 343 or more
+  wait for his rerun. The references' notes now give that cause.
+
+### Added
+- **R2 is reported unavailable, with the reason, when the R2 scale factor is undefined**
+  (fewer than two process design conditions, or M < K + 2 observations). `formulate()` warns;
+  R2–R6 are not offered; `execute()` and `why_not()` give the reason; `loss_function()` and
+  `maximum_information()` raise `ValidationError`; `capability()` reports potential capability
+  unavailable. Previously these layouts produced half-differences of the raw data.
+- **`CapabilityResult.potential_center`**: the centre of the potential values, ȳ + mean(R2).
+  Potential CPL/CPU and the potential chart's centre line use it, as VAS does (Medicare potential
+  PPU 5.74; ȳ alone gives 5.73). It equals ȳ in ADS 1.
+
+### Fixed
+- **Xbar and S charts with subgroups of unequal size follow the 10-1 manual (Eqs 11-5, 11-16,
+  11-17).** sigma-hat is the average of each subgroup's S_r / c4(N_r) (was S-bar / c4(N_r)), and each
+  subgroup's limits use its own N_r, so they step with subgroup size, as VAS draws them. N_r now
+  counts the values the chart is drawn from (was the response's count): on ADS 2 and 3 residual
+  charts, R2's blank first value leaves one subgroup one smaller. Equal-size charts are unchanged.
+  Found on Tom's Medicare run (slides 52-53): ACO-001 has 3 R6 values, and its limits are wider by
+  sqrt(4/3) on the Xbar chart and use B4(3) on the S chart.
+- **Xbar charts include one-reading subgroups, as VAS draws them.** A subgroup with one value has
+  no S, so it takes no part in sigma-hat, but it is charted with limits centre ± 3 sigma-hat
+  (Eqs 11-16/17 with N_r = 1); it was left off the chart. The companion S chart still leaves it
+  out. On PM SDS 3 the Xbar chart now has all 800 subgroups (was 783) and on PM SDS 6 all 772
+  (was 642), matching the limit lines in Tom's VAS run subgroup by subgroup; on PM SDS 6's
+  interaction chart the one cell whose single reading has no R2 stays off, as in VAS. Designs
+  without one-reading subgroups (ADS 1) are unchanged.
+- **Per-stratum Xbar centre lines count one-observation subgroups.** The centre is Bishop's
+  unweighted mean of every subgroup mean; subgroups with n = 1 were dropped before it was
+  taken, which moved four of the eight PM SDS 3 per-condition centres by 0.01–0.04.
+- **Documented: PB keeps α<sub>N</sub> exact above N = 5000.** The manual (footnote to Eq 10-12) and
+  VAS set α<sub>N</sub> = 1 for N > 5000, which puts an S chart's limits on its centerline for
+  subgroups that large. PB's `c4` stays exact for every N, so the limits close in gradually (S̄ ± 3%
+  at N = 5000, ± 1.5% at 20,000). It is a deliberate difference, decided on 8 October
+  2026, and only S charts with subgroups of more than 5000 values are affected.
+- **Code and docs cite the manual's Chapters 10 and 12.** The X/mR limits and constants
+  (Eqs 12-1..12-11), c4 and the S-chart factors (Eqs 10-12, 10-13, 10-15), the cell and marginal
+  means (Eqs 10-8, 10-10) and the model the residuals estimate (Eq 10-3) now cite the 10-1 manual
+  where the code computes exactly those equations; dotted citations ("Eq 12.4") and an older
+  manual's numbering in a test are gone. `tests/test_manual_citations.py` keeps one citation form,
+  and CONTRIBUTING.md describes it. The residuals guide now says Ȳ is the mean of the cell means.
+- **Bishop's methodology is called the Variation Analysis System**, as his VAS documentation
+  manual names it (was "Variance Analysis System" in the README, docs, CITATION.cff, docstrings and
+  the design report's VAS line). The synthetic-data module no longer credits the design states to
+  Wheeler.
+- **Docs:** the three note blocks in the chart-types and design-state guides now render on the
+  MyST site (they used mkdocs syntax); the DS 4–6 chart tables and the no-factors branch of the
+  decision tree match what the library offers (a time-only study is DS 1, 2 or 3 by the number
+  of observations per time point, not DS 6); the R1 note no longer claims the residuals sum to
+  zero on unbalanced data (their cell means average to zero); R1 is cited as Eq 14-2, and the
+  design states are attributed to Bishop.
+
 ## [0.3.3] - 2026-09-29
 
 ### Changed

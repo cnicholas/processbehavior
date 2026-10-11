@@ -9,6 +9,8 @@ Tests cover:
 - Tom Bishop validation data
 """
 
+import math
+
 import pandas as pd
 import pytest
 
@@ -25,6 +27,7 @@ from processbehavior.residual_calculator import (
     calculate_r5_residual,
     calculate_time_means,
     calculate_vas_residuals,
+    r2_scale_factor,
 )
 
 # ============================================================================
@@ -136,6 +139,25 @@ def test_calculate_r1_residual_sum_is_zero():
     assert pytest.approx(r1.sum(), abs=1e-10) == 0.0
 
 
+@pytest.mark.parametrize(
+    ('k', 'm', 'expected'),
+    [
+        (8, 641, 0.65729),  # PM SDS 5 layout: 8 conditions, 641 observations
+        (8, 800, 0.65812),  # PM SDS 2 layout: 8 x 100, one per cell
+        (24, 96, 0.59843),  # Medicare ACO file: 24 organisations x 4 years
+    ],
+)
+def test_r2_scale_factor_matches_manual_layouts(k, m, expected):
+    """c(K, M) = sqrt((K-1)/(2K) * (1 - K/(M-1))), Eq 14-8 / 14-13."""
+    assert r2_scale_factor(k, m) == pytest.approx(expected, abs=5e-6)
+
+
+@pytest.mark.parametrize(('k', 'm'), [(1, 50), (1, 2), (5, 6), (5, 5), (0, 10)])
+def test_r2_scale_factor_undefined_is_nan(k, m):
+    """Undefined for K < 2 or M < K + 2: NaN, never an exception."""
+    assert math.isnan(r2_scale_factor(k, m))
+
+
 def test_calculate_r2_exact():
     """R2 exact = Y - Ybar_kt (within-cell deviation)."""
     # Build data with required keys
@@ -155,60 +177,57 @@ def test_calculate_r2_exact():
     pd.testing.assert_series_equal(result, expected, check_names=False)
 
 
-def test_calculate_r2_ma2():
-    """R2 ma2 uses backward 2-point moving average per Tom Bishop."""
+# R2 for the singleton design states (10-1 manual Eqs 14-4..14-13).
+# Hand-worked 2 x 3 grid, one observation per cell:
+#   A: 10, 12, 11    B: 14, 13, 18
+# Ybar = 13; Ybar_k = 11 (A), 15 (B); Ybar_t = 12, 12.5, 14.5
+# Z = Y - Ybar_k - Ybar_t + Ybar = 0, 1.5, -1.5, 0, -1.5, 1.5 (A1..A3, B1..B3)
+# c(2, 6) = sqrt(1/4 * (1 - 2/5)) = sqrt(0.15)
+# R2_j = (Z_j - Z_{j-1}) / (2c): NaN, then 1.5, -3.0, 1.5, -1.5, 3.0 over 2*sqrt(0.15)
+_GRID_2X3 = {
+    'lane': ['A', 'A', 'A', 'B', 'B', 'B'],
+    'time': [1, 2, 3, 1, 2, 3],
+    'weight': [10.0, 12.0, 11.0, 14.0, 13.0, 18.0],
+}
+_GRID_2X3_R2 = [float('nan')] + [d / (2 * math.sqrt(0.15)) for d in (1.5, -3.0, 1.5, -1.5, 3.0)]
+
+
+def test_calculate_r2_ma2_scaled_z_difference():
+    """R2 = (Z_j - Z_{j-1}) / (2 c(K, M)), aligned back to the frame's own row order."""
     df = pd.DataFrame(
         {
-            'weight': [10.0, 11.0, 12.0],
-            'Ybar_kt': [10.0, 11.0, 12.0],
-            'cell_key': [('A', 1), ('A', 2), ('A', 3)],
-            'rsg_key': ['A', 'A', 'A'],
-            'sort_key': [(('A',), 1, 0), (('A',), 2, 0), (('A',), 3, 0)],
+            'weight': _GRID_2X3['weight'],
+            'Ybar_kt': _GRID_2X3['weight'],
+            'Ybar': [13.0] * 6,
+            'Ybar_k': [11.0, 11.0, 11.0, 15.0, 15.0, 15.0],
+            'Ybar_t': [12.0, 12.5, 14.5, 12.0, 12.5, 14.5],
+            'sort_key': list(range(6)),
         }
     )
+    shuffled = df.sample(frac=1.0, random_state=7)
 
-    result = calculate_r2(df, 'weight', r2_method='ma2')
+    result = calculate_r2(shuffled, 'weight', r2_method='ma2', n_conditions=2)
 
-    # R2_j = (Y_j - Y_{j-1}) / 2
-    # Point 0: NaN (no predecessor — Bishop leaves j=1 blank)
-    # Point 1: (11-10)/2 = 0.5
-    # Point 2: (12-11)/2 = 0.5
-    assert pd.isna(result.iloc[0])
-    assert pytest.approx(result.iloc[1], 0.01) == 0.5
-    assert pytest.approx(result.iloc[2], 0.01) == 0.5
+    pd.testing.assert_index_equal(result.index, shuffled.index)
+    by_sort = result.loc[df.index]
+    assert pd.isna(by_sort.iloc[0])
+    assert by_sort.iloc[1:].tolist() == pytest.approx(_GRID_2X3_R2[1:], rel=1e-12)
 
 
-def test_calculate_r2_mixed_cells_uses_ma2_for_all():
-    """R2 with any singletons uses MA2 across entire sorted stream.
-
-    When any cell has n=1, ALL observations use MA2 on the full
-    canonical-sorted stream — no per-cell exact/MA2 selection.
-    Bishop Eq 13.7-13.9: j=2,...,J with no grouping; only j=1 gets 0.
-    """
-    # A×1 has n=2, B×1 has n=1, B×2 has n=1
-    # sort_key order: A×1(0), A×1(1), B×1(0), B×2(0)
+def test_calculate_r2_ma2_requires_n_conditions():
+    """The scaled difference needs K for the R2 scale factor; missing K is a programming error."""
     df = pd.DataFrame(
         {
-            'weight': [10.0, 10.5, 9.0, 11.0],
-            'Ybar_kt': [10.25, 10.25, 9.0, 11.0],
-            'cell_key': [('A', 1), ('A', 1), ('B', 1), ('B', 2)],
-            'rsg_key': ['A', 'A', 'B', 'B'],
-            'sort_key': [(('A',), 1, 0), (('A',), 1, 1), (('B',), 1, 0), (('B',), 2, 0)],
+            'weight': [1.0, 2.0],
+            'Ybar_kt': [1.0, 2.0],
+            'Ybar': [1.5] * 2,
+            'Ybar_k': [1.5] * 2,
+            'Ybar_t': [1.0, 2.0],
+            'sort_key': [0, 1],
         }
     )
-    n_per_cell = pd.Series([2, 2, 1, 1])
-
-    result = calculate_r2(df, 'weight', r2_method='ma2', n_per_cell=n_per_cell)
-
-    # MA2 across full sorted stream (no grouping):
-    # j=0 (10.0): first obs → NaN (no predecessor)
-    # j=1 (10.5): (10.5 - 10.0)/2 = 0.25
-    # j=2 (9.0):  (9.0 - 10.5)/2 = -0.75
-    # j=3 (11.0): (11.0 - 9.0)/2 = 1.0
-    assert pd.isna(result.iloc[0])
-    assert pytest.approx(result.iloc[1], 0.01) == 0.25
-    assert pytest.approx(result.iloc[2], 0.01) == -0.75
-    assert pytest.approx(result.iloc[3], 0.01) == 1.0
+    with pytest.raises(RuntimeError, match='n_conditions'):
+        calculate_r2(df, 'weight', r2_method='ma2')
 
 
 def test_calculate_r3_residual():
@@ -355,27 +374,20 @@ def test_calculate_vas_residuals_r1_sum_is_zero(sds1_df, spec_sds1):
     assert pytest.approx(result['R1'].sum(), abs=1e-10) == 0.0
 
 
-def test_calculate_vas_residuals_sds2_uses_moving_average(spec_sds1):
-    """SDS 2 (ma2) should use backward moving average for R2."""
-    sds2_df = pd.DataFrame({'lane': ['A', 'A', 'A'], 'time': [1, 2, 3], 'weight': [10.0, 11.0, 12.0]})
-    df = _prepare_for_vas(sds2_df, spec_sds1)
-    result = calculate_vas_residuals(df, spec_sds1, r2_method='ma2')
+def test_calculate_vas_residuals_ma2_matches_hand_computation(spec_sds1):
+    """End to end through data preparation: the 2 x 3 grid gives the hand-worked R2."""
+    df = _prepare_for_vas(pd.DataFrame(_GRID_2X3), spec_sds1)
+    result = calculate_vas_residuals(df, spec_sds1, r2_method='ma2').sort_values('sort_key')
 
-    assert 'R2' in result.columns
-    # R2 = (Y_j - Y_{j-1}) / 2
-    # First observation: NaN (no predecessor — Bishop leaves j=1 blank)
     assert pd.isna(result['R2'].iloc[0])
-    # Remaining: (11-10)/2=0.5, (12-11)/2=0.5
-    assert pytest.approx(result['R2'].iloc[1], 0.01) == 0.5
-    assert pytest.approx(result['R2'].iloc[2], 0.01) == 0.5
+    assert result['R2'].iloc[1:].tolist() == pytest.approx(_GRID_2X3_R2[1:], rel=1e-12)
 
 
 def test_calculate_vas_residuals_sds3_uses_ma2_for_all(spec_sds1):
-    """SDS 3 (any singletons) uses MA2 across entire sorted stream.
+    """ADS 3 (any singleton) runs one scaled-difference stream over every observation.
 
-    When any cell has n=1, ALL observations use MA2 on the full
-    canonical-sorted stream — no per-cell exact/MA2 selection.
-    Only j=1 gets R2=NaN (no predecessor).
+    No per-cell choice between exact and ma2: replicated cells are differenced in the
+    same condition-then-time stream. Only j=1 gets R2=NaN (no predecessor).
     """
     # A has n=2 at time=1, B has n=1 at time=1 and n=1 at time=2
     sds3_df = pd.DataFrame({'lane': ['A', 'A', 'B', 'B'], 'time': [1, 1, 1, 2], 'weight': [10.0, 10.5, 9.0, 11.0]})
@@ -383,15 +395,14 @@ def test_calculate_vas_residuals_sds3_uses_ma2_for_all(spec_sds1):
     n_per_cell = df.groupby('cell_key', observed=True)['weight'].transform('size')
     result = calculate_vas_residuals(df, spec_sds1, r2_method='ma2', n_per_cell=n_per_cell)
 
-    # MA2 across full sorted stream (A×1(0), A×1(1), B×1(0), B×2(0)):
-    # Only the very first observation in the entire stream gets R2=NaN
-    # All others get (Y_j - Y_{j-1})/2
+    # One stream (A×1(0), A×1(1), B×1(0), B×2(0)):
+    # only the very first observation in the entire stream gets R2=NaN
     a_rows = result[result['rsg'] == 'A']
     assert pd.isna(a_rows['R2'].iloc[0])  # j=1: first in stream → NaN
 
     b_rows = result[result['rsg'] == 'B']
-    assert b_rows['R2'].iloc[0] != 0  # Not first in stream — gets MA2 value
-    assert b_rows['R2'].iloc[1] != 0  # Also gets MA2 value
+    assert b_rows['R2'].iloc[0] != 0  # Not first in stream — gets a value
+    assert b_rows['R2'].iloc[1] != 0  # Also gets a value
 
 
 def test_calculate_vas_residuals_sds1_exact_replicated(spec_sds1):
@@ -410,20 +421,23 @@ def test_calculate_vas_residuals_sds1_exact_replicated(spec_sds1):
     pd.testing.assert_series_equal(result['R2'], expected_r2, check_names=False)
 
 
-def test_calculate_vas_residuals_sparse_uses_moving_average(spec_sds1):
-    """Sparse data (all n=1) should use MA2 for R2."""
-    sds6_df = pd.DataFrame({'lane': ['A', 'A', 'A'], 'time': [1, 2, 3], 'weight': [10.0, 11.0, 12.0]})
-    df = _prepare_for_vas(sds6_df, spec_sds1)
+def test_calculate_vas_residuals_single_condition_r2_unavailable(spec_sds1):
+    """One condition (K = 1): the R2 scale factor is undefined, so R2 is all NaN — never ±inf."""
+    single = pd.DataFrame({'lane': ['A', 'A', 'A'], 'time': [1, 2, 3], 'weight': [10.0, 11.0, 12.0]})
+    df = _prepare_for_vas(single, spec_sds1)
     result = calculate_vas_residuals(df, spec_sds1, r2_method='ma2')
 
-    assert pd.isna(result['R2'].iloc[0])  # j=1: no predecessor → NaN
-    assert pytest.approx(result['R2'].iloc[1], 0.01) == 0.5
-    assert pytest.approx(result['R2'].iloc[2], 0.01) == 0.5
+    for col in ['R2', 'R3', 'R4', 'R5']:
+        assert result[col].isna().all(), f'{col} should be unavailable when K = 1'
+    assert result['R1'].notna().all()
 
 
-# ============================================================================
-# Test: Pure Functions Are Truly Pure
-# ============================================================================
+def test_calculate_vas_residuals_exact_rejects_singletons(spec_sds1):
+    """'exact' with a one-observation cell is a methodology invariant violation."""
+    mixed = pd.DataFrame({'lane': ['A', 'A', 'B'], 'time': [1, 1, 1], 'weight': [10.0, 10.5, 9.0]})
+    df = _prepare_for_vas(mixed, spec_sds1)
+    with pytest.raises(RuntimeError, match='exact'):
+        calculate_vas_residuals(df, spec_sds1, r2_method='exact')
 
 
 def test_pure_functions_dont_modify_inputs():
@@ -543,131 +557,52 @@ def test_no_nan_residuals_all_r2_methods(r2_method, df_key, sds1_df, sds2_df, sd
 
 
 # ============================================================================
-# Test: Tom Bishop Validation - R2 = MR/2 for MA2
+# Test: R2 properties for the singleton design states (10-1 manual)
 # ============================================================================
 
 
-def test_r2_ma2_equals_half_moving_range():
-    """
-    Validate Tom Bishop's formula: R2 = (Y_j - Y_{j-1}) / 2 = MR / 2.
+def test_r2_ma2_ignores_condition_and_period_offsets(spec_sds1):
+    """Z removes the condition and period effects before differencing, so shifting a whole
+    condition or a whole period leaves R2 unchanged — including at the lane boundaries."""
+    lanes, periods = ['A', 'B', 'C'], [1, 2, 3, 4, 5]
+    noise = [0.3, -1.1, 0.8, 0.0, 1.7, -0.4, 0.9, -0.6, 1.2, -1.5, 0.5, 0.2, -0.9, 1.0, -0.2]
+    base = pd.DataFrame({'lane': [k for k in lanes for _ in periods], 'time': periods * len(lanes), 'weight': noise})
+    shifted = base.copy()
+    shifted['weight'] = base['weight'] + base['lane'].map({'A': 0.0, 'B': 50.0, 'C': -30.0}) + 7.0 * base['time']
 
-    This test confirms the mathematical relationship between R2 residuals
-    and the moving range used in XmR charts.
-    """
-    df = pd.DataFrame(
+    r2_base = calculate_vas_residuals(_prepare_for_vas(base, spec_sds1), spec_sds1, r2_method='ma2')
+    r2_shift = calculate_vas_residuals(_prepare_for_vas(shifted, spec_sds1), spec_sds1, r2_method='ma2')
+
+    a = r2_base.sort_values('sort_key')['R2'].to_numpy()
+    b = r2_shift.sort_values('sort_key')['R2'].to_numpy()
+    assert pd.isna(a[0]) and pd.isna(b[0])
+    assert b[1:] == pytest.approx(a[1:], abs=1e-9)
+
+
+def test_r2_ma2_mixed_cells_one_stream():
+    """ADS 3: Z uses unweighted cell-mean averages; every observation joins one stream."""
+    spec = FormulationSpec(response_var='weight', rsg_vars=('lane',), rsg_var_name='rsg', time_var='time')
+    raw = pd.DataFrame(
         {
-            'weight': [10.0, 12.0, 11.0, 13.0, 12.5],
-            'Ybar_kt': [10.0, 12.0, 11.0, 13.0, 12.5],
-            'cell_key': [('A', i) for i in range(1, 6)],
-            'rsg_key': ['A'] * 5,
-            'sort_key': [(('A',), i, 0) for i in range(1, 6)],
+            'lane': ['A', 'A', 'A', 'B', 'B', 'B', 'B'],
+            'time': [1, 1, 2, 1, 2, 2, 3],
+            'weight': [10.0, 11.0, 13.0, 15.0, 14.0, 16.0, 19.0],
         }
     )
+    result = calculate_vas_residuals(_prepare_for_vas(raw, spec), spec, r2_method='ma2').sort_values('sort_key')
 
-    r2 = calculate_r2(df, 'weight', r2_method='ma2')
+    # Independent computation from the cell means (equal weight per occupied cell)
+    cells = raw.groupby(['lane', 'time'])['weight'].mean()
+    ybar = cells.mean()
+    ybar_k = cells.groupby(level=0).mean()
+    ybar_t = cells.groupby(level=1).mean()
+    ordered = raw.sort_values(['lane', 'time'], kind='stable')
+    z = ordered['weight'] - ordered['lane'].map(ybar_k) - ordered['time'].map(ybar_t) + ybar
+    c = r2_scale_factor(2, len(raw))
+    expected = (z.diff() / (2 * c)).to_numpy()
 
-    # R2_j = (Y_j - Y_{j-1}) / 2
-    # j=1: NaN (no predecessor)
-    # j=2: (12-10)/2 = 1.0
-    # j=3: (11-12)/2 = -0.5
-    # j=4: (13-11)/2 = 1.0
-    # j=5: (12.5-13)/2 = -0.25
-    assert pd.isna(r2.iloc[0])
-    assert pytest.approx(r2.iloc[1], 0.01) == 1.0
-    assert pytest.approx(r2.iloc[2], 0.01) == -0.5
-    assert pytest.approx(r2.iloc[3], 0.01) == 1.0
-    assert pytest.approx(r2.iloc[4], 0.01) == -0.25
-
-
-def test_r2_ma2_multiple_groups():
-    """
-    MA2 R2 runs across the entire canonical-sorted stream, not per group.
-
-    Bishop Eq 13.7-13.9: j=2,...,J with no grouping. Only j=1 gets R2=NaN.
-    The MA2 continues across rsg_key boundaries.
-    """
-    df = pd.DataFrame(
-        {
-            'weight': [10.0, 11.0, 12.0, 20.0, 22.0, 21.0],
-            'Ybar_kt': [10.0, 11.0, 12.0, 20.0, 22.0, 21.0],
-            'cell_key': [('A', 1), ('A', 2), ('A', 3), ('B', 1), ('B', 2), ('B', 3)],
-            'rsg_key': ['A', 'A', 'A', 'B', 'B', 'B'],
-            'sort_key': [
-                (('A',), 1, 0),
-                (('A',), 2, 0),
-                (('A',), 3, 0),
-                (('B',), 1, 0),
-                (('B',), 2, 0),
-                (('B',), 3, 0),
-            ],
-        }
-    )
-
-    result = calculate_r2(df, 'weight', r2_method='ma2')
-
-    # Full stream MA2 (no grouping):
-    # j=0 (10.0): first obs → NaN (no predecessor)
-    # j=1 (11.0): (11-10)/2 = 0.5
-    # j=2 (12.0): (12-11)/2 = 0.5
-    # j=3 (20.0): (20-12)/2 = 4.0  (crosses A→B boundary)
-    # j=4 (22.0): (22-20)/2 = 1.0
-    # j=5 (21.0): (21-22)/2 = -0.5
-    assert pd.isna(result.iloc[0])
-    assert pytest.approx(result.iloc[1], 0.01) == 0.5
-    assert pytest.approx(result.iloc[2], 0.01) == 0.5
-    assert pytest.approx(result.iloc[3], 0.01) == 4.0
-    assert pytest.approx(result.iloc[4], 0.01) == 1.0
-    assert pytest.approx(result.iloc[5], 0.01) == -0.5
-
-
-def test_r2_ma2_tom_bishop_example():
-    """
-    Test with values inspired by Tom Bishop's Figure 30 example.
-
-    Validates that R2 = (Y_j - Y_{j-1}) / 2 for each consecutive pair,
-    removing trend (PT effect) and leaving unexplained variation.
-    """
-    weights = [238.0, 239.0, 240.0, 239.5, 240.5, 241.0, 240.0, 241.5, 241.0, 242.0]
-    df = pd.DataFrame(
-        {
-            'weight': weights,
-            'Ybar_kt': weights,  # n=1 per cell, so Ybar_kt = Y
-            'cell_key': [('Lane4', i) for i in range(1, 11)],
-            'rsg_key': ['Lane4'] * 10,
-            'sort_key': [(('Lane4',), i, 0) for i in range(1, 11)],
-        }
-    )
-
-    result = calculate_r2(df, 'weight', r2_method='ma2')
-
-    assert pd.isna(result.iloc[0])  # j=1: no predecessor → NaN
-    for i in range(1, len(result)):
-        y_current = df['weight'].iloc[i]
-        y_previous = df['weight'].iloc[i - 1]
-        expected_r2 = (y_current - y_previous) / 2.0
-        assert pytest.approx(result.iloc[i], 0.01) == expected_r2
-
-    # R2 values should be smaller than original variation (trend removed)
-    assert result.iloc[1:].abs().max() < df['weight'].std()
-
-
-def test_r2_ma2_handles_single_group():
-    """MA2 R2 calculation should handle minimal data (2 points) correctly."""
-    df = pd.DataFrame(
-        {
-            'weight': [10.0, 11.0],
-            'Ybar_kt': [10.0, 11.0],
-            'cell_key': [('A', 1), ('A', 2)],
-            'rsg_key': ['A', 'A'],
-            'sort_key': [(('A',), 1, 0), (('A',), 2, 0)],
-        }
-    )
-
-    result = calculate_r2(df, 'weight', r2_method='ma2')
-
-    assert len(result) == 2
-    assert pd.isna(result.iloc[0])  # j=1: no predecessor → NaN
-    assert pytest.approx(result.iloc[1], 0.01) == 0.5  # (11-10)/2
+    assert pd.isna(result['R2'].iloc[0])
+    assert result['R2'].to_numpy()[1:] == pytest.approx(expected[1:], rel=1e-12)
 
 
 # ============================================================================

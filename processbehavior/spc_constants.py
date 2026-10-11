@@ -29,9 +29,10 @@ from .exceptions import ValidationError
 # Control limit multiplier (3-sigma limits are standard in SPC)
 SIGMA_MULTIPLIER = 3
 
-# Moving-range constants for n = 2 (consecutive pairs), as in Bishop's VAS manual:
-# sigma = mR / d2 (Eq 12.4), X limits = X ± 3·mR/d2 (Eq 12.10-12.11), and the
-# moving-range upper limit = (1 + 3·d3/d2)·mR (Eq 12.5). The manual prints the
+# Moving-range constants for n = 2 (consecutive pairs), as in Bishop's VAS manual
+# (10-1 manual Eq 12-2: E(R) = d2·sigma, sigma_R = d3·sigma): sigma = mR / d2 (Eq 12-4),
+# X limits = X ± 3·mR/d2 (Eqs 12-10, 12-11), and the moving-range upper limit
+# = (1 + 3·d3/d2)·mR (Eq 12-5). The manual prints the
 # rounded values 2.66 and 3.268; Bishop's VAS software computes them from d2 and
 # d3 without rounding, and so does this library.
 D2_N2 = 1.128
@@ -54,7 +55,17 @@ def c4(n: int) -> float:
     Calculate c4 bias constant for Xbar and S charts.
 
     The c4 constant corrects for bias in the standard deviation estimate
-    when using subgroups. It approaches 1.0 as n increases.
+    when using subgroups: E(S) = c4(n)·sigma, the manual's alpha_N (10-1 manual
+    Eq 10-12), so S / c4(n) is unbiased for sigma (Eq 10-13). It approaches 1.0
+    as n increases.
+
+    Deliberate difference from the manual: its footnote to Eq 10-12 sets
+    alpha_N = 1 for N > 5000, and VAS does. c4 stays exact for every n (computed
+    with log-gamma, so it has no overflow limit). Since sigma_S uses
+    sqrt(1 - alpha_N²) (Eq 10-15), alpha_N = 1 would put an S chart's limits on
+    its centerline for subgroups of more than 5000 values. The exact c4 lets
+    them close in gradually instead: S-bar ± 3% at n = 5000, ± 1.5% at 20,000.
+    Only S charts with subgroups that large are affected.
 
     Parameters
     ----------
@@ -123,7 +134,9 @@ def b3(n: int, sigma_multiplier: float = 3) -> float:
 
     Notes
     -----
-    Formula: b3(n) = 1 - sigma_multiplier/c4(n) * sqrt(1 - c4(n)²)
+    Formula: b3(n) = 1 - sigma_multiplier/c4(n) * sqrt(1 - c4(n)²), i.e. S-bar
+    less sigma_multiplier estimated standard deviations of S (10-1 manual
+    Eq 10-15), the S chart's lower limit (Eq 11-8).
 
     For small subgroup sizes (n < 6), the raw b3 formula yields negative
     values. Since standard deviations cannot be negative, these values are
@@ -172,7 +185,9 @@ def b4(n: int, sigma_multiplier: float = 3) -> float:
 
     Notes
     -----
-    Formula: b4(n) = 1 + sigma_multiplier/(c4(n)) * sqrt(1 - c4(n)^2)
+    Formula: b4(n) = 1 + sigma_multiplier/(c4(n)) * sqrt(1 - c4(n)^2), i.e. S-bar
+    plus sigma_multiplier estimated standard deviations of S (10-1 manual
+    Eq 10-15), the S chart's upper limit (Eq 11-9).
 
     The b4 constant decreases as subgroup size increases, approaching the
     value of 1 + 3*sqrt(1-1) = 1 for very large subgroups.
@@ -303,8 +318,7 @@ def calculate_limits(
                 f'The limits calculation for {limits_type} requires (mean, and mR). Got: mean={mean}, mR={mR}'
             )
 
-        # LPL = X̄ - (E2 * mR)
-        # UPL = X̄ + (E2 * mR)
+        # LPL = X̄ - (E2 * mR), UPL = X̄ + (E2 * mR)  (10-1 manual Eqs 12-10, 12-11)
         lpl = mean - (XMR_LIMIT_MULTIPLIER * mR)
         upl = mean + (XMR_LIMIT_MULTIPLIER * mR)
 
@@ -313,7 +327,7 @@ def calculate_limits(
             raise ValueError(f'The limits calculation for {limits_type} requires (mR). Got: mR={mR}')
 
         # LPL = 0 (ranges cannot be negative)
-        # UPL = mR * D4
+        # UPL = mR * D4  (10-1 manual Eq 12-5)
         lpl = 0
         upl = mR * R_UPPER_LIMIT_MULTIPLIER
 
@@ -323,6 +337,20 @@ def calculate_limits(
     return pd.Series({'lpl': lpl, 'upl': upl}, index=['lpl', 'upl'])
 
 
+def subgroup_sigma_hat(s, n) -> float:
+    """Bishop's estimate of sigma from R rational subgroups (10-1 manual Eq 11-5).
+
+    The average of each subgroup's own unbiased estimate: sigma_hat = (1/R) sum S_r / c4(N_r).
+    With equal subgroup sizes this is S-bar / c4(N) (Eq 11-6); with unequal sizes it is not,
+    because each S_r is unbiased-corrected with its own c4 before averaging. VAS computes it
+    this way (Tom's Medicare run: one subgroup of 3 among 23 of 4).
+    """
+    s = np.asarray(s, dtype=float)
+    sizes = np.asarray(n)
+    lookup = {int(v): c4(int(v)) for v in np.unique(sizes)}
+    return float(np.mean(s / np.array([lookup[int(v)] for v in sizes.ravel()]).reshape(sizes.shape)))
+
+
 def calculate_limits_vectorized(
     limits_type: str,
     *,
@@ -330,12 +358,18 @@ def calculate_limits_vectorized(
     sd=None,
     N=None,
     mR=None,
+    sigma=None,
     sigma_multiplier: float = 3,
 ) -> pd.DataFrame:
     """Array form of :func:`calculate_limits` — same formulae, whole columns at once.
 
+    ``sigma`` (Xbar only) gives sigma_hat directly, for subgroups of unequal size: the limits
+    are then mean ± multiplier · sigma / sqrt(N_r) for each subgroup (10-1 manual Eqs 11-16,
+    11-17), with sigma from :func:`subgroup_sigma_hat`. Without it, ``sd`` is S-bar and each
+    row's limits use S-bar / c4(N), which is the same thing when every N is equal.
+
     :func:`calculate_limits` stays the scalar reference and is unchanged: it is what the
-    Bishop validator exercises, so keeping it independent means the 280 reference
+    Bishop validator exercises, so keeping it independent means the reference
     assertions remain a genuine check on this path rather than a check of it against
     itself.
 
@@ -373,14 +407,18 @@ def calculate_limits_vectorized(
         return np.array([lookup[int(v)] for v in sizes.ravel()]).reshape(sizes.shape)
 
     if limits_type == 'Xbar':
-        if mean is None or sd is None or N is None:
+        if mean is None or (sd is None and sigma is None) or N is None:
             raise ValueError(
-                f'The limits calculation for {limits_type} requires (mean, sd, and N). '
-                f'Got: mean={mean}, sd={sd}, N={N}'
+                f'The limits calculation for {limits_type} requires (mean, sd or sigma, and N). '
+                f'Got: mean={mean}, sd={sd}, sigma={sigma}, N={N}'
             )
         sizes = np.asarray(N)
-        # Wd = S / c4(n), then half-width = (multiplier * Wd) / sqrt(n)
-        half = (sigma_multiplier * (np.asarray(sd) / _per_n(c4, sizes))) / np.sqrt(sizes)
+        if sigma is not None:
+            # Eqs 11-16/11-17: half-width = multiplier * sigma_hat / sqrt(N_r)
+            half = (sigma_multiplier * float(sigma)) / np.sqrt(sizes)
+        else:
+            # Wd = S / c4(n), then half-width = (multiplier * Wd) / sqrt(n)
+            half = (sigma_multiplier * (np.asarray(sd) / _per_n(c4, sizes))) / np.sqrt(sizes)
         lpl, upl = np.asarray(mean) - half, np.asarray(mean) + half
 
     elif limits_type == 'S':
@@ -398,13 +436,13 @@ def calculate_limits_vectorized(
                 f'The limits calculation for {limits_type} requires (mean, and mR). '
                 f'Got: mean={mean}, mR={mR}'
             )
-        half = XMR_LIMIT_MULTIPLIER * np.asarray(mR)
+        half = XMR_LIMIT_MULTIPLIER * np.asarray(mR)  # 10-1 manual Eqs 12-10, 12-11
         lpl, upl = np.asarray(mean) - half, np.asarray(mean) + half
 
     elif limits_type == 'R':
         if mR is None:
             raise ValueError(f'The limits calculation for {limits_type} requires (mR). Got: mR={mR}')
-        upl = np.asarray(mR) * R_UPPER_LIMIT_MULTIPLIER
+        upl = np.asarray(mR) * R_UPPER_LIMIT_MULTIPLIER  # 10-1 manual Eq 12-5
         lpl = np.zeros_like(upl)
 
     else:
@@ -441,8 +479,8 @@ def calibrated_limits(
     sigma-scaled input that makes the existing formula emit the standards-given
     band:
 
-    - **Xbar** (location): inject ``sd = c4(N)·sigma`` → ``mean ± n_sigma·sigma/√N``
-      (the ``c4`` cancels); center ``= mean``.
+    - **Xbar** (location): ``mean ± n_sigma·sigma/√N``, computed directly (injecting
+      ``sd = c4(N)·sigma`` would cancel, but c4 is undefined for a one-reading subgroup); center ``= mean``.
     - **S** (dispersion): inject ``sd = c4(N)·sigma`` → ``b3·(c4·sigma) = B5·sigma``,
       ``b4·(c4·sigma) = B6·sigma``; center ``= c4(N)·sigma``.
     - **XmR** (X individuals, location): inject ``mR = D2_N2·sigma`` →
@@ -481,25 +519,24 @@ def calibrated_limits(
     if limits_type == 'Xbar':
         assert N is not None
         center = mean
-        lims = calculate_limits(
-            limits_type='Xbar', mean=mean, sd=c4(N) * sigma, N=N,
-            round_to=round_to, sigma_multiplier=n_sigma,
-        )
+        # mean ± n_sigma·sigma/√N directly: a one-reading subgroup (N = 1) has no c4 to cancel
+        half = n_sigma * sigma / math.sqrt(N)
+        lims = pd.Series({'lpl': mean - half, 'upl': mean + half}, index=['lpl', 'upl'])
     elif limits_type == 'S':
         assert N is not None
-        center = c4(N) * sigma
+        center = c4(N) * sigma  # E(S) = alpha_N·sigma (10-1 manual Eq 10-12)
         lims = calculate_limits(
             limits_type='S', mean=0, sd=c4(N) * sigma, N=N,
             round_to=round_to, sigma_multiplier=n_sigma,
         )
     elif limits_type == 'XmR':
-        center = mean
+        center = mean  # mean ± 3·sigma (10-1 manual Eq 12-6)
         lims = calculate_limits(
             limits_type='XmR', mean=mean, sd=0, N=0, mR=D2_N2 * sigma,
             round_to=round_to,
         )
     elif limits_type == 'R':
-        center = D2_N2 * sigma
+        center = D2_N2 * sigma  # E(R) = d2·sigma; limits 0 … D4·d2·sigma (10-1 manual Eqs 12-2, 12-3)
         lims = calculate_limits(
             limits_type='R', mean=0, sd=0, N=0, mR=D2_N2 * sigma,
             round_to=round_to,
@@ -659,7 +696,7 @@ def suggest_chart_name(name: str) -> str:
 # labelled "Noise / Unexplained variation", which is R2's meaning, in a table that
 # also mapped `within_cell` to R2 and so contradicted itself.
 RESIDUAL_LABELS: dict[str, str] = {
-    # Bishop 13.1, "Centering the Original PM Data at 0": R1 = Y_ktn - Ybar.., the
+    # 10-1 manual Eq 14-2 (centring the original PM data at 0): R1 = Y_ktn - Ybar.., the
     # response re-expressed as +/- about zero. Not a within-subgroup quantity.
     'R1': 'Response Centered at 0',
     'R2': 'Within-Cell',

@@ -1,8 +1,11 @@
 """
-VAS (Variance Analysis System) residual calculations for process behavior analysis.
+VAS (Variation Analysis System) residual calculations for process behavior analysis.
 
 This module calculates the Bishop VAS residuals (R1-R5) that decompose
-total variation into interpretable components:
+total variation into interpretable components. They estimate the terms of the
+re-parameterized VAS model Y_ktn = mu + rho_k + tau_t + rhotau_kt + e'_ktn
+(10-1 manual Eq 10-3), with the means estimated as unweighted means of the cell
+means (Eq 10-10; on an incomplete grid, SDS 4-6, over the cells present):
 
 - R1: Total deviation from grand mean (pure algebra)
 - R2: Within-cell (unexplained) variation (structure-dependent)
@@ -10,11 +13,15 @@ total variation into interpretable components:
 - R4: Time effects + unexplained (pure algebra given R2)
 - R5: Factor effects + unexplained (pure algebra given R2)
 
-R2 is the ONLY residual whose calculation varies by structure:
-- exact (state 1): R2 = Y - Ȳ_kt (Eq 59), when all cells have n >= 2
-- ma2 (states 2 & 3): R2 = (Y_j - Y_{j-1}) / 2 (Eq 13.8-13.9),
-  when any cell has n = 1 — applied to ALL observations across the
-  entire sorted stream, no grouping
+R2 is the ONLY residual whose calculation varies by structure (equation numbers
+are Bishop's 10-1 manual):
+- exact (ADS 1): R2 = Y - Ȳ_kt (Eq 14-3, the error estimate of Eq 10-11), when every cell has n >= 2
+- ma2 (ADS 2 & 3): when any cell has n = 1. The data are first stripped of the
+  process mean and the condition and period effects, Z = Y - Ȳ_k - Ȳ_t + Ȳ
+  (Eq 14-4 / 14-9). Z is then differenced along the condition-then-time stream
+  and divided by twice the R2 scale factor c(K, M), which puts it back on the
+  noise scale: R2_j = (Z_j - Z_{j-1}) / (2c) (Eqs 14-5..14-8 / 14-10..14-13).
+  "ma2" names Bishop's size-2 moving average of Z; R2_j = Z_j minus that average.
 
 All other residuals (R1, R3, R4, R5) are pure algebraic transformations
 that don't depend on structure once the means are defined.
@@ -24,7 +31,7 @@ Module structure:
   calculate_time_means, calculate_cell_means
 - Pure residual functions: calculate_r1_residual, calculate_r3_residual,
   calculate_r4_residual, calculate_r5_residual
-- Consolidated R2: calculate_r2(df, y, r2_method, n_per_cell)
+- Consolidated R2: r2_scale_factor(K, M), calculate_r2(df, y, r2_method, n_conditions=K)
 - Orchestration: calculate_vas_residuals(df, spec, r2_method, ...)
 - Request residuals: resolve_r6_groupby, calculate_r6_residuals — R6/RCR6 are
   computed per execute() request from that request's by=, never stored on the
@@ -34,6 +41,7 @@ Module structure:
 from __future__ import annotations
 
 import logging
+import math
 from collections.abc import Sequence
 from typing import TYPE_CHECKING
 
@@ -154,7 +162,7 @@ def calculate_time_means(df: pd.DataFrame, response_var: str, time_var: str) -> 
 
 def calculate_cell_means(df: pd.DataFrame, response_var: str, rsg_var_name: str, time_var: str) -> pd.Series:
     """
-    Calculate cell means (Ȳ_kt) - average for each (factor × time) cell.
+    Calculate cell means (Ȳ_kt) - average for each (factor × time) cell (10-1 manual Eq 10-8).
 
     Broadcasts the mean for each cell to all rows in that cell.
 
@@ -200,7 +208,7 @@ def calculate_r1_residual(df: pd.DataFrame, response_var: str, grand_mean: float
     """
     Calculate R1 residual: total deviation from grand mean.
 
-    R1 = Y - Ȳ  (Bishop Equation 56)
+    R1 = Y - Ȳ  (10-1 manual Eq 14-2)
 
     R1 represents the total variation of each observation around the
     overall average. It's the foundation for all other residuals.
@@ -240,7 +248,7 @@ def calculate_r3_residual(
     """
     Calculate R3 residual: interaction effects (factor × time).
 
-    R3 = Y - Ȳ_k - Ȳ_t + Ȳ  (Bishop Equation 66)
+    R3 = Y - Ȳ_k - Ȳ_t + Ȳ  (10-1 manual Eq 14-14, interaction part)
 
     R3 captures the interaction between factors and time. It represents
     variation that can't be explained by factor effects or time effects alone.
@@ -277,7 +285,7 @@ def calculate_r4_residual(time_means: pd.Series, grand_mean: float, r2: pd.Serie
     """
     Calculate R4 residual: time effects + unexplained.
 
-    R4 = Ȳ_t - Ȳ + R2  (Bishop Equation 72)
+    R4 = Ȳ_t - Ȳ + R2  (10-1 manual Eq 14-16)
 
     R4 represents time effects plus within-cell variation. Used to
     assess if time contributes meaningful variation.
@@ -303,7 +311,7 @@ def calculate_r5_residual(factor_means: pd.Series, grand_mean: float, r2: pd.Ser
     """
     Calculate R5 residual: factor effects + unexplained.
 
-    R5 = Ȳ_k - Ȳ + R2  (Bishop Equation 75)
+    R5 = Ȳ_k - Ȳ + R2  (10-1 manual Eq 14-19)
 
     R5 represents factor effects plus within-cell variation. Used to
     assess if factors contribute meaningful variation and to calculate
@@ -331,53 +339,100 @@ def calculate_r5_residual(factor_means: pd.Series, grand_mean: float, r2: pd.Ser
 # ============================================================================
 
 
-def calculate_r2(df: pd.DataFrame, y: str, r2_method: R2Method, n_per_cell: pd.Series | None = None) -> pd.Series:
+def r2_scale_factor(n_conditions: int, n_observations: int) -> float:
     """
-    Calculate R2 residual using the specified method.
+    R2 scale factor c(K, M) for the singleton design states.
 
-    R2 is the ONLY structure-dependent residual. The method is determined by
-    observed cell sizes (via SDSRegistry.get_r2_method()):
+    Bishop's 10-1 manual Eq 14-8 (SDS 2, where M = KT) and Eq 14-13 (SDS 3, 5, 6)::
 
-    - exact (ADS 1): R2 = Y - Ȳ_kt (Eq 59), every cell has n >= 2
-    - ma2 (ADS 2 and 3): R2 = (Y_j - Y_{j-1}) / 2 (Eq 13.7-13.9),
-      any cell has n = 1
+        c(K, M) = sqrt( (K - 1) / (2K) * (1 - K / (M - 1)) )
 
-    When any cell has n=1, MA2 is applied to ALL observations across the
-    entire canonical-sorted stream — no grouping by rsg_key, no per-cell
-    selection between exact and MA2. Bishop Eq 13.7-13.9 specify j=2,...,J
-    with no grouping; only j=1 has no value.
+    The R2 scale factor is computed from the layout, not looked up: K is the
+    number of process design conditions present and M is the number of
+    observations in the full analysis frame (never a subset). Dividing the
+    differenced interaction series by 2c puts R2 back on the noise scale.
+
+    Parameters
+    ----------
+    n_conditions : int
+        K, the number of process design conditions (rsg levels) present.
+    n_observations : int
+        M, the number of observations in the analysis frame.
+
+    Returns
+    -------
+    float
+        c(K, M), or NaN where the formula is undefined (K < 2 or M < K + 2).
+        Never raises: an undefined factor means R2 is unavailable, not an error.
+    """
+    if n_conditions < 2 or n_observations < n_conditions + 2:
+        return float('nan')
+    return math.sqrt((n_conditions - 1) / (2 * n_conditions) * (1 - n_conditions / (n_observations - 1)))
+
+
+def calculate_r2(
+    df: pd.DataFrame,
+    y: str,
+    r2_method: R2Method,
+    *,
+    n_conditions: int | None = None,
+) -> pd.Series:
+    """
+    Calculate the R2 residual by the method the analytical design state selects.
+
+    R2 is the ONLY structure-dependent residual. ``r2_method`` comes from
+    ``SDSRegistry.get_r2_method()`` (exact iff every cell has n >= 2) and drives
+    the branch; equation numbers are Bishop's 10-1 manual.
+
+    - ``'exact'`` (ADS 1): R2 = Y - Ȳ_kt (Eq 14-3).
+    - ``'ma2'`` (ADS 2 and 3): Z = Y - Ȳ_k - Ȳ_t + Ȳ (Eq 14-4 / 14-9), using the
+      unweighted cell-mean averages already on the frame, so the process mean and
+      the condition and period effects are removed before anything is differenced.
+      In the canonical condition-then-time order (``sort_key``),
+      R2_j = (Z_j - Z_{j-1}) / (2 c(K, M)) for j >= 2 (Eqs 14-5..14-8 /
+      14-10..14-13). The stream runs across condition boundaries with no grouping;
+      only the first observation has no value (NaN). Because Z carries no condition
+      or period effect, the step from one condition's last period to the next
+      condition's first period no longer carries a level difference.
+
+    When the R2 scale factor is undefined for the layout (fewer than two
+    conditions, or too few observations), R2 is all NaN: unavailable, never ±inf.
 
     Parameters
     ----------
     df : pd.DataFrame
-        Input data with 'cell_key', 'sort_key', 'Ybar_kt' columns
+        The full analysis frame, with ``sort_key``, ``Ybar_kt`` and, for ``'ma2'``,
+        ``Ybar``, ``Ybar_k`` and ``Ybar_t``. M is ``len(df)``, so never pass a subset.
     y : str
-        Name of response variable
+        Name of response variable.
     r2_method : R2Method
-        'exact' or 'ma2', as chosen by SDSRegistry.get_r2_method(). Kept for
-        callers and logging; the branch below re-derives it from n_per_cell so
-        the two can never disagree.
-    n_per_cell : pd.Series, optional
-        Pre-computed observations per cell. Pass from ADS to avoid recomputation.
+        ``'exact'`` or ``'ma2'``.
+    n_conditions : int, optional
+        K, the number of process design conditions present. Required for ``'ma2'``.
 
     Returns
     -------
     pd.Series
-        R2 residuals with name="R2"
+        R2 residuals with name="R2", aligned to ``df.index``.
     """
-    if n_per_cell is None:
-        n_per_cell = df.groupby('cell_key', observed=True)[y].transform('size')
-
-    # State 1: all cells replicated → exact (Eq 59)
-    if (n_per_cell >= 2).all():
+    if r2_method == 'exact':
         return pd.Series(df[y] - df['Ybar_kt'], index=df.index, name='R2')
 
-    # States 2 & 3: any singletons → MA2 for ALL observations (Eq 13.8-13.9)
-    # MA2 runs across the entire canonical-sorted stream — no grouping.
-    # j=1 has no predecessor → R2 is NaN (Bishop leaves it blank).
+    if n_conditions is None:
+        raise RuntimeError("R2 method 'ma2' needs n_conditions (K) for the R2 scale factor")
+
     df_sorted = df.sort_values('sort_key')
-    y_sorted = df_sorted[y]
-    r2 = (y_sorted - y_sorted.shift(1)) / 2
+    z = df_sorted[y] - df_sorted['Ybar_k'] - df_sorted['Ybar_t'] + df_sorted['Ybar']
+    c = r2_scale_factor(n_conditions, len(df_sorted))
+    if math.isnan(c):
+        logger.debug(
+            'R2 scale factor undefined for K=%d conditions and M=%d observations; R2 is unavailable.',
+            n_conditions,
+            len(df_sorted),
+        )
+        r2 = pd.Series(float('nan'), index=df_sorted.index)
+    else:
+        r2 = (z - z.shift(1)) / (2 * c)
     return pd.Series(r2.loc[df.index], index=df.index, name='R2')
 
 
@@ -460,7 +515,7 @@ def calculate_vas_residuals(
 
     # Step 2: Derive marginal means from cell means (unweighted means analysis)
     # Bishop VAS uses mean of cell means, giving each experimental
-    # condition equal weight regardless of sample size within cells.
+    # condition equal weight regardless of sample size within cells (10-1 manual Eq 10-10).
     cell_means_unique = out.groupby([spec.rsg_var_name, spec.time_var], observed=True)['Ybar_kt'].first()
 
     grand_mean = cell_means_unique.mean()
@@ -478,13 +533,18 @@ def calculate_vas_residuals(
 
     # Step 4: Calculate R2 (structure-dependent)
     logger.debug(f'Calculating R2 residual (method: {r2_method})')
-    out['R2'] = calculate_r2(out, y, r2_method, n_per_cell=n_per_cell)
+    if r2_method == 'exact':
+        if n_per_cell is None:
+            n_per_cell = out.groupby('cell_key', observed=True)[y].transform('size')
+        if (n_per_cell < 2).any():
+            raise RuntimeError("R2 method 'exact' requires every cell to have n >= 2")
+    out['R2'] = calculate_r2(out, y, r2_method, n_conditions=int(out[spec.rsg_var_name].nunique()))
 
-    # Step 5: Calculate R3 (interaction effects)
+    # Step 5: Calculate R3 (interaction effects), Eq 14-14
     # Unified formula: Ybar_kt - Ybar_k - Ybar_t + Ybar + R2
-    # For exact (state 1): R2 = Y - Ybar_kt, so this simplifies to
-    #   Y - Ybar_k - Ybar_t + Ybar (algebraically identical to old formula).
-    # For MA2 (states 2-3): adds R2 to each row per Bishop.
+    # For exact (ADS 1): R2 = Y - Ybar_kt, so this simplifies to
+    #   Y - Ybar_k - Ybar_t + Ybar.
+    # For ma2 (ADS 2-3): the interaction estimate plus R2, per Bishop.
     logger.debug('Calculating R3 residual')
     out['R3'] = out['Ybar_kt'] - out['Ybar_k'] - out['Ybar_t'] + grand_mean + out['R2']
 
@@ -550,13 +610,18 @@ def resolve_r6_groupby(by: Sequence[str] | None, factors: Sequence[str]) -> str 
 def calculate_r6_residuals(df: pd.DataFrame, groupby_key: str | list[str], recentered: bool) -> pd.DataFrame:
     """Return a new frame carrying R6 (and RCR6 when recentered). Never mutates ``df``.
 
-    R6 = α_i + R2 where α_i = mean(R5 | factor level(s)).
+    R6 = α_i + R2, where α_i is the factor-level effect: the condition effects ρ̂_k = R5 - R2
+    averaged over the level's rows (10-1 manual Eqs 14-19, 14-24, 14-25).
 
-    Bit-identity constraints — this math moved verbatim from the old
-    ``Study._compute_r6`` and must keep producing identical floats:
+    The manual writes α_i as the level's mean of R5 (Eq 14-24, "≈ α_i"). R5 = ρ̂_k + R2, so
+    that mean also carries the level's average R2, which VAS leaves out: Tom's Medicare run
+    (10/3/2026, slide 52) centres the organisation-effects chart at 10831.1, the effect
+    without it, where the mean of R5 gives 10829.8. On ADS 1, R2 averages to zero inside
+    each cell, so the two agree; on ADS 2/3 they differ by the level's mean R2, which only
+    shows when levels are small.
 
     - ``groupby`` keeps its default kwargs (no ``observed=``, no ``dropna=``) to
-      preserve row alignment and values exactly.
+      preserve row alignment.
     - RCR6 is ``Ybar + alpha + R2`` evaluated left-to-right. Do not rewrite it as
       ``Ybar + R6``: float addition is non-associative, so the two differ in the
       last ulp.
@@ -565,7 +630,8 @@ def calculate_r6_residuals(df: pd.DataFrame, groupby_key: str | list[str], recen
     plain R6 column (``_resolve_mr_source_column('RCR6') == 'R6'``).
     """
     df = df.copy()
-    alpha = df.groupby(groupby_key)['R5'].transform('mean')
+    # ρ̂_k = R5 - R2 on the rows R5 exists (same rows and weighting as the mean of R5)
+    alpha = df.assign(_rho=df['R5'] - df['R2']).groupby(groupby_key)['_rho'].transform('mean')
 
     df['R6'] = alpha + df['R2']
     if recentered:

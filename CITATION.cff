@@ -1,8 +1,8 @@
 cff-version: 1.2.0
 message: "If you use processbehavior in your research, please cite it as below."
-title: "processbehavior: Process Behavior Charts and Variance Analysis for Python"
+title: "processbehavior: Process Behavior Charts and Variation Analysis for Python"
 abstract: >-
-  A Python implementation of Thomas A. Bishop's Variance Analysis System (VAS):
+  A Python implementation of Thomas A. Bishop's Variation Analysis System (VAS):
   three-state design-state lineage detection (planned / observed / analytical),
   process behavior charts, R1-R6 residual variance decomposition, capability
   indices, and Taguchi loss functions. Analytical outputs are validated
@@ -21,7 +21,7 @@ version: 0.2.0
 keywords:
   - statistical process control
   - process behavior charts
-  - variance analysis
+  - variation analysis
   - control charts
   - quality control
   - shewhart
@@ -31,7 +31,7 @@ references:
   - type: book
     title: "The Scientific Basis for Modern Analytic Practice"
     abstract: >-
-      The methodological foundation for the Variance Analysis System this
+      The methodological foundation for the Variation Analysis System this
       package implements: applied-research foundations, scientific methodology,
       Shewhart's inductive analytic approach and process behavior charts,
       operational definitions and research protocols, and case studies.

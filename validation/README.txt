@@ -7,12 +7,24 @@ What lives here and why
   FACTOR 1 x FACTOR 2 x 100 time periods; response columns PM SDS 1-6 and
   PM INERT, each structured to exercise one observed design state). Ground
   truth for the CI validation gate (e2e_bishop_report.py) and the
-  Bishop Reference Validation tutorial.
+  Bishop Reference Validation tutorial. PM INERT is pure noise (sd 1); the
+  gate also runs it with each PM SDS k missing-data pattern (k = 2..6), as
+  Tom's VAS runs of PM INERT SDS 2-6 do.
+- PBTESTKNOWNEFFECTS_T100.csv - Tom Bishop's known-effects database (same
+  layout and six missing-data patterns, columns PM SDS 1-6 KNOWN). Built as
+  300 + condition effect (11:-1, 12:1, 21:-1, 22:1, 31:-3, 32:-1, 41:-1,
+  42:1) + a linear time trend from -2 to 2 + a +/-2 condition x time
+  interaction (blocks of 25 periods, phase 2 the mirror image of phase 1) +
+  normal noise with sd 3. Specs LSL 295 / target 300 / USL 305. Shared by
+  Tom Bishop (October 2026) for validation.
 - PBTESTDATABASE_T20.csv - the 20-period variant, consumed by
   e2e_T20_report.py.
-- e2e_bishop_report.py - runs the full 280-assertion check of computed
-  results against Bishop's Minitab numbers; executed in CI and regenerates
-  docs/reference/validation.md (drift-guarded there). Writes
+- e2e_bishop_report.py - checks computed results against Tom Bishop's VAS
+  (Minitab) runs, value by value, for every run in RUNS: PM SDS 1-6, PM INERT
+  SDS 1-6, the known-effects SDS 1 run and the Medicare ACO run. Each run's reference values, specs
+  and target are in tests/fixtures/bishop_analyses/<run>.json, read from the
+  VAS decks (the decks themselves are not in the repo). Executed in CI;
+  regenerates docs/reference/validation.md (drift-guarded there). Writes
   e2e_bishop_report.html locally (untracked).
 - e2e_T20_report.py - the same idea against the T20 database.
 - effects_visualization.ipynb - effects-chart exploration against the
@@ -27,7 +39,8 @@ What lives here and why
 - aco_per_capita_expenditure.csv - the synthetic 24-organisation x 4-year
   dataset (96 rows, ADS 2) built with Tom Bishop for GitHub issue #114, from
   the reporter's description of Medicare shared-savings series. Input for
-  mr_permutation_invariance.py.
+  mr_permutation_invariance.py and the Medicare run of the e2e gate (Tom's
+  VAS run of 10/3/2026; specs LSL 6000 / target 11000 / USL 16000).
 - short_series_sampling.py, short_series_bands.py - contributed by the #114
   reporter (PR #119). Self-contained: regenerate the limit-width-vs-T table
   and the sampling distribution of MRbar/d2 for n = 3..30 under a stable

@@ -131,7 +131,7 @@ def test_b3_b4_raises_on_invalid_n(func):
 
 
 class TestMovingRangeConstants:
-    """The XmR and mR constants follow Bishop's VAS manual (Eq 12.4, 12.5, 12.10, 12.11)
+    """The XmR and mR constants follow Bishop's VAS manual (10-1 manual Eqs 12-4, 12-5, 12-10, 12-11)
     and are computed from d2 = 1.128 and d3 = 0.8525 without rounding, as VAS does."""
 
     def test_building_blocks_are_the_manuals(self):

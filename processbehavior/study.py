@@ -64,6 +64,10 @@ MAX_COMBO_DISPLAY = 100
 # Chart names have an equivalent in spc_constants.VALID_BASE_CHARTS, imported above.
 RESIDUAL_CODES = ALL_RESIDUALS
 
+# Residuals that carry R2 (R3-R6 are an effect plus R2). When the layout leaves R2 undefined
+# (AnalysisDataSet.r2_unavailable_reason) every one of them is unavailable.
+_R2_FAMILY = frozenset({'R2', 'R3', 'R4', 'R5', 'R6'})
+
 
 def _base_residual_code(value: str) -> str:
     """'RCR5' -> 'R5', 'r2' -> 'R2'. Recentring does not change which chart a residual pairs with."""
@@ -1038,7 +1042,7 @@ class Study:
         - rsg: Rational subgroup identifier
         - Ybar, Ybar_k, Ybar_t, Ybar_kt: Hierarchical means
         - R1-R5: VAS residuals (where applicable for the SDS)
-        - RCR1-RCR5: Re-centered residuals (Y reconstructed from components)
+        - RCR1-RCR5: Re-centred residuals, R + Ybar (10-1 manual Eq 14-26; RCR2 = Ybar_kt + R2)
 
         Returns a copy to preserve immutability. The frame itself is immutable
         after formulate() — execute() never adds columns to it; request
@@ -1233,10 +1237,11 @@ class Study:
         ads_cols = set(self._ads.analysis_dataset.columns)
         # R6 is computed on-the-fly from R5+R2, so check prerequisites instead of column
         r6_available = {'R5', 'R2'}.issubset(ads_cols)
+        r2_ok = self._ads.r2_unavailable_reason is None
         return [
             (chart, value)
             for chart, value in self._plan.residual_charts
-            if value in ads_cols or (value == 'R6' and r6_available)
+            if (value in ads_cols or (value == 'R6' and r6_available)) and (r2_ok or value not in _R2_FAMILY)
         ]
 
     @property
@@ -1292,6 +1297,8 @@ class Study:
         available = sorted(r for r in ('R1', 'R2', 'R3', 'R4', 'R5') if r in ads_cols)
         if self._spec.rsg_vars_list and 'R5' in ads_cols:
             available.append('R6')
+        if self._ads.r2_unavailable_reason is not None:
+            available = [r for r in available if r not in _R2_FAMILY]
         return StudyResidualAccessor(available)
 
     @property
@@ -1310,7 +1317,7 @@ class Study:
         import pandas as pd
 
         ads_cols = set(self._ads.analysis_dataset.columns)
-        vas_available = 'R2' in ads_cols
+        vas_available = 'R2' in ads_cols and self._ads.r2_unavailable_reason is None
 
         rows = [
             {
@@ -2363,6 +2370,9 @@ class Study:
         """
         base_residual = _base_residual_code(value)
 
+        if base_residual in _R2_FAMILY and self._ads.r2_unavailable_reason is not None:
+            return self._ads.r2_unavailable_reason
+
         if base_chart in ('Histogram', 'mR'):
             return None
 
@@ -2381,8 +2391,8 @@ class Study:
         if not needs_residuals:
             raise ValidationError(
                 'recentered=True requires VAS decomposition (factors + time). '
-                'Recentered residuals (RCR) reconstruct values relative to '
-                'factor and time means, which require both to be specified.'
+                'Recentered residuals (RCR) are the VAS residuals moved onto the '
+                'measurement scale (R + grand mean), which needs both to be specified.'
             )
         recenterable = set(RESIDUAL_CODES)
         if value is None:

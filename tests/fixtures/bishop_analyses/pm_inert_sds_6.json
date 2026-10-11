@@ -1,0 +1,1112 @@
+{
+  "run": "pm_inert_sds_6",
+  "label": "PM INERT SDS 6",
+  "analytic_design_state": 3,
+  "specs": {
+    "lsl": -3,
+    "usl": 3,
+    "target": 0
+  },
+  "source_file": "PM6 INERT.pptm (VAS run of 10/3/2026, 10-1 manual)",
+  "extraction_method": "Values read from the text drawn in the Minitab charts of the VAS deck (displayed precision); page structure and null pattern from the PM SDS reference for the same ADS.",
+  "pages_extracted": 34,
+  "capability": {
+    "pp": 1.01,
+    "ppk_upper": 1.01,
+    "ppk_lower": 1.01,
+    "pct_below_lsl": 0.1,
+    "pct_above_usl": 0.1,
+    "cp": 0.95,
+    "cpk_upper": 0.95,
+    "cpk_lower": 0.94,
+    "potential_pct_below_lsl": 0.3,
+    "potential_pct_above_usl": 0.3
+  },
+  "loss": {
+    "pct_unexplained": 93.5,
+    "pct_time": 6.0,
+    "pct_pdc": 0.5,
+    "pct_centering": 0.0,
+    "pct_interaction": 0.0,
+    "pct_pdc_f1": 0.2,
+    "pct_pdc_factor_interaction": 0.2,
+    "pct_pdc_f2": 0.0
+  },
+  "items": [
+    {
+      "page_number": 1,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "Analysis of PM Sample Averages",
+      "chart_subtitle": "PM INERT SDS 6",
+      "context_subtitle": null,
+      "variable": "RSG AVG",
+      "CL": -0.01,
+      "LBL": null,
+      "UBL": null,
+      "axis_labels": {
+        "x": "PDCxPT RSG",
+        "y": "Sample Average"
+      },
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 3: N=1 AND N>1 COMPLETE"
+      },
+      "notes": null,
+      "drawn_limits": {
+        "unit": 0.0284,
+        "levels": [
+          -2.9128,
+          -2.0609,
+          -1.6917,
+          -1.4645,
+          -1.3225,
+          1.2901,
+          1.4604,
+          1.6876,
+          2.0568,
+          2.9087
+        ],
+        "LBL": "0213112202121033341102021131400112223221022332231112112021223231102321101012213321113124000321122201222230322332110422021422123321410320212021120023010231313032322131023332221313221022112221031202212011222131302221034233114303422001013232302231212211032222202204303001001312312212000121110220231041121013131231323013330202142222013210111310142301212421021414312232113020312121211122301212211330431110323442231310222122231303021412122101100200231032111213210310023420223111232220313221202230112322011112210223200332100030232211222402232230023111211011122210212121024121211122011123302130021022221203113221111131001112130122322111113132232002112123112320144331001122122012221213111012221011313314110121210103113001110220213211022020330111121123112222221031103223011011102333",
+        "UBL": "9786887797878966658897978868599887776778977667768887887978776768897678898987786678886875999678877798777769677667889577978577876678589679787978879976989768686967677868976667778686778977887778968797787988777868697778965766885696577998986767697768787788967777797795696998998687687787999878889779768958878986868768676986669797857777986789888689857698787578978585687767886979687878788877698787788669568889676557768689777877768696978587877898899799768967888786789689976579776888767779686778797769887677988887789776799667899969767788777597767769976888788988877789787878975878788877988876697869978977778796886778888868998887869877677888886867767997887876887679855668998877877987778786888987778988686685889878789896886998889779786788977979669888878876887777778968896776988988897666"
+      }
+    },
+    {
+      "page_number": 2,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "Analysis of PM Sample Standard Deviations",
+      "chart_subtitle": "PM INERT SDS 6",
+      "context_subtitle": null,
+      "variable": "RSG STDEV",
+      "CL": 0.84,
+      "LBL": null,
+      "UBL": null,
+      "axis_labels": {
+        "x": "PDCxPT RSG",
+        "y": "Sample Standard Deviation"
+      },
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 3: N=1 AND N>1 COMPLETE"
+      },
+      "notes": null,
+      "drawn_limits": {
+        "unit": 0.01677,
+        "levels": [
+          -0.0028,
+          1.7584,
+          1.9093,
+          2.1609,
+          2.7312
+        ],
+        "LBL": "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+        "UBL": "342443334342221443344241443332334332233244434433433232443234444334223444243123443334333322332234413334133432234142334334433243242422323342432223334242334334433342433343443334242333421322441221334423232332434334423333333122442432433434344433324144344242432423242223341333342344442441324343134341412433234423243434344433243433442212444232113324243334333242234143433444332423444342342432133324443233324233433324432334444334332322342323344333133233232444344444333434343431434344433444322342343333432442334444424444342433233444442423323344343244323411224443343343334342444433344424224144434344244244433342344333224444344324433333342442332444443222"
+      }
+    },
+    {
+      "page_number": 3,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "Analysis of PM Sample Averages",
+      "chart_subtitle": "PM INERT SDS 6",
+      "context_subtitle": "PDC RSG - 1-1",
+      "variable": "RSG AVG",
+      "CL": 0.02,
+      "LBL": null,
+      "UBL": null,
+      "axis_labels": {
+        "x": "PT RSG",
+        "y": "Sample Average"
+      },
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 3: N=1 AND N>1 COMPLETE"
+      },
+      "notes": null,
+      "drawn_limits": {
+        "unit": 0.02875,
+        "levels": [
+          -2.9199,
+          -2.0575,
+          -1.6838,
+          -1.4538,
+          -1.2813,
+          1.3347,
+          1.5072,
+          1.7372,
+          2.1109,
+          2.9733
+        ],
+        "LBL": "021311220212103334110202113140011222322102233223111211202122323110232110101221332111312400032112",
+        "UBL": "978688779787896665889797886859988777677897766776888788797877676889767889898778667888687599967887"
+      }
+    },
+    {
+      "page_number": 4,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "Analysis of PM Sample Standard Deviations",
+      "chart_subtitle": "PM INERT SDS 6",
+      "context_subtitle": "PDC RSG - 1-1",
+      "variable": "RSG STDEV",
+      "CL": 0.85,
+      "LBL": null,
+      "UBL": null,
+      "axis_labels": {
+        "x": "PT RSG",
+        "y": "Sample Standard Deviation"
+      },
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 3: N=1 AND N>1 COMPLETE"
+      },
+      "notes": null,
+      "drawn_limits": {
+        "unit": 0.01483,
+        "levels": [
+          0.0042,
+          1.7691,
+          1.9174,
+          2.1695,
+          2.7627
+        ],
+        "LBL": "000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+        "UBL": "342443334342221443344241443332334332233244434433433232443234444334223444243123443"
+      }
+    },
+    {
+      "page_number": 5,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "Analysis of PM Sample Averages",
+      "chart_subtitle": "PM INERT SDS 6",
+      "context_subtitle": "PDC RSG - 1-2",
+      "variable": "RSG AVG",
+      "CL": 0.14,
+      "LBL": null,
+      "UBL": null,
+      "axis_labels": {
+        "x": "PT RSG",
+        "y": "Sample Average"
+      },
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 3: N=1 AND N>1 COMPLETE"
+      },
+      "notes": null,
+      "drawn_limits": {
+        "unit": 0.02803,
+        "levels": [
+          -2.7107,
+          -1.8699,
+          -1.5055,
+          -1.2813,
+          -1.1411,
+          1.4094,
+          1.5776,
+          1.7738,
+          2.1662,
+          2.979
+        ],
+        "LBL": "22012222303223321104220214221233214103202120211200230102313130323221310233322213132210221122210",
+        "UBL": "77987777696776678895779785778766785896797879788799769897686869676778689766677786867789778877789"
+      }
+    },
+    {
+      "page_number": 6,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "Analysis of PM Sample Standard Deviations",
+      "chart_subtitle": "PM INERT SDS 6",
+      "context_subtitle": "PDC RSG - 1-2",
+      "variable": "RSG STDEV",
+      "CL": 0.83,
+      "LBL": null,
+      "UBL": null,
+      "axis_labels": {
+        "x": "PT RSG",
+        "y": "Sample Standard Deviation"
+      },
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 3: N=1 AND N>1 COMPLETE"
+      },
+      "notes": null,
+      "drawn_limits": {
+        "unit": 0.014,
+        "levels": [
+          0.0,
+          1.75,
+          1.89,
+          2.128,
+          2.716
+        ],
+        "LBL": "00000000000000000000000000000000000000000000000000000000000000000000000000000000",
+        "UBL": "33433332233223441333413343223414233433443324324242232334243222333424233433443334"
+      }
+    },
+    {
+      "page_number": 7,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "Analysis of PM Sample Averages",
+      "chart_subtitle": "PM INERT SDS 6",
+      "context_subtitle": "PDC RSG - 2-1",
+      "variable": "RSG AVG",
+      "CL": 0.01,
+      "LBL": null,
+      "UBL": null,
+      "axis_labels": {
+        "x": "PT RSG",
+        "y": "Sample Average"
+      },
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 3: N=1 AND N>1 COMPLETE"
+      },
+      "notes": null,
+      "drawn_limits": {
+        "unit": 0.0274,
+        "levels": [
+          -2.7867,
+          -1.9648,
+          -1.6086,
+          -1.3894,
+          -1.2524,
+          1.2681,
+          1.4325,
+          1.6517,
+          2.0078,
+          2.8297
+        ],
+        "LBL": "3120221201122213130222103423311430342200101323230223121221103222220220430300100131231221200012111",
+        "UBL": "6879778798877786869777896576688569657799898676769776878778896777779779569699899868768778799987888"
+      }
+    },
+    {
+      "page_number": 8,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "Analysis of PM Sample Standard Deviations",
+      "chart_subtitle": "PM INERT SDS 6",
+      "context_subtitle": "PDC RSG - 2-1",
+      "variable": "RSG STDEV",
+      "CL": 0.82,
+      "LBL": null,
+      "UBL": null,
+      "axis_labels": {
+        "x": "PT RSG",
+        "y": "Sample Standard Deviation"
+      },
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 3: N=1 AND N>1 COMPLETE"
+      },
+      "notes": null,
+      "drawn_limits": {
+        "unit": 0.014,
+        "levels": [
+          0.0,
+          1.722,
+          1.862,
+          2.114,
+          2.688
+        ],
+        "LBL": "00000000000000000000000000000000000000000000000000000000000000000000000000000",
+        "UBL": "24333434433342423334213224412213344232323324343344233333331224424324334343444"
+      }
+    },
+    {
+      "page_number": 9,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "Analysis of PM Sample Averages",
+      "chart_subtitle": "PM INERT SDS 6",
+      "context_subtitle": "PDC RSG - 2-2",
+      "variable": "RSG AVG",
+      "CL": -0.07,
+      "LBL": null,
+      "UBL": null,
+      "axis_labels": {
+        "x": "PT RSG",
+        "y": "Sample Average"
+      },
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 3: N=1 AND N>1 COMPLETE"
+      },
+      "notes": null,
+      "drawn_limits": {
+        "unit": 0.02857,
+        "levels": [
+          -3.0,
+          -2.1429,
+          -1.7714,
+          -1.5429,
+          -1.3714,
+          1.2286,
+          1.4,
+          1.6286,
+          2.0,
+          2.8571
+        ],
+        "LBL": "0220231041121013131231323013330202142222013210111310142301212421021414312232113020312121211122301",
+        "UBL": "9779768958878986868768676986669797857777986789888689857698787578978585687767886979687878788877698"
+      }
+    },
+    {
+      "page_number": 10,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "Analysis of PM Sample Standard Deviations",
+      "chart_subtitle": "PM INERT SDS 6",
+      "context_subtitle": "PDC RSG - 2-2",
+      "variable": "RSG STDEV",
+      "CL": 0.85,
+      "LBL": null,
+      "UBL": null,
+      "axis_labels": {
+        "x": "PT RSG",
+        "y": "Sample Standard Deviation"
+      },
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 3: N=1 AND N>1 COMPLETE"
+      },
+      "notes": null,
+      "drawn_limits": {
+        "unit": 0.01401,
+        "levels": [
+          -0.0035,
+          1.7763,
+          1.9164,
+          2.1687,
+          2.7573
+        ],
+        "LBL": "0000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+        "UBL": "3332414434424243242324222334133334234444244132434313434141243323442324343434443324"
+      }
+    },
+    {
+      "page_number": 11,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "Analysis of PM Sample Averages",
+      "chart_subtitle": "PM INERT SDS 6",
+      "context_subtitle": "PDC RSG - 3-1",
+      "variable": "RSG AVG",
+      "CL": 0.0,
+      "LBL": null,
+      "UBL": null,
+      "axis_labels": {
+        "x": "PT RSG",
+        "y": "Sample Average"
+      },
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 3: N=1 AND N>1 COMPLETE"
+      },
+      "notes": null,
+      "drawn_limits": {
+        "unit": 0.03591,
+        "levels": [
+          -3.1358,
+          -2.2023,
+          -1.8073,
+          -1.556,
+          -1.4123,
+          1.4243,
+          1.5679,
+          1.8193,
+          2.2142,
+          3.1478
+        ],
+        "LBL": "212211330431110323442231310222122231303021412122101100200231032111213210310023420223111232220313",
+        "UBL": "787788669568889676557768689777877768696978587877898899799768967888786789689976579776888767779686"
+      }
+    },
+    {
+      "page_number": 12,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "Analysis of PM Sample Standard Deviations",
+      "chart_subtitle": "PM INERT SDS 6",
+      "context_subtitle": "PDC RSG - 3-1",
+      "variable": "RSG STDEV",
+      "CL": 0.91,
+      "LBL": null,
+      "UBL": null,
+      "axis_labels": {
+        "x": "PT RSG",
+        "y": "Sample Standard Deviation"
+      },
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 3: N=1 AND N>1 COMPLETE"
+      },
+      "notes": null,
+      "drawn_limits": {
+        "unit": 0.01442,
+        "levels": [
+          0.0046,
+          1.8934,
+          2.0664,
+          2.326,
+          2.9604
+        ],
+        "LBL": "00000000000000000000000000000000000000000000000000000000000000000000000000000000",
+        "UBL": "34334422124442321133242433343332422341434334443324234443423424321333244432333242"
+      }
+    },
+    {
+      "page_number": 13,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "Analysis of PM Sample Averages",
+      "chart_subtitle": "PM INERT SDS 6",
+      "context_subtitle": "PDC RSG - 3-2",
+      "variable": "RSG AVG",
+      "CL": -0.14,
+      "LBL": null,
+      "UBL": null,
+      "axis_labels": {
+        "x": "PT RSG",
+        "y": "Sample Average"
+      },
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 3: N=1 AND N>1 COMPLETE"
+      },
+      "notes": null,
+      "drawn_limits": {
+        "unit": 0.02806,
+        "levels": [
+          -2.9739,
+          -2.1603,
+          -1.7675,
+          -1.5711,
+          -1.4028,
+          1.1503,
+          1.2906,
+          1.515,
+          1.8798,
+          2.7214
+        ],
+        "LBL": "22120223011232201111221022320033210003023221122240223223002311121101112221021212102412121112201112",
+        "UBL": "77879776988767798888778977679966789996976778877759776776997688878898887778978787897587878887798887"
+      }
+    },
+    {
+      "page_number": 14,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "Analysis of PM Sample Standard Deviations",
+      "chart_subtitle": "PM INERT SDS 6",
+      "context_subtitle": "PDC RSG - 3-2",
+      "variable": "RSG STDEV",
+      "CL": 0.82,
+      "LBL": null,
+      "UBL": null,
+      "axis_labels": {
+        "x": "PT RSG",
+        "y": "Sample Standard Deviation"
+      },
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 3: N=1 AND N>1 COMPLETE"
+      },
+      "notes": null,
+      "drawn_limits": {
+        "unit": 0.014,
+        "levels": [
+          0.0,
+          1.708,
+          1.848,
+          2.1,
+          2.674
+        ],
+        "LBL": "000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+        "UBL": "334333244323344443343323223423233443331332332324443444443334343434314343444334443"
+      }
+    },
+    {
+      "page_number": 15,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "Analysis of PM Sample Averages",
+      "chart_subtitle": "PM INERT SDS 6",
+      "context_subtitle": "PDC RSG - 4-1",
+      "variable": "RSG AVG",
+      "CL": -0.04,
+      "LBL": null,
+      "UBL": null,
+      "axis_labels": {
+        "x": "PT RSG",
+        "y": "Sample Average"
+      },
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 3: N=1 AND N>1 COMPLETE"
+      },
+      "notes": null,
+      "drawn_limits": {
+        "unit": 0.02718,
+        "levels": [
+          -2.7883,
+          -1.9728,
+          -1.6194,
+          -1.4019,
+          -1.266,
+          1.2078,
+          1.3437,
+          1.5612,
+          1.9146,
+          2.7301
+        ],
+        "LBL": "330213002102222120311322111113100111213012232211111313223200211212311232014433100112212201222121",
+        "UBL": "669786997897777879688677888886899888786987767788888686776799788787688767985566899887787798777878"
+      }
+    },
+    {
+      "page_number": 16,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "Analysis of PM Sample Standard Deviations",
+      "chart_subtitle": "PM INERT SDS 6",
+      "context_subtitle": "PDC RSG - 4-1",
+      "variable": "RSG STDEV",
+      "CL": 0.78,
+      "LBL": null,
+      "UBL": null,
+      "axis_labels": {
+        "x": "PT RSG",
+        "y": "Sample Standard Deviation"
+      },
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 3: N=1 AND N>1 COMPLETE"
+      },
+      "notes": null,
+      "drawn_limits": {
+        "unit": 0.01677,
+        "levels": [
+          -0.0028,
+          1.641,
+          1.7752,
+          2.0268,
+          2.5635
+        ],
+        "LBL": "0000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+        "UBL": "2234234333343244233444442444434243323344444242332334434324432341122444334334333434"
+      }
+    },
+    {
+      "page_number": 17,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "Analysis of PM Sample Averages",
+      "chart_subtitle": "PM INERT SDS 6",
+      "context_subtitle": "PDC RSG - 4-2",
+      "variable": "RSG AVG",
+      "CL": 0.01,
+      "LBL": null,
+      "UBL": null,
+      "axis_labels": {
+        "x": "PT RSG",
+        "y": "Sample Average"
+      },
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 3: N=1 AND N>1 COMPLETE"
+      },
+      "notes": null,
+      "drawn_limits": {
+        "unit": 0.02887,
+        "levels": [
+          -2.9443,
+          -2.0784,
+          -1.7031,
+          -1.4722,
+          -1.299,
+          1.3567,
+          1.501,
+          1.732,
+          2.1072,
+          2.9732
+        ],
+        "LBL": "3111012221011313314110121210103113001110220213211022020330111121123112222221031103223011011102333",
+        "UBL": "6888987778988686685889878789896886998889779786788977979669888878876887777778968896776988988897666"
+      }
+    },
+    {
+      "page_number": 18,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "Analysis of PM Sample Standard Deviations",
+      "chart_subtitle": "PM INERT SDS 6",
+      "context_subtitle": "PDC RSG - 4-2",
+      "variable": "RSG STDEV",
+      "CL": 0.84,
+      "LBL": null,
+      "UBL": null,
+      "axis_labels": {
+        "x": "PT RSG",
+        "y": "Sample Standard Deviation"
+      },
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 3: N=1 AND N>1 COMPLETE"
+      },
+      "notes": null,
+      "drawn_limits": {
+        "unit": 0.01401,
+        "levels": [
+          -0.0035,
+          1.7482,
+          1.9024,
+          2.1547,
+          2.7292
+        ],
+        "LBL": "0000000000000000000000000000000000000000000000000000000000000000000000000000000",
+        "UBL": "2444433344424224144434344244244433342344333224444344324433333342442332444443222"
+      }
+    },
+    {
+      "page_number": 19,
+      "analysis_title": "Current Process Capability",
+      "chart_title": "PM3 H TITLE 1",
+      "chart_subtitle": "PM INERT SDS 6",
+      "context_subtitle": null,
+      "variable": null,
+      "CL": null,
+      "LBL": null,
+      "UBL": null,
+      "axis_labels": {
+        "x": "PM3 in Grams",
+        "y": "Percent"
+      },
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 3: N=1 AND N>1 COMPLETE"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 20,
+      "analysis_title": "Process Design Condition Main Effects Analysis",
+      "chart_title": "Analysis of PDC RSG Sample Averages",
+      "chart_subtitle": "PM INERT SDS 6",
+      "context_subtitle": null,
+      "variable": "RSG AVG",
+      "CL": -0.01,
+      "LBL": null,
+      "UBL": null,
+      "axis_labels": {
+        "x": "PDC RSG",
+        "y": "Sample Average"
+      },
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 3: N=1 AND N>1 COMPLETE"
+      },
+      "notes": null,
+      "drawn_limits": {
+        "unit": 0.00205,
+        "levels": [
+          -0.2197,
+          -0.2094,
+          0.1902,
+          0.2004
+        ],
+        "LBL": "11111110",
+        "UBL": "22222323"
+      }
+    },
+    {
+      "page_number": 21,
+      "analysis_title": "Process Design Factor Main Effects Analysis",
+      "chart_title": "Analysis of PD Factor Sample Standard Deviations",
+      "chart_subtitle": "PM INERT SDS 6",
+      "context_subtitle": null,
+      "variable": "RSG STDEV",
+      "CL": 1.06,
+      "LBL": null,
+      "UBL": null,
+      "axis_labels": {
+        "x": "PDC RSG",
+        "y": "Sample Standard Deviation"
+      },
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 3: N=1 AND N>1 COMPLETE"
+      },
+      "notes": null,
+      "drawn_limits": {
+        "unit": 0.00141,
+        "levels": [
+          0.9103,
+          0.9202,
+          1.1999
+        ],
+        "LBL": "01111000",
+        "UBL": "22222222"
+      }
+    },
+    {
+      "page_number": 22,
+      "analysis_title": "Production Time Main Effects Analysis",
+      "chart_title": "Analysis of PT RSG Sample Averages",
+      "chart_subtitle": "PM INERT SDS 6",
+      "context_subtitle": null,
+      "variable": "RSG AVG",
+      "CL": -0.01,
+      "LBL": null,
+      "UBL": null,
+      "axis_labels": {
+        "x": "PT RSG",
+        "y": "Sample Average"
+      },
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 3: N=1 AND N>1 COMPLETE"
+      },
+      "notes": null,
+      "drawn_limits": {
+        "unit": 0.00901,
+        "levels": [
+          -0.8937,
+          -0.8667,
+          -0.8396,
+          -0.8036,
+          -0.7856,
+          -0.7676,
+          -0.7495,
+          -0.7315,
+          -0.7045,
+          -0.6865,
+          -0.6775,
+          -0.6685,
+          -0.6505,
+          -0.6414,
+          -0.6234,
+          -0.6054,
+          0.5838,
+          0.6018,
+          0.6108,
+          0.6288,
+          0.6468,
+          0.6559,
+          0.6739,
+          0.6829,
+          0.7009,
+          0.7189,
+          0.7459,
+          0.764,
+          0.791,
+          0.809,
+          0.845,
+          0.8721
+        ],
+        "LBL": "99435867833bb9493c6fb864b2a9575b966586e3592299c8784757678b257465e664775ce882690889993d78666623279a18",
+        "UBL": "mmrsqnponsskkmrmsjpgknprktlmqoqkmppqnphsqmttmmjnonroqoponktqorpqhpprooqjhnntpmvnnmmmsionpppptstomlun"
+      }
+    },
+    {
+      "page_number": 23,
+      "analysis_title": "Production Time Main Effects Analysis",
+      "chart_title": "Analysis of PT RSG Sample Standard Deviations",
+      "chart_subtitle": "PM INERT SDS 6",
+      "context_subtitle": null,
+      "variable": "RSG STDEV",
+      "CL": 1.05,
+      "LBL": null,
+      "UBL": null,
+      "axis_labels": {
+        "x": "PT RSG",
+        "y": "Sample Standard Deviation"
+      },
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 3: N=1 AND N>1 COMPLETE"
+      },
+      "notes": null,
+      "drawn_limits": {
+        "unit": 0.00645,
+        "levels": [
+          0.4023,
+          0.4281,
+          0.4539,
+          0.4733,
+          0.4926,
+          0.512,
+          0.5184,
+          0.5378,
+          0.5507,
+          0.5636,
+          0.5701,
+          0.583,
+          0.5894,
+          0.6023,
+          0.6088,
+          0.6281,
+          1.467,
+          1.4928,
+          1.4993,
+          1.5122,
+          1.5186,
+          1.5315,
+          1.538,
+          1.5509,
+          1.5702,
+          1.5767,
+          1.6025,
+          1.609,
+          1.6283,
+          1.6477,
+          1.6799,
+          1.6993
+        ],
+        "LBL": "99435867833bb9493c6fb864b2a9575b966586e3592299c8784757678b257465e664775ce882690889993d78666623279a18",
+        "UBL": "mmrsqnponsskkmrmsjpgknprktlmqoqkmppqnphsqmttmmjnonroqoponktqorpqhpprooqjhnntpmvnnmmmsionpppptstomlun"
+      }
+    },
+    {
+      "page_number": 24,
+      "analysis_title": "Process Design Factor Main Effects Analysis",
+      "chart_title": "Analysis of PD Factor Sample Averages",
+      "chart_subtitle": "PM INERT SDS 6",
+      "context_subtitle": "PD Factor - F1",
+      "variable": "RSG AVG",
+      "CL": -0.01,
+      "LBL": null,
+      "UBL": null,
+      "axis_labels": {
+        "x": "PD Factor RSG",
+        "y": "Sample Average"
+      },
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 3: N=1 AND N>1 COMPLETE"
+      },
+      "notes": null,
+      "drawn_limits": {
+        "unit": 0.00141,
+        "levels": [
+          -0.1499,
+          0.1301,
+          0.14
+        ],
+        "LBL": "0000",
+        "UBL": "1112"
+      }
+    },
+    {
+      "page_number": 25,
+      "analysis_title": "Process Design Factor Main Effects Analysis",
+      "chart_title": "Analysis of PD Factor Sample Standard Deviations",
+      "chart_subtitle": "PM INERT SDS 6",
+      "context_subtitle": "PD Factor - F1",
+      "variable": "RSG STDEV",
+      "CL": 1.06,
+      "LBL": null,
+      "UBL": null,
+      "axis_labels": {
+        "x": "PD Factor RSG",
+        "y": "Sample Standard Deviation"
+      },
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 3: N=1 AND N>1 COMPLETE"
+      },
+      "notes": null,
+      "drawn_limits": {
+        "unit": 0.00098,
+        "levels": [
+          0.9602,
+          1.16
+        ],
+        "LBL": "0000",
+        "UBL": "1111",
+        "pending": "A subgroup here has 343 or more values. The 10/3 VAS held alpha_N (Eq 10-12) at 0.9995 above N = 343, where Minitab's GAMMA function overflows, so its S limits follow N = 500 instead of the subgroup's own N (confirmed by Dr. Bishop, 10/8/2026). Pending his rerun with alpha_N from a table."
+      }
+    },
+    {
+      "page_number": 26,
+      "analysis_title": "Process Design Factor Main Effects Analysis",
+      "chart_title": "Analysis of PD Factor Sample Averages",
+      "chart_subtitle": "PM INERT SDS 6",
+      "context_subtitle": "PD Factor - F2",
+      "variable": "RSG AVG",
+      "CL": -0.01,
+      "LBL": null,
+      "UBL": null,
+      "axis_labels": {
+        "x": "PD Factor RSG",
+        "y": "Sample Average"
+      },
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 3: N=1 AND N>1 COMPLETE"
+      },
+      "notes": null,
+      "drawn_limits": {
+        "unit": 0.00099,
+        "levels": [
+          -0.1099,
+          0.0903
+        ],
+        "LBL": "00",
+        "UBL": "11"
+      }
+    },
+    {
+      "page_number": 27,
+      "analysis_title": "Process Design Factor Main Effects Analysis",
+      "chart_title": "Analysis of PD Factor Sample Standard Deviations",
+      "chart_subtitle": "PM INERT SDS 6",
+      "context_subtitle": "PD Factor - F2",
+      "variable": "RSG STDEV",
+      "CL": 1.06,
+      "LBL": null,
+      "UBL": null,
+      "axis_labels": {
+        "x": "PD Factor RSG",
+        "y": "Sample Standard Deviation"
+      },
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 3: N=1 AND N>1 COMPLETE"
+      },
+      "notes": null,
+      "drawn_limits": {
+        "unit": 0.00098,
+        "levels": [
+          0.9602,
+          1.16
+        ],
+        "LBL": "00",
+        "UBL": "11",
+        "pending": "A subgroup here has 343 or more values. The 10/3 VAS held alpha_N (Eq 10-12) at 0.9995 above N = 343, where Minitab's GAMMA function overflows, so its S limits follow N = 500 instead of the subgroup's own N (confirmed by Dr. Bishop, 10/8/2026). Pending his rerun with alpha_N from a table."
+      }
+    },
+    {
+      "page_number": 28,
+      "analysis_title": "Process Design Condition by Production Time Interaction Effects",
+      "chart_title": "Analysis of PDCxPT RSG Sample Averages",
+      "chart_subtitle": "PM INERT SDS 6",
+      "context_subtitle": null,
+      "variable": "RSG AVG",
+      "CL": -0.03,
+      "LBL": null,
+      "UBL": null,
+      "axis_labels": {
+        "x": "PDCxPT RSG",
+        "y": "Sample Average"
+      },
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 3: N=1 AND N>1 COMPLETE"
+      },
+      "notes": null,
+      "drawn_limits": {
+        "unit": 0.04562,
+        "levels": [
+          -3.6861,
+          -2.6369,
+          -2.135,
+          -1.8613,
+          -1.6332,
+          1.6058,
+          1.8339,
+          2.1077,
+          2.5639,
+          3.6588
+        ],
+        "LBL": "213112202121033341102021131400112223221022332231112112021223231102321101012213321113124000321122201222230322332110422021422123321410320212021120023010231313032322131023332221313221022112221031202212011222131302221034233114303422001013232302231212211032222202204303001001312312212000121110220231041121013131231323013330202142222013210111310142301212421021414312232113020312121211122301212211330431110323442231310222122231303021412122101100200231032111213210310023420223111232220313221202230112322011112210223200332100030232211222402232230023111211011122210212121024121211122011123302130021022221203113221111131001112130122322111113132232002112123112320144331001122122012221213111012221011313314110121210103113001110220213211022020330111121123112222221031103223011011102333",
+        "UBL": "786887797878966658897978868599887776778977667768887887978776768897678898987786678886875999678877798777769677667889577978577876678589679787978879976989768686967677868976667778686778977887778968797787988777868697778965766885696577998986767697768787788967777797795696998998687687787999878889779768958878986868768676986669797857777986789888689857698787578978585687767886979687878788877698787788669568889676557768689777877768696978587877898899799768967888786789689976579776888767779686778797769887677988887789776799667899969767788777597767769976888788988877789787878975878788877988876697869978977778796886778888868998887869877677888886867767997887876887679855668998877877987778786888987778988686685889878789896886998889779786788977979669888878876887777778968896776988988897666"
+      }
+    },
+    {
+      "page_number": 29,
+      "analysis_title": "Process Design Condition by Production Time Interaction Effects",
+      "chart_title": "Analysis of PDCxPT RSG Sample Standard Deviations",
+      "chart_subtitle": "PM INERT SDS 6",
+      "context_subtitle": null,
+      "variable": "RSG STDEV",
+      "CL": 1.05,
+      "LBL": null,
+      "UBL": null,
+      "axis_labels": {
+        "x": "PDCxPT RSG",
+        "y": "Sample Standard Deviation"
+      },
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 3: N=1 AND N>1 COMPLETE"
+      },
+      "notes": null,
+      "drawn_limits": {
+        "unit": 0.02355,
+        "levels": [
+          0.0034,
+          2.1938,
+          2.3822,
+          2.712,
+          3.4421
+        ],
+        "LBL": "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+        "UBL": "342443334342221443344241443332334332233244434433433232443234444334223444243123443334333322332234413334133432234142334334433243242422323342432223334242334334433342433343443334242333421322441221334423232332434334423333333122442432433434344433324144344242432423242223341333342344442441324343134341412433234423243434344433243433442212444232113324243334333242234143433444332423444342342432133324443233324233433324432334444334332322342323344333133233232444344444333434343431434344433444322342343333432442334444424444342433233444442423323344343244323411224443343343334342444433344424224144434344244244433342344333224444344324433333342442332444443222"
+      }
+    },
+    {
+      "page_number": 30,
+      "analysis_title": "Taguchi Loss Function Analysis",
+      "chart_title": null,
+      "chart_subtitle": "PM INERT SDS 6",
+      "context_subtitle": null,
+      "variable": null,
+      "CL": null,
+      "LBL": null,
+      "UBL": null,
+      "axis_labels": {
+        "x": "Components Contributing to Average Loss",
+        "y": "Contribution to Average Loss (%)"
+      },
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 3: N=1 AND N>1 COMPLETE"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 31,
+      "analysis_title": "Taguchi Loss Function Analysis",
+      "chart_title": null,
+      "chart_subtitle": "PM INERT SDS 6",
+      "context_subtitle": null,
+      "variable": null,
+      "CL": null,
+      "LBL": null,
+      "UBL": null,
+      "axis_labels": {
+        "x": "Components Contributing to Average Loss",
+        "y": "Contribution to Average Loss (%)"
+      },
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 3: N=1 AND N>1 COMPLETE"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 32,
+      "analysis_title": "Potential Process Capability",
+      "chart_title": "PM3 H TITLE 1",
+      "chart_subtitle": "PM INERT SDS 6",
+      "context_subtitle": null,
+      "variable": null,
+      "CL": null,
+      "LBL": null,
+      "UBL": null,
+      "axis_labels": {
+        "x": "PM3 in Grams",
+        "y": "Percent"
+      },
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 3: N=1 AND N>1 COMPLETE"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 33,
+      "analysis_title": "Test of Maximum Information",
+      "chart_title": "R2 Residuals Individuals Chart",
+      "chart_subtitle": "PM INERT SDS 6",
+      "context_subtitle": null,
+      "variable": "R2 RESIDUALS",
+      "CL": 0.0,
+      "LBL": -3.85,
+      "UBL": 3.85,
+      "axis_labels": {
+        "x": "PDCxPT RSG",
+        "y": "Residual Value"
+      },
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 3: N=1 AND N>1 COMPLETE"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 34,
+      "analysis_title": "Maximum Information Analysis",
+      "chart_title": null,
+      "chart_subtitle": "PM INERT SDS 6",
+      "context_subtitle": null,
+      "variable": null,
+      "CL": null,
+      "LBL": null,
+      "UBL": null,
+      "axis_labels": {
+        "x": "PM3 in Grams",
+        "y": "Percent"
+      },
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 3: N=1 AND N>1 COMPLETE"
+      },
+      "notes": null
+    }
+  ],
+  "drawn_limits_method": "Where VAS prints \"UNEQUAL\", the LBL/UBL of every subgroup are read from the red limit lines in the chart drawing (EMF, 576 x 384 units) and scaled by the y-axis ticks: good to about one drawing unit ('unit', in the response's units)."
+}

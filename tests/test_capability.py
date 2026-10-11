@@ -23,6 +23,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
+import processbehavior as pb
 from processbehavior import ProcessBehavior, SpecLimits, ValidationError
 from processbehavior.capability import (
     CapabilityResult,
@@ -590,12 +591,13 @@ class TestIntegrationSDS1:
         if cap.pp is not None and cap.ppk is not None:
             assert cap.pp >= cap.ppk or cap.pp == pytest.approx(cap.ppk)
 
-    def test_y_bar_is_overall_mean(self, sds1_study):
-        """Ȳ for potential capability is overall response mean, not mean of R2."""
+    def test_y_bar_is_process_mean(self, sds1_study):
+        """Ȳ is the response's process mean (VAS: the mean of the cell means), not the mean of R2."""
         cap = sds1_study.capability(usl=120, lsl=80)
         ds = sds1_study.dataset
-        expected_y_bar = ds[sds1_study.response].dropna().mean()
+        expected_y_bar = ds.groupby('cell_key')[sds1_study.response].mean().mean()
         assert cap.y_bar == pytest.approx(expected_y_bar)
+        assert cap.y_bar != pytest.approx(ds['R2'].mean())
 
     def test_precision_from_study(self, sds1_study):
         """round_to comes from Study's spec."""
@@ -959,3 +961,72 @@ class TestAssessCapabilityDirect:
         specs = SpecLimits(usl=120, lsl=80)
         cap = assess_capability(study, specs, round_to=5)
         assert cap.round_to == 5
+
+
+# ============================================================================
+# Potential centre (y_bar + mean R2) — 10-1 manual potential capability
+# ============================================================================
+
+
+class TestPotentialCenter:
+    def test_ads1_potential_center_is_y_bar(self):
+        """ADS 1: R2 is the within-cell deviation, which averages to zero."""
+        df = pb.make_design(1, K1=2, K2=2, T=4, seed=42)
+        study = pb.formulate(df, response='y', factors=['factor 1', 'factor 2'], time='time', precision=12)
+        cap = study.capability(usl=float(df['y'].max()) + 10, lsl=float(df['y'].min()) - 10)
+        assert cap.potential_center == pytest.approx(cap.y_bar, abs=1e-9)
+
+    def test_ads2_potential_center_is_mean_of_potential_values(self):
+        df = pd.read_csv('validation/PBTESTDATABASE_T100.csv', na_values=['*'])
+        study = pb.formulate(
+            df, response='PM SDS 2', factors=['FACTOR 1', 'FACTOR 2'], time='PRODUCTION TIME', precision=12
+        )
+        cap = study.capability(lsl=232, usl=242)
+        r2 = study.dataset['R2'].dropna()
+        assert cap.potential_center == pytest.approx(cap.y_bar + r2.mean(), rel=1e-12)
+        sigma = cap.sigma_hat_r2
+        assert cap.cpk_upper == pytest.approx((242 - cap.potential_center) / (3 * sigma), rel=1e-12)
+        assert cap.cpk_lower == pytest.approx((cap.potential_center - 232) / (3 * sigma), rel=1e-12)
+
+    def test_potential_chart_centre_line_at_potential_center(self):
+        df = pd.read_csv('validation/PBTESTDATABASE_T100.csv', na_values=['*'])
+        study = pb.formulate(
+            df, response='PM SDS 2', factors=['FACTOR 1', 'FACTOR 2'], time='PRODUCTION TIME', precision=12
+        )
+        cap = study.capability(lsl=232, usl=242)
+        fig = cap.plot(view='potential')
+        xs = [s.x0 for s in (fig.layout.shapes or []) if s.type == 'line' and s.x0 == s.x1]
+        assert any(x == pytest.approx(cap.potential_center) for x in xs)
+
+
+class TestProcessMean:
+    """y_bar is VAS's process mean: the unweighted mean of the (factor × time) cell means, the same
+    centre as the Xbar chart and the loss function, not the plain average of the readings. The two
+    differ only when cells have different sizes (SDS 3, 4, 6)."""
+
+    @staticmethod
+    def _study(col):
+        df = pd.read_csv('validation/PBTESTDATABASE_T100.csv', na_values=['*'])
+        return pb.formulate(df, response=col, factors=['FACTOR 1', 'FACTOR 2'], time='PRODUCTION TIME', precision=12)
+
+    def test_unbalanced_uses_mean_of_cell_means(self):
+        study = self._study('PM SDS 6')
+        cap = study.capability(lsl=232, usl=242, target=237)
+        d = study.dataset
+        cell_means = d.groupby(['FACTOR 1', 'FACTOR 2', 'PRODUCTION TIME'])['PM SDS 6'].mean()
+        assert cap.y_bar == pytest.approx(cell_means.mean(), rel=1e-12)
+        assert abs(cap.y_bar - d['PM SDS 6'].mean()) > 0.01  # the plain average (237.834) differs here
+        # Tom's PM SDS 6 VAS run (9/24/2026): PROCESS MEAN 237.86, PPL 1.102, PPU 0.78
+        assert round(cap.y_bar, 2) == 237.86
+        assert round(cap.ppk_lower, 3) == 1.102
+        assert round(cap.ppk_upper, 2) == 0.78
+
+    def test_same_centre_as_loss_function(self):
+        study = self._study('PM SDS 3')
+        assert study.capability(lsl=232, usl=242).y_bar == pytest.approx(
+            study.loss_function(target=237).y_bar, rel=1e-12
+        )
+
+    def test_balanced_equals_plain_average(self):
+        study = self._study('PM SDS 1')
+        assert study.capability(lsl=232, usl=242).y_bar == pytest.approx(study.dataset['PM SDS 1'].mean(), rel=1e-12)

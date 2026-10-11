@@ -1,15 +1,22 @@
 """
 E2E Validation Report: processbehavior vs Tom Bishop's VAS Analyses
 
-Generates an HTML report comparing our library output against Tom Bishop's
-Minitab reference analyses for SDS 1-3. Uses PBTESTDATABASE_T100.csv as input.
+Compares the library's output with Tom Bishop's VAS (Minitab) analyses, value by value, for every
+run in RUNS: PM SDS 1-6 and PM INERT SDS 1-6 (PBTESTDATABASE_T100.csv), the known-effects data
+(PBTESTKNOWNEFFECTS_T100.csv) and the Medicare ACO data (aco_per_capita_expenditure.csv).
+Each run's reference values, spec limits and target live in
+tests/fixtures/bishop_analyses/<run>.json; a reference that is not yet available is "pending" and
+never fails the gate. Writes an HTML report and docs/reference/validation.md; exits 1 on any
+disagreement.
 
 Usage:
     python validation/e2e_bishop_report.py
 """
 import json
-import sys
 import math
+import string
+import sys
+from dataclasses import dataclass
 from pathlib import Path
 
 import pandas as pd
@@ -18,50 +25,45 @@ from processbehavior import ProcessBehavior
 
 # --- Configuration ---
 
-VALIDATION_CSV = Path(__file__).parent / 'PBTESTDATABASE_T100.csv'
+DATA = {
+    'T100': Path(__file__).parent / 'PBTESTDATABASE_T100.csv',
+    'KNOWN': Path(__file__).parent / 'PBTESTKNOWNEFFECTS_T100.csv',
+    'ACO': Path(__file__).parent / 'aco_per_capita_expenditure.csv',
+}
 FIXTURES_DIR = Path(__file__).parent.parent / 'tests' / 'fixtures' / 'bishop_analyses'
 OUTPUT_HTML = Path(__file__).parent / 'e2e_bishop_report.html'
 TOLERANCE = 0.01  # half-unit of last decimal place
 
-SPEC_LSL = 232
-SPEC_USL = 242
-SPEC_TARGET = 237
+# Sampling design state -> analytic design state: incomplete grids (SDS 4-6) are analysed as the
+# complete design that survives tidying.
+ADS_OF_SDS = {1: 1, 2: 2, 3: 3, 4: 1, 5: 2, 6: 3}
 
-SDS_CONFIGS = {
-    1: {'response_attr': 'PM_SDS_1', 'json': 'vassds1analysis.json', 'chart': 'Xbar'},
-    2: {'response_attr': 'PM_SDS_2', 'json': 'vassds2analysis.json', 'chart': 'X'},
-    3: {'response_attr': 'PM_SDS_3', 'json': 'vassds3analysis.json', 'chart': 'X'},
-}
 
-# Tom's process-capability reference indices (LSL=232, USL=242, Target=237).
-# Tom reports to 2 decimals; tolerance is half-unit of last decimal place.
+@dataclass(frozen=True)
+class Run:
+    """One VAS analysis to reproduce: a response column of a data source, at its ADS."""
+
+    id: str        # also the reference file: tests/fixtures/bishop_analyses/<id>.json
+    label: str
+    data: str      # key of DATA
+    response: str
+    ads: int
+    factors: tuple[str, ...] = ('FACTOR 1', 'FACTOR 2')
+    time: str = 'PRODUCTION TIME'
+
+
+RUNS = [
+    *[Run(f'pm_sds_{k}', f'PM SDS {k}', 'T100', f'PM SDS {k}', ADS_OF_SDS[k]) for k in range(1, 7)],
+    Run('pm_inert_sds_1', 'PM INERT', 'T100', 'PM INERT', 1),
+    # PM INERT SDS k: the PM INERT column with PM SDS k's missing pattern (see load_frames)
+    *[Run(f'pm_inert_sds_{k}', f'PM INERT SDS {k}', 'T100', f'PM INERT SDS {k}', ADS_OF_SDS[k]) for k in range(2, 7)],
+    Run('known_effects_sds_1', 'PM SDS 1 KNOWN', 'KNOWN', 'PM SDS 1 KNOWN', 1),
+    # Medicare per-capita expenditure: 24 organisations x 4 years, one reading each (issue #114)
+    Run('aco_medicare', 'Medicare ACO (PCE)', 'ACO', 'PER CAPITA EXPENDITURE', 2, factors=('ACO',), time='YEAR'),
+]
+
+# Tom reports capability to 2 decimals and loss shares to 1; tolerance is half a unit of the last place.
 CAPABILITY_TOLERANCE = 0.01
-EXPECTED_CAPABILITY = {
-    1: {
-        # Current (overall sigma)
-        'pp': 0.96, 'ppk_upper': 0.80, 'ppk_lower': 1.11,
-        'pct_below_lsl': 0.53, 'pct_above_usl': 0.45,
-        # Potential (R2 sigma)
-        'cp': 2.08, 'cpk_upper': 1.74, 'cpk_lower': 2.42,
-        'potential_pct_below_lsl': 0.0, 'potential_pct_above_usl': 0.0,
-    },
-    2: {
-        # Current
-        'pp': 1.1, 'ppk_upper': 0.93, 'ppk_lower': 1.27,
-        'pct_below_lsl': 0.5, 'pct_above_usl': 0.0,
-        # Potential (R2 sigma)
-        'cp': 2.51, 'cpk_upper': 2.12, 'cpk_lower': 2.91,
-        'potential_pct_below_lsl': 0.0, 'potential_pct_above_usl': 0.0,
-    },
-    3: {
-        # Current
-        'pp': 0.96, 'ppk_upper': 0.8, 'ppk_lower': 1.12,
-        'pct_below_lsl': 0.53, 'pct_above_usl': 0.46,
-        # Potential (R2 sigma)
-        'cp': 2.34, 'cpk_upper': 1.95, 'cpk_lower': 2.72,
-        'potential_pct_below_lsl': 0.0, 'potential_pct_above_usl': 0.0,
-    },
-}
 # (Tom's label) -> (CapabilityResult.as_dict key). Order shown is the order
 # they appear in the report table; "Current" block then "Potential" block.
 CAPABILITY_METRICS = [
@@ -77,46 +79,8 @@ CAPABILITY_METRICS = [
     ('Potential % above USL', 'potential_pct_above_usl'),
 ]
 
-# Tom's Taguchi loss-function decomposition (percentages). 1 decimal place;
-# tolerance is half-unit of last decimal place.
+# Loss shares are compared in percent, to 1 decimal.
 LOSS_TOLERANCE = 0.05
-EXPECTED_LOSS = {
-    1: {
-        'pct_centering':   16.8,  # Tom: "mean"
-        'pct_unexplained': 23.0,
-        'pct_pdc':         14.2,
-        'pct_time':         2.7,  # Tom: "pt"
-        'pct_interaction': 43.3,  # Tom: "pdcxpt"
-    },
-    2: {
-        # 5-component decomposition
-        'pct_centering':   16.1,
-        'pct_unexplained': 23.6,
-        'pct_pdc':         15.6,
-        'pct_time':         2.2,
-        'pct_interaction': 42.5,
-        # Factor-level decomposition of pct_pdc (synthetic fields; computed
-        # from LossResult.pdc_by_factor / total in _build_loss_results)
-        'pct_pdc_f1':                  10.6,
-        'pct_pdc_f2':                   4.1,
-        'pct_pdc_factor_interaction':   0.9,  # Tom: "PDF Int"
-    },
-    3: {
-        # 5-component decomposition
-        'pct_centering':   16.4,
-        'pct_unexplained': 25.0,
-        'pct_pdc':         13.7,
-        'pct_time':         2.5,
-        'pct_interaction': 42.4,
-        # Factor-level decomposition of pct_pdc
-        'pct_pdc_f1':       8.3,
-        'pct_pdc_f2':       3.8,
-        # Tom's initial note said 0.6 but it didn't reconcile with his own
-        # pdc=13.7 (8.3+3.8+0.6=12.7); 1.6 makes the row internally
-        # consistent and matches our 1.59. Confirmed by Tom as 1.6.
-        'pct_pdc_factor_interaction':   1.6,
-    },
-}
 # (Tom's label) -> (LossResult.as_dict key, or synthetic key). Synthetic
 # keys (pct_pdc_f1, pct_pdc_f2, pct_pdc_factor_interaction) are computed
 # inside _build_loss_results since LossResult only exposes the absolute
@@ -133,10 +97,11 @@ LOSS_METRICS = [
 ]
 
 
-def context_to_stratum(context_subtitle: str, sds: int) -> str:
-    """Convert JSON context_subtitle 'PDC RSG - 1-1' to our stratum key."""
-    # Extract '1-1' from 'PDC RSG - 1-1'
-    level = context_subtitle.split(' - ')[1]  # '1-1'
+def context_to_stratum(context_subtitle: str, n_factors: int = 2) -> str:
+    """Convert a slide's context 'PDC RSG - 1-1' (two factors) or 'PDC RSG - ACO-001' (one) to our stratum key."""
+    level = context_subtitle.split(' - ', 1)[1]  # '1-1' or 'ACO-001'
+    if n_factors == 1:
+        return level
     f1, f2 = level.split('-')
     return f'{f1}_{f2}'  # Strata normalized to strings per #73
 
@@ -148,6 +113,37 @@ def close(actual, expected, tol=TOLERANCE):
     if math.isnan(actual) or math.isnan(expected):
         return False
     return abs(actual - expected) <= tol
+
+
+DRAWN_CODES = string.digits + string.ascii_letters
+DRAWN_UNITS = 1.5  # drawing units a drawn limit may sit from PB's: one for the drawing, half for the axis ticks
+
+
+def compare_drawn(drawn, table, tol=TOLERANCE):
+    """Check PB's limits, subgroup by subgroup, against the limits VAS draws where it prints "UNEQUAL".
+
+    ``drawn`` is an item's ``drawn_limits``: the red limit lines of the VAS chart, read per subgroup and scaled by
+    the y-axis ticks, so each value is good to about one drawing unit (``unit``). Each subgroup's limit is a
+    character indexing ``levels``. Returns the row fields to override: expected (VAS's last subgroup, the one
+    Minitab would label), match and note.
+    """
+    lbl = [drawn['levels'][DRAWN_CODES.index(c)] for c in drawn['LBL']]
+    ubl = [drawn['levels'][DRAWN_CODES.index(c)] for c in drawn['UBL']]
+    tol = max(tol, DRAWN_UNITS * drawn['unit'])
+    pending = drawn.get('pending')
+    out = {'expected_lbl': lbl[-1], 'expected_ubl': ubl[-1]}
+    if table is None or len(table) != len(lbl):
+        charted = 0 if table is None else len(table)
+        match = None if pending else False
+        return {**out, 'match_lpl': match, 'match_upl': match,
+                'note': f'Drawn limits: VAS charts {len(lbl)} subgroups, PB {charted}.'}
+    d_lo = max(abs(float(a) - e) for a, e in zip(table['lpl'], lbl, strict=True))
+    d_hi = max(abs(float(a) - e) for a, e in zip(table['upl'], ubl, strict=True))
+    note = (f'Limits read from the VAS drawing for all {len(lbl)} subgroups: largest difference LBL {d_lo:.4f}, '
+            f'UBL {d_hi:.4f} (tolerance {tol:.4f}).')
+    if pending:
+        return {**out, 'match_lpl': None, 'match_upl': None, 'note': f'{note} Pending: {pending}'}
+    return {**out, 'match_lpl': d_lo <= tol, 'match_upl': d_hi <= tol, 'note': note}
 
 
 def classify_page(item):
@@ -198,9 +194,8 @@ def _coerce_float(v):
     return float(v)
 
 
-def _build_capability_results(sds_num, cap_dict):
-    """Validate process-capability indices against EXPECTED_CAPABILITY."""
-    expected = EXPECTED_CAPABILITY.get(sds_num, {})
+def _build_capability_results(expected, cap_dict):
+    """Validate process-capability indices against the run's reference values."""
     rows = []
     for label, field in CAPABILITY_METRICS:
         actual = _coerce_float(cap_dict.get(field))
@@ -230,17 +225,16 @@ def _augment_loss_with_factor_percentages(loss_dict):
     # positionally so this stays robust if factor names ever change.
     factor_keys = list(pdc_by_factor.keys())
     if len(factor_keys) >= 1:
-        derived['pct_pdc_f1'] = round(100 * pdc_by_factor[factor_keys[0]] / total, 3)
+        derived['pct_pdc_f1'] = 100 * pdc_by_factor[factor_keys[0]] / total
     if len(factor_keys) >= 2:
-        derived['pct_pdc_f2'] = round(100 * pdc_by_factor[factor_keys[1]] / total, 3)
+        derived['pct_pdc_f2'] = 100 * pdc_by_factor[factor_keys[1]] / total
     if pdc_fi is not None:
-        derived['pct_pdc_factor_interaction'] = round(100 * pdc_fi / total, 3)
+        derived['pct_pdc_factor_interaction'] = 100 * pdc_fi / total
     return derived
 
 
-def _build_loss_results(sds_num, loss_dict):
-    """Validate loss-function decomposition (percentages) against EXPECTED_LOSS."""
-    expected = EXPECTED_LOSS.get(sds_num, {})
+def _build_loss_results(expected, loss_dict):
+    """Validate loss-function decomposition (percentages) against the run's reference values."""
     derived = _augment_loss_with_factor_percentages(loss_dict)
     rows = []
     for label, field in LOSS_METRICS:
@@ -254,8 +248,8 @@ def _build_loss_results(sds_num, loss_dict):
     return rows
 
 
-def run_sds_validation(sds_num, pb, study, json_data):  # noqa: C901
-    """Run all validations for one SDS type.
+def run_validation(run, pb, study, ref):  # noqa: C901
+    """Run all validations for one run (a response column at its ADS) against its reference file.
 
     Returns
     -------
@@ -264,68 +258,68 @@ def run_sds_validation(sds_num, pb, study, json_data):  # noqa: C901
         list contains per-row dicts ready for HTML rendering.
     """
     results = []
-    items = json_data['items']
+    items = ref['items']
+    specs = ref['specs']
+    tol = ref.get('chart_tolerance', TOLERANCE)
+    factors, time = list(run.factors), run.time
+    f_str, t_str = '[' + ', '.join(factors) + ']', f'[{time}]'
 
     # Pre-compute results we'll need
     computed = {}
 
+    # Xbar/S wherever some subgroups are replicated: ADS 1, and ADS 3, where the 10-1 manual makes
+    # Xbar/S VAS's default (Tom's 10/3/2026 run draws PM SDS 3 that way). ADS 2 uses X/mR.
+    xbar_s = run.ads in (1, 3)
+
     # Overall charts
-    if sds_num == 1:
+    if xbar_s:
         computed['overall'] = study.execute(chart='Xbar', by=[], companion=True)
-        computed['stratified'] = study.execute(chart='Xbar', by=[pb.cols.PRODUCTION_TIME], companion=True)
+        computed['stratified'] = study.execute(chart='Xbar', by=[time], companion=True)
     else:
         computed['overall'] = study.execute(chart='X', by=[], companion=True)
-        computed['stratified'] = study.execute(chart='X', by=[pb.cols.FACTOR_1, pb.cols.FACTOR_2], companion=True)
+        computed['stratified'] = study.execute(chart='X', by=factors, companion=True)
 
     # Effects charts — all SDS types
     # PDC effects (pages 20-21)
     computed['pdc_effects_xbar'] = study.execute(
-        chart='Xbar', by=[pb.cols.FACTOR_1, pb.cols.FACTOR_2],
+        chart='Xbar', by=factors,
         value='R6', recentered=True
     )
     computed['pdc_effects_s'] = study.execute(
-        chart='S', by=[pb.cols.FACTOR_1, pb.cols.FACTOR_2], value='R6'
+        chart='S', by=factors, value='R6'
     )
-    # PT effects (pages 22-23) — Xbar/S by time for all SDS
-    # When charted by=[time], each time subgroup has multiple factor levels,
-    # giving n>1 subgroups even in SDS 2, so Xbar/S is correct.
+    # PT effects (pages 22-23) — Xbar/S of R4 by time for all SDS (R4 carries the period effect,
+    # 10-1 manual Eq 14-16). When charted by=[time], each time subgroup has multiple factor
+    # levels, giving n>1 subgroups even in SDS 2, so Xbar/S is correct.
     computed['pt_effects_xbar'] = study.execute(
-        chart='Xbar', by=[pb.cols.PRODUCTION_TIME], value='R3', recentered=True
+        chart='Xbar', by=[time], value='R4', recentered=True
     )
     computed['pt_effects_s'] = study.execute(
-        chart='S', by=[pb.cols.PRODUCTION_TIME], value='R3', recentered=True
+        chart='S', by=[time], value='R4', recentered=True
     )
     # Interaction (pages 28-29)
-    if sds_num == 1:
+    if xbar_s:
         computed['interaction_xbar'] = study.execute(
-            chart='Xbar', by=[pb.cols.FACTOR_1, pb.cols.FACTOR_2, pb.cols.PRODUCTION_TIME],
+            chart='Xbar', by=[*factors, time],
             value='R3', recentered=True
         )
         computed['interaction_s'] = study.execute(
-            chart='S', by=[pb.cols.FACTOR_1, pb.cols.FACTOR_2, pb.cols.PRODUCTION_TIME],
+            chart='S', by=[*factors, time],
             value='R3', recentered=True
         )
     else:
         computed['r3_xmr'] = study.execute(
             chart='X', by=[], value='R3', recentered=True, companion=True
         )
-    # Individual factor effects (pages 24-27)
-    computed['f1_effects_xbar'] = study.execute(
-        chart='Xbar', by=[pb.cols.FACTOR_1], value='R6', recentered=True
-    )
-    computed['f1_effects_s'] = study.execute(
-        chart='S', by=[pb.cols.FACTOR_1], value='R6'
-    )
-    computed['f2_effects_xbar'] = study.execute(
-        chart='Xbar', by=[pb.cols.FACTOR_2], value='R6', recentered=True
-    )
-    computed['f2_effects_s'] = study.execute(
-        chart='S', by=[pb.cols.FACTOR_2], value='R6'
-    )
+    # Individual factor effects (pages 24-27), when the conditions are built from two factors
+    if len(factors) >= 2:
+        for tag, factor in (('f1', factors[0]), ('f2', factors[1])):
+            computed[f'{tag}_effects_xbar'] = study.execute(chart='Xbar', by=[factor], value='R6', recentered=True)
+            computed[f'{tag}_effects_s'] = study.execute(chart='S', by=[factor], value='R6')
 
     computed['max_info_xmr'] = study.execute(chart='X', by=[], value='R2')
-    computed['loss'] = study.loss_function(target=SPEC_TARGET)
-    computed['capability'] = study.capability(lsl=SPEC_LSL, usl=SPEC_USL, target=SPEC_TARGET)
+    computed['loss'] = study.loss_function(target=specs['target'])
+    computed['capability'] = study.capability(lsl=specs['lsl'], usl=specs['usl'], target=specs['target'])
 
     for item in items:
         page = item['page_number']
@@ -336,10 +330,11 @@ def run_sds_validation(sds_num, pb, study, json_data):  # noqa: C901
         expected_cl = item.get('CL')
         expected_lbl = item.get('LBL')
         expected_ubl = item.get('UBL')
+        drawn_limits = item.get('drawn_limits')
         is_location = is_location_chart(item)
 
         base = {
-            'sds': sds_num,
+            'run': run.id,
             'page': page,
             'chart_title': chart_title,
             'chart_subtitle': chart_subtitle,
@@ -349,8 +344,11 @@ def run_sds_validation(sds_num, pb, study, json_data):  # noqa: C901
 
         def append_result(
             chart_type, by_str, value, recentered, actual_cl, actual_lpl, actual_upl, table,
-            _base=base, _ecl=expected_cl, _elbl=expected_lbl, _eubl=expected_ubl, **extra
+            _base=base, _ecl=expected_cl, _elbl=expected_lbl, _eubl=expected_ubl,
+            _drawn=drawn_limits, **extra
         ):
+            if _drawn is not None and _elbl is None and _eubl is None:
+                extra = {**extra, **compare_drawn(_drawn, table, tol)}
             results.append({
                 **_base,
                 'chart_type': chart_type,
@@ -363,9 +361,9 @@ def run_sds_validation(sds_num, pb, study, json_data):  # noqa: C901
                 'actual_cl': actual_cl,
                 'actual_lpl': actual_lpl,
                 'actual_upl': actual_upl,
-                'match_cl': close(actual_cl, _ecl) if _ecl is not None else None,
-                'match_lpl': close(actual_lpl, _elbl) if _elbl is not None else None,
-                'match_upl': close(actual_upl, _eubl) if _eubl is not None else None,
+                'match_cl': close(actual_cl, _ecl, tol) if _ecl is not None else None,
+                'match_lpl': close(actual_lpl, _elbl, tol) if _elbl is not None else None,
+                'match_upl': close(actual_upl, _eubl, tol) if _eubl is not None else None,
                 'chart_table': table,
                 **extra,
             })
@@ -375,13 +373,19 @@ def run_sds_validation(sds_num, pb, study, json_data):  # noqa: C901
             center = stats['center']
             lpl_val = stats.get('lpl')
             upl_val = stats.get('upl')
+            if stats.get('limits_vary') and lpl_val is None and upl_val is None:
+                # Limits step with subgroup size (10-1 manual Eqs 11-16/17). VAS/Minitab labels the
+                # limits of the last subgroup, so that is the value its slide carries.
+                table = safe_chart_table(result_obj, chart_type)
+                if table is not None and len(table):
+                    lpl_val, upl_val = table['lpl'].iloc[-1], table['upl'].iloc[-1]
             cl = float(center) if center is not None else None
             lpl = float(lpl_val) if lpl_val is not None else None
             upl = float(upl_val) if upl_val is not None else None
             return cl, lpl, upl
 
         def primary_chart_type(_loc=is_location):
-            if sds_num == 1:
+            if xbar_s:
                 return 'Xbar' if _loc else 'S'
             return 'X' if _loc else 'mR'
 
@@ -392,11 +396,11 @@ def run_sds_validation(sds_num, pb, study, json_data):  # noqa: C901
             append_result(chart_type, '[]', 'response', False, cl, lpl, upl, safe_chart_table(overall, chart_type))
 
         elif category == 'stratified':
-            stratum = context_to_stratum(context, sds_num)
+            stratum = context_to_stratum(context, len(run.factors))
             focused = computed['stratified'].focus(stratum)
             chart_type = primary_chart_type()
             cl, lpl, upl = stats_from(focused, chart_type)
-            by_str = '[PRODUCTION_TIME]' if sds_num == 1 else '[FACTOR_1, FACTOR_2]'
+            by_str = t_str if xbar_s else f_str
             append_result(chart_type, by_str, 'response', False, cl, lpl, upl,
                           safe_chart_table(focused, chart_type), stratum=str(stratum))
 
@@ -405,25 +409,25 @@ def run_sds_validation(sds_num, pb, study, json_data):  # noqa: C901
             chart_type = 'Xbar' if is_location else 'S'
             cl, lpl, upl = stats_from(result_obj, chart_type)
             recentered = is_location
-            append_result(chart_type, '[FACTOR_1, FACTOR_2]', 'R6', recentered, cl, lpl, upl,
+            append_result(chart_type, f_str, 'R6', recentered, cl, lpl, upl,
                           safe_chart_table(result_obj, chart_type))
 
         elif category == 'pt_effects':
             result_obj = computed['pt_effects_xbar'] if is_location else computed['pt_effects_s']
             chart_type = 'Xbar' if is_location else 'S'
             cl, lpl, upl = stats_from(result_obj, chart_type)
-            append_result(chart_type, '[PRODUCTION_TIME]', 'R3', True, cl, lpl, upl,
+            append_result(chart_type, t_str, 'R4', True, cl, lpl, upl,
                           safe_chart_table(result_obj, chart_type))
 
         elif category == 'factor_effects':
             if context and 'F1' in context:
                 xbar_r = computed['f1_effects_xbar']
                 s_r = computed['f1_effects_s']
-                by_str = '[FACTOR_1]'
+                by_str = f'[{factors[0]}]'
             elif context and 'F2' in context:
                 xbar_r = computed['f2_effects_xbar']
                 s_r = computed['f2_effects_s']
-                by_str = '[FACTOR_2]'
+                by_str = f'[{factors[1]}]'
             else:
                 append_result('?', '?', 'R6', True, None, None, None, None)
                 continue
@@ -436,11 +440,11 @@ def run_sds_validation(sds_num, pb, study, json_data):  # noqa: C901
                           safe_chart_table(result_obj, chart_type))
 
         elif category == 'interaction':
-            if sds_num == 1:
+            if xbar_s:
                 result_obj = computed['interaction_xbar'] if is_location else computed['interaction_s']
                 chart_type = 'Xbar' if is_location else 'S'
                 cl, lpl, upl = stats_from(result_obj, chart_type)
-                append_result(chart_type, '[FACTOR_1, FACTOR_2, PRODUCTION_TIME]', 'R3', True,
+                append_result(chart_type, '[' + ', '.join([*factors, time]) + ']', 'R3', True,
                               cl, lpl, upl, safe_chart_table(result_obj, chart_type))
             else:
                 r3 = computed['r3_xmr']
@@ -466,8 +470,12 @@ def run_sds_validation(sds_num, pb, study, json_data):  # noqa: C901
             # No other category produces a meaningful chart-row; drop it.
             continue
 
-    capability_results = _build_capability_results(sds_num, computed['capability'].as_dict())
-    loss_results = _build_loss_results(sds_num, computed['loss'].as_dict())
+    # Compare at full precision: Tom's figures are displayed to 1-2 decimals and the tolerance
+    # absorbs that; rounding our side first would double-count the rounding.
+    capability_results = _build_capability_results(
+        ref.get('capability', {}), computed['capability'].as_dict(round_to=12)
+    )
+    loss_results = _build_loss_results(ref.get('loss', {}), computed['loss'].as_dict(round_to=12))
 
     return {
         'charts': results,
@@ -551,18 +559,18 @@ def _render_metric_table(title: str, rows, value_decimals: int, tolerance: float
     return html
 
 
-def generate_html(all_results, aux_by_sds=None):  # noqa: C901
+def generate_html(all_results, aux_by_run, runs):  # noqa: C901
     """Generate the full HTML report.
 
     Parameters
     ----------
     all_results : list[dict]
-        Per-chart-row result dicts (existing schema).
-    aux_by_sds : dict[int, dict] | None
-        Optional auxiliary results keyed by SDS number, with
-        ``{'capability': [...], 'loss': [...]}`` per SDS.
+        Per-chart-row result dicts, each tagged with its run id.
+    aux_by_run : dict[str, dict]
+        Per run id: ``{'capability': [...], 'loss': [...], 'specs': {...}, 'loss_note': str | None}``.
+    runs : list[Run]
+        The runs, in report order.
     """
-    aux_by_sds = aux_by_sds or {}
     html = """<!DOCTYPE html>
 <html>
 <head>
@@ -595,7 +603,7 @@ summary { cursor: pointer; color: #1565c0; font-size: 12px; }
 </head>
 <body>
 <h1>E2E Bishop Validation Report</h1>
-<p>Comparison of processbehavior library output against Tom Bishop's VAS Minitab analyses (SDS 1-3).</p>
+<p>Comparison of processbehavior library output against Tom Bishop's VAS Minitab analyses, run by run.</p>
 <p class="tolerance">Tolerance: &plusmn;0.01 (half-unit of last decimal place in reference data)</p>
 """
     # Global summary
@@ -617,7 +625,7 @@ summary { cursor: pointer; color: #1565c0; font-size: 12px; }
                 total_skip += 1
 
     # Also fold in capability + loss matches from auxiliary results
-    for aux in aux_by_sds.values():
+    for aux in aux_by_run.values():
         for row in aux.get('capability', []) + aux.get('loss', []):
             if row['match'] is True:
                 total_checks += 1
@@ -638,22 +646,22 @@ out of {total_checks + total_skip} total checks
 </div>
 """
 
-    # Group by SDS
-    for sds_num in [1, 2, 3]:
-        sds_results = [r for r in all_results if r['sds'] == sds_num]
-        if not sds_results:
+    # One section per run
+    for run in runs:
+        run_results = [r for r in all_results if r['run'] == run.id]
+        if not run_results:
             continue
 
-        sds_pass = sum(1 for r in sds_results for k in ('match_cl', 'match_lpl', 'match_upl') if r.get(k) is True)
-        sds_fail = sum(1 for r in sds_results for k in ('match_cl', 'match_lpl', 'match_upl') if r.get(k) is False)
-        sds_skip = sum(1 for r in sds_results for k in ('match_cl', 'match_lpl', 'match_upl') if r.get(k) is None)
+        run_pass = sum(1 for r in run_results for k in ('match_cl', 'match_lpl', 'match_upl') if r.get(k) is True)
+        run_fail = sum(1 for r in run_results for k in ('match_cl', 'match_lpl', 'match_upl') if r.get(k) is False)
+        run_skip = sum(1 for r in run_results for k in ('match_cl', 'match_lpl', 'match_upl') if r.get(k) is None)
 
         html += f"""
-<h2>SDS {sds_num} — Analytic Design State {sds_num}</h2>
+<h2>{run.label} — Analytic Design State {run.ads}</h2>
 <div class="summary">
-<span class="pass-count">{sds_pass} passed</span> /
-<span class="fail-count">{sds_fail} failed</span> /
-<span class="skip-count">{sds_skip} skipped</span>
+<span class="pass-count">{run_pass} passed</span> /
+<span class="fail-count">{run_fail} failed</span> /
+<span class="skip-count">{run_skip} skipped</span>
 </div>
 <table class="main">
 <tr>
@@ -671,7 +679,7 @@ out of {total_checks + total_skip} total checks
     <th>Details</th>
 </tr>
 """
-        for r in sds_results:
+        for r in run_results:
             # Determine overall row status
             matches = [r.get(k) for k in ('match_cl', 'match_lpl', 'match_upl')]
             if any(m is False for m in matches):
@@ -741,12 +749,13 @@ out of {total_checks + total_skip} total checks
         html += '</table>'
 
         # Capability + loss-function sections under each SDS
-        aux = aux_by_sds.get(sds_num, {})
+        aux = aux_by_run.get(run.id, {})
+        specs = aux.get('specs', {})
         cap_rows = aux.get('capability', [])
         loss_rows = aux.get('loss', [])
         if cap_rows:
             html += _render_metric_table(
-                f'Process Capability (LSL={SPEC_LSL}, USL={SPEC_USL}, Target={SPEC_TARGET})',
+                f"Process Capability (LSL={specs.get('lsl')}, USL={specs.get('usl')}, Target={specs.get('target')})",
                 cap_rows, value_decimals=2, tolerance=CAPABILITY_TOLERANCE,
             )
         if loss_rows:
@@ -754,6 +763,8 @@ out of {total_checks + total_skip} total checks
                 'Taguchi Loss Function (% of total)',
                 loss_rows, value_decimals=1, tolerance=LOSS_TOLERANCE,
             )
+            if aux.get('loss_note'):
+                html += f'<p class="tolerance">Pending: {aux["loss_note"]}</p>'
 
     from datetime import datetime
     html += f'<p class="timestamp">Generated: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}</p>'
@@ -768,23 +779,23 @@ out of {total_checks + total_skip} total checks
 MYST_OUTPUT = Path(__file__).parent.parent / 'docs' / 'reference' / 'validation.md'
 
 
-def _tally(all_results, aux_by_sds):
-    """(passed, failed, skipped) per ADS, over charts + capability + loss."""
-    per_sds: dict[int, list[int]] = {}
+def _tally(all_results, aux_by_run):
+    """(passed, failed, pending) per run id, over charts + capability + loss."""
+    per_run: dict[str, list[int]] = {}
     for row in all_results:
-        counts = per_sds.setdefault(row['sds'], [0, 0, 0])
+        counts = per_run.setdefault(row['run'], [0, 0, 0])
         for key in ('match_cl', 'match_lpl', 'match_upl'):
             match = row.get(key)
             counts[0 if match is True else 1 if match is False else 2] += 1
-    for sds_num, aux in (aux_by_sds or {}).items():
-        counts = per_sds.setdefault(sds_num, [0, 0, 0])
+    for run_id, aux in aux_by_run.items():
+        counts = per_run.setdefault(run_id, [0, 0, 0])
         for row in aux['capability'] + aux['loss']:
             match = row['match']
             counts[0 if match is True else 1 if match is False else 2] += 1
-    return per_sds
+    return per_run
 
 
-def generate_myst_summary(all_results, aux_by_sds=None):
+def generate_myst_summary(all_results, aux_by_run, runs):
     """A short, committable summary of the validation run.
 
     Deliberately not the full HTML report: this is the page a reader lands on,
@@ -794,64 +805,68 @@ def generate_myst_summary(all_results, aux_by_sds=None):
     """
     import processbehavior
 
-    per_sds = _tally(all_results, aux_by_sds)
-    total_pass = sum(v[0] for v in per_sds.values())
-    total_fail = sum(v[1] for v in per_sds.values())
-    total_skip = sum(v[2] for v in per_sds.values())
-
-    names = {
-        1: 'ADS 1 — full replication',
-        2: 'ADS 2 — no replication',
-        3: 'ADS 3 — partial replication',
-    }
-    sources = {1: '`PM SDS 1`', 2: '`PM SDS 2`', 3: '`PM SDS 3`'}
+    per_run = _tally(all_results, aux_by_run)
+    total_pass = sum(v[0] for v in per_run.values())
+    total_fail = sum(v[1] for v in per_run.values())
+    total_skip = sum(v[2] for v in per_run.values())
+    data_files = {'T100': '`PBTESTDATABASE_T100.csv`', 'KNOWN': '`PBTESTKNOWNEFFECTS_T100.csv`',
+                  'ACO': '`aco_per_capita_expenditure.csv`'}
 
     lines = [
         '# Validation against Bishop\'s reference results',
         '',
         'Every analytical output this library produces is checked, number by number,',
-        "against Dr. Thomas A. Bishop's published Minitab results for the same data.",
+        "against Dr. Thomas A. Bishop's VAS results (Minitab) for the same data.",
         'Not "inspired by" and not spot-checked — the chart centers, control limits,',
-        'signal classifications, capability indices and loss-function components are',
-        'compared to the reference and the run fails if any of them disagree.',
+        'capability indices and loss-function components are compared to the reference',
+        'and the run fails if any of them disagree.',
         '',
         f'**{total_pass} assertions pass**'
         + (f', {total_fail} fail' if total_fail else ', 0 fail')
-        + (f', {total_skip} have no reference value.' if total_skip else '.'),
+        + (f', {total_skip} have no reference value yet.' if total_skip else '.'),
         '',
         f'Generated by `validation/e2e_bishop_report.py` from processbehavior '
-        f'{processbehavior.__version__}, against `validation/PBTESTDATABASE_T100.csv`.',
+        f'{processbehavior.__version__}.',
         '',
         '## Coverage',
         '',
-        '| Analytical Design State | Source column | Assertions | Result |',
-        '|---|---|---|---|',
+        '| Run | Data | Analytic design state | Assertions | No reference yet | Result |',
+        '|---|---|---|---|---|---|',
     ]
-    for sds_num in sorted(per_sds):
-        passed, failed, skipped = per_sds[sds_num]
+    for run in runs:
+        passed, failed, skipped = per_run.get(run.id, [0, 0, 0])
         verdict = '✅ all pass' if failed == 0 else f'❌ {failed} failing'
         lines.append(
-            f'| {names.get(sds_num, f"ADS {sds_num}")} | {sources.get(sds_num, "—")} '
-            f'| {passed + failed} | {verdict} |'
+            f'| `{run.label}` | {data_files[run.data]} | ADS {run.ads} '
+            f'| {passed + failed} | {skipped} | {verdict} |'
         )
 
     lines += [
         '',
+        'PM SDS 1-6 are one fill-weight dataset with deletions; SDS 4-6 are incomplete grids, analysed',
+        'as the complete design that survives tidying (ADS 1-3). PM INERT is pure noise with the same',
+        'six missing-data patterns. The known-effects data are built from known condition, time and',
+        'interaction effects plus noise. The Medicare data are per-capita expenditure for 24',
+        'organisations over 4 years, one reading each (issue #114).',
+        '',
         '## What is covered',
         '',
         '- **Charts** — center line and both natural process limits, for the primary',
-        '  chart and for each valid chart x residual pair at that design state.',
+        '  chart and for each valid chart x residual pair at that design state. Where subgroup',
+        '  sizes differ, VAS prints "UNEQUAL" instead of a limit; there the limits of every',
+        '  subgroup are read from the limit lines VAS draws, to within 1.5 drawing units',
+        '  (about 0.01-0.1, by chart), and each line counts as one assertion.',
         '- **Capability** — Pp, Ppk (upper and lower), Cp, Cpk, and the percentage of',
         '  the distribution beyond each specification limit.',
         '- **Loss function** — the Taguchi loss decomposition and its components.',
         '',
-        '## What is not yet covered',
+        '## Values with no reference yet',
         '',
-        'ODS 4-6 (incomplete grids) are detected and routed correctly, and their',
-        'collapse to ADS 1-3 is pinned by tests — an incomplete design is analysed as',
-        'the complete design that survives tidying, so the numbers above are the ones',
-        'that apply. What is still outstanding is an end-to-end comparison against',
-        "Bishop's Minitab output for the incomplete-grid datasets themselves.",
+        '- The limits of the R6 S charts (pages 21, 25 and 27) whose subgroups have 343 or more',
+        '  values. The VAS runs of 3 October 2026 held α<sub>N</sub> (10-1 manual Eq 10-12) at 0.9995 from N = 343 up,',
+        "  where Minitab's GAMMA function overflows, so their limits follow N = 500 instead of the",
+        "  subgroup's own N. Dr. Bishop is replacing it with a table of α<sub>N</sub>; these wait for his",
+        '  rerun. Below N = 343 the same charts are checked, and match.',
         '',
         '## Reproducing this',
         '',
@@ -861,51 +876,61 @@ def generate_myst_summary(all_results, aux_by_sds=None):
         '',
         'That writes this page and a detailed HTML report',
         '(`validation/e2e_bishop_report.html`) with every compared value, expected',
-        'beside actual, grouped by design state.',
+        'beside actual, grouped by run.',
         '',
     ]
     return '\n'.join(lines)
 
 
+def load_frames():
+    """Read every data source. PM INERT SDS k (k = 2..6) is the PM INERT column with PM SDS k's
+    missing pattern, which is how the PM INERT SDS 2-6 columns of Dr. Bishop's VAS runs are built."""
+    frames = {name: pd.read_csv(path) for name, path in DATA.items()}
+    t100 = frames['T100']
+    inert = pd.to_numeric(t100['PM INERT'], errors='coerce')
+    for k in range(2, 7):
+        present = pd.to_numeric(t100[f'PM SDS {k}'], errors='coerce').notna()
+        t100[f'PM INERT SDS {k}'] = inert.where(present)
+    return frames
+
+
 def main():
     print('Loading validation data...')
-    df = pd.read_csv(VALIDATION_CSV)
-    pb = ProcessBehavior(df)
+    frames = load_frames()
+    pbs = {name: ProcessBehavior(df) for name, df in frames.items()}
 
     all_results = []
-    aux_by_sds = {}   # {sds_num: {'capability': [...], 'loss': [...]}}
+    aux_by_run = {}   # {run id: {'capability': [...], 'loss': [...], 'specs': {...}, 'loss_note': ...}}
     total_fails = 0
 
-    for sds_num, config in SDS_CONFIGS.items():
-        print(f'\nProcessing SDS {sds_num}...')
-        response = getattr(pb.cols, config['response_attr'])
-        study = pb.formulate(
-            response=response,
-            factors=[pb.cols.FACTOR_1, pb.cols.FACTOR_2],
-            time=pb.cols.PRODUCTION_TIME
-        )
-        print(f'  Analytical SDS: {study.analytical_design_state}')
+    for run in RUNS:
+        print(f'\nProcessing {run.label}...')
+        pb = pbs[run.data]
+        study = pb.formulate(response=run.response, factors=list(run.factors), time=run.time)
+        ads = study.analytical_design_state
+        print(f'  Analytical SDS: {ads}')
+        if ads.sds != run.ads:
+            print(f'  ADS MISMATCH: expected {run.ads}')
+            total_fails += 1
 
-        json_path = FIXTURES_DIR / config['json']
-        with open(json_path) as f:
-            json_data = json.load(f)
-
-        sds_payload = run_sds_validation(sds_num, pb, study, json_data)
-        chart_results = sds_payload['charts']
+        ref = json.loads((FIXTURES_DIR / f'{run.id}.json').read_text())
+        payload = run_validation(run, pb, study, ref)
+        chart_results = payload['charts']
         all_results.extend(chart_results)
-        aux_by_sds[sds_num] = {
-            'capability': sds_payload['capability'],
-            'loss': sds_payload['loss'],
+        aux_by_run[run.id] = {
+            'capability': payload['capability'],
+            'loss': payload['loss'],
+            'specs': ref['specs'],
+            'loss_note': ref.get('loss_note'),
         }
 
-        # Print summary across charts + capability/loss
         passes = sum(
             1 for r in chart_results for k in ('match_cl', 'match_lpl', 'match_upl') if r.get(k) is True
         )
         fails = sum(
             1 for r in chart_results for k in ('match_cl', 'match_lpl', 'match_upl') if r.get(k) is False
         )
-        for row in sds_payload['capability'] + sds_payload['loss']:
+        for row in payload['capability'] + payload['loss']:
             if row['match'] is True:
                 passes += 1
             elif row['match'] is False:
@@ -914,18 +939,17 @@ def main():
         total_fails += fails
 
     print('\nGenerating HTML report...')
-    html = generate_html(all_results, aux_by_sds)
-    OUTPUT_HTML.write_text(html)
+    OUTPUT_HTML.write_text(generate_html(all_results, aux_by_run, RUNS))
     print(f'Report written to: {OUTPUT_HTML}')
 
     MYST_OUTPUT.parent.mkdir(parents=True, exist_ok=True)
-    MYST_OUTPUT.write_text(generate_myst_summary(all_results, aux_by_sds))
+    MYST_OUTPUT.write_text(generate_myst_summary(all_results, aux_by_run, RUNS))
     print(f'Docs summary written to: {MYST_OUTPUT}')
 
     # The reports above are evidence; this exit code is the gate. Reference
     # disagreement must fail the build itself, not just drift the docs page —
     # otherwise committing the drifted page makes CI green with wrong numbers.
-    # 'pending' rows (match is None, the ODS 4-6 backlog) are never fatal.
+    # 'pending' rows (match is None: no reference value yet) are never fatal.
     if total_fails:
         print(f'\nVALIDATION FAILED: {total_fails} assertion(s) diverge from Bishop reference values.')
         sys.exit(1)

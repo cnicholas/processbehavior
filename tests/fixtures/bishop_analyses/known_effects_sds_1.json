@@ -1,18 +1,48 @@
 {
-  "source_file": "vassds1analysis.pptm",
-  "extraction_method": "Structured extraction from PDF text generated from the PowerPoint; this deck exposes chart text in the rendered PDF, which allowed direct parsing of page titles, chart text, limits, axis labels, and package footer metadata. Missing values were preserved as null when not present on the slide.",
+  "run": "known_effects_sds_1",
+  "label": "PM SDS 1 KNOWN",
+  "analytic_design_state": 1,
+  "specs": {
+    "lsl": 295,
+    "usl": 305,
+    "target": 300
+  },
+  "source_file": "VAS KNOWN EFFECTS TEST 10-6-26.pptm (VAS run of 10/6/2026, 10-1 manual)",
+  "extraction_method": "Values read from the text drawn in the Minitab charts of the VAS deck (displayed precision); page structure and null pattern from the PM SDS reference for the same ADS.",
   "pages_extracted": 34,
+  "capability": {
+    "pp": 0.41,
+    "ppk_upper": 0.45,
+    "ppk_lower": 0.38,
+    "pct_below_lsl": 12.78,
+    "pct_above_usl": 9.35,
+    "cp": 0.61,
+    "cpk_upper": 0.67,
+    "cpk_lower": 0.56,
+    "potential_pct_below_lsl": 4.55,
+    "potential_pct_above_usl": 1.95
+  },
+  "loss": {
+    "pct_unexplained": 50.3,
+    "pct_interaction": 30.2,
+    "pct_pdc": 9.6,
+    "pct_time": 8.8,
+    "pct_centering": 1.2,
+    "pct_pdc_f2": 4.9,
+    "pct_pdc_f1": 4.6,
+    "pct_pdc_factor_interaction": 0.0
+  },
   "items": [
     {
       "page_number": 1,
       "analysis_title": "Analysis of Original Performance Measurement Behavior",
       "chart_title": "Analysis of PM Sample Averages",
-      "chart_subtitle": "PM1",
+      "chart_subtitle": "PM SDS 1 KNOWN",
       "context_subtitle": null,
       "variable": "RSG AVG",
-      "CL": 237.82,
-      "LBL": 236.63,
-      "UBL": 239,
+      "CL": 299.54,
+      "LBL": 295.47,
+      "UBL": 303.61,
       "axis_labels": {
         "x": "PDCxPT RSG",
         "y": "Sample Average"
@@ -26,12 +56,12 @@
       "page_number": 2,
       "analysis_title": "Analysis of Original Performance Measurement Behavior",
       "chart_title": "Analysis of PM Sample Standard Deviations",
-      "chart_subtitle": "PM1",
+      "chart_subtitle": "PM SDS 1 KNOWN",
       "context_subtitle": null,
       "variable": "RSG STDEV",
-      "CL": 0.83,
-      "LBL": 0,
-      "UBL": 1.74,
+      "CL": 2.85,
+      "LBL": 0.0,
+      "UBL": 5.96,
       "axis_labels": {
         "x": "PDCxPT RSG",
         "y": "Sample Standard Deviation"
@@ -45,12 +75,12 @@
       "page_number": 3,
       "analysis_title": "Analysis of Original Performance Measurement Behavior",
       "chart_title": "Analysis of PM Sample Averages",
-      "chart_subtitle": "PM1",
+      "chart_subtitle": "PM SDS 1 KNOWN",
       "context_subtitle": "PDC RSG - 1-1",
       "variable": "RSG AVG",
-      "CL": 238.2,
-      "LBL": 237.09,
-      "UBL": 239.31,
+      "CL": 299.28,
+      "LBL": 295.08,
+      "UBL": 303.48,
       "axis_labels": {
         "x": "PT RSG",
         "y": "Sample Average"
@@ -64,12 +94,12 @@
       "page_number": 4,
       "analysis_title": "Analysis of Original Performance Measurement Behavior",
       "chart_title": "Analysis of PM Sample Standard Deviations",
-      "chart_subtitle": "PM1",
+      "chart_subtitle": "PM SDS 1 KNOWN",
       "context_subtitle": "PDC RSG - 1-1",
       "variable": "RSG STDEV",
-      "CL": 0.78,
-      "LBL": 0,
-      "UBL": 1.62,
+      "CL": 2.94,
+      "LBL": 0.0,
+      "UBL": 6.15,
       "axis_labels": {
         "x": "PT RSG",
         "y": "Sample Standard Deviation"
@@ -83,12 +113,12 @@
       "page_number": 5,
       "analysis_title": "Analysis of Original Performance Measurement Behavior",
       "chart_title": "Analysis of PM Sample Averages",
-      "chart_subtitle": "PM1",
+      "chart_subtitle": "PM SDS 1 KNOWN",
       "context_subtitle": "PDC RSG - 1-2",
       "variable": "RSG AVG",
-      "CL": 238.61,
-      "LBL": 237.47,
-      "UBL": 239.76,
+      "CL": 301.09,
+      "LBL": 297.0,
+      "UBL": 305.18,
       "axis_labels": {
         "x": "PT RSG",
         "y": "Sample Average"
@@ -102,12 +132,12 @@
       "page_number": 6,
       "analysis_title": "Analysis of Original Performance Measurement Behavior",
       "chart_title": "Analysis of PM Sample Standard Deviations",
-      "chart_subtitle": "PM1",
+      "chart_subtitle": "PM SDS 1 KNOWN",
       "context_subtitle": "PDC RSG - 1-2",
       "variable": "RSG STDEV",
-      "CL": 0.8,
-      "LBL": 0,
-      "UBL": 1.68,
+      "CL": 2.87,
+      "LBL": 0.0,
+      "UBL": 5.99,
       "axis_labels": {
         "x": "PT RSG",
         "y": "Sample Standard Deviation"
@@ -121,12 +151,12 @@
       "page_number": 7,
       "analysis_title": "Analysis of Original Performance Measurement Behavior",
       "chart_title": "Analysis of PM Sample Averages",
-      "chart_subtitle": "PM1",
+      "chart_subtitle": "PM SDS 1 KNOWN",
       "context_subtitle": "PDC RSG - 2-1",
       "variable": "RSG AVG",
-      "CL": 237.37,
-      "LBL": 236.16,
-      "UBL": 238.59,
+      "CL": 299.13,
+      "LBL": 295.2,
+      "UBL": 303.06,
       "axis_labels": {
         "x": "PT RSG",
         "y": "Sample Average"
@@ -140,12 +170,12 @@
       "page_number": 8,
       "analysis_title": "Analysis of Original Performance Measurement Behavior",
       "chart_title": "Analysis of PM Sample Standard Deviations",
-      "chart_subtitle": "PM1",
+      "chart_subtitle": "PM SDS 1 KNOWN",
       "context_subtitle": "PDC RSG - 2-1",
       "variable": "RSG STDEV",
-      "CL": 0.85,
-      "LBL": 0,
-      "UBL": 1.78,
+      "CL": 2.75,
+      "LBL": 0.0,
+      "UBL": 5.75,
       "axis_labels": {
         "x": "PT RSG",
         "y": "Sample Standard Deviation"
@@ -159,12 +189,12 @@
       "page_number": 9,
       "analysis_title": "Analysis of Original Performance Measurement Behavior",
       "chart_title": "Analysis of PM Sample Averages",
-      "chart_subtitle": "PM1",
+      "chart_subtitle": "PM SDS 1 KNOWN",
       "context_subtitle": "PDC RSG - 2-2",
       "variable": "RSG AVG",
-      "CL": 238.98,
-      "LBL": 237.78,
-      "UBL": 240.18,
+      "CL": 300.94,
+      "LBL": 296.89,
+      "UBL": 304.99,
       "axis_labels": {
         "x": "PT RSG",
         "y": "Sample Average"
@@ -178,12 +208,12 @@
       "page_number": 10,
       "analysis_title": "Analysis of Original Performance Measurement Behavior",
       "chart_title": "Analysis of PM Sample Standard Deviations",
-      "chart_subtitle": "PM1",
+      "chart_subtitle": "PM SDS 1 KNOWN",
       "context_subtitle": "PDC RSG - 2-2",
       "variable": "RSG STDEV",
-      "CL": 0.84,
-      "LBL": 0,
-      "UBL": 1.76,
+      "CL": 2.84,
+      "LBL": 0.0,
+      "UBL": 5.93,
       "axis_labels": {
         "x": "PT RSG",
         "y": "Sample Standard Deviation"
@@ -197,12 +227,12 @@
       "page_number": 11,
       "analysis_title": "Analysis of Original Performance Measurement Behavior",
       "chart_title": "Analysis of PM Sample Averages",
-      "chart_subtitle": "PM1",
+      "chart_subtitle": "PM SDS 1 KNOWN",
       "context_subtitle": "PDC RSG - 3-1",
       "variable": "RSG AVG",
-      "CL": 236.62,
-      "LBL": 235.37,
-      "UBL": 237.86,
+      "CL": 297.05,
+      "LBL": 292.89,
+      "UBL": 301.21,
       "axis_labels": {
         "x": "PT RSG",
         "y": "Sample Average"
@@ -216,12 +246,12 @@
       "page_number": 12,
       "analysis_title": "Analysis of Original Performance Measurement Behavior",
       "chart_title": "Analysis of PM Sample Standard Deviations",
-      "chart_subtitle": "PM1",
+      "chart_subtitle": "PM SDS 1 KNOWN",
       "context_subtitle": "PDC RSG - 3-1",
       "variable": "RSG STDEV",
-      "CL": 0.87,
-      "LBL": 0,
-      "UBL": 1.82,
+      "CL": 2.91,
+      "LBL": 0.0,
+      "UBL": 6.08,
       "axis_labels": {
         "x": "PT RSG",
         "y": "Sample Standard Deviation"
@@ -235,12 +265,12 @@
       "page_number": 13,
       "analysis_title": "Analysis of Original Performance Measurement Behavior",
       "chart_title": "Analysis of PM Sample Averages",
-      "chart_subtitle": "PM1",
+      "chart_subtitle": "PM SDS 1 KNOWN",
       "context_subtitle": "PDC RSG - 3-2",
       "variable": "RSG AVG",
-      "CL": 237.08,
-      "LBL": 235.94,
-      "UBL": 238.22,
+      "CL": 298.87,
+      "LBL": 294.73,
+      "UBL": 303.0,
       "axis_labels": {
         "x": "PT RSG",
         "y": "Sample Average"
@@ -254,12 +284,12 @@
       "page_number": 14,
       "analysis_title": "Analysis of Original Performance Measurement Behavior",
       "chart_title": "Analysis of PM Sample Standard Deviations",
-      "chart_subtitle": "PM1",
+      "chart_subtitle": "PM SDS 1 KNOWN",
       "context_subtitle": "PDC RSG - 3-2",
       "variable": "RSG STDEV",
-      "CL": 0.8,
-      "LBL": 0,
-      "UBL": 1.67,
+      "CL": 2.9,
+      "LBL": 0.0,
+      "UBL": 6.05,
       "axis_labels": {
         "x": "PT RSG",
         "y": "Sample Standard Deviation"
@@ -273,12 +303,12 @@
       "page_number": 15,
       "analysis_title": "Analysis of Original Performance Measurement Behavior",
       "chart_title": "Analysis of PM Sample Averages",
-      "chart_subtitle": "PM1",
+      "chart_subtitle": "PM SDS 1 KNOWN",
       "context_subtitle": "PDC RSG - 4-1",
       "variable": "RSG AVG",
-      "CL": 237.54,
-      "LBL": 236.31,
-      "UBL": 238.77,
+      "CL": 298.91,
+      "LBL": 294.89,
+      "UBL": 302.93,
       "axis_labels": {
         "x": "PT RSG",
         "y": "Sample Average"
@@ -292,12 +322,12 @@
       "page_number": 16,
       "analysis_title": "Analysis of Original Performance Measurement Behavior",
       "chart_title": "Analysis of PM Sample Standard Deviations",
-      "chart_subtitle": "PM1",
+      "chart_subtitle": "PM SDS 1 KNOWN",
       "context_subtitle": "PDC RSG - 4-1",
       "variable": "RSG STDEV",
-      "CL": 0.86,
-      "LBL": 0,
-      "UBL": 1.8,
+      "CL": 2.82,
+      "LBL": 0.0,
+      "UBL": 5.88,
       "axis_labels": {
         "x": "PT RSG",
         "y": "Sample Standard Deviation"
@@ -311,12 +341,12 @@
       "page_number": 17,
       "analysis_title": "Analysis of Original Performance Measurement Behavior",
       "chart_title": "Analysis of PM Sample Averages",
-      "chart_subtitle": "PM1",
+      "chart_subtitle": "PM SDS 1 KNOWN",
       "context_subtitle": "PDC RSG - 4-2",
       "variable": "RSG AVG",
-      "CL": 238.13,
-      "LBL": 236.91,
-      "UBL": 239.34,
+      "CL": 301.06,
+      "LBL": 297.05,
+      "UBL": 305.07,
       "axis_labels": {
         "x": "PT RSG",
         "y": "Sample Average"
@@ -330,12 +360,12 @@
       "page_number": 18,
       "analysis_title": "Analysis of Original Performance Measurement Behavior",
       "chart_title": "Analysis of PM Sample Standard Deviations",
-      "chart_subtitle": "PM1",
+      "chart_subtitle": "PM SDS 1 KNOWN",
       "context_subtitle": "PDC RSG - 4-2",
       "variable": "RSG STDEV",
-      "CL": 0.85,
-      "LBL": 0,
-      "UBL": 1.77,
+      "CL": 2.81,
+      "LBL": 0.0,
+      "UBL": 5.87,
       "axis_labels": {
         "x": "PT RSG",
         "y": "Sample Standard Deviation"
@@ -349,7 +379,7 @@
       "page_number": 19,
       "analysis_title": "Current Process Capability",
       "chart_title": "PM1 H TITLE 1",
-      "chart_subtitle": "PM1 H TITLE 2",
+      "chart_subtitle": "PM SDS 1 KNOWN",
       "context_subtitle": null,
       "variable": null,
       "CL": null,
@@ -362,18 +392,18 @@
       "package": {
         "analysis_design_state": "ANALYTIC DESIGN STATE 1: N > 1 COMPLETE"
       },
-      "notes": "Chart title placeholders 'H TITLE 1/2' appear unreplaced in source slide."
+      "notes": null
     },
     {
       "page_number": 20,
       "analysis_title": "Process Design Condition Main Effects Analysis",
       "chart_title": "Analysis of PDC RSG Sample Averages",
-      "chart_subtitle": "PM1",
+      "chart_subtitle": "PM SDS 1 KNOWN",
       "context_subtitle": null,
       "variable": "RSG AVG",
-      "CL": 237.82,
-      "LBL": 237.71,
-      "UBL": 237.92,
+      "CL": 299.54,
+      "LBL": 299.18,
+      "UBL": 299.9,
       "axis_labels": {
         "x": "PDC RSG",
         "y": "Sample Average"
@@ -387,12 +417,12 @@
       "page_number": 21,
       "analysis_title": "Process Design Condition Main Effects Analysis",
       "chart_title": "Analysis of PDC RSG Sample Standard Deviations",
-      "chart_subtitle": "PM1",
+      "chart_subtitle": "PM SDS 1 KNOWN",
       "context_subtitle": null,
       "variable": "RSG STDEV",
-      "CL": 0.8,
-      "LBL": 0.73,
-      "UBL": 0.88,
+      "CL": 2.71,
+      "LBL": 2.45,
+      "UBL": 2.97,
       "axis_labels": {
         "x": "PDC RSG",
         "y": "Sample Standard Deviation"
@@ -406,12 +436,12 @@
       "page_number": 22,
       "analysis_title": "Production Time Main Effects Analysis",
       "chart_title": "Analysis of PT RSG Sample Averages",
-      "chart_subtitle": "PM1",
+      "chart_subtitle": "PM SDS 1 KNOWN",
       "context_subtitle": null,
       "variable": "RSG AVG",
-      "CL": 237.82,
-      "LBL": 237.43,
-      "UBL": 238.2,
+      "CL": 299.54,
+      "LBL": 298.24,
+      "UBL": 300.84,
       "axis_labels": {
         "x": "PT RSG",
         "y": "Sample Average"
@@ -425,12 +455,12 @@
       "page_number": 23,
       "analysis_title": "Production Time Main Effects Analysis",
       "chart_title": "Analysis of PT RSG Sample Standard Deviations",
-      "chart_subtitle": "PM1",
+      "chart_subtitle": "PM SDS 1 KNOWN",
       "context_subtitle": null,
       "variable": "RSG STDEV",
-      "CL": 0.8,
-      "LBL": 0.53,
-      "UBL": 1.08,
+      "CL": 2.72,
+      "LBL": 1.79,
+      "UBL": 3.65,
       "axis_labels": {
         "x": "PT RSG",
         "y": "Sample Standard Deviation"
@@ -444,12 +474,12 @@
       "page_number": 24,
       "analysis_title": "Process Design Factor Main Effects Analysis",
       "chart_title": "Analysis of PD Factor Sample Averages",
-      "chart_subtitle": "PM1",
+      "chart_subtitle": "PM SDS 1 KNOWN",
       "context_subtitle": "PD Factor - F1",
       "variable": "RSG AVG",
-      "CL": 237.82,
-      "LBL": 237.74,
-      "UBL": 237.89,
+      "CL": 299.54,
+      "LBL": 299.28,
+      "UBL": 299.8,
       "axis_labels": {
         "x": "PD Factor RSG",
         "y": "Sample Average"
@@ -463,12 +493,12 @@
       "page_number": 25,
       "analysis_title": "Process Design Condition Main Effects Analysis",
       "chart_title": "Analysis of PDC RSG Sample Standard Deviations",
-      "chart_subtitle": "PM1",
+      "chart_subtitle": "PM SDS 1 KNOWN",
       "context_subtitle": "PD Factor - F1",
       "variable": "RSG STDEV",
-      "CL": 0.8,
-      "LBL": 0.75,
-      "UBL": 0.86,
+      "CL": 2.71,
+      "LBL": null,
+      "UBL": null,
       "axis_labels": {
         "x": "PD Factor RSG",
         "y": "Sample Standard Deviation"
@@ -476,18 +506,18 @@
       "package": {
         "analysis_design_state": "ANALYTIC DESIGN STATE 1: N > 1 COMPLETE"
       },
-      "notes": null
+      "notes": "One subgroup per factor level (confirmed by Dr. Bishop, 10/8/2026). These subgroups have more than 343 values, and the 10/3 VAS held alpha_N (Eq 10-12) at 0.9995 above N = 343 (Minitab's GAMMA limit), so its limits follow N = 500; limits pending his rerun with alpha_N from a table."
     },
     {
       "page_number": 26,
       "analysis_title": "Process Design Factor Main Effects Analysis",
       "chart_title": "Analysis of PD Factor Sample Averages",
-      "chart_subtitle": "PM1",
+      "chart_subtitle": "PM SDS 1 KNOWN",
       "context_subtitle": "PD Factor - F2",
       "variable": "RSG AVG",
-      "CL": 237.82,
-      "LBL": 237.76,
-      "UBL": 237.87,
+      "CL": 299.54,
+      "LBL": 299.36,
+      "UBL": 299.72,
       "axis_labels": {
         "x": "PD Factor RSG",
         "y": "Sample Average"
@@ -501,12 +531,12 @@
       "page_number": 27,
       "analysis_title": "Process Design Condition Main Effects Analysis",
       "chart_title": "Analysis of PDC RSG Sample Standard Deviations",
-      "chart_subtitle": "PM1",
+      "chart_subtitle": "PM SDS 1 KNOWN",
       "context_subtitle": "PD Factor - F2",
       "variable": "RSG STDEV",
-      "CL": 0.8,
-      "LBL": 0.76,
-      "UBL": 0.84,
+      "CL": 2.71,
+      "LBL": null,
+      "UBL": null,
       "axis_labels": {
         "x": "PD Factor RSG",
         "y": "Sample Standard Deviation"
@@ -514,18 +544,18 @@
       "package": {
         "analysis_design_state": "ANALYTIC DESIGN STATE 1: N > 1 COMPLETE"
       },
-      "notes": null
+      "notes": "One subgroup per factor level (confirmed by Dr. Bishop, 10/8/2026). These subgroups have more than 343 values, and the 10/3 VAS held alpha_N (Eq 10-12) at 0.9995 above N = 343 (Minitab's GAMMA limit), so its limits follow N = 500; limits pending his rerun with alpha_N from a table."
     },
     {
       "page_number": 28,
       "analysis_title": "Process Design Condition by Production Time Interaction Effects",
       "chart_title": "Analysis of PDCxPT RSG Sample Averages",
-      "chart_subtitle": "PM1",
+      "chart_subtitle": "PM SDS 1 KNOWN",
       "context_subtitle": null,
       "variable": "RSG AVG",
-      "CL": 237.82,
-      "LBL": 236.63,
-      "UBL": 239,
+      "CL": 299.54,
+      "LBL": 295.47,
+      "UBL": 303.61,
       "axis_labels": {
         "x": "PDCxPT RSG",
         "y": "Sample Average"
@@ -539,12 +569,12 @@
       "page_number": 29,
       "analysis_title": "Process Design Condition by Production Time Interaction Effects",
       "chart_title": "Analysis of PDCxPT RSG Sample Standard Deviations",
-      "chart_subtitle": "PM1",
+      "chart_subtitle": "PM SDS 1 KNOWN",
       "context_subtitle": null,
       "variable": "RSG STDEV",
-      "CL": 0.83,
-      "LBL": 0,
-      "UBL": 1.74,
+      "CL": 2.85,
+      "LBL": 0.0,
+      "UBL": 5.96,
       "axis_labels": {
         "x": "PDCxPT RSG",
         "y": "Sample Standard Deviation"
@@ -596,7 +626,7 @@
       "page_number": 32,
       "analysis_title": "Potential Process Capability",
       "chart_title": "PM1 H TITLE 1",
-      "chart_subtitle": "PM1 H TITLE 2",
+      "chart_subtitle": "PM SDS 1 KNOWN",
       "context_subtitle": null,
       "variable": null,
       "CL": null,
@@ -609,18 +639,18 @@
       "package": {
         "analysis_design_state": "ANALYTIC DESIGN STATE 1: N > 1 COMPLETE"
       },
-      "notes": "Chart title placeholders 'H TITLE 1/2' appear unreplaced in source slide."
+      "notes": null
     },
     {
       "page_number": 33,
       "analysis_title": "Test of Maximum Information",
       "chart_title": "R2 Residuals Individuals Chart",
-      "chart_subtitle": "PM1",
+      "chart_subtitle": "PM SDS 1 KNOWN",
       "context_subtitle": null,
       "variable": "R2 RESIDUALS",
-      "CL": 0,
-      "LBL": -2.63,
-      "UBL": 2.63,
+      "CL": 0.0,
+      "LBL": -8.89,
+      "UBL": 8.89,
       "axis_labels": {
         "x": "PDCxPT RSG",
         "y": "Individual Value"
