@@ -673,7 +673,12 @@ def assess_capability(
             raise ValidationError(f'Capability analysis requires at least 2 valid observations, got {n}.')
 
     # --- Current capability ---
-    y_bar = _process_mean(frame, response_var)  # mean of cell means, as VAS (see _process_mean)
+    # Mean of cell means, as VAS (see _process_mean). The whole study's is already on every row
+    # as Ybar (residual_calculator), as the loss function reads it; a window needs its own.
+    if window is None and 'Ybar' in df.columns:
+        y_bar = float(df['Ybar'].iloc[0])
+    else:
+        y_bar = _process_mean(frame, response_var)
     s, sigma_hat = compute_sigma_hat(y_values)
 
     current = compute_capability_indices(y_bar, sigma_hat, specs)
