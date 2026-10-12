@@ -389,11 +389,12 @@ def calculate_limits_vectorized(
     Notes
     -----
     **Conversion is deliberately partial.** The four primary Xbar/S limit computations in
-    ``analysis.py`` use this; the phase-segment and per-stratum sites still call the scalar
-    form. Those iterate over phases or strata (a handful of rows), not subgroups, so they
-    were not hot when measured — converting them would carry risk for no gain. If a future
-    profile shows otherwise, they are the next candidates; do not assume the absence of a
-    call here means a site was checked and rejected on correctness grounds.
+    ``analysis.py`` use this, and so do the stratified X/mR paths (through
+    ``_mr_family_limits``): those once iterated over a handful of strata, until a study
+    with one stratum per row (300,000 of them) made the scalar calls cost 30s per chart.
+    The ungrouped phase-segment sites still call the scalar form; they iterate over phases,
+    not subgroups or strata. Do not assume the absence of a call here means a site was
+    checked and rejected on correctness grounds.
     """
     index = next((arg.index for arg in (mean, sd, N, mR) if isinstance(arg, pd.Series)), None)
 

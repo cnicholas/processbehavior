@@ -197,6 +197,65 @@ def _split_strata_by_sufficiency(
     return insufficient, published
 
 
+def _stratum_row_positions(df: pd.DataFrame, stratify_col: str) -> dict:
+    """Row positions of every stratum in `df`, from one grouping pass.
+
+    The per-stratum loops used to select with ``df[df[stratify_col] == stratum]``, which
+    compares the whole column for every stratum: O(strata x rows). With one row per
+    stratum that is quadratic in the data: 48s for an X/mR pair at 30,165 rows, an
+    estimated 80 minutes at 307,683. Look rows up here instead with :func:`_stratum_rows`.
+
+    NaN strata are absent (groupby drops them), so they select no rows, exactly as
+    ``col == NaN`` did.
+    """
+    return df.groupby(stratify_col, sort=False, observed=True).indices
+
+
+def _stratum_rows(df: pd.DataFrame, positions: dict, stratum) -> pd.DataFrame:
+    """The rows of `df` in `stratum`, in `df`'s order (a view; copy before writing)."""
+    pos = positions.get(stratum)
+    return df.iloc[pos] if pos is not None else df.iloc[0:0]
+
+
+def _mr_family_limits(mr_spec: _MRChartSpec, *, mean, mR) -> pd.DataFrame:
+    """Limits for one MR-family chart per row of a per-stratum or per-phase table.
+
+    The array form of the scalar ``calculate_limits`` these sites used to call through
+    ``DataFrame.apply(axis=1)``: the same formulae, 10-12 manual Eqs 12-10/12-11 (X) and
+    12-5 (mR). The scalar call built a ``pd.Series`` per stratum, about 0.1 ms each, so
+    it cost 30s per chart at 300,000 strata. ``mean`` is ignored for the mR chart.
+    """
+    if mr_spec.limits_type == 'XmR':
+        return calculate_limits_vectorized('XmR', mean=mean, mR=mR)
+    return calculate_limits_vectorized(mr_spec.limits_type, mR=mR)
+
+
+def _mr_stratum_statistics(mr_spec: _MRChartSpec, grouped: pd.DataFrame, stratify_col: str,
+                           lpl_col: str, upl_col: str, round_to: int) -> dict:
+    """The per-stratum statistics dict of a stratified MR-family chart, in one pass.
+
+    `grouped` has one row per stratum. Replaces a loop that found each stratum's row
+    with ``grouped[grouped[stratify_col] == stratum]``: O(strata^2). The values stay
+    numpy floats (``to_numpy``, not ``tolist``), as that loop's row lookup returned them.
+    """
+    n = _mr_family_subgroup_n(mr_spec.chart_type)
+    return {
+        stratum: {
+            'N': n,
+            'center': round(center, round_to),
+            'lpl': round(lpl, round_to),
+            'upl': round(upl, round_to),
+        }
+        for stratum, center, lpl, upl in zip(
+            grouped[stratify_col].tolist(),
+            grouped['center'].to_numpy(),
+            grouped[lpl_col].to_numpy(),
+            grouped[upl_col].to_numpy(),
+            strict=True,
+        )
+    }
+
+
 def _no_replication_alternative(chart: str) -> str:
     """What to reach for instead, when a subgroup chart has nothing to subgroup."""
     return (
@@ -278,7 +337,9 @@ def _build_stratified_mr_payload(
         published_strata = list(strata)
     else:
         metadata['insufficient_strata'] = insufficient_strata or None
-        published_strata = [s for s in strata if s not in (insufficient_strata or [])]
+        # A set: against the list this was O(strata^2) when most strata are insufficient.
+        insufficient_set = set(insufficient_strata or ())
+        published_strata = [s for s in strata if s not in insufficient_set]
     return {
         mr_spec.chart_type: {
             'data': chart_out,
@@ -951,6 +1012,28 @@ class Analysis:
         groupby_cols = list(by)
         return groupby_cols, None, []
 
+    def _stratum_lane_boundaries(self, out: pd.DataFrame, stratify_col: str, strata: list,
+                                 collapsed_factors: list[str]) -> dict:
+        """Lane boundaries for each stratum of a stratified chart, keyed by stratum.
+
+        Strata with no boundary are left out. A stratum of fewer than two rows can't have
+        one, so it is skipped without the per-call cost, which matters when nearly every
+        row is its own stratum.
+        """
+        lane_boundaries: dict = {}
+        if not collapsed_factors:
+            return lane_boundaries
+        positions = _stratum_row_positions(out, stratify_col)
+        for stratum in strata:
+            pos = positions.get(stratum)
+            if pos is None or len(pos) < 2:
+                continue
+            stratum_data = out.iloc[pos].reset_index(drop=True)
+            boundaries = self._calculate_lane_boundaries(stratum_data, collapsed_factors)
+            if boundaries:
+                lane_boundaries[stratum] = boundaries
+        return lane_boundaries
+
     def _calculate_lane_boundaries(self, df: pd.DataFrame, collapsed_vars: list[str]) -> list[dict]:
         """
         Calculate lane boundaries where collapsed factors change.
@@ -1368,6 +1451,7 @@ class Analysis:
         _limits_col = self._resolve_limits_column(value_col, df)
 
         strata = df[stratify_col].unique().tolist()
+        positions = _stratum_row_positions(df, stratify_col)
         all_xbar_frames = []
         chart_statistics = {}
         intermediates_per_stratum = {}
@@ -1378,7 +1462,7 @@ class Analysis:
         insufficient_strata: list = []
 
         for stratum in strata:
-            sdf = df[df[stratify_col] == stratum].copy()
+            sdf = _stratum_rows(df, positions, stratum).copy()
 
             # Group by time within this stratum
             # Note: we always compute mean directly from filtered data, NOT using
@@ -1457,7 +1541,8 @@ class Analysis:
         chart_out = pd.concat(all_xbar_frames, ignore_index=True)
 
         # Publish only strata a caller can actually focus() into.
-        published_strata = [s for s in strata if s not in set(insufficient_strata)]
+        insufficient_set = set(insufficient_strata)
+        published_strata = [s for s in strata if s not in insufficient_set]
 
         # Select output columns
         group_col = groupby_cols[0] if groupby_cols else None
@@ -1541,10 +1626,12 @@ class Analysis:
                 df['_stratify_key'] = encode_rsg_series(df, stratify_by)
                 stratify_col = '_stratify_key'
             strata = df[stratify_col].unique().tolist()
+            positions = _stratum_row_positions(df, stratify_col)
             per_stratum = None
             insufficient_strata = []
 
-        all_strata = list(strata) + [s for s in insufficient_strata if s not in strata]
+        strata_set = set(strata)
+        all_strata = list(strata) + [s for s in insufficient_strata if s not in strata_set]
         all_s_frames = []
         chart_statistics = {}
 
@@ -1562,7 +1649,7 @@ class Analysis:
                 n_max = inter['n_max']
                 n_avg = inter['n_avg']
             else:
-                sdf = df[df[stratify_col] == stratum].copy()
+                sdf = _stratum_rows(df, positions, stratum).copy()
                 _limits_col = self._resolve_limits_column(value_col, sdf)
                 agg_dict = {
                     's': pd.NamedAgg(column=_limits_col, aggfunc='std'),
@@ -1619,7 +1706,8 @@ class Analysis:
             _raise_no_replication('S', sds, insufficient_strata, len(all_strata))
         chart_out = pd.concat(all_s_frames, ignore_index=True)
 
-        published_strata = [s for s in all_strata if s not in set(insufficient_strata)]
+        insufficient_set = set(insufficient_strata)
+        published_strata = [s for s in all_strata if s not in insufficient_set]
 
         group_col = groupby_cols[0] if groupby_cols else None
         cols_to_keep = [stratify_col, group_col, 's', 'center', 'lpl', 'upl', 'beyond_limits']
@@ -1983,17 +2071,7 @@ class Analysis:
 
             # Recompute R-specific limits per phase within each stratum
             r_phase_stats = phase_stats[[stratify_col, '_phase_id', 'mR']].copy()
-            r_lims = r_phase_stats.apply(
-                lambda row: calculate_limits(
-                    mean=0,
-                    sd=0,
-                    N=0,
-                    mR=row['mR'],
-                    limits_type=mr_spec.limits_type,
-                    round_to=spec.round_to,
-                ),
-                axis=1,
-            )
+            r_lims = _mr_family_limits(mr_spec, mean=0, mR=r_phase_stats['mR'])
             r_phase_stats = _join_limits(r_phase_stats, r_lims)
             r_phase_stats['center'] = r_phase_stats['mR']
 
@@ -2048,17 +2126,7 @@ class Analysis:
         # grouped has columns: stratify_col, center (=mean), mR, lpl, upl (X limits)
         r_grouped = grouped.rename(columns={'center': 'xmr_center', 'mR': 'center'})
 
-        r_lims = r_grouped.apply(
-            lambda row: calculate_limits(
-                mean=0,
-                sd=0,
-                N=0,
-                mR=row['center'],
-                limits_type=mr_spec.limits_type,
-                round_to=spec.round_to,
-            ),
-            axis=1,
-        )
+        r_lims = _mr_family_limits(mr_spec, mean=0, mR=r_grouped['center'])
 
         r_grouped = _join_limits(r_grouped, r_lims, rsuffix='_r')
 
@@ -2084,15 +2152,9 @@ class Analysis:
         r_out = self._add_beyond_limits_flag(r_out, value_col=plot_col)
 
         # Build statistics
-        chart_statistics = {}
-        for stratum in strata:
-            row = r_grouped[r_grouped[stratify_col] == stratum].iloc[0]
-            chart_statistics[stratum] = {
-                'N': _mr_family_subgroup_n(mr_spec.chart_type),
-                'center': round(row['center'], spec.round_to),
-                'lpl': round(row[r_lpl_col], spec.round_to),
-                'upl': round(row[r_upl_col], spec.round_to),
-            }
+        chart_statistics = _mr_stratum_statistics(
+            mr_spec, r_grouped, stratify_col, r_lpl_col, r_upl_col, spec.round_to,
+        )
 
         # Format output
         chart_out = self._build_output_columns(
@@ -2186,30 +2248,10 @@ class Analysis:
             # 5. Compute per-phase limits
             if mr_spec.center_source == 'mean':
                 phase_stats['center'] = phase_stats['_mean']
-                phase_lims = phase_stats.apply(
-                    lambda row: calculate_limits(
-                        mean=row['_mean'],
-                        sd=0,
-                        N=0,
-                        mR=row['mR'],
-                        limits_type=mr_spec.limits_type,
-                        round_to=spec.round_to,
-                    ),
-                    axis=1,
-                )
+                phase_lims = _mr_family_limits(mr_spec, mean=phase_stats['_mean'], mR=phase_stats['mR'])
             else:  # center_source == 'mR' (R chart)
                 phase_stats['center'] = phase_stats['mR']
-                phase_lims = phase_stats.apply(
-                    lambda row: calculate_limits(
-                        mean=0,
-                        sd=0,
-                        N=0,
-                        mR=row['mR'],
-                        limits_type=mr_spec.limits_type,
-                        round_to=spec.round_to,
-                    ),
-                    axis=1,
-                )
+                phase_lims = _mr_family_limits(mr_spec, mean=0, mR=phase_stats['mR'])
             phase_stats = _join_limits(phase_stats, phase_lims)
 
             # 6. Merge per-phase limits back to row-level data
@@ -2228,13 +2270,7 @@ class Analysis:
             out = self._add_beyond_limits_flag(out, value_col=plot_col)
 
             # 9. Lane boundaries per stratum
-            lane_boundaries = {}
-            if collapsed_factors:
-                for stratum in strata:
-                    stratum_data = out[out[stratify_col] == stratum].reset_index(drop=True)
-                    boundaries = self._calculate_lane_boundaries(stratum_data, collapsed_factors)
-                    if boundaries:
-                        lane_boundaries[stratum] = boundaries
+            lane_boundaries = self._stratum_lane_boundaries(out, stratify_col, strata, collapsed_factors)
 
             # 10. Statistics per stratum: limits vary per phase
             chart_statistics = {
@@ -2311,29 +2347,10 @@ class Analysis:
         # For X:  center=mean, limits based on mean ± E2*mR
         # For mR: center=mR, limits based on 0 to D4*mR
         if mr_spec.center_source == 'mean':
-            lims = grouped.apply(
-                lambda row: calculate_limits(
-                    mean=row['mean'],
-                    sd=0,
-                    N=0,
-                    mR=(row['mR'] if pd.notna(row['mR']) else 0.0),
-                    limits_type=mr_spec.limits_type,
-                    round_to=spec.round_to,
-                ),
-                axis=1,
-            )
+            # A one-row stratum has no moving range: its X limits collapse to the mean.
+            lims = _mr_family_limits(mr_spec, mean=grouped['mean'], mR=grouped['mR'].fillna(0.0))
         else:  # center_source == 'mR'
-            lims = grouped.apply(
-                lambda row: calculate_limits(
-                    mean=0,
-                    sd=0,
-                    N=0,
-                    mR=row['mR'],
-                    limits_type=mr_spec.limits_type,
-                    round_to=spec.round_to,
-                ),
-                axis=1,
-            )
+            lims = _mr_family_limits(mr_spec, mean=0, mR=grouped['mR'])
 
         # Normalize/join lpl/upl
         grouped = _join_limits(grouped, lims)
@@ -2363,24 +2380,10 @@ class Analysis:
         strata = grouped[stratify_col].tolist()
 
         # Lane boundaries per stratum
-        lane_boundaries = {}
-        if collapsed_factors:
-            for stratum in strata:
-                stratum_data = out[out[stratify_col] == stratum].reset_index(drop=True)
-                boundaries = self._calculate_lane_boundaries(stratum_data, collapsed_factors)
-                if boundaries:
-                    lane_boundaries[stratum] = boundaries
+        lane_boundaries = self._stratum_lane_boundaries(out, stratify_col, strata, collapsed_factors)
 
         # Build statistics nested by stratum
-        chart_statistics = {}
-        for stratum in strata:
-            row = grouped[grouped[stratify_col] == stratum].iloc[0]
-            chart_statistics[stratum] = {
-                'N': _mr_family_subgroup_n(mr_spec.chart_type),
-                'center': round(row['center'], spec.round_to),
-                'lpl': round(row['lpl'], spec.round_to),
-                'upl': round(row['upl'], spec.round_to),
-            }
+        chart_statistics = _mr_stratum_statistics(mr_spec, grouped, stratify_col, 'lpl', 'upl', spec.round_to)
 
         # Format output
         extra_cols = [c for c in stratify_by if c != spec.rsg_var_name and c != spec.time_var]
