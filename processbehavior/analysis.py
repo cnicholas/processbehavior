@@ -800,7 +800,7 @@ class Analysis:
         """Return the cell-grid columns at which to compute Bishop's grand mean
         for an Xbar chart on this column.
 
-        Each re-centred residual is R + Ybar (10-1 manual Eq 14-26; see
+        Each re-centred residual is R + Ybar (10-12 manual Eq 14-26; see
         `AnalysisDataSet._calculate_centered_residuals` and
         `residual_calculator.calculate_r6_residuals`). The canonical grand mean of an
         RCRk chart averages over the grain its effect lives at — equal weight per
@@ -1082,7 +1082,7 @@ class Analysis:
         """Xbar natural process limits for the subgroups in ``out`` (columns center, s, n, N).
 
         Equal subgroup sizes (or n_mode="average", Eq 11-20): S-bar / c4(N) for every row.
-        Unequal sizes: sigma_hat is the average of each subgroup's S_r / c4(N_r) (10-1 manual
+        Unequal sizes: sigma_hat is the average of each subgroup's S_r / c4(N_r) (10-12 manual
         Eq 11-5) and each subgroup's limits are center ± multiplier · sigma_hat / sqrt(N_r)
         (Eqs 11-16, 11-17), so they step with N_r, as VAS draws them. A one-reading subgroup
         has no S_r: it takes no part in sigma_hat and is charted at center ± multiplier · sigma_hat.
@@ -1897,7 +1897,7 @@ class Analysis:
 
         The X and mR charts share >85% of their calculation logic. The behavioral
         differences are encoded in ``mr_spec`` — no boolean flags needed. The
-        statistics are the 10-1 manual's Chapter 12: mR-bar over the T - 1
+        statistics are the 10-12 manual's Chapter 12: mR-bar over the T - 1
         consecutive ranges (Eq 12-1), X centre Y-bar (Eqs 12-7, 12-9), X limits
         Y-bar ± 3·mR-bar/d2 (Eqs 12-10, 12-11) and mR limits 0 … D4·mR-bar
         (Eq 12-5), within each stratum or phase when the chart is split.
@@ -2672,7 +2672,7 @@ class Analysis:
             return result
 
         # === Global limits path (unchanged) ===
-        # Moving range: mR-bar over the T - 1 consecutive ranges (10-1 manual Eq 12-1). A re-centred
+        # Moving range: mR-bar over the T - 1 consecutive ranges (10-12 manual Eq 12-1). A re-centred
         # R2 chart takes them over R2 (_resolve_mr_source_column), not the plotted RCR2.
         out['mr'] = out[mr_source_col].diff().abs()
         mR = out['mr'].mean()

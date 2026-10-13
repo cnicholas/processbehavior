@@ -271,7 +271,7 @@ def run_validation(run, pb, study, ref):  # noqa: C901
     # Pre-compute results we'll need
     computed = {}
 
-    # Xbar/S wherever some subgroups are replicated: ADS 1, and ADS 3, where the 10-1 manual makes
+    # Xbar/S wherever some subgroups are replicated: ADS 1, and ADS 3, where the 10-12 manual makes
     # Xbar/S VAS's default (Tom's 10/3/2026 run draws PM SDS 3 that way). ADS 2 uses X/mR.
     xbar_s = run.ads in (1, 3)
 
@@ -293,7 +293,7 @@ def run_validation(run, pb, study, ref):  # noqa: C901
         chart='S', by=factors, value='R6'
     )
     # PT effects (pages 22-23) — Xbar/S of R4 by time for all SDS (R4 carries the period effect,
-    # 10-1 manual Eq 14-16). When charted by=[time], each time subgroup has multiple factor
+    # 10-12 manual Eq 14-16). When charted by=[time], each time subgroup has multiple factor
     # levels, giving n>1 subgroups even in SDS 2, so Xbar/S is correct.
     computed['pt_effects_xbar'] = study.execute(
         chart='Xbar', by=[time], value='R4', recentered=True
@@ -378,7 +378,7 @@ def run_validation(run, pb, study, ref):  # noqa: C901
             lpl_val = stats.get('lpl')
             upl_val = stats.get('upl')
             if stats.get('limits_vary') and lpl_val is None and upl_val is None:
-                # Limits step with subgroup size (10-1 manual Eqs 11-16/17). VAS/Minitab labels the
+                # Limits step with subgroup size (10-12 manual Eqs 11-16/17). VAS/Minitab labels the
                 # limits of the last subgroup, so that is the value its slide carries.
                 table = safe_chart_table(result_obj, chart_type)
                 if table is not None and len(table):
@@ -868,7 +868,7 @@ def generate_myst_summary(all_results, aux_by_run, runs):
         '',
         '- The limits of the two factor S charts (pages 25 and 27) in the known-effects run, whose',
         '  subgroups have 1000 and 2000 values. Its VAS run of 6 October 2026 held α<sub>N</sub>',
-        "  (10-1 manual Eq 10-12) at 0.9995 from N = 343 up, where Minitab's GAMMA function overflows,",
+        "  (10-12 manual Eq 10-11) at 0.9995 from N = 343 up, where Minitab's GAMMA function overflows,",
         "  so its limits follow N = 500 instead of the subgroup's own N. Dr. Bishop's reruns of the PM",
         '  runs (13 October 2026) compute α<sub>N</sub> for every N, and every R6 S chart in them is',
         '  checked and matches; the known-effects run waits for the same rerun.',

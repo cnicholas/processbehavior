@@ -1042,7 +1042,7 @@ class Study:
         - rsg: Rational subgroup identifier
         - Ybar, Ybar_k, Ybar_t, Ybar_kt: Hierarchical means
         - R1-R5: VAS residuals (where applicable for the SDS)
-        - RCR1-RCR5: Re-centred residuals, R + Ybar (10-1 manual Eq 14-26; RCR2 = Ybar_kt + R2)
+        - RCR1-RCR5: Re-centred residuals, R + Ybar (10-12 manual Eq 14-26; RCR2 = Ybar_kt + R2)
 
         Returns a copy to preserve immutability. The frame itself is immutable
         after formulate() — execute() never adds columns to it; request

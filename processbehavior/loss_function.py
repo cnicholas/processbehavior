@@ -60,7 +60,7 @@ class LossResult:
         Analytical SDS.
     centering, unexplained, pdc, time, interaction : float
         The 5 loss components (squared-loss units). In ADS 1 each is estimated
-        directly (10-1 manual Eq 15-16). In ADS 2/3 the interaction is what the
+        directly (10-12 manual Eq 15-16). In ADS 2/3 the interaction is what the
         other four leave of the total loss (Ȳ.. - T)² + S² (Eqs 15-18 to 15-20),
         set to 0 when that remainder is negative.
     total : float
@@ -309,13 +309,13 @@ class LossResult:
 
 
 def _compute_centering(y_bar: float, target: float) -> float:
-    """10-1 manual Eq 15-16 / 15-21, first term: (Ȳ.. - T)²."""
+    """10-12 manual Eq 15-16 / 15-21, first term: (Ȳ.. - T)²."""
     return (y_bar - target) ** 2
 
 
 def _compute_unexplained_replicated(df, response_var: str) -> float:
     """
-    10-1 manual Eq 15-14/15-16: within-cell variance for fully replicated designs (ADS 1).
+    10-12 manual Eq 15-14/15-16: within-cell variance for fully replicated designs (ADS 1).
 
     unexplained = (1/KT) Σ S_kt²
 
@@ -328,7 +328,7 @@ def _compute_unexplained_replicated(df, response_var: str) -> float:
 
 def _compute_unexplained_pooled(df) -> float:
     """
-    10-1 manual Eq 15-17: unexplained loss for ADS 2/3 is the sample variance of R2.
+    10-12 manual Eq 15-17: unexplained loss for ADS 2/3 is the sample variance of R2.
 
     unexplained = S²_R2 (n - 1 divisor). R2 is already on the noise scale (the R2
     scale factor puts it there), so no further correction is applied.
@@ -338,7 +338,7 @@ def _compute_unexplained_pooled(df) -> float:
 
 
 def _compute_pdc(df, rsg_var_name: str) -> float:
-    """10-1 manual Eq 15-22: (1/K) Σ (Ȳ_k. - Ȳ..)²."""
+    """10-12 manual Eq 15-22: (1/K) Σ (Ȳ_k. - Ȳ..)²."""
     ybar = df['Ybar'].iloc[0]
     ybar_k = df.groupby(rsg_var_name, observed=True)['Ybar_k'].first()
     rho_k = ybar_k - ybar
@@ -346,7 +346,7 @@ def _compute_pdc(df, rsg_var_name: str) -> float:
 
 
 def _compute_time(df, time_var: str) -> float:
-    """10-1 manual Eq 15-16 / 15-21, time term: (1/T) Σ (Ȳ_.t - Ȳ..)²."""
+    """10-12 manual Eq 15-16 / 15-21, time term: (1/T) Σ (Ȳ_.t - Ȳ..)²."""
     ybar = df['Ybar'].iloc[0]
     ybar_t = df.groupby(time_var, observed=True)['Ybar_t'].first()
     tau_t = ybar_t - ybar
@@ -354,7 +354,7 @@ def _compute_time(df, time_var: str) -> float:
 
 
 def _compute_interaction(df, time_var: str) -> float:
-    """10-1 manual Eq 15-16, last term (ADS 1): (1/KT) Σ (Ȳ_kt - Ȳ_k. - Ȳ_.t + Ȳ..)²."""
+    """10-12 manual Eq 15-16, last term (ADS 1): (1/KT) Σ (Ȳ_kt - Ȳ_k. - Ȳ_.t + Ȳ..)²."""
     ybar = df['Ybar'].iloc[0]
     cell = df.groupby('cell_key', observed=True)[['Ybar_kt', 'Ybar_k', 'Ybar_t']].first()
     rho_tau = cell['Ybar_kt'] - cell['Ybar_k'] - cell['Ybar_t'] + ybar
@@ -363,7 +363,7 @@ def _compute_interaction(df, time_var: str) -> float:
 
 def _compute_interaction_remainder(df, response_var: str, pdc: float, time_loss: float, unexplained: float) -> float:
     """
-    10-1 manual Eqs 15-18 to 15-20 (ADS 2/3): interaction is what the other parts leave of the total.
+    10-12 manual Eqs 15-18 to 15-20 (ADS 2/3): interaction is what the other parts leave of the total.
 
     The total loss is (Ȳ.. - T)² + S², with S² the sample variance of all
     observations (Eq 15-18). Subtracting the mean, condition, time and unexplained
@@ -497,7 +497,7 @@ def assess_loss(
     pdc = _compute_pdc(df, rsg_var_name)
     time_loss = _compute_time(df, time_var)
 
-    # Unexplained and interaction: branch on cell replication (10-1 manual §15.4)
+    # Unexplained and interaction: branch on cell replication (10-12 manual §15.4)
     if ads._structure_stats.n_cell_min >= 2:
         unexplained = _compute_unexplained_replicated(df, response_var)  # Eq 15-16
         interaction = _compute_interaction(df, time_var)  # Eq 15-16

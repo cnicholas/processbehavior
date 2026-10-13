@@ -1,6 +1,6 @@
 # VAS Residuals
 
-Dr. Thomas A. Bishop's **Variation Analysis System (VAS)** decomposes total variation into meaningful components. ProcessBehavior calculates six residuals (R1-R6) that help answer different analytical questions. Equation numbers on this page refer to Bishop's VAS documentation manual dated 10-1-2026.
+Dr. Thomas A. Bishop's **Variation Analysis System (VAS)** decomposes total variation into meaningful components. ProcessBehavior calculates six residuals (R1-R6) that help answer different analytical questions. Equation numbers on this page refer to Bishop's VAS documentation manual dated 10-12-2026.
 
 ## The Residual Hierarchy
 
@@ -15,10 +15,10 @@ Dr. Thomas A. Bishop's **Variation Analysis System (VAS)** decomposes total vari
 
 Where:
 - Y = individual observation
-- Y̅ = grand mean: the mean of the cell means, each cell counted once (10-1 manual Eq 10-10)
+- Y̅ = grand mean: the mean of the cell means, each cell counted once (10-12 manual Eq 10-9)
 - Y̅<sub>k</sub> = mean for factor level k: the mean of that level's cell means
 - Y̅<sub>t</sub> = mean at time t: the mean of that period's cell means
-- Y̅<sub>kt</sub> = mean for factor k at time t (cell mean, Eq 10-8)
+- Y̅<sub>kt</sub> = mean for factor k at time t (cell mean, Eq 10-7)
 
 ## Accessing Residuals
 

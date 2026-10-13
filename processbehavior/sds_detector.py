@@ -227,7 +227,7 @@ class SDSAnalysisPlan:
         if not self.vas_residuals_supported:
             return []
 
-        # R1 (10-1 manual Eq 14-2): the response centred at 0 — a location shift, so only the
+        # R1 (10-12 manual Eq 14-2): the response centred at 0 — a location shift, so only the
         # location charts. X is unconditional: charting the centred raw data is the whole
         # diagnostic. No S/mR — R1 differs from the response by a constant, so its
         # dispersion charts would duplicate the response's exactly.
@@ -379,7 +379,7 @@ class SDSRegistry:
 
     **SDS 2**: Semi-Complete - No replication
         - Min N_kt = 1 and Max N_kt = 1 (all cells are singletons)
-        - R2 by the scaled difference of the effect-adjusted series (10-1 manual Eqs 14-4..14-8)
+        - R2 by the scaled difference of the effect-adjusted series (10-12 manual Eqs 14-4..14-8)
 
     **SDS 3**: Semi-Complete - Partial replication
         - Min N_kt = 1 and Max N_kt ≥ 2 (mixed)
@@ -758,7 +758,7 @@ class SDSRegistry:
 
         Notes
         -----
-        Deterministic rule based on Bishop's 10-1 manual:
+        Deterministic rule based on Bishop's 10-12 manual:
         - Eq 14-3 (exact): R2 = Y - Ȳ_kt, requires replication in every cell
         - Eqs 14-4..14-13 (ma2): Z = Y - Ȳ_k - Ȳ_t + Ȳ, differenced over the whole
           condition-then-time sequence (j = 2..M, no grouping by cell) and divided
@@ -1321,7 +1321,7 @@ class SDSRegistry:
                 has_time=True,
                 has_replication='partial',
                 valid_charts=['Histogram', 'Xbar', 'S', 'X', 'mR'],
-                recommended_chart='Xbar',  # 10-1 manual: Xbar/S is VAS's default for ADS 3
+                recommended_chart='Xbar',  # 10-12 manual: Xbar/S is VAS's default for ADS 3
                 invalid_charts=[],
                 vas_residuals_supported=True,
                 residuals_available=['R1', 'R2', 'R3', 'R4', 'R5', 'R6'],
@@ -1336,7 +1336,7 @@ class SDSRegistry:
                     'Pilot studies with targeted replication',
                 ],
                 limitations=[
-                    'R2 uses the scaled difference over the full sequence (10-1 manual Eqs 14-9..14-13); '
+                    'R2 uses the scaled difference over the full sequence (10-12 manual Eqs 14-9..14-13); '
                     'the replicated cells contribute no separate within-cell estimate',
                     'Variance estimates less precise than SDS 1',
                     'May have unequal subgroup sizes',

@@ -269,7 +269,7 @@ class TestResidualCalculations:
         ds = ads.analysis_dataset
         TOL = 1e-10
 
-        # Re-centred residuals, Bishop's 10-1 manual Eq 14-26: RCR = R + Ybar (R1, R3, R4, R5);
+        # Re-centred residuals, Bishop's 10-12 manual Eq 14-26: RCR = R + Ybar (R1, R3, R4, R5);
         # RCR2 is not part of Eq 14-26 and stays Ybar_kt + R2.
         expected_rcr1 = ds['Ybar'] + ds['R1']
         assert (ds['RCR1'] - expected_rcr1).abs().max() <= TOL, 'RCR1 formula incorrect'

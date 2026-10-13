@@ -111,7 +111,7 @@ class CapabilityResult:
     pp, ppk_lower, ppk_upper, ppk : float | None
         Current capability indices (from overall sigma).
     sigma_hat_r2 : float | None
-        Unbiased sigma from R2 residuals: S_R2 / c4(N_R2) (10-1 manual Eq 16-10).
+        Unbiased sigma from R2 residuals: S_R2 / c4(N_R2) (10-12 manual Eq 16-10).
     cp, cpk_lower, cpk_upper, cpk : float | None
         Potential capability indices (from R2 sigma), with CPL/CPU measured from
         ``potential_center``.
@@ -391,7 +391,7 @@ def compute_sigma_hat(values: np.ndarray) -> tuple[float, float]:
     -----
     Bishop Ch. 16 — ddof=1 is mandatory.  The c4 correction
     removes the small-sample bias inherent in the sample standard
-    deviation: sigma_hat = S / alpha_N (10-1 manual Eq 10-13).
+    deviation: sigma_hat = S / alpha_N (10-12 manual Eq 10-12).
     """
     n = len(values)
     s = float(np.std(values, ddof=1))
@@ -546,8 +546,8 @@ def _process_mean(frame: pd.DataFrame, response_var: str) -> float:
     Each experimental condition counts once, whatever its cell size, as for the
     Xbar centre line and the loss function's centring term. VAS prints this as the
     capability charts' PROCESS MEAN (PM SDS 6: 237.86, where the plain average of
-    the readings is 237.834). The 10-1 manual's Eqs 16-4..16-6 and 16-11..16-13
-    write it as the "overall average" Y-bar; on balanced data the two are equal.
+    the readings is 237.834), and the 10-12 manual's one-sided indices (Eqs 16-5, 16-6,
+    16-12, 16-13) centre on it; on balanced data the two are equal.
     A study without cells (no factors or time) has one cell: the plain average.
     """
     valid = frame[frame[response_var].notna()]

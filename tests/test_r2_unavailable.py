@@ -1,7 +1,7 @@
 """R2 is unavailable, with a stated reason, when the layout leaves the R2 scale factor undefined.
 
 With a one-observation subgroup, R2 is the condition-and-period-adjusted series differenced and divided
-by the R2 scale factor c(K, M) (10-1 manual Eqs 14-4..14-13). c needs at least two process design
+by the R2 scale factor c(K, M) (10-12 manual Eqs 14-4..14-13). c needs at least two process design
 conditions; with one condition the adjusted series is identically zero and R2 carries no information.
 """
 

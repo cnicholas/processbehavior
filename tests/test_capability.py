@@ -964,7 +964,7 @@ class TestAssessCapabilityDirect:
 
 
 # ============================================================================
-# Potential centre (y_bar + mean R2) — 10-1 manual potential capability
+# Potential centre (y_bar + mean R2) — 10-12 manual potential capability
 # ============================================================================
 
 

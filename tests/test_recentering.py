@@ -1,4 +1,4 @@
-"""Re-centred residuals follow Bishop's 10-1 manual Eq 14-26: RCR = R + Ybar.
+"""Re-centred residuals follow Bishop's 10-12 manual Eq 14-26: RCR = R + Ybar.
 
 Re-centring moves a residual onto the measurement scale without changing what it shows, so an
 effect chart of a re-centred residual plots that effect plus R2, centred on the grand mean.

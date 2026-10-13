@@ -1,6 +1,6 @@
 """Equation citations name Bishop's VAS documentation manual in one form, so they can be checked.
 
-The library cites the manual by edition and equation, e.g. "(10-1 manual Eq 14-8)" or "Eqs 14-4..14-13".
+The library cites the manual by edition and equation, e.g. "(10-12 manual Eq 14-8)" or "Eqs 14-4..14-13".
 The private manual repository reads these citations and checks every number against the manual's
 equations, and reports the ones a new edition changes; that only works if the citations use the
 chapter-number form. These tests keep the form: no dotted numbers ("Eq 12.4", an older manual's style),

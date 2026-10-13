@@ -30,7 +30,7 @@ from .exceptions import ValidationError
 SIGMA_MULTIPLIER = 3
 
 # Moving-range constants for n = 2 (consecutive pairs), as in Bishop's VAS manual
-# (10-1 manual Eq 12-2: E(R) = d2·sigma, sigma_R = d3·sigma): sigma = mR / d2 (Eq 12-4),
+# (10-12 manual Eq 12-2: E(R) = d2·sigma, sigma_R = d3·sigma): sigma = mR / d2 (Eq 12-4),
 # X limits = X ± 3·mR/d2 (Eqs 12-10, 12-11), and the moving-range upper limit
 # = (1 + 3·d3/d2)·mR (Eq 12-5). The manual prints the
 # rounded values 2.66 and 3.268; Bishop's VAS software computes them from d2 and
@@ -55,17 +55,14 @@ def c4(n: int) -> float:
     Calculate c4 bias constant for Xbar and S charts.
 
     The c4 constant corrects for bias in the standard deviation estimate
-    when using subgroups: E(S) = c4(n)·sigma, the manual's alpha_N (10-1 manual
-    Eq 10-12), so S / c4(n) is unbiased for sigma (Eq 10-13). It approaches 1.0
+    when using subgroups: E(S) = c4(n)·sigma, the manual's alpha_N (10-12 manual
+    Eq 10-11), so S / c4(n) is unbiased for sigma (Eq 10-12). It approaches 1.0
     as n increases.
 
-    Deliberate difference from the manual: its footnote to Eq 10-12 sets
-    alpha_N = 1 for N > 5000, and VAS does. c4 stays exact for every n (computed
-    with log-gamma, so it has no overflow limit). Since sigma_S uses
-    sqrt(1 - alpha_N²) (Eq 10-15), alpha_N = 1 would put an S chart's limits on
-    its centerline for subgroups of more than 5000 values. The exact c4 lets
-    them close in gradually instead: S-bar ± 3% at n = 5000, ± 1.5% at 20,000.
-    Only S charts with subgroups that large are affected.
+    c4 is exact for every n, as the manual's alpha_N is: it is computed with
+    log-gamma, so it has no overflow limit. Since sigma_S uses sqrt(1 - alpha_N²)
+    (Eq 10-14), an S chart's limits close in on S-bar gradually as n grows:
+    S-bar ± 3% at n = 5000, ± 1.5% at 20,000.
 
     Parameters
     ----------
@@ -135,8 +132,8 @@ def b3(n: int, sigma_multiplier: float = 3) -> float:
     Notes
     -----
     Formula: b3(n) = 1 - sigma_multiplier/c4(n) * sqrt(1 - c4(n)²), i.e. S-bar
-    less sigma_multiplier estimated standard deviations of S (10-1 manual
-    Eq 10-15), the S chart's lower limit (Eq 11-8).
+    less sigma_multiplier estimated standard deviations of S (10-12 manual
+    Eq 10-14), the S chart's lower limit (Eq 11-8).
 
     For small subgroup sizes (n < 6), the raw b3 formula yields negative
     values. Since standard deviations cannot be negative, these values are
@@ -186,8 +183,8 @@ def b4(n: int, sigma_multiplier: float = 3) -> float:
     Notes
     -----
     Formula: b4(n) = 1 + sigma_multiplier/(c4(n)) * sqrt(1 - c4(n)^2), i.e. S-bar
-    plus sigma_multiplier estimated standard deviations of S (10-1 manual
-    Eq 10-15), the S chart's upper limit (Eq 11-9).
+    plus sigma_multiplier estimated standard deviations of S (10-12 manual
+    Eq 10-14), the S chart's upper limit (Eq 11-9).
 
     The b4 constant decreases as subgroup size increases, approaching the
     value of 1 + 3*sqrt(1-1) = 1 for very large subgroups.
@@ -318,7 +315,7 @@ def calculate_limits(
                 f'The limits calculation for {limits_type} requires (mean, and mR). Got: mean={mean}, mR={mR}'
             )
 
-        # LPL = X̄ - (E2 * mR), UPL = X̄ + (E2 * mR)  (10-1 manual Eqs 12-10, 12-11)
+        # LPL = X̄ - (E2 * mR), UPL = X̄ + (E2 * mR)  (10-12 manual Eqs 12-10, 12-11)
         lpl = mean - (XMR_LIMIT_MULTIPLIER * mR)
         upl = mean + (XMR_LIMIT_MULTIPLIER * mR)
 
@@ -327,7 +324,7 @@ def calculate_limits(
             raise ValueError(f'The limits calculation for {limits_type} requires (mR). Got: mR={mR}')
 
         # LPL = 0 (ranges cannot be negative)
-        # UPL = mR * D4  (10-1 manual Eq 12-5)
+        # UPL = mR * D4  (10-12 manual Eq 12-5)
         lpl = 0
         upl = mR * R_UPPER_LIMIT_MULTIPLIER
 
@@ -338,7 +335,7 @@ def calculate_limits(
 
 
 def subgroup_sigma_hat(s, n) -> float:
-    """Bishop's estimate of sigma from R rational subgroups (10-1 manual Eq 11-5).
+    """Bishop's estimate of sigma from R rational subgroups (10-12 manual Eq 11-5).
 
     The average of each subgroup's own unbiased estimate: sigma_hat = (1/R) sum S_r / c4(N_r).
     With equal subgroup sizes this is S-bar / c4(N) (Eq 11-6); with unequal sizes it is not,
@@ -364,7 +361,7 @@ def calculate_limits_vectorized(
     """Array form of :func:`calculate_limits` — same formulae, whole columns at once.
 
     ``sigma`` (Xbar only) gives sigma_hat directly, for subgroups of unequal size: the limits
-    are then mean ± multiplier · sigma / sqrt(N_r) for each subgroup (10-1 manual Eqs 11-16,
+    are then mean ± multiplier · sigma / sqrt(N_r) for each subgroup (10-12 manual Eqs 11-16,
     11-17), with sigma from :func:`subgroup_sigma_hat`. Without it, ``sd`` is S-bar and each
     row's limits use S-bar / c4(N), which is the same thing when every N is equal.
 
@@ -436,13 +433,13 @@ def calculate_limits_vectorized(
                 f'The limits calculation for {limits_type} requires (mean, and mR). '
                 f'Got: mean={mean}, mR={mR}'
             )
-        half = XMR_LIMIT_MULTIPLIER * np.asarray(mR)  # 10-1 manual Eqs 12-10, 12-11
+        half = XMR_LIMIT_MULTIPLIER * np.asarray(mR)  # 10-12 manual Eqs 12-10, 12-11
         lpl, upl = np.asarray(mean) - half, np.asarray(mean) + half
 
     elif limits_type == 'R':
         if mR is None:
             raise ValueError(f'The limits calculation for {limits_type} requires (mR). Got: mR={mR}')
-        upl = np.asarray(mR) * R_UPPER_LIMIT_MULTIPLIER  # 10-1 manual Eq 12-5
+        upl = np.asarray(mR) * R_UPPER_LIMIT_MULTIPLIER  # 10-12 manual Eq 12-5
         lpl = np.zeros_like(upl)
 
     else:
@@ -524,19 +521,19 @@ def calibrated_limits(
         lims = pd.Series({'lpl': mean - half, 'upl': mean + half}, index=['lpl', 'upl'])
     elif limits_type == 'S':
         assert N is not None
-        center = c4(N) * sigma  # E(S) = alpha_N·sigma (10-1 manual Eq 10-12)
+        center = c4(N) * sigma  # E(S) = alpha_N·sigma (10-12 manual Eq 10-11)
         lims = calculate_limits(
             limits_type='S', mean=0, sd=c4(N) * sigma, N=N,
             round_to=round_to, sigma_multiplier=n_sigma,
         )
     elif limits_type == 'XmR':
-        center = mean  # mean ± 3·sigma (10-1 manual Eq 12-6)
+        center = mean  # mean ± 3·sigma (10-12 manual Eq 12-6)
         lims = calculate_limits(
             limits_type='XmR', mean=mean, sd=0, N=0, mR=D2_N2 * sigma,
             round_to=round_to,
         )
     elif limits_type == 'R':
-        center = D2_N2 * sigma  # E(R) = d2·sigma; limits 0 … D4·d2·sigma (10-1 manual Eqs 12-2, 12-3)
+        center = D2_N2 * sigma  # E(R) = d2·sigma; limits 0 … D4·d2·sigma (10-12 manual Eqs 12-2, 12-3)
         lims = calculate_limits(
             limits_type='R', mean=0, sd=0, N=0, mR=D2_N2 * sigma,
             round_to=round_to,
@@ -696,7 +693,7 @@ def suggest_chart_name(name: str) -> str:
 # labelled "Noise / Unexplained variation", which is R2's meaning, in a table that
 # also mapped `within_cell` to R2 and so contradicted itself.
 RESIDUAL_LABELS: dict[str, str] = {
-    # 10-1 manual Eq 14-2 (centring the original PM data at 0): R1 = Y_ktn - Ybar.., the
+    # 10-12 manual Eq 14-2 (centring the original PM data at 0): R1 = Y_ktn - Ybar.., the
     # response re-expressed as +/- about zero. Not a within-subgroup quantity.
     'R1': 'Response Centered at 0',
     'R2': 'Within-Cell',

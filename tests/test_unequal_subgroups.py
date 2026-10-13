@@ -1,4 +1,4 @@
-"""Xbar/S charts with subgroups of unequal size follow the 10-1 manual (Eqs 11-5, 11-7..11-9, 11-16, 11-17).
+"""Xbar/S charts with subgroups of unequal size follow the 10-12 manual (Eqs 11-5, 11-7..11-9, 11-16, 11-17).
 
 sigma_hat is the average of each subgroup's own unbiased S_r / c4(N_r); each subgroup's Xbar limits are
 centre ± 3 sigma_hat / sqrt(N_r), and its S limits are B3(N_r) S-bar and B4(N_r) S-bar. N_r counts the

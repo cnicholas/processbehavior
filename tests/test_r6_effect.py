@@ -1,6 +1,6 @@
 """R6's factor-level effect is the condition effect averaged over the level, without R2's level mean.
 
-R6 = α_i + R2 (10-1 manual Eq 14-25). The manual takes α_i as the level's mean of R5 (Eq 14-24, "≈ α_i");
+R6 = α_i + R2 (10-12 manual Eq 14-25). The manual takes α_i as the level's mean of R5 (Eq 14-24, "≈ α_i");
 R5 = ρ̂_k + R2 (Eq 14-19), so that mean also carries the level's average R2. VAS leaves it out: Tom's
 Medicare run (10/3/2026, slide 52) centres the organisation-effects Xbar chart at 10831.1, which is the
 effect without it (the mean of R5 gives 10829.8). On ADS 1 the two agree, because R2 averages to zero in

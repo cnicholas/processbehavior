@@ -416,7 +416,7 @@ cap.plot(values=study.dataset[study.response].dropna().values)
 | Metric | Based On | Meaning |
 |--------|----------|---------|
 | **Pp/Ppk** | Overall σ̂ (all variation) | Current capability — process as-is |
-| **Cp/Cpk** | R2 σ̂ = S<sub>R2</sub> / c4(N<sub>R2</sub>) (noise only; 10-1 manual Eq 16-10) | Potential capability — achievable if all assignable causes are eliminated |
+| **Cp/Cpk** | R2 σ̂ = S<sub>R2</sub> / c4(N<sub>R2</sub>) (noise only; 10-12 manual Eq 16-10) | Potential capability — achievable if all assignable causes are eliminated |
 
 The potential values are ȳ + R2. Potential CPL/CPU are measured from their mean,
 `cap.potential_center` (ȳ + mean of R2), and the potential chart's center line sits there.
@@ -427,7 +427,7 @@ Potential capability (Cp/Cpk) requires VAS residuals (factors + time). If unavai
 
 ### `study.loss_function()`
 
-Decomposes expected loss into five components using the Taguchi Loss Function (Bishop Ch. 15; equation numbers below are from Bishop's VAS documentation manual dated 10-1-2026). Identifies the largest sources of variation as a Pareto analysis. It needs R2, so it raises `ValidationError` when R2 is unavailable for the layout.
+Decomposes expected loss into five components using the Taguchi Loss Function (Bishop Ch. 15; equation numbers below are from Bishop's VAS documentation manual dated 10-12-2026). Identifies the largest sources of variation as a Pareto analysis. It needs R2, so it raises `ValidationError` when R2 is unavailable for the layout.
 
 ```python
 # Use grand mean as target (centering = 0)

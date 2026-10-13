@@ -200,7 +200,7 @@ def assess_maximum_information(
     if n < 2:
         raise ValidationError(f'Maximum information analysis requires at least 2 R2 values, got {n}.')
 
-    # --- XmR statistics on R2 (10-1 manual Chapter 12) ---
+    # --- XmR statistics on R2 (10-12 manual Chapter 12) ---
     r2_mean = float(np.mean(r2_values))
     mr_values = np.abs(np.diff(r2_values))
     r2_mR = float(np.mean(mr_values))  # Eq 12-1

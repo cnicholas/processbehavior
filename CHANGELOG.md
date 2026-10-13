@@ -7,18 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-This release aligns the library with Bishop's VAS documentation manual dated 10-1-2026 and
-reproduces his VAS run of 3 October 2026 (PM SDS, PM INERT and Medicare decks). Equation
-numbers below are that manual's.
+This release aligns the library with Bishop's VAS documentation manual dated 10-12-2026 and
+reproduces his VAS runs of October 2026 (PM SDS, PM INERT, known-effects and Medicare decks).
+Equation numbers below are that manual's.
 
 ### Changed
-- **R6's factor-level effect leaves out R2's level mean, as VAS does.** R6 = α_i + R2 with α_i the
-  condition effects ρ̂_k = R5 - R2 averaged over the level (was the level's mean of R5, which also
-  carries the level's average R2; the 10-1 manual's Eq 14-24 writes it that way, "≈ α_i"). ADS 1 is
-  unchanged (R2 averages to zero in each cell); on ADS 2/3 the effect moves by the level's mean R2,
-  which shows when levels are small: Tom's Medicare run centres the organisation-effects chart at
-  10831.1 (PB was 10829.8, now 10831.1).
-- **R2 for designs with a one-observation subgroup (ADS 2 and 3) follows the 10-1 manual.**
+- **R6's factor-level effect is the average of the condition effects over the level.** R6 = α_i + R2
+  with α_i the condition effects ρ̂_k = R5 - R2 averaged over the level (was the level's mean of R5,
+  Eq 14-24, "≈ α_i"). The two differ by the level's average R2, which Dr. Bishop notes is always
+  near 0; in ADS 1 it is 0 (R2 averages to zero in each cell). On ADS 2/3 it shows when levels are
+  small: Tom's Medicare run centres the organisation-effects chart at 10831.1 (PB was 10829.8, now
+  10831.1).
+- **R2 for designs with a one-observation subgroup (ADS 2 and 3) follows the manual.**
   The data are first stripped of the process mean and the condition and period effects
   (Z = Y − Ȳ_k − Ȳ_t + Ȳ, Eq 14-4 / 14-9), Z is differenced along the condition-then-time
   sequence, and the difference is divided by twice the R2 scale factor
@@ -32,14 +32,15 @@ numbers below are that manual's.
   organisation chart (recentred R5 by ACO) flags 19 of 24 organisations instead of 8. ADS 1
   R2 (within-cell deviation, Eq 14-3) is unchanged. `calculate_r2` now dispatches on
   `r2_method` and takes `n_conditions`; its `n_per_cell` argument is gone.
-- **Taguchi loss follows the 10-1 manual.** ADS 1 unexplained loss is the average cell
+- **Taguchi loss follows the manual.** ADS 1 unexplained loss is the average cell
   variance (1/KT)·ΣS²_kt, without dividing each S_kt by c4 (Eq 15-16). ADS 2/3 unexplained
   loss is the sample variance of R2 (Eq 15-17; the 1/0.7 correction is gone), and the
   interaction is what the other parts leave of the total loss (Ȳ − T)² + S², set to 0 when
   negative (Eqs 15-18..15-20), so the parts add to the total. PM SDS 1 at target 237:
   unexplained 23.0% → 20.9%, interaction 43.3% → 44.5%; PM SDS 2: interaction 42.5% → 25.6%,
   unexplained 23.6% → 30.0%; pure noise (PM INERT) now shows 0% interaction in ADS 2/3.
-- **Re-centred residuals are the residual plus the grand mean (Eq 14-26).** RCR3, RCR4 and
+- **Re-centred residuals are the residual plus the process mean, the mean of the cell means
+  (Eq 14-26).** RCR3, RCR4 and
   RCR5 were "reconstructed Y" (each algebraically Ȳ_kt + R2), so a recentred interaction
   chart plotted close to the raw cell means. They now plot the effect plus R2 on the
   measurement scale, as VAS does; RCR2 is unchanged. Xbar means by condition (RCR5) or
@@ -71,7 +72,7 @@ numbers below are that manual's.
   charts in SDS 3-6; the gate reports 1475 assertions passing, 0 failing, and 79 with no
   reference (was 1155 / 0 / 399).
 - **The R6 S charts are checked wherever VAS computed them correctly.** VAS's α<sub>N</sub>
-  (Eq 10-12) used Minitab's GAMMA function, which overflows above N = 343; the 10/3 VAS runs held
+  (Eq 10-11) used Minitab's GAMMA function, which overflows above N = 343; the 10/3 VAS runs held
   α<sub>N</sub> at 0.9995 from there on, so their S limits followed N = 500 whatever the subgroup size.
   Dr. Bishop confirmed it (8 October 2026) and is replacing it with a table; PB computes α<sub>N</sub>
   with log-gamma for any N. The gate now checks the R6 S charts whose subgroups are under 343 (all
@@ -100,7 +101,7 @@ numbers below are that manual's.
   PPU 5.74; ȳ alone gives 5.73). It equals ȳ in ADS 1.
 
 ### Fixed
-- **Xbar and S charts with subgroups of unequal size follow the 10-1 manual (Eqs 11-5, 11-16,
+- **Xbar and S charts with subgroups of unequal size follow the manual (Eqs 11-5, 11-16,
   11-17).** sigma-hat is the average of each subgroup's S_r / c4(N_r) (was S-bar / c4(N_r)), and each
   subgroup's limits use its own N_r, so they step with subgroup size, as VAS draws them. N_r now
   counts the values the chart is drawn from (was the response's count): on ADS 2 and 3 residual
@@ -117,17 +118,14 @@ numbers below are that manual's.
 - **Per-stratum Xbar centre lines count one-observation subgroups.** The centre is Bishop's
   unweighted mean of every subgroup mean; subgroups with n = 1 were dropped before it was
   taken, which moved four of the eight PM SDS 3 per-condition centres by 0.01–0.04.
-- **Documented: PB keeps α<sub>N</sub> exact above N = 5000.** The manual (footnote to Eq 10-12) and
-  VAS set α<sub>N</sub> = 1 for N > 5000, which puts an S chart's limits on its centerline for
-  subgroups that large. PB's `c4` stays exact for every N, so the limits close in gradually (S̄ ± 3%
-  at N = 5000, ± 1.5% at 20,000). It is a deliberate difference, decided on 8 October
-  2026, and only S charts with subgroups of more than 5000 values are affected.
 - **Code and docs cite the manual's Chapters 10 and 12.** The X/mR limits and constants
-  (Eqs 12-1..12-11), c4 and the S-chart factors (Eqs 10-12, 10-13, 10-15), the cell and marginal
-  means (Eqs 10-8, 10-10) and the model the residuals estimate (Eq 10-3) now cite the 10-1 manual
-  where the code computes exactly those equations; dotted citations ("Eq 12.4") and an older
-  manual's numbering in a test are gone. `tests/test_manual_citations.py` keeps one citation form,
-  and CONTRIBUTING.md describes it. The residuals guide now says Ȳ is the mean of the cell means.
+  (Eqs 12-1..12-11), c4 and the S-chart factors (Eqs 10-11, 10-12, 10-14), the cell and marginal
+  means (Eqs 10-7, 10-9) and the model the residuals estimate (Eq 10-3) now cite the manual where
+  the code computes exactly those equations, and every citation names the 10-12 edition (its
+  Chapter 10 drops the 10-1 edition's Eq 10-4, so Eqs 10-5..10-16 became 10-4..10-15); dotted
+  citations ("Eq 12.4") and an older manual's numbering in a test are gone.
+  `tests/test_manual_citations.py` keeps one citation form, and CONTRIBUTING.md describes it. The
+  residuals guide now says Ȳ is the mean of the cell means.
 - **Bishop's methodology is called the Variation Analysis System**, as his VAS documentation
   manual names it (was "Variance Analysis System" in the README, docs, CITATION.cff, docstrings and
   the design report's VAS line). The synthetic-data module no longer credits the design states to
@@ -137,7 +135,8 @@ numbers below are that manual's.
   decision tree match what the library offers (a time-only study is DS 1, 2 or 3 by the number
   of observations per time point, not DS 6); the R1 note no longer claims the residuals sum to
   zero on unbalanced data (their cell means average to zero); R1 is cited as Eq 14-2, and the
-  design states are attributed to Bishop.
+  design states are attributed to Bishop. The README's Validation section describes the gate as
+  it is (14 VAS runs, 1,547 assertions, SDS 4–6 included); it still described 3 runs and 254.
 
 ## [0.3.3] - 2026-09-29
 

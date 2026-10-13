@@ -118,7 +118,7 @@ To determine the DS for a dataset:
 (r2-calculation-methods-by-ds)=
 ## R2 Calculation Methods by DS
 
-Equation numbers refer to Bishop's VAS documentation manual dated 10-1-2026.
+Equation numbers refer to Bishop's VAS documentation manual dated 10-12-2026.
 
 | DS | R2 Method | Description |
 |-----|-----------|-------------|

@@ -1,4 +1,4 @@
-"""ADS 3 (partial replication) charts follow the 10-1 manual: Xbar/S is the default chart.
+"""ADS 3 (partial replication) charts follow the 10-12 manual: Xbar/S is the default chart.
 
 Tom Bishop's VAS run of 10/3/2026 draws PM SDS 3 as Xbar/S throughout (original data and the
 PDC×PT interaction); the per-condition centre lines on that deck are the unweighted mean of every

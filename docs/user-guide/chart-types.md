@@ -246,7 +246,7 @@ Charted](residuals.md#how-effect-residuals-are-charted).
 
 Plots each individual observation.
 
-- **Centerline**: Average of all observations (X̅) (10-1 manual Eqs 12-7, 12-9)
+- **Centerline**: Average of all observations (X̅) (10-12 manual Eqs 12-7, 12-9)
 - **Control Limits**: X̅ ± (3/1.128) × R̅, about X̅ ± 2.66 × R̅ (R̅ is the average of the T − 1 moving ranges; Eqs 12-1, 12-10, 12-11)
 - **Interpretation**: Points beyond limits indicate special causes
 
@@ -255,7 +255,7 @@ Plots each individual observation.
 Plots the absolute difference between consecutive observations.
 
 - **Centerline**: Average moving range (R̅)
-- **UCL**: (1 + 3 × 0.8525/1.128) × R̅, about 3.267 × R̅ (10-1 manual Eq 12-5)
+- **UCL**: (1 + 3 × 0.8525/1.128) × R̅, about 3.267 × R̅ (10-12 manual Eq 12-5)
 - **LCL**: 0 (range cannot be negative)
 - **Interpretation**: Large ranges indicate sudden changes
 
@@ -370,7 +370,7 @@ result = study.execute(chart='X', by=['lane'], value='R4')
 result = study.execute(chart='X', by=['lane'], value='R4', recentered=True)
 ```
 
-Re-centering adds back the grand mean, RCR = R + Y̅ (Bishop's 10-1 manual, Eq 14-26, for R1
+Re-centering adds back the grand mean, RCR = R + Y̅ (Bishop's 10-12 manual, Eq 14-26, for R1
 and R3–R6), so a re-centered chart plots the effect plus R2 on the measurement scale. The
 chart shifts by Y̅; the limit width is unchanged. RCR2 is the exception: Y̅_kt + R2. Chart
 period effects from R4; an Xbar of RCR3 by period is flat, because the interaction sums to

@@ -374,7 +374,7 @@ The **Analytical Design State** determines three key aspects of the analysis:
 
 ### 1. Variance Estimation (R2 Method)
 
-The R2 method is determined by the tidy data structure (ADS), not the raw DS. Equation numbers refer to Bishop's VAS documentation manual dated 10-1-2026.
+The R2 method is determined by the tidy data structure (ADS), not the raw DS. Equation numbers refer to Bishop's VAS documentation manual dated 10-12-2026.
 
 | ADS | R2 Method | Description |
 |-----|-----------|-------------|

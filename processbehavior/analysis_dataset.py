@@ -171,7 +171,7 @@ class AnalysisDataSet:
     def _check_r2_scale_factor(self, r2_method: str) -> None:
         """Record (and warn once) when the layout leaves the R2 scale factor undefined.
 
-        The scaled-difference R2 (10-1 manual Eqs 14-4..14-13) needs at least two process
+        The scaled-difference R2 (10-12 manual Eqs 14-4..14-13) needs at least two process
         design conditions and more than K + 1 observations; outside that it has no value.
         """
         if r2_method != 'ma2':
@@ -243,7 +243,7 @@ class AnalysisDataSet:
 
         # Compute n_per_cell and cell means once
         self._n_per_cell = df.groupby('cell_key', observed=True)[y].transform('size')
-        self._ybar_kt = df.groupby('cell_key', observed=True)[y].transform('mean')  # Ȳ_kt (10-1 manual Eq 10-8)
+        self._ybar_kt = df.groupby('cell_key', observed=True)[y].transform('mean')  # Ȳ_kt (10-12 manual Eq 10-7)
 
         # Handle edge case: empty data or all NaN
         if len(self._n_per_cell) == 0 or self._n_per_cell.isna().all():
@@ -355,7 +355,7 @@ class AnalysisDataSet:
         Calculate the re-centred residuals (RCR) and the R1 cell/marginal means (Rbar).
 
         Re-centring puts a residual back on the measurement scale without changing what it
-        shows: RCR = R + Ȳ.. (Bishop's 10-1 manual Eq 14-26, for R1, R3, R4, R5 and R6; RCR6
+        shows: RCR = R + Ȳ.. (Bishop's 10-12 manual Eq 14-26, for R1, R3, R4, R5 and R6; RCR6
         is built per request in residual_calculator.calculate_r6_residuals). An effect chart of
         RCR5 by condition, RCR4 by period or RCR3 by subgroup therefore plots that effect plus
         R2, centred on the grand mean.
