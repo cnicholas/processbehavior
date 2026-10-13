@@ -7,8 +7,8 @@
     "usl": 242,
     "target": 237
   },
-  "source_file": "PM SDS2.pptm (VAS run of 10/3/2026, 10-1 manual)",
-  "extraction_method": "Values read from the text drawn in the Minitab charts of the 10/3/2026 VAS deck (displayed precision); structure and null pattern kept from the earlier extraction.",
+  "source_file": "PM SDS 2.pptm (VAS rerun of 10/13/2026, alpha_N computed for every N)",
+  "extraction_method": "Values read from the text drawn in the Minitab charts of the VAS deck (displayed precision); structure and null pattern kept from the earlier extraction.",
   "pages_extracted": 34,
   "capability": {
     "pp": 1.1,
@@ -535,8 +535,8 @@
       "context_subtitle": "PD Factor - F2",
       "variable": "RSG STDEV",
       "CL": 0.94,
-      "LBL": null,
-      "UBL": null,
+      "LBL": 0.84,
+      "UBL": 1.03,
       "axis_labels": {
         "x": "PD Factor RSG",
         "y": "Sample Standard Deviation"
@@ -544,7 +544,7 @@
       "package": {
         "analysis_design_state": "ANALYTIC DESIGN STATE 2: N = 1 COMPLETE"
       },
-      "notes": "The 10/3 deck prints 0.85/1.02 for this F2 S chart. N = 400 is above 343, where the 10/3 VAS held alpha_N (Eq 10-12) at 0.9995 (Minitab's GAMMA limit, confirmed by Dr. Bishop, 10/8/2026), so its limits follow N = 500; PB's, with N = 400, are 0.84/1.03. Pending his rerun with alpha_N from a table."
+      "notes": null
     },
     {
       "page_number": 28,

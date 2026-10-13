@@ -35,51 +35,51 @@ REFERENCE_ARTIFACTS = [
     ),
     (
         'tests/fixtures/bishop_analyses/pm_sds_1.json',
-        '78c0f9c40239726d7ca56f775c0aa4b22655ab23796d32ad16210c1ce66fcab7',
+        '18bc3172fd7ce5378dd2a1204151f79d8390fa9ed68564c3fc5b91cc53705058',
     ),
     (
         'tests/fixtures/bishop_analyses/pm_sds_2.json',
-        '9b3cc7ec7954da8d9490cb7da9519c11439cdf83febd4eed87e778842b9317f8',
+        '867937df46f602fb5f0c49559a24c5bdcf1dcb6d815fa7ae8d556c40b03ce947',
     ),
     (
         'tests/fixtures/bishop_analyses/pm_sds_3.json',
-        '70811e5f59fcd9995e9dc4437aec1aec08868add3996d95b3b245ed02e07eb7c',
+        'd0c7dd31e4f1caa4c078021ea5974b50964c67420120b83d91caf51a2ebe477a',
     ),
     (
         'tests/fixtures/bishop_analyses/pm_sds_4.json',
-        'f556d81251ff35706d8f5eddd5ad9b8f46b4af08520cfc19185ed223139f665c',
+        '9ad9da957b1504272cecebd6552c98f365a25952503d6c71d1d20c678d785146',
     ),
     (
         'tests/fixtures/bishop_analyses/pm_sds_5.json',
-        '60c205dc4a9dc49398cfa00621272651c11be64f1cfb620115e4a928edab70aa',
+        'df307bc4fc7603268bd4ce537095a2a10a3d89be0e5e931cb6ed28ff56894cda',
     ),
     (
         'tests/fixtures/bishop_analyses/pm_sds_6.json',
-        '4247d11e987aefb85c75cc0df5ec4aa3dd477eba6d0f6bfc2ee6e53acecc5443',
+        '38fad86476a04be122739091e3b464152096ccc3978296ee921c3c065ad91e6c',
     ),
     (
         'tests/fixtures/bishop_analyses/pm_inert_sds_1.json',
-        '32e31db625f6bbeb2d9b9759b5e635b31d0ec4f5ba0235fd7d8c616d72f06f1b',
+        '15b8579f6d18abfb917b7217d4c7792289e087e029f17387bf112f55db6d6f81',
     ),
     (
         'tests/fixtures/bishop_analyses/pm_inert_sds_2.json',
-        '096cad6602731fdfc536c8bed89c6d87427496c61879cdae53d6715f6eb56eca',
+        '38c216a433bb98660b4252b8f62a30babb2763ac1150fffbcfd8ed2f6dabad7e',
     ),
     (
         'tests/fixtures/bishop_analyses/pm_inert_sds_3.json',
-        'eab2e47b7781871a82c48a51dc0b3ad156cc33580fe1b3d6074b1341afd86035',
+        'e6e0e1828866965a9bc8d4f34d8a8088ff0e5ade4a7f509d56ea1c6f3d38d7ac',
     ),
     (
         'tests/fixtures/bishop_analyses/pm_inert_sds_4.json',
-        '50069462af1eaac4161153be3d35814342521f5976ab80dfe7e9fe7cadb6123b',
+        '8cfe623f54467c66f38e8615f13b2ed97fdb1f2aa1225d4e03ef440f3ae8f437',
     ),
     (
         'tests/fixtures/bishop_analyses/pm_inert_sds_5.json',
-        'aabf897651880dccde74b8aef2a21e034e23878e4ac25adc6f10f19f3291a66b',
+        'ab56f4ec6e23dfcf12ff0a4b4a2cf898f9420303ad25f52e54ad721cb6d47276',
     ),
     (
         'tests/fixtures/bishop_analyses/pm_inert_sds_6.json',
-        '5c5d4a8c88b77d017863a564c653e90d9f38010656342504b5269b8e65ef01cf',
+        'd5374b63c7e84f7170cebe6d77524b0ee74c71593a9818e6173e76dac50584b0',
     ),
     (
         'tests/fixtures/bishop_analyses/known_effects_sds_1.json',

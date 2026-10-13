@@ -7,8 +7,8 @@
     "usl": 242,
     "target": 237
   },
-  "source_file": "PM SDS1.pptm (VAS run of 10/3/2026, 10-1 manual)",
-  "extraction_method": "Values read from the text drawn in the Minitab charts of the 10/3/2026 VAS deck (displayed precision); structure and null pattern kept from the earlier extraction.",
+  "source_file": "PM SDS1.pptm (VAS rerun of 10/13/2026, alpha_N computed for every N)",
+  "extraction_method": "Values read from the text drawn in the Minitab charts of the VAS deck (displayed precision); structure and null pattern kept from the earlier extraction.",
   "pages_extracted": 34,
   "capability": {
     "pp": 0.96,
@@ -506,7 +506,7 @@
       "package": {
         "analysis_design_state": "ANALYTIC DESIGN STATE 1: N > 1 COMPLETE"
       },
-      "notes": "The 10/3 VAS run prints 0.73/0.88 here: it held alpha_N (Eq 10-12) at 0.9995 above N = 343, where Minitab's GAMMA function overflows (confirmed by Dr. Bishop, 10/8/2026). Kept the limits from the earlier VAS run, which used the subgroup's own N, as PB does."
+      "notes": null
     },
     {
       "page_number": 26,
@@ -544,7 +544,7 @@
       "package": {
         "analysis_design_state": "ANALYTIC DESIGN STATE 1: N > 1 COMPLETE"
       },
-      "notes": "The 10/3 VAS run prints 0.73/0.88 here: it held alpha_N (Eq 10-12) at 0.9995 above N = 343, where Minitab's GAMMA function overflows (confirmed by Dr. Bishop, 10/8/2026). Kept the limits from the earlier VAS run, which used the subgroup's own N, as PB does."
+      "notes": null
     },
     {
       "page_number": 28,

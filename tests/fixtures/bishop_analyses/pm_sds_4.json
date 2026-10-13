@@ -7,7 +7,7 @@
     "usl": 242,
     "target": 237
   },
-  "source_file": "PM SDS4.pptm (VAS run of 10/3/2026, 10-1 manual)",
+  "source_file": "PM SDS 4.pptm (VAS rerun of 10/13/2026, alpha_N computed for every N)",
   "extraction_method": "Values read from the text drawn in the Minitab charts of the VAS deck (displayed precision); page structure and null pattern from the PM SDS reference for the same ADS.",
   "pages_extracted": 34,
   "capability": {
@@ -18,7 +18,7 @@
     "pct_above_usl": 0.48,
     "cp": 2.28,
     "cpk_upper": 1.91,
-    "cpk_lower": 2.65,
+    "cpk_lower": 2.66,
     "potential_pct_below_lsl": 0.0,
     "potential_pct_above_usl": 0.0
   },
@@ -861,7 +861,7 @@
       "package": {
         "analysis_design_state": "ANALYTIC DESIGN STATE 1: N > 1 COMPLETE"
       },
-      "notes": "One subgroup per factor level (confirmed by Dr. Bishop, 10/8/2026). These subgroups have more than 343 values, and the 10/3 VAS held alpha_N (Eq 10-12) at 0.9995 above N = 343 (Minitab's GAMMA limit), so its limits follow N = 500; limits pending his rerun with alpha_N from a table.",
+      "notes": null,
       "drawn_limits": {
         "unit": 0.0007,
         "levels": [
@@ -869,8 +869,7 @@
           0.8005
         ],
         "LBL": "0000",
-        "UBL": "1111",
-        "pending": "A subgroup here has 343 or more values. The 10/3 VAS held alpha_N (Eq 10-12) at 0.9995 above N = 343, where Minitab's GAMMA function overflows, so its S limits follow N = 500 instead of the subgroup's own N (confirmed by Dr. Bishop, 10/8/2026). Pending his rerun with alpha_N from a table."
+        "UBL": "1111"
       }
     },
     {
@@ -918,16 +917,15 @@
       "package": {
         "analysis_design_state": "ANALYTIC DESIGN STATE 1: N > 1 COMPLETE"
       },
-      "notes": "One subgroup per factor level (confirmed by Dr. Bishop, 10/8/2026). These subgroups have more than 343 values, and the 10/3 VAS held alpha_N (Eq 10-12) at 0.9995 above N = 343 (Minitab's GAMMA limit), so its limits follow N = 500; limits pending his rerun with alpha_N from a table.",
+      "notes": null,
       "drawn_limits": {
-        "unit": 0.0007,
+        "unit": 0.00049,
         "levels": [
-          0.6603,
-          0.8005
+          0.68,
+          0.78
         ],
         "LBL": "00",
-        "UBL": "11",
-        "pending": "A subgroup here has 343 or more values. The 10/3 VAS held alpha_N (Eq 10-12) at 0.9995 above N = 343, where Minitab's GAMMA function overflows, so its S limits follow N = 500 instead of the subgroup's own N (confirmed by Dr. Bishop, 10/8/2026). Pending his rerun with alpha_N from a table."
+        "UBL": "11"
       }
     },
     {

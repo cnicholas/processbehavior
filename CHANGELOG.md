@@ -78,6 +78,16 @@ numbers below are that manual's.
   match), the factor S charts' centerlines (one subgroup per factor level, as Dr. Bishop confirmed),
   and PM SDS 5's loss shares from his rerun at 237; only the limits for subgroups of 343 or more
   wait for his rerun. The references' notes now give that cause.
+- **Every R6 S chart in the PM runs is checked, against Dr. Bishop's reruns of 13 October 2026.**
+  His reruns of PM SDS 1-6 and PM INERT SDS 1-6 compute α<sub>N</sub> for every N. Against the
+  10/3 runs they change only the R6 S charts (pages 21, 25 and 27) and potential capability in
+  PM SDS 3 and 4. The limits for subgroups of 343 or more, pending until now, all match PB within
+  the gate's tolerances (36 assertions). The rerun's potential capability is now PB's value
+  to the digit it prints: PM SDS 3 Cp 1.58 and CPL 1.84 (PB 1.5751 and 1.8356; the 10/3 run
+  printed 1.57 and 1.83), and PM SDS 4 CPL 2.66 (PB 2.6555; was 2.65). The gate reports 1547
+  assertions passing, 0 failing and 7 with no reference (was 1511 / 0 / 43). Four of the 7 are
+  the known-effects factor S limits, whose 6 October run predates the fix. The other three are
+  the Medicare per-factor loss shares, which don't apply to a one-factor study.
 
 ### Added
 - **R2 is reported unavailable, with the reason, when the R2 scale factor is undefined**

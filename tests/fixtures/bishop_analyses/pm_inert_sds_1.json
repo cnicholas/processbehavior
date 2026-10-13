@@ -7,7 +7,7 @@
     "usl": 3,
     "target": 0
   },
-  "source_file": "PM1 INERT.pptm (VAS run of 10/3/2026, 10-1 manual)",
+  "source_file": "PM INERT SDS 1.pptm (VAS rerun of 10/13/2026, alpha_N computed for every N)",
   "extraction_method": "Values read from the text drawn in the Minitab charts of the VAS deck (displayed precision); page structure and null pattern from the PM SDS reference for the same ADS.",
   "pages_extracted": 34,
   "capability": {
@@ -497,8 +497,8 @@
       "context_subtitle": "PD Factor - F1",
       "variable": "RSG STDEV",
       "CL": 0.89,
-      "LBL": null,
-      "UBL": null,
+      "LBL": 0.83,
+      "UBL": 0.95,
       "axis_labels": {
         "x": "PD Factor RSG",
         "y": "Sample Standard Deviation"
@@ -506,7 +506,7 @@
       "package": {
         "analysis_design_state": "ANALYTIC DESIGN STATE 1: N > 1 COMPLETE"
       },
-      "notes": "One subgroup per factor level (confirmed by Dr. Bishop, 10/8/2026). These subgroups have more than 343 values, and the 10/3 VAS held alpha_N (Eq 10-12) at 0.9995 above N = 343 (Minitab's GAMMA limit), so its limits follow N = 500; limits pending his rerun with alpha_N from a table."
+      "notes": null
     },
     {
       "page_number": 26,
@@ -535,8 +535,8 @@
       "context_subtitle": "PD Factor - F2",
       "variable": "RSG STDEV",
       "CL": 0.89,
-      "LBL": null,
-      "UBL": null,
+      "LBL": 0.85,
+      "UBL": 0.93,
       "axis_labels": {
         "x": "PD Factor RSG",
         "y": "Sample Standard Deviation"
@@ -544,7 +544,7 @@
       "package": {
         "analysis_design_state": "ANALYTIC DESIGN STATE 1: N > 1 COMPLETE"
       },
-      "notes": "One subgroup per factor level (confirmed by Dr. Bishop, 10/8/2026). These subgroups have more than 343 values, and the 10/3 VAS held alpha_N (Eq 10-12) at 0.9995 above N = 343 (Minitab's GAMMA limit), so its limits follow N = 500; limits pending his rerun with alpha_N from a table."
+      "notes": null
     },
     {
       "page_number": 28,
