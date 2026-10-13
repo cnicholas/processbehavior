@@ -95,6 +95,8 @@ LOSS_METRICS = [
     ('F2',          'pct_pdc_f2'),
     ('PDC Int',     'pct_pdc_factor_interaction'),
 ]
+# These split PDC between two process design factors; a one-factor run has no such rows.
+PER_FACTOR_LOSS_FIELDS = {'pct_pdc_f1', 'pct_pdc_f2', 'pct_pdc_factor_interaction'}
 
 
 def context_to_stratum(context_subtitle: str, n_factors: int = 2) -> str:
@@ -233,11 +235,13 @@ def _augment_loss_with_factor_percentages(loss_dict):
     return derived
 
 
-def _build_loss_results(expected, loss_dict):
+def _build_loss_results(expected, loss_dict, n_factors):
     """Validate loss-function decomposition (percentages) against the run's reference values."""
     derived = _augment_loss_with_factor_percentages(loss_dict)
     rows = []
     for label, field in LOSS_METRICS:
+        if n_factors < 2 and field in PER_FACTOR_LOSS_FIELDS:
+            continue
         actual = _coerce_float(derived.get(field))
         exp = expected.get(field)
         match = bool(close(actual, exp, tol=LOSS_TOLERANCE)) if exp is not None else None
@@ -475,7 +479,7 @@ def run_validation(run, pb, study, ref):  # noqa: C901
     capability_results = _build_capability_results(
         ref.get('capability', {}), computed['capability'].as_dict(round_to=12)
     )
-    loss_results = _build_loss_results(ref.get('loss', {}), computed['loss'].as_dict(round_to=12))
+    loss_results = _build_loss_results(ref.get('loss', {}), computed['loss'].as_dict(round_to=12), len(run.factors))
 
     return {
         'charts': results,
@@ -868,8 +872,6 @@ def generate_myst_summary(all_results, aux_by_run, runs):
         "  so its limits follow N = 500 instead of the subgroup's own N. Dr. Bishop's reruns of the PM",
         '  runs (13 October 2026) compute α<sub>N</sub> for every N, and every R6 S chart in them is',
         '  checked and matches; the known-effects run waits for the same rerun.',
-        '- The per-factor loss shares (F1, F2, PDC Int) of the Medicare run: it has one factor, so they',
-        '  do not apply.',
         '',
         '## Reproducing this',
         '',
