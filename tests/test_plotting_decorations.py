@@ -12,7 +12,7 @@ import pytest
 from plotly.subplots import make_subplots
 
 from processbehavior.plotting import get_theme
-from processbehavior.plotting.lane_boundaries import add_lane_boundaries
+from processbehavior.plotting.lane_boundaries import MAX_LANE_DIVIDERS, add_lane_boundaries
 from processbehavior.plotting.limits import (
     add_stepped_limit_line,
     build_stepped_coordinates,
@@ -222,6 +222,47 @@ class TestAddLaneBoundaries:
         boundaries = [{'position': 5}]
         add_lane_boundaries(fig, boundaries, (0, 100), theme)
         assert len(fig.layout.shapes) == 1
+        assert len(fig.layout.annotations) == 0
+
+    @staticmethod
+    def _one_call_each(fig, boundaries, y_range, theme, row=None, col=None, show_labels=True):
+        """The figure add_lane_boundaries built before batching: one add_shape per divider."""
+        y_min, y_max = y_range
+        kw = {'row': row, 'col': col} if row is not None and col is not None else {}
+        for b in boundaries:
+            fig.add_shape(type='line', x0=b['position'], x1=b['position'], y0=y_min, y1=y_max,
+                          line=dict(color=theme.lane_boundary_color, dash=theme.lane_boundary_dash,
+                                    width=theme.lane_boundary_width), **kw)
+            if show_labels and b.get('label', ''):
+                fig.add_annotation(x=b['position'], y=y_max, text=b['label'], showarrow=False, yanchor='bottom',
+                                   font=dict(size=theme.lane_boundary_annotation_size,
+                                             color=theme.lane_boundary_color), **kw)
+
+    @pytest.mark.parametrize(('make', 'subplot'), [
+        (go.Figure, {}),
+        (lambda: make_subplots(rows=2, cols=2), {'row': 2, 'col': 1}),
+    ])
+    @pytest.mark.parametrize('show_labels', [True, False])
+    def test_batched_figure_matches_one_call_each(self, theme, make, subplot, show_labels):
+        """Adding the dividers in one assignment builds the same figure, references included."""
+        boundaries = [{'position': i * 3, 'label': f'L{i}' if i % 4 else ''} for i in range(1, 40)]
+        expected, actual = make(), make()
+        for fig in (expected, actual):
+            fig.add_shape(type='rect', x0=0, x1=1, y0=0, y1=1)  # a shape already on the figure
+        self._one_call_each(expected, boundaries, (-1, 5), theme, show_labels=show_labels, **subplot)
+        add_lane_boundaries(actual, boundaries, (-1, 5), theme, show_labels=show_labels, **subplot)
+        assert actual.to_dict() == expected.to_dict()
+
+    def test_draws_up_to_the_divider_limit(self, theme):
+        fig = go.Figure()
+        add_lane_boundaries(fig, [{'position': i} for i in range(MAX_LANE_DIVIDERS)], (0, 1), theme)
+        assert len(fig.layout.shapes) == MAX_LANE_DIVIDERS
+
+    def test_draws_none_above_the_divider_limit(self, theme):
+        """Past the limit dividers merge into a solid band: one lane per gene of a 6,033-gene study."""
+        fig = go.Figure()
+        add_lane_boundaries(fig, [{'position': i, 'label': 'g'} for i in range(6_032)], (0, 1), theme)
+        assert len(fig.layout.shapes) == 0
         assert len(fig.layout.annotations) == 0
 
 

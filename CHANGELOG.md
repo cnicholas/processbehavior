@@ -112,6 +112,13 @@ Equation numbers below are that manual's.
   30,165-row gene-effects file. `scripts/benchmark.py` adds a one-row-strata scenario, and
   `tests/test_performance.py` checks that it scales linearly. Stratified Xbar/S still costs
   about 2.5 ms per stratum (15 s at 6,033): linear, but not yet vectorised.
+- **Charts with many lanes draw in a fraction of a second.** Each lane divider was added to the
+  figure with its own `add_shape` call, and plotly re-validates every shape already there, so the
+  cost grew with the square of the number of lanes: 800 dividers took 27 s, and an X chart of a
+  6,033-gene study (one lane per gene) would have taken about 25 minutes. They are now added in
+  one assignment, which builds the same figure (0.03 s for 800). Above 1,000
+  (`plotting.lane_boundaries.MAX_LANE_DIVIDERS`) none are drawn: the dividers would merge into a
+  solid band at any chart width.
 - **Xbar and S charts with subgroups of unequal size follow the manual (Eqs 11-5, 11-16,
   11-17).** sigma-hat is the average of each subgroup's S_r / c4(N_r) (was S-bar / c4(N_r)), and each
   subgroup's limits use its own N_r, so they step with subgroup size, as VAS draws them. N_r now
