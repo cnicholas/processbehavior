@@ -2,7 +2,7 @@
 ProcessBehavior - Statistical Process Control for Python
 
 A Pythonic library for process behavior analysis following Bishop's
-Variance Analysis System (VAS). The library models the data lifecycle
+Variation Analysis System (VAS). The library models the data lifecycle
 through three design states and routes analysis by what your data
 actually supports:
 

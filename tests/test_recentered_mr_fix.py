@@ -69,7 +69,7 @@ class TestRecenteredXmRLimits:
         )
 
     def test_xmr_r3_reference_values(self, sds2_study):
-        """SDS 2, PM2, R3, by=[], XmR recentered: match Tom's Minitab values."""
+        """SDS 2, PM2, R3, by=[], XmR recentered: match Tom's VAS run of 10/3/2026."""
         result = sds2_study.execute(
             chart='X',
             value='R3',
@@ -78,10 +78,10 @@ class TestRecenteredXmRLimits:
         )
         stats = result.charts['X']['statistics']
 
-        # Tom's reference: CL=237.79, LPL=233.94, UPL=241.63, half-width=3.85
-        assert stats['center'] == pytest.approx(237.79, abs=0.1)
-        half_width = (stats['upl'] - stats['lpl']) / 2
-        assert half_width == pytest.approx(3.85, abs=0.05)
+        # Tom's 10-1 VAS (PM SDS 2 deck, slide 28): CL=237.79, LBL=233.04, UBL=242.53
+        assert stats['center'] == pytest.approx(237.79, abs=0.01)
+        assert stats['lpl'] == pytest.approx(233.04, abs=0.01)
+        assert stats['upl'] == pytest.approx(242.53, abs=0.01)
 
 
 class TestRecenteredRChart:
@@ -112,7 +112,7 @@ class TestRecenteredRChart:
         assert r_stats_plain['lpl'] == pytest.approx(r_stats_rc['lpl'], abs=0.01)
 
     def test_r_chart_r3_reference_values(self, sds2_study):
-        """R chart reference values: CL=1.440, UPL=4.720, LPL=0."""
+        """mR chart of R3 matches Tom's VAS run of 10/3/2026 (PM SDS 2 deck, slide 29): CL=1.78, UBL=5.83."""
         result = sds2_study.execute(
             chart='X',
             value='R3',
@@ -121,8 +121,8 @@ class TestRecenteredRChart:
         )
         r_stats = result.charts['mR']['statistics']
 
-        assert r_stats['center'] == pytest.approx(1.440, abs=0.01)
-        assert r_stats['upl'] == pytest.approx(4.720, abs=0.05)
+        assert r_stats['center'] == pytest.approx(1.78, abs=0.01)
+        assert r_stats['upl'] == pytest.approx(5.83, abs=0.01)
         assert r_stats['lpl'] == pytest.approx(0.0, abs=0.01)
 
 
@@ -197,6 +197,6 @@ class TestNonRecenteredUnchanged:
         result = sds2_study.execute(chart='X', value='R3', by=[])
         stats = result.charts['X']['statistics']
 
-        # These are known-good values from before the fix
+        # Half-width of Tom's 10-1 VAS limits (PM SDS 2 deck, slide 28): (242.53 - 233.04) / 2
         half_width = (stats['upl'] - stats['lpl']) / 2
-        assert half_width == pytest.approx(3.85, abs=0.05)
+        assert half_width == pytest.approx(4.745, abs=0.01)

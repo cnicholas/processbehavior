@@ -1,5 +1,5 @@
 """
-Effects and interactions calculator for VAS (Variance Analysis System).
+Effects and interactions calculator for VAS (Variation Analysis System).
 
 This module calculates:
 - Main effects for each factor (mean of R5 per level)

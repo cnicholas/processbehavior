@@ -1,7 +1,37 @@
 {
-  "source_file": "vassds1analysis.pptm",
-  "extraction_method": "Structured extraction from PDF text generated from the PowerPoint; this deck exposes chart text in the rendered PDF, which allowed direct parsing of page titles, chart text, limits, axis labels, and package footer metadata. Missing values were preserved as null when not present on the slide.",
+  "run": "pm_sds_1",
+  "label": "PM SDS 1",
+  "analytic_design_state": 1,
+  "specs": {
+    "lsl": 232,
+    "usl": 242,
+    "target": 237
+  },
+  "source_file": "PM SDS1.pptm (VAS rerun of 10/13/2026, alpha_N computed for every N)",
+  "extraction_method": "Values read from the text drawn in the Minitab charts of the VAS deck (displayed precision); structure and null pattern kept from the earlier extraction.",
   "pages_extracted": 34,
+  "capability": {
+    "pp": 0.96,
+    "ppk_upper": 0.8,
+    "ppk_lower": 1.11,
+    "pct_below_lsl": 0.53,
+    "pct_above_usl": 0.45,
+    "cp": 2.08,
+    "cpk_upper": 1.74,
+    "cpk_lower": 2.42,
+    "potential_pct_below_lsl": 0.0,
+    "potential_pct_above_usl": 0.0
+  },
+  "loss": {
+    "pct_interaction": 44.5,
+    "pct_unexplained": 20.9,
+    "pct_centering": 17.3,
+    "pct_pdc": 14.6,
+    "pct_time": 2.8,
+    "pct_pdc_f1": 9.2,
+    "pct_pdc_f2": 3.8,
+    "pct_pdc_factor_interaction": 1.6
+  },
   "items": [
     {
       "page_number": 1,

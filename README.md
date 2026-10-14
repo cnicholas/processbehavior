@@ -6,7 +6,7 @@
 [![codecov](https://codecov.io/gh/cnicholas/processbehavior/graph/badge.svg)](https://codecov.io/gh/cnicholas/processbehavior)
 [![License](https://img.shields.io/pypi/l/processbehavior.svg)](https://github.com/cnicholas/processbehavior/blob/main/LICENSE)
 
-A Python library for **Process Behavior Analysis** following Thomas A. Bishop's Variance Analysis System (VAS) methodology.
+A Python library for **Process Behavior Analysis** following Thomas A. Bishop's Variation Analysis System (VAS) methodology.
 
 Unlike traditional SPC packages, processbehavior faithfully implements Bishop's VAS equation-by-equation: automatic detection of the three-state design lineage (PDS / ODS / ADS), variance decomposition via R1-R6 residuals, and chart selection routed by the data your study can actually analyze.
 
@@ -148,17 +148,16 @@ for stratum in result.strata:
 
 ## Validation
 
-processbehavior's analytical outputs are continuously verified against Dr. Thomas A. Bishop's Minitab reference results. The validator at `validation/e2e_bishop_report.py` runs **280 numerical assertions** through the full formulate → execute → capability / loss / maximum-information pipeline:
+processbehavior's analytical outputs are verified against Dr. Thomas A. Bishop's VAS (Minitab-based) reference results on every push. The validator at `validation/e2e_bishop_report.py` runs **1,547 numerical assertions** through the full formulate → execute → capability / loss pipeline, across 14 of his VAS runs:
 
-| Analytical Design State | Datasets validated | Assertions | Status |
-|---|---|---|---|
-| ADS 1 (full replication) | `PM SDS 1` from `PBTESTDATABASE_T100.csv` | 102 | ✅ all pass |
-| ADS 2 (no replication) | `PM SDS 2` | 89 | ✅ all pass |
-| ADS 3 (partial replication) | `PM SDS 3` | 89 | ✅ all pass |
+| VAS runs | Data | Analytical design states | Assertions | Status |
+|---|---|---|---|---|
+| `PM SDS 1`–`6` | `PBTESTDATABASE_T100.csv` | ADS 1, 2, 3 | 630 | ✅ all pass |
+| `PM INERT SDS 1`–`6` (pure noise) | `PBTESTDATABASE_T100.csv` | ADS 1, 2, 3 | 630 | ✅ all pass |
+| `PM SDS 1 KNOWN` (known effects) | `PBTESTKNOWNEFFECTS_T100.csv` | ADS 1 | 101 | ✅ all pass |
+| `Medicare ACO (PCE)` | `aco_per_capita_expenditure.csv` | ADS 2 | 186 | ✅ all pass |
 
-Reference data is Bishop's published Minitab golden output. The library matches every chart center, control limit, signal classification, capability index, and loss-function value to within the precision Bishop reports.
-
-ODS 4–6 (incomplete-grid scenarios) are detected and routed correctly but their end-to-end Bishop-reference coverage is pending. The synthetic generators in `make_design(state=4|5|6)` produce data with the structural shape Bishop's Table 1 specifies; full numerical validation against Bishop's incomplete-grid Minitab output is on the roadmap (issue #109).
+Reference data is Bishop's VAS output for the 10-12-2026 manual (his runs of October 2026). The library matches every chart center, control limit, capability index and loss-function value that output prints, to within the precision Bishop reports. Where subgroup sizes differ, VAS prints "UNEQUAL" instead of a limit; there every subgroup's limits are read from the limit lines VAS draws and compared one by one. SDS 4–6 are incomplete grids (ODS 4–6), checked as the complete design that survives tidying (ADS 1–3). Four values, the factor S-chart limits of the known-effects run, wait for a VAS rerun. The per-run table is in `docs/reference/validation.md`.
 
 The full report renders to `validation/e2e_bishop_report.html`.
 

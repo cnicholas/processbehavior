@@ -40,14 +40,16 @@ def focus_on(result: AnalysisResult, stratum: str) -> AnalysisResult:
     ProcessBehaviorError
         If the chart lacks both stratify_col metadata and an rsg column.
     """
-    if not result.strata:
+    # `strata` is a property that rebuilds the list on every read: read it once.
+    strata = result.strata
+    if not strata:
         raise ValidationError(
             "Cannot focus: this result is not stratified. "
             "Use result.strata to check available subgroups."
         )
-    if stratum not in result.strata:
+    if stratum not in strata:
         raise ValidationError(
-            f"Stratum '{stratum}' not found. Available strata: {result.strata}"
+            f"Stratum '{stratum}' not found. Available strata: {strata}"
         )
 
     focused_charts: dict[str, dict[str, Any]] = {}

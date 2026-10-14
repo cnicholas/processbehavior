@@ -146,4 +146,6 @@ def _detect_for_chart(
         value_col=value_col,
         chart_name=chart_name,
         chart_type=chart_type,
+        # Phased charts mark run rules not applicable; until now only the renderer read it.
+        run_rules_applicable=metadata.get("run_rules_applicable", True),
     )

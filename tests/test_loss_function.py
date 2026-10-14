@@ -4,6 +4,7 @@ Tests for Taguchi Loss Function Analysis (Bishop Ch. 15).
 Uses validation dataset (PBTESTDATABASE_T100.csv) as ground truth.
 """
 
+import pandas as pd
 import pytest
 
 from processbehavior import LossResult, ProcessBehavior, ValidationError
@@ -31,7 +32,7 @@ def study_sds1(pb):
 
 @pytest.fixture
 def study_sds2(pb):
-    """PM SDS 2: 2 factors, time, some singleton cells."""
+    """PM SDS 2: 2 factors, time, one observation in every cell (ADS 2)."""
     return pb.formulate(
         response='PM SDS 2',
         factors=['FACTOR 1', 'FACTOR 2'],
@@ -41,7 +42,7 @@ def study_sds2(pb):
 
 @pytest.fixture
 def study_sds3(pb):
-    """PM SDS 3: 2 factors, time, all singleton cells."""
+    """PM SDS 3: 2 factors, time, a mix of singleton and replicated cells (ADS 3)."""
     return pb.formulate(
         response='PM SDS 3',
         factors=['FACTOR 1', 'FACTOR 2'],
@@ -74,17 +75,17 @@ def study_no_time(pb):
 
 
 class TestValidationPMSDS1:
-    """Match Tom's reference output: Fig 15-4 / 15-5."""
+    """Match Tom's VAS run of 10/3/2026 (10-1 manual), PM SDS 1 deck slides 30-31."""
 
     def test_unstructured_percentages(self, study_sds1):
         """5-component Pareto matches Tom's reference."""
         result = study_sds1.loss_function(target=237.0)
 
-        assert round(result.pct_interaction, 1) == 43.3
-        assert round(result.pct_unexplained, 1) == 23.0
-        assert round(result.pct_centering, 1) == 16.8
-        assert round(result.pct_pdc, 1) == 14.2
-        assert round(result.pct_time, 1) == 2.7
+        assert round(result.pct_interaction, 1) == 44.5
+        assert round(result.pct_unexplained, 1) == 20.9
+        assert round(result.pct_centering, 1) == 17.3
+        assert round(result.pct_pdc, 1) == 14.6
+        assert round(result.pct_time, 1) == 2.8
 
     def test_structured_pdc_decomposition(self, study_sds1):
         """PDC broken into F1, F2, PDF INT matches Tom's reference."""
@@ -95,9 +96,9 @@ class TestValidationPMSDS1:
         f2_pct = result.pdc_by_factor['FACTOR 2'] / total * 100
         pdc_int_pct = result.pdc_factor_interaction / total * 100
 
-        assert round(f1_pct, 1) == 8.9
-        assert round(f2_pct, 1) == 3.7
-        assert round(pdc_int_pct, 1) == 1.5
+        assert round(f1_pct, 1) == 9.2
+        assert round(f2_pct, 1) == 3.8
+        assert round(pdc_int_pct, 1) == 1.6
 
     def test_target_237(self, study_sds1):
         result = study_sds1.loss_function(target=237.0)
@@ -171,32 +172,66 @@ class TestDecompositionIdentities:
 
 class TestUnexplained:
     def test_sds1_uses_per_cell(self, study_sds1):
-        """SDS 1 (replicated) uses per-cell S/c4 path."""
+        """SDS 1 (replicated): unexplained is the average cell variance (Eq 15-16), no c4."""
         result = study_sds1.loss_function()
         assert result.sds == 1
-        assert result.unexplained > 0.0
+        df = study_sds1.dataset
+        expected = df.groupby('cell_key', observed=True)['PM SDS 1'].var().mean()
+        assert result.unexplained == pytest.approx(expected, rel=1e-12)
 
     def test_sds2_percentages(self, study_sds2):
-        """SDS 2 5-component Pareto — Eq 15.18 pooled R2 path."""
+        """SDS 2 Pareto (Eqs 15-17, 15-20) matches Tom's VAS run of 10/3/2026 (PM SDS 2 deck, slide 30)."""
         result = study_sds2.loss_function(target=237.0)
         assert result.sds == 2
 
-        assert round(result.pct_interaction, 1) == 42.5
-        assert round(result.pct_unexplained, 1) == 23.6
-        assert round(result.pct_centering, 1) == 16.1
-        assert round(result.pct_pdc, 1) == 15.6
-        assert round(result.pct_time, 1) == 2.2
+        assert round(result.pct_unexplained, 1) == 30.0
+        assert round(result.pct_interaction, 1) == 25.6
+        assert round(result.pct_centering, 1) == 21.0
+        assert round(result.pct_pdc, 1) == 20.4
+        assert round(result.pct_time, 1) == 2.9
 
     def test_sds3_percentages(self, study_sds3):
-        """SDS 3 5-component Pareto — Eq 15.18 pooled R2 path."""
+        """SDS 3 Pareto (Eqs 15-17, 15-20) matches Tom's VAS run of 10/3/2026 (PM SDS 3 deck, slide 30)."""
         result = study_sds3.loss_function(target=237.0)
         assert result.sds == 3
 
-        assert round(result.pct_interaction, 1) == 42.4
-        assert round(result.pct_unexplained, 1) == 25.0
-        assert round(result.pct_centering, 1) == 16.4
-        assert round(result.pct_pdc, 1) == 13.7
-        assert round(result.pct_time, 1) == 2.5
+        assert round(result.pct_interaction, 1) == 33.1
+        assert round(result.pct_unexplained, 1) == 30.3
+        assert round(result.pct_centering, 1) == 18.5
+        assert round(result.pct_pdc, 1) == 15.4
+        assert round(result.pct_time, 1) == 2.8
+
+    def test_ads23_unexplained_is_r2_variance(self, study_sds2):
+        """Eq 15-17: ADS 2/3 unexplained is the sample variance of R2, nothing more."""
+        result = study_sds2.loss_function(target=237.0)
+        r2 = study_sds2.dataset['R2'].dropna()
+        assert result.unexplained == pytest.approx(r2.var(ddof=1), rel=1e-12)
+
+    @pytest.mark.parametrize('response', ['PM SDS 2', 'PM SDS 3'])
+    def test_ads23_parts_add_to_total_loss(self, pb, response):
+        """Eqs 15-18 to 15-20: with no floor, the parts add to (Ybar - T)^2 + S^2 exactly."""
+        study = pb.formulate(response=response, factors=['FACTOR 1', 'FACTOR 2'], time='PRODUCTION TIME')
+        result = study.loss_function(target=237.0)
+        assert result.interaction > 0.0
+        s2 = study.dataset[response].var(ddof=1)
+        assert result.total == pytest.approx(result.centering + s2, rel=1e-12)
+
+    def test_ads23_interaction_floored_at_zero_on_pure_noise(self):
+        """PM INERT (pure noise) under the PM SDS 5 pattern: Eq 15-20 remainder is negative, set to 0.
+
+        Tom's VAS run of 10/3/2026 (PM5 INERT deck, slide 30) reports 84.0 / 14.0 / 1.5 / 0.5 / 0.0.
+        """
+        df = pd.read_csv('validation/PBTESTDATABASE_T100.csv', na_values=['*'])
+        df['PM INERT SDS 5'] = df['PM INERT'].where(df['PM SDS 5'].notna())
+        study = ProcessBehavior(df).formulate(
+            response='PM INERT SDS 5', factors=['FACTOR 1', 'FACTOR 2'], time='PRODUCTION TIME'
+        )
+        result = study.loss_function(target=0.0)
+        assert result.interaction == 0.0
+        assert round(result.pct_unexplained, 1) == 84.0
+        assert round(result.pct_time, 1) == 14.0
+        assert round(result.pct_pdc, 1) == 1.5
+        assert round(result.pct_centering, 1) == 0.5
 
 
 # ============================================================================

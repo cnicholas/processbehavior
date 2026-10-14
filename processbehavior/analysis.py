@@ -45,6 +45,7 @@ from .spc_constants import (
     calculate_limits,
     calculate_limits_vectorized,
     calibrated_limits,
+    subgroup_sigma_hat,
 )
 from .types import ChartPayload
 
@@ -196,6 +197,65 @@ def _split_strata_by_sufficiency(
     return insufficient, published
 
 
+def _stratum_row_positions(df: pd.DataFrame, stratify_col: str) -> dict:
+    """Row positions of every stratum in `df`, from one grouping pass.
+
+    The per-stratum loops used to select with ``df[df[stratify_col] == stratum]``, which
+    compares the whole column for every stratum: O(strata x rows). With one row per
+    stratum that is quadratic in the data: 48s for an X/mR pair at 30,165 rows, an
+    estimated 80 minutes at 307,683. Look rows up here instead with :func:`_stratum_rows`.
+
+    NaN strata are absent (groupby drops them), so they select no rows, exactly as
+    ``col == NaN`` did.
+    """
+    return df.groupby(stratify_col, sort=False, observed=True).indices
+
+
+def _stratum_rows(df: pd.DataFrame, positions: dict, stratum) -> pd.DataFrame:
+    """The rows of `df` in `stratum`, in `df`'s order (a view; copy before writing)."""
+    pos = positions.get(stratum)
+    return df.iloc[pos] if pos is not None else df.iloc[0:0]
+
+
+def _mr_family_limits(mr_spec: _MRChartSpec, *, mean, mR) -> pd.DataFrame:
+    """Limits for one MR-family chart per row of a per-stratum or per-phase table.
+
+    The array form of the scalar ``calculate_limits`` these sites used to call through
+    ``DataFrame.apply(axis=1)``: the same formulae, 10-12 manual Eqs 12-10/12-11 (X) and
+    12-5 (mR). The scalar call built a ``pd.Series`` per stratum, about 0.1 ms each, so
+    it cost 30s per chart at 300,000 strata. ``mean`` is ignored for the mR chart.
+    """
+    if mr_spec.limits_type == 'XmR':
+        return calculate_limits_vectorized('XmR', mean=mean, mR=mR)
+    return calculate_limits_vectorized(mr_spec.limits_type, mR=mR)
+
+
+def _mr_stratum_statistics(mr_spec: _MRChartSpec, grouped: pd.DataFrame, stratify_col: str,
+                           lpl_col: str, upl_col: str, round_to: int) -> dict:
+    """The per-stratum statistics dict of a stratified MR-family chart, in one pass.
+
+    `grouped` has one row per stratum. Replaces a loop that found each stratum's row
+    with ``grouped[grouped[stratify_col] == stratum]``: O(strata^2). The values stay
+    numpy floats (``to_numpy``, not ``tolist``), as that loop's row lookup returned them.
+    """
+    n = _mr_family_subgroup_n(mr_spec.chart_type)
+    return {
+        stratum: {
+            'N': n,
+            'center': round(center, round_to),
+            'lpl': round(lpl, round_to),
+            'upl': round(upl, round_to),
+        }
+        for stratum, center, lpl, upl in zip(
+            grouped[stratify_col].tolist(),
+            grouped['center'].to_numpy(),
+            grouped[lpl_col].to_numpy(),
+            grouped[upl_col].to_numpy(),
+            strict=True,
+        )
+    }
+
+
 def _no_replication_alternative(chart: str) -> str:
     """What to reach for instead, when a subgroup chart has nothing to subgroup."""
     return (
@@ -277,7 +337,9 @@ def _build_stratified_mr_payload(
         published_strata = list(strata)
     else:
         metadata['insufficient_strata'] = insufficient_strata or None
-        published_strata = [s for s in strata if s not in (insufficient_strata or [])]
+        # A set: against the list this was O(strata^2) when most strata are insufficient.
+        insufficient_set = set(insufficient_strata or ())
+        published_strata = [s for s in strata if s not in insufficient_set]
     return {
         mr_spec.chart_type: {
             'data': chart_out,
@@ -799,14 +861,15 @@ class Analysis:
         """Return the cell-grid columns at which to compute Bishop's grand mean
         for an Xbar chart on this column.
 
-        Each VAS residual is recentered around a baseline computed at a specific
-        grain (see `analysis_dataset.py:364-371` and `residual_calculator.calculate_r6_residuals`). The
-        canonical grand mean of an RCRk chart averages over that grain — equal
-        weight per cell — yielding Bishop's unweighted center line.
+        Each re-centred residual is R + Ybar (10-12 manual Eq 14-26; see
+        `AnalysisDataSet._calculate_centered_residuals` and
+        `residual_calculator.calculate_r6_residuals`). The canonical grand mean of an
+        RCRk chart averages over the grain its effect lives at — equal weight per
+        level — yielding Bishop's unweighted center line.
 
         Grain table (None for non-residuals; falls through to other logic):
           R1, R2, R3 -> [rsg_var_name, time_var]   (full cell grid)
-          R4         -> [rsg_var_name]             (time effect removed)
+          R4         -> [time_var]                 (R4 carries the period effect)
           R5, R6     -> [rsg_var_name]             (factor effects live at rsg level)
 
         Returns an empty list when the column isn't a residual or the spec
@@ -820,13 +883,11 @@ class Analysis:
             base = 'R' + base[3:]
         if not (base.startswith('R') and len(base) >= 2 and base[1].isdigit()):
             return []
-        # R5/R6 are factor-effect residuals; R4 is the time-effect residual
-        # (time component removed). For our SDS 3 validation only R3 and R6 are
-        # exercised; R4/R5 grains are inferred from the recentering structure.
+        # R5/R6 carry the condition (factor) effects; R4 carries the period effect.
         if base in ('R5', 'R6'):
             return [spec.rsg_var_name] if spec.rsg_var_name else []
         if base == 'R4':
-            return [spec.rsg_var_name] if spec.rsg_var_name else []
+            return [spec.time_var] if spec.time_var else []
         # R1, R2, R3: full (rsg x time) cell grid
         grain = []
         if spec.rsg_var_name:
@@ -844,9 +905,8 @@ class Analysis:
         whose within-group std inflates limits. R2 (within-cell noise) is the
         correct dispersion basis per Bishop.
 
-        Always uses plain R2 (not RCR2) because recentered residuals add
-        cell-specific offsets that inflate within-group std when groups span
-        multiple cells.
+        Always uses plain R2 (not RCR2): RCR2 adds the cell mean, which would
+        inflate within-group std when groups span multiple cells.
         """
         _EFFECT_RESIDUALS = {'R1', 'R3', 'R4', 'R5', 'RCR1', 'RCR3', 'RCR4', 'RCR5'}
         if value_col is not None and value_col.upper() in _EFFECT_RESIDUALS and 'R2' in df.columns:
@@ -951,6 +1011,28 @@ class Analysis:
         # Use the by columns directly
         groupby_cols = list(by)
         return groupby_cols, None, []
+
+    def _stratum_lane_boundaries(self, out: pd.DataFrame, stratify_col: str, strata: list,
+                                 collapsed_factors: list[str]) -> dict:
+        """Lane boundaries for each stratum of a stratified chart, keyed by stratum.
+
+        Strata with no boundary are left out. A stratum of fewer than two rows can't have
+        one, so it is skipped without the per-call cost, which matters when nearly every
+        row is its own stratum.
+        """
+        lane_boundaries: dict = {}
+        if not collapsed_factors:
+            return lane_boundaries
+        positions = _stratum_row_positions(out, stratify_col)
+        for stratum in strata:
+            pos = positions.get(stratum)
+            if pos is None or len(pos) < 2:
+                continue
+            stratum_data = out.iloc[pos].reset_index(drop=True)
+            boundaries = self._calculate_lane_boundaries(stratum_data, collapsed_factors)
+            if boundaries:
+                lane_boundaries[stratum] = boundaries
+        return lane_boundaries
 
     def _calculate_lane_boundaries(self, df: pd.DataFrame, collapsed_vars: list[str]) -> list[dict]:
         """
@@ -1079,6 +1161,32 @@ class Analysis:
     # Chart Calculation Methods (Strategy Pattern)
     # =========================================================================
 
+    def _xbar_limits(self, out: pd.DataFrame, s_bar: float, n_to_use: str) -> pd.DataFrame:
+        """Xbar natural process limits for the subgroups in ``out`` (columns center, s, n, N).
+
+        Equal subgroup sizes (or n_mode="average", Eq 11-20): S-bar / c4(N) for every row.
+        Unequal sizes: sigma_hat is the average of each subgroup's S_r / c4(N_r) (10-12 manual
+        Eq 11-5) and each subgroup's limits are center ± multiplier · sigma_hat / sqrt(N_r)
+        (Eqs 11-16, 11-17), so they step with N_r, as VAS draws them. A one-reading subgroup
+        has no S_r: it takes no part in sigma_hat and is charted at center ± multiplier · sigma_hat.
+        """
+        if n_to_use == 'n':
+            fit = out['n'].ge(2)
+            return calculate_limits_vectorized(
+                'Xbar',
+                mean=out['center'],
+                sigma=subgroup_sigma_hat(out.loc[fit, 's'], out.loc[fit, 'n']),
+                N=out['n'],
+                sigma_multiplier=self.request.n_sigma,
+            )
+        return calculate_limits_vectorized(
+            'Xbar',
+            mean=out['center'],
+            sd=s_bar,
+            N=out[n_to_use],
+            sigma_multiplier=self.request.n_sigma,
+        )
+
     def _calculate_xbar(  # noqa: C901
         self, value_col: str | None = None, _return_intermediates: bool = False
     ) -> dict:
@@ -1165,8 +1273,9 @@ class Analysis:
             agg_dict = {
                 's': pd.NamedAgg(column=_limits_col, aggfunc='std'),
                 'mean': pd.NamedAgg(column=value_col, aggfunc='mean'),
-                # Count on response_var (not value_col) to avoid NaN issues with residuals
-                'n': pd.NamedAgg(column=spec.response_var, aggfunc='count'),
+                # N_r counts the values S_r is computed from: a residual missing on a row (R2's
+                # first value) leaves that subgroup one smaller, as VAS treats it.
+                'n': pd.NamedAgg(column=_limits_col, aggfunc='count'),
             }
             if _limits_col != value_col:
                 agg_dict['s_value'] = pd.NamedAgg(column=value_col, aggfunc='std')
@@ -1186,40 +1295,39 @@ class Analysis:
             _N = out['n'].max()
             out['N'] = _N
 
-        # Filter out groups with n=1 (can't compute c4 for variance estimation)
-        # Xbar charts require n >= 2 for within-group variance.
-        # Xbar stays in valid_charts on ADS 2 — the chart family is valid there
-        # (Xbar of a residual, or of a pooled subgroup, computes fine); it is
-        # only charting *the response* that has nothing to subgroup. See
-        # Study._response_pair_problem, which reports that in advance.
-        mask_n1 = out['n'].eq(1)
-        if mask_n1.any():
-            n_filtered = mask_n1.sum()
-            logger.info(f'Filtered {n_filtered} subgroup(s) with n=1 from Xbar calculation')
-            out = out[~mask_n1].copy()
-
-        # Handle case where no subgroups have >1 observation
-        if out.shape[0] == 0:
+        # Every subgroup with a value is charted. A one-reading subgroup has no S, so sigma-hat
+        # comes from the subgroups with n >= 2, and its limits are center ± 3·sigma-hat (10-1
+        # manual Eqs 11-16/17 with N_r = 1), as VAS draws them; the companion S chart keeps only
+        # n >= 2. n counts the limits column, so a reading without one (R2's first value) is not
+        # charted, as in VAS. Xbar stays in valid_charts on ADS 2 — the chart family is valid
+        # there (Xbar of a residual, or of a pooled subgroup, computes fine); it is only charting
+        # *the response* that has nothing to subgroup. See Study._response_pair_problem, which
+        # reports that in advance.
+        out = out[out['n'].ge(1)].copy()  # n=0: every charted value missing
+        fit = out['n'].ge(2)
+        if not fit.any():
             sds = self.ads._ads_result.sds if self.ads._ads_result else '?'
             _raise_no_replicated_subgroups('Xbar', sds)
 
         # Use Bishop VAS grand mean (mean of cell means on value_col) as center
         _Xbar = _Ybar
-        _S = out['s'].mean()
-        _N = out['n'].max()
+        _S = out.loc[fit, 's'].mean()
+        _N = out.loc[fit, 'n'].max()
         if 'N' not in out.columns:
             out['N'] = _N
 
-        # Determine if subgroup sizes are constant or variable
+        # Determine if subgroup sizes are constant or variable: on the Xbar chart, and on the
+        # S chart, which has no one-reading subgroups
         n_to_use, n_max = self._determine_n_to_use(out)
+        s_n_to_use, _ = self._determine_n_to_use(out[fit])
 
         # Override n_to_use if n_mode="average"
         n_mode = self.request.n_mode
         n_avg = None
         if n_mode == 'average':
-            n_avg = out['n'].mean()
+            n_avg = out.loc[fit, 'n'].mean()
             out['N'] = n_avg  # overwrite N column with average
-            n_to_use = 'N'  # force constant-N path
+            n_to_use = s_n_to_use = 'N'  # force constant-N path
 
         # CALCULATE XBAR
         xbar = out.copy()
@@ -1231,13 +1339,7 @@ class Analysis:
             )
         else:
             xbar['center'] = _Xbar  # Add center column for Xbar chart
-            xbar[['lpl', 'upl']] = calculate_limits_vectorized(
-                'Xbar',
-                mean=xbar['center'],
-                sd=_S,
-                N=xbar[n_to_use],
-                sigma_multiplier=self.request.n_sigma,
-            )
+            xbar[['lpl', 'upl']] = self._xbar_limits(xbar, _S, n_to_use)
 
         # Detect beyond limits signals
         xbar = self._add_beyond_limits_flag(xbar, value_col='xbar')
@@ -1297,11 +1399,11 @@ class Analysis:
         if _return_intermediates:
             result['_intermediates'] = {
                 '_S': _S,
-                'n_to_use': n_to_use,
+                'n_to_use': s_n_to_use,
                 'n_max': n_max,
                 'groupby_cols': groupby_cols,
                 'group_col': group_col,
-                'out': out,  # Pre-aggregated DataFrame with s, n, mean columns
+                'out': out[fit],  # Pre-aggregated subgroups with an S: s, n, mean columns
                 'n_avg': n_avg,
             }
 
@@ -1349,6 +1451,7 @@ class Analysis:
         _limits_col = self._resolve_limits_column(value_col, df)
 
         strata = df[stratify_col].unique().tolist()
+        positions = _stratum_row_positions(df, stratify_col)
         all_xbar_frames = []
         chart_statistics = {}
         intermediates_per_stratum = {}
@@ -1359,7 +1462,7 @@ class Analysis:
         insufficient_strata: list = []
 
         for stratum in strata:
-            sdf = df[df[stratify_col] == stratum].copy()
+            sdf = _stratum_rows(df, positions, stratum).copy()
 
             # Group by time within this stratum
             # Note: we always compute mean directly from filtered data, NOT using
@@ -1367,7 +1470,7 @@ class Analysis:
             agg_dict = {
                 's': pd.NamedAgg(column=_limits_col, aggfunc='std'),
                 'xbar': pd.NamedAgg(column=value_col, aggfunc='mean'),
-                'n': pd.NamedAgg(column=spec.response_var, aggfunc='count'),
+                'n': pd.NamedAgg(column=_limits_col, aggfunc='count'),
             }
             if _limits_col != value_col:
                 agg_dict['s_value'] = pd.NamedAgg(column=value_col, aggfunc='std')
@@ -1375,35 +1478,32 @@ class Analysis:
 
             out['N'] = out['n'].max()
 
-            # Filter subgroups with n=1
-            mask_n1 = out['n'].eq(1)
-            if mask_n1.any():
-                out = out[~mask_n1].copy()
+            # Centre first: Bishop's unweighted mean of the subgroup means, every
+            # subgroup counted once — a one-observation subgroup is still a cell.
+            _Xbar = out['xbar'].mean()
 
-            if out.shape[0] == 0:
+            # Every subgroup with a value is charted; sigma-hat comes from those with n >= 2
+            # (see _calculate_xbar)
+            out = out[out['n'].ge(1)].copy()
+            fit = out['n'].ge(2)
+            if not fit.any():
                 insufficient_strata.append(stratum)
                 continue
 
             # Per-stratum statistics
-            _Xbar = out['xbar'].mean()
-            _S = out['s'].mean()
+            _S = out.loc[fit, 's'].mean()
             n_to_use, n_max = self._determine_n_to_use(out)
+            s_n_to_use, _ = self._determine_n_to_use(out[fit])
 
             n_mode = self.request.n_mode
             n_avg = None
             if n_mode == 'average':
-                n_avg = out['n'].mean()
+                n_avg = out.loc[fit, 'n'].mean()
                 out['N'] = n_avg
-                n_to_use = 'N'
+                n_to_use = s_n_to_use = 'N'
 
             out['center'] = _Xbar
-            out[['lpl', 'upl']] = calculate_limits_vectorized(
-                'Xbar',
-                mean=out['center'],
-                sd=_S,
-                N=out[n_to_use],
-                sigma_multiplier=self.request.n_sigma,
-            )
+            out[['lpl', 'upl']] = self._xbar_limits(out, _S, n_to_use)
 
             out = self._add_beyond_limits_flag(out, value_col='xbar')
             out = out.round(spec.round_to)
@@ -1429,9 +1529,9 @@ class Analysis:
             if _return_intermediates:
                 intermediates_per_stratum[stratum] = {
                     '_S': _S,
-                    'n_to_use': n_to_use,
+                    'n_to_use': s_n_to_use,
                     'n_max': n_max,
-                    'out': out,
+                    'out': out[out['n'].ge(2)],
                     'n_avg': n_avg,
                 }
 
@@ -1441,7 +1541,8 @@ class Analysis:
         chart_out = pd.concat(all_xbar_frames, ignore_index=True)
 
         # Publish only strata a caller can actually focus() into.
-        published_strata = [s for s in strata if s not in set(insufficient_strata)]
+        insufficient_set = set(insufficient_strata)
+        published_strata = [s for s in strata if s not in insufficient_set]
 
         # Select output columns
         group_col = groupby_cols[0] if groupby_cols else None
@@ -1525,10 +1626,12 @@ class Analysis:
                 df['_stratify_key'] = encode_rsg_series(df, stratify_by)
                 stratify_col = '_stratify_key'
             strata = df[stratify_col].unique().tolist()
+            positions = _stratum_row_positions(df, stratify_col)
             per_stratum = None
             insufficient_strata = []
 
-        all_strata = list(strata) + [s for s in insufficient_strata if s not in strata]
+        strata_set = set(strata)
+        all_strata = list(strata) + [s for s in insufficient_strata if s not in strata_set]
         all_s_frames = []
         chart_statistics = {}
 
@@ -1546,14 +1649,14 @@ class Analysis:
                 n_max = inter['n_max']
                 n_avg = inter['n_avg']
             else:
-                sdf = df[df[stratify_col] == stratum].copy()
+                sdf = _stratum_rows(df, positions, stratum).copy()
                 _limits_col = self._resolve_limits_column(value_col, sdf)
                 agg_dict = {
                     's': pd.NamedAgg(column=_limits_col, aggfunc='std'),
-                    'n': pd.NamedAgg(column=spec.response_var, aggfunc='count'),
+                    'n': pd.NamedAgg(column=_limits_col, aggfunc='count'),
                 }
                 out = sdf.groupby(groupby_cols, as_index=False, observed=True).agg(**agg_dict)
-                mask = out['n'].eq(1)
+                mask = out['n'].lt(2)
                 out = out[~mask]
                 if out.shape[0] == 0:
                     insufficient_strata.append(stratum)
@@ -1603,7 +1706,8 @@ class Analysis:
             _raise_no_replication('S', sds, insufficient_strata, len(all_strata))
         chart_out = pd.concat(all_s_frames, ignore_index=True)
 
-        published_strata = [s for s in all_strata if s not in set(insufficient_strata)]
+        insufficient_set = set(insufficient_strata)
+        published_strata = [s for s in all_strata if s not in insufficient_set]
 
         group_col = groupby_cols[0] if groupby_cols else None
         cols_to_keep = [stratify_col, group_col, 's', 'center', 'lpl', 'upl', 'beyond_limits']
@@ -1697,12 +1801,12 @@ class Analysis:
                 agg_dict = {
                     's': pd.NamedAgg(column=_limits_col, aggfunc='std'),
                     # Count on response_var (not value_col) to avoid NaN issues with residuals
-                    'n': pd.NamedAgg(column=spec.response_var, aggfunc='count'),
+                    'n': pd.NamedAgg(column=_limits_col, aggfunc='count'),
                 }
                 out = df.groupby(groupby_cols, as_index=False, observed=True).agg(**agg_dict)
 
                 # remove groups with a single observation
-                mask = out['n'].eq(1)
+                mask = out['n'].lt(2)
                 out = out[~mask]
 
                 # Handle case where no subgroups have >1 observation
@@ -1880,7 +1984,11 @@ class Analysis:
         Shared pipeline for MR-family charts (X and mR).
 
         The X and mR charts share >85% of their calculation logic. The behavioral
-        differences are encoded in ``mr_spec`` — no boolean flags needed.
+        differences are encoded in ``mr_spec`` — no boolean flags needed. The
+        statistics are the 10-12 manual's Chapter 12: mR-bar over the T - 1
+        consecutive ranges (Eq 12-1), X centre Y-bar (Eqs 12-7, 12-9), X limits
+        Y-bar ± 3·mR-bar/d2 (Eqs 12-10, 12-11) and mR limits 0 … D4·mR-bar
+        (Eq 12-5), within each stratum or phase when the chart is split.
 
         Parameters
         ----------
@@ -1963,17 +2071,7 @@ class Analysis:
 
             # Recompute R-specific limits per phase within each stratum
             r_phase_stats = phase_stats[[stratify_col, '_phase_id', 'mR']].copy()
-            r_lims = r_phase_stats.apply(
-                lambda row: calculate_limits(
-                    mean=0,
-                    sd=0,
-                    N=0,
-                    mR=row['mR'],
-                    limits_type=mr_spec.limits_type,
-                    round_to=spec.round_to,
-                ),
-                axis=1,
-            )
+            r_lims = _mr_family_limits(mr_spec, mean=0, mR=r_phase_stats['mR'])
             r_phase_stats = _join_limits(r_phase_stats, r_lims)
             r_phase_stats['center'] = r_phase_stats['mR']
 
@@ -2028,17 +2126,7 @@ class Analysis:
         # grouped has columns: stratify_col, center (=mean), mR, lpl, upl (X limits)
         r_grouped = grouped.rename(columns={'center': 'xmr_center', 'mR': 'center'})
 
-        r_lims = r_grouped.apply(
-            lambda row: calculate_limits(
-                mean=0,
-                sd=0,
-                N=0,
-                mR=row['center'],
-                limits_type=mr_spec.limits_type,
-                round_to=spec.round_to,
-            ),
-            axis=1,
-        )
+        r_lims = _mr_family_limits(mr_spec, mean=0, mR=r_grouped['center'])
 
         r_grouped = _join_limits(r_grouped, r_lims, rsuffix='_r')
 
@@ -2064,15 +2152,9 @@ class Analysis:
         r_out = self._add_beyond_limits_flag(r_out, value_col=plot_col)
 
         # Build statistics
-        chart_statistics = {}
-        for stratum in strata:
-            row = r_grouped[r_grouped[stratify_col] == stratum].iloc[0]
-            chart_statistics[stratum] = {
-                'N': _mr_family_subgroup_n(mr_spec.chart_type),
-                'center': round(row['center'], spec.round_to),
-                'lpl': round(row[r_lpl_col], spec.round_to),
-                'upl': round(row[r_upl_col], spec.round_to),
-            }
+        chart_statistics = _mr_stratum_statistics(
+            mr_spec, r_grouped, stratify_col, r_lpl_col, r_upl_col, spec.round_to,
+        )
 
         # Format output
         chart_out = self._build_output_columns(
@@ -2166,30 +2248,10 @@ class Analysis:
             # 5. Compute per-phase limits
             if mr_spec.center_source == 'mean':
                 phase_stats['center'] = phase_stats['_mean']
-                phase_lims = phase_stats.apply(
-                    lambda row: calculate_limits(
-                        mean=row['_mean'],
-                        sd=0,
-                        N=0,
-                        mR=row['mR'],
-                        limits_type=mr_spec.limits_type,
-                        round_to=spec.round_to,
-                    ),
-                    axis=1,
-                )
+                phase_lims = _mr_family_limits(mr_spec, mean=phase_stats['_mean'], mR=phase_stats['mR'])
             else:  # center_source == 'mR' (R chart)
                 phase_stats['center'] = phase_stats['mR']
-                phase_lims = phase_stats.apply(
-                    lambda row: calculate_limits(
-                        mean=0,
-                        sd=0,
-                        N=0,
-                        mR=row['mR'],
-                        limits_type=mr_spec.limits_type,
-                        round_to=spec.round_to,
-                    ),
-                    axis=1,
-                )
+                phase_lims = _mr_family_limits(mr_spec, mean=0, mR=phase_stats['mR'])
             phase_stats = _join_limits(phase_stats, phase_lims)
 
             # 6. Merge per-phase limits back to row-level data
@@ -2208,13 +2270,7 @@ class Analysis:
             out = self._add_beyond_limits_flag(out, value_col=plot_col)
 
             # 9. Lane boundaries per stratum
-            lane_boundaries = {}
-            if collapsed_factors:
-                for stratum in strata:
-                    stratum_data = out[out[stratify_col] == stratum].reset_index(drop=True)
-                    boundaries = self._calculate_lane_boundaries(stratum_data, collapsed_factors)
-                    if boundaries:
-                        lane_boundaries[stratum] = boundaries
+            lane_boundaries = self._stratum_lane_boundaries(out, stratify_col, strata, collapsed_factors)
 
             # 10. Statistics per stratum: limits vary per phase
             chart_statistics = {
@@ -2291,29 +2347,10 @@ class Analysis:
         # For X:  center=mean, limits based on mean ± E2*mR
         # For mR: center=mR, limits based on 0 to D4*mR
         if mr_spec.center_source == 'mean':
-            lims = grouped.apply(
-                lambda row: calculate_limits(
-                    mean=row['mean'],
-                    sd=0,
-                    N=0,
-                    mR=(row['mR'] if pd.notna(row['mR']) else 0.0),
-                    limits_type=mr_spec.limits_type,
-                    round_to=spec.round_to,
-                ),
-                axis=1,
-            )
+            # A one-row stratum has no moving range: its X limits collapse to the mean.
+            lims = _mr_family_limits(mr_spec, mean=grouped['mean'], mR=grouped['mR'].fillna(0.0))
         else:  # center_source == 'mR'
-            lims = grouped.apply(
-                lambda row: calculate_limits(
-                    mean=0,
-                    sd=0,
-                    N=0,
-                    mR=row['mR'],
-                    limits_type=mr_spec.limits_type,
-                    round_to=spec.round_to,
-                ),
-                axis=1,
-            )
+            lims = _mr_family_limits(mr_spec, mean=0, mR=grouped['mR'])
 
         # Normalize/join lpl/upl
         grouped = _join_limits(grouped, lims)
@@ -2343,24 +2380,10 @@ class Analysis:
         strata = grouped[stratify_col].tolist()
 
         # Lane boundaries per stratum
-        lane_boundaries = {}
-        if collapsed_factors:
-            for stratum in strata:
-                stratum_data = out[out[stratify_col] == stratum].reset_index(drop=True)
-                boundaries = self._calculate_lane_boundaries(stratum_data, collapsed_factors)
-                if boundaries:
-                    lane_boundaries[stratum] = boundaries
+        lane_boundaries = self._stratum_lane_boundaries(out, stratify_col, strata, collapsed_factors)
 
         # Build statistics nested by stratum
-        chart_statistics = {}
-        for stratum in strata:
-            row = grouped[grouped[stratify_col] == stratum].iloc[0]
-            chart_statistics[stratum] = {
-                'N': _mr_family_subgroup_n(mr_spec.chart_type),
-                'center': round(row['center'], spec.round_to),
-                'lpl': round(row['lpl'], spec.round_to),
-                'upl': round(row['upl'], spec.round_to),
-            }
+        chart_statistics = _mr_stratum_statistics(mr_spec, grouped, stratify_col, 'lpl', 'upl', spec.round_to)
 
         # Format output
         extra_cols = [c for c in stratify_by if c != spec.rsg_var_name and c != spec.time_var]
@@ -2652,10 +2675,11 @@ class Analysis:
             return result
 
         # === Global limits path (unchanged) ===
-        # Moving range
+        # Moving range: mR-bar over the T - 1 consecutive ranges (10-12 manual Eq 12-1). A re-centred
+        # R2 chart takes them over R2 (_resolve_mr_source_column), not the plotted RCR2.
         out['mr'] = out[mr_source_col].diff().abs()
         mR = out['mr'].mean()
-        mean_ = out[value_col].mean()
+        mean_ = out[value_col].mean()  # Y-bar, the X chart's centre (Eqs 12-7, 12-9)
 
         # R chart: drop first observation
         if mr_spec.drops_first_mr:

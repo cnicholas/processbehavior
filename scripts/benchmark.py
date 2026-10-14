@@ -2,8 +2,9 @@
 """Performance benchmark + drift check for processbehavior.
 
 Runs a fixed set of scenarios — design {SDS-1 exact-R2, SDS-2 MA2 worst-case} × size
-{10K, 100K, 1M} × op {init, formulate, execute, execute-stratified} — prints a report table, writes
-``benchmarks/last_run.json``, and compares against the committed ``benchmarks/baseline.json``.
+{10K, 100K, 1M} × op {init, formulate, execute, execute-stratified, and for SDS-2 one-row
+strata} — prints a report table, writes ``benchmarks/last_run.json``, and compares against the
+committed ``benchmarks/baseline.json``.
 
 The baseline is *same-machine* (absolute times are hardware-specific), so a regression flag
 is meaningful when you re-run on the same box. Cross-machine, rely on the shape checks in
@@ -109,13 +110,24 @@ def run_scenario(sds: int, target_rows: int) -> list[dict]:
     peak = _peak_mb(lambda: ProcessBehavior(df).formulate(**spec))
 
     common = {"sds": sds, "size": target_rows, "rows": rows}
-    return [
+    results = [
         {**common, "op": "init", "seconds": t_init},
         {**common, "op": "formulate", "seconds": t_form},
         {**common, "op": f"execute_{exec_chart.lower()}", "seconds": t_exec},
         {**common, "op": "execute_x_stratified", "seconds": t_strat},
-        {**common, "op": "formulate_peak", "seconds": None, "peak_mb": peak, "input_mb": input_mb},
     ]
+    if sds == 2:
+        # One row per stratum: the time column taken as a factor makes every row its own
+        # condition. The scenario above has at most a few thousand strata; this one has as
+        # many as rows. The stratified X/mR path was quadratic in strata until 2026-10-12:
+        # about 80 minutes per chart at 307,683 one-row strata, unnoticed because nothing
+        # measured this shape.
+        one_row = [*DESIGNS[sds]["factors"], "time"]
+        one_row_study = pdf.formulate(response="y", factors=one_row)
+        t_one_row, _ = _time(lambda: one_row_study.execute(chart="X", by=one_row, companion=True), repeat)
+        results.append({**common, "op": "execute_x_one_row_strata", "seconds": t_one_row})
+    results.append({**common, "op": "formulate_peak", "seconds": None, "peak_mb": peak, "input_mb": input_mb})
+    return results
 
 
 def run_benchmarks(quick: bool = False) -> list[dict]:

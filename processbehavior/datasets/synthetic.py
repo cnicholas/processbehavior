@@ -2,8 +2,7 @@
 Synthetic Data Generators for Statistical Process Control
 
 This module provides data generators for all Sampling Design States (SDS)
-defined in the Variance Analysis System framework by Dr. Donald Wheeler
-and extended by Dr. Thomas A. Bishop.
+defined in Dr. Thomas A. Bishop's Variation Analysis System.
 
 Purpose:
 --------
@@ -39,8 +38,8 @@ References:
 Wheeler, D. J. (1995). Advanced Topics in Statistical Process Control.
 SPC Press, Knoxville, TN.
 
-Bishop, D. R. (2023). Personal communication and collaboration on
-Variance Analysis System implementation.
+Bishop, T. A. (2023). Personal communication and collaboration on
+Variation Analysis System implementation.
 """
 
 import logging

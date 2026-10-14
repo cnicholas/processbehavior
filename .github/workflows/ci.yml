@@ -72,9 +72,10 @@ jobs:
             docs/tutorials/sds1-complete-analysis.ipynb \
             --tb=short
       - name: Validate against Bishop's reference results (ubuntu / 3.13 only)
-        # The 280-assertion ground-truth check. It lives outside tests/ because
-        # it also renders a report, but nothing was running it — so a drift in
-        # the numbers the README advertises would have gone unnoticed.
+        # The ground-truth check: PB against every VAS run of Dr. Bishop's on hand
+        # (tests/fixtures/bishop_analyses/). It lives outside tests/ because it
+        # also renders a report, but nothing was running it — so a drift in the
+        # numbers the README advertises would have gone unnoticed.
         if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.13'
         run: python validation/e2e_bishop_report.py
 

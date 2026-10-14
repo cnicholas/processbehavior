@@ -218,3 +218,54 @@ class TestResidualAccessor:
         """End-to-end: study.execute(chart=..., value=study.residuals.R5)."""
         result = sds1_study.execute(chart=sds1_study.charts.Xbar, value=sds1_study.residuals.R5)
         assert result is not None
+
+
+# =============================================================================
+# value='response' is the response (#142)
+# =============================================================================
+
+
+class TestValueResponse:
+    """The documented value='response' charts the response, like value=None.
+
+    Residuals are told apart by a leading 'R', which 'RESPONSE' also has, so the
+    documented spelling was routed down the residual path and refused.
+    """
+
+    @pytest.mark.parametrize(
+        'kwargs',
+        [
+            {'chart': 'Xbar'},
+            {'chart': 'S'},
+            {'chart': 'Xbar', 'companion': True},
+            {'chart': 'X', 'by': []},
+            {'chart': 'mR', 'by': []},
+            {'chart': 'Histogram'},
+        ],
+        ids=['Xbar', 'S', 'Xbar+S', 'X', 'mR', 'Histogram'],
+    )
+    @pytest.mark.parametrize('spelling', ['response', 'Response', 'RESPONSE'])
+    def test_same_result_as_none(self, sds1_study, kwargs, spelling):
+        from pandas.testing import assert_frame_equal
+
+        expected = sds1_study.execute(**kwargs)
+        actual = sds1_study.execute(value=spelling, **kwargs)
+        assert set(actual.charts) == set(expected.charts)
+        for name in expected.charts:
+            assert_frame_equal(actual.get_chart(name), expected.get_chart(name))
+            assert actual.get_statistics(name) == expected.get_statistics(name)
+            assert actual.charts[name]['metadata'] == expected.charts[name]['metadata']
+
+    def test_why_not_agrees(self, sds1_study):
+        for chart in ('Xbar', 'S', 'X', 'mR'):
+            assert sds1_study.why_not(chart, value='response') == sds1_study.why_not(chart)
+
+    def test_supports_calibration_agrees(self, sds1_study):
+        for kwargs in ({'chart': 'X', 'by': []}, {'chart': 'Xbar'}, {'chart': 'X', 'by': ['factor 1']}):
+            assert sds1_study.supports_calibration(value='response', **kwargs) == (
+                sds1_study.supports_calibration(**kwargs)
+            )
+
+    def test_recentered_response_still_refused(self, sds1_study):
+        with pytest.raises(ValidationError, match='recentered.*requires.*residual'):
+            sds1_study.execute(chart='Xbar', value='response', recentered=True)

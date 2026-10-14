@@ -1,0 +1,948 @@
+{
+  "run": "aco_medicare",
+  "label": "Medicare ACO (PCE)",
+  "analytic_design_state": 2,
+  "specs": {
+    "lsl": 6000,
+    "usl": 16000,
+    "target": 11000
+  },
+  "chart_tolerance": 0.1,
+  "chart_tolerance_note": "VAS prints five-digit values to one decimal (half a unit: 0.05) and places the limits about a centre it rounds to six significant figures (up to 0.05 more), e.g. ACO-002 UBL 14807.4 where the exact limit is 14807.346.",
+  "source_file": "MEDICARE PCE.pptm (VAS run of 10/3/2026, 10-1 manual)",
+  "extraction_method": "Values read from the text drawn in the Minitab charts of the VAS deck (displayed precision).",
+  "pages_extracted": 57,
+  "capability": {
+    "pp": 0.85,
+    "ppk_upper": 0.88,
+    "ppk_lower": 0.82,
+    "pct_below_lsl": 0.0,
+    "pct_above_usl": 2.08,
+    "cp": 5.55,
+    "cpk_upper": 5.74,
+    "cpk_lower": 5.36,
+    "potential_pct_below_lsl": 0.0,
+    "potential_pct_above_usl": 0.0
+  },
+  "loss": {
+    "pct_pdc": 68.5,
+    "pct_time": 28.0,
+    "pct_unexplained": 2.3,
+    "pct_centering": 0.7,
+    "pct_interaction": 0.4
+  },
+  "items": [
+    {
+      "page_number": 1,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "Analysis of PDCxPT Individuals Chart",
+      "chart_subtitle": "PCE",
+      "context_subtitle": null,
+      "variable": "R1 RESIDUALS",
+      "CL": 10832.4,
+      "LBL": 6994.1,
+      "UBL": 14670.7,
+      "axis_labels": null,
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 2"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 2,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "Analysis of PDCxPT Moving Range Chart",
+      "chart_subtitle": "PCE",
+      "context_subtitle": null,
+      "variable": "MOVING RANGE",
+      "CL": 1443.21,
+      "LBL": 0.0,
+      "UBL": 4715.38,
+      "axis_labels": null,
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 2"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 3,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "Analysis of PDCxPT Individuals Chart",
+      "chart_subtitle": "PCE",
+      "context_subtitle": "PDC RSG - ACO-001",
+      "variable": "R1 RESIDUALS",
+      "CL": 9747.59,
+      "LBL": 7503.91,
+      "UBL": 11991.3,
+      "axis_labels": null,
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 2"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 4,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "Analysis of PDCxPT Moving Range Chart",
+      "chart_subtitle": "PCE",
+      "context_subtitle": "PDC RSG - ACO-001",
+      "variable": "MOVING RANGE",
+      "CL": 843.62,
+      "LBL": 0.0,
+      "UBL": 2756.36,
+      "axis_labels": null,
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 2"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 5,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "Analysis of PDCxPT Individuals Chart",
+      "chart_subtitle": "PCE",
+      "context_subtitle": "PDC RSG - ACO-002",
+      "variable": "R1 RESIDUALS",
+      "CL": 12637.4,
+      "LBL": 10467.4,
+      "UBL": 14807.4,
+      "axis_labels": null,
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 2"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 6,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "Analysis of PDCxPT Moving Range Chart",
+      "chart_subtitle": "PCE",
+      "context_subtitle": "PDC RSG - ACO-002",
+      "variable": "MOVING RANGE",
+      "CL": 815.91,
+      "LBL": 0.0,
+      "UBL": 2665.81,
+      "axis_labels": null,
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 2"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 7,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "Analysis of PDCxPT Individuals Chart",
+      "chart_subtitle": "PCE",
+      "context_subtitle": "PDC RSG - ACO-003",
+      "variable": "R1 RESIDUALS",
+      "CL": 10368.2,
+      "LBL": 8111.52,
+      "UBL": 12624.9,
+      "axis_labels": null,
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 2"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 8,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "Analysis of PDCxPT Moving Range Chart",
+      "chart_subtitle": "PCE",
+      "context_subtitle": "PDC RSG - ACO-003",
+      "variable": "MOVING RANGE",
+      "CL": 848.51,
+      "LBL": 0.0,
+      "UBL": 2772.33,
+      "axis_labels": null,
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 2"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 9,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "Analysis of PDCxPT Individuals Chart",
+      "chart_subtitle": "PCE",
+      "context_subtitle": "PDC RSG - ACO-004",
+      "variable": "R1 RESIDUALS",
+      "CL": 11967.1,
+      "LBL": 10465.9,
+      "UBL": 13468.3,
+      "axis_labels": null,
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 2"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 10,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "Analysis of PDCxPT Moving Range Chart",
+      "chart_subtitle": "PCE",
+      "context_subtitle": "PDC RSG - ACO-004",
+      "variable": "MOVING RANGE",
+      "CL": 564.45,
+      "LBL": 0.0,
+      "UBL": 1844.21,
+      "axis_labels": null,
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 2"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 11,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "Analysis of PDCxPT Individuals Chart",
+      "chart_subtitle": "PCE",
+      "context_subtitle": "PDC RSG - ACO-005",
+      "variable": "R1 RESIDUALS",
+      "CL": 9558.58,
+      "LBL": 7036.44,
+      "UBL": 12080.7,
+      "axis_labels": null,
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 2"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 12,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "Analysis of PDCxPT Moving Range Chart",
+      "chart_subtitle": "PCE",
+      "context_subtitle": "PDC RSG - ACO-005",
+      "variable": "MOVING RANGE",
+      "CL": 948.32,
+      "LBL": 0.0,
+      "UBL": 3098.44,
+      "axis_labels": null,
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 2"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 13,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "Analysis of PDCxPT Individuals Chart",
+      "chart_subtitle": "PCE",
+      "context_subtitle": "PDC RSG - ACO-006",
+      "variable": "R1 RESIDUALS",
+      "CL": 9165.22,
+      "LBL": 6248.24,
+      "UBL": 12082.2,
+      "axis_labels": null,
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 2"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 14,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "Analysis of PDCxPT Moving Range Chart",
+      "chart_subtitle": "PCE",
+      "context_subtitle": "PDC RSG - ACO-006",
+      "variable": "MOVING RANGE",
+      "CL": 1096.78,
+      "LBL": 0.0,
+      "UBL": 3583.51,
+      "axis_labels": null,
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 2"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 15,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "Analysis of PDCxPT Individuals Chart",
+      "chart_subtitle": "PCE",
+      "context_subtitle": "PDC RSG - ACO-007",
+      "variable": "R1 RESIDUALS",
+      "CL": 8980.38,
+      "LBL": 6572.04,
+      "UBL": 11388.7,
+      "axis_labels": null,
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 2"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 16,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "Analysis of PDCxPT Moving Range Chart",
+      "chart_subtitle": "PCE",
+      "context_subtitle": "PDC RSG - ACO-007",
+      "variable": "MOVING RANGE",
+      "CL": 905.54,
+      "LBL": 0.0,
+      "UBL": 2958.65,
+      "axis_labels": null,
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 2"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 17,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "Analysis of PDCxPT Individuals Chart",
+      "chart_subtitle": "PCE",
+      "context_subtitle": "PDC RSG - ACO-008",
+      "variable": "R1 RESIDUALS",
+      "CL": 9778.51,
+      "LBL": 7478.26,
+      "UBL": 12078.8,
+      "axis_labels": null,
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 2"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 18,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "Analysis of PDCxPT Moving Range Chart",
+      "chart_subtitle": "PCE",
+      "context_subtitle": "PDC RSG - ACO-008",
+      "variable": "MOVING RANGE",
+      "CL": 864.89,
+      "LBL": 0.0,
+      "UBL": 2825.85,
+      "axis_labels": null,
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 2"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 19,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "Analysis of PDCxPT Individuals Chart",
+      "chart_subtitle": "PCE",
+      "context_subtitle": "PDC RSG - ACO-009",
+      "variable": "R1 RESIDUALS",
+      "CL": 13123.4,
+      "LBL": 10116.9,
+      "UBL": 16129.8,
+      "axis_labels": null,
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 2"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 20,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "Analysis of PDCxPT Moving Range Chart",
+      "chart_subtitle": "PCE",
+      "context_subtitle": "PDC RSG - ACO-009",
+      "variable": "MOVING RANGE",
+      "CL": 1130.43,
+      "LBL": 0.0,
+      "UBL": 3693.44,
+      "axis_labels": null,
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 2"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 21,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "Analysis of PDCxPT Individuals Chart",
+      "chart_subtitle": "PCE",
+      "context_subtitle": "PDC RSG - ACO-010",
+      "variable": "R1 RESIDUALS",
+      "CL": 12114.6,
+      "LBL": 9221.26,
+      "UBL": 15007.9,
+      "axis_labels": null,
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 2"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 22,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "Analysis of PDCxPT Moving Range Chart",
+      "chart_subtitle": "PCE",
+      "context_subtitle": "PDC RSG - ACO-010",
+      "variable": "MOVING RANGE",
+      "CL": 1087.88,
+      "LBL": 0.0,
+      "UBL": 3554.42,
+      "axis_labels": null,
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 2"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 23,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "Analysis of PDCxPT Individuals Chart",
+      "chart_subtitle": "PCE",
+      "context_subtitle": "PDC RSG - ACO-011",
+      "variable": "R1 RESIDUALS",
+      "CL": 10683.0,
+      "LBL": 7866.08,
+      "UBL": 13500.0,
+      "axis_labels": null,
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 2"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 24,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "Analysis of PDCxPT Moving Range Chart",
+      "chart_subtitle": "PCE",
+      "context_subtitle": "PDC RSG - ACO-011",
+      "variable": "MOVING RANGE",
+      "CL": 1059.17,
+      "LBL": 0.0,
+      "UBL": 3460.6,
+      "axis_labels": null,
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 2"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 25,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "Analysis of PDCxPT Individuals Chart",
+      "chart_subtitle": "PCE",
+      "context_subtitle": "PDC RSG - ACO-012",
+      "variable": "R1 RESIDUALS",
+      "CL": 10176.9,
+      "LBL": 7589.88,
+      "UBL": 12764.0,
+      "axis_labels": null,
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 2"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 26,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "Analysis of PDCxPT Moving Range Chart",
+      "chart_subtitle": "PCE",
+      "context_subtitle": "PDC RSG - ACO-012",
+      "variable": "MOVING RANGE",
+      "CL": 972.73,
+      "LBL": 0.0,
+      "UBL": 3178.19,
+      "axis_labels": null,
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 2"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 27,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "Analysis of PDCxPT Individuals Chart",
+      "chart_subtitle": "PCE",
+      "context_subtitle": "PDC RSG - ACO-013",
+      "variable": "R1 RESIDUALS",
+      "CL": 10967.3,
+      "LBL": 8567.6,
+      "UBL": 13366.9,
+      "axis_labels": null,
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 2"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 28,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "Analysis of PDCxPT Moving Range Chart",
+      "chart_subtitle": "PCE",
+      "context_subtitle": "PDC RSG - ACO-013",
+      "variable": "MOVING RANGE",
+      "CL": 902.27,
+      "LBL": 0.0,
+      "UBL": 2947.96,
+      "axis_labels": null,
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 2"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 29,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "Analysis of PDCxPT Individuals Chart",
+      "chart_subtitle": "PCE",
+      "context_subtitle": "PDC RSG - ACO-014",
+      "variable": "R1 RESIDUALS",
+      "CL": 10407.7,
+      "LBL": 7240.28,
+      "UBL": 13575.2,
+      "axis_labels": null,
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 2"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 30,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "Analysis of PDCxPT Moving Range Chart",
+      "chart_subtitle": "PCE",
+      "context_subtitle": "PDC RSG - ACO-014",
+      "variable": "MOVING RANGE",
+      "CL": 1190.96,
+      "LBL": 0.0,
+      "UBL": 3891.22,
+      "axis_labels": null,
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 2"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 31,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "Analysis of PDCxPT Individuals Chart",
+      "chart_subtitle": "PCE",
+      "context_subtitle": "PDC RSG - ACO-015",
+      "variable": "R1 RESIDUALS",
+      "CL": 9974.99,
+      "LBL": 8280.45,
+      "UBL": 11669.5,
+      "axis_labels": null,
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 2"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 32,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "Analysis of PDCxPT Moving Range Chart",
+      "chart_subtitle": "PCE",
+      "context_subtitle": "PDC RSG - ACO-015",
+      "variable": "MOVING RANGE",
+      "CL": 637.15,
+      "LBL": 0.0,
+      "UBL": 2081.74,
+      "axis_labels": null,
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 2"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 33,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "Analysis of PDCxPT Individuals Chart",
+      "chart_subtitle": "PCE",
+      "context_subtitle": "PDC RSG - ACO-016",
+      "variable": "R1 RESIDUALS",
+      "CL": 8574.67,
+      "LBL": 6692.72,
+      "UBL": 10456.6,
+      "axis_labels": null,
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 2"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 34,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "Analysis of PDCxPT Moving Range Chart",
+      "chart_subtitle": "PCE",
+      "context_subtitle": "PDC RSG - ACO-016",
+      "variable": "MOVING RANGE",
+      "CL": 707.61,
+      "LBL": 0.0,
+      "UBL": 2311.98,
+      "axis_labels": null,
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 2"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 35,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "Analysis of PDCxPT Individuals Chart",
+      "chart_subtitle": "PCE",
+      "context_subtitle": "PDC RSG - ACO-017",
+      "variable": "R1 RESIDUALS",
+      "CL": 10958.6,
+      "LBL": 8193.53,
+      "UBL": 13723.6,
+      "axis_labels": null,
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 2"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 36,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "Analysis of PDCxPT Moving Range Chart",
+      "chart_subtitle": "PCE",
+      "context_subtitle": "PDC RSG - ACO-017",
+      "variable": "MOVING RANGE",
+      "CL": 1039.66,
+      "LBL": 0.0,
+      "UBL": 3396.86,
+      "axis_labels": null,
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 2"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 37,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "Analysis of PDCxPT Individuals Chart",
+      "chart_subtitle": "PCE",
+      "context_subtitle": "PDC RSG - ACO-018",
+      "variable": "R1 RESIDUALS",
+      "CL": 14729.2,
+      "LBL": 12445.0,
+      "UBL": 17013.3,
+      "axis_labels": null,
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 2"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 38,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "Analysis of PDCxPT Moving Range Chart",
+      "chart_subtitle": "PCE",
+      "context_subtitle": "PDC RSG - ACO-018",
+      "variable": "MOVING RANGE",
+      "CL": 858.84,
+      "LBL": 0.0,
+      "UBL": 2806.09,
+      "axis_labels": null,
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 2"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 39,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "Analysis of PDCxPT Individuals Chart",
+      "chart_subtitle": "PCE",
+      "context_subtitle": "PDC RSG - ACO-019",
+      "variable": "R1 RESIDUALS",
+      "CL": 11583.1,
+      "LBL": 9201.7,
+      "UBL": 13964.4,
+      "axis_labels": null,
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 2"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 40,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "Analysis of PDCxPT Moving Range Chart",
+      "chart_subtitle": "PCE",
+      "context_subtitle": "PDC RSG - ACO-019",
+      "variable": "MOVING RANGE",
+      "CL": 895.39,
+      "LBL": 0.0,
+      "UBL": 2925.5,
+      "axis_labels": null,
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 2"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 41,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "Analysis of PDCxPT Individuals Chart",
+      "chart_subtitle": "PCE",
+      "context_subtitle": "PDC RSG - ACO-020",
+      "variable": "R1 RESIDUALS",
+      "CL": 11834.6,
+      "LBL": 8580.46,
+      "UBL": 15088.7,
+      "axis_labels": null,
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 2"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 42,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "Analysis of PDCxPT Moving Range Chart",
+      "chart_subtitle": "PCE",
+      "context_subtitle": "PDC RSG - ACO-020",
+      "variable": "MOVING RANGE",
+      "CL": 1223.55,
+      "LBL": 0.0,
+      "UBL": 3997.7,
+      "axis_labels": null,
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 2"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 43,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "Analysis of PDCxPT Individuals Chart",
+      "chart_subtitle": "PCE",
+      "context_subtitle": "PDC RSG - ACO-021",
+      "variable": "R1 RESIDUALS",
+      "CL": 10019.9,
+      "LBL": 7926.41,
+      "UBL": 12113.4,
+      "axis_labels": null,
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 2"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 44,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "Analysis of PDCxPT Moving Range Chart",
+      "chart_subtitle": "PCE",
+      "context_subtitle": "PDC RSG - ACO-021",
+      "variable": "MOVING RANGE",
+      "CL": 787.16,
+      "LBL": 0.0,
+      "UBL": 2571.87,
+      "axis_labels": null,
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 2"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 45,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "Analysis of PDCxPT Individuals Chart",
+      "chart_subtitle": "PCE",
+      "context_subtitle": "PDC RSG - ACO-022",
+      "variable": "R1 RESIDUALS",
+      "CL": 9557.56,
+      "LBL": 7498.4,
+      "UBL": 11616.7,
+      "axis_labels": null,
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 2"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 46,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "Analysis of PDCxPT Moving Range Chart",
+      "chart_subtitle": "PCE",
+      "context_subtitle": "PDC RSG - ACO-022",
+      "variable": "MOVING RANGE",
+      "CL": 774.24,
+      "LBL": 0.0,
+      "UBL": 2529.68,
+      "axis_labels": null,
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 2"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 47,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "Analysis of PDCxPT Individuals Chart",
+      "chart_subtitle": "PCE",
+      "context_subtitle": "PDC RSG - ACO-023",
+      "variable": "R1 RESIDUALS",
+      "CL": 14320.0,
+      "LBL": 10755.6,
+      "UBL": 17884.3,
+      "axis_labels": null,
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 2"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 48,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "Analysis of PDCxPT Moving Range Chart",
+      "chart_subtitle": "PCE",
+      "context_subtitle": "PDC RSG - ACO-023",
+      "variable": "MOVING RANGE",
+      "CL": 1340.19,
+      "LBL": 0.0,
+      "UBL": 4378.77,
+      "axis_labels": null,
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 2"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 49,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "Analysis of PDCxPT Individuals Chart",
+      "chart_subtitle": "PCE",
+      "context_subtitle": "PDC RSG - ACO-024",
+      "variable": "R1 RESIDUALS",
+      "CL": 8749.83,
+      "LBL": 6314.33,
+      "UBL": 11185.3,
+      "axis_labels": null,
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 2"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 50,
+      "analysis_title": "Analysis of Original Performance Measurement Behavior",
+      "chart_title": "Analysis of PDCxPT Moving Range Chart",
+      "chart_subtitle": "PCE",
+      "context_subtitle": "PDC RSG - ACO-024",
+      "variable": "MOVING RANGE",
+      "CL": 915.75,
+      "LBL": 0.0,
+      "UBL": 2992.01,
+      "axis_labels": null,
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 2"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 52,
+      "analysis_title": "Process Design Condition Main Effects Analysis",
+      "chart_title": "Analysis of PDC RSG Sample Averages",
+      "chart_subtitle": "PCE",
+      "context_subtitle": null,
+      "variable": "RSG AVG",
+      "CL": 10831.1,
+      "LBL": 10340.9,
+      "UBL": 11321.4,
+      "axis_labels": null,
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 2"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 53,
+      "analysis_title": "Process Design Condition Main Effects Analysis",
+      "chart_title": "Analysis of PDC RSG Sample Standard Deviations",
+      "chart_subtitle": "PCE",
+      "context_subtitle": null,
+      "variable": "RSG STDEV",
+      "CL": 300.58,
+      "LBL": 0.0,
+      "UBL": 681.13,
+      "axis_labels": null,
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 2"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 54,
+      "analysis_title": "Production Time Main Effects Analysis",
+      "chart_title": "Analysis of PT RSG Sample Averages",
+      "chart_subtitle": "PCE",
+      "context_subtitle": null,
+      "variable": "RSG AVG",
+      "CL": 10831.2,
+      "LBL": 10644.2,
+      "UBL": 11018.3,
+      "axis_labels": null,
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 2"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 55,
+      "analysis_title": "Production Time Main Effects Analysis",
+      "chart_title": "Analysis of PT RSG Sample Standard Deviations",
+      "chart_subtitle": "PCE",
+      "context_subtitle": null,
+      "variable": "RSG STDEV",
+      "CL": 302.12,
+      "LBL": 167.77,
+      "UBL": 436.46,
+      "axis_labels": null,
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 2"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 56,
+      "analysis_title": "Analysis of PDCxPT Interaction",
+      "chart_title": "R3 Residuals Individuals Chart",
+      "chart_subtitle": "PCE",
+      "context_subtitle": null,
+      "variable": "R3 RESIDUALS",
+      "CL": 10830.2,
+      "LBL": 9087.7,
+      "UBL": 12572.6,
+      "axis_labels": null,
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 2"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 57,
+      "analysis_title": "Analysis of PDCxPT Interaction",
+      "chart_title": "R3 Residuals Moving Range Chart",
+      "chart_subtitle": "PCE",
+      "context_subtitle": null,
+      "variable": "MOVING RANGE",
+      "CL": 655.16,
+      "LBL": 0.0,
+      "UBL": 2140.61,
+      "axis_labels": null,
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 2"
+      },
+      "notes": null
+    },
+    {
+      "page_number": 60,
+      "analysis_title": "Test of Maximum Information",
+      "chart_title": "R2 Residuals Individuals Chart",
+      "chart_subtitle": "PCE",
+      "context_subtitle": null,
+      "variable": "R2 RESIDUALS",
+      "CL": -1.15,
+      "LBL": -1045.19,
+      "UBL": 1042.88,
+      "axis_labels": null,
+      "package": {
+        "analysis_design_state": "ANALYTIC DESIGN STATE 2"
+      },
+      "notes": null
+    }
+  ]
+}
