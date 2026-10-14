@@ -173,6 +173,9 @@ def detect_run(data: pd.DataFrame, stats: dict, value_col: str, length: int = 8)
     """
     values = data[value_col]
     center = stats.get('center', stats.get('Mean'))  # Try 'center' first, fallback to 'Mean'
+    if center is None and 'center' in data.columns:
+        # Phased charts: each phase has its own centre, carried on the rows.
+        center = data['center']
 
     # Above or below center
     above = (values > center).astype(int)
