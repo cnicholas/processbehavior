@@ -412,3 +412,77 @@ class TestPhasedWithResidualValue:
         result = sds2_study.execute(chart='X', by=[], phased=True, value='R2')
         data = result.get_chart('X')
         assert data['center'].nunique() > 1 or data['upl'].nunique() > 1
+
+
+# =============================================================================
+# Phased + signal detection
+# =============================================================================
+
+
+class TestPhasedSignals:
+    """detect_signals() on phased charts: Rule 1 against each phase's own limits.
+
+    Phased statistics carry ``center=None`` (each phase has its own centre) and the
+    chart marks run rules not applicable. detect_signals() used to read the scalar
+    centre and raise TypeError on every phased chart.
+    """
+
+    def test_phased_x_rule_1_against_phase_limits(self, sds1_study):
+        result = sds1_study.execute(chart='X', by=[], phased=True)
+        signals = result.detect_signals(chart='X')
+        assert signals.rules_evaluated == ['rule_1']
+        assert signals.rules_skipped == {}
+        assert not signals.is_partial
+        data = result.get_chart('X')
+        beyond = set(data.index[data['beyond_limits'] != 0])
+        assert beyond, 'fixture should have a point beyond its phase limits'
+        assert signals.flagged_observations == beyond
+
+    def test_violation_records_the_phase_centre(self, sds1_study):
+        result = sds1_study.execute(chart='X', by=[], phased=True)
+        data = result.get_chart('X')
+        violations = result.detect_signals(chart='X').to_dataframe()
+        assert violations['center'].notna().all()
+        for _, row in violations.iterrows():
+            assert row['center'] == data.loc[row['obs_id'], 'center']
+            assert row['upl'] == data.loc[row['obs_id'], 'upl']
+
+    def test_phased_companion_both_charts(self, sds1_study):
+        result = sds1_study.execute(chart='X', by=[], phased=True, companion=True)
+        signals = result.detect_signals()
+        assert set(signals) == {'X', 'mR'}
+        for name, sig in signals.items():
+            data = result.get_chart(name)
+            assert sig.rules_evaluated == ['rule_1']
+            assert sig.flagged_observations == set(data.index[data['beyond_limits'] != 0])
+
+    def test_phased_stratified_focus(self, sds1_study):
+        result = sds1_study.execute(chart='X', by=['factor 1'], phased=True, companion=True)
+        for stratum in result.strata:
+            signals = result.focus(stratum).detect_signals()
+            assert {sig.rules_evaluated[0] for sig in signals.values()} == {'rule_1'}
+
+    def test_explicit_rules_run_against_each_phase_centre(self):
+        """An explicit rule list runs as given; run and zone rules read the row's centre."""
+        from processbehavior.signals import SignalConfig, SignalDetector
+
+        # Phase 1 sits above its centre 0, phase 2 below its centre 10: one run each.
+        # Phase 2's last two points fall in its lower zone A (7 to 8, sigma 1).
+        data = pd.DataFrame({
+            'x': [1.0] * 8 + [9.0] * 6 + [7.5, 7.5],
+            'center': [0.0] * 8 + [10.0] * 8,
+            'upl': [3.0] * 8 + [13.0] * 8,
+            'lpl': [-3.0] * 8 + [7.0] * 8,
+        })
+        stats = {'N': None, 'center': None, 'lpl': None, 'upl': None, 'limits_vary': True}
+        signals = SignalDetector().detect(
+            data, stats, SignalConfig(enabled_rules=['rule_2', 'rule_4'], min_observations=1),
+            value_col='x', chart_type='X', run_rules_applicable=False,
+        )
+        assert signals.rules_evaluated == ['rule_2', 'rule_4']
+        assert set(signals.by_rule['rule_4']['obs_id']) == {7, 15}
+        assert set(signals.by_rule['rule_2']['obs_id']) == {15}
+
+    def test_unphased_x_keeps_every_rule(self, sds1_study):
+        signals = sds1_study.execute(chart='X', by=[]).detect_signals(chart='X')
+        assert signals.rules_evaluated == [f'rule_{i}' for i in range(1, 9)]

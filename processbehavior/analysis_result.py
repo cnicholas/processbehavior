@@ -1039,6 +1039,10 @@ class AnalysisResult:
         ``signals.is_partial`` is True and ``signals.summary`` says which rules
         were evaluated.
 
+        On a phased chart (``phased=True``) each phase has its own centre line, so
+        the default rules are Rule 1 only, judged against each phase's limits. An
+        explicit rule list still runs as given, against each row's own centre.
+
         Access violations:
 
         >>> signals.by_rule['rule_2']  # Rule 2 violations

@@ -592,6 +592,14 @@ class TestScalingShape:
         print(f'\nSDS-2 MA2 per-row: {small:.2f}us (10K) -> {large:.2f}us (100K), ratio {large / small:.2f}')
         assert large <= small * self.MAX_RATIO, f'MA2 per-row grew {large / small:.1f}x (>{self.MAX_RATIO}x)'
 
+    def test_one_row_strata_scale_linearly(self, benchmark_results):
+        """Stratified X/mR with every row its own stratum. A per-stratum table scan makes
+        this quadratic: 10x the rows took ~100x the time before 2026-10-12."""
+        small = _per_row_us(benchmark_results, 2, 'execute_x_one_row_strata', 10_000)
+        large = _per_row_us(benchmark_results, 2, 'execute_x_one_row_strata', 100_000)
+        print(f'\nOne-row strata per-row: {small:.2f}us (10K) -> {large:.2f}us (100K), ratio {large / small:.2f}')
+        assert large <= small * self.MAX_RATIO, f'one-row strata per-row grew {large / small:.1f}x (>{self.MAX_RATIO}x)'
+
 
 @pytest.mark.slow
 @pytest.mark.benchmark

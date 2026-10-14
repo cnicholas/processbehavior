@@ -184,3 +184,28 @@ def test_sufficient_data_publishes_every_stratum(df, response, chart):
     assert _meta(result, chart)['insufficient_strata'] is None
     for stratum in result.strata:
         assert len(result.focus(stratum).get_chart(chart)) > 0
+
+
+# ---------------------------------------------------------------------------
+# Every row its own stratum (X/mR)
+# ---------------------------------------------------------------------------
+
+
+def test_one_row_strata_publish_nothing_and_report_every_stratum(df):
+    """Every row its own condition, as in a 307,683-row study that took 80 minutes per chart.
+
+    Each stratum holds one reading, so none has a moving range and none is published, but
+    every one is reported. The time column taken as a factor does it on the reference data.
+    The cost of this shape is guarded in tests/test_performance.py (one-row strata).
+    """
+    by = [*FACTORS, TIME]
+    study = pb.formulate(df, response='PM SDS 2', factors=by)
+    result = study.execute(chart='X', by=by, companion=True)
+
+    rows = int(df['PM SDS 2'].notna().sum())
+    assert result.strata == []
+    for chart in ('X', 'mR'):
+        meta = _meta(result, chart)
+        assert len(meta['insufficient_strata']) == rows
+        assert len(set(meta['insufficient_strata'])) == rows
+        assert meta['lane_boundaries'] is None

@@ -101,6 +101,34 @@ Equation numbers below are that manual's.
   PPU 5.74; ȳ alone gives 5.73). It equals ȳ in ADS 1.
 
 ### Fixed
+- **Stratified charts take time in proportion to the data, however many strata there are.**
+  The stratified X/mR path looked each stratum up with a scan of the whole table, so its cost
+  grew with strata × rows. With every row its own condition, an X/mR pair took 48 s at 30,165
+  rows, and an estimated 80 minutes at 307,683 (a gene-expression study, 6,033 genes × 51
+  subjects). It now takes 0.2 s and 1.9 s. The same scan sat in the stratified Xbar/S loops and
+  the lane-boundary loop, the per-stratum limits were computed one `pd.Series` at a time, and
+  two lists of strata were searched as lists. Results are unchanged: every chart, statistic,
+  lane boundary and stratum list was compared before and after on the reference data and a
+  30,165-row gene-effects file. `scripts/benchmark.py` adds a one-row-strata scenario, and
+  `tests/test_performance.py` checks that it scales linearly. Stratified Xbar/S still costs
+  about 2.5 ms per stratum (15 s at 6,033): linear, but not yet vectorised.
+- **Charts with many lanes draw in a fraction of a second.** Each lane divider was added to the
+  figure with its own `add_shape` call, and plotly re-validates every shape already there, so the
+  cost grew with the square of the number of lanes: 800 dividers took 27 s, and an X chart of a
+  6,033-gene study (one lane per gene) would have taken about 25 minutes. They are now added in
+  one assignment, which builds the same figure (0.03 s for 800). Above 1,000
+  (`plotting.lane_boundaries.MAX_LANE_DIVIDERS`) none are drawn: the dividers would merge into a
+  solid band at any chart width.
+- **`detect_signals()` works on phased charts.** It raised `TypeError` on every `phased=True`
+  chart: each phase has its own centre, so the statistics carry `center=None`, and the zone
+  calculation read that scalar. The chart already marks run rules not applicable, but only the
+  plot read the flag. Phased charts now get Rule 1 by default, judged against each phase's
+  limits, with the same points the chart flags; an explicit rule list runs as given, against each
+  row's own centre. The limits and the flagged points on the chart were always correct.
+- **`value='response'` charts the response**, as the `execute()` signature and docstring say.
+  Every chart refused it ("Valid charts for RESPONSE: None"): residuals are told apart by a leading
+  `R`, which `RESPONSE` also has. `execute()`, `supports_calibration()` and `why_not()` now treat
+  it, in any case, exactly as `value=None`.
 - **Xbar and S charts with subgroups of unequal size follow the manual (Eqs 11-5, 11-16,
   11-17).** sigma-hat is the average of each subgroup's S_r / c4(N_r) (was S-bar / c4(N_r)), and each
   subgroup's limits use its own N_r, so they step with subgroup size, as VAS draws them. N_r now
