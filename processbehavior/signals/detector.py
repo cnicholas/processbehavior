@@ -91,6 +91,7 @@ class SignalDetector:
         value_col: str = 'mean',
         chart_name: str = 'Chart',
         chart_type: str = 'Xbar',
+        run_rules_applicable: bool = True,
     ) -> SignalResult:
         """
         Detect signals in control chart data.
@@ -109,6 +110,11 @@ class SignalDetector:
             Name of chart for reporting
         chart_type : str, default 'Xbar'
             Chart type ('Xbar', 'S', 'X', 'mR') - determines applicable rules
+        run_rules_applicable : bool, default True
+            False for charts whose centre moves along the series (phased limits,
+            ``metadata['run_rules_applicable']``). The chart-type default rules
+            narrow to Rule 1; an explicit rule list runs as given, against each
+            row's own centre.
 
         Returns
         -------
@@ -125,6 +131,13 @@ class SignalDetector:
 
         # Get applicable rules for this chart type
         applicable_rules = config.get_rules_for_chart(chart_type)
+
+        # Phased limits give each phase its own centre, so the chart marks run rules
+        # 2-8 not applicable: they are not part of the default set, rather than
+        # skipped (a skip would mark the evaluation partial). An explicit rule list is
+        # the analyst's choice and runs as given.
+        if not run_rules_applicable and config.enabled_rules == 'default':
+            applicable_rules = [r for r in applicable_rules if r == 'rule_1']
 
         # Log rule selection
         if logger.isEnabledFor(logging.INFO):
@@ -291,7 +304,7 @@ class SignalDetector:
                             'rule_number': int(rule_name.split('_')[1]),
                             'description': self.RULE_DESCRIPTIONS[rule_name],
                             'value': data.loc[idx, value_col],
-                            'center': stats['center'],
+                            'center': self._row_center(data, stats, idx),
                             'upl': ucl,
                             'lpl': lcl,
                         }
@@ -308,6 +321,22 @@ class SignalDetector:
     def _limits_vary(self, stats: dict) -> bool:
         """Check if control limits vary (per-row limits)."""
         return bool(stats.get('limits_vary'))
+
+    @staticmethod
+    def _center(data: pd.DataFrame, stats: dict):
+        """The centre line: the scalar, or the per-row column when there is none.
+
+        Phased charts give each phase its own centre, so their statistics carry
+        ``center=None`` and the per-phase value lives on each row.
+        """
+        if stats.get('center') is None and 'center' in data.columns:
+            return data['center']
+        return stats['center']
+
+    def _row_center(self, data: pd.DataFrame, stats: dict, idx):
+        """The centre line at one row."""
+        center = self._center(data, stats)
+        return center.loc[idx] if isinstance(center, pd.Series) else center
 
     def _calculate_per_row_zones(self, data: pd.DataFrame, stats: dict, config: SignalConfig) -> pd.DataFrame:
         """
@@ -334,7 +363,7 @@ class SignalDetector:
         if 'upl' not in data.columns or 'lpl' not in data.columns:
             raise ValueError("Cannot calculate per-row zones: data missing 'upl' or 'lpl' columns")
 
-        center = stats['center']
+        center = self._center(data, stats)
         zone_def = config.zone_definition
 
         # Calculate sigma per row

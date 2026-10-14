@@ -119,6 +119,12 @@ Equation numbers below are that manual's.
   one assignment, which builds the same figure (0.03 s for 800). Above 1,000
   (`plotting.lane_boundaries.MAX_LANE_DIVIDERS`) none are drawn: the dividers would merge into a
   solid band at any chart width.
+- **`detect_signals()` works on phased charts.** It raised `TypeError` on every `phased=True`
+  chart: each phase has its own centre, so the statistics carry `center=None`, and the zone
+  calculation read that scalar. The chart already marks run rules not applicable, but only the
+  plot read the flag. Phased charts now get Rule 1 by default, judged against each phase's
+  limits, with the same points the chart flags; an explicit rule list runs as given, against each
+  row's own centre. The limits and the flagged points on the chart were always correct.
 - **Xbar and S charts with subgroups of unequal size follow the manual (Eqs 11-5, 11-16,
   11-17).** sigma-hat is the average of each subgroup's S_r / c4(N_r) (was S-bar / c4(N_r)), and each
   subgroup's limits use its own N_r, so they step with subgroup size, as VAS draws them. N_r now
