@@ -75,6 +75,17 @@ def _base_residual_code(value: str) -> str:
     return upper[2:] if upper.startswith('RCR') else upper
 
 
+def _normalise_value(value: str | None) -> str | None:
+    """'response' (any case) -> None, the response's own spelling; residuals unchanged.
+
+    Residuals are told apart by their leading 'R', which 'RESPONSE' also has, so the
+    documented ``value='response'`` must become None before anything tests the prefix.
+    """
+    if isinstance(value, str) and value.lower() == 'response':
+        return None
+    return value
+
+
 @dataclass
 class DesignReport:
     """
@@ -1521,6 +1532,8 @@ class Study:
         >>> study.why_not('Xbar', value='R2')
         "'Xbar' with value='R2' is not valid for ADS 1.\\nValid charts for R2: S, X"
         """
+        value = _normalise_value(value)
+
         # Handle old fused syntax: why_not('R5_Xbar') -> why_not('Xbar', value='R5')
         if '_' in chart and value is None:
             parts = chart.split('_', 1)
@@ -2018,6 +2031,8 @@ class Study:
                 )
             by = stratify_by
 
+        value = _normalise_value(value)
+
         # 0. Resolve calibration (label string -> attached Calibration object).
         calibration_obj = self._resolve_calibration(calibration)
 
@@ -2114,6 +2129,7 @@ class Study:
                     'parameter.'
                 )
             by = stratify_by
+        value = _normalise_value(value)
 
         from .analysis import Analysis
         from .formulation_spec import ChartRequest
@@ -2396,7 +2412,10 @@ class Study:
             )
         recenterable = set(RESIDUAL_CODES)
         if value is None:
-            raise ValidationError('recentered=True requires a residual value (R1-R6), got value=None')
+            raise ValidationError(
+                'recentered=True requires a residual value (R1-R6); the response '
+                '(value=None or "response") is already on the measurement scale.'
+            )
         if value.upper() not in recenterable:
             raise ValidationError(f"recentered=True requires a residual value (R1-R6), got '{value}'")
 

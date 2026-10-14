@@ -125,6 +125,10 @@ Equation numbers below are that manual's.
   plot read the flag. Phased charts now get Rule 1 by default, judged against each phase's
   limits, with the same points the chart flags; an explicit rule list runs as given, against each
   row's own centre. The limits and the flagged points on the chart were always correct.
+- **`value='response'` charts the response**, as the `execute()` signature and docstring say.
+  Every chart refused it ("Valid charts for RESPONSE: None"): residuals are told apart by a leading
+  `R`, which `RESPONSE` also has. `execute()`, `supports_calibration()` and `why_not()` now treat
+  it, in any case, exactly as `value=None`.
 - **Xbar and S charts with subgroups of unequal size follow the manual (Eqs 11-5, 11-16,
   11-17).** sigma-hat is the average of each subgroup's S_r / c4(N_r) (was S-bar / c4(N_r)), and each
   subgroup's limits use its own N_r, so they step with subgroup size, as VAS draws them. N_r now
