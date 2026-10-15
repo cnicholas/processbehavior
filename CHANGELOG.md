@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-10-14
+
 This release aligns the library with Bishop's VAS documentation manual dated 10-12-2026 and
 reproduces his VAS runs of October 2026 (PM SDS, PM INERT, known-effects and Medicare decks).
 Equation numbers below are that manual's.
@@ -1112,7 +1114,8 @@ and may change between minor versions until 1.0.
 - `natsort >= 8.0`
 - `plotly >= 5.18, < 7`
 
-[Unreleased]: https://github.com/cnicholas/processbehavior/compare/v0.3.3...HEAD
+[Unreleased]: https://github.com/cnicholas/processbehavior/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/cnicholas/processbehavior/compare/v0.3.3...v0.4.0
 [0.3.3]: https://github.com/cnicholas/processbehavior/compare/v0.3.2...v0.3.3
 [0.3.2]: https://github.com/cnicholas/processbehavior/compare/v0.3.1...v0.3.2
 [0.3.1]: https://github.com/cnicholas/processbehavior/compare/v0.3.0...v0.3.1
