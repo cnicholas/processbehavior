@@ -12,6 +12,7 @@ Note: Uses shared fixtures from conftest.py for common test data patterns.
 """
 
 import logging
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -19,6 +20,9 @@ import pytest
 
 from processbehavior.exceptions import ColumnNotFoundError, FactorNotFoundError, ValidationError
 from processbehavior.process_behavior import ColumnAccessor, ProcessBehavior
+from processbehavior.spc_constants import RECEIVED_ORDER_COL
+
+REFERENCE_CSV = Path(__file__).resolve().parent.parent / 'validation' / 'PBTESTDATABASE_T100.csv'
 
 # ============================================================================
 # Test: ColumnAccessor - Auto-completion support
@@ -1018,13 +1022,14 @@ class TestDatetimeInputPreserved:
 
 
 class TestSingleStreamFormulation:
-    """A response and a time column is a complete study.
+    """A response and a time column is a complete study; so is a bare response.
 
     Omitting `factors` used to be refused outright while the equivalent
-    `factors=[]` was accepted and worked — two spellings of "no factors"
-    doing opposite things, with the refusal naming neither. An individuals
-    chart of one measurement over time is the most common SPC study there is,
-    so it is the one thing that must not need a trick to express.
+    `factors=[]` was accepted — two spellings of "no factors" doing different
+    things, with the refusal naming neither. An individuals chart of one
+    measurement over time is the most common SPC study there is, so it is the
+    one thing that must not need a trick to express. With no time column
+    either, the values are charted in the order received (#129).
     """
 
     @staticmethod
@@ -1061,16 +1066,6 @@ class TestSingleStreamFormulation:
         study = pb.formulate(self._stream(), response='weight', time='hour')
         assert study.recommended_chart
 
-    def test_no_structure_at_all_is_refused(self):
-        """No factors, no plan, no time — no grid and no order to plot in."""
-        df = self._stream()
-        with pytest.raises(ValidationError) as exc:
-            ProcessBehavior(df).formulate(response='weight')
-
-        message = str(exc.value)
-        assert 'time' in message and 'factors' in message
-        assert "time='hour'" in message or "time='<column>'" in message
-
     def test_factors_and_plan_together_still_rejected(self):
         df = self._stream()
         df['machine'] = ['A', 'B'] * 15
@@ -1078,3 +1073,112 @@ class TestSingleStreamFormulation:
             ProcessBehavior(df).formulate(
                 response='weight', factors=['machine'], plan={'machine': ['A', 'B']}, time='hour'
             )
+
+
+class TestReceivedOrderFormulation:
+    """No time, factors or plan: the values are charted in the order received (#129).
+
+    formulate() numbers the rows 1..N in RECEIVED_ORDER_COL — the same numbers as
+    obs_id — on the raw frame, so the study must be exactly the one an explicit
+    time column holding those numbers gives. Checked on Bishop's reference data.
+    """
+
+    @staticmethod
+    def _reference(column):
+        df = pd.read_csv(REFERENCE_CSV, na_values=['*'])
+        return df[[column]]
+
+    @staticmethod
+    def _numbered(df):
+        return df.assign(**{RECEIVED_ORDER_COL: range(1, len(df) + 1)})
+
+    def _assert_same_study(self, received, explicit):
+        assert received.observed_design_state.sds == explicit.observed_design_state.sds
+        assert received.analytical_design_state.sds == explicit.analytical_design_state.sds
+        assert received.recommended_chart == explicit.recommended_chart
+        assert received.series_length == explicit.series_length
+        pd.testing.assert_frame_equal(received.dataset, explicit.dataset)
+        got = received.execute(chart='X', companion=True)
+        want = explicit.execute(chart='X', companion=True)
+        for chart in ('X', 'mR'):
+            pd.testing.assert_frame_equal(got.get_chart(chart), want.get_chart(chart))
+            assert got.statistics(chart) == want.statistics(chart)
+
+    @pytest.mark.parametrize('factors', [None, []], ids=['omitted', 'empty'])
+    def test_matches_explicit_time_on_reference_data(self, factors):
+        df = self._reference('PM SDS 1')
+        received = ProcessBehavior(df).formulate(response='PM SDS 1', factors=factors)
+        explicit = ProcessBehavior(self._numbered(df)).formulate(response='PM SDS 1', time=RECEIVED_ORDER_COL)
+
+        assert received.time == RECEIVED_ORDER_COL
+        assert received.analytical_design_state.sds == 2
+        assert received.recommended_chart == 'X'
+        self._assert_same_study(received, explicit)
+
+    def test_na_responses_are_empty_cells_in_order(self):
+        """An NA keeps its place: ODS sees an empty cell, ADS charts the rest."""
+        df = self._reference('PM SDS 2')
+        n_values = int(df['PM SDS 2'].notna().sum())
+        assert n_values < len(df)  # the reference column has '*' gaps
+
+        received = ProcessBehavior(df).formulate(response='PM SDS 2')
+        explicit = ProcessBehavior(self._numbered(df)).formulate(response='PM SDS 2', time=RECEIVED_ORDER_COL)
+
+        assert received.observed_design_state.sds == 5
+        assert received.analytical_design_state.sds == 2
+        assert n_values == received.series_length.T
+        self._assert_same_study(received, explicit)
+
+    def test_design_report_says_received_order(self):
+        df = self._reference('PM SDS 1')
+        report = repr(ProcessBehavior(df).formulate(response='PM SDS 1').design())
+        assert 'Time: received order (no time column given)' in report
+        assert f'T: {len(df)}' in report
+        assert f'{len(df) - 1} moving ranges' in report
+
+        explicit = ProcessBehavior(self._numbered(df)).formulate(response='PM SDS 1', time=RECEIVED_ORDER_COL)
+        assert 'received order' not in repr(explicit.design())
+
+    def test_received_order_is_what_is_charted(self):
+        df = self._reference('PM SDS 1')
+        shuffled = df.sample(frac=1, random_state=0).reset_index(drop=True)
+        mr = ProcessBehavior(df).formulate(response='PM SDS 1').execute(chart='mR').get_chart('mR')
+        mr_shuffled = ProcessBehavior(shuffled).formulate(response='PM SDS 1').execute(chart='mR').get_chart('mR')
+        assert not np.allclose(mr['mr'].dropna().to_numpy(), mr_shuffled['mr'].dropna().to_numpy())
+
+    @pytest.mark.parametrize('chart', ['Xbar', 'S'])
+    def test_subgroup_charts_need_replication(self, chart):
+        study = ProcessBehavior(self._reference('PM SDS 1')).formulate(response='PM SDS 1')
+        with pytest.raises(ValidationError, match='requires replicated observations'):
+            study.execute(chart=chart)
+        assert 'replicat' in study.why_not(chart).lower()
+
+    def test_existing_column_of_that_name_is_not_overwritten(self):
+        df = pd.DataFrame({'weight': [1.0, 2.0, 3.0, 4.0], RECEIVED_ORDER_COL: [4, 3, 2, 1]})
+        with pytest.raises(ValidationError, match=f"time='{RECEIVED_ORDER_COL}'"):
+            ProcessBehavior(df).formulate(response='weight')
+
+    def test_input_is_not_mutated_and_can_be_reformulated(self):
+        df = self._reference('PM SDS 1')
+        process = ProcessBehavior(df)
+        first = process.formulate(response='PM SDS 1')
+        second = process.formulate(response='PM SDS 1')
+        assert list(df.columns) == ['PM SDS 1']
+        assert RECEIVED_ORDER_COL not in process.data.columns
+        pd.testing.assert_frame_equal(first.dataset, second.dataset)
+
+    def test_single_value_behaves_like_explicit_time(self):
+        df = pd.DataFrame({'weight': [5.0]})
+
+        def outcome(make):
+            try:
+                study = make()
+            except ValidationError as exc:
+                return ('raises', str(exc))
+            return (study.analytical_design_state.sds, study.recommended_chart, study.series_length)
+
+        received = outcome(lambda: ProcessBehavior(df).formulate(response='weight'))
+        explicit = outcome(
+            lambda: ProcessBehavior(self._numbered(df)).formulate(response='weight', time=RECEIVED_ORDER_COL)
+        )
+        assert received == explicit

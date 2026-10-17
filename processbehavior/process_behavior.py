@@ -39,6 +39,7 @@ from .derivations import validate as _validate_derivation
 from .exceptions import ColumnNotFoundError, ProcessBehaviorWarning, ValidationError
 from .formulation_spec import FormulationSpec
 from .sds_detector import SDSRegistry, SDSResult
+from .spc_constants import RECEIVED_ORDER_COL
 
 if TYPE_CHECKING:
     from .study import Study
@@ -403,38 +404,24 @@ class ColumnAccessor:
 # ---------------------------------------------------------------------------
 
 
-def _validate_factors_or_plan_args(
-    factors: list | None, plan: dict | None, time: object | None = None
-) -> None:
+def _validate_factors_or_plan_args(factors: list | None, plan: dict | None) -> None:
     """Enforce the factors XOR plan contract for formulate().
 
     Both provided is rejected (ambiguous source of factor structure).
 
-    Omitting both is fine as long as there is a ``time`` column: that is a
-    single measurement stream over time — the most common SPC study there is,
-    and an X/mR chart handles it. It used to be refused outright, while the
-    equivalent ``factors=[]`` was accepted and worked, so the two spellings of
-    "no factors" did opposite things and the refusal named neither.
-
-    With no factors, no plan *and* no time there is nothing to analyse
-    against: no grid, and no order to plot in.
+    Omitting both is fine. With a ``time`` column that is a single measurement
+    stream over time — the most common SPC study there is, and an X/mR chart
+    handles it. With no time either, the values are charted in the order
+    received: formulate() numbers them 1..N in ``RECEIVED_ORDER_COL`` and the
+    study is the same single stream (#129). Both used to be refused, while the
+    equivalent ``factors=[]`` was accepted, so the spellings of "no factors"
+    did different things and the refusal named neither.
     """
     if factors is not None and plan is not None:
         raise ValidationError(
             "Cannot specify both 'factors' and 'plan'. Use either:\n"
             '  • factors=[...] to infer structure from observed data (complete designs)\n'
             '  • plan={col: [levels], ...} to specify expected structure (complete + incomplete designs)'
-        )
-    if factors is None and plan is None and time is None:
-        raise ValidationError(
-            'A study needs either a time order or a grouping structure — this has neither.\n\n'
-            'Add whichever describes your data:\n'
-            "  • time='<column>' — a single measurement stream in order (X/mR charts)\n"
-            "  • factors=['<column>', ...] — categorical variables defining subgroups\n"
-            '  • plan={column: [levels], ...} — expected factor levels, which also\n'
-            '    lets incomplete designs be detected\n\n'
-            'A single stream is the common case:\n'
-            "  study = pb.formulate(df, response='weight', time='hour')"
         )
 
 
@@ -730,6 +717,11 @@ class ProcessBehavior:
         Copy data from Excel, then:
 
         >>> pb = ProcessBehavior.read_clipboard()
+
+        A pasted column of values with a header, charted in the order pasted:
+
+        >>> study = ProcessBehavior.read_clipboard().formulate(response='Weight')
+        >>> study.execute().plot()
         """
         df = pd.read_clipboard(**kwargs)
         return cls(df, na_values=na_values)
@@ -1043,7 +1035,7 @@ class ProcessBehavior:
 
         Examples
         --------
-        Basic formulation (infer factors from data):
+        A list of values, charted in the order received (X/mR):
 
         >>> pb = ProcessBehavior(df)
         >>> study = pb.formulate(response='weight')
@@ -1074,32 +1066,26 @@ class ProcessBehavior:
 
         Notes
         -----
-        **Implicit Time Ordering**
+        **Received order**
 
-        When no ``time`` parameter is specified, the system treats observation
-        order as implicit time. This design decision is intentional:
+        With no ``time``, ``factors`` or ``plan``, the values are charted in the
+        order received. formulate() numbers them 1..N in an ``Observation``
+        column (the same numbers as ``obs_id``) and the study is exactly the one
+        ``time='Observation'`` would give: a single stream, ADS 2, charted with
+        X/mR. The design report says the order is the received order.
+        ``factors=[]`` with no time is the same study.
 
-        1. Wheeler's XmR chart fundamentally assumes temporal ordering - moving
-           ranges between consecutive observations only make sense in sequence.
+        Moving ranges between consecutive values only make sense in sequence.
+        If the rows are NOT in time order, pass the ``time`` column.
 
-        2. The ``obs_id`` column (assigned during data preparation) serves as
-           the implicit time dimension, preserving the order in which data was
-           provided.
-
-        If your observations are NOT in temporal order, you MUST specify the
-        ``time`` parameter to ensure correct analysis.
-
-        **Factors are optional; structure is not**
+        **Factors are optional**
 
         Supply a grouping structure (``factors`` or ``plan``), a ``time``
-        column, or both. Bishop's design-state classification works over a
-        factor × time grid, and a single measurement stream in time order is
-        the degenerate case of one — charted with X/mR::
+        column, both, or neither. Bishop's design-state classification works
+        over a factor × time grid, and a single measurement stream in time
+        order is the degenerate case of one — charted with X/mR::
 
             study = pb.formulate(df, response='weight', time='hour')
-
-        Only a study with no factors, no plan *and* no time is refused: there
-        is no grid to classify and no order to plot in.
 
         **SDS Detection**
 
@@ -1112,8 +1098,8 @@ class ProcessBehavior:
         Study : The returned Study object
         ColumnRef : Column reference with .levels property for discoverability
         """
-        # 1. Validate the factors/plan combination + presence.
-        _validate_factors_or_plan_args(factors, plan, time)
+        # 1. Validate the factors/plan combination.
+        _validate_factors_or_plan_args(factors, plan)
 
         # 2. Normalize inputs into (response_str, time_str, factors_str,
         #    sampling_plan, factor_order, T_planned, N_planned).
@@ -1123,6 +1109,13 @@ class ProcessBehavior:
             self._resolve_factors_and_plan(factors, plan)
         )
 
+        # No time, factors or plan (factors=[] included): the values in the order
+        # received, numbered in RECEIVED_ORDER_COL (step 4b). From here on it is the
+        # single stream time=RECEIVED_ORDER_COL gives (#129).
+        received_order = time_str is None and not factors_str and plan is None
+        if received_order:
+            time_str = RECEIVED_ORDER_COL
+
         # 3. Build the FormulationSpec.
         spec = FormulationSpec(
             response_var=response_str,
@@ -1130,6 +1123,7 @@ class ProcessBehavior:
             time_var=time_str,
             round_to=precision,
             unit_of_analysis=unit_of_analysis,
+            received_order=received_order,
         )
 
         # 4. Materialize pending derived variables ONCE into the augmented frame,
@@ -1138,6 +1132,23 @@ class ProcessBehavior:
         #    never self.data — so a derived factor is seen consistently and the
         #    materialize-once ordering cannot drift in a later refactor.
         frame, resolved_derivations = self._materialize_derivations()
+
+        # 4b. Number the rows in received order on the raw frame, before ODS
+        #     detection, so an NA response keeps its place as an empty cell — the
+        #     same numbers obs_id gets in data preparation. Copy first: with no
+        #     derivations the frame is self.data itself.
+        if received_order:
+            if RECEIVED_ORDER_COL in frame.columns:
+                raise ValidationError(
+                    f'No time column was given, so the values are charted in the order '
+                    f"received and numbered in a column called '{RECEIVED_ORDER_COL}' — "
+                    f'but the data already has one.\n\n'
+                    f"  • If it gives the order: time='{RECEIVED_ORDER_COL}'\n"
+                    f'  • Otherwise rename it'
+                )
+            frame = frame.copy()
+            frame[RECEIVED_ORDER_COL] = range(1, len(frame) + 1)
+
         return self._formulate_from_frame(
             frame,
             spec,
@@ -1262,6 +1273,10 @@ def formulate(
 
     >>> study = pb.formulate(df, response='weight', factors=['machine'], time='shift')
     >>> study.execute().plot()
+
+    A plain list of values is charted in the order received (X/mR):
+
+    >>> study = pb.formulate(df, response='weight')
 
     Reach for :class:`ProcessBehavior` when you need the fluent derivation verbs, since
     those must be attached before formulating::

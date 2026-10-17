@@ -190,6 +190,7 @@ class DesignReport:
     _ods_result: SDSResult | None = None  # Observed Design State
     _ads_result: SDSResult | None = None  # Analytical Design State
     _series_length: SeriesLengthPrecision | None = None  # Where sigma comes from, and how precise
+    _received_order: bool = False  # Time is the received order formulate() numbered (#129)
 
     @property
     def factors_table(self) -> pd.DataFrame:
@@ -758,6 +759,8 @@ class DesignReport:
 
         # Compact metrics line (includes min cell size)
         lines.append(self._repr_metrics_line())
+        if self._received_order:
+            lines.append('  Time: received order (no time column given)')
 
         # Factor details
         lines.append('')
@@ -1729,6 +1732,7 @@ class Study:
             _ods_result=self._sds_result,
             _ads_result=self._ads.analytical_design_state,
             _series_length=self.series_length,
+            _received_order=self._spec.received_order,
         )
 
     def capability(

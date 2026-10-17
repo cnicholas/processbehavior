@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **A bare response is charted in the order received.** `formulate(response=...)` with no time,
+  factors or plan used to be refused. The values are now numbered 1..N in an `Observation` column
+  (the same numbers as `obs_id`) and the study is exactly the one `time='Observation'` gives: a
+  single stream, ADS 2, X/mR, sigma from N − 1 moving ranges. An NA response keeps its place as an
+  empty cell. The design report adds `Time: received order (no time column given)`. If the data
+  already has an `Observation` column, formulate asks you to pass it as `time=` or rename it (#129).
+
+### Changed
+- **`formulate(response=..., factors=[])` with no time is the same study.** It used to treat the
+  whole column as one replicated cell: ADS 1, a recommended one-point Xbar chart, the "within-cell
+  replication" series-length line, and an X chart plotted against the response values. Its chart
+  tables now start with `Observation` (#129).
+
 ## [0.4.0] - 2026-10-14
 
 This release aligns the library with Bishop's VAS documentation manual dated 10-12-2026 and

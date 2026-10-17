@@ -171,8 +171,19 @@ study = pb.formulate(
     response=pb.cols.temperature,
     time=pb.cols.day
 )
-# Results in DS 4, recommends X
+# Results in ADS 2, recommends X
 ```
+
+With no time column either, the values are charted in the order received. They are
+numbered 1..N in an `Observation` column and the study is the one `time='Observation'`
+would give; the design report says `Time: received order (no time column given)`:
+
+```python
+study = pb.formulate(response=pb.cols.temperature)
+# Results in ADS 2, recommends X
+```
+
+If the rows are not in time order, pass the time column.
 
 ### Pattern 2: Comparing Groups
 
