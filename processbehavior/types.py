@@ -93,6 +93,8 @@ class ChartMetadata(TypedDict, total=False):
     - ``chart_type`` / ``value_col`` / ``center_col``: every chart.
     - ``stratified`` / ``stratify_col`` / ``stratify_by``: stratified
       charts only.
+    - ``group_col``: unstratified Xbar/S — the chart-data column that labels
+      each subgroup (``group``, ``subgroup``, or the factor's own name).
     - ``lane_boundaries``: stratified X/mR charts with collapsed factors.
     - ``insufficient_strata``: mR/r charts that dropped first-per-stratum.
     - ``phased`` / ``single_point_phases``: charts run with
@@ -109,6 +111,7 @@ class ChartMetadata(TypedDict, total=False):
     stratified: bool
     stratify_col: str | None
     stratify_by: list[str]
+    group_col: str  # Unstratified Xbar/S: the subgroup label column
     lane_boundaries: dict[str, list[float]] | None
     insufficient_strata: list[str] | None
     phased: bool

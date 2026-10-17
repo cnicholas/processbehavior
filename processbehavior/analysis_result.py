@@ -808,8 +808,13 @@ class AnalysisResult:
         -------
         pd.DataFrame
             Summary table with columns:
-            - subgroup: Subgroup identifier (RSG) — when chart_data has rsg
-            - n: Number of observations in subgroup
+            - subgroup: Subgroup identifier — on every Xbar/S table, whatever
+              the ``by=`` (a pooled subgroup is labelled by its ``by`` values),
+              and on X/mR tables when the chart data has an rsg
+            - n: Number of values in the subgroup that its limits rest on —
+              the Xbar/S aggregation's own count, so a pooled subgroup's n
+              covers all its cells, and a residual whose first value is
+              undefined (R2) counts one fewer
             - value: The statistic value (xbar, s, etc.)
             - center: Center line value
             - lpl: Lower process limit
