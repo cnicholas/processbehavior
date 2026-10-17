@@ -25,6 +25,22 @@ pip install "processbehavior[images]"  # kaleido, for static plot images
 
 ## Quickstart
 
+A column of values, charted in the order received, is an X/mR chart in two calls:
+
+```python
+import pandas as pd
+import processbehavior as pb
+
+df = pd.DataFrame({'weight': [50.2, 49.8, 50.5, 50.1, 49.6, 50.9, 50.3, 49.9, 50.4, 50.0, 49.7, 50.6]})
+
+study = pb.formulate(df, response='weight')   # no time column: rows are numbered 1..N as 'Observation'
+result = study.execute(companion=True)        # X chart with its mR companion
+print(result.statistics('X'))                 # {'N': 1, 'center': 50.167, 'lpl': 48.619, 'upl': 51.714}
+result.plot()
+```
+
+When the data has a time order, factors, or both, name them. The design state routes the analysis:
+
 ```python
 import processbehavior as pb
 

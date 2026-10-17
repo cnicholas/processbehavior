@@ -14,11 +14,11 @@ from processbehavior import ProcessBehavior
 
 rng = np.random.default_rng(3)
 df = pd.DataFrame({
-    'week': range(1, 25),
     'on_time_pct': np.clip(rng.normal(92, 2.5, 24), 80, 100).round(1),
 })
 
-study = ProcessBehavior(df).formulate(response='on_time_pct', time='week')
+# No time column: the values are charted in the order received
+study = ProcessBehavior(df).formulate(response='on_time_pct')
 result = study.execute(chart='X', companion=True)
 
 print(result.get_statistics('X'))
@@ -31,6 +31,14 @@ Output:
 ```
 {'N': 1, 'center': 91.883, 'lpl': 83.211, 'upl': 100.556}
 {'N': 2, 'center': 3.261, 'lpl': 0.0, 'upl': 10.654}
+```
+
+With no time column the rows are numbered 1..N in an `Observation` column, in the
+order received. If your data carries its own order (a `week` column, a timestamp),
+name it and the points are charted in that order instead:
+
+```python
+study = ProcessBehavior(df).formulate(response='on_time_pct', time='week')
 ```
 
 ## Reading it

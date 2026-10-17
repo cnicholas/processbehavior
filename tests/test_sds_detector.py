@@ -1299,11 +1299,13 @@ class TestPlanCoverageRatio:
 
 
 class TestDegenerateInputs:
-    def test_response_only_raises_with_guidance(self):
-        """A study needs time or grouping; the error says which to add."""
+    def test_response_only_is_one_stream_in_received_order(self):
+        """No time or grouping: a 1 × N grid in received order, classified like any other (#129)."""
         df = pd.DataFrame({'y': [1.0, 2.0, 3.0, 4.0, 5.0, 6.0]})
-        with pytest.raises(ValidationError, match='time'):
-            ProcessBehavior(df).formulate(response='y')
+        study = ProcessBehavior(df).formulate(response='y')
+        assert study.observed_design_state.sds == 2
+        assert study.analytical_design_state.sds == 2
+        assert study.analytical_design_state.min_cell_size == 1
 
     def test_all_na_response_raises(self):
         df = pd.DataFrame({'y': ['*', 'N/A', '*', 'N/A'], 'time': [1, 2, 3, 4]})

@@ -47,7 +47,9 @@ knows what the study is for.
   Series length: T=2. Sigma for X/mR rests on a single moving range.
   ```
 
-- **No time variable and no replication.** Nothing to say; the line is omitted.
+- **No time variable and no replication.** Nothing to say; the line is omitted. A bare
+  response (no time, factors or plan) is not this case: its values are numbered in the
+  order received, so it has T = N and the moving-range line above.
 
 The same numbers appear in code as `study.series_length`, a frozen record with `T`,
 `n_moving_ranges`, `within_cell_df` (the sum over cells of N_kt − 1), `sigma_from_time`,
