@@ -253,6 +253,11 @@ result.charts['Xbar']['metadata']     # dict
 result.charts['Xbar']['strata']       # per-stratum payloads, when stratified
 ```
 
+Xbar and S chart data carry `n`, each subgroup's own count of the values its limits
+rest on, right after the subgroup label. `chart_table` shows it, with the label as
+`subgroup`, whatever the `by=`: a pooled subgroup (`by=['lane', 'hour']`) counts all
+the cells it pools.
+
 ### Statistics — the four-key contract
 
 ```python

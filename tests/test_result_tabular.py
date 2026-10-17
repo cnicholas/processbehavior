@@ -7,6 +7,8 @@ inference and n-join depend on the ads/spec wiring.
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import pandas as pd
 import pytest
 
@@ -65,8 +67,8 @@ class TestBuildChartTable:
             build_chart_table(xbar_s_result, chart="DoesNotExist")
 
     def test_columns_match_documented_contract(self, xbar_s_result):
-        """Output has value, center, lpl, upl, (signal). `subgroup` only when
-        chart_data has an `rsg` column (chart-type dependent)."""
+        """Output has value, center, lpl, upl, (signal). Xbar/S always add
+        `subgroup` and `n` (see TestXbarSSubgroupAndN)."""
         table = build_chart_table(xbar_s_result, chart="Xbar")
         assert "value" in table.columns
         assert "center" in table.columns
@@ -129,6 +131,98 @@ class TestBuildChartTable:
         assert "value" in table.columns
         assert "center" in table.columns
         assert len(table) > 0
+
+
+REFERENCE_CSV = Path(__file__).resolve().parent.parent / "validation" / "PBTESTDATABASE_T100.csv"
+FACTORS = ["FACTOR 1", "FACTOR 2"]
+TIME = "PRODUCTION TIME"
+
+
+@pytest.fixture(scope="module")
+def reference_studies():
+    """Bishop's reference data: PM SDS 1 (balanced) and PM SDS 3 (cell sizes vary)."""
+    df = pd.read_csv(REFERENCE_CSV, na_values=["*"])
+    return {
+        response: ProcessBehavior(df).formulate(response=response, factors=FACTORS, time=TIME)
+        for response in ("PM SDS 1", "PM SDS 3")
+    }
+
+
+def _expected_n(study, by, column, min_n=1):
+    """Independent count of `column` per subgroup of `by`, keyed like the table's label."""
+    counts = study.dataset.groupby(by, observed=True)[column].count()
+    counts = counts[counts >= min_n]
+    labels = ["_".join(map(str, k)) if isinstance(k, tuple) else str(k) for k in counts.index]
+    return dict(zip(labels, counts.tolist(), strict=True))
+
+
+class TestXbarSSubgroupAndN:
+    """Every Xbar/S table labels its subgroups and gives each one's own n (#143).
+
+    `n` comes from the Xbar/S aggregation, so a subgroup that pools several cells
+    reports all of them — a per-cell size, which the table used to re-join, cannot.
+    """
+
+    POOLED = [
+        ["FACTOR 1", TIME],
+        ["FACTOR 2", TIME],
+        ["FACTOR 1", "FACTOR 2", TIME],
+        ["FACTOR 1", "FACTOR 2"],
+        ["FACTOR 1"],
+    ]
+
+    @pytest.mark.parametrize("response", ["PM SDS 1", "PM SDS 3"])
+    @pytest.mark.parametrize("by", POOLED, ids=lambda b: "+".join(b))
+    def test_by_tables_have_subgroup_and_true_n(self, reference_studies, response, by):
+        study = reference_studies[response]
+        result = study.execute(chart="Xbar", by=by, companion=True)
+        for chart, min_n in (("Xbar", 1), ("S", 2)):
+            table = build_chart_table(result, chart=chart)
+            assert list(table.columns[:2]) == ["subgroup", "n"]
+            assert dict(zip(table["subgroup"], table["n"], strict=True)) == _expected_n(study, by, response, min_n)
+
+    @pytest.mark.parametrize("by", POOLED, ids=lambda b: "+".join(b))
+    def test_solo_s_matches_companion_s(self, reference_studies, by):
+        study = reference_studies["PM SDS 3"]
+        companion = build_chart_table(study.execute(chart="Xbar", by=by, companion=True), chart="S")
+        solo = build_chart_table(study.execute(chart="S", by=by), chart="S")
+        pd.testing.assert_frame_equal(companion, solo)
+
+    @pytest.mark.parametrize("response", ["PM SDS 1", "PM SDS 3"])
+    def test_default_and_stratified_tables_give_cell_sizes(self, reference_studies, response):
+        study = reference_studies[response]
+        cell_n = _expected_n(study, ["rsg", TIME], response)
+        default = build_chart_table(study.execute(chart="Xbar"), chart="Xbar")
+        assert list(default.columns) == ["subgroup", "n", "value", "center", "lpl", "upl", "signal"]
+        assert dict(zip(default["subgroup"], default["n"], strict=True)) == cell_n
+
+        stratified = study.execute(chart="Xbar", by=[TIME])
+        table = build_chart_table(stratified, chart="Xbar")
+        data = stratified.get_chart("Xbar")
+        labels = data["rsg"].astype(str) + "_" + data[TIME].astype(str)
+        assert dict(zip(labels, table["n"], strict=True)) == cell_n
+
+    def test_n_is_what_the_limits_rest_on(self, reference_studies):
+        """R5's limits rest on R2, undefined at the stream's first value: that cell counts one fewer."""
+        study = reference_studies["PM SDS 3"]
+        table = build_chart_table(study.execute(chart="Xbar", value="R5"), chart="Xbar")
+        assert dict(zip(table["subgroup"], table["n"], strict=True)) == _expected_n(study, ["rsg", TIME], "R2")
+        first = table.iloc[0]
+        assert first["n"] == _expected_n(study, ["rsg", TIME], "PM SDS 3")[first["subgroup"]] - 1
+
+    def test_n_mode_average_keeps_actual_sizes(self, reference_studies):
+        study = reference_studies["PM SDS 3"]
+        by = ["FACTOR 1", TIME]
+        table = build_chart_table(study.execute(chart="Xbar", by=by, n_mode="average"), chart="Xbar")
+        assert dict(zip(table["subgroup"], table["n"], strict=True)) == _expected_n(study, by, "PM SDS 3")
+
+    @pytest.mark.parametrize("by", [None, ["FACTOR 1", TIME], ["FACTOR 1"], [TIME]], ids=str)
+    def test_chart_data_carries_n_after_the_label(self, reference_studies, by):
+        result = reference_studies["PM SDS 3"].execute(chart="Xbar", by=by, companion=True)
+        for chart in ("Xbar", "S"):
+            columns = list(result.get_chart(chart).columns)
+            assert columns[columns.index("n") - 1] == (result.charts[chart]["metadata"].get("group_col") or TIME)
+            assert columns.index("n") < columns.index("center")
 
 
 # ---------------------------------------------------------------------------
