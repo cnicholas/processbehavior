@@ -1379,7 +1379,9 @@ class Analysis:
         else:
             group_col = None
 
-        cols_to_keep = [group_col, 'xbar', 'center', 'lpl', 'upl', 'beyond_limits']
+        # n is each subgroup's own count from the aggregation above: the size its limits
+        # used. A pooled subgroup spans several cells, so no per-cell size could stand in (#143).
+        cols_to_keep = [group_col, 'n', 'xbar', 'center', 'lpl', 'upl', 'beyond_limits']
         cols_to_keep = [c for c in cols_to_keep if c in xbar.columns]
         xbar = xbar[cols_to_keep]
         result['Xbar'] = {
@@ -1392,6 +1394,7 @@ class Analysis:
                 'n_sigma': self.request.n_sigma,
                 'n_mode': n_mode,
                 **({'n_avg': round(n_avg, spec.round_to)} if n_avg is not None else {}),
+                **({'group_col': group_col} if group_col else {}),
             },
         }
 
@@ -1546,7 +1549,7 @@ class Analysis:
 
         # Select output columns
         group_col = groupby_cols[0] if groupby_cols else None
-        cols_to_keep = [stratify_col, group_col, 'xbar', 'center', 'lpl', 'upl', 'beyond_limits']
+        cols_to_keep = [stratify_col, group_col, 'n', 'xbar', 'center', 'lpl', 'upl', 'beyond_limits']
         cols_to_keep = [c for c in cols_to_keep if c is not None and c in chart_out.columns]
         chart_out = chart_out[cols_to_keep]
 
@@ -1710,7 +1713,7 @@ class Analysis:
         published_strata = [s for s in all_strata if s not in insufficient_set]
 
         group_col = groupby_cols[0] if groupby_cols else None
-        cols_to_keep = [stratify_col, group_col, 's', 'center', 'lpl', 'upl', 'beyond_limits']
+        cols_to_keep = [stratify_col, group_col, 'n', 's', 'center', 'lpl', 'upl', 'beyond_limits']
         cols_to_keep = [c for c in cols_to_keep if c is not None and c in chart_out.columns]
         chart_out = chart_out[cols_to_keep]
 
@@ -1887,7 +1890,8 @@ class Analysis:
             elif len(groupby_cols) > 1 and group_col == 'group' and 'group' not in out.columns:
                 out['group'] = out[groupby_cols].astype(str).agg('_'.join, axis=1)
 
-        cols_to_keep = [group_col, 's', 'center', 'lpl', 'upl', 'beyond_limits']
+        # n: each subgroup's own count, as on Xbar (#143).
+        cols_to_keep = [group_col, 'n', 's', 'center', 'lpl', 'upl', 'beyond_limits']
         cols_to_keep = [c for c in cols_to_keep if c in out.columns]
         out = out[cols_to_keep]
         out = out.round(spec.round_to)
@@ -1917,6 +1921,7 @@ class Analysis:
                     'n_sigma': self.request.n_sigma,
                     'n_mode': n_mode,
                     **({'n_avg': round(n_avg, spec.round_to)} if n_avg is not None else {}),
+                    **({'group_col': group_col} if group_col else {}),
                 },
             }
         }

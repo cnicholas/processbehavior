@@ -20,6 +20,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   whole column as one replicated cell: ADS 1, a recommended one-point Xbar chart, the "within-cell
   replication" series-length line, and an X chart plotted against the response values. Its chart
   tables now start with `Observation` (#129).
+- **Xbar and S chart data carry `n`.** `get_chart('Xbar')` / `get_chart('S')`, and the Excel chart
+  sheets, gain an `n` column after the subgroup label. Unstratified Xbar/S metadata names the label
+  column as `group_col` (#143).
+
+### Fixed
+- **Xbar/S `chart_table` keeps the subgroup label and `n` on every `by=`.** With a `by=` other than
+  time alone, such as a pooled subset (`by=['FACTOR 1', time]`), all factors, factors without time,
+  or one factor, the table dropped both columns, so a row couldn't be traced to its subgroup and
+  stepped limits went unexplained. `n` is now the aggregation's own count, which covers every cell
+  a pooled subgroup spans. This also corrects one row on residual charts whose limits rest on R2
+  (R1, R3, R4, R5) in a design with singletons: the stream's first cell, where R2 is undefined at
+  the first value, showed its cell size, not the one-fewer values its S and limits use. Limits,
+  centres and statistics are unchanged (#143).
 
 ## [0.4.0] - 2026-10-14
 
