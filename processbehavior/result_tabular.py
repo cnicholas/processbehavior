@@ -34,6 +34,7 @@ _NON_VALUE_COLS = frozenset(
         "beyond_limits",
         "n",
         "N",
+        "phase",
         "obs_id",
         "x",
         "pull",
@@ -249,6 +250,10 @@ def _output_column_plan(
     if subgroup_col:
         output_cols.append(subgroup_col)
         renames[subgroup_col] = "subgroup"
+
+    # Phased Xbar/S: which phase's centre and limits the row uses.
+    if "phase" in chart_data.columns:
+        output_cols.append("phase")
 
     if "n" in chart_data.columns:
         output_cols.append("n")

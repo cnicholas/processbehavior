@@ -1040,6 +1040,7 @@ class Plotter:
             'groups',
             'n',
             'N',
+            'phase',
         }
         for col in data.columns:
             if col in metric_cols:

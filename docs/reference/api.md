@@ -113,7 +113,7 @@ result = study.execute(
     recentered=False,    # bool — recentered residual (RCR*) form
     bins=None,           # int | None — Histogram bins
     companion=False,     # bool — also compute the companion chart (see below)
-    phased=False,        # bool — phase-wise limits
+    phased=False,        # bool — a center line and limits per phase (X/mR and Xbar/S)
     n_sigma=3.0,         # float — limit width
     n_mode='actual',     # 'actual' | 'average' — subgroup-size handling
     calibration=None,    # Calibration | str | None — standards-given limits
@@ -276,7 +276,8 @@ Every chart's statistics dict carries exactly these keys:
 
 When limits vary point-to-point (e.g. varying subgroup sizes with
 `n_mode='actual'`), `N`, `lpl` and `upl` are `None` and the dict additionally has
-`'limits_vary': True` — read per-point limits from `get_chart()`. Histogram adds
+`'limits_vary': True` — read per-point limits from `get_chart()`. On a phased chart
+`center` is `None` too. Histogram adds
 `{'mean', 'std', 'n'}` and has `lpl`/`upl` of `None`. For a stratified result,
 `get_statistics()` returns `{stratum: {...}}`; `statistics(chart, stratum=...)`
 picks one.
@@ -325,6 +326,29 @@ result.focus(stratum)          # -> FocusedAnalysisResult
 `.dataset`/`.residuals` are masked to the stratum, and `.is_stratified` is
 `False`. (`FocusedAnalysisResult` is created by `focus()`, not constructed
 directly, and is not a top-level export.)
+
+### Phases
+
+```python
+result.phase_statistics(chart, stratum=None)   # -> DataFrame, one row per phase
+```
+
+A chart executed with `phased=True` gives each phase — one factor combination, a
+contiguous run of points in time order — its own center line and limits. The chart data
+gains a `phase` column (the lane label) next to the subgroup label, and `chart_table`
+shows it. `phase_statistics(chart)` returns the numbers behind the stepped lines. On
+Xbar/S: `phase`, `subgroups`, `N` (the subgroup size the phase's limits assume; `NaN`
+when sizes vary within it), `center`, `s_bar`, `sigma_hat`, `lpl`, `upl` (`NaN` when the
+limits step within the phase). On X/mR: `phase`, `points`, `center`, `mR_bar`, `lpl`,
+`upl`. A stratified phased X/mR chart (`by=['factor 1'], phased=True`) has phases per
+stratum: pass `stratum=`, or call it on `focus(stratum)`. It raises `ValidationError` on a
+chart that is not phased.
+
+Phased metadata carries `phased=True`, `run_rules_applicable=False`, `phase_by` (the
+factors a phase is one combination of), `lane_boundaries` (the divider positions),
+`single_point_phases` and `insufficient_phases` (phases with no replicated subgroup,
+charted without limits). Phased Xbar/S refuses residual values, calibrations and
+`by=[time]`; see [Staged Xbar/S](../user-guide/chart-types.md#staged-xbars).
 
 ### Plotting, reporting, export
 

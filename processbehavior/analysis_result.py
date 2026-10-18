@@ -656,6 +656,70 @@ class AnalysisResult:
             )
         return dict(stats[stratum])
 
+    def phase_statistics(self, chart: str, stratum: str | None = None) -> pd.DataFrame:
+        """One row per phase of a phased chart: the numbers behind its stepped lines.
+
+        Xbar/S columns: ``phase`` (the lane label, as in ``chart_table``), ``subgroups``
+        (points charted in it), ``N`` (the subgroup size its limits assume: the common size,
+        the mean size under ``n_mode='average'``, or NaN when sizes vary within the phase),
+        ``center``, ``s_bar``, ``sigma_hat``, ``lpl`` and ``upl`` (NaN when the limits step
+        within the phase; ``get_chart`` carries them per row). A phase with no replicated
+        subgroup keeps its ``subgroups`` and is NaN elsewhere; ``metadata['insufficient_phases']``
+        names it.
+
+        X/mR columns: ``phase``, ``points``, ``center``, ``mR_bar``, ``lpl``, ``upl``. On the
+        mR chart ``center`` is ``mR_bar``.
+
+        Parameters
+        ----------
+        chart : str
+            Chart name, e.g. ``'Xbar'`` or ``'X'``.
+        stratum : str, optional
+            Required on a stratified phased chart (X/mR with ``by=[factor]``), where each
+            stratum has its own phases; rejected otherwise. ``focus(stratum)`` gives the same
+            table without the argument.
+
+        Raises
+        ------
+        ValidationError
+            On a chart that is not phased, or when a stratum is needed and not given, given
+            and not needed, or unknown.
+        ChartNotAvailableError
+            If the chart is not in this result.
+        """
+        name = self._resolve_chart_name(chart)
+        if name not in self.charts:
+            raise ChartNotAvailableError(
+                f"Chart '{name}' not found. Available charts: {self.all_charts}", chart=name, available=self.all_charts
+            )
+        payload = self.charts[name]
+        if not payload.get('metadata', {}).get('phased') or payload.get('phases') is None:
+            raise ValidationError(
+                f'Chart {chart!r} is not phased, so it has no per-phase statistics. '
+                'execute(..., phased=True) gives each phase its own centre line and limits.'
+            )
+        phases = payload['phases']
+        if isinstance(phases, dict):
+            available = list(phases)
+            if stratum is None:
+                raise ValidationError(
+                    f'Chart {chart!r} is stratified, so a stratum is required to return one set of '
+                    f'phases.\nAvailable strata: {available}\n'
+                    f'Use result.phase_statistics({chart!r}, stratum={available[0]!r}) '
+                    f'or result.focus({available[0]!r}).phase_statistics({chart!r}).'
+                )
+            if stratum not in phases:
+                raise ValidationError(
+                    f'Stratum {stratum!r} not found in chart {chart!r}.\nAvailable strata: {available}'
+                )
+            return phases[stratum].copy()
+        if stratum is not None:
+            raise ValidationError(
+                f'This result is not stratified, so stratum={stratum!r} does not apply.\n'
+                f'Use result.phase_statistics({chart!r}) with no stratum.'
+            )
+        return phases.copy()
+
     def get_residual(self, residual_type: str) -> pd.Series:
         """
         Get a specific residual series.

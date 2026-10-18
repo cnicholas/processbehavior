@@ -47,7 +47,7 @@ def _requests():
         for by in (None, [], ['FACTOR 1'], FACTORS, [TIME], FACTORS + [TIME]):
             for value in (None, 'R5', 'R2'):
                 for recentered in ((False, True) if value else (False,)):
-                    for phased in ((False, True) if chart in ('X', 'mR') else (False,)):
+                    for phased in (False, True):
                         kwargs = dict(
                             chart=chart, by=by, recentered=recentered, phased=phased,
                         )
@@ -134,6 +134,19 @@ def test_phased_xmr_is_refused_only_when_collapsing(study):
     """`by=[]` collapses factors into the sequence, which is what phasing acts on."""
     assert study.supports_calibration(chart='X', by=[], phased=False) is True
     assert study.supports_calibration(chart='X', by=[], phased=True) is False
+
+
+def test_phased_xbar_s_is_refused(study):
+    """Phased Xbar/S gives each phase its own limits, so one calibration cannot apply (#144)."""
+    assert study.supports_calibration(chart='Xbar', phased=True) is False
+    assert study.supports_calibration(chart='S', phased=True) is False
+    assert study.supports_calibration(chart='Xbar', by=['FACTOR 1', TIME], phased=True) is False
+    with pytest.raises(CalibrationNotSupportedError) as exc:
+        study.execute(chart='Xbar', phased=True, calibration=CAL)
+    assert exc.value.context == 'phased Xbar'
+    with pytest.raises(CalibrationNotSupportedError) as exc:
+        study.execute(chart='S', phased=True, calibration=CAL)
+    assert exc.value.context == 'phased S'
 
 
 def test_companion_does_not_change_the_answer(study):
