@@ -58,6 +58,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`execute()` no longer documents `phased=True` as requiring `by=[]`.** Stratified phasing of X/mR
   (`by=['factor 1'], phased=True`) has been accepted since 75bcdd1; the docstring never caught up. (#144)
 - **The companion mR of a phased X chart reports `single_point_phases`.** Only the solo mR did. (#144)
+- **X/mR lane order honours an ordered pandas Categorical factor.** A stage column with categories
+  `before < after` already ordered the Xbar/S subgroups that way, but the canonical row order sorted
+  the raw labels, so X/mR lanes, phases and `strata` came out `after, before`. The canonical sort now
+  uses an ordered Categorical's category codes; plain string and numeric factors sort as before. (#144)
 
 ## [0.4.0] - 2026-10-14
 
