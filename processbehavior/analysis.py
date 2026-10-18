@@ -211,6 +211,38 @@ def _stratum_row_positions(df: pd.DataFrame, stratify_col: str) -> dict:
     return df.groupby(stratify_col, sort=False, observed=True).indices
 
 
+@dataclass(frozen=True)
+class _GroupFit:
+    """What one group of Xbar/S subgroups (a chart, a stratum or a phase) needs for its limits.
+
+    Built by :meth:`Analysis._fit_xbar_group` from an aggregated subgroup frame; consumed by
+    :meth:`Analysis._apply_xbar_limits` and, for the companion S chart, by
+    :meth:`Analysis._apply_s_limits`.
+    """
+
+    out: pd.DataFrame  # the charted subgroups (n >= 1); N overwritten under n_mode='average'
+    fit: pd.Series  # mask over ``out``: the subgroups with n >= 2 that sigma-hat is estimated from
+    s_bar: float  # mean S over the fitted subgroups
+    n_to_use: str  # 'N' when the Xbar chart's subgroup sizes are constant, else 'n'
+    s_n_to_use: str  # the same decision for the S chart, which has no one-reading subgroups
+    n_max: int
+    n_avg: float | None  # mean fitted n under n_mode='average', else None
+
+
+def _lane_labels(df: pd.DataFrame, collapsed_vars: list[str]) -> np.ndarray:
+    """One display label per row of ``df``: the collapsed columns as ``astype(str)``, joined with ``'_'``.
+
+    Column-wise rather than ``.agg('_'.join, axis=1)``, which ran once per row (1.05s at 1M).
+    Deliberately NOT encode_rsg_series: that renders a datetime as str(Timestamp)
+    ('2024-01-01 00:00:00') where DataFrame.astype(str) gives '2024-01-01'. These are display
+    labels for a chart divider or a phase, not stratum identity, so they keep the astype
+    rendering — do not "unify" the two.
+    """
+    parts = [df[col].astype(str) for col in collapsed_vars]
+    combined = parts[0] if len(parts) == 1 else reduce(lambda left, right: left + '_' + right, parts)
+    return combined.to_numpy()
+
+
 def _stratum_rows(df: pd.DataFrame, positions: dict, stratum) -> pd.DataFrame:
     """The rows of `df` in `stratum`, in `df`'s order (a view; copy before writing)."""
     pos = positions.get(stratum)
@@ -1063,19 +1095,11 @@ class Analysis:
         if not collapsed_vars or df.empty:
             return []
 
-        # Combine column-wise rather than with `.agg('_'.join, axis=1)`, which ran once per
-        # row (1.05s at 1M). Deliberately NOT encode_rsg_series: that renders a datetime as
-        # str(Timestamp) ('2024-01-01 00:00:00') where DataFrame.astype(str) gives
-        # '2024-01-01'. These are display labels for a chart divider, not stratum identity,
-        # so they keep the astype rendering — do not "unify" the two.
-        parts = [df[col].astype(str) for col in collapsed_vars]
-        combined = parts[0] if len(parts) == 1 else reduce(lambda left, right: left + '_' + right, parts)
-
         # Positional comparison against the previous row. The old form built a boolean mask,
         # took df.index[mask], dropped the first entry, then called df.index.get_loc() per
         # boundary — and get_loc is not O(1) on these frames (~1.3ms a call, ~1.8s total).
         # Comparing the array to itself shifted gives the 0-based positions directly.
-        labels = combined.to_numpy()
+        labels = _lane_labels(df, collapsed_vars)
         changed = np.empty(len(labels), dtype=bool)
         changed[0] = False  # the first row is a start, not a boundary
         changed[1:] = labels[1:] != labels[:-1]
@@ -1187,6 +1211,117 @@ class Analysis:
             sigma_multiplier=self.request.n_sigma,
         )
 
+    def _aggregate_subgroups(
+        self,
+        df: pd.DataFrame,
+        groupby_cols: list[str],
+        value_col: str,
+        limits_col: str,
+        ybar_col: str | None = None,
+    ) -> pd.DataFrame:
+        """Aggregate ``df`` into Xbar/S subgroups, one row per ``groupby_cols`` combination.
+
+        Columns: the grouping columns; ``s`` and ``n`` from ``limits_col`` (for an effect
+        residual that is R2, so a reading without one leaves the subgroup one smaller, as VAS
+        treats it); ``xbar`` from ``value_col``; ``s_value`` when the two columns differ; and
+        ``N``, the largest ``n``. With ``ybar_col`` the residual calculator's cached cell mean
+        stands in for the subgroup mean.
+        """
+        agg_dict = {
+            's': pd.NamedAgg(column=limits_col, aggfunc='std'),
+            'mean': pd.NamedAgg(column=value_col, aggfunc='mean'),
+            # N_r counts the values S_r is computed from: a residual missing on a row (R2's
+            # first value) leaves that subgroup one smaller, as VAS treats it.
+            'n': pd.NamedAgg(column=limits_col, aggfunc='count'),
+        }
+        if limits_col != value_col:
+            agg_dict['s_value'] = pd.NamedAgg(column=value_col, aggfunc='std')
+        out = df.groupby(groupby_cols, as_index=False, observed=True).agg(**agg_dict)
+
+        if ybar_col and ybar_col in df.columns:
+            # Get unique Ybar values per group
+            ybar_by_group = df.groupby(groupby_cols, observed=True)[ybar_col].first().reset_index()
+            out = out.merge(ybar_by_group, on=groupby_cols, how='left')
+            out['xbar'] = out[ybar_col]
+            out = out.drop(columns=[ybar_col, 'mean'], errors='ignore')
+        else:
+            out = out.rename(columns={'mean': 'xbar'})
+
+        out['N'] = out['n'].max()
+        return out
+
+    def _fit_xbar_group(self, out: pd.DataFrame) -> _GroupFit | None:
+        """Decide which subgroups of ``out`` are charted and which estimate sigma-hat.
+
+        Every subgroup with a value is charted. A one-reading subgroup has no S, so sigma-hat
+        comes from the subgroups with n >= 2, and its limits are center ± 3·sigma-hat (10-12
+        manual Eqs 11-16, 11-17 with N_r = 1), as VAS draws them; the companion S chart keeps
+        only n >= 2. n counts the limits column, so a reading without one (R2's first value) is
+        not charted, as in VAS. Returns None when no subgroup has n >= 2; the caller decides
+        whether that raises (one chart) or is recorded (a stratum, a phase). Under
+        ``n_mode='average'`` the ``N`` column becomes the mean fitted n and both charts take
+        the constant-N path (Eq 11-20).
+        """
+        out = out[out['n'].ge(1)].copy()  # n=0: every charted value missing
+        fit = out['n'].ge(2)
+        if not fit.any():
+            return None
+
+        s_bar = out.loc[fit, 's'].mean()
+        # Constant or variable subgroup sizes: on the Xbar chart, and on the S chart, which has
+        # no one-reading subgroups
+        n_to_use, n_max = self._determine_n_to_use(out)
+        s_n_to_use, _ = self._determine_n_to_use(out[fit])
+
+        n_avg = None
+        if self.request.n_mode == 'average':
+            n_avg = out.loc[fit, 'n'].mean()
+            out['N'] = n_avg  # overwrite N column with average
+            n_to_use = s_n_to_use = 'N'  # force constant-N path
+        return _GroupFit(
+            out=out, fit=fit, s_bar=s_bar, n_to_use=n_to_use, s_n_to_use=s_n_to_use, n_max=n_max, n_avg=n_avg
+        )
+
+    def _apply_xbar_limits(self, out: pd.DataFrame, center: float, group: _GroupFit) -> pd.DataFrame:
+        """Centre, natural process limits, beyond-limits flag and rounding for one Xbar group."""
+        out['center'] = center
+        out[['lpl', 'upl']] = self._xbar_limits(out, group.s_bar, group.n_to_use)
+        out = self._add_beyond_limits_flag(out, value_col='xbar')
+        return out.round(self.spec.round_to)
+
+    def _apply_s_limits(self, out: pd.DataFrame, s_bar: float, n_to_use: str) -> pd.DataFrame:
+        """Centre (S-bar), B3/B4 limits per row, beyond-limits flag and rounding for one S group."""
+        out['center'] = s_bar
+        out[['lpl', 'upl']] = calculate_limits_vectorized(
+            'S',
+            sd=out['center'],
+            N=out[n_to_use],
+            sigma_multiplier=self.request.n_sigma,
+        )
+        out = self._add_beyond_limits_flag(out, value_col='s')
+        return out.round(self.spec.round_to)
+
+    def _subgroup_label_column(self, out: pd.DataFrame, groupby_cols: list[str]) -> tuple[pd.DataFrame, str | None]:
+        """Name the subgroup label column of an Xbar/S frame, building it when it spans several columns.
+
+        An explicit single ``by`` keeps the factor's own column (cast to str so Plotly treats
+        coded factors as categories); several ``by`` columns join into ``subgroup``; the
+        default grouping joins into ``group``; a single default column is used as is.
+        """
+        by = self.request.by
+        if by is not None and len(by) > 0:
+            if len(by) == 1:
+                out[groupby_cols[0]] = out[groupby_cols[0]].astype(str)
+                return out, groupby_cols[0]
+            out['subgroup'] = out[groupby_cols].astype(str).agg('_'.join, axis=1)
+            return out, 'subgroup'
+        if len(groupby_cols) > 1:
+            out['group'] = out[groupby_cols].astype(str).agg('_'.join, axis=1)
+            return out, 'group'
+        if groupby_cols:
+            return out, groupby_cols[0]
+        return out, None
+
     def _calculate_xbar(  # noqa: C901
         self, value_col: str | None = None, _return_intermediates: bool = False
     ) -> dict:
@@ -1269,81 +1404,37 @@ class Analysis:
                 out_dict['s_value'] = [df[value_col].std()]
             out = pd.DataFrame(out_dict)
         else:
-            # Group by specified columns
-            agg_dict = {
-                's': pd.NamedAgg(column=_limits_col, aggfunc='std'),
-                'mean': pd.NamedAgg(column=value_col, aggfunc='mean'),
-                # N_r counts the values S_r is computed from: a residual missing on a row (R2's
-                # first value) leaves that subgroup one smaller, as VAS treats it.
-                'n': pd.NamedAgg(column=_limits_col, aggfunc='count'),
-            }
-            if _limits_col != value_col:
-                agg_dict['s_value'] = pd.NamedAgg(column=value_col, aggfunc='std')
-            out = df.groupby(groupby_cols, as_index=False, observed=True).agg(**agg_dict)
+            out = self._aggregate_subgroups(df, groupby_cols, value_col, _limits_col, ybar_col)
 
-            # If we have pre-calculated Ybar, use it for xbar values
-            if ybar_col and ybar_col in df.columns:
-                # Get unique Ybar values per group
-                ybar_by_group = df.groupby(groupby_cols, observed=True)[ybar_col].first().reset_index()
-                out = out.merge(ybar_by_group, on=groupby_cols, how='left')
-                out['xbar'] = out[ybar_col]
-                out = out.drop(columns=[ybar_col, 'mean'], errors='ignore')
-            else:
-                # Rename columns for consistency: mean→xbar (values)
-                out = out.rename(columns={'mean': 'xbar'})
-
-            _N = out['n'].max()
-            out['N'] = _N
-
-        # Every subgroup with a value is charted. A one-reading subgroup has no S, so sigma-hat
-        # comes from the subgroups with n >= 2, and its limits are center ± 3·sigma-hat (10-1
-        # manual Eqs 11-16/17 with N_r = 1), as VAS draws them; the companion S chart keeps only
-        # n >= 2. n counts the limits column, so a reading without one (R2's first value) is not
-        # charted, as in VAS. Xbar stays in valid_charts on ADS 2 — the chart family is valid
-        # there (Xbar of a residual, or of a pooled subgroup, computes fine); it is only charting
-        # *the response* that has nothing to subgroup. See Study._response_pair_problem, which
-        # reports that in advance.
-        out = out[out['n'].ge(1)].copy()  # n=0: every charted value missing
-        fit = out['n'].ge(2)
-        if not fit.any():
+        # Which subgroups are charted and which estimate sigma-hat: _fit_xbar_group. Xbar stays
+        # in valid_charts on ADS 2 — the chart family is valid there (Xbar of a residual, or of
+        # a pooled subgroup, computes fine); it is only charting *the response* that has nothing
+        # to subgroup. See Study._response_pair_problem, which reports that in advance.
+        group = self._fit_xbar_group(out)
+        if group is None:
             sds = self.ads._ads_result.sds if self.ads._ads_result else '?'
             _raise_no_replicated_subgroups('Xbar', sds)
+        out, fit = group.out, group.fit
+        _S, n_to_use, s_n_to_use = group.s_bar, group.n_to_use, group.s_n_to_use
+        n_max, n_avg = group.n_max, group.n_avg
+        n_mode = self.request.n_mode
 
         # Use Bishop VAS grand mean (mean of cell means on value_col) as center
         _Xbar = _Ybar
-        _S = out.loc[fit, 's'].mean()
         _N = out.loc[fit, 'n'].max()
-        if 'N' not in out.columns:
-            out['N'] = _N
-
-        # Determine if subgroup sizes are constant or variable: on the Xbar chart, and on the
-        # S chart, which has no one-reading subgroups
-        n_to_use, n_max = self._determine_n_to_use(out)
-        s_n_to_use, _ = self._determine_n_to_use(out[fit])
-
-        # Override n_to_use if n_mode="average"
-        n_mode = self.request.n_mode
-        n_avg = None
-        if n_mode == 'average':
-            n_avg = out.loc[fit, 'n'].mean()
-            out['N'] = n_avg  # overwrite N column with average
-            n_to_use = s_n_to_use = 'N'  # force constant-N path
 
         # CALCULATE XBAR
-        xbar = out.copy()
         if self.calibration is not None:
             # Standards-given Xbar: center=mean, mean ± n_sigma·sigma/√N (per-row N).
+            xbar = out.copy()
             xbar[['center', 'lpl', 'upl']] = xbar.apply(
                 lambda row: self._calibrated_row('Xbar', N=row[n_to_use]),
                 axis=1,
             )
+            xbar = self._add_beyond_limits_flag(xbar, value_col='xbar')
+            xbar = xbar.round(spec.round_to)
         else:
-            xbar['center'] = _Xbar  # Add center column for Xbar chart
-            xbar[['lpl', 'upl']] = self._xbar_limits(xbar, _S, n_to_use)
-
-        # Detect beyond limits signals
-        xbar = self._add_beyond_limits_flag(xbar, value_col='xbar')
-        xbar = xbar.round(spec.round_to)
+            xbar = self._apply_xbar_limits(out.copy(), _Xbar, group)
 
         _center_stat = xbar['center'].iloc[0] if self.calibration is not None else _Xbar
         statistics['center'] = round(_center_stat, spec.round_to)
@@ -1357,27 +1448,7 @@ class Analysis:
             statistics['upl'] = None
             statistics['limits_vary'] = True
 
-        # Determine the grouping column for output
-        by = self.request.by
-        if by is not None and len(by) > 0:
-            # Explicit by list
-            if len(by) == 1:
-                # Single factor: preserve original column name for axis labeling.
-                # Cast to string so Plotly treats coded factors (e.g., 1,2,3) as categories.
-                xbar[groupby_cols[0]] = xbar[groupby_cols[0]].astype(str)
-                group_col = groupby_cols[0]
-            else:
-                xbar['subgroup'] = xbar[groupby_cols].astype(str).agg('_'.join, axis=1)
-                group_col = 'subgroup'
-        elif len(groupby_cols) > 1:
-            # by=None - create 'group' from multiple columns (original behavior)
-            xbar['group'] = xbar[groupby_cols].astype(str).agg('_'.join, axis=1)
-            group_col = 'group'
-        elif groupby_cols:
-            # Single groupby column
-            group_col = groupby_cols[0]
-        else:
-            group_col = None
+        xbar, group_col = self._subgroup_label_column(xbar, groupby_cols)
 
         # n is each subgroup's own count from the aggregation above: the size its limits
         # used. A pooled subgroup spans several cells, so no per-cell size could stand in (#143).
@@ -1470,46 +1541,21 @@ class Analysis:
             # Group by time within this stratum
             # Note: we always compute mean directly from filtered data, NOT using
             # Ybar_t (which is the marginal time mean across ALL factors).
-            agg_dict = {
-                's': pd.NamedAgg(column=_limits_col, aggfunc='std'),
-                'xbar': pd.NamedAgg(column=value_col, aggfunc='mean'),
-                'n': pd.NamedAgg(column=_limits_col, aggfunc='count'),
-            }
-            if _limits_col != value_col:
-                agg_dict['s_value'] = pd.NamedAgg(column=value_col, aggfunc='std')
-            out = sdf.groupby(groupby_cols, as_index=False, observed=True).agg(**agg_dict)
-
-            out['N'] = out['n'].max()
+            out = self._aggregate_subgroups(sdf, groupby_cols, value_col, _limits_col)
 
             # Centre first: Bishop's unweighted mean of the subgroup means, every
             # subgroup counted once — a one-observation subgroup is still a cell.
             _Xbar = out['xbar'].mean()
 
             # Every subgroup with a value is charted; sigma-hat comes from those with n >= 2
-            # (see _calculate_xbar)
-            out = out[out['n'].ge(1)].copy()
-            fit = out['n'].ge(2)
-            if not fit.any():
+            # (see _fit_xbar_group)
+            group = self._fit_xbar_group(out)
+            if group is None:
                 insufficient_strata.append(stratum)
                 continue
-
-            # Per-stratum statistics
-            _S = out.loc[fit, 's'].mean()
-            n_to_use, n_max = self._determine_n_to_use(out)
-            s_n_to_use, _ = self._determine_n_to_use(out[fit])
-
-            n_mode = self.request.n_mode
-            n_avg = None
-            if n_mode == 'average':
-                n_avg = out.loc[fit, 'n'].mean()
-                out['N'] = n_avg
-                n_to_use = s_n_to_use = 'N'
-
-            out['center'] = _Xbar
-            out[['lpl', 'upl']] = self._xbar_limits(out, _S, n_to_use)
-
-            out = self._add_beyond_limits_flag(out, value_col='xbar')
-            out = out.round(spec.round_to)
+            _S, n_to_use, s_n_to_use = group.s_bar, group.n_to_use, group.s_n_to_use
+            n_max, n_avg = group.n_max, group.n_avg
+            out = self._apply_xbar_limits(group.out, _Xbar, group)
 
             # Add stratum identifier
             out[stratify_col] = stratum
@@ -1678,16 +1724,7 @@ class Analysis:
                 if groupby_cols:
                     out[groupby_cols[0]] = out[groupby_cols[0]].astype(str)
 
-            out['center'] = _S
-            out[['lpl', 'upl']] = calculate_limits_vectorized(
-                'S',
-                sd=out['center'],
-                N=out[n_to_use],
-                sigma_multiplier=self.request.n_sigma,
-            )
-
-            out = self._add_beyond_limits_flag(out, value_col='s')
-            out = out.round(spec.round_to)
+            out = self._apply_s_limits(out, _S, n_to_use)
             out[stratify_col] = stratum
 
             all_s_frames.append(out)
@@ -1833,22 +1870,9 @@ class Analysis:
                 out['N'] = n_avg
                 n_to_use = 'N'
 
-            # Determine group_col
-            by = self.request.by
-            if by is not None and len(by) > 0:
-                if len(by) == 1:
-                    out[groupby_cols[0]] = out[groupby_cols[0]].astype(str)
-                    group_col = groupby_cols[0]
-                else:
-                    out['subgroup'] = out[groupby_cols].astype(str).agg('_'.join, axis=1)
-                    group_col = 'subgroup'
-            elif len(groupby_cols) > 1:
-                out['group'] = out[groupby_cols].astype(str).agg('_'.join, axis=1)
-                group_col = 'group'
-            elif groupby_cols:
-                group_col = groupby_cols[0]
-            else:
-                group_col = None
+        # Label the subgroups. Xbar labelled its own copy; the shared intermediate frame is
+        # still unlabelled, so the companion path labels it here too.
+        out, group_col = self._subgroup_label_column(out, groupby_cols)
 
         # Calculate S chart (common path for both precomputed and independent)
         out['groups'] = out['n'].count()
@@ -1860,41 +1884,15 @@ class Analysis:
                 lambda row: self._calibrated_row('S', N=row[n_to_use]),
                 axis=1,
             )
+            out = self._add_beyond_limits_flag(out, value_col='s')
+            out = out.round(spec.round_to)
         else:
-            out['center'] = _S
-            # Add limits columns
-            out[['lpl', 'upl']] = calculate_limits_vectorized(
-                'S',
-                sd=out['center'],
-                N=out[n_to_use],
-                sigma_multiplier=self.request.n_sigma,
-            )
-
-        # Detect beyond limits signals
-        out = self._add_beyond_limits_flag(out, value_col='s')
-
-        # Apply grouping column transformation if needed and not already done
-        if _precomputed is None:
-            # Already handled in independent path above
-            pass
-        else:
-            # For precomputed path, apply group_col transformation
-            by = self.request.by
-            if by is not None and len(by) > 0 and 'subgroup' not in out.columns:
-                if len(by) == 1:
-                    out[groupby_cols[0]] = out[groupby_cols[0]].astype(str)
-                    group_col = groupby_cols[0]
-                else:
-                    out['subgroup'] = out[groupby_cols].astype(str).agg('_'.join, axis=1)
-                    group_col = 'subgroup'
-            elif len(groupby_cols) > 1 and group_col == 'group' and 'group' not in out.columns:
-                out['group'] = out[groupby_cols].astype(str).agg('_'.join, axis=1)
+            out = self._apply_s_limits(out, _S, n_to_use)
 
         # n: each subgroup's own count, as on Xbar (#143).
         cols_to_keep = [group_col, 'n', 's', 'center', 'lpl', 'upl', 'beyond_limits']
         cols_to_keep = [c for c in cols_to_keep if c in out.columns]
         out = out[cols_to_keep]
-        out = out.round(spec.round_to)
 
         # Build statistics
         _S_stat = out['center'].iloc[0] if len(out) > 0 else None
