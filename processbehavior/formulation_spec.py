@@ -46,6 +46,11 @@ class FormulationSpec:
         Delimiter for multi-variable grouping. Default '_'.
     unit_of_analysis : str or None
         The fundamental entity being measured (informational only).
+    received_order : bool
+        True when ``time_var`` is the ``RECEIVED_ORDER_COL`` that formulate()
+        added because no time, factors or plan were given: the values are
+        charted in the order received. Informational (the design report says
+        so); the analysis is the ordinary single-stream one.
 
     Raises
     ------
@@ -72,6 +77,7 @@ class FormulationSpec:
     rsg_var_name: str = 'rsg'
     rsg_var_delim: str = '_'
     unit_of_analysis: str | None = None
+    received_order: bool = False
 
     def __post_init__(self):
         if self.response_var is None:

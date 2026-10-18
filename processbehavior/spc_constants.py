@@ -603,6 +603,16 @@ def detect_beyond_limits(x: float, lpl: float, upl: float) -> int:
 
 
 # ============================================================================
+# Received-order time column
+# ============================================================================
+
+# The time column formulate() adds when a study names no time, factors or plan: the
+# values numbered 1..N in the order received (the same numbers as obs_id). The study is
+# then the single stream formulate(response, time=RECEIVED_ORDER_COL) would give (#129).
+RECEIVED_ORDER_COL = 'Observation'
+
+
+# ============================================================================
 # Chart Name Constants
 # ============================================================================
 
