@@ -19,18 +19,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Minitab's staged Xbar-S chart. Residual values, calibrations and `by=[time]` are refused with
   messages that say what to use instead; a phase with no replicated subgroup keeps its points without
   limits and is named in `metadata['insufficient_phases']`. (#144)
-- **`result.phase_statistics(chart)`.** One row per phase of a phased Xbar/S chart: `phase`,
-  `subgroups`, `N`, `center`, `s_bar`, `sigma_hat`, `lpl`, `upl`. (#144)
+- **`result.phase_statistics(chart, stratum=None)`.** One row per phase of a phased chart. Xbar/S:
+  `phase`, `subgroups`, `N`, `center`, `s_bar`, `sigma_hat`, `lpl`, `upl`. X/mR: `phase`, `points`,
+  `center`, `mR_bar`, `lpl`, `upl`, per stratum on a stratified chart (`stratum=`, or through
+  `focus()`). (#144)
 
 ### Changed
-- **Phased Xbar/S chart data and `chart_table` carry a `phase` column** after the subgroup label, and
-  the metadata carries `phase_by`, `lane_boundaries`, `single_point_phases` and `insufficient_phases`.
-  `n_avg` is not reported on a phased chart, whose `n_mode='average'` is applied per phase; the
-  per-phase mean size is `phase_statistics(chart)['N']`. (#144)
+- **Phased chart data and `chart_table` carry a `phase` column** (the lane label) after the subgroup
+  label, on X/mR as well as Xbar/S. Phased Xbar/S metadata carries `phase_by`, `lane_boundaries`,
+  `single_point_phases` and `insufficient_phases`; `n_avg` is not reported on a phased chart, whose
+  `n_mode='average'` is applied per phase, so the per-phase mean size is `phase_statistics(chart)['N']`.
+  (#144)
 - **Lane dividers on an Xbar or S chart are labelled with the phase.** These charts have no time
   column and so no cell band under the axis, which is where X charts name their lanes. (#144)
 
 ### Fixed
+- **The companion mR of a phased X chart reports `single_point_phases`.** Only the solo mR did. (#144)
 - **`execute()` no longer documents `phased=True` as requiring `by=[]`.** Stratified phasing of X/mR
   (`by=['factor 1'], phased=True`) has been accepted since 75bcdd1; the docstring never caught up. (#144)
 - **Xbar/S `chart_table` keeps the subgroup label and `n` on every `by=`.** With a `by=` other than

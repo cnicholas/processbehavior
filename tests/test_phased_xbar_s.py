@@ -411,11 +411,11 @@ class TestContracts:
             table = result.chart_table(chart)
             assert list(table.columns) == ['subgroup', 'phase', 'n', 'value', 'center', 'lpl', 'upl', 'signal']
 
-    def test_phase_statistics_refuses_unphased_and_xmr(self, sds1_study):
+    def test_phase_statistics_refuses_unphased(self, sds1_study):
         with pytest.raises(ValidationError, match='not phased'):
             sds1_study.execute(chart='Xbar').phase_statistics('Xbar')
-        with pytest.raises(ValidationError, match='phased Xbar and S'):
-            sds1_study.execute(chart='X', by=[], phased=True).phase_statistics('X')
+        with pytest.raises(ValidationError, match='does not apply'):
+            sds1_study.execute(chart='Xbar', phased=True).phase_statistics('Xbar', stratum='1_1')
 
     def test_detect_signals_rule_1_against_each_phase(self, reference_studies):
         result = reference_studies['PM SDS 1'].execute(chart='Xbar', phased=True, companion=True)

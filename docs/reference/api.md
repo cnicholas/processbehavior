@@ -330,17 +330,19 @@ directly, and is not a top-level export.)
 ### Phases
 
 ```python
-result.phase_statistics(chart)   # -> DataFrame, one row per phase (phased Xbar/S)
+result.phase_statistics(chart, stratum=None)   # -> DataFrame, one row per phase
 ```
 
-A chart executed with `phased=True` gives each phase — one combination of the grouping
-factors, a contiguous run of subgroups in time order — its own center line and limits.
-On Xbar/S the chart data gains a `phase` column (the lane label) next to the subgroup
-label, and `chart_table` shows it. `phase_statistics(chart)` returns the numbers behind
-the stepped lines: `phase`, `subgroups`, `N` (the subgroup size the phase's limits assume;
-`NaN` when sizes vary within it), `center`, `s_bar`, `sigma_hat`, `lpl`, `upl` (`NaN` when
-the limits step within the phase). It raises `ValidationError` on a chart that is not
-phased, and on phased X/mR, whose per-phase values are on each row of `get_chart()`.
+A chart executed with `phased=True` gives each phase — one factor combination, a
+contiguous run of points in time order — its own center line and limits. The chart data
+gains a `phase` column (the lane label) next to the subgroup label, and `chart_table`
+shows it. `phase_statistics(chart)` returns the numbers behind the stepped lines. On
+Xbar/S: `phase`, `subgroups`, `N` (the subgroup size the phase's limits assume; `NaN`
+when sizes vary within it), `center`, `s_bar`, `sigma_hat`, `lpl`, `upl` (`NaN` when the
+limits step within the phase). On X/mR: `phase`, `points`, `center`, `mR_bar`, `lpl`,
+`upl`. A stratified phased X/mR chart (`by=['factor 1'], phased=True`) has phases per
+stratum: pass `stratum=`, or call it on `focus(stratum)`. It raises `ValidationError` on a
+chart that is not phased.
 
 Phased metadata carries `phased=True`, `run_rules_applicable=False`, `phase_by` (the
 factors a phase is one combination of), `lane_boundaries` (the divider positions),
