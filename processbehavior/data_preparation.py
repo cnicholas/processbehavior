@@ -529,8 +529,19 @@ class DataPreparation:
         else:
             out['cell_key'] = out['rsg_key']
 
-        # 3. Sort by canonical order: (cell_key, obs_id)
-        out = out.sort_values(['cell_key', 'obs_id'], kind='stable')
+        # 3. Sort by canonical order: (cell_key, obs_id). An ordered Categorical factor sorts by
+        #    its category order rather than its labels, so a stage labelled before < after keeps
+        #    that order on every chart and in every stratum list, not only in the Xbar/S
+        #    aggregation (issue #144). Every other column sorts as the tuple of its values,
+        #    exactly as before: the parallel key exists only when an ordered Categorical is present.
+        key_cols = (k_vars + [t]) if (k_vars and t) else ([t] if t else list(k_vars))
+        ordered_cols = {c for c in key_cols if isinstance(out[c].dtype, pd.CategoricalDtype) and out[c].cat.ordered}
+        if ordered_cols:
+            parts = [out[c].cat.codes.astype(object) if c in ordered_cols else out[c].astype(object) for c in key_cols]
+            out['_order_key'] = list(map(tuple, pd.concat(parts, axis=1).to_numpy()))
+            out = out.sort_values(['_order_key', 'obs_id'], kind='stable').drop(columns=['_order_key'])
+        else:
+            out = out.sort_values(['cell_key', 'obs_id'], kind='stable')
 
         # 4. Assign sort_key AFTER sorting (canonical ordering 0..N-1)
         out['sort_key'] = np.arange(len(out), dtype=np.int64)
