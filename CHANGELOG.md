@@ -23,6 +23,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `phase`, `subgroups`, `N`, `center`, `s_bar`, `sigma_hat`, `lpl`, `upl`. X/mR: `phase`, `points`,
   `center`, `mR_bar`, `lpl`, `upl`, per stratum on a stratified chart (`stratum=`, or through
   `focus()`). (#144)
+- **A bare response is charted in the order received.** `formulate(response=...)` with no time,
+  factors or plan used to be refused. The values are now numbered 1..N in an `Observation` column
+  (the same numbers as `obs_id`) and the study is exactly the one `time='Observation'` gives: a
+  single stream, ADS 2, X/mR, sigma from N − 1 moving ranges. An NA response keeps its place as an
+  empty cell. The design report adds `Time: received order (no time column given)`. If the data
+  already has an `Observation` column, formulate asks you to pass it as `time=` or rename it (#129).
 
 ### Changed
 - **Phased chart data and `chart_table` carry a `phase` column** (the lane label) after the subgroup
@@ -32,6 +38,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (#144)
 - **Lane dividers on an Xbar or S chart are labelled with the phase.** These charts have no time
   column and so no cell band under the axis, which is where X charts name their lanes. (#144)
+- **Xbar and S chart data carry `n`.** `get_chart('Xbar')` / `get_chart('S')`, and the Excel chart
+  sheets, gain an `n` column after the subgroup label. Unstratified Xbar/S metadata names the label
+  column as `group_col` (#143).
+- **`formulate(response=..., factors=[])` with no time is the same study.** It used to treat the
+  whole column as one replicated cell: ADS 1, a recommended one-point Xbar chart, the "within-cell
+  replication" series-length line, and an X chart plotted against the response values. Its chart
+  tables now start with `Observation` (#129).
 
 ### Fixed
 - **The companion mR of a phased X chart reports `single_point_phases`.** Only the solo mR did. (#144)
@@ -49,11 +62,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (R1, R3, R4, R5) in a design with singletons: the stream's first cell, where R2 is undefined at
   the first value, showed its cell size, not the one-fewer values its S and limits use. Limits,
   centres and statistics are unchanged (#143).
-
-### Changed
-- **Xbar and S chart data carry `n`.** `get_chart('Xbar')` / `get_chart('S')`, and the Excel chart
-  sheets, gain an `n` column after the subgroup label. Unstratified Xbar/S metadata names the label
-  column as `group_col` (#143).
 
 ## [0.4.0] - 2026-10-14
 
