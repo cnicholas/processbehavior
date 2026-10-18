@@ -132,9 +132,9 @@ class CalibrationNotSupportedError(ValidationError):
     """A calibration was supplied on a chart path that cannot apply it.
 
     Calibration is applied on global and grouped (single-chart) Xbar/S/X/mR paths.
-    Stratified paths (one chart per stratum) and phased X/mR are a documented
-    follow-up, so a calibration passed to one of those is refused rather than
-    silently ignored.
+    Stratified paths (one chart per stratum) and phased charts (X/mR and Xbar/S)
+    are a documented follow-up, so a calibration passed to one of those is refused
+    rather than silently ignored.
 
     Ask *before* executing with :meth:`Study.supports_calibration`, which answers
     the same question without raising — preferable to catching this, and far
@@ -146,7 +146,7 @@ class CalibrationNotSupportedError(ValidationError):
     Attributes
     ----------
     context : str | None
-        The unsupported path, e.g. ``'stratified Xbar'`` or ``'phased X/mR'``.
+        The unsupported path, e.g. ``'stratified Xbar'``, ``'phased X/mR'`` or ``'phased Xbar'``.
 
     Examples
     --------

@@ -42,6 +42,7 @@ from .formulation_spec import ChartRequest, FormulationSpec
 from .residual_calculator import calculate_r6_residuals, resolve_r6_groupby
 from .spc_constants import (
     REQUEST_RESIDUALS,
+    c4,
     calculate_limits,
     calculate_limits_vectorized,
     calibrated_limits,
@@ -705,7 +706,7 @@ class Analysis:
         """The path description a calibration would be refused for, or None if it applies.
 
         Calibration is applied on global and grouped (single-chart) Xbar/S/X/mR paths.
-        Stratified paths and phased X/mR are a documented follow-up.
+        Stratified paths and phased charts (X/mR and Xbar/S) are a documented follow-up.
 
         This is the predicate behind :meth:`Study.supports_calibration`. It asks the
         same two resolvers the chart code asks — :meth:`_resolve_by_grouping` for
@@ -724,7 +725,11 @@ class Analysis:
 
         if chart_type in ('Xbar', 'S'):
             _, _, stratify_by = self._resolve_by_grouping(value_col)
-            return f'stratified {chart_type}' if stratify_by else None
+            if stratify_by:
+                return f'stratified {chart_type}'
+            if self.request.phased:
+                return f'phased {chart_type}'
+            return None
 
         if chart_type in ('X', 'mR'):
             stratify_by, collapsed_factors = self._resolve_xmr_stratification()
@@ -1361,6 +1366,9 @@ class Analysis:
         # Resolve grouping based on `by` parameter
         groupby_cols, ybar_col, stratify_by = self._resolve_by_grouping(value_col)
 
+        if self.request.phased:
+            return {'Xbar': self._calculate_xbar_s_phased(value_col)['Xbar']}
+
         # Stratified path: separate chart per factor combination
         if stratify_by:
             self._reject_calibration('stratified Xbar')
@@ -1821,6 +1829,9 @@ class Analysis:
             # Resolve grouping based on `by` parameter
             groupby_cols, _, stratify_by = self._resolve_by_grouping(value_col)
 
+            if self.request.phased:
+                return {'S': self._calculate_xbar_s_phased(value_col)['S']}
+
             # Stratified path: separate chart per factor combination
             if stratify_by:
                 self._reject_calibration('stratified S')
@@ -1942,6 +1953,9 @@ class Analysis:
         dict
             Combined chart data: {'Xbar': {...}, 'S': {...}}
         """
+        if self.request.phased:
+            return self._calculate_xbar_s_phased(value_col)
+
         # Calculate Xbar with intermediates for S reuse
         xbar_result = self._calculate_xbar(value_col, _return_intermediates=True)
 
@@ -1963,6 +1977,158 @@ class Analysis:
 
         # Combine results
         return {**xbar_result, **s_result}
+
+    def _calculate_xbar_s_phased(self, value_col: str | None = None) -> dict[str, ChartPayload]:
+        """Xbar and S with a centre line and limits per phase (issue #144).
+
+        A phase is one combination of the grouping factors: a contiguous run of subgroups in
+        time order on the stage-by-stage layout that ``by=None`` already draws. Each phase is
+        computed as the per-condition chart of ``by=[time]`` computes one stratum — the
+        unweighted mean of its subgroup means as centre (10-12 manual Eq 10-9 within the
+        phase), its own S-bar and sigma-hat (Eq 11-5), its own limits (Eqs 11-8, 11-9, 11-16,
+        11-17) — and the phases are concatenated in display order with the stepped columns.
+        Nothing is pooled across phases: Dr. Bishop (2026-10-18), "treat each stage separately
+        as if it were a single analysis".
+
+        With factors besides the phase factors pooled into the subgroup (``by=['stage', time]``
+        in a study with more factors) the subgroups are the pooled ones and the centre is the
+        mean of their averages, per Bishop: "ignore the [other factor] completely and simply
+        group the data by [stage] and Time". That equals re-formulating the study without the
+        pooled factors and charting its per-condition charts.
+
+        Solo Xbar, solo S and the companion pair all come through here, so they agree by
+        construction. Residual values are refused in validation; a calibration here.
+        """
+        spec = self.spec
+        if value_col is None:
+            value_col = spec.response_var
+        self._reject_calibration(f'phased {self.analysis_type}')
+
+        df = self._source_frame().copy()
+        groupby_cols, _, _ = self._resolve_by_grouping(value_col)
+        time_var = spec.time_var
+        phase_by = [c for c in groupby_cols if c != time_var]
+        limits_col = self._resolve_limits_column(value_col, df)
+
+        # The subgroup means are computed from the data, as the per-condition charts do, not
+        # read from the cached cell means: a pooled subgroup has no cached mean anyway.
+        out = self._aggregate_subgroups(df, groupby_cols, value_col, limits_col)
+        out = out[out['n'].ge(1)].reset_index(drop=True)
+        lane_boundaries = self._calculate_lane_boundaries(out, phase_by)
+        labels = _lane_labels(out, phase_by)
+        starts = [0] + [b['position'] for b in lane_boundaries]
+        ends = starts[1:] + [len(out)]
+
+        xbar_frames: list[pd.DataFrame] = []
+        s_frames: list[pd.DataFrame] = []
+        xbar_rows: list[dict] = []
+        s_rows: list[dict] = []
+        insufficient: list[str] = []
+        single_point = 0
+        for start, end in zip(starts, ends, strict=True):
+            label = str(labels[start])
+            segment = out.iloc[start:end].copy()
+            segment['N'] = segment['n'].max()  # this phase's own N, as a stratum's would be
+            center = segment['xbar'].mean()
+            group = self._fit_xbar_group(segment)
+            if group is None:
+                # No replicated subgroup: the points stay, the limits are NaN (so nothing is
+                # flagged) and the phase is named in the metadata.
+                segment[['center', 'lpl', 'upl']] = np.nan
+                segment['beyond_limits'] = 0
+                segment['phase'] = label
+                xbar_frames.append(segment.round(spec.round_to))
+                insufficient.append(label)
+                xbar_rows.append({'phase': label, 'subgroups': len(segment)})
+                continue
+
+            xbar_seg = self._apply_xbar_limits(group.out, center, group)
+            xbar_seg['phase'] = label
+            xbar_frames.append(xbar_seg)
+            single_point += int(len(xbar_seg) == 1)
+
+            # The S chart works from the rounded Xbar slice with n >= 2, as the stratified
+            # companion path does, so the two S charts agree to the last digit.
+            s_seg = xbar_seg[xbar_seg['n'].ge(2)].drop(columns=['s_value'], errors='ignore').copy()
+            s_seg = self._apply_s_limits(s_seg, group.s_bar, group.s_n_to_use)
+            s_seg['phase'] = label
+            s_frames.append(s_seg)
+
+            n_used = group.out['N'].iloc[0]  # n_avg under n_mode='average', else the phase's N
+            sigma_hat = (
+                subgroup_sigma_hat(group.out.loc[group.fit, 's'], group.out.loc[group.fit, 'n'])
+                if group.n_to_use == 'n'
+                else group.s_bar / c4(int(n_used))
+            )
+            common = {'center': center, 's_bar': group.s_bar, 'sigma_hat': sigma_hat}
+            xbar_rows.append(
+                {
+                    'phase': label,
+                    'subgroups': len(xbar_seg),
+                    **self._phase_limits(xbar_seg, group.n_to_use, group.n_avg),
+                    **common,
+                }
+            )
+            s_rows.append(
+                {
+                    'phase': label,
+                    'subgroups': len(s_seg),
+                    **self._phase_limits(s_seg, group.s_n_to_use, group.n_avg),
+                    **{**common, 'center': group.s_bar},
+                }
+            )
+
+        if not s_frames:
+            sds = self.ads._ads_result.sds if self.ads._ads_result else '?'
+            _raise_no_replicated_subgroups(self.analysis_type, sds)
+
+        xbar_out = pd.concat(xbar_frames, ignore_index=True)
+        xbar_out, group_col = self._subgroup_label_column(xbar_out, groupby_cols)
+        s_out = pd.concat(s_frames, ignore_index=True)
+        s_out, _ = self._subgroup_label_column(s_out, groupby_cols)
+        s_lane_boundaries = self._calculate_lane_boundaries(s_out, ['phase'])
+
+        phase_cols = ['phase', 'subgroups', 'N', 'center', 's_bar', 'sigma_hat', 'lpl', 'upl']
+        statistics = {'N': None, 'center': None, 'lpl': None, 'upl': None, 'limits_vary': True}
+
+        def payload(chart: str, value_name: str, frame: pd.DataFrame, lanes: list[dict], rows: list[dict]):
+            cols = [group_col, 'phase', 'n', value_name, 'center', 'lpl', 'upl', 'beyond_limits']
+            phases = pd.DataFrame(rows, columns=phase_cols).round(spec.round_to)
+            return {
+                'data': frame[[c for c in cols if c in frame.columns]],
+                'statistics': dict(statistics),
+                'metadata': {
+                    'chart_type': chart,
+                    'value_col': value_name,
+                    'center_col': 'center',
+                    'n_sigma': self.request.n_sigma,
+                    'n_mode': self.request.n_mode,
+                    **({'group_col': group_col} if group_col else {}),
+                    'phased': True,
+                    'run_rules_applicable': False,
+                    'phase_by': list(phase_by),
+                    'lane_boundaries': lanes or None,
+                    'single_point_phases': single_point,
+                    'insufficient_phases': insufficient or None,
+                },
+                'phases': phases,
+            }
+
+        return {
+            'Xbar': payload('Xbar', 'xbar', xbar_out, lane_boundaries, xbar_rows),
+            'S': payload('S', 's', s_out, s_lane_boundaries, s_rows),
+        }
+
+    @staticmethod
+    def _phase_limits(frame: pd.DataFrame, n_to_use: str, n_avg: float | None) -> dict:
+        """The N, lpl and upl a phase reports: scalars when its limits are one pair, NaN when they step."""
+        if n_to_use != 'N':
+            return {'N': np.nan, 'lpl': np.nan, 'upl': np.nan}
+        return {
+            'N': n_avg if n_avg is not None else frame['N'].iloc[0],
+            'lpl': frame['lpl'].iloc[0],
+            'upl': frame['upl'].iloc[0],
+        }
 
     @staticmethod
     def _resolve_mr_source_column(value_col: str) -> str:

@@ -182,10 +182,12 @@ class TestPhasedLaneBoundaries:
 class TestPhasedValidation:
     """Test that invalid phased configurations raise appropriate errors."""
 
-    def test_phased_requires_xmr_or_r(self, sds1_study):
-        """phased=True with Xbar should raise ValidationError."""
-        with pytest.raises(ValidationError, match='only valid for X or mR'):
-            sds1_study.execute(chart='Xbar', phased=True)
+    def test_phased_requires_a_limits_chart(self, sds1_study):
+        """phased=True is refused on Histogram and accepted on Xbar/S (#144) as on X/mR."""
+        with pytest.raises(ValidationError, match='only valid for'):
+            sds1_study.execute(chart='Histogram', phased=True)
+        result = sds1_study.execute(chart='Xbar', phased=True)
+        assert result.charts['Xbar']['metadata']['phased'] is True
 
     def test_phased_stratified_allowed_with_collapsed_factors(self, sds1_study):
         """phased=True with by=['factor 1'] should work (factor 2 is collapsed)."""

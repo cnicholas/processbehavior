@@ -1,0 +1,58 @@
+{
+  "center_col": "center",
+  "chart_type": "Xbar",
+  "group_col": "group",
+  "insufficient_phases": null,
+  "lane_boundaries": [
+    {
+      "label": "F1_1_F2_2",
+      "position": 6,
+      "variables": [
+        "factor 1",
+        "factor 2"
+      ]
+    },
+    {
+      "label": "F1_2_F2_1",
+      "position": 12,
+      "variables": [
+        "factor 1",
+        "factor 2"
+      ]
+    },
+    {
+      "label": "F1_2_F2_2",
+      "position": 18,
+      "variables": [
+        "factor 1",
+        "factor 2"
+      ]
+    },
+    {
+      "label": "F1_3_F2_1",
+      "position": 24,
+      "variables": [
+        "factor 1",
+        "factor 2"
+      ]
+    },
+    {
+      "label": "F1_3_F2_2",
+      "position": 30,
+      "variables": [
+        "factor 1",
+        "factor 2"
+      ]
+    }
+  ],
+  "n_mode": "actual",
+  "n_sigma": 3.0,
+  "phase_by": [
+    "factor 1",
+    "factor 2"
+  ],
+  "phased": true,
+  "run_rules_applicable": false,
+  "single_point_phases": 0,
+  "value_col": "xbar"
+}

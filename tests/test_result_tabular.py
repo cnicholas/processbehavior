@@ -273,7 +273,7 @@ class TestModuleConstants:
         assert set(_SIGNAL_SYMBOLS.keys()) == {-1, 0, 1}
 
     def test_non_value_cols_includes_typical_metadata(self):
-        for col in ("rsg", "center", "lpl", "upl", "beyond_limits", "n", "obs_id"):
+        for col in ("rsg", "center", "lpl", "upl", "beyond_limits", "n", "phase", "obs_id"):
             assert col in _NON_VALUE_COLS
 
     def test_preferred_statistic_cols_order(self):
