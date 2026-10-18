@@ -61,7 +61,9 @@ class ChartStatistics(TypedDict):
     When the control limits and/or subgroup size vary across subgroups
     (e.g. Xbar/S with ``n_mode='actual'`` on unbalanced data),
     ``N``, ``lpl``, and ``upl`` are ``None`` and the optional
-    ``limits_vary`` flag is ``True``. ``center`` remains a single scalar.
+    ``limits_vary`` flag is ``True``; ``center`` stays a scalar. On a phased
+    chart ``center`` is ``None`` too, and each row's ``center`` column
+    carries its phase's value.
     """
 
     N: int | None
@@ -95,10 +97,15 @@ class ChartMetadata(TypedDict, total=False):
       charts only.
     - ``group_col``: unstratified Xbar/S — the chart-data column that labels
       each subgroup (``group``, ``subgroup``, or the factor's own name).
-    - ``lane_boundaries``: stratified X/mR charts with collapsed factors.
+    - ``lane_boundaries``: X/mR charts with collapsed factors and phased
+      Xbar/S — a flat list of ``{'position', 'label', 'variables'}`` dicts,
+      or one such list per stratum on a stratified chart.
     - ``insufficient_strata``: mR/r charts that dropped first-per-stratum.
     - ``phased`` / ``single_point_phases``: charts run with
       ``phased=True``.
+    - ``phase_by`` / ``insufficient_phases``: phased Xbar/S — the factors a
+      phase is one combination of, and the phases with no replicated
+      subgroup (charted without limits).
     - ``run_rules_applicable``: present on charts where Western Electric
       rules apply (or explicitly don't).
     - ``limits_source`` / ``calibration``: reserved for the standards-
@@ -112,10 +119,12 @@ class ChartMetadata(TypedDict, total=False):
     stratify_col: str | None
     stratify_by: list[str]
     group_col: str  # Unstratified Xbar/S: the subgroup label column
-    lane_boundaries: dict[str, list[float]] | None
+    lane_boundaries: list[dict] | dict[str, list[dict]] | None
     insufficient_strata: list[str] | None
     phased: bool
     single_point_phases: int
+    phase_by: list[str]  # Phased Xbar/S: the factors a phase is one combination of
+    insufficient_phases: list[str] | None  # Phased Xbar/S: phases charted without limits
     run_rules_applicable: bool
     bins: int  # Histogram only
     focused_stratum: str  # After AnalysisResult.focus()
@@ -134,13 +143,15 @@ class ChartPayload(TypedDict):
     """The dict structure stored in ``AnalysisResult.charts[name]``.
 
     Required: ``data``, ``statistics``, ``metadata``.
-    Optional: ``strata`` (present on stratified charts).
+    Optional: ``strata`` (present on stratified charts); ``phases`` (phased
+    Xbar/S: one row per phase, read through ``AnalysisResult.phase_statistics``).
     """
 
     data: pd.DataFrame
     statistics: ChartStatisticsValue
     metadata: ChartMetadata
     strata: NotRequired[list[str]]
+    phases: NotRequired[pd.DataFrame]
 
 
 # Type alias for the full charts dict on AnalysisResult.

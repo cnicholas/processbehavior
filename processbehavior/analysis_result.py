@@ -656,6 +656,43 @@ class AnalysisResult:
             )
         return dict(stats[stratum])
 
+    def phase_statistics(self, chart: str) -> pd.DataFrame:
+        """One row per phase of a phased chart: the numbers behind its stepped lines.
+
+        Columns: ``phase`` (the lane label, as in ``chart_table``), ``subgroups`` (points
+        charted in it), ``N`` (the subgroup size its limits assume: the common size, the mean
+        size under ``n_mode='average'``, or NaN when sizes vary within the phase), ``center``,
+        ``s_bar``, ``sigma_hat``, ``lpl`` and ``upl`` (NaN when the limits step within the
+        phase; ``get_chart`` carries them per row). A phase with no replicated subgroup keeps
+        its ``subgroups`` and is NaN elsewhere; ``metadata['insufficient_phases']`` names it.
+
+        Raises
+        ------
+        ValidationError
+            On a chart that is not phased, and on phased X/mR, whose per-phase values are on
+            each row of ``get_chart`` (a later release adds this table there; issue #144).
+        ChartNotAvailableError
+            If the chart is not in this result.
+        """
+        name = self._resolve_chart_name(chart)
+        if name not in self.charts:
+            raise ChartNotAvailableError(
+                f"Chart '{name}' not found. Available charts: {self.all_charts}", chart=name, available=self.all_charts
+            )
+        payload = self.charts[name]
+        if not payload.get('metadata', {}).get('phased'):
+            raise ValidationError(
+                f'Chart {chart!r} is not phased, so it has no per-phase statistics. '
+                'execute(..., phased=True) gives each phase its own centre line and limits.'
+            )
+        phases = payload.get('phases')
+        if phases is None:
+            raise ValidationError(
+                'phase_statistics is available on phased Xbar and S charts; a phased X or mR chart '
+                f"carries each phase's centre and limits on its rows (get_chart({chart!r}))."
+            )
+        return phases.copy()
+
     def get_residual(self, residual_type: str) -> pd.Series:
         """
         Get a specific residual series.
