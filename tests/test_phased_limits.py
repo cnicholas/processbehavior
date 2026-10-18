@@ -470,16 +470,22 @@ class TestPhasedSignals:
 
         # Phase 1 sits above its centre 0, phase 2 below its centre 10: one run each.
         # Phase 2's last two points fall in its lower zone A (7 to 8, sigma 1).
-        data = pd.DataFrame({
-            'x': [1.0] * 8 + [9.0] * 6 + [7.5, 7.5],
-            'center': [0.0] * 8 + [10.0] * 8,
-            'upl': [3.0] * 8 + [13.0] * 8,
-            'lpl': [-3.0] * 8 + [7.0] * 8,
-        })
+        data = pd.DataFrame(
+            {
+                'x': [1.0] * 8 + [9.0] * 6 + [7.5, 7.5],
+                'center': [0.0] * 8 + [10.0] * 8,
+                'upl': [3.0] * 8 + [13.0] * 8,
+                'lpl': [-3.0] * 8 + [7.0] * 8,
+            }
+        )
         stats = {'N': None, 'center': None, 'lpl': None, 'upl': None, 'limits_vary': True}
         signals = SignalDetector().detect(
-            data, stats, SignalConfig(enabled_rules=['rule_2', 'rule_4'], min_observations=1),
-            value_col='x', chart_type='X', run_rules_applicable=False,
+            data,
+            stats,
+            SignalConfig(enabled_rules=['rule_2', 'rule_4'], min_observations=1),
+            value_col='x',
+            chart_type='X',
+            run_rules_applicable=False,
         )
         assert signals.rules_evaluated == ['rule_2', 'rule_4']
         assert set(signals.by_rule['rule_4']['obs_id']) == {7, 15}
@@ -488,3 +494,83 @@ class TestPhasedSignals:
     def test_unphased_x_keeps_every_rule(self, sds1_study):
         signals = sds1_study.execute(chart='X', by=[]).detect_signals(chart='X')
         assert signals.rules_evaluated == [f'rule_{i}' for i in range(1, 9)]
+
+
+# =============================================================================
+# Phase column and per-phase statistics (#144, parity with phased Xbar/S)
+# =============================================================================
+
+
+class TestPhaseColumnAndStatistics:
+    """Phased X/mR name each row's phase and expose one row per phase, as phased Xbar/S do."""
+
+    def test_phase_column_is_the_lane_label(self, sds1_study):
+        result = sds1_study.execute(chart='X', by=[], phased=True, companion=True)
+        for chart in ('X', 'mR'):
+            data = result.get_chart(chart)
+            assert list(data.columns) == [
+                'time',
+                'rsg',
+                'phase',
+                data.columns[3],
+                'center',
+                'lpl',
+                'upl',
+                'beyond_limits',
+                'obs_id',
+            ]
+            assert list(data['phase']) == list(data['rsg'].astype(str))
+            # one centre per phase, and every row of a phase shares it
+            assert data.groupby('phase', sort=False)['center'].nunique().eq(1).all()
+            assert list(result.chart_table(chart).columns[:3]) == ['Obs', 'subgroup', 'phase']
+
+    def test_phase_statistics_x_and_mr(self, sds1_study):
+        result = sds1_study.execute(chart='X', by=[], phased=True, companion=True)
+        x, mr = result.phase_statistics('X'), result.phase_statistics('mR')
+        assert list(x.columns) == ['phase', 'points', 'center', 'mR_bar', 'lpl', 'upl']
+        assert list(x.columns) == list(mr.columns)
+        data = result.get_chart('X')
+        assert list(x['phase']) == list(dict.fromkeys(data['phase']))  # display order, one row each
+        assert x['points'].sum() == len(data)
+        for _, row in x.iterrows():
+            rows = data[data['phase'] == row['phase']]
+            assert rows['center'].iloc[0] == row['center']
+            assert (rows['lpl'].iloc[0], rows['upl'].iloc[0]) == (row['lpl'], row['upl'])
+        assert (mr['center'] == mr['mR_bar']).all()
+        assert (mr['lpl'] == 0).all()
+        pd.testing.assert_series_equal(mr['mR_bar'], x['mR_bar'])
+
+    def test_companion_mr_carries_single_point_phases(self, sds1_study):
+        result = sds1_study.execute(chart='X', by=[], phased=True, companion=True)
+        x_meta, mr_meta = result.charts['X']['metadata'], result.charts['mR']['metadata']
+        assert 'single_point_phases' in mr_meta
+        assert mr_meta['single_point_phases'] == x_meta['single_point_phases']
+        assert x_meta['single_point_phases'] == int((result.phase_statistics('X')['points'] < 2).sum())
+
+    def test_stratified_phases_by_stratum_and_focus(self, sds1_study):
+        result = sds1_study.execute(chart='X', by=['factor 1'], phased=True, companion=True)
+        for chart in ('X', 'mR'):
+            assert 'phase' in result.get_chart(chart).columns
+            with pytest.raises(ValidationError, match='stratum is required'):
+                result.phase_statistics(chart)
+            with pytest.raises(ValidationError, match='not found'):
+                result.phase_statistics(chart, stratum='no such stratum')
+            for stratum in result.strata:
+                table = result.phase_statistics(chart, stratum=stratum)
+                assert list(table.columns) == ['phase', 'points', 'center', 'mR_bar', 'lpl', 'upl']
+                focused = result.focus(stratum)
+                pd.testing.assert_frame_equal(focused.phase_statistics(chart), table)
+                data = focused.get_chart(chart)
+                assert list(table['phase']) == list(dict.fromkeys(data['phase']))
+                assert table['points'].sum() == len(data)
+            assert 'single_point_phases' in result.charts[chart]['metadata']
+
+    def test_unphased_charts_have_no_phase(self, sds1_study):
+        result = sds1_study.execute(chart='X', by=[], companion=True)
+        for chart in ('X', 'mR'):
+            assert 'phase' not in result.get_chart(chart).columns
+            with pytest.raises(ValidationError, match='not phased'):
+                result.phase_statistics(chart)
+        phased = sds1_study.execute(chart='X', by=[], phased=True)
+        with pytest.raises(ValidationError, match='does not apply'):
+            phased.phase_statistics('X', stratum='F1_1_F2_1')

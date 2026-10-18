@@ -332,6 +332,25 @@ def _raise_no_replication(chart: str, sds, insufficient: list, total: int) -> No
     )
 
 
+def _mr_phase_table(phase_stats: pd.DataFrame, out: pd.DataFrame, keys: list[str], round_to: int) -> pd.DataFrame:
+    """One row per phase of a phased X or mR chart: label, points, centre, mR-bar and limits.
+
+    ``phase_stats`` is the per-phase aggregation keyed by ``keys`` (``['_phase_id']``, or
+    ``[stratify_col, '_phase_id']``); ``out`` carries the ``phase`` label on every row.
+    """
+    labels = out.groupby(keys, sort=False)['phase'].first().reset_index()
+    table = phase_stats.merge(labels, on=keys, how='left').rename(columns={'_n': 'points', 'mR': 'mR_bar'})
+    return table[keys + ['phase', 'points', 'center', 'mR_bar', 'lpl', 'upl']].round(round_to)
+
+
+def _split_phase_table(table: pd.DataFrame, stratify_col: str) -> dict:
+    """The per-stratum phase tables of a stratified phased chart, keyed by stratum."""
+    return {
+        stratum: group.drop(columns=[stratify_col, '_phase_id']).reset_index(drop=True)
+        for stratum, group in table.groupby(stratify_col, sort=False)
+    }
+
+
 def _build_stratified_mr_payload(
     *,
     mr_spec: _MRChartSpec,
@@ -345,6 +364,7 @@ def _build_stratified_mr_payload(
     phased: bool = False,
     insufficient_strata: list | None = None,
     single_point_phases: int | None = None,
+    phases: dict | None = None,
 ) -> dict:
     """Build the {chart_type: {...}} payload for a stratified MR-family chart.
 
@@ -379,6 +399,7 @@ def _build_stratified_mr_payload(
             'statistics': chart_statistics,
             'metadata': metadata,
             'strata': published_strata,
+            **({'phases': phases} if phased and phases is not None else {}),
         },
     }
 
@@ -392,6 +413,7 @@ def _build_ungrouped_mr_payload(
     lane_boundaries,
     phased: bool = False,
     single_point_phases: int | None = None,
+    phases: pd.DataFrame | None = None,
 ) -> dict:
     """Build the {chart_type: {...}} payload for an ungrouped MR-family chart."""
     metadata: dict = {
@@ -410,6 +432,7 @@ def _build_ungrouped_mr_payload(
             'data': chart_out,
             'statistics': chart_statistics,
             'metadata': metadata,
+            **({'phases': phases} if phased and phases is not None else {}),
         },
     }
 
@@ -2239,10 +2262,13 @@ class Analysis:
             phase_stats = precomputed['phase_stats']
 
             # Recompute R-specific limits per phase within each stratum
-            r_phase_stats = phase_stats[[stratify_col, '_phase_id', 'mR']].copy()
+            r_phase_stats = phase_stats[[stratify_col, '_phase_id', '_n', 'mR']].copy()
             r_lims = _mr_family_limits(mr_spec, mean=0, mR=r_phase_stats['mR'])
             r_phase_stats = _join_limits(r_phase_stats, r_lims)
             r_phase_stats['center'] = r_phase_stats['mR']
+            r_phases = _split_phase_table(
+                _mr_phase_table(r_phase_stats, out, [stratify_col, '_phase_id'], spec.round_to), stratify_col
+            )
 
             # Replace X limits with mR limits
             out = out.drop(columns=['center', 'lpl', 'upl', 'beyond_limits'], errors='ignore')
@@ -2261,7 +2287,7 @@ class Analysis:
             # Format output
             chart_out = self._build_output_columns(
                 df=out,
-                value_cols=extra_cols + [plot_col, 'center', 'lpl', 'upl', 'beyond_limits'],
+                value_cols=extra_cols + ['phase', plot_col, 'center', 'lpl', 'upl', 'beyond_limits'],
             )
 
             chart_statistics = {
@@ -2286,6 +2312,8 @@ class Analysis:
                 strata=strata,
                 lane_boundaries=xmr_lane_boundaries,
                 phased=True,
+                single_point_phases=precomputed.get('single_point_phases'),
+                phases=r_phases,
             )
 
         # --- Non-phased precomputed path ---
@@ -2396,12 +2424,14 @@ class Analysis:
             else:
                 out['_phase_key'] = list(map(tuple, out[collapsed_factors].to_numpy()))
 
-            # 2. Assign within-stratum phase IDs via transitions of _phase_key
+            # 2. Assign within-stratum phase IDs via transitions of _phase_key, and the
+            #    phase's display label (the lane label) on every row
             out['_phase_id'] = (
                 out.groupby(stratify_col, sort=False)['_phase_key']
                 .transform(lambda s: (s != s.shift()).cumsum())
                 .astype('int64')
             )
+            out['phase'] = _lane_labels(out, collapsed_factors)
 
             # 3. Per-phase mR (reset at phase boundaries within each stratum)
             out['mr'] = out.groupby([stratify_col, '_phase_id'], sort=False)[mr_source_col].diff().abs()
@@ -2455,12 +2485,15 @@ class Analysis:
 
             # 11. Track single-point phases
             n_single_point = int((phase_stats['_n'] < 2).sum())
+            phases = _split_phase_table(
+                _mr_phase_table(phase_stats, out, [stratify_col, '_phase_id'], spec.round_to), stratify_col
+            )
 
             # Format output
             extra_cols = [c for c in stratify_by if c != spec.rsg_var_name and c != spec.time_var]
             chart_out = self._build_output_columns(
                 df=out,
-                value_cols=extra_cols + [plot_col, 'center', 'lpl', 'upl', 'beyond_limits'],
+                value_cols=extra_cols + ['phase', plot_col, 'center', 'lpl', 'upl', 'beyond_limits'],
             )
 
             result.update(_build_stratified_mr_payload(
@@ -2474,12 +2507,14 @@ class Analysis:
                 lane_boundaries=lane_boundaries,
                 phased=True,
                 single_point_phases=n_single_point,
+                phases=phases,
             ))
 
             if _return_intermediates:
                 result['_intermediates'] = {
                     'out': out,
                     'phase_stats': phase_stats,
+                    'single_point_phases': n_single_point,
                     'stratify_col': stratify_col,
                     'stratify_by': stratify_by,
                     'strata': strata,
@@ -2614,7 +2649,7 @@ class Analysis:
                 xmr_lane_boundaries = _precomputed['lane_boundaries']
 
                 # Recompute R-specific limits per phase
-                r_phase_stats = phase_stats[['_phase_id', 'mR']].copy()
+                r_phase_stats = phase_stats[['_phase_id', '_n', 'mR']].copy()
                 r_lims = r_phase_stats.apply(
                     lambda row: calculate_limits(
                         mean=0,
@@ -2628,6 +2663,11 @@ class Analysis:
                 )
                 r_phase_stats = _join_limits(r_phase_stats, r_lims)
                 r_phase_stats['center'] = r_phase_stats['mR']
+                r_phases = (
+                    _mr_phase_table(r_phase_stats, out, ['_phase_id'], spec.round_to)
+                    .drop(columns=['_phase_id'])
+                    .reset_index(drop=True)
+                )
 
                 # Replace X limits with mR limits
                 out = out.drop(columns=['center', 'lpl', 'upl'], errors='ignore')
@@ -2646,7 +2686,7 @@ class Analysis:
 
                 chart_out = self._build_output_columns(
                     df=out,
-                    value_cols=[plot_col, 'center', 'lpl', 'upl', 'beyond_limits'],
+                    value_cols=['phase', plot_col, 'center', 'lpl', 'upl', 'beyond_limits'],
                 )
 
                 chart_statistics = {
@@ -2665,6 +2705,8 @@ class Analysis:
                     plot_col=plot_col,
                     lane_boundaries=xmr_lane_boundaries,
                     phased=True,
+                    single_point_phases=_precomputed.get('single_point_phases'),
+                    phases=r_phases,
                 ))
                 return result
 
@@ -2738,8 +2780,10 @@ class Analysis:
         # === Phased limits path ===
         if phased and collapsed_factors:
             self._reject_calibration('phased X/mR')
-            # 1. Assign phase_id: contiguous runs of the same rsg_key
+            # 1. Assign phase_id: contiguous runs of the same rsg_key, and the phase's display
+            #    label (the lane label) on every row
             out['_phase_id'] = (out['rsg_key'] != out['rsg_key'].shift()).cumsum().astype('int64')
+            out['phase'] = _lane_labels(out, collapsed_factors)
 
             # 2. Per-phase moving range (reset at boundaries)
             out['mr'] = out.groupby('_phase_id', sort=False)[mr_source_col].diff().abs()
@@ -2806,7 +2850,7 @@ class Analysis:
             # 9. Format output
             chart_out = self._build_output_columns(
                 df=out,
-                value_cols=[plot_col, 'center', 'lpl', 'upl', 'beyond_limits'],
+                value_cols=['phase', plot_col, 'center', 'lpl', 'upl', 'beyond_limits'],
             )
 
             # 10. Statistics: limits_vary=True signals stepped rendering
@@ -2818,8 +2862,13 @@ class Analysis:
                 'limits_vary': True,
             }
 
-            # 11. Track single-point phases for visibility
+            # 11. Track single-point phases for visibility, and the per-phase table
             n_single_point = int((phase_stats['_n'] < 2).sum())
+            phases = (
+                _mr_phase_table(phase_stats, out, ['_phase_id'], spec.round_to)
+                .drop(columns=['_phase_id'])
+                .reset_index(drop=True)
+            )
 
             result.update(_build_ungrouped_mr_payload(
                 mr_spec=mr_spec,
@@ -2829,6 +2878,7 @@ class Analysis:
                 lane_boundaries=lane_boundaries,
                 phased=True,
                 single_point_phases=n_single_point,
+                phases=phases,
             ))
 
             if _return_intermediates:
@@ -2839,6 +2889,7 @@ class Analysis:
                     'is_stratified': False,
                     'phased': True,
                     'phase_stats': phase_stats,
+                    'single_point_phases': n_single_point,
                 }
 
             return result
