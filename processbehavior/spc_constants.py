@@ -374,7 +374,8 @@ def calculate_limits_vectorized(
     ``DataFrame.apply(axis=1)``, each call constructing a ``pd.Series`` to carry two
     numbers. At 1M rows (~50,000 subgroups) that was ~2.5s per chart; this is ~0.001s.
 
-    ``mean``, ``sd``, ``N`` and ``mR`` accept scalars or array-likes and broadcast.
+    ``mean``, ``sd``, ``N``, ``mR`` and ``sigma`` accept scalars or array-likes and broadcast,
+    so one chart can carry a sigma-hat per row (a phased chart: one per phase).
     Subgroup-size constants (c4/b3/b4) are looked up once per *distinct* N and mapped, so
     an N of 1 still raises ``ValueError`` from :func:`c4` exactly as the scalar path does.
 
@@ -396,7 +397,7 @@ def calculate_limits_vectorized(
     not subgroups or strata. Do not assume the absence of a call here means a site was
     checked and rejected on correctness grounds.
     """
-    index = next((arg.index for arg in (mean, sd, N, mR) if isinstance(arg, pd.Series)), None)
+    index = next((arg.index for arg in (mean, sd, N, mR, sigma) if isinstance(arg, pd.Series)), None)
 
     def _per_n(func, sizes, *args):
         """Evaluate a subgroup-size constant once per distinct N, then broadcast."""
@@ -413,7 +414,7 @@ def calculate_limits_vectorized(
         sizes = np.asarray(N)
         if sigma is not None:
             # Eqs 11-16/11-17: half-width = multiplier * sigma_hat / sqrt(N_r)
-            half = (sigma_multiplier * float(sigma)) / np.sqrt(sizes)
+            half = (sigma_multiplier * np.asarray(sigma, dtype=float)) / np.sqrt(sizes)
         else:
             # Wd = S / c4(n), then half-width = (multiplier * Wd) / sqrt(n)
             half = (sigma_multiplier * (np.asarray(sd) / _per_n(c4, sizes))) / np.sqrt(sizes)
