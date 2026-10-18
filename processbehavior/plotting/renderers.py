@@ -254,7 +254,8 @@ def render_control_chart(
             # Single-chart mode: cell labels are rendered as a band below the
             # axis title by Plotter._apply_time_tick_labels, so suppress the
             # top-of-plot lane labels here. Faceted mode keeps top labels
-            # per panel.
+            # per panel. Phased Xbar/S has no time column and so no band: its
+            # divider labels are the only place the phase is named.
             add_lane_boundaries(
                 fig,
                 lane_boundaries,
@@ -262,7 +263,7 @@ def render_control_chart(
                 theme,
                 row=row,
                 col=col,
-                show_labels=ctx.is_faceted,
+                show_labels=ctx.is_faceted or spec.chart_type in ('Xbar', 'S'),
             )
 
 

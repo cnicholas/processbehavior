@@ -240,6 +240,51 @@ Charted](residuals.md#how-effect-residuals-are-charted).
 2. **Then interpret Xbar** - Only meaningful if S is stable
 3. **Investigate signals** - What makes that subgroup different?
 
+### Staged Xbar/S
+
+A staged study records the stage as a factor, and the default Xbar chart already lays the
+subgroups out stage by stage: every subgroup of stage A, then every subgroup of stage B,
+each in time order. `phased=True` gives each stage its own center line and limits on that
+one chart, drawn as stepped lines with a divider at each stage change.
+
+```python
+study = pb.formulate(df, response='Thickness', time='Hour', factors=['Cavity'])
+staged = study.execute(chart='Xbar', phased=True, companion=True)
+staged.plot(chart='Xbar')
+staged.phase_statistics('Xbar')   # one row per stage: center, S-bar, sigma-hat, limits
+```
+
+Each stage is computed as a separate analysis, exactly as `by=['Hour']` computes one chart
+per stage: its center is the unweighted mean of its subgroup means, its S̄ is the mean of its
+subgroup standard deviations, and its σ̂ and limits follow from those (10-12 manual Eqs 11-5,
+11-8, 11-9, 11-16, 11-17). Nothing is pooled across stages. On Wheeler's four-cavity
+thickness data the per-cavity centers and limits match Minitab's staged Xbar-S chart to the
+digit; the per-cavity charts of `by=['Hour']` give the same numbers, one chart at a time.
+
+With more factors than the stage, `by=['Cavity', 'Hour']` pools the others into the
+subgroup and phases on `Cavity`. The center is then the mean of the pooled subgroup
+averages, per Dr. Bishop: ignore the other factor completely, group by stage and time, and
+chart per the usual rules. That equals charting a study formulated without the pooled
+factors.
+
+What the phased chart reports:
+
+- `get_chart('Xbar')` has a `phase` column and each row's own `center`, `lpl` and `upl`;
+  `chart_table` shows `phase` after `subgroup`.
+- `get_statistics` returns `None` for `center`, `N`, `lpl` and `upl` with
+  `limits_vary=True`, since no single value describes the chart; `phase_statistics(chart)`
+  carries the per-stage numbers.
+- `detect_signals` applies Rule 1 against each stage's own limits; the run rules are off,
+  as on phased X/mR, because the zones differ from stage to stage.
+- A stage with a single replicated subgroup takes its σ̂ from that subgroup. A stage with
+  no replicated subgroup keeps its points but has no limits, and is named in
+  `metadata['insufficient_phases']`.
+
+Stages are ordered as the factor's levels sort, so label them to sort (`1 before`,
+`2 after`, or an ordered pandas Categorical). `by=[time]` with `phased=True` is refused:
+that view is already one chart per stage. Residual values and calibrations are refused on
+phased Xbar/S.
+
 ## Understanding X and mR Charts
 
 ### The X (Individual) Chart
@@ -314,6 +359,10 @@ phased = study.execute(chart='X', by=[], phased=True, companion=True)
 phased.plot(chart='X')
 ```
 
+The same view exists for subgrouped data: `study.execute(chart='Xbar', phased=True,
+companion=True)` gives each factor combination its own center and limits on one Xbar/S
+chart (see [Staged Xbar/S](#staged-xbars)).
+
 **3. One subgroup at a time.** Full stratification: one chart per subgroup, each with
 its own limits.
 
@@ -350,6 +399,7 @@ only the lane order, and reports which results move.
 | "This transition is a signal" | `chart='mR', by=[]` | No. Which transitions are flagged depends on which lanes are adjacent. |
 | "Subgroup *k* differs in level" | `chart='Xbar', by=['lane'], value='R5', recentered=True` | The points, yes: each is a subgroup mean. The limits, not entirely in DS 2 and 3: they are set from R2, which differences the condition-and-period-adjusted series along the same lane-major sequence. The level difference between lanes no longer enters R2, but which observations are paired still depends on lane order. In DS 1, R2 is within-cell and carries no order. |
 | "Subgroup *k* is stable on its own" | `phased=True`, or `by=['lane']` | Yes. Only that subgroup's own ranges enter. |
+| "Stage *k* is stable on its own" (subgrouped data) | `chart='Xbar', phased=True` | Yes. Only that stage's own subgroups enter its center, S̄ and limits. |
 
 So a boundary signal should be read as evidence along the path, and claims about the
 subgroups themselves should come from the charts that have no path: the R5 chart for
@@ -401,6 +451,7 @@ VAS residuals (R1–R6) need both factors and time.
 |----------|-------|----------------|
 | Is this one process? | `chart='X', by=[], companion=True` | Subgroups do not join into one stable stream |
 | Each subgroup on its own? | `chart='X', by=[], phased=True` | Special cause within that subgroup |
+| Each stage on its own, with subgroups? | `chart='Xbar', phased=True, companion=True` | Special cause within that stage |
 | Are groups different? | `chart='Xbar'` | Group deviates from average |
 | Is variation stable? | `chart='S'` | Group has unusual variation |
 | Process over time? | `chart='X', by=[...]` | Special cause detected |

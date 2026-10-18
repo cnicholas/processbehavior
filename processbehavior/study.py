@@ -1915,16 +1915,28 @@ class Study:
             Not applicable to Histogram.
 
         phased : bool, default False
-            When True, computes per-phase center lines and control limits.
-            Each phase is a contiguous run of the same collapsed factor
-            combination (the groups demarcated by vertical lane boundaries).
-            Within each phase, the moving range is computed independently.
+            When True, each phase gets its own center line and limits, drawn
+            as stepped lines on one chart. A phase is a contiguous run of one
+            factor combination (the lanes between the vertical dividers).
 
-            - phased=False (default): Global limits across entire chart
-            - phased=True: Per-phase limits (requires by=[])
+            - X/mR: the collapsed factors define the phases (``by=[]``
+              collapses all of them; ``by=['factor 1']`` stratifies on it and
+              phases on the rest). Each phase's moving range is computed on
+              its own.
+            - Xbar/S: the grouping factors define the phases. ``by=None`` (or
+              all factors + time) phases on every factor combination;
+              ``by=['stage', time]`` pools the other factors into the
+              subgroup and phases on ``stage``. Each phase is computed as a
+              separate Xbar/S analysis: its center is the mean of its
+              subgroup means, with its own S-bar and sigma-hat (Dr. Bishop,
+              2026-10-18). ``by=[time]`` and residual values are refused.
+              Per-phase numbers: ``result.phase_statistics(chart)``.
 
-            Single-point phases yield zero-width limits because mR is
-            imputed as 0; count available in metadata['single_point_phases'].
+            Statistics report ``center``, ``N``, ``lpl`` and ``upl`` as None
+            with ``limits_vary=True``; run rules are off (Rule 1 only).
+            Single-point phases: X/mR impute mR as 0 (zero-width limits);
+            Xbar/S take sigma-hat from the one subgroup's S. Count in
+            metadata['single_point_phases'].
 
         n_sigma : float, default 3.0
             Sigma multiplier for Xbar/S chart control limits. Standard SPC
@@ -2257,7 +2269,7 @@ class Study:
         if recentered:
             self._validate_recentered(value)
         if phased:
-            self._validate_phased(base_chart, by_validated)
+            self._validate_phased(base_chart, by_validated, value)
 
         if companion and base_chart == 'Histogram':
             raise ValidationError('companion is not applicable to Histogram charts.')
@@ -2419,10 +2431,13 @@ class Study:
         if value.upper() not in recenterable:
             raise ValidationError(f"recentered=True requires a residual value (R1-R6), got '{value}'")
 
-    def _validate_phased(self, base_chart: str, by_validated: list[str] | None) -> None:
-        """Validate phased=True requirements."""
+    def _validate_phased(self, base_chart: str, by_validated: list[str] | None, value: str | None = None) -> None:
+        """Validate phased=True: X/mR phase on the collapsed factors, Xbar/S on the grouping factors."""
+        if base_chart in ('Xbar', 'S'):
+            self._validate_phased_xbar_s(base_chart, by_validated, value)
+            return
         if base_chart not in ('X', 'mR'):
-            raise ValidationError(f"phased=True is only valid for X or mR charts, got '{base_chart}'.")
+            raise ValidationError(f"phased=True is only valid for X, mR, Xbar or S charts, got '{base_chart}'.")
         if by_validated is None:
             raise ValidationError('phased=True requires an explicit by= parameter.')
         if not self._spec.rsg_vars_list:
@@ -2440,6 +2455,57 @@ class Study:
                     'no factors remain to create phase boundaries. '
                     'Remove factors from by= or set phased=False.'
                 )
+
+    def _validate_phased_xbar_s(self, base_chart: str, by_validated: list[str] | None, value: str | None) -> None:
+        """phased=True on Xbar/S: one centre line and one set of limits per factor combination.
+
+        A phase is a contiguous run of subgroups sharing the grouping factors, in time order, on
+        the stage-by-stage layout ``by=None`` already draws. So the request must chart the
+        response, have factors and a time variable, and group by some factors with time last;
+        ``by=None`` / ``[]`` phases on every factor, ``by=['stage', time]`` pools the others into
+        the subgroup. ``by=[time]`` is refused because that view is already one chart per
+        combination (issue #144).
+        """
+        factors = self._spec.rsg_vars_list
+        time_var = self._spec.time_var
+        if value is not None and value.upper().startswith('R'):
+            raise ValidationError(
+                f'phased=True on {base_chart} charts the response; value={value!r} is not supported. '
+                "Residual charts repeat the response's phases or are flat within a phase; for a phased "
+                f"residual use chart='X', by=[], value={value!r}, phased=True."
+            )
+        if not factors:
+            raise ValidationError(
+                'phased=True requires factors to define phases (rsg_key). '
+                'This study has no factors; phased limits do not apply.'
+            )
+        if not time_var:
+            raise ValidationError(
+                f'phased=True on {base_chart} requires a time variable: a phase is one factor '
+                "combination's subgroups in time order, and this study has none."
+            )
+        if not by_validated:
+            return  # None or []: phases are the factor combinations
+        by_list = list(by_validated)
+        if set(by_list) == set(factors) | {time_var}:
+            return  # all factors + time, any order: the same subgroups as by=None
+        if by_list == [time_var]:
+            raise ValidationError(
+                f'phased=True with by={by_list} on {base_chart}: that view already gives each factor '
+                'combination its own chart, centre line and limits (result.focus(k)). For the same '
+                'limits side by side on one chart use by=None with phased=True.'
+            )
+        if time_var not in by_list:
+            raise ValidationError(
+                f'phased=True on {base_chart} requires the time variable in by=: by={by_list} gives one '
+                f'point per level with no time order, so there are no phases. Use by={by_list + [time_var]}.'
+            )
+        if by_list[-1] != time_var:
+            ordered = [c for c in by_list if c != time_var] + [time_var]
+            raise ValidationError(
+                f'phased=True requires the time variable last in by= (got by={by_list}): phasing changes '
+                f'the limits, not the order of the points. Use by={ordered}.'
+            )
 
     def _parse_chart_request(self, chart: str) -> str:
         """

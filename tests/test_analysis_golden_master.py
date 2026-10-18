@@ -274,6 +274,11 @@ def _make_residual_chart():
     return synthetic.make_design(1, K1=3, K2=2, T=4, n_min=3, n_max=3, seed=42)
 
 
+def _make_phased_xbar_s():
+    """Scenario: phased Xbar/S — a centre line and limits per factor combination (#144)."""
+    return synthetic.make_design(1, K1=3, K2=2, T=6, n_min=2, n_max=4, seed=42)
+
+
 def _make_single_obs_strata():
     """Scenario 7: Stratum with n=1 — edge case for mR computation."""
     # SDS 3 has mixed replication. Use specific params to get some n=1 cells.
@@ -356,6 +361,14 @@ def _execute_single_obs_strata():
     return study.execute(chart='X', by=[], companion=True)
 
 
+def _execute_phased_xbar_s():
+    """Execute scenario: phased Xbar/S companion pair (#144)."""
+    df = _make_phased_xbar_s()
+    pb = ProcessBehavior(df)
+    study = pb.formulate(response='y', factors=['factor 1', 'factor 2'], time='time')
+    return study.execute(chart='Xbar', phased=True, companion=True)
+
+
 def _execute_pathological_ordering():
     """Execute scenario 8: reverse-sorted input, X companion."""
     df = _make_pathological_ordering()
@@ -403,6 +416,10 @@ class TestGoldenMasterSnapshots:
     def test_single_obs_strata(self):
         result = _execute_single_obs_strata()
         _assert_result_matches_snapshot('single_obs_strata', result)
+
+    def test_phased_xbar_s(self):
+        result = _execute_phased_xbar_s()
+        _assert_result_matches_snapshot('phased_xbar_s', result)
 
     def test_pathological_ordering(self):
         result = _execute_pathological_ordering()
