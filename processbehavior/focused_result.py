@@ -99,6 +99,11 @@ def _build_focused_chart_info(
     focused_stats = _extract_stratum_statistics(chart_name, chart_info, stratum)
     focused_lb = _extract_stratum_lane_boundaries(parent_metadata, stratum)
 
+    # A phased stratified chart keeps one per-phase table per stratum; the focused chart
+    # carries its own, in the unstratified shape phase_statistics() reads.
+    phases = chart_info.get("phases")
+    focused_phases = {"phases": phases[stratum]} if isinstance(phases, dict) and stratum in phases else {}
+
     return {
         "data": focused_data,
         "statistics": focused_stats,
@@ -108,6 +113,7 @@ def _build_focused_chart_info(
             "focused_stratum": stratum,
             "lane_boundaries": focused_lb,
         },
+        **focused_phases,
     }
 
 
