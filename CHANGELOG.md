@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-10-29
+
+This release adds staged (phased) Xbar and S charts, computed per stage as Dr. Bishop
+specified (2026-10-18), with `phase_statistics()` for the numbers behind each stage on both
+chart families. A column of values with no time is now charted in the order received.
+
 ### Added
 - **A bare response is charted in the order received.** `formulate(response=...)` with no time,
   factors or plan used to be refused. The values are now numbered 1..N in an `Observation` column
@@ -1175,7 +1181,8 @@ and may change between minor versions until 1.0.
 - `natsort >= 8.0`
 - `plotly >= 5.18, < 7`
 
-[Unreleased]: https://github.com/cnicholas/processbehavior/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/cnicholas/processbehavior/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/cnicholas/processbehavior/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/cnicholas/processbehavior/compare/v0.3.3...v0.4.0
 [0.3.3]: https://github.com/cnicholas/processbehavior/compare/v0.3.2...v0.3.3
 [0.3.2]: https://github.com/cnicholas/processbehavior/compare/v0.3.1...v0.3.2
