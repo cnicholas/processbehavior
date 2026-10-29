@@ -65,6 +65,7 @@ jobs:
             docs/tutorials/derived-variables.ipynb \
             docs/tutorials/loss-function.ipynb \
             docs/tutorials/xbar-s-analysis.ipynb \
+            docs/tutorials/staged-charts.ipynb \
             docs/tutorials/signal-detection.ipynb \
             docs/tutorials/stratified-analysis.ipynb \
             docs/tutorials/design-state-tour.ipynb \

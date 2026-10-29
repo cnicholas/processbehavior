@@ -82,6 +82,20 @@ The whole pipeline is one expression when you don't need the intermediate object
 pb.formulate(df, response='y', factors=['factor 1'], time='time').execute().plot()
 ```
 
+A process that changed on purpose gets its own limits for each stage with `phased=True`:
+
+```python
+import processbehavior as pb
+
+# The bundled coffee-shop data: a new machine in week 8, a new POS in week 12, new baristas from week 14
+pbd = pb.load_coffee_shop().bin('week', method='breaks', breaks=[8, 12, 14],
+                                bin_labels=['baseline', 'new machine', 'new POS', 'new baristas'],
+                                label='stage')
+staged = pbd.formulate(response='wait_sec', factors=['stage'], time='date').execute(chart='Xbar', phased=True, companion=True)
+staged.phase_statistics('Xbar')   # one row per stage: center, S-bar, sigma-hat, limits
+staged.plot(chart='Xbar', title='Wait time: limits per stage')
+```
+
 Use `pb.ProcessBehavior(df)` directly when you want the fluent derived-variable verbs
 (`.transform(...)`, `.bin(...)`), which attach before formulating. With that object in hand,
 `pbd.cols.<column_name>` provides IDE auto-completion for column references.
@@ -184,6 +198,7 @@ The full report renders to `validation/e2e_bishop_report.html`.
 - **Variance decomposition**: R1-R6 residuals for factorial designs
 - **Effects analysis**: Main effects, time effects, and interaction effects
 - **Stratified charts**: Automatic per-stratum limits for grouped individual data
+- **Staged charts**: `phased=True` gives each stage its own center and limits on X/mR and Xbar/S; `phase_statistics()` returns the numbers behind the steps
 - **Signal detection**: all eight Western Electric rules on X/mR; Rule 1 (3-sigma) on Xbar/S, where the run- and zone-based rules need a time order that subgroup comparisons don't have
 - **Beyond the charts**: capability indices (Cp/Cpk/Pp/Ppk), Taguchi loss decomposition, and maximum-information analysis — validated in the same Bishop-reference CI gate
 - **IDE support**: Column auto-completion via `ProcessBehavior(df).cols`
