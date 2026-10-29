@@ -344,11 +344,12 @@ limits step within the phase). On X/mR: `phase`, `points`, `center`, `mR_bar`, `
 stratum: pass `stratum=`, or call it on `focus(stratum)`. It raises `ValidationError` on a
 chart that is not phased.
 
-Phased metadata carries `phased=True`, `run_rules_applicable=False`, `phase_by` (the
-factors a phase is one combination of), `lane_boundaries` (the divider positions),
-`single_point_phases` and `insufficient_phases` (phases with no replicated subgroup,
-charted without limits). Phased Xbar/S refuses residual values, calibrations and
-`by=[time]`; see [Staged Xbar/S](../user-guide/chart-types.md#staged-xbars).
+Phased metadata carries `phased=True`, `run_rules_applicable=False`, `lane_boundaries`
+(the divider positions) and `single_point_phases`. Phased Xbar/S adds `phase_by` (the
+factors a phase is one combination of) and `insufficient_phases` (phases with no
+replicated subgroup, charted without limits). Phased Xbar/S refuses residual values,
+calibrations and `by=[time]`; see [Staged Xbar/S](../user-guide/chart-types.md#staged-xbar-s)
+and the [Staged Charts tutorial](../tutorials/staged-charts.ipynb).
 
 ### Plotting, reporting, export
 

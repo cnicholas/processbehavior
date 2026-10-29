@@ -29,6 +29,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `phase`, `subgroups`, `N`, `center`, `s_bar`, `sigma_hat`, `lpl`, `upl`. X/mR: `phase`, `points`,
   `center`, `mR_bar`, `lpl`, `upl`, per stratum on a stratified chart (`stratum=`, or through
   `focus()`). (#144)
+- **Docs: a Staged Charts tutorial**, executed in CI. On the bundled coffee-shop data, with the
+  stage derived by one `.bin()` call, it compares one set of limits with limits per stage on Xbar
+  and S, reads `phase_statistics()`, puts every reading on a phased X/mR chart, and pools or splits
+  a second factor. The chart-types guide's staged example now runs as written, and its pooling
+  example uses a study that has a factor to pool. (#144)
 
 ### Changed
 - **`formulate(response=..., factors=[])` with no time is the same study.** It used to treat the

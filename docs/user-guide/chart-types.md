@@ -240,6 +240,7 @@ Charted](residuals.md#how-effect-residuals-are-charted).
 2. **Then interpret Xbar** - Only meaningful if S is stable
 3. **Investigate signals** - What makes that subgroup different?
 
+(staged-xbar-s)=
 ### Staged Xbar/S
 
 A staged study records the stage as a factor, and the default Xbar chart already lays the
@@ -247,25 +248,41 @@ subgroups out stage by stage: every subgroup of stage A, then every subgroup of 
 each in time order. `phased=True` gives each stage its own center line and limits on that
 one chart, drawn as stepped lines with a divider at each stage change.
 
+The bundled coffee-shop data changed three times in sixteen weeks (a new espresso machine
+in week 8, a new POS in week 12, new baristas from week 14). One `.bin()` call turns its
+`week` column into a stage:
+
 ```python
-study = pb.formulate(df, response='Thickness', time='Hour', factors=['Cavity'])
+from processbehavior import load_coffee_shop
+
+pb = load_coffee_shop().bin('week', method='breaks', breaks=[8, 12, 14],
+                            bin_labels=['baseline', 'new machine', 'new POS', 'new baristas'],
+                            label='stage')
+study = pb.formulate(response='wait_sec', factors=['stage'], time='date')
 staged = study.execute(chart='Xbar', phased=True, companion=True)
-staged.plot(chart='Xbar')
+staged.plot(chart='Xbar', title='Wait time: limits per stage')
 staged.phase_statistics('Xbar')   # one row per stage: center, S-bar, sigma-hat, limits
 ```
 
-Each stage is computed as a separate analysis, exactly as `by=['Hour']` computes one chart
+Each stage is computed as a separate analysis, exactly as `by=[time]` computes one chart
 per stage: its center is the unweighted mean of its subgroup means, its S̄ is the mean of its
 subgroup standard deviations, and its σ̂ and limits follow from those (10-12 manual Eqs 11-5,
 11-8, 11-9, 11-16, 11-17). Nothing is pooled across stages. On Wheeler's four-cavity
-thickness data the per-cavity centers and limits match Minitab's staged Xbar-S chart to the
-digit; the per-cavity charts of `by=['Hour']` give the same numbers, one chart at a time.
+thickness data, with the cavity as the stage, the per-cavity centers and limits match
+Minitab's staged Xbar-S chart to the digit; the per-cavity charts of `by=['Hour']` give the
+same numbers, one chart at a time.
 
-With more factors than the stage, `by=['Cavity', 'Hour']` pools the others into the
-subgroup and phases on `Cavity`. The center is then the mean of the pooled subgroup
-averages, per Dr. Bishop: ignore the other factor completely, group by stage and time, and
-chart per the usual rules. That equals charting a study formulated without the pooled
-factors.
+With more factors than the stage, name the stage and the time in `by=`: the other factors
+are pooled into the subgroup and the phases are on the stage.
+
+```python
+two = pb.formulate(response='wait_sec', factors=['stage', 'daypart'], time='date')
+two.execute(chart='Xbar', by=['stage', 'date'], phased=True)   # dayparts pooled into each day's subgroup
+```
+
+The center is then the mean of the pooled subgroup averages, per Dr. Bishop: ignore the
+other factor completely, group by stage and time, and chart per the usual rules. That equals
+charting a study formulated without the pooled factors.
 
 What the phased chart reports:
 
@@ -281,9 +298,15 @@ What the phased chart reports:
   `metadata['insufficient_phases']`.
 
 Stages are ordered as the factor's levels sort, so label them to sort (`1 before`,
-`2 after`, or an ordered pandas Categorical). `by=[time]` with `phased=True` is refused:
-that view is already one chart per stage. Residual values and calibrations are refused on
-phased Xbar/S.
+`2 after`, or an ordered pandas Categorical, which is what `.bin()` returns). A stage is a
+level, not a stretch of time: a level that comes back later (A, then B, then A again) is one
+phase, placed before B, so give a returning condition its own label. `by=[time]` with
+`phased=True` is refused: that view is already one chart per stage. Residual values and
+calibrations are refused on phased Xbar/S.
+
+The [Staged Charts tutorial](../tutorials/staged-charts.ipynb) walks this example end to
+end: one set of limits against limits per stage, the S chart, phased X/mR, and a second
+factor pooled or charted on its own.
 
 ## Understanding X and mR Charts
 
@@ -361,7 +384,7 @@ phased.plot(chart='X')
 
 The same view exists for subgrouped data: `study.execute(chart='Xbar', phased=True,
 companion=True)` gives each factor combination its own center and limits on one Xbar/S
-chart (see [Staged Xbar/S](#staged-xbars)).
+chart (see [Staged Xbar/S](#staged-xbar-s)).
 
 **3. One subgroup at a time.** Full stratification: one chart per subgroup, each with
 its own limits.
