@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`validation/truth_report.py`.** It reports how closely the methods, as implemented, recover
   answers known by construction: the PM INERT pure-noise data under all six missing-data
   patterns, and Dr. Bishop's known-effects data. It is a report, not a gate.
+- **Two design-report lines.** In ADS 3 the report says how many cells hold a single reading,
+  since one is enough to switch R2 for the whole study to the differencing method. When
+  conditions were observed in different periods, it says how far apart their average periods
+  are, since condition effects then average over different times.
 
 ### Changed
 - **mR charts check Rule 1 only by default.** Wheeler reads the moving range chart for points
@@ -42,6 +46,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **The design report no longer says "Complete structure" when there is nothing to compare.**
   Without a sampling plan the structure line reads "Not checked (no sampling plan supplied)". It
   used to say "Complete structure", even beside hundreds of empty cells.
+- **Potential capability says why it is unavailable.** A study with no factors (such as one
+  stream of subgroups) or no time variable got "R2 residuals not available (ADS 1)". It now
+  says that Cp/Cpk use the VAS R2 residuals, which need at least one factor (or a time
+  variable), and that the study has none.
 
 ## [0.5.0] - 2026-10-29
 

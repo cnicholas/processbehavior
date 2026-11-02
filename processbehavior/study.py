@@ -193,6 +193,8 @@ class DesignReport:
     _received_order: bool = False  # Time is the received order formulate() numbered (#129)
     _nested_in_time: tuple[str, ...] = ()  # Factors with one level per time period
     _time_var: str | None = None
+    _n_single_reading_cells: int | None = None  # Factor x time cells holding one reading
+    _period_spread: float | None = None  # Range of the conditions' average period ranks
 
     @property
     def factors_table(self) -> pd.DataFrame:
@@ -725,6 +727,22 @@ class DesignReport:
         """Convert machine reason token to human-readable label."""
         return self._REASON_DISPLAY.get(reason, reason)
 
+    def _repr_layout_notes(self) -> list[str]:
+        """Single-reading cells (ADS 3) and conditions observed in different periods, when they apply."""
+        notes = []
+        if self._ads_result and self._ads_result.sds == 3 and self._factors and self._n_single_reading_cells:
+            notes.append(
+                f'  Single-reading cells: {self._n_single_reading_cells} of {self._R_observed}. One is enough '
+                f'to switch R2 for the whole study to the differencing method (ADS 3).'
+            )
+        if self._period_spread is not None:
+            notes.append(
+                f'  Periods: conditions were observed in different periods (their average period differs by '
+                f'up to {self._period_spread:.1f} of {self._T_observed}), so condition effects average over '
+                f'different times and can include time effects.'
+            )
+        return notes
+
     def _nesting_note(self) -> str:
         """Why some empty cells cannot be filled: a factor holds one level per time period."""
         t = self._time_var
@@ -800,6 +818,7 @@ class DesignReport:
         # Structure summary (discrepancy details)
         lines.append('')
         lines.append(f'  Structure: {self.structure_summary}')
+        lines.extend(self._repr_layout_notes())
 
         # Series length: where sigma comes from at this structure and T. A fact beside the
         # design state, not a verdict on it — ADS 2 is ADS 2 whether T is 4 or 400 (#114).
@@ -1729,6 +1748,18 @@ class Study:
             if len(cell_sizes) > 0:
                 N_observed = (int(cell_sizes.min()), float(cell_sizes.median()), int(cell_sizes.max()))
 
+        time_var = self._spec.time_var
+        nested = factors_nested_in_time(ads_df, factors, time_var)
+
+        # Conditions observed in different periods: each condition's average period rank, compared.
+        # Not when a nested factor already explains the gaps.
+        period_spread = None
+        if R_observed is not None and T_observed and not nested and R_observed < len(observed_rsg_values) * T_observed:
+            rank = {v: i for i, v in enumerate(DesignReport._safe_sort(list(ads_df[time_var].dropna().unique())), 1)}
+            cells = ads_df[[rsg_col, time_var]].drop_duplicates()
+            mean_rank = cells[time_var].map(rank).groupby(cells[rsg_col], observed=True).mean()
+            period_spread = float(mean_rank.max() - mean_rank.min())
+
         return DesignReport(
             _sampling_plan=self._sampling_plan,
             _observed_levels=observed_levels,
@@ -1749,8 +1780,10 @@ class Study:
             _ads_result=self._ads.analytical_design_state,
             _series_length=self.series_length,
             _received_order=self._spec.received_order,
-            _nested_in_time=tuple(factors_nested_in_time(ads_df, factors, self._spec.time_var)),
-            _time_var=self._spec.time_var,
+            _nested_in_time=tuple(nested),
+            _time_var=time_var,
+            _n_single_reading_cells=int((cell_sizes == 1).sum()) if R_observed is not None else None,
+            _period_spread=period_spread,
         )
 
     def capability(

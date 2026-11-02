@@ -207,7 +207,15 @@ The design report shows:
 - **N**: Planned vs observed (min, median, max) cell sizes
 - **missing_combos**: Which factor combinations are missing
 - **sds_reason**: Why this DS was detected
-- **structure_summary**: Overall assessment
+- **structure_summary**: Overall assessment against the plan ("Not checked" without one)
+
+Printed, the report adds a line for each of these when it applies:
+- **Empty cells from nesting**: a factor with one level per time period (a stage) leaves cells
+  that cannot be filled; the sampling line names it.
+- **Single-reading cells** (ADS 3): how many cells hold one reading. One is enough to switch R2
+  for the whole study from the within-cell deviation to the differencing method.
+- **Periods**: when conditions were observed in different periods, how far apart their average
+  periods are. Condition effects then average over different times and can include time effects.
 
 ### Summary: When Plans Add Value
 

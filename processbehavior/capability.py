@@ -716,10 +716,18 @@ def assess_capability(
                 f'Too few R2 residual values ({n_r2}) for potential capability; need at least 2'
             )
     else:
-        potential_unavailable_reason = (
-            f'R2 residuals not available (ADS {ads.analytical_design_state.sds}); '
-            f'Cp/Cpk require VAS residuals from a factorial+time design'
-        )
+        needs = (('at least one factor', ads.spec.rsg_vars_list), ('a time variable', ads.spec.time_var))
+        missing = [what for what, present in needs if not present]
+        if missing:
+            potential_unavailable_reason = (
+                f'Cp/Cpk use the VAS R2 residuals, which need {" and ".join(missing)}; '
+                f'this study has {"none" if len(missing) == 1 else "neither"}.'
+            )
+        else:
+            potential_unavailable_reason = (
+                f'R2 residuals not available (ADS {ads.analytical_design_state.sds}); '
+                f'Cp/Cpk require VAS residuals from a factorial+time design'
+            )
 
     return CapabilityResult(
         specs=specs,
