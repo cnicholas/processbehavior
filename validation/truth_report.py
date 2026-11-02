@@ -1,0 +1,147 @@
+"""How closely the VAS methods, as implemented, recover known answers. A report, not a gate.
+
+    python validation/truth_report.py [--out PATH]
+
+The e2e gate (e2e_bishop_report.py) checks that PB reproduces Dr. Bishop's VAS runs value for value.
+This report asks a different question of two datasets whose truth is known by construction:
+
+- PM INERT (PBTESTDATABASE_T100.csv): pure noise, sd 1, no condition, time or interaction effects,
+  under each of the six missing-data patterns (PM INERT SDS k = PM INERT where PM SDS k is present).
+  Specs -3 / 0 / 3, so the true potential and current Cp are both 1.00.
+- Known effects (PBTESTKNOWNEFFECTS_T100.csv, Dr. Bishop, October 2026): 300 + condition effect
+  (11:-1, 12:1, 21:-1, 22:1, 31:-3, 32:-1, 41:-1, 42:1) + a linear time trend from -2 to 2 + a +/-2
+  condition x time interaction (blocks of 25 periods; phase 2 the mirror image of phase 1) + noise
+  with sd 3. Specs 295 / 300 / 305.
+
+For each design state it reports the noise estimate behind potential capability, potential and current
+Pp against their true values, the loss shares against the true shares of the expected loss
+(Ybar - T)^2 + sigma_total^2 (10-1 manual Eq 15-18), and how far the estimated condition and time
+effects sit from the true ones.
+"""
+from __future__ import annotations
+
+import argparse
+import sys
+import warnings
+from pathlib import Path
+
+import numpy as np
+import pandas as pd
+
+import processbehavior as pb
+
+HERE = Path(__file__).parent
+STATES = range(1, 7)
+ALPHA = {11: -1.0, 12: 1.0, 21: -1.0, 22: 1.0, 31: -3.0, 32: -1.0, 41: -1.0, 42: 1.0}
+
+
+def _frame(path: Path, column: str, pattern: str | None) -> pd.DataFrame:
+    df = pd.read_csv(path, na_values=['*'])
+    if pattern is not None:
+        df[column] = df['PM INERT'].where(df[pattern].notna())
+    return df.dropna(subset=[column])
+
+
+def _effects_error(study, column: str, true_alpha: dict, true_beta) -> tuple[float, float]:
+    """RMS distance of the estimated condition and time effects (unweighted means of cell means) from the truth."""
+    d = study.dataset
+    cm = d.groupby(['FACTOR 1', 'FACTOR 2', 'PRODUCTION TIME'])[column].mean()
+    grand = cm.mean()
+    cond = cm.groupby(level=[0, 1]).mean() - grand
+    time = cm.groupby(level=2).mean() - grand
+    a = np.array([true_alpha[int(f'{f1}{f2}')] for f1, f2 in cond.index])
+    b = np.array([true_beta(t) for t in time.index])
+    return float(np.sqrt(np.mean((cond.to_numpy() - (a - a.mean())) ** 2))), \
+        float(np.sqrt(np.mean((time.to_numpy() - (b - b.mean())) ** 2)))
+
+
+def _row(study, column, specs, true_alpha, true_beta):
+    lsl, target, usl = specs
+    cap = study.capability(lsl=lsl, usl=usl, target=target)
+    loss = study.loss_function(target=target)
+    parts = {'unexplained': loss.unexplained, 'interaction': loss.interaction, 'condition': loss.pdc,
+             'time': loss.time, 'mean': loss.centering}
+    total = loss.centering + float(study.dataset[column].var(ddof=1))
+    cond_err, time_err = _effects_error(study, column, true_alpha, true_beta)
+    return {
+        'ads': study.analytical_design_state.sds, 'n': len(study.dataset),
+        'sigma': cap.sigma_hat_r2, 'cp': cap.cp, 'pp': cap.pp,
+        **{f'share_{k}': 100 * v / sum(parts.values()) for k, v in parts.items()},
+        'parts_over_total': sum(parts.values()) / total,
+        'cond_err': cond_err, 'time_err': time_err,
+    }
+
+
+def inert():
+    rows = []
+    for k in STATES:
+        col = 'PM INERT' if k == 1 else f'PM INERT SDS {k}'
+        df = _frame(HERE / 'PBTESTDATABASE_T100.csv', col, None if k == 1 else f'PM SDS {k}')
+        s = pb.formulate(df, response=col, factors=['FACTOR 1', 'FACTOR 2'], time='PRODUCTION TIME', precision=12)
+        rows.append({'state': k, **_row(s, col, (-3, 0, 3), {key: 0.0 for key in ALPHA}, lambda t: 0.0)})
+    return rows
+
+
+def known():
+    rows = []
+    a = np.array(list(ALPHA.values()))
+    beta = lambda t: -2 + 4 * (t - 1) / 99  # noqa: E731
+    t = np.arange(1, 101)
+    true = {'unexplained': 9.0, 'interaction': 4.0, 'condition': float(((a - a.mean()) ** 2).mean()),
+            'time': float((beta(t) ** 2).mean()), 'mean': float(a.mean() ** 2)}
+    for k in STATES:
+        col = f'PM SDS {k} KNOWN'
+        df = _frame(HERE / 'PBTESTKNOWNEFFECTS_T100.csv', col, None)
+        s = pb.formulate(df, response=col, factors=['FACTOR 1', 'FACTOR 2'], time='PRODUCTION TIME', precision=12)
+        rows.append({'state': k, **_row(s, col, (295, 300, 305), ALPHA, beta)})
+    total = sum(true.values())
+    return rows, {k: 100 * v / total for k, v in true.items()}, 10 / (6 * 3.0), 10 / (6 * np.sqrt(total - true['mean']))
+
+
+def render() -> str:
+    out = ['# Recovering known answers', '',
+           'A report, not a gate: the gate is that PB reproduces Dr. Bishop\'s VAS runs value for value',
+           '(`validation/e2e_bishop_report.py`). This shows how closely those methods recover answers known',
+           'by construction. Generated by `validation/truth_report.py`.', '']
+    rows = inert()
+    out += ['## PM INERT: pure noise (sd 1), true potential and current Pp 1.00, no effects', '',
+            '| SDS | ADS | Noise estimate | Potential Pp | Current Pp | Interaction share | Parts / total '
+            '| Condition effects (RMS) | Time effects (RMS) |',
+            '|---|---|---|---|---|---|---|---|---|']
+    for r in rows:
+        out.append(f"| {r['state']} | {r['ads']} | {r['sigma']:.3f} | {r['cp']:.2f} | {r['pp']:.2f} "
+                   f"| {r['share_interaction']:.1f}% | {r['parts_over_total']:.2f} | {r['cond_err']:.3f} "
+                   f"| {r['time_err']:.3f} |")
+    rows, shares, true_cp, true_pp = known()
+    out += ['', '## Known effects (noise sd 3)', '',
+            f'True potential Pp {true_cp:.3f}, current Pp {true_pp:.3f}. True loss shares: '
+            + ', '.join(f'{k} {v:.1f}%' for k, v in shares.items()) + '.', '',
+            '| SDS | ADS | Noise estimate | Potential Pp | Current Pp | Unexplained | Interaction | Condition '
+            '| Time | Parts / total | Condition error (RMS) | Time error (RMS) |',
+            '|---|---|---|---|---|---|---|---|---|---|---|---|']
+    for r in rows:
+        out.append(f"| {r['state']} | {r['ads']} | {r['sigma']:.3f} | {r['cp']:.3f} | {r['pp']:.3f} "
+                   f"| {r['share_unexplained']:.1f}% | {r['share_interaction']:.1f}% | {r['share_condition']:.1f}% "
+                   f"| {r['share_time']:.1f}% | {r['parts_over_total']:.2f} | {r['cond_err']:.3f} "
+                   f"| {r['time_err']:.3f} |")
+    out += ['', 'Effect errors are root-mean-square distances of the estimated effects (unweighted means of cell',
+            'means) from the true ones; noise alone puts them near sd/sqrt(readings per level).', '']
+    return '\n'.join(out)
+
+
+def main() -> None:
+    ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    ap.add_argument('--out', type=Path, help='write the markdown here instead of printing it')
+    args = ap.parse_args()
+    with warnings.catch_warnings():
+        warnings.simplefilter('ignore')
+        text = render()
+    if args.out:
+        args.out.write_text(text)
+        print(f'wrote {args.out}')
+    else:
+        sys.stdout.write(text)
+
+
+if __name__ == '__main__':
+    main()

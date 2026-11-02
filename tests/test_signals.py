@@ -56,7 +56,7 @@ class TestSignalConfig:
         assert config.get_rules_for_chart('Xbar') == ['rule_1']
         assert config.get_rules_for_chart('S') == ['rule_1']
         assert len(config.get_rules_for_chart('X')) == 8
-        assert len(config.get_rules_for_chart('mR')) == 8
+        assert config.get_rules_for_chart('mR') == ['rule_1']
 
     def test_preset_standard(self):
         """Test standard preset."""

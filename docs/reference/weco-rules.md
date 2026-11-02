@@ -241,15 +241,22 @@ Not all rules apply to all chart types:
 | Rule | Xbar | S | X | mR |
 |------|------|---|-----|---|
 | 1: Beyond Limits | ✅ | ✅ | ✅ | ✅ |
-| 2: Zone A | ❌ | ❌ | ✅ | ✅ |
-| 3: Zone B | ❌ | ❌ | ✅ | ✅ |
-| 4: Run | ❌ | ❌ | ✅ | ✅ |
-| 5: Trend | ❌ | ❌ | ✅ | ✅ |
-| 6: Oscillation | ❌ | ❌ | ✅ | ✅ |
-| 7: Hugging Center | ❌ | ❌ | ✅ | ✅ |
-| 8: Avoiding Center | ❌ | ❌ | ✅ | ✅ |
+| 2: Zone A | ❌ | ❌ | ✅ | ❌ |
+| 3: Zone B | ❌ | ❌ | ✅ | ❌ |
+| 4: Run | ❌ | ❌ | ✅ | ❌ |
+| 5: Trend | ❌ | ❌ | ✅ | ❌ |
+| 6: Oscillation | ❌ | ❌ | ✅ | ❌ |
+| 7: Hugging Center | ❌ | ❌ | ✅ | ❌ |
+| 8: Avoiding Center | ❌ | ❌ | ✅ | ❌ |
 
-**Reason**: Xbar and S charts compare subgroups, which may not be time-ordered. Rules 2-8 assume sequential ordering, which is guaranteed only for X charts.
+**Reason**: Xbar and S charts compare subgroups, which may not be time-ordered. Rules 2-8
+assume sequential, independent points from a symmetric distribution. X charts meet that;
+mR charts do not, because successive moving ranges share a reading and their distribution
+is skewed, so the zone and run rules fire on pure noise. Wheeler reads the mR chart for
+points above its upper limit.
+
+These are the defaults. `rules='standard'`, `'extended'`, `'all'` or an explicit list apply
+as given, on every chart.
 
 ## Sensitivity vs. False Alarms
 
@@ -288,7 +295,7 @@ a run of eight cannot exist in six points.
 
 `SignalConfig.min_observations` (default 20) is the series length below which the
 evaluation as a whole is reported as **partial**, even if every rule that could run
-did run. At four points, six of the eight X/mR rules are structurally inert and the
+did run. At four points, six of the eight X-chart rules are structurally inert and the
 remaining two have very little to work with. Below the threshold the detector emits
 a `ProcessBehaviorWarning` naming both numbers, and the result carries the detail:
 

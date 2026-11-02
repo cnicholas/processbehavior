@@ -199,7 +199,7 @@ The full report renders to `validation/e2e_bishop_report.html`.
 - **Effects analysis**: Main effects, time effects, and interaction effects
 - **Stratified charts**: Automatic per-stratum limits for grouped individual data
 - **Staged charts**: `phased=True` gives each stage its own center and limits on X/mR and Xbar/S; `phase_statistics()` returns the numbers behind the steps
-- **Signal detection**: all eight Western Electric rules on X/mR; Rule 1 (3-sigma) on Xbar/S, where the run- and zone-based rules need a time order that subgroup comparisons don't have
+- **Signal detection**: all eight Western Electric rules on X charts; Rule 1 (3-sigma) on mR, Xbar and S, where the run- and zone-based rules don't fit: subgroup comparisons have no time order, and successive moving ranges share a reading
 - **Beyond the charts**: capability indices (Cp/Cpk/Pp/Ppk), Taguchi loss decomposition, and maximum-information analysis — validated in the same Bishop-reference CI gate
 - **IDE support**: Column auto-completion via `ProcessBehavior(df).cols`
 - **Self-diagnostic errors**: Helpful messages that say what's available and how to fix it

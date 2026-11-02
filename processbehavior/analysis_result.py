@@ -1053,9 +1053,10 @@ class AnalysisResult:
             Specific chart to analyze. If None, analyzes all charts.
         rules : str, list, or RuleSet, optional
             Rules to apply:
-            - 'standard': Rules 1-4 (default)
-            - 'extended': Rules 1-8
-            - 'all': All available rules
+            - None (default): Rules 1-8 on X charts; Rule 1 on mR, Xbar and S charts
+            - 'standard': Rules 1-4, on every chart
+            - 'extended': Rules 1-8, on every chart
+            - 'all': Same as 'extended'
             - List of rule names: ['rule_1', 'rule_2', ...]
             - RuleSet: Fluent API configuration
         config : SignalConfig, optional
@@ -1071,7 +1072,7 @@ class AnalysisResult:
 
         Examples
         --------
-        Simple usage (standard rules):
+        Simple usage (default rules for each chart):
 
         >>> signals = result.detect_signals()
         >>> print(signals.summary)
