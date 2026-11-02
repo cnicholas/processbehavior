@@ -449,6 +449,11 @@ interaction effect in ADS 1; in ADS 2/3 it is what the other parts leave of
 (Ȳ − T)² + S² unless the interaction was set to 0. `loss_function()` raises
 `ValidationError` when R2 is unavailable for the layout.
 
+`reference` is what `pdc`, `time` and `interaction` would be expected to show from noise
+alone (a dict with those keys, in loss units), for the study's own layout: independent
+readings with a common variance, estimated by `unexplained`. The printed result shows each as
+a share of `total`. The interaction's reference is `None` in ADS 2/3.
+
 ```python
 loss.as_dict(round_to=None)
 loss.plot(*, structured=False, orientation='vertical', theme=None,

@@ -15,6 +15,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   since one is enough to switch R2 for the whole study to the differencing method. When
   conditions were observed in different periods, it says how far apart their average periods
   are, since condition effects then average over different times.
+- **`LossResult.reference`: what each loss part shows from noise alone.** The PDC, Time and
+  Interaction parts average squared deviations of estimated means, so with no effects each is
+  still above zero (about 14% interaction on the PM INERT pure-noise data). `reference` gives
+  the expected value of each under no effects for the study's own layout, exact for any
+  pattern of occupied cells and cell sizes, and the printed result shows it as a share of the
+  total. It is in `as_dict()` too. In ADS 2/3 the interaction is a remainder, so its reference
+  is `None`. Loss values are unchanged.
 
 ### Changed
 - **mR charts check Rule 1 only by default.** Wheeler reads the moving range chart for points
