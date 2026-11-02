@@ -22,6 +22,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   pattern of occupied cells and cell sizes, and the printed result shows it as a share of the
   total. It is in `as_dict()` too. In ADS 2/3 the interaction is a remainder, so its reference
   is `None`. Loss values are unchanged.
+- **Windowed capability shows the window's own noise.** `CapabilityResult.window_sigma_r2` is
+  σ̂ from the window's R2 values, printed beside the full-study `sigma_hat_r2` that the
+  potential indices use. It appears only on windowed results; the default result is unchanged.
+- **A Provenance sheet in Excel exports.** Written with the Summary sheet: library version,
+  time written, variables, input rows and rows analysed, design states, and a SHA-256
+  fingerprint of the analysed values. `AnalysisDataSet.n_input_rows` holds the input row count.
 
 ### Changed
 - **mR charts check Rule 1 only by default.** Wheeler reads the moving range chart for points

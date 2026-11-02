@@ -426,6 +426,9 @@ From `study.capability()`. Fields include `pp`, `ppk` (with `ppk_lower`/`ppk_upp
   there; it equals `y_bar` in ADS 1. `None` when potential capability is unavailable.
 - `potential_unavailable_reason` — why the potential indices are `None` (for example,
   no VAS residuals, or R2 unavailable for the layout).
+- `window_sigma_r2` — windowed results only: σ̂ from the window's own R2 values. The
+  potential indices keep the full-study `sigma_hat_r2`; this shows how the window's noise
+  compares.
 
 ```python
 cap.as_dict(round_to=None)   # -> dict
