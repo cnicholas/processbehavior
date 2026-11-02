@@ -27,6 +27,7 @@ function when it is an instance method.
 from __future__ import annotations
 
 import logging
+import re
 import warnings
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
@@ -89,14 +90,18 @@ def _try_clean_numeric_strings(series: pd.Series) -> pd.Series | None:
     if len(non_na) == 0:
         return None
 
-    # Fast path: try direct pd.to_numeric first (handles plain numeric strings)
-    direct = pd.to_numeric(series, errors='coerce')
-    direct_success = direct.notna().sum()
     original_non_na = non_na.shape[0]
-    if direct_success >= original_non_na * _NUMERIC_CONVERSION_THRESHOLD:
-        return direct
+    comma_role = _comma_role(non_na)
 
-    result = _coerce_formatted_numerics(series)
+    # Fast path: try direct pd.to_numeric first (handles plain numeric strings). Skipped when
+    # any value has a comma: to_numeric rejects them all, so a lone '10,4' among plain numbers
+    # would vanish here without being read or reported.
+    if comma_role == 'none':
+        direct = pd.to_numeric(series, errors='coerce')
+        if direct.notna().sum() >= original_non_na * _NUMERIC_CONVERSION_THRESHOLD:
+            return direct
+
+    result = _coerce_formatted_numerics(series, comma_role)
 
     # Check success rate against non-NA values only
     converted_count = result.notna().sum()
@@ -106,14 +111,47 @@ def _try_clean_numeric_strings(series: pd.Series) -> pd.Series | None:
     return None
 
 
-def _coerce_formatted_numerics(series: pd.Series) -> pd.Series:
+# A comma between digit groups of three, with the sign, brackets and currency already removed:
+# '1,234', '-1,234,567.89', '12,500%'. Only these commas are thousands separators.
+_THOUSANDS_FORMAT = re.compile(r'^-?\d{1,3}(?:,\d{3})+(?:\.\d+)?%?$')
+# A comma followed by other than exactly three digits ('10,4', '3,14159'): it can't be a
+# thousands separator, so in a column with no '.' it is a decimal comma.
+_NOT_A_THOUSANDS_GROUP = re.compile(r'\d,(?:\d{1,2}|\d{4,})(?!\d)')
+
+
+def _comma_role(values: pd.Series) -> str:
+    """How commas are read in one column, decided once from its non-NA values.
+
+    'decimal' when no value has a '.' and some comma is not a thousands group ('10,4'), so
+    the column was written with decimal commas; 'thousands' when values have commas otherwise;
+    'none' when no value has a comma. Deciding per column, not per value, keeps '1,234'
+    meaning one thing throughout a column, and gives the same answer on the distinct values
+    as on the full column (see :func:`_clean_numeric_strings_via_uniques`).
+    """
+    s = values.dropna().astype(str)
+    has_comma = s.str.contains(',', regex=False)
+    if not has_comma.any():
+        return 'none'
+    if not s.str.contains('.', regex=False).any() and s[has_comma].str.contains(_NOT_A_THOUSANDS_GROUP).any():
+        return 'decimal'
+    return 'thousands'
+
+
+def _coerce_formatted_numerics(series: pd.Series, comma_role: str | None = None) -> pd.Series:
     """The value transform behind :func:`_try_clean_numeric_strings`, without the
     accept/reject decision.
 
     Split out so the decision can be scored against a different population than the one
     transformed — see :func:`_clean_numeric_strings_via_uniques`, which transforms the
     distinct values but must score frequency-weighted over the full column.
+
+    Commas follow ``comma_role`` (:func:`_comma_role`, computed from ``series`` when not
+    given): decimal commas become points; otherwise a comma is removed only where it
+    separates thousands, and any other value with a comma becomes NA rather than being
+    read as a different number ('10,4' is never 104).
     """
+    if comma_role is None:
+        comma_role = _comma_role(series)
     # Convert to string for .str operations (handles mixed float/str columns)
     s = series.astype(str)
     # Preserve original NAs
@@ -128,8 +166,13 @@ def _coerce_formatted_numerics(series: pd.Series) -> pd.Series:
     # Remove currency symbols and optional adjacent whitespace
     # Use literal Unicode chars (€£¥) — raw string \u escapes aren't valid in pyarrow regex
     cleaned = cleaned.str.replace(r'[$€£¥]\s*', '', regex=True)
-    # Remove thousands separators (commas)
-    cleaned = cleaned.str.replace(',', '', regex=False)
+    if comma_role == 'decimal':
+        cleaned = cleaned.str.replace(',', '.', regex=False)
+    elif comma_role == 'thousands':
+        has_comma = cleaned.str.contains(',', regex=False)
+        separators = has_comma & cleaned.str.match(_THOUSANDS_FORMAT)
+        cleaned = cleaned.mask(separators, cleaned.str.replace(',', '', regex=False))
+        cleaned = cleaned.mask(has_comma & ~separators, 'nan')
     # Remove percentage signs
     cleaned = cleaned.str.replace('%', '', regex=False)
     # Final strip (catches residual whitespace after symbol removal)
@@ -193,16 +236,50 @@ def _clean_numeric_strings_via_uniques(series: pd.Series) -> pd.Series | None:
 
     # Fast path, then slow path — the same order and the same acceptance test as
     # _try_clean_numeric_strings, but scored over the full column so the frequency
-    # weighting is preserved.
-    direct = _mapped(pd.to_numeric(uniques, errors='coerce'))
-    if direct.notna().sum() >= threshold:
-        return direct
+    # weighting is preserved. The comma role comes from the distinct values, which hold
+    # exactly the strings the full column does, so both paths read commas the same way.
+    comma_role = _comma_role(uniques)
+    if comma_role == 'none':
+        direct = _mapped(pd.to_numeric(uniques, errors='coerce'))
+        if direct.notna().sum() >= threshold:
+            return direct
 
-    formatted = _mapped(_coerce_formatted_numerics(uniques))
+    formatted = _mapped(_coerce_formatted_numerics(uniques, comma_role))
     if formatted.notna().sum() >= threshold:
         return formatted
 
     return None
+
+
+def _describe_numeric_cleaning(before: pd.Series, after: pd.Series, examples: int = 3) -> str | None:
+    """One warning line saying what numeric cleaning did to a column, or None if it changed nothing.
+
+    Counts the values whose text was reformatted ('$1,234.50' became 1234.5), says when commas
+    were read as decimal points, and names the values that could not be read and are now
+    missing. Blank cells are left out: they were empty to begin with.
+    """
+    text = before.astype(str).str.strip()
+    present = before.notna() & (text != '')
+    dropped = present & after.isna()
+    changed = present & after.notna() & (pd.to_numeric(before, errors='coerce') != after)
+    if not dropped.any() and not changed.any():
+        return None
+
+    def sample(mask: pd.Series) -> list[str]:
+        return [str(v) for v in pd.unique(before[mask])[:examples]]
+
+    parts = []
+    if changed.any():
+        shown = ', '.join(f"'{v}' → {after[before.astype(str) == v].iloc[0]:.10g}" for v in sample(changed))
+        parts.append(f'{int(changed.sum())} values reformatted (e.g. {shown})')
+        if _comma_role(before[present]) == 'decimal':
+            parts.append('commas read as decimal points')
+    if dropped.any():
+        parts.append(
+            f'{int(dropped.sum())} values could not be read and are now missing: '
+            + ', '.join(f"'{v}'" for v in sample(dropped))
+        )
+    return '; '.join(parts)
 
 
 @dataclass
@@ -578,15 +655,17 @@ class ProcessBehavior:
         for col in cleaned_df.columns:
             result = _clean_numeric_strings_via_uniques(cleaned_df[col])
             if result is not None:
-                formatting_cleaned[col] = int(result.notna().sum())
+                line = _describe_numeric_cleaning(cleaned_df[col], result)
+                if line:
+                    formatting_cleaned[col] = line
                 cleaned_df[col] = result
 
         if formatting_cleaned:
             warnings.warn(
                 f'Cleaned numeric formatting in {len(formatting_cleaned)} column(s):\n'
-                + '\n'.join([f'  • {col}: {count} values converted' for col, count in formatting_cleaned.items()])
-                + '\n\nCurrency symbols, thousands separators, and '
-                'accounting negatives were removed.',
+                + '\n'.join(f'  • {col}: {line}' for col, line in formatting_cleaned.items())
+                + '\n\nCurrency symbols, percent signs, thousands separators and accounting brackets were '
+                'removed. A value that could not be read is missing and left out of the analysis.',
                 ProcessBehaviorWarning,
                 stacklevel=3,
             )

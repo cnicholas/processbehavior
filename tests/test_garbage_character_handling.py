@@ -350,6 +350,63 @@ class TestNumericStringDataIntegrity:
         assert pdf.data['Y'].iloc[2] == 3.00
 
 
+class TestCommaHandling:
+    """A comma is read one way per column: decimal commas, or thousands separators, never a guess per value."""
+
+    @staticmethod
+    def _clean(values):
+        with warnings.catch_warnings(record=True) as record:
+            warnings.simplefilter('always')
+            data = ProcessBehavior(pd.DataFrame({'Y': values})).data['Y']
+        return data, '\n'.join(str(w.message) for w in record)
+
+    def test_decimal_comma_column_read_as_decimals(self):
+        data, text = self._clean(['10,4', '10,5', '9,8', '11,0'])
+        assert list(data) == [10.4, 10.5, 9.8, 11.0]
+        assert 'commas read as decimal points' in text
+
+    def test_decimal_comma_column_is_never_read_as_thousands(self):
+        data, _ = self._clean(['10,4', '1,234'])
+        assert list(data) == [10.4, 1.234]
+
+    def test_stray_comma_among_dotted_decimals_is_named_not_misread(self):
+        data, text = self._clean(['10.4', '10.5', '9.8', '11.0', '10,4', '10.1'])
+        assert pd.isna(data.iloc[4])
+        assert data.drop(index=4).tolist() == [10.4, 10.5, 9.8, 11.0, 10.1]
+        assert "could not be read and are now missing: '10,4'" in text
+
+    @pytest.mark.parametrize(
+        'values, expected',
+        [
+            pytest.param(['1,234', '2,500', '10,000'], [1234.0, 2500.0, 10000.0], id='thousands_no_decimals'),
+            pytest.param(['1,234.56', '2,500.5', '980.25'], [1234.56, 2500.5, 980.25], id='thousands_with_decimals'),
+        ],
+    )
+    def test_thousands_separators_still_removed(self, values, expected):
+        data, _ = self._clean(values)
+        assert list(data) == expected
+
+    def test_low_cardinality_column_reads_commas_like_the_direct_path(self):
+        """The distinct-value path decides the comma role from the same strings as the full column."""
+        data, _ = self._clean(['10,4', '10,5', '9,8'] * 400)
+        assert data.head(3).tolist() == [10.4, 10.5, 9.8]
+        assert data.notna().all()
+
+    def test_plain_numeric_strings_do_not_warn(self):
+        _, text = self._clean(['1.50', '2.00', '3.50'])
+        assert 'Cleaned numeric formatting' not in text
+
+    def test_unreadable_values_are_named(self):
+        values = ['10.1', '9.9', '16 mm', '10.2', '10.0', '9.7', '10.3', '10.6', '9.5', '10.8', '9.6']
+        data, text = self._clean(values)
+        assert data.isna().sum() == 1
+        assert "1 values could not be read and are now missing: '16 mm'" in text
+
+    def test_count_is_values_changed_not_values_present(self):
+        _, text = self._clean(['$1.50', '2.00', '3.50'])
+        assert 'Y: 1 values reformatted' in text
+
+
 class TestNumericStringWithGarbageChars:
     """Test interaction between garbage character cleaning and numeric string cleaning."""
 
