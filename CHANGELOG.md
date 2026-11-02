@@ -17,6 +17,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (it used to count every value in the column), gives examples, says when commas were read as
   decimal points, and names the values that could not be read. A column of plain numeric strings
   no longer warns.
+- **A factor nested in time is named.** When every time period holds one level of a factor (a
+  stage, a before/after split), the design report says so beside the empty-cell count, and
+  `loss_function()` warns that the PDC and Time parts both contain that factor's effect, so the
+  decomposition counts it more than once. It points to staged charts instead. Loss values are
+  unchanged.
+- **The design report no longer says "Complete structure" when there is nothing to compare.**
+  Without a sampling plan the structure line reads "Not checked (no sampling plan supplied)". It
+  used to say "Complete structure", even beside hundreds of empty cells.
 
 ## [0.5.0] - 2026-10-29
 

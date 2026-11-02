@@ -1359,3 +1359,16 @@ class SDSRegistry:
         plan = plans[sds]
         # Set min_cell_size from actual data
         return replace(plan, min_cell_size=min_cell_size)
+
+def factors_nested_in_time(frame: pd.DataFrame, factors: list[str], time_var: str | None) -> list[str]:
+    """
+    Factors whose every time period holds a single level, such as a stage or a before/after split.
+
+    Such a factor is confounded with time. Its levels are seen only in their own periods, so the
+    K x T grid has cells that cannot be filled, and its effect cannot be separated from the time
+    effect. Factors with one level overall are not reported.
+    """
+    if not time_var or not factors:
+        return []
+    by_time = frame.groupby(time_var, observed=True)
+    return [f for f in factors if frame[f].nunique() > 1 and bool((by_time[f].nunique() <= 1).all())]

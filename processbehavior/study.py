@@ -28,7 +28,7 @@ from typing import TYPE_CHECKING, Literal
 
 from .exceptions import ChartNotAvailableError, FactorNotFoundError, ValidationError
 from .residual_calculator import resolve_r6_groupby
-from .sds_detector import SDSRegistry
+from .sds_detector import SDSRegistry, factors_nested_in_time
 from .series_length import SeriesLengthPrecision, assess_series_length
 from .spc_constants import (
     ALL_RESIDUALS,
@@ -191,6 +191,8 @@ class DesignReport:
     _ads_result: SDSResult | None = None  # Analytical Design State
     _series_length: SeriesLengthPrecision | None = None  # Where sigma comes from, and how precise
     _received_order: bool = False  # Time is the received order formulate() numbered (#129)
+    _nested_in_time: tuple[str, ...] = ()  # Factors with one level per time period
+    _time_var: str | None = None
 
     @property
     def factors_table(self) -> pd.DataFrame:
@@ -651,8 +653,12 @@ class DesignReport:
         Summary of structure discrepancy (distinct from SDS reason).
 
         Returns 'Complete structure' if plan matches observation,
-        otherwise lists what's missing or extra.
+        otherwise lists what's missing or extra. Without a sampling plan there
+        is nothing to compare, so it says so; empty cells in the observed grid
+        are counted on the SDS line instead.
         """
+        if not self.has_plan and self._T is None and self._N is None:
+            return 'Not checked (no sampling plan supplied)'
         issues = []
         if self.K_missing > 0:
             issues.append(f'{self.K_missing} RSG groups missing')
@@ -719,6 +725,14 @@ class DesignReport:
         """Convert machine reason token to human-readable label."""
         return self._REASON_DISPLAY.get(reason, reason)
 
+    def _nesting_note(self) -> str:
+        """Why some empty cells cannot be filled: a factor holds one level per time period."""
+        t = self._time_var
+        if len(self._nested_in_time) == 1:
+            f = self._nested_in_time[0]
+            return f'{f} is nested in {t}: each {t} has one {f}'
+        return f'{" and ".join(self._nested_in_time)} are nested in {t}: each {t} has one level of each'
+
     def __repr__(self) -> str:
         """Nice summary showing plan vs observed per factor with K/T/N."""
         lines = [f'Design Report ({len(self._factors)} factors)']
@@ -739,6 +753,8 @@ class DesignReport:
             else:
                 lines.append('    PDS (Planned):    no plan supplied')
             empty_detail = f' — {ods.n_empty_cells} empty cells' if ods.n_empty_cells > 0 else ''
+            if empty_detail and self._nested_in_time:
+                empty_detail += f' ({self._nesting_note()})'
             ods_reason = self._humanize_reason(ods.reason)
             # Label deliberately reads "SDS (Sampling)", not "ODS (Observed)":
             # Bishop calls the state produced by executing the sampling plan the
@@ -1733,6 +1749,8 @@ class Study:
             _ads_result=self._ads.analytical_design_state,
             _series_length=self.series_length,
             _received_order=self._spec.received_order,
+            _nested_in_time=tuple(factors_nested_in_time(ads_df, factors, self._spec.time_var)),
+            _time_var=self._spec.time_var,
         )
 
     def capability(

@@ -487,6 +487,12 @@ S² is the sample variance of all observations. The total is the sum of the five
 in ADS 2 and 3 it equals (Ȳ - Target)² + S², unless the interaction remainder was negative
 and set to 0. The largest percentage identifies where to focus improvement efforts.
 
+**A factor nested in time.** When every time period holds one level of a factor (a stage, or a
+before/after split), its effect cannot be separated from time. The PDC and Time parts both
+contain it, so the decomposition counts it more than once, and `loss_function()` warns. Compare
+the levels with staged charts instead, `study.execute(chart='Xbar', phased=True)`; see the
+[Staged Charts tutorial](../tutorials/staged-charts.ipynb).
+
 ## Best Practices
 
 1. **Use auto-completion** — Prevents typos and speeds up development
