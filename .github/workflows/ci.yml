@@ -23,7 +23,7 @@ jobs:
         # macOS billed at 10x so we run it only on the newest Python as
         # a release-readiness check. The maintainer develops on macOS,
         # so regressions also surface in local dev between CI runs.
-        python-version: ["3.10", "3.11", "3.13"]
+        python-version: ["3.10", "3.11", "3.13", "3.14"]
         os: [ubuntu-latest, windows-latest]
         include:
           - os: macos-latest

@@ -268,6 +268,21 @@ as given, on every chart.
 
 **Recommendation**: Start with standard rules. Add extended rules when investigating known issues or when resources permit investigation of false alarms.
 
+### Signals on pure noise, per chart
+
+Over a whole chart, the chance of at least one false signal grows with its length. Share of
+500 X/mR charts of pure noise (independent normal readings, no signal in them) with at least
+one signal under the default rules, and on mR with all eight:
+
+| Readings | X (Rules 1-8) | mR (Rule 1, the default) | mR (all eight rules) |
+|---|---|---|---|
+| 25 | 17% | 13% | 34% |
+| 50 | 43% | 33% | 73% |
+| 100 | 70% | 58% | 94% |
+
+A signal is a reason to look, not proof of a cause; on a long chart some will be noise.
+`validation/chance_signals.py` reproduces this table (it is a report, not a test).
+
 ## Minimum Observations
 
 There are two minimums, and they answer different questions.

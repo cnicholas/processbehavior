@@ -28,6 +28,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **A Provenance sheet in Excel exports.** Written with the Summary sheet: library version,
   time written, variables, input rows and rows analysed, design states, and a SHA-256
   fingerprint of the analysed values. `AnalysisDataSet.n_input_rows` holds the input row count.
+- **`validation/chance_signals.py`.** It reports how often charts signal on pure noise: X/mR
+  charts under the default rules (and mR with all eight), and the R3-R5 effect charts, whose
+  limits sit between about 2.2 and 4.4 standard deviations of the plotted points depending on
+  the chart and layout. A report, not a gate; its tables are in the WECO rules reference and
+  the residuals guide.
 
 ### Changed
 - **mR charts check Rule 1 only by default.** Wheeler reads the moving range chart for points
@@ -63,6 +68,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   stream of subgroups) or no time variable got "R2 residuals not available (ADS 1)". It now
   says that Cp/Cpk use the VAS R2 residuals, which need at least one factor (or a time
   variable), and that the study has none.
+
+### CI / Infrastructure
+- **Python 3.14 is tested** on Ubuntu and Windows, in CI and in the release gate, and listed in
+  the package classifiers.
 
 ## [0.5.0] - 2026-10-29
 
