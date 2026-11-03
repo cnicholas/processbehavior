@@ -74,13 +74,7 @@ The full test suite is the gate: if it fails, the change is not ready.
 The file `validation/PBTESTDATABASE_T100.csv` is ground-truth Minitab output
 for DS 1–6 from Bishop's reference materials. Numerical changes that touch
 residuals (R1–R5), DS detection, limit calculations, or variance
-decomposition must keep the relevant Bishop-reference tests green:
-
-```bash
-pytest tests/test_bishop_reference.py -v   # skips unless Bishop's residual workbooks are present
-```
-
-There is also a full end-to-end check that compares every chart center, control
+decomposition must keep the end-to-end check green. It compares every chart center, control
 limit, capability index and loss component against Bishop's VAS runs for the
 10-12-2026 manual (PM SDS 1–6, PM INERT, his known-effects data and the Medicare data):
 

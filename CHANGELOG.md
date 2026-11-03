@@ -80,9 +80,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   says that Cp/Cpk use the VAS R2 residuals, which need at least one factor (or a time
   variable), and that the study has none.
 
+### Removed
+- **`examples/` and `validation/effects_visualization.ipynb`.** These demos predated the 0.2.0
+  API (`ProcessDataFrame`, `study.sds`, moved data files) and no longer ran; nothing linked to
+  them. The maintained, CI-executed tutorials are in `docs/tutorials/`.
+- **`tests/test_bishop_reference.py`.** Its one test compared residual values with a workbook
+  of Dr. Bishop's that is not in the repository, so it skipped on every run. Residual charts are
+  still compared with VAS through their limits.
+
 ### CI / Infrastructure
 - **Python 3.14 is tested** on Ubuntu and Windows, in CI and in the release gate, and listed in
   the package classifiers.
+- **The truth report runs in CI.** `validation/truth_report.py` runs on every push (Ubuntu,
+  Python 3.13) and its output is kept as the `truth-report` artifact.
 
 ## [0.5.0] - 2026-10-29
 
