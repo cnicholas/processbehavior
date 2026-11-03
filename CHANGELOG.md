@@ -69,6 +69,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   says that Cp/Cpk use the VAS R2 residuals, which need at least one factor (or a time
   variable), and that the study has none.
 
+### Removed
+- **`examples/` and `validation/effects_visualization.ipynb`.** These demos predated the 0.2.0
+  API (`ProcessDataFrame`, `study.sds`, moved data files) and no longer ran; nothing linked to
+  them. The maintained, CI-executed tutorials are in `docs/tutorials/`.
+
 ### CI / Infrastructure
 - **Python 3.14 is tested** on Ubuntu and Windows, in CI and in the release gate, and listed in
   the package classifiers.
