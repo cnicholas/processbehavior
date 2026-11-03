@@ -27,8 +27,12 @@ What lives here and why
   regenerates docs/reference/validation.md (drift-guarded there). Writes
   e2e_bishop_report.html locally (untracked).
 - e2e_T20_report.py - the same idea against the T20 database.
-- effects_visualization.ipynb - effects-chart exploration against the
-  reference data.
+- truth_report.py - how closely the methods, as implemented, recover answers
+  known by construction (PM INERT pure noise, Dr. Bishop's known-effects
+  data). A report, not a gate.
+- chance_signals.py - how often charts signal on pure noise: X/mR under the
+  default rules, and the R3-R5 effect charts. A report, not a gate; its
+  tables are in docs/reference/weco-rules.md and docs/user-guide/residuals.md.
 - sds1_data.csv - synthetic design-state-1 dataset (make_design-style
   structure, seed 42); loaded by the Complete Design-State-1 Analysis
   tutorial (docs/tutorials/sds1-complete-analysis.ipynb).
