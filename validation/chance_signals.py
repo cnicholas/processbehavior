@@ -7,7 +7,8 @@ condition, time or interaction effects. Each design gets its own random stream,
 default_rng([SEED, ...]), so every row reproduces on its own.
 
 1. Signal rules. One stream of T readings, charted as X/mR. The share of charts with at least
-   one signal under the default rules (X: Rules 1-8; mR: Rule 1), and on mR with all eight.
+   one signal: on X under Rule 1, Rules 1-4 and all eight (the default), and on mR under Rule 1
+   (the default) and all eight.
    Successive moving ranges share a reading and their distribution is skewed, which is why the
    zone and run rules are off by default on mR.
 
@@ -38,10 +39,12 @@ EFFECT_CHARTS = {'R5 by condition': ('R5', ['cond']), 'R4 by period': ('R4', ['p
 
 def signal_rates(T: int) -> dict[str, float]:
     rng = np.random.default_rng([SEED, T])
-    hits = {'X': 0, 'mR': 0, 'mR, all eight': 0}
+    hits = {'X, Rule 1': 0, 'X, Rules 1-4': 0, 'X': 0, 'mR': 0, 'mR, all eight': 0}
     for _ in range(SIGNAL_REPS):
         df = pd.DataFrame({'t': range(T), 'y': rng.standard_normal(T)})
         result = pb.formulate(df, response='y', time='t').execute(chart='X', companion=True)
+        hits['X, Rule 1'] += result.detect_signals(chart='X', rules=['rule_1']).has_signals
+        hits['X, Rules 1-4'] += result.detect_signals(chart='X', rules='standard').has_signals
         hits['X'] += result.detect_signals(chart='X').has_signals
         hits['mR'] += result.detect_signals(chart='mR').has_signals
         hits['mR, all eight'] += result.detect_signals(chart='mR', rules='all').has_signals
@@ -79,10 +82,12 @@ def effect_chart(K: int, T: int, n: int) -> dict[str, tuple[float, float] | None
 def render() -> str:
     lines = ['## Signals on pure noise', '',
              f'Share of {SIGNAL_REPS} pure-noise X/mR charts with at least one signal.', '',
-             '| Readings | X (Rules 1-8) | mR (Rule 1, the default) | mR (all eight rules) |', '|---|---|---|---|']
+             '| Readings | X (Rule 1) | X (Rules 1-4) | X (Rules 1-8, the default) | mR (Rule 1, the default) '
+             '| mR (all eight rules) |', '|---|---|---|---|---|---|']
     for T in SIGNAL_LENGTHS:
         r = signal_rates(T)
-        lines.append(f"| {T} | {r['X']:.0%} | {r['mR']:.0%} | {r['mR, all eight']:.0%} |")
+        lines.append(f"| {T} | {r['X, Rule 1']:.0%} | {r['X, Rules 1-4']:.0%} | {r['X']:.0%} | {r['mR']:.0%} "
+                     f"| {r['mR, all eight']:.0%} |")
     lines += ['', '## Effect charts on pure noise', '',
               f'Effective sigma multiple of the limits (3 for a textbook chart), and the share of {EFFECT_REPS}',
               'charts with a point beyond them.', '',

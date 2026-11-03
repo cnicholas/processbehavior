@@ -47,6 +47,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   report. The `detect_signals()` docstring no longer says Rules 1-4 are the default.
 
 ### Fixed
+- **Three signal rules now match their definitions.** Rule 5 (trend) fired only on 7 rising or
+  falling points, not 6; Rule 6 (oscillation) only on 15 alternating points, not 14; and Rule 2
+  counted only points in Zone A, leaving out points beyond 3σ, which Western Electric and Wheeler
+  count as "beyond 2σ". The docs, the rule descriptions and the minimum-observation table already
+  said 6, 14 and "Zone A or beyond". X charts may show slightly more signals; on 100 points of
+  pure noise, the share with a signal under the eight default rules rises from 70% to 79%.
+- **The WECO rules page gives correct chance rates.** Six of its eight per-rule false-alarm rates
+  were wrong (for example 0.003% for 15 points hugging the centre, where it is 0.33%), and its
+  rule-set table had no source. The rates are now exact per-window figures, the table is measured
+  by `validation/chance_signals.py`, and the wording no longer says a signal is "almost certainly"
+  a special cause.
 - **Commas in numbers stored as text are no longer misread.** A comma was removed wherever it
   appeared, so a decimal comma such as `10,4` became 104; and a lone `10,4` in a column of plain
   numbers silently became missing. Commas are now read one way per column: as decimal points

@@ -24,6 +24,10 @@ LCL ─────────────────────── -3σ
 
 ## The Eight Rules
 
+Each false alarm rate below is the chance that the pattern appears by chance in one window of
+the rule's length, for independent, normally distributed points from a stable process. Over a
+whole chart these chances add up; see [Signals on pure noise, per chart](#signals-on-pure-noise-per-chart).
+
 ### Rule 1: Beyond Limits
 
 **Pattern**: Single point beyond the 3-sigma control limits.
@@ -32,7 +36,9 @@ LCL ─────────────────────── -3σ
 
 **False Alarm Rate**: 0.27% per point (1 in 370)
 
-**Interpretation**: Almost certainly a special cause. This is the most reliable signal.
+**Interpretation**: The strongest single signal and a reason to look for a special cause. On a
+stable process about one point in 370 falls outside the limits by chance, so a long chart will
+show some.
 
 **Example Causes**:
 - Equipment malfunction
@@ -51,9 +57,9 @@ signals = result.detect_signals(rules='standard')
 
 **Detection**: In a window of 3 consecutive points, 2 or more are beyond 2σ on the same side.
 
-**False Alarm Rate**: ~0.15% per point
+**False Alarm Rate**: 0.31% per 3-point window
 
-**Interpretation**: Process is likely shifting. Two points near the limits is unusual.
+**Interpretation**: Suggests a shift. Two of three points beyond 2σ on one side is unusual.
 
 **Example Causes**:
 - Gradual equipment drift
@@ -71,9 +77,9 @@ rules = RuleSet().zone_a(consecutive=2)```
 
 **Detection**: In a window of 5 consecutive points, 4 or more are beyond 1σ on the same side.
 
-**False Alarm Rate**: ~0.28% per point
+**False Alarm Rate**: 0.55% per 5-point window
 
-**Interpretation**: Process is likely shifting, but shift is smaller than Rule 2.
+**Interpretation**: Suggests a shift, smaller than one Rule 2 picks up.
 
 **Example Causes**:
 - Small sustained shift
@@ -89,9 +95,9 @@ rules = RuleSet().zone_b(consecutive=4)```
 
 **Detection**: 8+ points all above CL or all below CL.
 
-**False Alarm Rate**: 0.39% per 8-point sequence
+**False Alarm Rate**: 0.78% per 8-point window
 
-**Interpretation**: Process has shifted. Even small shifts (< 1σ) will eventually produce runs.
+**Interpretation**: Suggests a sustained shift. Even small shifts (< 1σ) will eventually produce runs.
 
 **Example Causes**:
 - Process adjustment
@@ -110,9 +116,9 @@ rules = RuleSet().run(length=7)```
 
 **Detection**: 6+ points where each is higher (or lower) than the previous.
 
-**False Alarm Rate**: 0.28% per 6-point sequence
+**False Alarm Rate**: 0.28% per 6-point window
 
-**Interpretation**: Process is drifting. Identify and address the cause.
+**Interpretation**: Suggests drift. Look for a cause that builds over time.
 
 **Example Causes**:
 - Tool wear
@@ -131,9 +137,9 @@ rules = RuleSet().trend(length=5)```
 
 **Detection**: 14+ points where each alternates direction from the previous.
 
-**False Alarm Rate**: 0.006% per 14-point sequence
+**False Alarm Rate**: 0.46% per 14-point window
 
-**Interpretation**: Process is being over-controlled. Each adjustment causes the next deviation.
+**Interpretation**: Suggests over-control or two alternating streams: each adjustment can cause the next deviation.
 
 **Example Causes**:
 - Over-adjustment (tampering)
@@ -150,7 +156,7 @@ rules = RuleSet().oscillation(length=14)```
 
 **Detection**: 15+ points all within ±1σ of the centerline.
 
-**False Alarm Rate**: 0.003% per 15-point sequence
+**False Alarm Rate**: 0.33% per 15-point window
 
 **Interpretation**: Variation has been reduced. Could be good (process improvement) or suspicious (data manipulation, stratification).
 
@@ -169,9 +175,9 @@ rules = RuleSet().reduced_variation(length=15)```
 
 **Detection**: 8+ points all outside ±1σ from centerline.
 
-**False Alarm Rate**: 0.41% per 8-point sequence
+**False Alarm Rate**: 0.010% per 8-point window
 
-**Interpretation**: Distribution is bimodal or has excessive variation.
+**Interpretation**: Suggests a mixture of two distributions, or excessive variation.
 
 **Example Causes**:
 - Mixture of two processes
@@ -260,25 +266,22 @@ as given, on every chart.
 
 ## Sensitivity vs. False Alarms
 
-| Rule Set | Sensitivity | False Alarm Rate |
-|----------|------------|------------------|
-| Rule 1 only | Low | Very low (~0.3%) |
-| Standard (1-4) | Medium | Low (~1-2%) |
-| Extended (1-8) | High | Moderate (~3-5%) |
+More rules catch smaller and slower changes sooner, and give more false signals on a stable
+process. The X-chart default is all eight. `rules='standard'` (Rules 1-4) or Rule 1 alone gives
+fewer false signals and is slower to catch small sustained shifts.
 
-**Recommendation**: Start with standard rules. Add extended rules when investigating known issues or when resources permit investigation of false alarms.
-
+(signals-on-pure-noise-per-chart)=
 ### Signals on pure noise, per chart
 
 Over a whole chart, the chance of at least one false signal grows with its length. Share of
 500 X/mR charts of pure noise (independent normal readings, no signal in them) with at least
-one signal under the default rules, and on mR with all eight:
+one signal:
 
-| Readings | X (Rules 1-8) | mR (Rule 1, the default) | mR (all eight rules) |
-|---|---|---|---|
-| 25 | 17% | 13% | 34% |
-| 50 | 43% | 33% | 73% |
-| 100 | 70% | 58% | 94% |
+| Readings | X (Rule 1) | X (Rules 1-4) | X (Rules 1-8, the default) | mR (Rule 1, the default) | mR (all eight rules) |
+|---|---|---|---|---|---|
+| 25 | 6% | 15% | 20% | 13% | 38% |
+| 50 | 12% | 35% | 50% | 33% | 78% |
+| 100 | 19% | 61% | 79% | 58% | 96% |
 
 A signal is a reason to look, not proof of a cause; on a long chart some will be noise.
 `validation/chance_signals.py` reproduces this table (it is a report, not a test).

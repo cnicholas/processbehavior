@@ -213,7 +213,7 @@ Signal detection uses the Western Electric (WECO) rules:
 | Rule | Name | Description |
 |------|------|-------------|
 | 1 | Beyond Limits | Point outside 3-sigma limits |
-| 2 | Zone A | 2 of 3 consecutive in Zone A (2-3 sigma) |
+| 2 | Zone A | 2 of 3 consecutive beyond 2 sigma (Zone A or beyond) |
 | 3 | Zone B | 4 of 5 consecutive in Zone B or beyond |
 | 4 | Run | 8+ consecutive same side of centerline |
 | 5 | Trend | 6+ consecutive increasing or decreasing |

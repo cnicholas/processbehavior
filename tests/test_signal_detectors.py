@@ -13,6 +13,7 @@ from processbehavior.signals.detectors import (
     detect_oscillation,
     detect_reduced_variation,
     detect_run,
+    detect_trend,
     detect_zone_a_2_of_3,
     detect_zone_b_4_of_5,
 )
@@ -99,6 +100,18 @@ class TestRule2ZoneA:
         # Window ending at idx 2: [50, 61, 62] — 2 in zone A upper
         assert result[2]
 
+    def test_beyond_the_limit_counts(self):
+        """'More than 2 sigma' includes a point past 3 sigma (Western Electric, Wheeler)."""
+        result = detect_zone_a_2_of_3(_df([50, 62.5, 67.5]), _stats(), 'value', _zones())  # 2.5 and 3.5 sigma
+        assert result[2]
+        result = detect_zone_a_2_of_3(_df([50, 37.5, 32.5]), _stats(), 'value', _zones())
+        assert result[2]
+
+    def test_beyond_the_limit_counts_with_varying_limits(self):
+        zones = pd.DataFrame({'A_upper_lower': [60.0] * 3, 'A_lower_upper': [40.0] * 3})
+        result = detect_zone_a_2_of_3(_df([50, 62.5, 67.5]), _stats(), 'value', zones, limits_vary=True)
+        assert result[2]
+
     def test_clean_data(self):
         """Points near center should not trigger Rule 2."""
         data = _df([50, 51, 49, 52, 48, 50, 51])
@@ -148,6 +161,26 @@ class TestRule4Run:
 
 
 # ============================================================================
+# Rule 5: Trend (6 consecutive points rising or falling)
+# ============================================================================
+
+
+class TestRule5Trend:
+    def test_six_rising_points_trigger(self):
+        result = detect_trend(_df([50, 51, 52, 53, 54, 55]), _stats(), 'value')
+        assert result[5] and result.sum() == 1
+
+    def test_five_rising_points_do_not(self):
+        assert not detect_trend(_df([50, 51, 52, 53, 54]), _stats(), 'value').any()
+
+    def test_six_falling_points_trigger(self):
+        assert detect_trend(_df([55, 54, 53, 52, 51, 50]), _stats(), 'value')[5]
+
+    def test_a_tie_breaks_the_run(self):
+        assert not detect_trend(_df([50, 51, 52, 52, 53, 54]), _stats(), 'value').any()
+
+
+# ============================================================================
 # Rule 6: Oscillation (14 consecutive alternating)
 # ============================================================================
 
@@ -160,6 +193,13 @@ class TestRule6Oscillation:
         data = _df(values)
         result = detect_oscillation(data, _stats(), 'value')
         assert result.any()
+
+    def test_fourteen_alternating_points_trigger(self):
+        result = detect_oscillation(_df([50 + ((-1) ** i) * 3 for i in range(14)]), _stats(), 'value')
+        assert result[13] and result.sum() == 1
+
+    def test_thirteen_alternating_points_do_not(self):
+        assert not detect_oscillation(_df([50 + ((-1) ** i) * 3 for i in range(13)]), _stats(), 'value').any()
 
     def test_clean_data(self):
         """Monotonically increasing should not trigger."""

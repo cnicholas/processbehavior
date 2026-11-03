@@ -59,7 +59,7 @@ class SignalDetector:
 
     RULE_DESCRIPTIONS = {
         'rule_1': 'Point beyond control limits',
-        'rule_2': '2 of 3 consecutive points in Zone A',
+        'rule_2': '2 of 3 consecutive points in Zone A or beyond',
         'rule_3': '4 of 5 consecutive points in Zone B or beyond',
         'rule_4': '8+ consecutive points on same side of center',
         'rule_5': '6+ consecutive points trending',
