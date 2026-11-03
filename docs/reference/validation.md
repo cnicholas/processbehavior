@@ -52,8 +52,7 @@ These outputs have no VAS reference in this run. They are covered by unit tests,
 other references, but no VAS value is checked:
 
 - **Residual values one by one.** Charts of R1-R6 are compared through their limits above;
-  `tests/test_bishop_reference.py` compares the values themselves when the reference
-  spreadsheets are present, which they are not in this repository, so it skips.
+  the values themselves are not compared.
 - **Signals** (run rules and points beyond the limits).
 - **Staged (phased) Xbar and S charts.** These are checked against Wheeler's cavity data and
   Minitab's per-stage limits in `tests/test_phased_xbar_s.py`.
@@ -64,7 +63,8 @@ other references, but no VAS value is checked:
 
 `validation/truth_report.py` asks a different question: how closely the methods, as
 implemented, recover answers known by construction (pure noise, and data built from known
-effects). It is a report, not a gate.
+effects). It is a report, not a gate. CI runs it on every push and keeps its output as the
+`truth-report` artifact.
 
 ## Values with no reference yet
 
