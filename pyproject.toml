@@ -178,7 +178,6 @@ format.quote-style = "single"
 target-version = "py310"
 extend-exclude = [
   "validation",
-  "examples",
   "docs",
   "simulation",
   "*.ipynb",
@@ -197,7 +196,7 @@ warn_unused_ignores = false
 warn_redundant_casts = true
 warn_return_any = false
 disallow_untyped_defs = false
-exclude = ["examples", "docs"]
+exclude = ["docs"]
 
 # Ignore common patterns that are too noisy or require extensive refactoring
 [[tool.mypy.overrides]]
