@@ -485,8 +485,9 @@ def create_time_interaction_chart(
     else:
         agg_data['_factor_key'] = agg_data[list(factors)].apply(lambda x: '_'.join(str(v) for v in x), axis=1)
 
-    # Sort by time
-    agg_data = agg_data.sort_values(time_var)
+    # Sort by time, keeping the groupby's factor order within each time: an unstable sort leaves
+    # it to the platform, so the legend order and each line's colour would change between machines.
+    agg_data = agg_data.sort_values(time_var, kind='stable')
 
     # Create figure
     fig = go.Figure()

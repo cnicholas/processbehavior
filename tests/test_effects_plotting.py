@@ -335,6 +335,18 @@ class TestCreateTimeInteractionChart:
         # Should have 3 traces (A, B, C)
         assert len(fig.data) == 3
 
+    def test_lines_are_in_factor_order(self, result_with_effects, theme):
+        """Legend order (and so each line's colour) follows the factor levels, the same on every machine."""
+        fig = create_time_interaction_chart(
+            interactions=result_with_effects.interactions,
+            effects=result_with_effects.effects,
+            factors=['factor1', 'factor2'],
+            time_var='time',
+            dataset=result_with_effects.dataset,
+            theme=theme,
+        )
+        assert [t.name for t in fig.data] == ['A_1', 'A_2', 'B_1', 'B_2']
+
     def test_raises_if_no_factor_time(self, theme, result_no_time):
         """Should raise error if factor_time not available."""
         with pytest.raises(ChartNotAvailableError, match='Factor × time interaction not available'):

@@ -53,6 +53,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   signal counts. All were re-executed. The Derived Variables tutorial, saved without outputs, now
   shows them. Prose that the new outputs contradicted was corrected; the Bishop reference values in
   the reference validation now quote his VAS rerun of 13 October 2026.
+- **The factor x time interaction chart draws its lines in factor order on every machine.** It
+  sorted by time with an unstable sort, so the legend order, and the colour each line got, depended
+  on the numpy version.
 - **Three signal rules now match their definitions.** Rule 5 (trend) fired only on 7 rising or
   falling points, not 6; Rule 6 (oscillation) only on 15 alternating points, not 14; and Rule 2
   counted only points in Zone A, leaving out points beyond 3σ, which Western Electric and Wheeler

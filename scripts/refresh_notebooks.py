@@ -9,9 +9,10 @@ notebook and fails if what a reader would see differs from what is saved.
     python scripts/refresh_notebooks.py --check       # fail if a fresh run differs from the saved outputs
 
 What is compared is what a reader sees: printed text, errors, tables, and each figure's data and
-labels. Plotly templates and styling are left out, so a plotly upgrade alone is not drift. Two
-things that differ on every run are ignored: the temporary path in a warning's location, and the
-random id of a derived variable.
+labels. Plotly templates and styling are left out, so a plotly upgrade alone is not drift. Numbers
+in figures are compared to a relative 1e-9, since the order of floating-point sums differs between
+machines. Two things that differ on every run are ignored: the temporary path in a warning's
+location, and the random id of a derived variable.
 """
 
 from __future__ import annotations
@@ -19,6 +20,7 @@ from __future__ import annotations
 import argparse
 import base64
 import difflib
+import math
 import pprint
 import re
 import sys
@@ -46,7 +48,7 @@ def execute(path: Path) -> nbformat.NotebookNode:
 
 
 def _values(v):
-    """A trace's x or y as plain values: decode plotly's base64 typed arrays and round floats.
+    """A trace's x or y as plain values, decoding plotly's base64 typed arrays.
 
     A missing value becomes None, whether it was saved as null or as NaN, because NaN never
     equals itself and would make identical figures compare as different.
@@ -58,8 +60,8 @@ def _values(v):
         v = arr.tolist()
     if isinstance(v, (list, tuple)):
         return [_values(x) for x in v]
-    if isinstance(v, float):
-        return None if v != v else float(f'{v:.10g}')
+    if isinstance(v, float) and v != v:
+        return None
     return v
 
 
@@ -108,6 +110,17 @@ def seen(nb: nbformat.NotebookNode) -> list[list]:
     return cells
 
 
+def same(a, b) -> bool:
+    """Equal as a reader would judge: floats within a relative 1e-9, everything else exactly."""
+    if isinstance(a, float) and isinstance(b, float):
+        return math.isclose(a, b, rel_tol=1e-9, abs_tol=1e-12)
+    if isinstance(a, (list, tuple)) and isinstance(b, (list, tuple)):
+        return len(a) == len(b) and all(same(x, y) for x, y in zip(a, b, strict=True))
+    if isinstance(a, dict) and isinstance(b, dict):
+        return a.keys() == b.keys() and all(same(a[k], b[k]) for k in a)
+    return a == b
+
+
 def _first_difference(saved: list, fresh: list, limit: int = 20) -> str:
     before, after = (pprint.pformat(x, width=110).splitlines() for x in (saved, fresh))
     lines = difflib.unified_diff(before, after, 'saved', 'fresh', n=1, lineterm='')
@@ -118,7 +131,7 @@ def _keep_unchanged(saved, fresh, before: list, after: list) -> None:
     """Keep the saved bytes of every cell a reader would see unchanged, so float noise is not churn."""
     code = [(s, f) for s, f in zip(saved.cells, fresh.cells, strict=True) if s.cell_type == 'code']
     for (s_cell, f_cell), a, b in zip(code, before, after, strict=True):
-        if a == b:
+        if same(a, b):
             f_cell.outputs, f_cell.execution_count = s_cell.outputs, s_cell.execution_count
 
 
@@ -135,10 +148,10 @@ def main(argv: list[str] | None = None) -> int:
         saved = nbformat.read(path, as_version=4)
         fresh = execute(path)
         before, after = seen(saved), seen(fresh)
-        if before == after:
+        if same(before, after):
             print(f'{name}: current')
             continue
-        changed = [i + 1 for i, (a, b) in enumerate(zip(before, after, strict=True)) if a != b]
+        changed = [i + 1 for i, (a, b) in enumerate(zip(before, after, strict=True)) if not same(a, b)]
         if args.check:
             drifted.append(name)
             first = changed[0] - 1
