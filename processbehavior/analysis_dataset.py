@@ -53,6 +53,7 @@ class AnalysisDataSet:
         # Store inputs
         self.spec = spec
         self.observed_design_state: int = observed_sds
+        self.n_input_rows: int = len(df)  # Rows given to formulate(), before tidying
 
         # Initialize output containers
         self.interactions = {}

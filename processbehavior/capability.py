@@ -138,6 +138,11 @@ class CapabilityResult:
         ``y_bar + mean(R2)``. Equals ``y_bar`` when R2 averages to zero (ADS 1);
         with the scaled-difference R2 of ADS 2/3 it differs by mean(R2), which is
         small. None when potential capability is unavailable.
+    window_sigma_r2 : float | None
+        Windowed results only: σ̂ from the window's own R2 values, by the same
+        estimator as ``sigma_hat_r2``. The potential indices keep the full-study
+        ``sigma_hat_r2``; this shows how the window's noise compares. None when not
+        windowed or potential capability is unavailable.
     """
 
     # Input context
@@ -202,6 +207,9 @@ class CapabilityResult:
 
     # Potential view centre: mean of (y_bar + R2). Last field so positional construction is unchanged.
     potential_center: float | None = None
+
+    # Windowed only: sigma_hat from this window's own R2 values, beside the full-study one used above.
+    window_sigma_r2: float | None = None
 
     # ------------------------------------------------------------------
     # Visualization
@@ -319,6 +327,7 @@ class CapabilityResult:
             out['time_var'] = self.time_var
             out['n_total'] = self.n_total
             out['window_warning'] = self.window_warning
+            out['window_sigma_r2'] = _r(self.window_sigma_r2)
         return out
 
     def __repr__(self) -> str:
@@ -339,6 +348,11 @@ class CapabilityResult:
             lines.append('  Potential Capability (R2 sigma):')
             lines.append(f'    centre={d["potential_center"]}, sigma_hat_r2={d["sigma_hat_r2"]}')
             lines.append(f'    Cp={d["cp"]}  Cpk={d["cpk"]}  (lower={d["cpk_lower"]}, upper={d["cpk_upper"]})')
+            if self.window is not None and self.window_sigma_r2 is not None:
+                lines.append(
+                    f'    sigma_hat_r2 is from the full study (N={d["n_total"]}); '
+                    f'this window\'s own is {d["window_sigma_r2"]}'
+                )
 
         lines.append('')
         lines.append('  Z-scores:')
@@ -690,6 +704,7 @@ def assess_capability(
     potential_unavailable_reason = None
     potential_values = None
     potential_center = None
+    window_sigma_r2 = None
     potential_outside = {}
 
     if ads.r2_unavailable_reason is not None:
@@ -711,6 +726,10 @@ def assess_capability(
             cpk_upper = pot['ppk_upper']
             cpk = pot['ppk']
             potential_outside = compute_pct_outside(potential_values, specs)
+            if window is not None:
+                window_r2 = frame['R2'].dropna().to_numpy(dtype=float)
+                if len(window_r2) >= 2:
+                    _, window_sigma_r2 = compute_sigma_hat(window_r2)
         else:
             potential_unavailable_reason = (
                 f'Too few R2 residual values ({n_r2}) for potential capability; need at least 2'
@@ -765,5 +784,6 @@ def assess_capability(
         n_total=n_total,
         window_warning=window_warning,
         potential_center=potential_center,
+        window_sigma_r2=window_sigma_r2,
         observed_values=y_values,
     )

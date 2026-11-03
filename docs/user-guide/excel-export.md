@@ -60,6 +60,17 @@ Contains metadata about the analysis:
 - Analysis type and chart used
 - Control limit values
 
+### Provenance Sheet
+
+Written with the Summary sheet, so a workbook found later says what produced it:
+- Library version and the time it was written (UTC)
+- Response, factors and time variable
+- Analysis type
+- Input rows and rows analysed (rows with a blank response are left out)
+- Observed and analytical design states
+- A data fingerprint: a SHA-256 hash of the analysed values. The same data give the same
+  fingerprint, so two workbooks can be checked against each other.
+
 ### Chart Sheets
 
 One sheet per chart with:

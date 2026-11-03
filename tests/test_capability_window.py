@@ -158,3 +158,26 @@ def test_bound_type_mismatch_raises_clean_error(coffee_df):
     study = _study(coffee_df, 'week')  # integer axis
     with pytest.raises(ValidationError, match='not comparable'):
         study.capability(usl=240, target=180, window=(None, '2026-02-23'))
+
+
+def test_window_reports_its_own_noise_beside_the_pooled_one(coffee_df):
+    import numpy as np
+
+    from processbehavior.capability import compute_sigma_hat
+
+    study = _study(coffee_df, 'week')
+    cap = study.capability(usl=240, target=180, window=(CUT_WEEK, None))
+    rows = study._ads.analysis_dataset
+    _, own = compute_sigma_hat(rows.loc[rows['week'] >= CUT_WEEK, 'R2'].dropna().to_numpy(dtype=float))
+    assert cap.window_sigma_r2 == pytest.approx(own)
+    assert cap.sigma_hat_r2 == study.capability(usl=240, target=180).sigma_hat_r2  # indices keep the pooled one
+    assert cap.as_dict()['window_sigma_r2'] == pytest.approx(round(own, 3))
+    assert "this window's own is" in repr(cap)
+    assert np.isfinite(cap.window_sigma_r2)
+
+
+def test_unwindowed_result_has_no_window_sigma(coffee_df):
+    full = _study(coffee_df, 'week').capability(usl=240, target=180)
+    assert full.window_sigma_r2 is None
+    assert 'window_sigma_r2' not in full.as_dict()
+    assert "window's own" not in repr(full)

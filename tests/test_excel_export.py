@@ -621,3 +621,41 @@ class TestVisualChartsErrorPaths:
         result.to_excel(temp_excel_file, include_chart_images=True)
         text = self._visual_cell_text(temp_excel_file)
         assert 'Could not render' in text or 'could not' in text.lower()
+
+
+def _provenance(path) -> dict:
+    sheet = pd.read_excel(path, sheet_name='Provenance', engine='openpyxl')
+    return dict(zip(sheet['Item'], sheet['Value'], strict=True))
+
+
+def test_provenance_sheet(tmp_path):
+    """The workbook says which library, variables, rows and design states produced it."""
+    import processbehavior
+
+    pb = ProcessBehavior.read_csv('validation/PBTESTDATABASE_T100.csv')
+    study = pb.formulate(response='PM SDS 2', factors=['FACTOR 1', 'FACTOR 2'], time='PRODUCTION TIME')
+    path = tmp_path / 'prov.xlsx'
+    study.execute(chart='X', by=[]).to_excel(str(path), include_chart_images=False)
+
+    assert pd.ExcelFile(path, engine='openpyxl').sheet_names[:2] == ['Summary', 'Provenance']
+    prov = _provenance(path)
+    assert prov['Library'] == f'processbehavior {processbehavior.__version__}'
+    assert prov['Response'] == 'PM SDS 2'
+    assert prov['Factors'] == 'FACTOR 1, FACTOR 2'
+    assert prov['Input rows'] == 4000
+    assert prov['Rows analysed'] == 800  # the rest are blank in this column
+    assert prov['Analytical design state (ADS)'] == 2
+    assert len(prov['Data fingerprint (SHA-256)']) == 64
+
+
+def test_provenance_fingerprint_follows_the_data(tmp_path):
+    df = make_design(1, K1=2, K2=2, T=4, n_min=2, n_max=2, seed=42)
+    changed = df.copy()
+    changed.loc[0, 'y'] += 1.0
+    prints = []
+    for i, data in enumerate((df, df, changed)):
+        path = tmp_path / f'p{i}.xlsx'
+        study = ProcessBehavior(data).formulate(response='y', factors=['factor 1'], time='time')
+        study.execute(chart='Xbar').to_excel(str(path), include_chart_images=False)
+        prints.append(_provenance(path)['Data fingerprint (SHA-256)'])
+    assert prints[0] == prints[1] != prints[2]

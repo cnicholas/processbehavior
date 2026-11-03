@@ -73,6 +73,8 @@ class ExcelExporter:
 
         Creates a multi-sheet Excel workbook with organized analysis results:
         - Summary: Analysis metadata, SDS info, signal counts
+        - Provenance: library version, time written, variables, row counts,
+          design states and a fingerprint of the analysed data (with Summary)
         - Charts: One tab per chart (Xbar, S, stratified X, etc.)
         - Residuals: R1-R5 variance decomposition (if available)
         - Effects: Main effects (if calculated)
@@ -148,6 +150,7 @@ class ExcelExporter:
             # 1. Summary Tab
             if include_summary:
                 self._write_summary_tab(writer, format_cells)
+                self._write_provenance_tab(writer, format_cells)
 
             # 2. Chart Tabs
             if include_charts:
@@ -235,6 +238,35 @@ class ExcelExporter:
         if format_cells:
             ws = writer.sheets['Summary']
             self._apply_formatting(ws)
+
+    def _write_provenance_tab(self, writer: pd.ExcelWriter, format_cells: bool) -> None:
+        """Write what produced this workbook, so a reader can tell which data and version it came from."""
+        import hashlib
+        from datetime import datetime, timezone
+
+        from .. import __version__
+
+        ads = self.result._ads
+        spec = ads.spec
+        data = ads.analysis_dataset
+        columns = [spec.response_var, *spec.rsg_vars_list, *([spec.time_var] if spec.time_var else [])]
+        row_hashes = pd.util.hash_pandas_object(data[columns], index=False).to_numpy()
+        rows = [
+            ('Library', f'processbehavior {__version__}'),
+            ('Written (UTC)', datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')),
+            ('Response', spec.response_var),
+            ('Factors', ', '.join(spec.rsg_vars_list) or '(none)'),
+            ('Time', spec.time_var or '(none)'),
+            ('Analysis type', self.result.summary['analysis_type']),
+            ('Input rows', ads.n_input_rows),
+            ('Rows analysed', len(data)),
+            ('Observed design state (ODS)', ads.observed_design_state),
+            ('Analytical design state (ADS)', ads.analytical_design_state.sds),
+            ('Data fingerprint (SHA-256)', hashlib.sha256(row_hashes.tobytes()).hexdigest()),
+        ]
+        pd.DataFrame(rows, columns=['Item', 'Value']).to_excel(writer, sheet_name='Provenance', index=False)
+        if format_cells:
+            self._apply_formatting(writer.sheets['Provenance'])
 
     def _write_chart_tabs(self, writer: pd.ExcelWriter, format_cells: bool) -> None:
         """Write tabs for each chart."""
