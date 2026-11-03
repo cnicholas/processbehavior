@@ -67,9 +67,11 @@ test = [
   "pytest-timeout>=2.4",
   "pyarrow>=14.0",
   "openpyxl>=3.1",
-  # nbmake executes notebooks as pytest items; the CI job uses it to
-  # catch broken examples in docs/tutorials and docs/getting-started.
-  "nbmake>=1.5",
+  # scripts/refresh_notebooks.py executes the docs notebooks; CI runs it with
+  # --check to catch notebooks that break or drift from the library.
+  "nbclient>=0.10",
+  "nbformat>=5.10",
+  "ipykernel>=6",
 ]
 lint = [
   "ruff>=0.5",
