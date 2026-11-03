@@ -487,6 +487,14 @@ S² is the sample variance of all observations. The total is the sum of the five
 in ADS 2 and 3 it equals (Ȳ - Target)² + S², unless the interaction remainder was negative
 and set to 0. The largest percentage identifies where to focus improvement efforts.
 
+**How much would noise alone show?** The PDC, Time and Interaction parts average squared
+deviations of estimated means, so with no effects at all each is still above zero, and on a
+small study by more than you might expect. `loss.reference` holds the expected value of each
+under no effects, for this study's layout, and the printed result shows it as a share of the
+total beside the decomposition. A part well above its reference reflects a real effect. The
+reference assumes independent readings with a common variance; it is not valid when readings
+are autocorrelated. In ADS 2/3 the interaction is a remainder, so it has no reference.
+
 **A factor nested in time.** When every time period holds one level of a factor (a stage, or a
 before/after split), its effect cannot be separated from time. The PDC and Time parts both
 contain it, so the decomposition counts it more than once, and `loss_function()` warns. Compare

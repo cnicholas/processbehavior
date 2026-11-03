@@ -76,6 +76,16 @@ class LossResult:
         PDC minus sum of per-factor losses (multi-factor only).
     round_to : int
         Decimal places for display.
+    reference : dict[str, float | None] | None
+        What the ``pdc``, ``time`` and ``interaction`` parts would be expected to show with no
+        condition, time or interaction effects, from noise alone (squared-loss units, keys
+        ``'pdc'``, ``'time'``, ``'interaction'``). These parts are averages of squared deviations
+        of estimated means, so noise alone makes each one positive. The reference assumes
+        independent readings with a common variance, estimated by the unexplained part, and is
+        exact for any pattern of occupied cells and cell sizes; with every cell holding n readings
+        it is σ²(K-1)/(KTn), σ²(T-1)/(KTn) and σ²(K-1)(T-1)/(KTn). In ADS 2/3 the interaction is
+        what the other parts leave (10-12 manual Eq 15-20), so its reference is None. Not valid
+        when readings are autocorrelated.
     """
 
     # Context
@@ -108,6 +118,9 @@ class LossResult:
 
     # Presentation
     round_to: int = 3
+
+    # What each part would show with no effects (see Attributes)
+    reference: dict[str, float | None] | None = None
 
     # ------------------------------------------------------------------
     # Visualization
@@ -264,6 +277,9 @@ class LossResult:
             d['pdc_by_factor'] = {k: round(v, r) for k, v in self.pdc_by_factor.items()}
             d['pdc_factor_interaction'] = round(self.pdc_factor_interaction, r)
 
+        if self.reference is not None:
+            d['reference'] = {k: None if v is None else round(v, r) for k, v in self.reference.items()}
+
         return d
 
     def __repr__(self) -> str:
@@ -301,6 +317,14 @@ class LossResult:
                 lines.append(f'    {factor:>15s}: {round(pct, r)}%')
             pdc_int_pct = (self.pdc_factor_interaction / self.total * 100) if self.total > 0 else 0.0
             lines.append(f'    {"PDF INT":>15s}: {round(pdc_int_pct, r)}%')
+
+        if self.reference is not None and self.total > 0:
+            labels = {'pdc': 'PDC', 'time': 'PT', 'interaction': 'PDCxPT INT'}
+            shares = [
+                f'{labels[k]} {round(v / self.total * 100, r)}%' for k, v in self.reference.items() if v is not None
+            ]
+            lines.append('')
+            lines.append(f'  No-effect reference (share from noise alone): {", ".join(shares)}')
 
         return '\n'.join(lines)
 
@@ -379,6 +403,38 @@ def _compute_interaction_remainder(df, response_var: str, pdc: float, time_loss:
         logger.debug('Eq 15-20 interaction remainder %.6g is negative; set to 0', remainder)
         return 0.0
     return remainder
+
+
+def _no_effect_reference(
+    df, rsg_var_name: str, time_var: str, sigma2: float, replicated: bool
+) -> dict[str, float | None]:
+    """
+    Expected PDC, time and interaction parts under no effects (see ``LossResult.reference``).
+
+    Each cell mean is μ + e_kt with Var(e_kt) = σ²/n_kt, independent across cells. Ȳ.., Ȳ_k. and
+    Ȳ_.t are unweighted means of the occupied cells' means, so the expected square of each
+    deviation in Eq 15-16 follows from these variances and covariances.
+    """
+    cells = df.groupby('cell_key', observed=True).agg(
+        k=(rsg_var_name, 'first'), t=(time_var, 'first'), n=(rsg_var_name, 'size')
+    )
+    v = sigma2 / cells['n']  # Var of each cell mean
+    n_cells = len(cells)
+    t_k = cells.groupby('k', observed=True)['n'].transform('size')  # occupied cells in the condition
+    k_t = cells.groupby('t', observed=True)['n'].transform('size')  # occupied cells in the period
+    s_k = v.groupby(cells['k'], observed=True).transform('sum')
+    s_t = v.groupby(cells['t'], observed=True).transform('sum')
+    var_g = v.sum() / n_cells**2  # Var(Ȳ..)
+    var_k, cov_kg = s_k / t_k**2, s_k / (t_k * n_cells)  # Var(Ȳ_k.), Cov(Ȳ_k., Ȳ..)
+    var_t, cov_tg = s_t / k_t**2, s_t / (k_t * n_cells)  # Var(Ȳ_.t), Cov(Ȳ_.t, Ȳ..)
+
+    pdc = (var_k - 2 * cov_kg + var_g).groupby(cells['k'], observed=True).first().mean()
+    time = (var_t - 2 * cov_tg + var_g).groupby(cells['t'], observed=True).first().mean()
+    interaction = None
+    if replicated:
+        cell_part = v - 2 * v / t_k - 2 * v / k_t + 2 * v / n_cells + 2 * v / (t_k * k_t)
+        interaction = float((cell_part + var_k + var_t + var_g - 2 * cov_kg - 2 * cov_tg).mean())
+    return {'pdc': float(pdc), 'time': float(time), 'interaction': interaction}
 
 
 def _compute_pdc_decomposition(
@@ -500,7 +556,8 @@ def assess_loss(
     time_loss = _compute_time(df, time_var)
 
     # Unexplained and interaction: branch on cell replication (10-12 manual §15.4)
-    if ads._structure_stats.n_cell_min >= 2:
+    replicated = ads._structure_stats.n_cell_min >= 2
+    if replicated:
         unexplained = _compute_unexplained_replicated(df, response_var)  # Eq 15-16
         interaction = _compute_interaction(df, time_var)  # Eq 15-16
     else:
@@ -556,4 +613,5 @@ def assess_loss(
         pdc_by_factor=pdc_by_factor,
         pdc_factor_interaction=pdc_factor_interaction,
         round_to=round_to,
+        reference=_no_effect_reference(df, rsg_var_name, time_var, unexplained, replicated),
     )
