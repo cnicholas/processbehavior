@@ -250,6 +250,28 @@ The R2 substitution only matters when `by` collapses factors. At the full RSG le
 
 For X charts, there is no substitution. The moving range is always computed from the requested residual's own values.
 
+### How wide the limits are on pure noise
+
+The plotted effects are estimates that sum to zero, and their limits come from R2, so the
+limits do not sit at three standard deviations of the plotted points. On pure noise (no
+condition, time or interaction effects), with a K × T grid and n readings per cell, the
+effective multiple (limit half-width over the observed spread of the plotted points) and the
+share of charts with a point beyond the limits are:
+
+| K | T | n | R5 by condition | R4 by period | R3 by cell |
+|---|---|---|---|---|---|
+| 2 | 20 | 2 | 2.8 (1%) | 2.4 (27%) | 4.4 (0%) |
+| 2 | 20 | 5 | 3.9 (0%) | 2.9 (8%) | 4.4 (0%) |
+| 5 | 20 | 5 | 3.0 (1%) | 2.7 (10%) | 3.5 (5%) |
+| 8 | 20 | 2 | 2.3 (13%) | 2.2 (41%) | 3.3 (14%) |
+| 8 | 20 | 5 | 2.9 (4%) | 2.8 (10%) | 3.3 (14%) |
+| 8 | 20 | 1 | 3.3 (2%) | 3.3 (3%) | not available |
+
+So a period chart with few readings per cell flags noise more often than a textbook chart
+would, and the interaction chart less often. These are the limits VAS draws; the library
+reports them as they are. `validation/chance_signals.py` reproduces the table (300 charts per
+row; it is a report, not a test).
+
 ## Re-centered Residuals
 
 By default, residual charts are centered at zero. Use `recentered=True` to show on the original measurement scale:
