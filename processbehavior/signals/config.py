@@ -16,13 +16,16 @@ from ..exceptions import ValidationError
 # ================================
 # WECO rules 2-8 require sequential/temporal ordering of observations.
 # - Xbar/S: Categorical comparison of subgroups → Only Rule 1 applies
-# - X/mR: Sequential observations over time → All rules apply
+# - X: Sequential observations over time → All rules apply
+# - mR: Rule 1 only. Wheeler reads the moving range chart for points above its upper limit; the
+#   zone and run rules assume symmetric, independent points, and successive moving ranges share a
+#   reading, so with all eight on, nearly every long pure-noise mR chart shows a signal.
 # Easy to extend for new chart types (CUSUM, EWMA, etc.)
 CHART_TYPE_RULES = {
     'Xbar': ['rule_1'],  # Rational subgroup means (categorical)
     'S': ['rule_1'],  # Rational subgroup variation (categorical)
     'X': ['rule_1', 'rule_2', 'rule_3', 'rule_4', 'rule_5', 'rule_6', 'rule_7', 'rule_8'],
-    'mR': ['rule_1', 'rule_2', 'rule_3', 'rule_4', 'rule_5', 'rule_6', 'rule_7', 'rule_8'],
+    'mR': ['rule_1'],  # Points above the upper range limit
 }
 
 
@@ -89,9 +92,9 @@ class SignalConfig:
     ----------
     enabled_rules : list or str, default 'default'
         Which rules to apply:
-        - 'default': Use chart-type-based defaults (Xbar/S: Rule 1, X/mR: Rules 1-8)
-        - 'standard': Rules 1-4 (filtered by chart type)
-        - 'extended': Rules 1-8 (filtered by chart type)
+        - 'default': Use chart-type-based defaults (X: Rules 1-8; mR, Xbar, S: Rule 1)
+        - 'standard': Rules 1-4, on every chart
+        - 'extended': Rules 1-8, on every chart
         - 'all': Same as extended
         - List of rule names: ['rule_1', 'rule_2', ...] (explicit override)
     zone_definition : ZoneDefinition, optional

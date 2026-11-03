@@ -305,12 +305,13 @@ result.detect_signals(chart=None, rules=None, config=None, **kwargs)
 result.get_signals(chart_name=None)    # -> DataFrame of detected signals
 ```
 
-`rules` accepts `'standard'` (rules 1–4, the default), `'extended'` / `'all'`
-(rules 1–8), an explicit list like `['rule_1', 'rule_4']`, or a
-[`RuleSet`](#signal-detection). Rules are filtered by
-chart type: **Xbar and S charts evaluate rule 1 only; X and mR charts evaluate
-all eight** (aggregation across subgroups invalidates the run-based rules'
-independence assumptions).
+By default the rules depend on the chart type: **X charts evaluate all eight;
+mR, Xbar and S charts evaluate rule 1 only.** Subgroup comparisons have no time
+order for the run-based rules to read, and successive moving ranges share a
+reading, so the zone and run rules fire on noise. `rules` also accepts
+`'standard'` (rules 1–4), `'extended'` / `'all'` (rules 1–8), an explicit list
+like `['rule_1', 'rule_4']`, or a [`RuleSet`](#signal-detection); these apply as
+given, on every chart.
 
 ### Stratification
 

@@ -31,9 +31,26 @@ def study():
     )
 
 
-def test_sequential_charts_run_all_eight_rules():
+def test_x_chart_runs_all_eight_rules():
     assert CHART_TYPE_RULES['X'] == ALL_EIGHT
-    assert CHART_TYPE_RULES['mR'] == ALL_EIGHT
+
+
+def test_mr_chart_runs_rule_1_only():
+    """Wheeler reads the mR chart for points above its upper limit; run rules misfire on ranges."""
+    assert CHART_TYPE_RULES['mR'] == ['rule_1']
+
+
+def test_mr_chart_on_noise_evaluates_rule_1_only():
+    import numpy as np
+
+    df = pd.DataFrame({'t': range(100), 'y': np.random.default_rng(7).normal(size=100)})
+    signals = pb.formulate(df, response='y', time='t').execute(chart='X', companion=True).detect_signals()['mR']
+    assert signals.rules_evaluated == ['rule_1']
+
+
+def test_rules_all_still_runs_eight_on_mr(study):
+    signals = study.execute(chart='mR', by=[]).detect_signals(chart='mR', rules='all')
+    assert len(signals.rules_evaluated) == 8
 
 
 def test_subgroup_charts_run_rule_1_only():

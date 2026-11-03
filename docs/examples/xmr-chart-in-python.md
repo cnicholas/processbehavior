@@ -54,8 +54,8 @@ study = ProcessBehavior(df).formulate(response='on_time_pct', time='week')
 ## Going further
 
 - Signals beyond eyeballing: `result.detect_signals(chart='X')` applies the
-  full set of Western Electric run and zone rules (all eight apply to X and mR
-  charts).
+  full set of Western Electric run and zone rules (all eight on the X chart;
+  the mR chart is read for points above its upper limit).
 - Guided version with a planted shift: [Your First X/mR
   Chart](../tutorials/first-xmr-chart.ipynb).
 - Multiple streams (one XmR per machine/lane): [Stratified

@@ -431,6 +431,7 @@ This enables Xbar/S analysis for R4 and R5 even when individual cells have n=1, 
 |-----|-----------------|
 | 1-3 (Xbar/S) | Rule 1 only |
 | 1-6 (X) | All 8 rules |
+| 1-6 (mR) | Rule 1 only |
 
 ## Improving Your DS
 

@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **`validation/truth_report.py`.** It reports how closely the methods, as implemented, recover
+  answers known by construction: the PM INERT pure-noise data under all six missing-data
+  patterns, and Dr. Bishop's known-effects data. It is a report, not a gate.
+
+### Changed
+- **mR charts check Rule 1 only by default.** Wheeler reads the moving range chart for points
+  above its upper limit. The zone and run rules assume symmetric, independent points, and
+  successive moving ranges share a reading, so with all eight rules on, 95% of 100-point
+  pure-noise mR charts showed a signal (59% with Rule 1 alone). X charts still check all eight.
+  `rules='all'` restores the old behaviour. Signal counts on mR charts drop.
+- **The validation page says what is compared with VAS.** It claimed "every analytical
+  output"; the gate compares chart centres and limits, capability indices and loss shares. The
+  page now lists what is not compared (residual values one by one, signals, staged charts,
+  effects tables, calibrations, capability windows, the design report) and points to the truth
+  report. The `detect_signals()` docstring no longer says Rules 1-4 are the default.
+
 ### Fixed
 - **Commas in numbers stored as text are no longer misread.** A comma was removed wherever it
   appeared, so a decimal comma such as `10,4` became 104; and a lone `10,4` in a column of plain

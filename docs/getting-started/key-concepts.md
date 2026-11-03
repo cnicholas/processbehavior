@@ -225,6 +225,7 @@ Signal detection uses the Western Electric (WECO) rules:
 
 - **Xbar/S charts**: Only Rule 1 applies (beyond limits)
 - **X charts**: All 8 rules apply
+- **mR charts**: Only Rule 1 applies (points above the upper limit)
 
 ```python
 # Standard rules (1-4)
