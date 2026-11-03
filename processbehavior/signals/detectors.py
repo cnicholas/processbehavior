@@ -53,10 +53,11 @@ def detect_zone_a_2_of_3(
     limits_vary: bool = False,
 ) -> pd.Series:
     """
-    Rule 2: 2 of 3 consecutive points in Zone A.
+    Rule 2: 2 of 3 consecutive points in Zone A or beyond.
 
-    Detects when 2 out of 3 consecutive points fall in Zone A
-    (between 2σ and 3σ from centerline), same side.
+    Detects when 2 out of 3 consecutive points fall more than 2σ from the
+    centerline on the same side: in Zone A or beyond the limit, as Western
+    Electric and Wheeler state the rule.
 
     Parameters
     ----------
@@ -81,12 +82,12 @@ def detect_zone_a_2_of_3(
     # Determine which zone each point is in
     if limits_vary:
         # Per-row zones
-        in_upper_a = (values > zones['A_upper_lower']) & (values <= zones['A_upper_upper'])
-        in_lower_a = (values >= zones['A_lower_lower']) & (values < zones['A_lower_upper'])
+        in_upper_a = values > zones['A_upper_lower']
+        in_lower_a = values < zones['A_lower_upper']
     else:
         # Constant zones
-        in_upper_a = (values > zones['A_upper'][0]) & (values <= zones['A_upper'][1])
-        in_lower_a = (values >= zones['A_lower'][0]) & (values < zones['A_lower'][1])
+        in_upper_a = values > zones['A_upper'][0]
+        in_lower_a = values < zones['A_lower'][1]
 
     # Rolling window count
     upper_count = in_upper_a.astype(int).rolling(window=3, min_periods=3).sum()
@@ -218,19 +219,20 @@ def detect_trend(
     """
     values = data[value_col]
 
-    # Calculate differences
+    # `length` points make length - 1 consecutive differences
     diffs = values.diff()
+    steps = length - 1
 
     up_trend = pd.Series(False, index=values.index)
     down_trend = pd.Series(False, index=values.index)
 
     if direction in ['up', 'both']:
-        increasing = (diffs > 0).astype(int).rolling(window=length, min_periods=length).sum()
-        up_trend = increasing == length
+        increasing = (diffs > 0).astype(int).rolling(window=steps, min_periods=steps).sum()
+        up_trend = increasing == steps
 
     if direction in ['down', 'both']:
-        decreasing = (diffs < 0).astype(int).rolling(window=length, min_periods=length).sum()
-        down_trend = decreasing == length
+        decreasing = (diffs < 0).astype(int).rolling(window=steps, min_periods=steps).sum()
+        down_trend = decreasing == steps
 
     violations = up_trend | down_trend
     return violations.fillna(False)
@@ -265,9 +267,10 @@ def detect_oscillation(data: pd.DataFrame, stats: dict, value_col: str, length: 
     changes = (diffs * diffs.shift(1) < 0).astype(int)
 
     # Count consecutive changes
-    change_count = changes.rolling(window=length - 1, min_periods=length - 1).sum()
+    # `length` points make length - 1 differences, so length - 2 changes of direction
+    change_count = changes.rolling(window=length - 2, min_periods=length - 2).sum()
 
-    violations = change_count == (length - 1)
+    violations = change_count == (length - 2)
     return violations.fillna(False)
 
 
