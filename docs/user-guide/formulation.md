@@ -226,18 +226,29 @@ study = pb.formulate(
 
 ## Data Cleaning
 
-ProcessBehavior automatically cleans common garbage values:
+ProcessBehavior automatically cleans common garbage values in text columns:
 
 ```python
-# These are automatically converted to NaN:
-default_na_values = [
-    '*', '?', 'ND', 'BDL', 'NA', 'N/A', 'n/a',
-    '<LOD', '>LOQ', 'TNTC', 'QNS', '--'
-]
+# These are converted to NaN (exact match):
+default_na_values = ['*', '?', '--', 'ND', 'BDL', 'BQL', '<LOD', '>ULQ', 'N/D', 'n/d', 'MISSING', 'missing']
 
-# Custom NA values
-pb = ProcessBehavior(df, na_values=['*', 'missing', '<DL'])
+# Add your own
+pbd = ProcessBehavior(df, na_values=['<DL', 'void'])
 ```
+
+Numbers stored as text are converted when at least 80% of a column's values can be read. Currency
+symbols, percent signs and accounting brackets such as `(1,234.56)` are removed. Commas are read
+one way per column:
+
+- **Thousands separators** when they separate groups of three digits: `1,234` is 1234 and
+  `$1,234,567.89` is 1234567.89.
+- **Decimal commas** when the column has no `.` anywhere and some comma is followed by other than
+  three digits: in `['10,4', '9,8', '11,0']`, `10,4` is 10.4.
+- A comma that fits neither, such as `10,4` in a column that also holds `10.5`, is not guessed:
+  the value becomes missing.
+
+A warning lists what changed in each column, with examples, and names every value that could
+not be read and is now missing, so nothing disappears silently.
 
 ## Natural Sorting
 

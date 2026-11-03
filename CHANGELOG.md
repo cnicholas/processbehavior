@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **Commas in numbers stored as text are no longer misread.** A comma was removed wherever it
+  appeared, so a decimal comma such as `10,4` became 104; and a lone `10,4` in a column of plain
+  numbers silently became missing. Commas are now read one way per column: as decimal points
+  when the column has no `.` and some comma is not a thousands group, otherwise only as
+  separators between groups of three digits. Any other comma value becomes missing and is named.
+- **The numeric-cleaning warning says what happened.** It counts the values actually reformatted
+  (it used to count every value in the column), gives examples, says when commas were read as
+  decimal points, and names the values that could not be read. A column of plain numeric strings
+  no longer warns.
+
 ## [0.5.0] - 2026-10-29
 
 This release adds staged (phased) Xbar and S charts, computed per stage as Dr. Bishop
