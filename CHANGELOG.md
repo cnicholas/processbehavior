@@ -47,6 +47,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   report. The `detect_signals()` docstring no longer says Rules 1-4 are the default.
 
 ### Fixed
+- **Tutorial outputs match the library again.** The docs site shows each notebook's saved outputs,
+  and eight tutorials had drifted: limits from before 0.4.0 in the Design-State-1 analysis, flat
+  limits where they now vary by subgroup size in the reference validation, older process means and
+  signal counts. All were re-executed. The Derived Variables tutorial, saved without outputs, now
+  shows them. Prose that the new outputs contradicted was corrected; the Bishop reference values in
+  the reference validation now quote his VAS rerun of 13 October 2026.
 - **Three signal rules now match their definitions.** Rule 5 (trend) fired only on 7 rising or
   falling points, not 6; Rule 6 (oscillation) only on 15 alternating points, not 14; and Rule 2
   counted only points in Zone A, leaving out points beyond 3σ, which Western Electric and Wheeler
@@ -81,6 +87,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   variable), and that the study has none.
 
 ### CI / Infrastructure
+- **CI checks that docs notebooks match their saved outputs.** `scripts/refresh_notebooks.py`
+  re-executes the docs notebooks; with `--check` (in CI, replacing the nbmake run) it fails when a
+  notebook no longer runs or what a reader would see has changed, comparing printed text, tables
+  and each figure's data and labels. The `[test]` extra now needs nbclient, nbformat and ipykernel
+  instead of nbmake.
 - **Python 3.14 is tested** on Ubuntu and Windows, in CI and in the release gate, and listed in
   the package classifiers.
 

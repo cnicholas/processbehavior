@@ -97,6 +97,20 @@ summary.
 If a Bishop check fails after your change, the change is wrong — not the
 reference.
 
+## Docs notebooks
+
+The docs site shows each notebook's saved outputs; it does not run them. After a change that
+alters what a notebook prints or plots, refresh the saved outputs:
+
+```bash
+python scripts/refresh_notebooks.py                 # every docs notebook
+python scripts/refresh_notebooks.py docs/tutorials/signal-detection.ipynb
+```
+
+CI runs `python scripts/refresh_notebooks.py --check` and fails when a notebook no longer runs or
+no longer matches its saved outputs. Then read the text around any changed output: the check
+compares outputs, not prose.
+
 ## Citing the methodology
 
 Code and docs cite Bishop's VAS documentation manual by edition and equation number:
