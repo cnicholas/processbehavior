@@ -15,12 +15,14 @@ Bishop, T.  *Variation Analysis System* — Chapter 15.
 from __future__ import annotations
 
 import logging
+import warnings
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 import numpy as np
 
-from .exceptions import ValidationError
+from .exceptions import ProcessBehaviorWarning, ValidationError
+from .sds_detector import factors_nested_in_time
 
 if TYPE_CHECKING:
     from .analysis_dataset import AnalysisDataSet
@@ -506,6 +508,19 @@ def assess_loss(
         interaction = _compute_interaction_remainder(df, response_var, pdc, time_loss, unexplained)  # Eq 15-20
 
     total = centering + unexplained + pdc + time_loss + interaction
+
+    nested = factors_nested_in_time(df, spec.rsg_vars_list, time_var)
+    if nested:
+        names = ' and '.join(repr(f) for f in nested)
+        each = f'one {nested[0]}' if len(nested) == 1 else 'one level of each'
+        warnings.warn(
+            f'{names} {"is" if len(nested) == 1 else "are"} nested in {time_var!r}: each {time_var} has {each}, '
+            f'so {"its effect" if len(nested) == 1 else "their effects"} cannot be separated from time. The PDC and '
+            f'PT parts of the loss both contain it, so the decomposition counts it more than once. Compare the '
+            f"levels with staged charts instead: study.execute(chart='Xbar', phased=True).",
+            ProcessBehaviorWarning,
+            stacklevel=3,
+        )
 
     # Pareto
     pct = _compute_pareto(centering, unexplained, pdc, time_loss, interaction, total)

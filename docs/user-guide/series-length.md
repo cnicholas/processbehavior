@@ -3,7 +3,7 @@
 The design report ends its structure section with one line about series length:
 
 ```
-  Structure: Complete structure
+  Structure: Not checked (no sampling plan supplied)
   Series length: T=4. Sigma for X/mR rests on 3 moving ranges.
 ```
 
