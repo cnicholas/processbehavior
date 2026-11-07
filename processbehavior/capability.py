@@ -1,5 +1,5 @@
 """
-Process Capability Analysis — Bishop Chapter 16.
+Process Capability Analysis — Bishop Chapter 15 (11-7 manual).
 
 Computes capability indices given specification limits. Core logic lives as
 pure module-level functions (composition pattern matching ResidualCalculator /
@@ -19,7 +19,7 @@ Potential Capability (achievable by removing assignable causes):
 
 References
 ----------
-Bishop, T.  *Variation Analysis System* — Chapter 16.
+Bishop, T.  *Variation Analysis System* — Chapter 15 (11-7 manual).
 """
 
 from __future__ import annotations
@@ -89,7 +89,7 @@ class SpecLimits:
 @dataclass(frozen=True)
 class CapabilityResult:
     """
-    Result of a process capability assessment (Bishop Ch. 16).
+    Result of a process capability assessment (Bishop Ch. 15).
 
     Raw ``float`` values are stored unrounded.  Use :meth:`as_dict` for a
     rounded dictionary or ``repr()`` for a formatted summary.
@@ -111,7 +111,7 @@ class CapabilityResult:
     pp, ppk_lower, ppk_upper, ppk : float | None
         Current capability indices (from overall sigma).
     sigma_hat_r2 : float | None
-        Unbiased sigma from R2 residuals: S_R2 / c4(N_R2) (10-12 manual Eq 16-10).
+        Unbiased sigma from R2 residuals: S_R2 / c4(N_R2) (11-7 manual Eq 15-10).
     cp, cpk_lower, cpk_upper, cpk : float | None
         Potential capability indices (from R2 sigma), with CPL/CPU measured from
         ``potential_center``.
@@ -403,9 +403,9 @@ def compute_sigma_hat(values: np.ndarray) -> tuple[float, float]:
 
     Notes
     -----
-    Bishop Ch. 16 — ddof=1 is mandatory.  The c4 correction
+    Bishop Ch. 15 — ddof=1 is mandatory.  The c4 correction
     removes the small-sample bias inherent in the sample standard
-    deviation: sigma_hat = S / alpha_N (10-12 manual Eq 10-12).
+    deviation: sigma_hat = S / alpha_N (11-7 manual Eq 9-9).
     """
     n = len(values)
     s = float(np.std(values, ddof=1))
@@ -560,8 +560,8 @@ def _process_mean(frame: pd.DataFrame, response_var: str) -> float:
     Each experimental condition counts once, whatever its cell size, as for the
     Xbar centre line and the loss function's centring term. VAS prints this as the
     capability charts' PROCESS MEAN (PM SDS 6: 237.86, where the plain average of
-    the readings is 237.834), and the 10-12 manual's one-sided indices (Eqs 16-5, 16-6,
-    16-12, 16-13) centre on it; on balanced data the two are equal.
+    the readings is 237.834), and the 11-7 manual's one-sided indices (Eqs 15-5, 15-6,
+    15-12, 15-13) centre on it; on balanced data the two are equal.
     A study without cells (no factors or time) has one cell: the plain average.
     """
     valid = frame[frame[response_var].notna()]
@@ -714,9 +714,9 @@ def assess_capability(
         n_r2 = len(r2_values)
 
         if n_r2 >= 2:
-            _, sigma_hat_r2 = compute_sigma_hat(r2_values)  # Eq 16-10
+            _, sigma_hat_r2 = compute_sigma_hat(r2_values)  # Eq 15-10
             potential_values = y_bar + r2_values
-            # Centre the potential indices on the potential values themselves (Eqs 16-11..16-13 as
+            # Centre the potential indices on the potential values themselves (Eqs 15-11..15-13 as
             # VAS computes them): y_bar + mean(R2). Tom's Medicare run of 10/3/2026 prints
             # "PROCESS MEAN 10831.3" on the potential slide (y_bar 10832.4, mean R2 -1.15).
             potential_center = float(np.mean(potential_values))

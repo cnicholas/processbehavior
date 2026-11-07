@@ -265,7 +265,7 @@ Printed, the report adds a line for each of these when it applies:
 ```
 
 **Capabilities**:
-- ⚠️ No within-cell variance: R2 is the condition-and-period-adjusted series, differenced along the condition-then-time sequence and divided by twice the R2 scale factor (Eqs 14-4..14-8)
+- ⚠️ No within-cell variance: R2 is the condition-and-period-adjusted series, differenced along the condition-then-time sequence and divided by twice the R2 scale factor (Eqs 13-4..13-8)
 - ⚠️ R2 needs at least 2 process design conditions (K) and M ≥ K + 2 observations; otherwise it is unavailable
 - ✅ Main effects analysis
 - ✅ Xbar-S of the effect residuals (R4, R5), with limits from R2
@@ -293,7 +293,7 @@ Printed, the report adds a line for each of these when it applies:
 **Valid Charts**: Histogram, Xbar, S, X, mR
 
 :::{note} Why DS 3 does not mix methods
-For R2 in DS 3 the library does not combine an exact estimate from the replicated cells with a separate estimate for the one-observation cells. Bishop's R2 for any layout with a one-observation cell (Eqs 14-9..14-13) is defined over the whole ordered sequence, with no grouping by cell: remove the process mean and the condition and period effects, difference what is left along the canonical condition-then-time sort, and divide by twice the R2 scale factor c(K, M). Only the first observation in the sequence has no value. The replicated cells' within-cell deviations are not used for R2. This is the same calculation as DS 2, and the ADS 3 reference assertions in the [validation page](../reference/validation.md) hold against it. The recommended chart is Xbar (with S), VAS's default for DS 3 and 6. Every subgroup mean, one-observation subgroups included, counts once toward the Xbar center line (per stratum too). One-observation subgroups have no within-subgroup spread, so they take no part in σ̂ (Eq 11-5); they are still charted, with limits center ± 3σ̂ (Eqs 11-16/17 with N = 1), as VAS draws them. The companion S chart leaves them out.
+For R2 in DS 3 the library does not combine an exact estimate from the replicated cells with a separate estimate for the one-observation cells. Bishop's R2 for any layout with a one-observation cell (Eqs 13-9..13-13) is defined over the whole ordered sequence, with no grouping by cell: remove the process mean and the condition and period effects, difference what is left along the canonical condition-then-time sort, and divide by twice the R2 scale factor c(K, M). Only the first observation in the sequence has no value. The replicated cells' within-cell deviations are not used for R2. This is the same calculation as DS 2, and the ADS 3 reference assertions in the [validation page](../reference/validation.md) hold against it. The recommended chart is Xbar (with S), VAS's default for DS 3 and 6. Every subgroup mean, one-observation subgroups included, counts once toward the Xbar center line (per stratum too). One-observation subgroups have no within-subgroup spread, so they take no part in σ̂ (Eq 10-5); they are still charted, with limits center ± 3σ̂ (Eqs 10-16/17 with N = 1), as VAS draws them. The companion S chart leaves them out.
 :::
 
 ## DS 4: Incomplete, No Singletons
@@ -386,9 +386,9 @@ The R2 method is determined by the tidy data structure (ADS), not the raw DS. Eq
 
 | ADS | R2 Method | Description |
 |-----|-----------|-------------|
-| 1 | exact | Within-cell deviation (`R2 = Y - Ȳ_kt`, Eq 14-3) |
-| 2 | ma2 | `Z = Y - Ȳ_k - Ȳ_t + Ȳ`, differenced along the condition-then-time sequence and divided by twice the R2 scale factor c(K, M) (Eqs 14-4..14-8) |
-| 3 | ma2 | Any one-observation cell: the same calculation over every observation (Eqs 14-9..14-13) |
+| 1 | exact | Within-cell deviation (`R2 = Y - Ȳ_kt`, Eq 13-3) |
+| 2 | ma2 | `Z = Y - Ȳ_k - Ȳ_t + Ȳ`, differenced along the condition-then-time sequence and divided by twice the R2 scale factor c(K, M) (Eqs 13-4..13-8) |
+| 3 | ma2 | Any one-observation cell: the same calculation over every observation (Eqs 13-9..13-13) |
 
 The token `ma2` names Bishop's size-2 moving average of Z; R2 is Z minus that average,
 divided by the R2 scale factor. The factor is computed from the layout, with K the number of

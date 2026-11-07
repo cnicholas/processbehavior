@@ -417,7 +417,7 @@ This tells you: the plan called for full replication across 480 cells. Three cel
 
 ### `study.capability()`
 
-Assesses process capability against specification limits (Bishop Ch. 16). Returns both **current capability** (Pp/Ppk, based on overall variation) and **potential capability** (Cp/Cpk, based on the R2 noise only).
+Assesses process capability against specification limits (Bishop Ch. 15). Returns both **current capability** (Pp/Ppk, based on overall variation) and **potential capability** (Cp/Cpk, based on the R2 noise only).
 
 ```python
 from processbehavior import SpecLimits
@@ -438,7 +438,7 @@ cap.plot(values=study.dataset[study.response].dropna().values)
 | Metric | Based On | Meaning |
 |--------|----------|---------|
 | **Pp/Ppk** | Overall σ̂ (all variation) | Current capability — process as-is |
-| **Cp/Cpk** | R2 σ̂ = S<sub>R2</sub> / c4(N<sub>R2</sub>) (noise only; 10-12 manual Eq 16-10) | Potential capability — achievable if all assignable causes are eliminated |
+| **Cp/Cpk** | R2 σ̂ = S<sub>R2</sub> / c4(N<sub>R2</sub>) (noise only; 11-7 manual Eq 15-10) | Potential capability — achievable if all assignable causes are eliminated |
 
 The potential values are ȳ + R2. Potential CPL/CPU are measured from their mean,
 `cap.potential_center` (ȳ + mean of R2), and the potential chart's center line sits there.
@@ -449,7 +449,7 @@ Potential capability (Cp/Cpk) requires VAS residuals (factors + time). If unavai
 
 ### `study.loss_function()`
 
-Decomposes expected loss into five components using the Taguchi Loss Function (Bishop Ch. 15; equation numbers below are from Bishop's VAS documentation manual dated 10-12-2026). Identifies the largest sources of variation as a Pareto analysis. It needs R2, so it raises `ValidationError` when R2 is unavailable for the layout.
+Decomposes expected loss into five components using the Taguchi Loss Function (Bishop Ch. 14; equation numbers below are from Bishop's VAS documentation manual dated 11-7-2026). Identifies the largest sources of variation as a Pareto analysis. It needs R2, so it raises `ValidationError` when R2 is unavailable for the layout.
 
 ```python
 # Use grand mean as target (centering = 0)
@@ -478,10 +478,10 @@ loss.plot(structured=True)     # Expands PDC into per-factor components
 | Component | Formula | What It Captures |
 |-----------|---------|-----------------|
 | **Centering** | (Ȳ - Target)² | Loss from being off-target |
-| **Unexplained** | ADS 1: average of the cell variances, (1/KT)·ΣS²<sub>kt</sub> (Eq 15-16). ADS 2/3: S²<sub>R2</sub>, the sample variance of R2 (Eq 15-17) | Irreducible noise (R2) |
+| **Unexplained** | ADS 1: average of the cell variances, (1/KT)·ΣS²<sub>kt</sub> (Eq 14-14). ADS 2/3: S²<sub>R2</sub>, the sample variance of R2 (Eq 14-15) | Irreducible noise (R2) |
 | **PDC** | Between-condition variance | Process design condition main effects (R5) |
 | **Time** | Between-time variance | Time period effects |
-| **Interaction** | ADS 1: average squared interaction effect (Eq 15-16). ADS 2/3: what the other parts leave of the total, S² − PDC − Time − Unexplained, set to 0 if negative (Eqs 15-18..15-20) | How factor effects change over time |
+| **Interaction** | ADS 1: average squared interaction effect (Eq 14-14). ADS 2/3: what the other parts leave of the total, S² − PDC − Time − Unexplained, set to 0 if negative (Eqs 14-16..14-18) | How factor effects change over time |
 
 S² is the sample variance of all observations. The total is the sum of the five components;
 in ADS 2 and 3 it equals (Ȳ - Target)² + S², unless the interaction remainder was negative

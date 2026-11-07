@@ -108,7 +108,7 @@ compares outputs, not prose.
 ## Citing the methodology
 
 Code and docs cite Bishop's VAS documentation manual by edition and equation number:
-`(10-12 manual Eq 14-8)`, `Eqs 14-4..14-13`, `Eqs 11-16/17`. Name the edition once per file and use
+`(11-7 manual Eq 13-8)`, `Eqs 13-4..13-13`, `Eqs 10-16/17`. Name the edition once per file and use
 the chapter-number form; `tests/test_manual_citations.py` checks both. The citations are read
 against the manual itself, so a new edition reports every place in the library whose equation
 changed or moved.

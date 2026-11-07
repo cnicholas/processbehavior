@@ -200,13 +200,13 @@ def assess_maximum_information(
     if n < 2:
         raise ValidationError(f'Maximum information analysis requires at least 2 R2 values, got {n}.')
 
-    # --- XmR statistics on R2 (10-12 manual Chapter 12) ---
+    # --- XmR statistics on R2 (11-7 manual Chapter 11) ---
     r2_mean = float(np.mean(r2_values))
     mr_values = np.abs(np.diff(r2_values))
-    r2_mR = float(np.mean(mr_values))  # Eq 12-1
-    sigma_hat = r2_mR / D2_N2  # Eq 12-4
+    r2_mR = float(np.mean(mr_values))  # Eq 11-1
+    sigma_hat = r2_mR / D2_N2  # Eq 11-4
 
-    # Limits: mean ± E2 * mR (Eqs 12-10, 12-11)
+    # Limits: mean ± E2 * mR (Eqs 11-8, 11-9)
     upl = r2_mean + XMR_LIMIT_MULTIPLIER * r2_mR
     lpl = r2_mean - XMR_LIMIT_MULTIPLIER * r2_mR
 
@@ -222,7 +222,7 @@ def assess_maximum_information(
     mr_series[0] = np.nan
     mr_series[1:] = mr_values
 
-    # R chart limits (Eq 12-5)
+    # R chart limits (Eq 11-5)
     r_upl = R_UPPER_LIMIT_MULTIPLIER * r2_mR
 
     xmr_data = pd.DataFrame(

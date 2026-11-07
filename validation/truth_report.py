@@ -15,7 +15,7 @@ This report asks a different question of two datasets whose truth is known by co
 
 For each design state it reports the noise estimate behind potential capability, potential and current
 Pp against their true values, the loss shares against the true shares of the expected loss
-(Ybar - T)^2 + sigma_total^2 (10-1 manual Eq 15-18), and how far the estimated condition and time
+(Ybar - T)^2 + sigma_total^2 (11-7 manual Eq 14-16), and how far the estimated condition and time
 effects sit from the true ones.
 """
 from __future__ import annotations

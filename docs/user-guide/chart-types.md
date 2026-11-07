@@ -266,8 +266,8 @@ staged.phase_statistics('Xbar')   # one row per stage: center, S-bar, sigma-hat,
 
 Each stage is computed as a separate analysis, exactly as `by=[time]` computes one chart
 per stage: its center is the unweighted mean of its subgroup means, its S̄ is the mean of its
-subgroup standard deviations, and its σ̂ and limits follow from those (10-12 manual Eqs 11-5,
-11-8, 11-9, 11-16, 11-17). Nothing is pooled across stages. On Wheeler's four-cavity
+subgroup standard deviations, and its σ̂ and limits follow from those (11-7 manual Eqs 10-5,
+10-8, 10-9, 10-16, 10-17). Nothing is pooled across stages. On Wheeler's four-cavity
 thickness data, with the cavity as the stage, the per-cavity centers and limits match
 Minitab's staged Xbar-S chart to the digit; the per-cavity charts of `by=['Hour']` give the
 same numbers, one chart at a time.
@@ -314,8 +314,8 @@ factor pooled or charted on its own.
 
 Plots each individual observation.
 
-- **Centerline**: Average of all observations (X̅) (10-12 manual Eqs 12-7, 12-9)
-- **Control Limits**: X̅ ± (3/1.128) × R̅, about X̅ ± 2.66 × R̅ (R̅ is the average of the T − 1 moving ranges; Eqs 12-1, 12-10, 12-11)
+- **Centerline**: Average of all observations (X̅) (11-7 manual Eq 11-7)
+- **Control Limits**: X̅ ± (3/1.128) × R̅, about X̅ ± 2.66 × R̅ (R̅ is the average of the T − 1 moving ranges; Eqs 11-1, 11-8, 11-9)
 - **Interpretation**: Points beyond limits indicate special causes
 
 ### The mR (Moving Range) Chart
@@ -323,7 +323,7 @@ Plots each individual observation.
 Plots the absolute difference between consecutive observations.
 
 - **Centerline**: Average moving range (R̅)
-- **UCL**: (1 + 3 × 0.8525/1.128) × R̅, about 3.267 × R̅ (10-12 manual Eq 12-5)
+- **UCL**: (1 + 3 × 0.8525/1.128) × R̅, about 3.267 × R̅ (11-7 manual Eq 11-5)
 - **LCL**: 0 (range cannot be negative)
 - **Interpretation**: Large ranges indicate sudden changes
 
@@ -443,7 +443,7 @@ result = study.execute(chart='X', by=['lane'], value='R4')
 result = study.execute(chart='X', by=['lane'], value='R4', recentered=True)
 ```
 
-Re-centering adds back the grand mean, RCR = R + Y̅ (Bishop's 10-12 manual, Eq 14-26, for R1
+Re-centering adds back the grand mean, RCR = R + Y̅ (Bishop's 11-7 manual, Eq 13-26, for R1
 and R3–R6), so a re-centered chart plots the effect plus R2 on the measurement scale. The
 chart shifts by Y̅; the limit width is unchanged. RCR2 is the exception: Y̅_kt + R2. Chart
 period effects from R4; an Xbar of RCR3 by period is flat, because the interaction sums to

@@ -1,5 +1,5 @@
 """
-Tests for process capability analysis (Bishop Chapter 16).
+Tests for process capability analysis (Bishop Chapter 15, 11-7 manual).
 
 Covers:
 - SpecLimits validation
@@ -964,7 +964,7 @@ class TestAssessCapabilityDirect:
 
 
 # ============================================================================
-# Potential centre (y_bar + mean R2) — 10-12 manual potential capability
+# Potential centre (y_bar + mean R2) — 11-7 manual potential capability
 # ============================================================================
 
 
