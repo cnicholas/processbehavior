@@ -269,8 +269,8 @@ class TestResidualCalculations:
         ds = ads.analysis_dataset
         TOL = 1e-10
 
-        # Re-centred residuals, Bishop's 10-12 manual Eq 14-26: RCR = R + Ybar (R1, R3, R4, R5);
-        # RCR2 is not part of Eq 14-26 and stays Ybar_kt + R2.
+        # Re-centred residuals, Bishop's 11-7 manual Eq 13-26: RCR = R + Ybar (R1, R3, R4, R5);
+        # RCR2 is not part of Eq 13-26 and stays Ybar_kt + R2.
         expected_rcr1 = ds['Ybar'] + ds['R1']
         assert (ds['RCR1'] - expected_rcr1).abs().max() <= TOL, 'RCR1 formula incorrect'
 
@@ -279,7 +279,7 @@ class TestResidualCalculations:
 
         for k in (3, 4, 5):
             expected = ds['Ybar'] + ds[f'R{k}']
-            assert (ds[f'RCR{k}'] - expected).abs().max() <= TOL, f'RCR{k} must equal R{k} + Ybar (Eq 14-26)'
+            assert (ds[f'RCR{k}'] - expected).abs().max() <= TOL, f'RCR{k} must equal R{k} + Ybar (Eq 13-26)'
 
         # End-to-end reconstruction identity
         # The fixture is SDS 1 with n_min=2, guaranteeing the exact R2 method

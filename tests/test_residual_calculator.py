@@ -148,7 +148,7 @@ def test_calculate_r1_residual_sum_is_zero():
     ],
 )
 def test_r2_scale_factor_matches_manual_layouts(k, m, expected):
-    """c(K, M) = sqrt((K-1)/(2K) * (1 - K/(M-1))), Eq 14-8 / 14-13."""
+    """c(K, M) = sqrt((K-1)/(2K) * (1 - K/(M-1))), Eq 13-8 / 13-13."""
     assert r2_scale_factor(k, m) == pytest.approx(expected, abs=5e-6)
 
 
@@ -177,7 +177,7 @@ def test_calculate_r2_exact():
     pd.testing.assert_series_equal(result, expected, check_names=False)
 
 
-# R2 for the singleton design states (10-12 manual Eqs 14-4..14-13).
+# R2 for the singleton design states (11-7 manual Eqs 13-4..13-13).
 # Hand-worked 2 x 3 grid, one observation per cell:
 #   A: 10, 12, 11    B: 14, 13, 18
 # Ybar = 13; Ybar_k = 11 (A), 15 (B); Ybar_t = 12, 12.5, 14.5
@@ -557,7 +557,7 @@ def test_no_nan_residuals_all_r2_methods(r2_method, df_key, sds1_df, sds2_df, sd
 
 
 # ============================================================================
-# Test: R2 properties for the singleton design states (10-12 manual)
+# Test: R2 properties for the singleton design states (11-7 manual)
 # ============================================================================
 
 

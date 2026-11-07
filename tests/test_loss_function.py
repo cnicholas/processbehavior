@@ -1,5 +1,5 @@
 """
-Tests for Taguchi Loss Function Analysis (Bishop Ch. 15).
+Tests for Taguchi Loss Function Analysis (Bishop Ch. 14, 11-7 manual).
 
 Uses validation dataset (PBTESTDATABASE_T100.csv) as ground truth.
 """
@@ -75,7 +75,7 @@ def study_no_time(pb):
 
 
 class TestValidationPMSDS1:
-    """Match Tom's VAS run of 10/3/2026 (10-1 manual), PM SDS 1 deck slides 30-31."""
+    """Match Tom's VAS run of 10/3/2026 (11-7 manual), PM SDS 1 deck slides 30-31."""
 
     def test_unstructured_percentages(self, study_sds1):
         """5-component Pareto matches Tom's reference."""
@@ -172,7 +172,7 @@ class TestDecompositionIdentities:
 
 class TestUnexplained:
     def test_sds1_uses_per_cell(self, study_sds1):
-        """SDS 1 (replicated): unexplained is the average cell variance (Eq 15-16), no c4."""
+        """SDS 1 (replicated): unexplained is the average cell variance (Eq 14-14), no c4."""
         result = study_sds1.loss_function()
         assert result.sds == 1
         df = study_sds1.dataset
@@ -180,7 +180,7 @@ class TestUnexplained:
         assert result.unexplained == pytest.approx(expected, rel=1e-12)
 
     def test_sds2_percentages(self, study_sds2):
-        """SDS 2 Pareto (Eqs 15-17, 15-20) matches Tom's VAS run of 10/3/2026 (PM SDS 2 deck, slide 30)."""
+        """SDS 2 Pareto (Eqs 14-15, 14-18) matches Tom's VAS run of 10/3/2026 (PM SDS 2 deck, slide 30)."""
         result = study_sds2.loss_function(target=237.0)
         assert result.sds == 2
 
@@ -191,7 +191,7 @@ class TestUnexplained:
         assert round(result.pct_time, 1) == 2.9
 
     def test_sds3_percentages(self, study_sds3):
-        """SDS 3 Pareto (Eqs 15-17, 15-20) matches Tom's VAS run of 10/3/2026 (PM SDS 3 deck, slide 30)."""
+        """SDS 3 Pareto (Eqs 14-15, 14-18) matches Tom's VAS run of 10/3/2026 (PM SDS 3 deck, slide 30)."""
         result = study_sds3.loss_function(target=237.0)
         assert result.sds == 3
 
@@ -202,14 +202,14 @@ class TestUnexplained:
         assert round(result.pct_time, 1) == 2.8
 
     def test_ads23_unexplained_is_r2_variance(self, study_sds2):
-        """Eq 15-17: ADS 2/3 unexplained is the sample variance of R2, nothing more."""
+        """Eq 14-15: ADS 2/3 unexplained is the sample variance of R2, nothing more."""
         result = study_sds2.loss_function(target=237.0)
         r2 = study_sds2.dataset['R2'].dropna()
         assert result.unexplained == pytest.approx(r2.var(ddof=1), rel=1e-12)
 
     @pytest.mark.parametrize('response', ['PM SDS 2', 'PM SDS 3'])
     def test_ads23_parts_add_to_total_loss(self, pb, response):
-        """Eqs 15-18 to 15-20: with no floor, the parts add to (Ybar - T)^2 + S^2 exactly."""
+        """Eqs 14-16 to 14-18: with no floor, the parts add to (Ybar - T)^2 + S^2 exactly."""
         study = pb.formulate(response=response, factors=['FACTOR 1', 'FACTOR 2'], time='PRODUCTION TIME')
         result = study.loss_function(target=237.0)
         assert result.interaction > 0.0
@@ -217,7 +217,7 @@ class TestUnexplained:
         assert result.total == pytest.approx(result.centering + s2, rel=1e-12)
 
     def test_ads23_interaction_floored_at_zero_on_pure_noise(self):
-        """PM INERT (pure noise) under the PM SDS 5 pattern: Eq 15-20 remainder is negative, set to 0.
+        """PM INERT (pure noise) under the PM SDS 5 pattern: Eq 14-18 remainder is negative, set to 0.
 
         Tom's VAS run of 10/3/2026 (PM5 INERT deck, slide 30) reports 84.0 / 14.0 / 1.5 / 0.5 / 0.0.
         """

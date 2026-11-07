@@ -1091,7 +1091,7 @@ class Study:
         - rsg: Rational subgroup identifier
         - Ybar, Ybar_k, Ybar_t, Ybar_kt: Hierarchical means
         - R1-R5: VAS residuals (where applicable for the SDS)
-        - RCR1-RCR5: Re-centred residuals, R + Ybar (10-12 manual Eq 14-26; RCR2 = Ybar_kt + R2)
+        - RCR1-RCR5: Re-centred residuals, R + Ybar (11-7 manual Eq 13-26; RCR2 = Ybar_kt + R2)
 
         Returns a copy to preserve immutability. The frame itself is immutable
         after formulate() — execute() never adds columns to it; request
@@ -1372,12 +1372,12 @@ class Study:
             {
                 'method': 'Capability',
                 'available': self.analytical_design_state.sds > 0,
-                'description': 'Process capability against specification limits (Ch. 16)',
+                'description': 'Process capability against specification limits (Ch. 15)',
             },
             {
                 'method': 'Loss Function',
                 'available': vas_available,
-                'description': 'Taguchi loss decomposition into 5 components (Ch. 15)',
+                'description': 'Taguchi loss decomposition into 5 components (Ch. 14)',
             },
             {
                 'method': 'Maximum Information',
@@ -1796,7 +1796,7 @@ class Study:
         window: tuple | None = None,
     ) -> CapabilityResult:
         """
-        Assess process capability against specification limits (Ch. 16).
+        Assess process capability against specification limits (Ch. 15).
 
         Parameters
         ----------
@@ -1847,7 +1847,7 @@ class Study:
 
     def loss_function(self, target: float | None = None) -> LossResult:
         """
-        Assess Taguchi Loss Function decomposition (Ch. 15).
+        Assess Taguchi Loss Function decomposition (Ch. 14).
 
         Decomposes expected loss into 5 components: centering, unexplained,
         PDC, time, and PDC×time interaction.

@@ -254,7 +254,7 @@ def _mr_family_limits(mr_spec: _MRChartSpec, *, mean, mR) -> pd.DataFrame:
     """Limits for one MR-family chart per row of a per-stratum or per-phase table.
 
     The array form of the scalar ``calculate_limits`` these sites used to call through
-    ``DataFrame.apply(axis=1)``: the same formulae, 10-12 manual Eqs 12-10/12-11 (X) and
+    ``DataFrame.apply(axis=1)``: the same formulae, 11-7 manual Eqs 11-8/11-9 (X) and
     12-5 (mR). The scalar call built a ``pd.Series`` per stratum, about 0.1 ms each, so
     it cost 30s per chart at 300,000 strata. ``mean`` is ignored for the mR chart.
     """
@@ -921,7 +921,7 @@ class Analysis:
         """Return the cell-grid columns at which to compute Bishop's grand mean
         for an Xbar chart on this column.
 
-        Each re-centred residual is R + Ybar (10-12 manual Eq 14-26; see
+        Each re-centred residual is R + Ybar (11-7 manual Eq 13-26; see
         `AnalysisDataSet._calculate_centered_residuals` and
         `residual_calculator.calculate_r6_residuals`). The canonical grand mean of an
         RCRk chart averages over the grain its effect lives at — equal weight per
@@ -1216,10 +1216,10 @@ class Analysis:
     def _xbar_limits(self, out: pd.DataFrame, s_bar: float, n_to_use: str) -> pd.DataFrame:
         """Xbar natural process limits for the subgroups in ``out`` (columns center, s, n, N).
 
-        Equal subgroup sizes (or n_mode="average", Eq 11-20): S-bar / c4(N) for every row.
-        Unequal sizes: sigma_hat is the average of each subgroup's S_r / c4(N_r) (10-12 manual
-        Eq 11-5) and each subgroup's limits are center ± multiplier · sigma_hat / sqrt(N_r)
-        (Eqs 11-16, 11-17), so they step with N_r, as VAS draws them. A one-reading subgroup
+        Equal subgroup sizes (or n_mode="average", Eq 10-20): S-bar / c4(N) for every row.
+        Unequal sizes: sigma_hat is the average of each subgroup's S_r / c4(N_r) (11-7 manual
+        Eq 10-5) and each subgroup's limits are center ± multiplier · sigma_hat / sqrt(N_r)
+        (Eqs 10-16, 10-17), so they step with N_r, as VAS draws them. A one-reading subgroup
         has no S_r: it takes no part in sigma_hat and is charted at center ± multiplier · sigma_hat.
         """
         if n_to_use == 'n':
@@ -1283,12 +1283,12 @@ class Analysis:
 
         Every subgroup with a value is charted. A one-reading subgroup has no S, so sigma-hat
         comes from the subgroups with n >= 2, and its limits are center ± 3·sigma-hat (10-12
-        manual Eqs 11-16, 11-17 with N_r = 1), as VAS draws them; the companion S chart keeps
+        manual Eqs 10-16, 10-17 with N_r = 1), as VAS draws them; the companion S chart keeps
         only n >= 2. n counts the limits column, so a reading without one (R2's first value) is
         not charted, as in VAS. Returns None when no subgroup has n >= 2; the caller decides
         whether that raises (one chart) or is recorded (a stratum, a phase). Under
         ``n_mode='average'`` the ``N`` column becomes the mean fitted n and both charts take
-        the constant-N path (Eq 11-20).
+        the constant-N path (Eq 10-20).
         """
         out = out[out['n'].ge(1)].copy()  # n=0: every charted value missing
         fit = out['n'].ge(2)
@@ -2007,9 +2007,9 @@ class Analysis:
         A phase is one combination of the grouping factors: a contiguous run of subgroups in
         time order on the stage-by-stage layout that ``by=None`` already draws. Each phase is
         computed as the per-condition chart of ``by=[time]`` computes one stratum — the
-        unweighted mean of its subgroup means as centre (10-12 manual Eq 10-9 within the
-        phase), its own S-bar and sigma-hat (Eq 11-5), its own limits (Eqs 11-8, 11-9, 11-16,
-        11-17) — and the phases are concatenated in display order with the stepped columns.
+        unweighted mean of its subgroup means as centre (11-7 manual Figure 13.3 within the
+        phase), its own S-bar and sigma-hat (Eq 10-5), its own limits (Eqs 10-8, 10-9, 10-16,
+        10-17) — and the phases are concatenated in display order with the stepped columns.
         Nothing is pooled across phases: Dr. Bishop (2026-10-18), "treat each stage separately
         as if it were a single analysis".
 
@@ -2177,10 +2177,10 @@ class Analysis:
 
         The X and mR charts share >85% of their calculation logic. The behavioral
         differences are encoded in ``mr_spec`` — no boolean flags needed. The
-        statistics are the 10-12 manual's Chapter 12: mR-bar over the T - 1
-        consecutive ranges (Eq 12-1), X centre Y-bar (Eqs 12-7, 12-9), X limits
-        Y-bar ± 3·mR-bar/d2 (Eqs 12-10, 12-11) and mR limits 0 … D4·mR-bar
-        (Eq 12-5), within each stratum or phase when the chart is split.
+        statistics are the 11-7 manual's Chapter 11: mR-bar over the T - 1
+        consecutive ranges (Eq 11-1), X centre Y-bar (Eq 11-7), X limits
+        Y-bar ± 3·mR-bar/d2 (Eqs 11-8, 11-9) and mR limits 0 … D4·mR-bar
+        (Eq 11-5), within each stratum or phase when the chart is split.
 
         Parameters
         ----------
@@ -2895,11 +2895,11 @@ class Analysis:
             return result
 
         # === Global limits path (unchanged) ===
-        # Moving range: mR-bar over the T - 1 consecutive ranges (10-12 manual Eq 12-1). A re-centred
+        # Moving range: mR-bar over the T - 1 consecutive ranges (11-7 manual Eq 11-1). A re-centred
         # R2 chart takes them over R2 (_resolve_mr_source_column), not the plotted RCR2.
         out['mr'] = out[mr_source_col].diff().abs()
         mR = out['mr'].mean()
-        mean_ = out[value_col].mean()  # Y-bar, the X chart's centre (Eqs 12-7, 12-9)
+        mean_ = out[value_col].mean()  # Y-bar, the X chart's centre (Eq 11-7)
 
         # R chart: drop first observation
         if mr_spec.drops_first_mr:

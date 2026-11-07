@@ -648,7 +648,7 @@ def test_realistic_scenario_designed_experiment_no_replication(detector):
 class TestR2ChartAvailability:
     """Tests for R2_S vs R2_X selection based on actual cell sizes.
 
-    Per Bishop Section 20.6.1:
+    Per Bishop's 11-7 manual (Chapter 12, the analytic design states, and Section 13.3.9):
     - R2_S is available when rational subgroups have n>=2
     - R2_X is used when n=1 (no within-cell variation)
     """
@@ -1317,7 +1317,7 @@ class TestR2MethodSelection:
     """``get_r2_method`` has two answers, and structure alone decides between them.
 
     The docs once described a third, per-cell "hybrid" for mixed cell sizes. It was removed in
-    cb037f8: with any singleton cell, R2 is Bishop's ungrouped MA2 (10-12 manual Eqs 14-9..14-13) for every
+    cb037f8: with any singleton cell, R2 is Bishop's ungrouped MA2 (11-7 manual Eqs 13-9..13-13) for every
     observation, which the ADS 3 reference assertions validate. These pin the vocabulary to that.
     """
 

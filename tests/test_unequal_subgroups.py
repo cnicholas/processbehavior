@@ -1,4 +1,4 @@
-"""Xbar/S charts with subgroups of unequal size follow the 10-12 manual (Eqs 11-5, 11-7..11-9, 11-16, 11-17).
+"""Xbar/S charts with subgroups of unequal size follow the 11-7 manual (Eqs 10-5, 10-7..10-9, 10-16, 10-17).
 
 sigma_hat is the average of each subgroup's own unbiased S_r / c4(N_r); each subgroup's Xbar limits are
 centre ± 3 sigma_hat / sqrt(N_r), and its S limits are B3(N_r) S-bar and B4(N_r) S-bar. N_r counts the
@@ -20,7 +20,7 @@ from processbehavior.spc_constants import b4, c4, subgroup_sigma_hat
 def test_subgroup_sigma_hat_is_average_of_unbiased_estimates():
     s, n = np.array([1.0, 2.0, 1.5]), np.array([3, 4, 5])
     assert subgroup_sigma_hat(s, n) == pytest.approx(np.mean(s / np.array([c4(3), c4(4), c4(5)])))
-    # equal sizes: S-bar / c4(N) (Eq 11-6)
+    # equal sizes: S-bar / c4(N) (Eq 10-6)
     assert subgroup_sigma_hat(s, np.array([4, 4, 4])) == pytest.approx(s.mean() / c4(4))
 
 
@@ -36,7 +36,7 @@ def test_subgroup_size_counts_the_charted_values(medicare):
     table = medicare.execute(chart='S', by=['ACO'], value='R6').chart_table('S')
     sizes = medicare.dataset.groupby('ACO')['R2'].count()
     assert sizes['ACO-001'] == 3 and (sizes.drop('ACO-001') == 4).all()
-    # ACO-001's S limit uses B4(3), the others B4(4) (Eqs 11-8, 11-9)
+    # ACO-001's S limit uses B4(3), the others B4(4) (Eqs 10-8, 10-9)
     s_bar = table['center'].iloc[0]
     assert table['upl'].iloc[0] == pytest.approx(b4(3) * s_bar, rel=1e-9)
     assert table['upl'].iloc[1] == pytest.approx(b4(4) * s_bar, rel=1e-9)
@@ -74,8 +74,8 @@ def with_one_reading_cells():
 
 
 def test_one_reading_subgroups_are_charted_at_three_sigma(with_one_reading_cells):
-    """A one-reading subgroup has no S_r, so it takes no part in sigma_hat (Eq 11-5), but it is charted with
-    limits centre ± 3 sigma_hat (Eqs 11-16/17 with N_r = 1), as VAS draws it (PM SDS 3 and 6, 10/3/2026)."""
+    """A one-reading subgroup has no S_r, so it takes no part in sigma_hat (Eq 10-5), but it is charted with
+    limits centre ± 3 sigma_hat (Eqs 10-16/17 with N_r = 1), as VAS draws it (PM SDS 3 and 6, 10/3/2026)."""
     study = with_one_reading_cells
     result = study.execute(chart='Xbar', by=[], companion=True)
     xbar, s = result.chart_table('Xbar'), result.chart_table('S')

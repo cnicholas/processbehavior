@@ -35,6 +35,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the residuals guide.
 
 ### Changed
+- **Manual citations follow the 11-7 edition.** Dr. Bishop's manual of 2026-11-07 has 20 chapters
+  (chapters 7 and up are one lower than before) and dot-numbered captions; every equation and
+  chapter citation in the code, docs and tests now uses its numbering, in the hyphen form the
+  manual repository checks ("11-7 manual Eq 13-8"). Seven equations it removed are cited by
+  their replacements. No behaviour changes.
 - **mR charts check Rule 1 only by default.** Wheeler reads the moving range chart for points
   above its upper limit. The zone and run rules assume symmetric, independent points, and
   successive moving ranges share a reading, so with all eight rules on, 95% of 100-point

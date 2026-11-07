@@ -241,7 +241,7 @@ class TestHandComputed:
         a = stages['A']
         stds = np.array([np.std(g, ddof=1) for g in a])
         sizes = np.array([len(g) for g in a])
-        sigma_hat = np.mean(stds / np.array([c4(n) for n in sizes]))  # Eq 11-5 within the phase
+        sigma_hat = np.mean(stds / np.array([c4(n) for n in sizes]))  # Eq 10-5 within the phase
         rows = xbar[xbar['phase'] == 'A']
         assert (rows['upl'] - rows['center']).to_numpy() == pytest.approx(3 * sigma_hat / np.sqrt(sizes), abs=1e-9)
         assert phases.loc['A', 'sigma_hat'] == pytest.approx(sigma_hat, abs=1e-9)
@@ -267,7 +267,7 @@ class TestHandComputed:
         for stage, subgroups in stages.items():
             n_avg = np.mean([len(g) for g in subgroups])
             s_bar = np.mean([np.std(g, ddof=1) for g in subgroups])
-            half = 3 * (s_bar / c4(int(n_avg))) / np.sqrt(n_avg)  # Eq 11-20, as the unphased chart applies it
+            half = 3 * (s_bar / c4(int(n_avg))) / np.sqrt(n_avg)  # Eq 10-20, as the unphased chart applies it
             rows = xbar[xbar['phase'] == stage]
             assert phases.loc[stage, 'N'] == pytest.approx(n_avg)
             assert rows['upl'].nunique() == 1
@@ -298,7 +298,7 @@ class TestEdgeCases:
         assert len(s) == len(xbar) - len(singles)
         phases = result.phase_statistics('Xbar').set_index('phase')
         for _, row in singles.iterrows():
-            # N_r = 1: center ± n_sigma · sigma_hat (10-12 manual Eqs 11-16, 11-17)
+            # N_r = 1: center ± n_sigma · sigma_hat (11-7 manual Eqs 10-16, 10-17)
             assert row['upl'] - row['center'] == pytest.approx(3 * phases.loc[row['phase'], 'sigma_hat'], abs=3e-3)
 
     def test_single_subgroup_phase_has_finite_limits(self):

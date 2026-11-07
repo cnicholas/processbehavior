@@ -15,10 +15,10 @@ Dr. Thomas A. Bishop's **Variation Analysis System (VAS)** decomposes total vari
 
 Where:
 - Y = individual observation
-- Y̅ = grand mean: the mean of the cell means, each cell counted once (10-12 manual Eq 10-9)
+- Y̅ = grand mean: the mean of the cell means, each cell counted once (11-7 manual Figure 13.3, the estimates of the VAS model parameters)
 - Y̅<sub>k</sub> = mean for factor level k: the mean of that level's cell means
 - Y̅<sub>t</sub> = mean at time t: the mean of that period's cell means
-- Y̅<sub>kt</sub> = mean for factor k at time t (cell mean, Eq 10-7)
+- Y̅<sub>kt</sub> = mean for factor k at time t (cell mean, Eq 9-6)
 
 ## Accessing Residuals
 
@@ -44,7 +44,7 @@ print(result.residuals.head())
 **Purpose**: View the original measurements as ± about zero, so the total range of
 variation is read directly rather than against an arbitrary process mean.
 
-**Formula**: R1 = Y - Y̅ (Eq 14-2)
+**Formula**: R1 = Y - Y̅ (Eq 13-2)
 
 R1 is a pure location shift — it subtracts the overall mean and changes nothing else. It
 is also the building block the other residuals are derived from, which makes it the
@@ -83,10 +83,10 @@ exactly in DS 1, approximately in DS 2 and 3, where differencing the adjusted se
 interaction that changes smoothly over time).
 
 **Formula by DS**:
-- **DS 1 (Full Replication)**: R2 = Y - Y̅<sub>kt</sub>, the deviation from the cell mean (Eq 14-3)
+- **DS 1 (Full Replication)**: R2 = Y - Y̅<sub>kt</sub>, the deviation from the cell mean (Eq 13-3)
 - **DS 2 (No Replication)** and **DS 3 (Partial)**: with any one-observation subgroup there is
   no within-cell deviation to use, so R2 is built from the whole series in three steps
-  (Eqs 14-4..14-8 for DS 2, 14-9..14-13 for DS 3, 5 and 6):
+  (Eqs 13-4..13-8 for DS 2, 14-9..14-13 for DS 3, 5 and 6):
   1. Remove the process mean and the condition and period effects:
      Z = Y - Y̅<sub>k</sub> - Y̅<sub>t</sub> + Y̅ (Y̅<sub>k</sub>, Y̅<sub>t</sub> and Y̅ are
      unweighted means of cell means).
@@ -121,7 +121,7 @@ fig = result.plot(show_zones=True, title='Unexplained Variation (R2)')
 
 **Purpose**: Detect factor × time interactions.
 
-**Formula**: R3 = (Y̅<sub>kt</sub> - Y̅<sub>k</sub> - Y̅<sub>t</sub> + Y̅) + R2 (Eq 14-14)
+**Formula**: R3 = (Y̅<sub>kt</sub> - Y̅<sub>k</sub> - Y̅<sub>t</sub> + Y̅) + R2 (Eq 13-14)
 
 This removes both main effects, leaving the interaction plus the unexplained noise. In DS 1,
 where R2 = Y - Y̅<sub>kt</sub>, it reduces to Y - Y̅<sub>k</sub> - Y̅<sub>t</sub> + Y̅.
@@ -287,9 +287,9 @@ result = study.execute(chart='X', by=['lane'], value='R4', recentered=True)
 ```
 
 Re-centering formulas:
-- RCR = R + Y̅ for R1, R3, R4, R5 and R6 (Eq 14-26) — each adds back the grand mean only, so a
+- RCR = R + Y̅ for R1, R3, R4, R5 and R6 (Eq 13-26) — each adds back the grand mean only, so a
   re-centered chart is the zero-centered chart shifted onto the measurement scale
-- RCR2 = Y̅<sub>kt</sub> + R2 — not part of Eq 14-26; in DS 1 this reconstructs Y
+- RCR2 = Y̅<sub>kt</sub> + R2 — not part of Eq 13-26; in DS 1 this reconstructs Y
 
 So an effect chart of RCR5 by condition, RCR4 by period, or RCR3 by subgroup plots that
 effect plus R2 on the measurement scale. Chart period effects from R4: an Xbar of RCR3 by
@@ -314,10 +314,10 @@ R6 requires factors (it is computed from R5 and R2 at `execute()` time).
 
 **Note on R2 calculation**: R2 is the one residual whose formula depends on structure, and the
 choice is made on the analytical design state (ADS), after cleaning:
-- **ADS 1** (every cell n ≥ 2): within-cell deviation, `R2 = Y - Ȳ_kt` (Eq 14-3)
+- **ADS 1** (every cell n ≥ 2): within-cell deviation, `R2 = Y - Ȳ_kt` (Eq 13-3)
 - **ADS 2 and 3** (any one-observation cell): the condition-and-period-adjusted series Z,
   differenced along the full canonical sequence and divided by twice the R2 scale factor,
-  for every observation (Eqs 14-4..14-13); no per-cell mixing. See [R2](#r2-unexplained-residuals).
+  for every observation (Eqs 13-4..13-13); no per-cell mixing. See [R2](#r2-unexplained-residuals).
 
 DS 4, 5 and 6 are sampling states; they collapse to ADS 1, 2 and 3 once empty cells are dropped.
 
@@ -429,7 +429,7 @@ has the same number of observations.
 R2 = Y - Ȳ_kt
 ```
 
-Where Y̅<sub>kt</sub> is the mean of observations in cell (k, t) (Eq 14-3).
+Where Y̅<sub>kt</sub> is the mean of observations in cell (k, t) (Eq 13-3).
 
 ### R2: Scaled Difference (DS 2 and 3, any one-observation cell)
 
@@ -440,7 +440,7 @@ c(K, M) = sqrt( (K - 1) / (2K) · (1 - K / (M - 1)) )
 ```
 
 K is the number of process design conditions present and M the number of observations
-(M = KT in DS 2); c(K, M) is the R2 scale factor (Eqs 14-4..14-8 for DS 2, 14-9..14-13 for
+(M = KT in DS 2); c(K, M) is the R2 scale factor (Eqs 13-4..13-8 for DS 2, 14-9..14-13 for
 DS 3, 5 and 6). The first observation in the sequence has no value (NaN). The scale factor
 is undefined, and R2 unavailable, when K < 2 or M < K + 2.
 
@@ -451,7 +451,7 @@ R3 = (Ȳ_kt - Ȳ_k - Ȳ_t + Ȳ) + R2
    = InteractionEffect + R2
 ```
 
-(Eq 14-14.) In DS 1 this equals Y - Ȳ_k - Ȳ_t + Ȳ, since Y = Ȳ_kt + R2 there.
+(Eq 13-14.) In DS 1 this equals Y - Ȳ_k - Ȳ_t + Ȳ, since Y = Ȳ_kt + R2 there.
 
 ### R4: Time Main Effect + Unexplained
 

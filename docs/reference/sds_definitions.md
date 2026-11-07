@@ -41,7 +41,7 @@ For background on the lineage itself (Planned → Observed → Analytical), see 
 - **Grid Status**: Semi-Complete
 - **Description**: Every (factor × time) cell has exactly 1 observation
 - **Implications**:
-  - No within-cell variance: R2 is estimated from the condition-and-period-adjusted series, differenced along the condition-then-time sequence and scaled by the R2 scale factor (Eqs 14-4..14-8)
+  - No within-cell variance: R2 is estimated from the condition-and-period-adjusted series, differenced along the condition-then-time sequence and scaled by the R2 scale factor (Eqs 13-4..13-8)
   - Interaction effects confounded with pure error
   - VAS residuals available when the R2 scale factor is defined: at least 2 process design conditions and M ≥ K + 2 observations (see [R2 calculation](#r2-calculation-methods-by-ds))
   - Common in unreplicated factorial designs
@@ -52,7 +52,7 @@ For background on the lineage itself (Planned → Observed → Analytical), see 
 - **Grid Status**: Semi-Complete
 - **Description**: Mix of cells - some have n=1, others have n≥2
 - **Implications**:
-  - R2 by the same scaled difference as DS 2, over every observation (Eqs 14-9..14-13); any one-observation cell selects `ma2` for every observation
+  - R2 by the same scaled difference as DS 2, over every observation (Eqs 13-9..13-13); any one-observation cell selects `ma2` for every observation
   - Xbar/S is the default chart
   - **Most common in real-world data**
   - Partial interaction effect estimation
@@ -123,12 +123,12 @@ Equation numbers refer to Bishop's VAS documentation manual dated 10-12-2026.
 | DS | R2 Method | Description |
 |-----|-----------|-------------|
 | 0 | N/A | No VAS decomposition |
-| 1 | Exact (within-cell) | `R2 = Y - Ȳ_kt` (Eq 14-3) |
-| 2 | Scaled difference (`ma2`) | Condition-and-period-adjusted series, differenced and divided by 2·c(K, M), M = KT (Eqs 14-4..14-8) |
-| 3 | Scaled difference (`ma2`) | Any one-observation cell: the same over every observation (Eqs 14-9..14-13) |
+| 1 | Exact (within-cell) | `R2 = Y - Ȳ_kt` (Eq 13-3) |
+| 2 | Scaled difference (`ma2`) | Condition-and-period-adjusted series, differenced and divided by 2·c(K, M), M = KT (Eqs 13-4..13-8) |
+| 3 | Scaled difference (`ma2`) | Any one-observation cell: the same over every observation (Eqs 13-9..13-13) |
 | 4 | Exact (present cells) | Collapses to ADS 1 after cleaning; within-cell for available data |
-| 5 | Scaled difference (`ma2`) | Collapses to ADS 2 after cleaning; all present cells are unreplicated (Eqs 14-9..14-13) |
-| 6 | Scaled difference (`ma2`) | Collapses to ADS 3 after cleaning (Eqs 14-9..14-13) |
+| 5 | Scaled difference (`ma2`) | Collapses to ADS 2 after cleaning; all present cells are unreplicated (Eqs 13-9..13-13) |
+| 6 | Scaled difference (`ma2`) | Collapses to ADS 3 after cleaning (Eqs 13-9..13-13) |
 
 The scaled difference first removes the process mean and the condition and period effects,
 Z = Y − Ȳ_k − Ȳ_t + Ȳ (unweighted means of cell means), then differences Z along the

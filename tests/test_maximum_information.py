@@ -201,7 +201,7 @@ class TestPlotting:
 
 
 # ---------------------------------------------------------------------------
-# 10-1 manual R2: limits match Tom's VAS run of 10/3/2026 (slide 33 of each deck)
+# 11-7 manual R2: limits match Tom's VAS run of 10/3/2026 (slide 33 of each deck)
 # ---------------------------------------------------------------------------
 
 

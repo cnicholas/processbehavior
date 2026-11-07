@@ -70,7 +70,7 @@ effects). It is a report, not a gate. CI runs it on every push and keeps its out
 
 - The limits of the two factor S charts (pages 25 and 27) in the known-effects run, whose
   subgroups have 1000 and 2000 values. Its VAS run of 6 October 2026 held α<sub>N</sub>
-  (10-12 manual Eq 10-11) at 0.9995 from N = 343 up, where Minitab's GAMMA function overflows,
+  (11-7 manual Eq 9-8) at 0.9995 from N = 343 up, where Minitab's GAMMA function overflows,
   so its limits follow N = 500 instead of the subgroup's own N. Dr. Bishop's reruns of the PM
   runs (13 October 2026) compute α<sub>N</sub> for every N, and every R6 S chart in them is
   checked and matches; the known-effects run waits for the same rerun.

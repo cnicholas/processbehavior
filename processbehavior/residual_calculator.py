@@ -4,8 +4,8 @@ VAS (Variation Analysis System) residual calculations for process behavior analy
 This module calculates the Bishop VAS residuals (R1-R5) that decompose
 total variation into interpretable components. They estimate the terms of the
 re-parameterized VAS model Y_ktn = mu + rho_k + tau_t + rhotau_kt + e'_ktn
-(10-12 manual Eq 10-3), with the means estimated as unweighted means of the cell
-means (Eq 10-9; on an incomplete grid, SDS 4-6, over the cells present):
+(11-7 manual Eq 9-2), with the means estimated as unweighted means of the cell
+means (Figure 13.3, the estimates of the model parameters; on an incomplete grid, SDS 4-6, over the cells present):
 
 - R1: Total deviation from grand mean (pure algebra)
 - R2: Within-cell (unexplained) variation (structure-dependent)
@@ -14,13 +14,13 @@ means (Eq 10-9; on an incomplete grid, SDS 4-6, over the cells present):
 - R5: Factor effects + unexplained (pure algebra given R2)
 
 R2 is the ONLY residual whose calculation varies by structure (equation numbers
-are Bishop's 10-12 manual):
-- exact (ADS 1): R2 = Y - Ȳ_kt (Eq 14-3, the error estimate of Eq 10-10), when every cell has n >= 2
+are Bishop's 11-7 manual):
+- exact (ADS 1): R2 = Y - Ȳ_kt (Eq 13-3, the estimate of the model's error term in Eq 9-1), when every cell has n >= 2
 - ma2 (ADS 2 & 3): when any cell has n = 1. The data are first stripped of the
   process mean and the condition and period effects, Z = Y - Ȳ_k - Ȳ_t + Ȳ
-  (Eq 14-4 / 14-9). Z is then differenced along the condition-then-time stream
+  (Eq 13-4 / 13-9). Z is then differenced along the condition-then-time stream
   and divided by twice the R2 scale factor c(K, M), which puts it back on the
-  noise scale: R2_j = (Z_j - Z_{j-1}) / (2c) (Eqs 14-5..14-8 / 14-10..14-13).
+  noise scale: R2_j = (Z_j - Z_{j-1}) / (2c) (Eqs 13-5..13-8 / 13-10..13-13).
   "ma2" names Bishop's size-2 moving average of Z; R2_j = Z_j minus that average.
 
 All other residuals (R1, R3, R4, R5) are pure algebraic transformations
@@ -162,7 +162,7 @@ def calculate_time_means(df: pd.DataFrame, response_var: str, time_var: str) -> 
 
 def calculate_cell_means(df: pd.DataFrame, response_var: str, rsg_var_name: str, time_var: str) -> pd.Series:
     """
-    Calculate cell means (Ȳ_kt) - average for each (factor × time) cell (10-12 manual Eq 10-7).
+    Calculate cell means (Ȳ_kt) - average for each (factor × time) cell (11-7 manual Eq 9-6).
 
     Broadcasts the mean for each cell to all rows in that cell.
 
@@ -208,7 +208,7 @@ def calculate_r1_residual(df: pd.DataFrame, response_var: str, grand_mean: float
     """
     Calculate R1 residual: total deviation from grand mean.
 
-    R1 = Y - Ȳ  (10-12 manual Eq 14-2)
+    R1 = Y - Ȳ  (11-7 manual Eq 13-2)
 
     R1 represents the total variation of each observation around the
     overall average. It's the foundation for all other residuals.
@@ -248,7 +248,7 @@ def calculate_r3_residual(
     """
     Calculate R3 residual: interaction effects (factor × time).
 
-    R3 = Y - Ȳ_k - Ȳ_t + Ȳ  (10-12 manual Eq 14-14, interaction part)
+    R3 = Y - Ȳ_k - Ȳ_t + Ȳ  (11-7 manual Eq 13-14, interaction part)
 
     R3 captures the interaction between factors and time. It represents
     variation that can't be explained by factor effects or time effects alone.
@@ -285,7 +285,7 @@ def calculate_r4_residual(time_means: pd.Series, grand_mean: float, r2: pd.Serie
     """
     Calculate R4 residual: time effects + unexplained.
 
-    R4 = Ȳ_t - Ȳ + R2  (10-12 manual Eq 14-16)
+    R4 = Ȳ_t - Ȳ + R2  (11-7 manual Eq 13-16)
 
     R4 represents time effects plus within-cell variation. Used to
     assess if time contributes meaningful variation.
@@ -311,7 +311,7 @@ def calculate_r5_residual(factor_means: pd.Series, grand_mean: float, r2: pd.Ser
     """
     Calculate R5 residual: factor effects + unexplained.
 
-    R5 = Ȳ_k - Ȳ + R2  (10-12 manual Eq 14-19)
+    R5 = Ȳ_k - Ȳ + R2  (11-7 manual Eq 13-19)
 
     R5 represents factor effects plus within-cell variation. Used to
     assess if factors contribute meaningful variation and to calculate
@@ -343,7 +343,7 @@ def r2_scale_factor(n_conditions: int, n_observations: int) -> float:
     """
     R2 scale factor c(K, M) for the singleton design states.
 
-    Bishop's 10-12 manual Eq 14-8 (SDS 2, where M = KT) and Eq 14-13 (SDS 3, 5, 6)::
+    Bishop's 11-7 manual Eq 13-8 (SDS 2, where M = KT) and Eq 13-13 (SDS 3, 5, 6)::
 
         c(K, M) = sqrt( (K - 1) / (2K) * (1 - K / (M - 1)) )
 
@@ -382,15 +382,15 @@ def calculate_r2(
 
     R2 is the ONLY structure-dependent residual. ``r2_method`` comes from
     ``SDSRegistry.get_r2_method()`` (exact iff every cell has n >= 2) and drives
-    the branch; equation numbers are Bishop's 10-12 manual.
+    the branch; equation numbers are Bishop's 11-7 manual.
 
-    - ``'exact'`` (ADS 1): R2 = Y - Ȳ_kt (Eq 14-3).
-    - ``'ma2'`` (ADS 2 and 3): Z = Y - Ȳ_k - Ȳ_t + Ȳ (Eq 14-4 / 14-9), using the
+    - ``'exact'`` (ADS 1): R2 = Y - Ȳ_kt (Eq 13-3).
+    - ``'ma2'`` (ADS 2 and 3): Z = Y - Ȳ_k - Ȳ_t + Ȳ (Eq 13-4 / 13-9), using the
       unweighted cell-mean averages already on the frame, so the process mean and
       the condition and period effects are removed before anything is differenced.
       In the canonical condition-then-time order (``sort_key``),
-      R2_j = (Z_j - Z_{j-1}) / (2 c(K, M)) for j >= 2 (Eqs 14-5..14-8 /
-      14-10..14-13). The stream runs across condition boundaries with no grouping;
+      R2_j = (Z_j - Z_{j-1}) / (2 c(K, M)) for j >= 2 (Eqs 13-5..13-8 /
+      13-10..13-13). The stream runs across condition boundaries with no grouping;
       only the first observation has no value (NaN). Because Z carries no condition
       or period effect, the step from one condition's last period to the next
       condition's first period no longer carries a level difference.
@@ -515,7 +515,7 @@ def calculate_vas_residuals(
 
     # Step 2: Derive marginal means from cell means (unweighted means analysis)
     # Bishop VAS uses mean of cell means, giving each experimental
-    # condition equal weight regardless of sample size within cells (10-12 manual Eq 10-9).
+    # condition equal weight regardless of sample size within cells (11-7 manual Figure 13.3).
     cell_means_unique = out.groupby([spec.rsg_var_name, spec.time_var], observed=True)['Ybar_kt'].first()
 
     grand_mean = cell_means_unique.mean()
@@ -540,7 +540,7 @@ def calculate_vas_residuals(
             raise RuntimeError("R2 method 'exact' requires every cell to have n >= 2")
     out['R2'] = calculate_r2(out, y, r2_method, n_conditions=int(out[spec.rsg_var_name].nunique()))
 
-    # Step 5: Calculate R3 (interaction effects), Eq 14-14
+    # Step 5: Calculate R3 (interaction effects), Eq 13-14
     # Unified formula: Ybar_kt - Ybar_k - Ybar_t + Ybar + R2
     # For exact (ADS 1): R2 = Y - Ybar_kt, so this simplifies to
     #   Y - Ybar_k - Ybar_t + Ybar.
@@ -611,9 +611,9 @@ def calculate_r6_residuals(df: pd.DataFrame, groupby_key: str | list[str], recen
     """Return a new frame carrying R6 (and RCR6 when recentered). Never mutates ``df``.
 
     R6 = α_i + R2, where α_i is the factor-level effect: the condition effects ρ̂_k = R5 - R2
-    averaged over the level's rows (10-12 manual Eqs 14-19, 14-24, 14-25).
+    averaged over the level's rows (11-7 manual Eqs 13-19, 13-24, 13-25).
 
-    The manual writes α_i as the level's mean of R5 (Eq 14-24, "≈ α_i"). R5 = ρ̂_k + R2, so
+    The manual writes α_i as the level's mean of R5 (Eq 13-24, "≈ α_i"). R5 = ρ̂_k + R2, so
     that mean also carries the level's average R2, which VAS leaves out: Tom's Medicare run
     (10/3/2026, slide 52) centres the organisation-effects chart at 10831.1, the effect
     without it, where the mean of R5 gives 10829.8. On ADS 1, R2 averages to zero inside
