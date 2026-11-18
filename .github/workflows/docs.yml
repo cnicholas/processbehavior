@@ -28,7 +28,9 @@ jobs:
         # Pinned: an unpinned global npm install floats to whatever mystmd
         # released today, and its CLI has had breaking changes between minors.
         # Dependabot does not see npm installs inside run steps — bump by hand.
-        run: npm install -g mystmd@1.10.1
+        # 1.13.0 or later: the default book theme moved to 2.x on 2026-11-10 and
+        # older mystmd refuses it.
+        run: npm install -g mystmd@1.13.0
       - name: Build site
         working-directory: docs
         env:
@@ -37,14 +39,16 @@ jobs:
           BASE_URL: /processbehavior
         run: myst build --html
       - name: Point sitemap and robots at the public URL
-        # mystmd's static export hardcodes localhost:3000 in sitemap.xml and
-        # robots.txt (site.domains only applies to its hosted deploys).
+        # mystmd's static export writes a placeholder host into sitemap.xml and
+        # robots.txt (http://pre.render with the 2.x theme, localhost:3000 before;
+        # site.domains only applies to its hosted deploys).
         working-directory: docs
         run: |
-          sed -i 's|http://localhost:3000|https://cnicholas.github.io/processbehavior|g' \
+          sed -i -e 's|http://pre.render|https://cnicholas.github.io/processbehavior|g' \
+                 -e 's|http://localhost:3000|https://cnicholas.github.io/processbehavior|g' \
             _build/html/sitemap.xml _build/html/robots.txt
       - name: Inject Google Search Console verification tag
-        # Google checks the property root for this tag; mystmd 1.10.1 has no
+        # Google checks the property root for this tag; mystmd has no
         # head-injection hook, so it goes in post-build.
         working-directory: docs
         run: |
