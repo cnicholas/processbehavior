@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### CI / Infrastructure
+- **The docs site builds with mystmd 1.13.0.** The default book theme moved to 2.x on
+  2026-11-10 and mystmd 1.10.1 refuses it, so docs deploys had failed since 2026-11-16. The 2.x
+  export writes `http://pre.render` into `sitemap.xml` and `robots.txt`; the workflow rewrites it
+  to the public address as it did `localhost:3000`.
+
 ## [0.6.0] - 2026-11-07
 
 ### Added
